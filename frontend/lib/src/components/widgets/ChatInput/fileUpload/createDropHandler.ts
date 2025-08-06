@@ -27,6 +27,8 @@ import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileI
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
+import { isFileTypeAllowed as checkFileType } from "./fileUploadUtils"
+
 interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
   acceptDirectoryFiles: boolean
@@ -41,29 +43,6 @@ interface CreateDropHandlerParams {
 }
 
 /**
- * Helper function to check if a file matches the accepted extensions
- */
-const isFileTypeAllowed = (file: File, element: ChatInputProto): boolean => {
-  const acceptedExtensions = element.fileType
-
-  // If no extensions are specified, allow all files
-  if (!acceptedExtensions || acceptedExtensions.length === 0) {
-    return true
-  }
-
-  // Check if the file extension matches any of the accepted extensions
-  const fileName = file.name.toLowerCase()
-  return acceptedExtensions.some(ext => {
-    const extLower = ext.toLowerCase()
-    // Ensure we're matching at an extension boundary (preceded by a period or starting with one)
-    return (
-      fileName.endsWith(extLower) &&
-      (extLower.startsWith(".") || fileName.endsWith(`.${extLower}`))
-    )
-  })
-}
-
-/**
  * Helper function to separate directory files into accepted and rejected based on file type
  */
 const filterDirectoryFiles = (
@@ -74,7 +53,7 @@ const filterDirectoryFiles = (
   const rejected: FileRejection[] = []
 
   files.forEach(file => {
-    if (isFileTypeAllowed(file, element)) {
+    if (checkFileType(file, element.fileType)) {
       accepted.push(file)
     } else {
       rejected.push({

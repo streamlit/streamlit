@@ -19,6 +19,10 @@ import React, { memo } from "react"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
+  configureFileInputProps,
+  getUploadDescription,
+} from "./fileUploadUtils"
+import {
   StyledChatFileUploadDropzone,
   StyledChatFileUploadDropzoneLabel,
 } from "./styled-components"
@@ -38,13 +42,7 @@ const ChatFileUploadDropzone = ({
   acceptFile,
   inputHeight,
 }: Props): React.ReactElement => {
-  const inputProps = getInputProps()
-
-  // Apply webkitdirectory attribute for directory uploads
-  if (acceptFile === AcceptFileValue.Directory) {
-    inputProps.webkitdirectory = ""
-    inputProps.multiple = true
-  }
+  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   return (
     <>
@@ -52,13 +50,7 @@ const ChatFileUploadDropzone = ({
         <input {...inputProps} />
       </StyledChatFileUploadDropzone>
       <StyledChatFileUploadDropzoneLabel height={inputHeight}>
-        {`Drag and drop ${
-          acceptFile === AcceptFileValue.Multiple
-            ? "files"
-            : acceptFile === AcceptFileValue.Directory
-              ? "a directory"
-              : "a file"
-        } here`}
+        {`Drag and drop ${getUploadDescription(acceptFile)} here`}
       </StyledChatFileUploadDropzoneLabel>
     </>
   )

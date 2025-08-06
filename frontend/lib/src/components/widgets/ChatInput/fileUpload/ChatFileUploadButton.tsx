@@ -26,6 +26,10 @@ import { EmotionTheme } from "~lib/theme"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
+  configureFileInputProps,
+  getUploadDescription,
+} from "./fileUploadUtils"
+import {
   StyledFileUploadButton,
   StyledFileUploadButtonContainer,
   StyledVerticalDivider,
@@ -48,13 +52,7 @@ const ChatFileUploadButton = ({
   disabled,
   theme,
 }: Props): React.ReactElement => {
-  const inputProps = getInputProps()
-
-  // Apply webkitdirectory attribute for directory uploads
-  if (acceptFile === AcceptFileValue.Directory) {
-    inputProps.webkitdirectory = ""
-    inputProps.multiple = true
-  }
+  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   return (
     <StyledFileUploadButtonContainer disabled={disabled}>
@@ -65,13 +63,7 @@ const ChatFileUploadButton = ({
       >
         <input {...inputProps} />
         <TooltipIcon
-          content={`Upload or drag and drop ${
-            acceptFile === AcceptFileValue.Multiple
-              ? "files"
-              : acceptFile === AcceptFileValue.Directory
-                ? "a directory"
-                : "a file"
-          }`}
+          content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
           placement={Placement.TOP}
           onMouseEnterDelay={500}
         >
