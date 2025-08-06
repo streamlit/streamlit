@@ -112,13 +112,13 @@ export interface UseTextInputAutoExpandResult {
   maxHeight: string
   /** Function to update scroll height (call this when content changes) */
   updateScrollHeight: () => void
+  /** Function to clear scroll height */
+  clearScrollHeight: () => void
 }
 
 export interface UseTextInputAutoExpandOptions {
   /** Ref to the textarea element */
   textareaRef: RefObject<HTMLTextAreaElement>
-  /** Dependencies that should trigger scroll height recalculation */
-  dependencies?: React.DependencyList
 }
 
 /**
@@ -127,7 +127,6 @@ export interface UseTextInputAutoExpandOptions {
  */
 export const useTextInputAutoExpand = ({
   textareaRef,
-  dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
   const theme = useEmotionTheme()
   const heightGuidance = useRef<HeightGuidance>({ minHeight: 0, maxHeight: 0 })
@@ -138,6 +137,10 @@ export const useTextInputAutoExpand = ({
   const updateScrollHeight = useCallback((): void => {
     setScrollHeight(getScrollHeight(textareaRef))
   }, [textareaRef, setScrollHeight])
+
+  const clearScrollHeight = useCallback((): void => {
+    setScrollHeight(0)
+  }, [setScrollHeight])
 
   // Initialize height guidance
   useLayoutEffect(() => {
@@ -155,7 +158,7 @@ export const useTextInputAutoExpand = ({
   // Update scroll height when dependencies change
   useLayoutEffect(() => {
     updateScrollHeight()
-  }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [textareaRef, updateScrollHeight])
 
   const { maxHeight: maxHeightValue } = heightGuidance.current
 
@@ -173,5 +176,6 @@ export const useTextInputAutoExpand = ({
     height: calculatedHeight,
     maxHeight: calculatedMaxHeight,
     updateScrollHeight,
+    clearScrollHeight,
   }
 }
