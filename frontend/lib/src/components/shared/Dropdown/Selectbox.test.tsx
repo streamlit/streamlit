@@ -138,12 +138,12 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     await user.click(selectbox)
     const options = screen.getAllByRole("option")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
+    await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(screen.getByText(props.options[2])).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+    ).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
