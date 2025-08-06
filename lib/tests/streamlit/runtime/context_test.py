@@ -256,7 +256,9 @@ class ContextPropertiesNoneTest(unittest.TestCase):
         ]
     )
     @patch("streamlit.runtime.context.get_script_run_ctx", MagicMock(return_value=None))
-    def test_property_none_context(self, property_name, attribute_name, test_value, expected_value):
+    def test_property_none_context(
+        self, property_name, attribute_name, test_value, expected_value
+    ):
         """Test that properties return None when context is None."""
         if property_name == "theme":
             assert getattr(st.context, property_name).type is None
@@ -274,7 +276,12 @@ class ContextPropertiesNoneTest(unittest.TestCase):
     )
     @patch("streamlit.runtime.context.get_script_run_ctx")
     def test_property_none_context_info(
-        self, property_name, attribute_name, test_value, expected_value, mock_get_script_run_ctx
+        self,
+        property_name,
+        attribute_name,
+        test_value,
+        expected_value,
+        mock_get_script_run_ctx,
     ):
         """Test that properties return None when context_info is None."""
         mock_ctx = MagicMock()
@@ -297,7 +304,12 @@ class ContextPropertiesNoneTest(unittest.TestCase):
     )
     @patch("streamlit.runtime.context.get_script_run_ctx")
     def test_property_with_value(
-        self, property_name, attribute_name, test_value, expected_value, mock_get_script_run_ctx
+        self,
+        property_name,
+        attribute_name,
+        test_value,
+        expected_value,
+        mock_get_script_run_ctx,
     ):
         """Test that properties return correct values from context_info."""
         mock_context_info = MagicMock()
