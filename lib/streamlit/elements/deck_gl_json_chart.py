@@ -410,13 +410,13 @@ class PydeckMixin:
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
         >>> import pydeck as pdk
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((1000, 2)) / [50, 50] + [37.76, -122.4],
         ...     columns=["lat", "lon"],
         ... )
         >>>
@@ -432,7 +432,7 @@ class PydeckMixin:
         ...         layers=[
         ...             pdk.Layer(
         ...                 "HexagonLayer",
-        ...                 data=chart_data,
+        ...                 data=df,
         ...                 get_position="[lon, lat]",
         ...                 radius=200,
         ...                 elevation_scale=4,
@@ -442,7 +442,7 @@ class PydeckMixin:
         ...             ),
         ...             pdk.Layer(
         ...                 "ScatterplotLayer",
-        ...                 data=chart_data,
+        ...                 data=df,
         ...                 get_position="[lon, lat]",
         ...                 get_color="[200, 30, 0, 160]",
         ...                 get_radius=200,

@@ -270,6 +270,7 @@ def login(provider: str | None = None) -> None:
     Your app code:
 
     >>> import streamlit as st
+    >>>
     >>> if st.button("Log in"):
     >>>     st.login("auth0")
     >>> if st.user.is_logged_in:
