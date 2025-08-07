@@ -24,7 +24,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_IFRAMES = 6
+NUM_IFRAMES = 11
 
 
 def test_components_iframe_rendering(
