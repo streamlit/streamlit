@@ -2023,7 +2023,7 @@ def _parse_trusted_user_headers() -> None:
             parsed_value = json.loads(trusted_user_headers.value)
             # Validate that this is an object with string values.
             if not isinstance(parsed_value, dict):
-                # Config validation is using RuntimeError deliberately; ingore warning
+                # Config validation is using RuntimeError deliberately; ignore warning
                 # about making this TypeError.
                 # ruff: noqa: TRY004
                 raise RuntimeError("server.trustedUserHeaders JSON must be an object")
