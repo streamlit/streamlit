@@ -304,6 +304,12 @@ export default tseslint.config([
                 "Please use the useEmotionTheme hook instead of useTheme for type-safety",
               importNames: ["useTheme"],
             },
+            {
+              name: "axios",
+              importNames: ["CancelToken"],
+              message:
+                "Please use the `AbortController` API instead of `CancelToken`",
+            },
           ],
         },
       ],

@@ -20,8 +20,6 @@
  * Returns a promise with the index of the URI that worked.
  */
 
-import { CancelToken } from "axios"
-
 import { IAppPage } from "@streamlit/protobuf"
 import type { StreamlitWindowObject } from "@streamlit/utils"
 
@@ -145,7 +143,7 @@ export interface StreamlitEndpoints {
    * @param file The file to upload.
    * @param sessionId the current sessionID. The file will be associated with this ID.
    * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload.
-   * @param cancelToken optional axios CancelToken that can be used to cancel the in-progress upload.
+   * @param signal optional AbortSignal that can be used to cancel the in-progress upload.
    *
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
@@ -155,7 +153,7 @@ export interface StreamlitEndpoints {
     sessionId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    signal?: AbortSignal
   ): Promise<void>
 
   /**

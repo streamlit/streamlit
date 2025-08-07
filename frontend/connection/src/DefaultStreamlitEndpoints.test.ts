@@ -256,7 +256,7 @@ describe("DefaultStreamlitEndpoints", () => {
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = vi.fn()
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockAbortController = new AbortController()
 
       await expect(
         endpoints.uploadFileUploaderFile(
@@ -264,7 +264,7 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
 
@@ -281,7 +281,7 @@ describe("DefaultStreamlitEndpoints", () => {
       // expect(actualRequestConfig.method?.toUpperCase()).toBe("PUT");
       expect(actualRequestConfig.responseType).toBe("text")
       expect(actualRequestConfig.data).toEqual(expectedData)
-      expect(actualRequestConfig.cancelToken).toBe(mockCancelToken)
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
@@ -291,7 +291,7 @@ describe("DefaultStreamlitEndpoints", () => {
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = vi.fn()
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockAbortController = new AbortController()
 
       await expect(
         endpoints.uploadFileUploaderFile(
@@ -299,7 +299,7 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
 
@@ -314,7 +314,7 @@ describe("DefaultStreamlitEndpoints", () => {
       )
       expect(actualRequestConfig.responseType).toBe("text")
       expect(actualRequestConfig.data).toEqual(expectedData)
-      expect(actualRequestConfig.cancelToken).toBe(mockCancelToken)
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
@@ -324,7 +324,7 @@ describe("DefaultStreamlitEndpoints", () => {
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = vi.fn()
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockAbortController = new AbortController()
 
       endpoints.setFileUploadClientConfig({
         prefix: "http://example.com/someprefix/",
@@ -340,7 +340,7 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
 
@@ -363,7 +363,7 @@ describe("DefaultStreamlitEndpoints", () => {
           header2: "header2value",
         })
       )
-      expect(actualRequestConfig.cancelToken).toBe(mockCancelToken)
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 

@@ -17,7 +17,6 @@
 import React, { PureComponent } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
-import axios from "axios"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
 
@@ -448,7 +447,7 @@ class CameraInput extends PureComponent<Props, State> {
       // The file hasn't been uploaded. Let's cancel the request.
       // However, it may have been received by the server so we'll still
       // send out a request to delete.
-      file.status.cancelToken.cancel()
+      file.status.abortController.abort()
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
@@ -537,7 +536,7 @@ class CameraInput extends PureComponent<Props, State> {
       fileId,
       file.setStatus({
         type: "uploading",
-        cancelToken: file.status.cancelToken,
+        abortController: file.status.abortController,
         progress: newProgress,
       })
     )
@@ -552,14 +551,14 @@ class CameraInput extends PureComponent<Props, State> {
 
   public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    const cancelToken = axios.CancelToken.source()
+    const abortController = new AbortController()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,
       file.size,
       this.nextLocalFileId(),
       {
         type: "uploading",
-        cancelToken,
+        abortController,
         progress: 1,
       }
     )
@@ -571,13 +570,13 @@ class CameraInput extends PureComponent<Props, State> {
         fileURLs.uploadUrl as string,
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
-        cancelToken.token
+        abortController.signal
       )
       .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
-        // If this was a cancel error, we don't show the user an error -
+        // If this was an abort error, we don't show the user an error -
         // the cancellation was in response to an action they took.
-        if (!axios.isCancel(err)) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
           this.updateFile(
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({
