@@ -492,7 +492,6 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
-            form_id=form_id,
             dg=self.dg,
             label=label,
             options=formatted_options,

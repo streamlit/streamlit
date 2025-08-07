@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useCallback } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -25,6 +25,7 @@ import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -130,11 +131,11 @@ function ExceptionElement({
     formattedExceptionFull
   )}`
 
-  const onCopyClick = (): void => {
-    navigator.clipboard.writeText(formattedExceptionFull).catch(error => {
-      LOG.error("Failed to copy exception details to clipboard:", error)
-    })
-  }
+  const { copyToClipboard } = useCopyToClipboard()
+
+  const handleCopy = useCallback(() => {
+    copyToClipboard(formattedExceptionFull)
+  }, [copyToClipboard, formattedExceptionFull])
 
   return (
     <div className="stException" data-testid="stException">
@@ -152,7 +153,7 @@ function ExceptionElement({
           ) : null}
           {isLocalhost() && (
             <StyledExceptionLinks>
-              <StyledExceptionCopyButton onClick={onCopyClick}>
+              <StyledExceptionCopyButton onClick={handleCopy}>
                 Copy
               </StyledExceptionCopyButton>
               <a href={searchUrl} target="_blank" rel="noopener noreferrer">

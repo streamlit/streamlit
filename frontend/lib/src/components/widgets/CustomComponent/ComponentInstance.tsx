@@ -236,11 +236,11 @@ function ComponentInstance(props: Props): ReactElement {
   const onBackMsgRef = useRef<IframeMessageHandlerProps>()
 
   // Show a log in the console as a soft-warning to the developer before showing the more disrupting warning element
-  const clearTimeoutLog = useTimeout(
+  const { clear: clearTimeoutLog } = useTimeout(
     () => LOG.warn(getWarnMessage(componentName, url)),
     COMPONENT_READY_WARNING_TIME_MS / 4
   )
-  const clearTimeoutWarningElement = useTimeout(() => {
+  const { clear: clearTimeoutWarningElement } = useTimeout(() => {
     /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
      * behavior the same as before introducing `createRoot` and after, we ensure
      * that the state updates are flushed immediately.

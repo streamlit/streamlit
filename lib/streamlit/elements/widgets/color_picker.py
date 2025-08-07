@@ -219,7 +219,6 @@ class ColorPickerMixin:
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=str(value),
