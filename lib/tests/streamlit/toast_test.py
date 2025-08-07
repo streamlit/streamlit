@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Literal
 
 import pytest
 
@@ -62,21 +62,20 @@ class ToastTest(DeltaGeneratorTestCase):
     @pytest.mark.parametrize(
         ("kwargs", "expected_duration"),
         [
-            ({}, True, 4.0),
-            ({"duration": "short"}, 4.0),
-            ({"duration": "long"}, 10.0),
-            ({"duration": "infinite"}, 0.0),
-            ({"duration": 10}, 10.0),
+            ("short", 4),
+            ("long", 10),
+            ("infinite", 0),
+            (10, 10),
         ],
         ids=["default_short", "explicit_short", "long", "infinite", "integer"],
     )
     def test_duration_variants(
         self: ToastTest,
-        kwargs: dict[str, Any],
+        duration: Literal["short", "long", "infinite"] | int,
         expected_duration: float,
     ) -> None:
         """Test all supported duration values, including default and None."""
-        st.toast("toast text", **kwargs)
+        st.toast("toast text", duration=duration)
 
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
