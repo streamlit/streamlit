@@ -130,6 +130,7 @@ describe("Opened ThemeCreatorDialog", () => {
 
   it("should copy to clipboard", async () => {
     const user = userEvent.setup()
+    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText")
 
     const props = getProps()

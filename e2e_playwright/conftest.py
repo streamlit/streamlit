@@ -563,6 +563,21 @@ def browser_type_launch_args(
     return browser_type_launch_args
 
 
+@pytest.fixture(scope="session")
+def browser_context_args(
+    browser_context_args: dict[str, Any], browser_name: str
+) -> dict[str, Any]:
+    """Fixture that adds clipboard permissions to the browser context for Chromium."""
+    # Clipboard permissions are only supported in Chromium-based browsers
+    if browser_name == "chromium":
+        return {
+            **browser_context_args,
+            "permissions": ["clipboard-read", "clipboard-write"],
+        }
+
+    return browser_context_args
+
+
 @pytest.fixture(params=["light_theme", "dark_theme"])
 def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""

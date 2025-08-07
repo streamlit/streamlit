@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, useEffect, useRef } from "react"
+import React, { memo, useCallback, useRef } from "react"
 
-import Clipboard from "clipboard"
-import { Copy as CopyIcon } from "react-feather"
+import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
 
@@ -31,39 +31,26 @@ interface Props {
 const CopyButton: React.FC<Props> = ({ text }) => {
   const theme = useEmotionTheme()
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const clipboardRef = useRef<Clipboard | null>(null)
 
-  useEffect(() => {
-    const node = buttonRef.current
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
 
-    if (node !== null) {
-      clipboardRef.current = new Clipboard(node, {
-        // Set the container so that copying also works in dialogs.
-        // Otherwise, the copy event is swallowed somehow.
-        container: node.parentElement ?? undefined,
-      })
-    }
-
-    return () => {
-      if (clipboardRef.current !== null) {
-        clipboardRef.current.destroy()
-      }
-    }
-  }, [])
+  const handleCopy = useCallback(() => {
+    copyToClipboard(text)
+  }, [copyToClipboard, text])
 
   return (
     <StyledCopyButton
       data-testid="stCodeCopyButton"
       title="Copy to clipboard"
       ref={buttonRef}
-      data-clipboard-text={text}
-      style={{
-        top: 0,
-        right: 0,
-      }}
+      onClick={handleCopy}
     >
       {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
-      <CopyIcon size={convertRemToPx(theme.iconSizes.base)} />
+      {isCopied ? (
+        <CheckIcon size={convertRemToPx(theme.iconSizes.base)} />
+      ) : (
+        <CopyIcon size={convertRemToPx(theme.iconSizes.base)} />
+      )}
     </StyledCopyButton>
   )
 }
