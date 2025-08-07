@@ -21,35 +21,6 @@ from e2e_playwright.shared.app_utils import click_button
 def test_data_frame_with_different_sizes(app: Page):
     """Test that st.dataframe should show different sizes as expected."""
 
-    # Mock scrollbar measurements to ensure consistent behavior across environments
-    # Different OS/browsers have different scrollbar widths which affects content width calculations
-    app.add_init_script("""
-        // Override scrollbar measurement to simulate overlay scrollbars (0px width)
-        const originalCreateElement = document.createElement;
-        document.createElement = function(tagName) {
-            const element = originalCreateElement.call(this, tagName);
-            if (tagName === 'div') {
-                const originalAppendChild = element.appendChild;
-                element.appendChild = function(child) {
-                    const result = originalAppendChild.call(this, child);
-                    // When measuring scrollbar width, make it appear as 0px (overlay scrollbars)
-                    if (this.style.overflow === 'scroll' && this.style.position === 'absolute') {
-                        Object.defineProperty(this, 'offsetWidth', {
-                            get: function() { return 50; },
-                            configurable: true
-                        });
-                        Object.defineProperty(child, 'offsetWidth', {
-                            get: function() { return 50; },
-                            configurable: true
-                        });
-                    }
-                    return result;
-                };
-            }
-            return element;
-        };
-    """)
-
     expected = [
         {"width": "704px", "height": "400px"},
         {"width": "250px", "height": "150px"},
@@ -62,12 +33,12 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "400px"},
         {"width": "704px", "height": "400px"},
-        {"width": "229px", "height": "400px"},
+        {"width": "226px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
         {"width": "704px", "height": "3537px"},
         {"width": "704px", "height": "142px"},
-        {"width": "229px", "height": "142px"},
+        {"width": "226px", "height": "142px"},
         {"width": "400px", "height": "300px"},
     ]
 
