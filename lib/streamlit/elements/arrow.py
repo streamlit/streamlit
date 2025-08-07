@@ -231,7 +231,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -248,7 +248,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -265,7 +265,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -331,12 +331,11 @@ class ArrowMixin:
             than the width of the parent container, Streamlit sets the dataframe
             width to match the width of the parent container.
 
-        height : int, "auto", or "content"
+        height : int or "auto"
             Desired height of the dataframe. If ``"auto"`` (default),
             Streamlit sets the height to show at most ten rows. Vertical
             scrolling within the dataframe element is enabled when the height
-            does not accommodate all rows. If ``"content"``, Streamlit sets
-            the height to show all rows without vertical scrolling. If an
+            does not accommodate all rows. If an
             integer, Streamlit sets the height of the dataframe to the
             specified number of pixels.
 
@@ -594,7 +593,10 @@ class ArrowMixin:
 
         validate_width(width, allow_content=True)
         validate_height(
-            height, allow_content=True, allow_stretch=False, additional_allowed=["auto"]
+            height,
+            allow_content=False,
+            allow_stretch=False,
+            additional_allowed=["auto"],
         )
 
         # Convert the user provided column config into the frontend compatible format:

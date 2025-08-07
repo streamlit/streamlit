@@ -294,31 +294,6 @@ describe("useTableSizer hook", () => {
       expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
     })
 
-    it("applies useContent configuration", () => {
-      const CONTAINER_WIDTH = 700
-      const widthConfig = new streamlit.WidthConfig({ useContent: true })
-
-      const { result } = renderHook(() =>
-        useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
-            useContainerWidth: true, // Should be overridden by widthConfig
-          }),
-          mockTheme,
-          10,
-          false,
-          CONTAINER_WIDTH,
-          undefined,
-          false,
-          widthConfig
-        )
-      )
-
-      // useContent should result in undefined width (auto-size)
-      expect(result.current.resizableSize.width).toEqual("100%")
-      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
-    })
-
     it("applies pixelWidth configuration", () => {
       const CONTAINER_WIDTH = 700
       const PIXEL_WIDTH = 350

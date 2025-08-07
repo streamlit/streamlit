@@ -110,36 +110,27 @@ function useTableSizer(
     minHeight
   )
 
-  // The initial height is either the default table height or the maximum
-  // (full) height based if its smaller than the default table height.
   // The reason why we have initial height is that the table itself is
   // resizable by the user. So, it starts with initial height but can be
   // resized between min and max height.
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
   const configuredHeight = getConfiguredHeight(element, heightConfig)
-  const useContentHeight = heightConfig?.useContent || false
 
   if (configuredHeight) {
     // User has explicitly configured a height (integer value)
     initialHeight = Math.max(configuredHeight, minHeight)
     maxHeight = Math.max(configuredHeight, maxHeight)
-  } else if (useContentHeight) {
-    // height="content" - show all rows without max height restriction
-    initialHeight = maxHeight
   }
   // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
     // The maxHeight and height should not be larger than container height
-    // UNLESS we're using height="content" which should show all rows
-    if (!useContentHeight) {
-      initialHeight = Math.min(initialHeight, containerHeight)
-      maxHeight = Math.min(maxHeight, containerHeight)
-    }
+    initialHeight = Math.min(initialHeight, containerHeight)
+    maxHeight = Math.min(maxHeight, containerHeight)
 
-    if (!configuredHeight && !useContentHeight) {
+    if (!configuredHeight) {
       // If no explicit height is set, set height to max height (fullscreen mode)
       initialHeight = maxHeight
     }

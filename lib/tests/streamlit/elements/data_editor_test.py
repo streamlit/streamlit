@@ -1028,14 +1028,6 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # height="auto" is the default and shouldn't set heightConfig
         assert el.height_config.WhichOneof("height_spec") is None
 
-    def test_height_content(self):
-        """Test that height='content' sets heightConfig correctly."""
-        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="content")
-
-        el = self.get_delta_from_queue().new_element
-        assert el.height_config.WhichOneof("height_spec") == "use_content"
-        assert el.height_config.use_content is True
-
     def test_height_integer(self):
         """Test that integer height sets heightConfig correctly."""
         st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height=500)

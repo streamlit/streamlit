@@ -69,11 +69,6 @@ class ArrowDataFrameDimensionsTest(DeltaGeneratorTestCase):
                 (HeightConfigFields.PIXEL_HEIGHT, "pixel_height", 300),
             ),
             (
-                {"height": "content"},
-                (WidthConfigFields.USE_STRETCH, "use_stretch", True),
-                (HeightConfigFields.USE_CONTENT, "use_content", True),
-            ),
-            (
                 {"height": "auto"},
                 (WidthConfigFields.USE_STRETCH, "use_stretch", True),
                 (None, None, None),  # auto doesn't set height config
@@ -83,11 +78,6 @@ class ArrowDataFrameDimensionsTest(DeltaGeneratorTestCase):
                 {"width": 200, "height": 250},
                 (WidthConfigFields.PIXEL_WIDTH, "pixel_width", 200),
                 (HeightConfigFields.PIXEL_HEIGHT, "pixel_height", 250),
-            ),
-            (
-                {"width": "content", "height": "content"},
-                (WidthConfigFields.USE_CONTENT, "use_content", True),
-                (HeightConfigFields.USE_CONTENT, "use_content", True),
             ),
         ]
     )

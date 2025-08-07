@@ -589,7 +589,7 @@ class DataEditorMixin:
         data: EditableData,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -610,7 +610,7 @@ class DataEditorMixin:
         data: Any,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -631,7 +631,7 @@ class DataEditorMixin:
         data: DataTypes,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto", "content"] = "auto",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -678,12 +678,11 @@ class DataEditorMixin:
             than the width of the parent container, Streamlit sets the data editor
             width to match the width of the parent container.
 
-        height : int, "auto", or "content"
+        height : int or "auto"
             Desired height of the data editor. If ``"auto"`` (default),
             Streamlit sets the height to show at most ten rows. Vertical
             scrolling within the data editor is enabled when the height
-            does not accommodate all rows. If ``"content"``, Streamlit sets
-            the height to show all rows without vertical scrolling. If an
+            does not accommodate all rows. If an
             integer, Streamlit sets the height of the data editor to the
             specified number of pixels.
 
@@ -862,7 +861,10 @@ class DataEditorMixin:
 
         validate_width(width, allow_content=True)
         validate_height(
-            height, allow_content=True, allow_stretch=False, additional_allowed=["auto"]
+            height,
+            allow_content=False,
+            allow_stretch=False,
+            additional_allowed=["auto"],
         )
 
         check_widget_policies(

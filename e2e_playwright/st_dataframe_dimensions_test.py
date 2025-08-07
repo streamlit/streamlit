@@ -36,22 +36,21 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "229px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
-        {"width": "704px", "height": "3537px"},
         {"width": "704px", "height": "142px"},
         {"width": "229px", "height": "142px"},
         {"width": "400px", "height": "300px"},
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(18)
+    expect(dataframe_elements).to_have_count(17)
 
     for i, element in enumerate(dataframe_elements.all()):
         expected_width = expected[i]["width"]
         expected_height = expected[i]["height"]
 
-        # Content width dataframes (indices 11 and 16) can vary between browsers/environments
+        # Content width dataframes (indices 11 and 15) can vary between browsers/environments
         # Chromium/Linux CI: 226px, Firefox/WebKit: 229px
-        if i in [11, 16]:
+        if i in [11, 15]:
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
 
@@ -78,13 +77,13 @@ def test_data_frame_resizing(app: Page):
 
 def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe should render as expected with width and height."""
-    stretch_dataframe = app.get_by_test_id("stDataFrame").nth(15)
+    stretch_dataframe = app.get_by_test_id("stDataFrame").nth(14)
     assert_snapshot(stretch_dataframe, name="stretch_dataframe")
 
-    content_dataframe_element = app.get_by_test_id("stDataFrame").nth(16)
+    content_dataframe_element = app.get_by_test_id("stDataFrame").nth(15)
     assert_snapshot(content_dataframe_element, name="content_dataframe")
 
-    fixed_dimensions_dataframe_element = app.get_by_test_id("stDataFrame").nth(17)
+    fixed_dimensions_dataframe_element = app.get_by_test_id("stDataFrame").nth(16)
     assert_snapshot(
         fixed_dimensions_dataframe_element, name="fixed_dimensions_dataframe"
     )

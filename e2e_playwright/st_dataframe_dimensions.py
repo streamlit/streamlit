@@ -45,8 +45,6 @@ if st.button("Resize dataframe"):
 else:
     st.dataframe(small_df, width=200, height=100)
 
-st.dataframe(df, height="content", width="content")
-
 short_dataframe = pd.DataFrame(np.random.randn(3, 3))
 st.dataframe(short_dataframe, width="stretch", key="stretch_dataframe")
 st.dataframe(short_dataframe, width="content", key="content_dataframe")
