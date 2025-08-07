@@ -21,25 +21,32 @@ from e2e_playwright.shared.app_utils import click_button
 def test_data_frame_with_different_sizes(app: Page):
     """Test that st.dataframe should show different sizes as expected."""
 
-    # Mock the document font size to ensure consistent behavior across environments
-    # This prevents content width calculations from varying due to browser font size differences
+    # Mock scrollbar measurements to ensure consistent behavior across environments
+    # Different OS/browsers have different scrollbar widths which affects content width calculations
     app.add_init_script("""
-        // Mock getComputedStyle to return consistent 16px font size for document element
-        const originalGetComputedStyle = window.getComputedStyle;
-        window.getComputedStyle = function(element, pseudoElement) {
-            const computedStyle = originalGetComputedStyle.call(this, element, pseudoElement);
-            if (element === document.documentElement) {
-                // Return a proxy that overrides fontSize property
-                return new Proxy(computedStyle, {
-                    get(target, prop) {
-                        if (prop === 'fontSize') {
-                            return '16px';
-                        }
-                        return target[prop];
+        // Override scrollbar measurement to simulate overlay scrollbars (0px width)
+        const originalCreateElement = document.createElement;
+        document.createElement = function(tagName) {
+            const element = originalCreateElement.call(this, tagName);
+            if (tagName === 'div') {
+                const originalAppendChild = element.appendChild;
+                element.appendChild = function(child) {
+                    const result = originalAppendChild.call(this, child);
+                    // When measuring scrollbar width, make it appear as 0px (overlay scrollbars)
+                    if (this.style.overflow === 'scroll' && this.style.position === 'absolute') {
+                        Object.defineProperty(this, 'offsetWidth', {
+                            get: function() { return 50; },
+                            configurable: true
+                        });
+                        Object.defineProperty(child, 'offsetWidth', {
+                            get: function() { return 50; },
+                            configurable: true
+                        });
                     }
-                });
+                    return result;
+                };
             }
-            return computedStyle;
+            return element;
         };
     """)
 
