@@ -25,9 +25,10 @@ st.toast(
 
 st.toast("Your edited image was saved!", icon=":material/cabin:")
 
-st.toast("I am a toast with a short duration", duration=2)
-st.toast("I am a toast with a long duration", duration="long")
-st.toast("I am a persistent toast", duration="infinite")
+if st.button("Show duration toasts"):
+    st.toast("I am a toast with a short duration", duration=2)
+    st.toast("I am a toast with a long duration", duration="long")
+    st.toast("I am a persistent toast", duration="infinite")
 
 
 @st.dialog("Streamlit Toast Notification")
