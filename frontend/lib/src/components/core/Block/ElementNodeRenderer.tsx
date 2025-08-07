@@ -324,7 +324,12 @@ const RawElementNodeRenderer = (
       )
 
     case "metric":
-      return <Metric element={node.element.metric as MetricProto} />
+      return (
+        <Metric
+          element={node.element.metric as MetricProto}
+          {...elementProps}
+        />
+      )
 
     case "html":
       return (

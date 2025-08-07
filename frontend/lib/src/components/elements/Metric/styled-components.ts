@@ -34,10 +34,26 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
     ...(showBorder && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
+      overflow: "hidden",
+    }),
+  })
+)
+
+export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
+  ({ theme, showBorder }) => ({
+    ...(showBorder && {
       padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
     }),
   })
 )
+
+export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
+  ({ theme, showBorder }) => ({
+    marginTop: showBorder ? undefined : theme.spacing.lg,
+    marginBottom: showBorder ? theme.spacing.twoXL : undefined,
+  })
+)
+
 export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions
 }
@@ -84,7 +100,7 @@ export interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
 }
 
-const getMetricColor = (
+export const getMetricColor = (
   theme: EmotionTheme,
   color: MetricProto.MetricColor
 ): string => {
