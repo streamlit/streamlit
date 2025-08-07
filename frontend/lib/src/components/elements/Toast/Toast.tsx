@@ -169,12 +169,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
     // to reference that toast for update/removal
     const newKey = toaster.info(toastContent, {
       overrides: { ...styleOverrides },
-      autoHideDuration:
-        duration === 0 || duration === Infinity
-          ? 0
-          : notNullOrUndefined(duration)
-            ? duration * 1000
-            : 4000,
+      autoHideDuration: notNullOrUndefined(duration) ? duration * 1000 : 4000,
     })
     setToastKey(newKey)
 
@@ -189,7 +184,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
 
     // Array must be empty to run as mount/cleanup
     // TODO: Update to match React best practices
-
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

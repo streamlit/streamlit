@@ -27,7 +27,7 @@ message Toast {
     string icon = 2;
 
     // The time to display the toast message in seconds.
-    // If not set, the toast will be displayed for 4.0 seconds. A value of 0
+    // If not set, the toast will be displayed for 4 seconds. A value of 0
     // indicates that the toast should not be automatically dismissed.
-    optional double duration = 3;
+    optional int32 duration = 3;
 }
