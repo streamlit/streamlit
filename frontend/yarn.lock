@@ -3582,7 +3582,7 @@ __metadata:
     iframe-resizer: "npm:4.3.11"
     immer: "npm:^10.1.1"
     jsdom: "npm:24.1.3"
-    lighthouse: "npm:^12.8.0"
+    lighthouse: "npm:^12.8.1"
     lodash: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
@@ -13726,6 +13726,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lighthouse-logger@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "lighthouse-logger@npm:2.0.2"
+  dependencies:
+    debug: "npm:^4.4.1"
+    marky: "npm:^1.2.2"
+  checksum: 10c0/bbce3939a0359d5f1f84b7cc623f1ee3daf5a28e55b7b9bf7d461d906121e64fa6de290c53bd6bdd6068a67442fa39a7deb6f61da2e0e1721c39ec4cc80876b8
+  languageName: node
+  linkType: hard
+
 "lighthouse-stack-packs@npm:1.12.2":
   version: 1.12.2
   resolution: "lighthouse-stack-packs@npm:1.12.2"
@@ -13733,9 +13743,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lighthouse@npm:^12.8.0":
-  version: 12.8.0
-  resolution: "lighthouse@npm:12.8.0"
+"lighthouse@npm:^12.8.1":
+  version: 12.8.1
+  resolution: "lighthouse@npm:12.8.1"
   dependencies:
     "@paulirish/trace_engine": "npm:0.0.57"
     "@sentry/node": "npm:^9.28.1"
@@ -13749,7 +13759,7 @@ __metadata:
     intl-messageformat: "npm:^10.5.3"
     jpeg-js: "npm:^0.4.4"
     js-library-detector: "npm:^6.7.0"
-    lighthouse-logger: "npm:^2.0.1"
+    lighthouse-logger: "npm:^2.0.2"
     lighthouse-stack-packs: "npm:1.12.2"
     lodash-es: "npm:^4.17.21"
     lookup-closest-locale: "npm:6.2.0"
@@ -13769,7 +13779,7 @@ __metadata:
     chrome-debug: core/scripts/manual-chrome-launcher.js
     lighthouse: cli/index.js
     smokehouse: cli/test/smokehouse/frontends/smokehouse-bin.js
-  checksum: 10c0/5f46f9de1d6a2d0189ce46087040ef7ef99bd988215e013b0c4dd74e2367af12526e35fded6ab44ecbf8124725f5b394baa8520fe81ec85c4b91df2c01f403de
+  checksum: 10c0/3e4e364508d145add71f6a9603e26ea45cbc0afd4d9b26ad5056ebe0f984680d29ab7c484b0d6fcc7bca1aafdc414b9a38126041fcb7f38b97f2b3128e1f24af
   languageName: node
   linkType: hard
 
