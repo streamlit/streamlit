@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { assertNever } from "~lib/util/assertNever"
 import { AcceptFileValue } from "~lib/util/utils"
 
 /**
@@ -21,9 +22,9 @@ import { AcceptFileValue } from "~lib/util/utils"
  * Handles special attributes needed for directory uploads.
  */
 export const configureFileInputProps = (
-  inputProps: Record<string, any>,
+  inputProps: Record<string, unknown>,
   acceptFile: AcceptFileValue
-): Record<string, any> => {
+): Record<string, unknown> => {
   // Apply webkitdirectory attribute for directory uploads
   if (acceptFile === AcceptFileValue.Directory) {
     return {
@@ -64,11 +65,15 @@ export const isFileTypeAllowed = (
  */
 export const getUploadDescription = (acceptFile: AcceptFileValue): string => {
   switch (acceptFile) {
+    case AcceptFileValue.None:
+      return "a file"
+    case AcceptFileValue.Single:
+      return "a file"
     case AcceptFileValue.Multiple:
       return "files"
     case AcceptFileValue.Directory:
       return "a directory"
     default:
-      return "a file"
+      return assertNever(acceptFile)
   }
 }
