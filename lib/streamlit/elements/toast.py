@@ -93,7 +93,6 @@ class ToastMixin:
         >>> import streamlit as st
         >>>
         >>> st.toast('Your edited image was saved!', icon='😍')
-        >>> st.toast('This toast will disappear in 10 seconds.', duration=10)
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
