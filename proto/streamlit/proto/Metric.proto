@@ -26,14 +26,14 @@ message Metric {
   string body = 2;
   string delta = 3;
 
-  enum MetricDirection{
+  enum MetricDirection {
     DOWN = 0;
     UP = 1;
     NONE = 2;
   }
   MetricDirection direction = 4;
 
-  enum MetricColor{
+  enum MetricColor {
     RED = 0;
     GREEN = 1;
     GRAY = 2;
@@ -44,7 +44,7 @@ message Metric {
   bool show_border = 8;
   repeated double chart_data = 9;
 
-  enum ChartType{
+  enum ChartType {
     LINE = 0;
     BAR = 1;
     AREA = 2;

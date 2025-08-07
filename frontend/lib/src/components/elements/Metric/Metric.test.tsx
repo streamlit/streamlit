@@ -61,7 +61,7 @@ describe("Metric element", () => {
     const props = getProps()
     render(<Metric {...props} />)
     const metricElement = screen.getByTestId("stMetric")
-    expect(metricElement).toBeInTheDocument()
+    expect(metricElement).toBeVisible()
     expect(metricElement).toHaveClass("stMetric")
   })
 
@@ -103,7 +103,7 @@ describe("Metric element", () => {
   it("renders direction icon based on props - red/up", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon-Up")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Up")).toBeVisible()
   })
 
   it("renders direction icon based on props - green/down", () => {
@@ -112,7 +112,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon-Down")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Down")).toBeVisible()
   })
 
   it("renders no text and icon based on props", () => {
@@ -197,7 +197,7 @@ describe("Metric element", () => {
       })
       render(<Metric {...props} />)
 
-      expect(screen.getByTestId("stMetricChart")).toBeInTheDocument()
+      expect(screen.getByTestId("stMetricChart")).toBeVisible()
     })
 
     it("does not render chart when chartData is empty", () => {
