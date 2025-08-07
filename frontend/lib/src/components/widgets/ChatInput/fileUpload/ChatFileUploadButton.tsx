@@ -18,12 +18,12 @@ import React, { memo } from "react"
 
 import { AttachFile } from "@emotion-icons/material-outlined"
 
-import { EmotionTheme } from "~lib/theme"
-import Icon from "~lib/components/shared/Icon"
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { AcceptFileValue } from "~lib/util/utils"
+import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { EmotionTheme } from "~lib/theme"
+import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   StyledFileUploadButton,

@@ -45,8 +45,9 @@ message Block {
 
   message Vertical {
     bool border = 1;
-    // Height of the container, activates scrolling
-    uint32 height = 2;
+    // DEPRECATED: We use height_config on the top-level which is shared.
+    // with other Block types.
+    uint32 height = 2 [deprecated = true];
   }
 
   message Horizontal {
@@ -55,7 +56,6 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
-
     streamlit.GapConfig gap_config = 2;
     float scale = 3;
 
@@ -66,6 +66,24 @@ message Block {
     }
     Direction direction = 4;
     bool wrap = 5;
+
+    enum Justify {
+      JUSTIFY_UNDEFINED = 0;
+      JUSTIFY_START = 1;
+      JUSTIFY_END = 2;
+      JUSTIFY_CENTER = 3;
+      SPACE_BETWEEN = 4;
+    }
+    Justify justify = 7;
+
+    enum Align {
+      ALIGN_UNDEFINED = 0;
+      ALIGN_START = 1;
+      ALIGN_END = 2;
+      ALIGN_CENTER = 3;
+      STRETCH = 4;
+    }
+    Align align = 8;
   }
 
   message Column {
@@ -101,6 +119,9 @@ message Block {
     bool dismissible = 2;
     DialogWidth width = 3;
     optional bool is_open = 4;
+
+    // If id is set, dismissal of the dialog will trigger a rerun.
+    string id = 5;
   }
 
   message Form {
@@ -119,7 +140,8 @@ message Block {
 
   message Popover {
     string label = 1;
-    bool use_container_width = 2;
+    // DEPRECATED: We use widthConfig on the top-level which is shared.
+    bool use_container_width = 2 [deprecated = true];
     string help = 3;
     bool disabled = 4;
     string icon = 5;

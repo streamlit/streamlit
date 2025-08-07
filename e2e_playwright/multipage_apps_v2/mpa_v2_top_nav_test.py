@@ -56,17 +56,21 @@ def test_mobile_fallback_to_sidebar(app: Page):
 
     wait_for_app_run(app)
 
-    # On mobile, should show sidebar, not top nav
+    # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
-    # Wait for sidebar to expand by checking if links are visible
+    # Expand the sidebar to access navigation
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+
+    # Wait for sidebar to expand and nav links to be visible
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links.first).to_be_visible()
 
-    # The sidebar might have overflow or positioning issues on mobile
-    # Try clicking the link directly without worrying about viewport
-    nav_links.nth(2).click(force=True)
+    # Test navigation functionality
+    nav_links.nth(2).click()
     wait_for_app_run(app)
 
     # Verify content updated - be specific
@@ -123,6 +127,51 @@ def test_top_nav_with_sections(app: Page):
 
     # Verify navigation worked - check the header
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 2")).to_be_visible()
+
+
+def test_top_nav_with_single_section(app: Page):
+    """Test top navigation with a single section containing 3 pages."""
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    # Enable single section test mode
+    click_checkbox(app, "Test Single Section (3 pages)")
+    wait_for_app_run(app)
+
+    # When a single section is used, the section name should be in the top nav
+    section_trigger = app.get_by_text("My Section").first
+    expect(section_trigger).to_be_visible()
+
+    # Click the section to open dropdown/popover
+    section_trigger.click()
+
+    # Wait for all 3 pages to become visible in the popover
+    page1_in_popover = app.get_by_role("link", name="Page 1")
+    page2_in_popover = app.get_by_role("link", name="Page 2")
+    page3_in_popover = app.get_by_role("link", name="Page 3")
+
+    expect(page1_in_popover).to_be_visible()
+    expect(page2_in_popover).to_be_visible()
+    expect(page3_in_popover).to_be_visible()
+
+    # Navigate to page 3 to verify navigation works
+    page3_in_popover.click()
+    wait_for_app_run(app)
+
+    # Verify navigation worked - check the header
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 3")).to_be_visible()
+
+    # Click the section again to verify it still works after navigation
+    section_trigger.click()
+
+    # Verify pages are still accessible
+    expect(page1_in_popover).to_be_visible()
+
+    # Navigate back to page 1
+    page1_in_popover.click()
+    wait_for_app_run(app)
+
+    # Verify we're back on page 1
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
 
 
 def test_hidden_navigation_mode(app: Page):
@@ -211,6 +260,37 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     expect(popover).to_be_visible()
     assert_snapshot(popover, name="st_navigation-top_nav_section_popover")
 
+    # Test single section
+    # First uncheck the Test Sections checkbox
+    click_checkbox(app, "Test Sections")
+    wait_for_app_run(app)
+
+    # Enable single section test
+    click_checkbox(app, "Test Single Section (3 pages)")
+    wait_for_app_run(app)
+
+    # Take screenshot of single section in nav
+    nav_area = app.locator("header").first
+    assert_snapshot(nav_area, name="st_navigation-top_nav_single_section")
+
+    # Click the section to open popover
+    single_section_trigger = app.get_by_text("My Section").first
+    expect(single_section_trigger).to_be_visible()
+    single_section_trigger.click()
+
+    # Wait for popover with 3 pages
+    page3_in_popover = app.get_by_role("link", name="Page 3")
+    expect(page3_in_popover).to_be_visible()
+
+    # Take screenshot of single section popover
+    single_section_popover = app.get_by_test_id("stTopNavSection").filter(
+        has_text="Page 1"
+    )
+    expect(single_section_popover).to_be_visible()
+    assert_snapshot(
+        single_section_popover, name="st_navigation-top_nav_single_section_popover"
+    )
+
 
 def test_mobile_sidebar_overlay_visual(
     app: Page, assert_snapshot: ImageCompareFunction
@@ -221,11 +301,19 @@ def test_mobile_sidebar_overlay_visual(
 
     wait_for_app_run(app)
 
-    # Verify sidebar is visible on mobile
+    # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
-    # Verify navigation has moved into the sidebar
+    # Take screenshot of initial collapsed state
+    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
+
+    # Expand the sidebar to test overlay behavior
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+
+    # Wait for sidebar to expand and verify navigation is visible
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
@@ -242,9 +330,6 @@ def test_mobile_sidebar_overlay_visual(
     # Wait for sidebar to collapse
     # The sidebar aria-expanded attribute should be false
     expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-    # Take screenshot of collapsed state showing more content visible
-    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
 
     # Test navigation interaction
     # Expand sidebar again using the expand button in the header

@@ -949,6 +949,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
+                "chartSequentialColors",
             }
             and option_val is not None
         ):
@@ -1111,6 +1112,39 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
+                    exc_info=e,
+                )
+
+    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
+    # If chartSequentialColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_sequential_colors, str):
+        try:
+            chart_sequential_colors = json.loads(chart_sequential_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartSequentialColors config option: %s.",
+                chart_sequential_colors,
+                exc_info=e,
+            )
+            chart_sequential_colors = None
+
+    if chart_sequential_colors is not None:
+        # Check that the list has 10 color values
+        if len(chart_sequential_colors) != 10:
+            _LOGGER.error(
+                "Config theme.chartSequentialColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_sequential_colors),
+            )
+        for color in chart_sequential_colors:
+            try:
+                msg.chart_sequential_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartSequentialColors config option: %s.",
                     color,
                     exc_info=e,
                 )

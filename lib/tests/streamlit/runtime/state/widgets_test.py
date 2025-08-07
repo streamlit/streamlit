@@ -16,7 +16,6 @@
 
 import inspect
 import unittest
-from dataclasses import dataclass
 from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
@@ -319,7 +318,7 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key", form_id=None
+            "button", label="the label", user_key="my_key", dg=None
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
@@ -357,7 +356,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["form_id", "user_key", "dg"]:
+        for kwarg in ["user_key", "dg"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -388,27 +387,11 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         """Test that active_script_hash and form ID are always included in
         element ID calculation."""
 
-        expected_form_id: str | None = "form_id"
-
-        @dataclass
-        class MockForm:
-            form_id = expected_form_id
-
         with patch(
             "streamlit.elements.lib.utils._compute_element_id",
             wraps=_compute_element_id,
         ) as patched_compute_element_id:
-            # Some elements cannot be used in a form:
-            if element_name not in ["button", "chat_input", "download_button"]:
-                with patch(
-                    "streamlit.elements.lib.form_utils._current_form",
-                    return_value=MockForm(),
-                ):
-                    widget_func()
-            else:
-                widget_func()
-                expected_form_id = None
-
+            widget_func()
         # Get call kwargs from patched_compute_element_id
         call_kwargs = patched_compute_element_id.call_args[1]
         assert "active_script_hash" in call_kwargs, (
@@ -416,10 +399,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         )
         "in element ID calculation."
 
-        # Elements that don't set a form ID
-        assert call_kwargs.get("form_id") == expected_form_id, (
-            "form_id is expected to be included in element ID calculation."
-        )
+        # Some elements cannot be used in a form
+        if element_name not in ["button", "chat_input", "download_button"]:
+            # For all other check that form_id is set:
+            assert call_kwargs.get("form_id") == "", (
+                "form_id is expected to be included in element ID calculation."
+            )
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
@@ -492,6 +477,10 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
+        # use_container_width is being deprecated and is not used for element ID calculation
+        if "use_container_width" in expected_sig:
+            del expected_sig["use_container_width"]
+
         if widget_func == st.button:
             expected_sig["is_form_submitter"] = ANY
         # we exclude `data` for `st.download_button` here and not
@@ -514,6 +503,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 default=[],
                 click_mode=0,
                 style="",
+                label="",
+                help="",  # noqa: A006
                 width="content": st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
@@ -521,27 +512,31 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.pills does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
                 style="",
-                width="content": st.pills("some_label", options, disabled=disabled),
+                key="",
+                help="",  # noqa: A006
+                width="content": st.pills(label, options, disabled=disabled),
                 "button_group",
             ),
             (
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.feedback does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
                 style="",
+                key="",
+                help="",  # noqa: A006
                 width="content": st.segmented_control(
-                    "some_label", options, disabled=disabled
+                    label, options, disabled=disabled
                 ),
                 "button_group",
             ),
@@ -591,6 +586,19 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         # argument shouldn't affect a widget's ID.
         with pytest.raises(errors.DuplicateWidgetID):
             st.data_editor(data=[], disabled=True)
+
+    def test_duplicate_id_error_uses_element_type(self) -> None:
+        """Test that duplicate ID error uses element_type when style is None."""
+        with pytest.raises(
+            errors.StreamlitDuplicateElementId,
+            match="There are multiple `button` elements with the same",
+        ):
+            compute_and_register_element_id(
+                element_type="button", user_key=None, dg=None
+            )
+            compute_and_register_element_id(
+                element_type="button", user_key=None, dg=None
+            )
 
 
 class RegisterWidgetsTest(DeltaGeneratorTestCase):

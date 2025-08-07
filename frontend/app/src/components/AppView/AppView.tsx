@@ -19,11 +19,25 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
-  useRef,
   useState,
 } from "react"
 
+import EventContainer from "@streamlit/app/src/components/EventContainer"
+import Header from "@streamlit/app/src/components/Header"
+import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
+import { LogoComponent } from "@streamlit/app/src/components/Logo"
+import {
+  shouldShowNavigation,
+  TopNav,
+} from "@streamlit/app/src/components/Navigation"
+import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import {
+  getSavedSidebarState,
+  saveSidebarState,
+  shouldCollapse,
+} from "@streamlit/app/src/components/Sidebar/utils"
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
+import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
   BlockNode,
@@ -36,17 +50,9 @@ import {
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
-import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
-import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
-import EventContainer from "@streamlit/app/src/components/EventContainer"
-import Header from "@streamlit/app/src/components/Header"
-import { TopNav } from "@streamlit/app/src/components/Navigation"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
 
+import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -60,7 +66,6 @@ import {
   StyledSidebarBlockContainer,
   StyledStickyBottomContainer,
 } from "./styled-components"
-import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
 export interface AppViewProps {
   elements: AppRoot
@@ -154,14 +159,15 @@ function AppView(props: AppViewProps): ReactElement {
   const hasEventElements = !elements.event.isEmpty
   const hasBottomElements = !elements.bottom.isEmpty
 
-  const [showSidebarOverride, setShowSidebarOverride] = useState(() => false)
+  const [showSidebarOverride, setShowSidebarOverride] = useState(false)
 
   const showSidebar =
-    hasSidebarElements ||
-    (navigationPosition === Navigation.Position.SIDEBAR &&
-      !hideSidebarNav &&
-      appPages.length > 1) ||
-    showSidebarOverride
+    innerWidth > 0 &&
+    (hasSidebarElements ||
+      (navigationPosition === Navigation.Position.SIDEBAR &&
+        !hideSidebarNav &&
+        appPages.length > 1) ||
+      showSidebarOverride)
 
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
@@ -204,48 +210,59 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
-    shouldCollapse(
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
+    const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
+    if (savedSidebarState !== null) {
+      // User has adjusted the sidebar, respect it
+      return savedSidebarState
+    }
+
+    // No saved preference, use initial config + screen size logic
+    return shouldCollapse(
       initialSidebarState,
       parseInt(activeTheme.emotion.breakpoints.md, 10),
       innerWidth
     )
+  })
+
+  useExecuteWhenChanged(() => {
+    if (innerWidth > 0 && showSidebar) {
+      const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
+
+      if (savedSidebarState !== null) {
+        // User has adjusted the sidebar, respect it
+        setSidebarIsCollapsed(savedSidebarState)
+      } else {
+        setSidebarIsCollapsed(
+          shouldCollapse(
+            initialSidebarState,
+            parseInt(activeTheme.emotion.breakpoints.md, 10),
+            innerWidth
+          )
+        )
+      }
+    }
+  }, [
+    innerWidth,
+    showSidebar,
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    pageLinkBaseUrl,
+  ])
+
+  const setSidebarCollapsedWithOptionalPersistence = useCallback(
+    (isCollapsed: boolean, shouldPersist: boolean = true) => {
+      setSidebarIsCollapsed(isCollapsed)
+      if (shouldPersist) {
+        saveSidebarState(pageLinkBaseUrl, isCollapsed)
+      }
+    },
+    [pageLinkBaseUrl]
   )
 
-  const hasInitializedWidthRef = useRef(false)
-
-  // Initialize sidebar state once after stable width is achieved
-  useLayoutEffect(() => {
-    if (!hasInitializedWidthRef.current && innerWidth > 0) {
-      setSidebarIsCollapsed(
-        shouldCollapse(
-          initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10),
-          innerWidth
-        )
-      )
-      hasInitializedWidthRef.current = true
-    }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
-
-  // Handle updates to initialSidebarState after set_page_config
-  useExecuteWhenChanged(() => {
-    if (!hasInitializedWidthRef.current) {
-      return
-    }
-
-    setSidebarIsCollapsed(
-      shouldCollapse(
-        initialSidebarState,
-        parseInt(activeTheme.emotion.breakpoints.md, 10),
-        innerWidth
-      )
-    )
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
-
   const toggleSidebar = useCallback(() => {
-    setSidebarIsCollapsed(prev => !prev)
-  }, [])
+    setSidebarCollapsedWithOptionalPersistence(!isSidebarCollapsed, true)
+  }, [setSidebarCollapsedWithOptionalPersistence, isSidebarCollapsed])
 
   // logo component to be used in the header when sidebar is closed
   const logoElement = appLogo ? (
@@ -262,14 +279,12 @@ function AppView(props: AppViewProps): ReactElement {
   // Only transparent when no content is shown at all
   const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
-  const shouldShowNavigation =
-    navigationPosition === Navigation.Position.TOP && appPages.length > 1
+  const shouldShowTopNav =
+    navigationPosition === Navigation.Position.TOP &&
+    shouldShowNavigation(appPages, navSections)
 
   const hasHeaderUserContent =
-    shouldShowLogo ||
-    shouldShowExpandButton ||
-    shouldShowNavigation ||
-    showToolbar
+    shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -293,7 +308,7 @@ function AppView(props: AppViewProps): ReactElement {
               hideSidebarNav={hideSidebarNav}
               expandSidebarNav={expandSidebarNav}
               isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={setSidebarIsCollapsed}
+              onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
             >
               <StyledSidebarBlockContainer>
                 {renderBlock(elements.sidebar)}
@@ -308,7 +323,7 @@ function AppView(props: AppViewProps): ReactElement {
             onToggleSidebar={toggleSidebar}
             navigation={
               navigationPosition === Navigation.Position.TOP &&
-              appPages.length > 1 ? (
+              shouldShowNavigation(appPages, navSections) ? (
                 <TopNav
                   endpoints={endpoints}
                   pageLinkBaseUrl={pageLinkBaseUrl}
@@ -336,8 +351,9 @@ function AppView(props: AppViewProps): ReactElement {
                 showPadding={showPadding}
                 hasBottom={hasBottomElements}
                 hasHeader={hasHeaderUserContent}
+                hasSidebar={showSidebar}
                 showToolbar={showToolbar}
-                hasTopNav={shouldShowNavigation}
+                hasTopNav={shouldShowTopNav}
                 embedded={embedded}
               >
                 {renderBlock(elements.main)}

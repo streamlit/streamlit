@@ -22,8 +22,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
 import type { StreamlitWindowObject } from "@streamlit/utils"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -137,7 +137,8 @@ export const isColor = (strColor: string): boolean => {
 
 /**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
- * This is generally used to keep configured font sizes to round values.
+ * This is used to keep configured font sizes to (generally) round values for dialogs.
+ * See `convertFontSizes` in `StreamlitMarkdown/styled-components.ts`
  * (ex: 0.78 -> 0.75)
  */
 export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
@@ -325,8 +326,7 @@ const convertHeadingFontSizeToRem = (
   } else if (validatedSize && validatedSize.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseFloat(validatedSize) / baseFontSize
-    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
-    return `${roundedRemValue}rem`
+    return `${remValue}rem`
   }
 
   // If invalid, return undefined
@@ -412,15 +412,22 @@ const setFontWeights = (
     // The extrabold weight is set to the baseFontWeight + 300
     fontWeightOverrides.extrabold = baseFontWeight + 300
 
-    // Set fallback for code's font weight based on configured baseFontWeight
+    // Set fallback for code font weights based on configured baseFontWeight
     fontWeightOverrides.code = baseFontWeight
+    fontWeightOverrides.codeBold = baseFontWeight + 200
+    fontWeightOverrides.codeExtraBold = baseFontWeight + 300
   }
 
   if (
     codeFontWeight &&
-    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 900)
+    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 600)
   ) {
+    // Set each of the code weights based on the base code font weight provided
     fontWeightOverrides.code = codeFontWeight
+    // The bold weight is set to the codeFontWeight + 200
+    fontWeightOverrides.codeBold = codeFontWeight + 200
+    // The extrabold weight is set to the codeFontWeight + 300
+    fontWeightOverrides.codeExtraBold = codeFontWeight + 300
   }
 
   if (headingFontWeights) {
@@ -446,15 +453,19 @@ const setFontWeights = (
 }
 
 /**
- * Helper function to validate each of the colors passed in the categorical colors config
- * @param colors: the categorical colors config passed in (array of strings)
+ * Helper function to validate each of the colors passed in the chart colors configs
+ * @param configName: the name of the config ("chartCategoricalColors", "chartSequentialColors" or "chartDivergingColors")
+ * @param colors: the colors config passed in (array of strings)
  * @returns the valid colors from the config
  */
-const validateCategoricalColors = (colors: string[]): string[] => {
+const validateChartColors = (
+  configName: string,
+  colors: string[]
+): string[] => {
   return (
     colors
       // parseColor returns undefined for invalid colors
-      .map(color => parseColor(color, "chartCategoricalColors"))
+      .map(color => parseColor(color, configName))
       // Filter any invalid colors
       .filter((color): color is string => color !== undefined)
   )
@@ -480,8 +491,9 @@ export const createEmotionTheme = (
     codeFont,
     showSidebarBorder,
     linkUnderline,
-    // Since categorical colors passed as array, handle separate from parsedColors
+    // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
+    chartSequentialColors,
     ...customColors
   } = themeInput
 
@@ -568,13 +580,35 @@ export const createEmotionTheme = (
     chartCategoricalColors.length > 0
   ) {
     // Validate the categorical colors config
-    const validatedCategoricalColors = validateCategoricalColors(
+    const validatedCategoricalColors = validateChartColors(
+      "chartCategoricalColors",
       chartCategoricalColors
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
       conditionalOverrides.colors.chartCategoricalColors =
         validatedCategoricalColors
+    }
+  }
+
+  if (
+    notNullOrUndefined(chartSequentialColors) &&
+    chartSequentialColors.length > 0
+  ) {
+    // Validate the sequential colors config
+    const validatedSequentialColors = validateChartColors(
+      "chartSequentialColors",
+      chartSequentialColors
+    )
+    // Set the validated colors, sequential colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedSequentialColors.length === 10) {
+      conditionalOverrides.colors.chartSequentialColors =
+        validatedSequentialColors
+    } else {
+      LOG.warn(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
     }
   }
 

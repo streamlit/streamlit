@@ -27,40 +27,41 @@ import React, {
   useState,
 } from "react"
 
-import { type Element, type Root } from "hast"
-import xxhash from "xxhashjs"
 import slugify from "@sindresorhus/slugify"
-import { visit } from "unist-util-visit"
+import { type Element, type Root } from "hast"
+import omit from "lodash/omit"
+import once from "lodash/once"
+import { findAndReplace } from "mdast-util-find-and-replace"
+import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
 } from "react-markdown"
-import { PluggableList } from "unified"
-import once from "lodash/once"
-import omit from "lodash/omit"
-import remarkDirective from "remark-directive"
-import remarkMathPlugin from "remark-math"
-import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
-import { Link2 as LinkIcon } from "react-feather"
+import rehypeRaw from "rehype-raw"
+import remarkDirective from "remark-directive"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import { findAndReplace } from "mdast-util-find-and-replace"
+import remarkMathPlugin from "remark-math"
+import { PluggableList } from "unified"
+import { visit } from "unist-util-visit"
+import xxhash from "xxhashjs"
 
-import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
-import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
+import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   convertRemToPx,
   EmotionTheme,
   getMarkdownBgColors,
   getMarkdownTextColors,
 } from "~lib/theme"
-import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledHeadingActionElements,
@@ -373,6 +374,20 @@ export const CustomPreTag: FC<ReactMarkdownProps> = ({ children }) => {
   )
 }
 
+export const CustomMediaTag: FC<
+  JSX.IntrinsicElements["img" | "video" | "audio"] &
+    ReactMarkdownProps & { node: Element }
+> = ({ node, ...props }) => {
+  const crossOrigin = useCrossOriginAttribute(props.src)
+  const Tag = node.tagName
+
+  const attributes = {
+    ...props,
+    crossOrigin,
+  }
+  return <Tag {...attributes} />
+}
+
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
   pre: CustomPreTag,
@@ -383,6 +398,9 @@ const BASE_RENDERERS = {
   h4: CustomHeading,
   h5: CustomHeading,
   h6: CustomHeading,
+  img: CustomMediaTag,
+  video: CustomMediaTag,
+  audio: CustomMediaTag,
 }
 
 /**

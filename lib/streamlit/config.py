@@ -36,8 +36,8 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: dict[str, str] = OrderedDict(
-    _test="Special test section just used for unit tests."
+_section_descriptions: OrderedDict[str, str] = OrderedDict(  # ty: ignore
+    _test="Special test section just used for unit tests."  # ty: ignore
 )
 
 # Ensures that we don't try to get or set config options when config.toml files
@@ -710,7 +710,7 @@ _create_option(
 
         Allowed values:
         - "auto"     : Streamlit will attempt to use the watchdog module, and
-                       falls back to polling if watchdog is not available.
+                       falls back to polling if watchdog isn't available.
         - "watchdog" : Force Streamlit to use the watchdog module.
         - "poll"     : Force Streamlit to always use polling.
         - "none"     : Streamlit will not watch files.
@@ -750,8 +750,8 @@ def _server_headless() -> bool:
 _create_option(
     "server.showEmailPrompt",
     description="""
-        Whether to show a terminal prompt for the user to enter their email
-        address when they run Streamlit for the first time. If you set
+        Whether to show a terminal prompt for the user's email address when
+        they run Streamlit (locally) for the first time. If you set
         `server.headless=True`, Streamlit will not show this prompt.
     """,
     default_val=True,
@@ -923,6 +923,24 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "server.websocketPingInterval",
+    description="""
+        The interval (in seconds) at which the server pings the client to keep
+        the websocket connection alive.
+
+        The default value should work for most deployments. However, if you're
+        experiencing frequent disconnections in certain proxy setups (e.g.,
+        "Connection error" messages), you may want to try adjusting this value.
+
+        Note: When you set this option, Streamlit automatically sets the ping
+        timeout to match this interval. For Tornado >=6.5, a value less than 30
+        may cause connection issues.
+    """,
+    default_val=None,
+    type_=int,
 )
 
 _create_option(
@@ -1229,11 +1247,12 @@ _create_theme_options(
     "baseFontSize",
     categories=["theme"],
     description="""
-        Sets the root font size (in pixels) for the app.
+        The root font size (in pixels) for the app.
 
-        This determines the overall scale of text and UI elements.
+        This determines the overall scale of text and UI elements. This is a
+        positive integer.
 
-        When unset, the font size will be 16px.
+        If this isn't set, the font size will be 16px.
     """,
     type_=int,
 )
@@ -1242,12 +1261,12 @@ _create_theme_options(
     "baseFontWeight",
     categories=["theme"],
     description="""
-        Sets the root font weight for the app.
+        The root font weight for the app.
 
-        This determines the overall weight of text and UI elements.
-        Valid values are 100-600, in increments of 100.
+        This determines the overall weight of text and UI elements. This is an
+        integer multiple of 100. Values can be between 100 and 600, inclusive.
 
-        When unset, the font weight will be set to normal 400.
+        If this isn't set, the font weight will be set to 400 (normal weight).
     """,
     type_=int,
 )
@@ -1266,7 +1285,7 @@ _create_theme_options(
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
-        If no heading font is set, Streamlit uses `theme.font` for headings.
+        If this isn't set, Streamlit uses `theme.font` for headings.
     """,
 )
 
@@ -1274,24 +1293,31 @@ _create_theme_options(
     "headingFontSizes",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        Sets the font weight for h1-h6 headings. Valid values are in pixels or rem.
+        One or more font sizes for h1-h6 headings.
 
-        When unset, the font weights will be set to defaults:
-        - h1: 2.75rem (1.5rem for sidebar)
-        - h2: 2.25rem (1.25rem for sidebar)
-        - h3: 1.75rem (1.125rem for sidebar)
-        - h4: 1.5rem (1rem for sidebar)
-        - h5: 1.25rem (0.875rem for sidebar)
-        - h6: 1rem (0.75rem for sidebar)
+        If no sizes are set, Streamlit will use the default sizes for h1-h6
+        headings. Heading font sizes set in [theme] are not inherited by
+        [theme.sidebar]. The following sizes are used by default:
+        [
+            "2.75rem", # h1 (1.5rem for sidebar)
+            "2.25rem", # h2 (1.25rem for sidebar)
+            "1.75rem", # h3 (1.125rem for sidebar)
+            "1.5rem",  # h4 (1rem for sidebar)
+            "1.25rem", # h5 (0.875rem for sidebar)
+            "1rem",    # h6 (0.75rem for sidebar)
+        ]
 
-        For example, you can use the following to set the font sizes for h1-h6:
-            headingFontSizes = ["3rem", "2.875rem", "2.75rem", "2.5rem", "2.25rem", "2rem"]
-
-        If you only want to set h1-h3:
+        If you specify an array with fewer than six sizes, the unspecified
+        heading sizes will be the default values. For example, you can use the
+        following array to set the font sizes for h1-h3 headings while keeping
+        h4-h6 headings at their default sizes:
             headingFontSizes = ["3rem", "2.875rem", "2.75rem"]
 
-        Setting a single value will set the font size for all h1-h6 headings to that value:
+        Setting a single value (not in an array) will set the font size for all
+        h1-h6 headings to that value:
             headingFontSizes = "2.75rem"
+
+        Font sizes can be specified in pixels or rem, but rem is recommended.
     """,
 )
 
@@ -1299,20 +1325,29 @@ _create_theme_options(
     "headingFontWeights",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
+        One or more font weights for h1-h6 headings.
 
-        When unset, the font weights will be set to defaults:
-        - h1: bold 700
-        - h2-h6: semi-bold 600
+        If no weights are set, Streamlit will use the default weights for h1-h6
+        headings. Heading font weights set in [theme] are not inherited by
+        [theme.sidebar]. The following weights are used by default:
+        [
+            700, # h1 (bold)
+            600, # h2 (semi-bold)
+            600, # h3 (semi-bold)
+            600, # h4 (semi-bold)
+            600, # h5 (semi-bold)
+            600, # h6 (semi-bold)
+        ]
 
-        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
-            headingFontWeights = [700, 600, 600, 600, 600, 600]
+        If you specify an array with fewer than six weights, the unspecified
+        heading weights will be the default values. For example, you can use
+        the following array to set the font weights for h1-h2 headings while
+        keeping h3-h6 headings at their default weights:
+            headingFontWeights = [800, 700]
 
-        If you only want to set h1-h3:
-            headingFontWeights = [700, 600, 500]
-
-        Setting a single value will set the font weight for all h1-h6 headings to that value:
-            headingFontWeights = 700
+        Setting a single value (not in an array) will set the font weight for
+        all h1-h6 headings to that value:
+            headingFontWeights = 500
     """,
 )
 
@@ -1336,25 +1371,26 @@ _create_theme_options(
     "codeFontSize",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        Sets the font size (in pixels or rem) for code blocks and code text.
+        The font size (in pixels or rem) for code blocks and code text.
 
-        This applies to code blocks (ex: `st.code`), as well as font in `st.json` and `st.help`.
-        It does not apply to inline code, which is set by default to 0.75em.
+        This applies to font in code blocks, `st.json`, and `st.help`. It
+        doesn't apply to inline code, which is set by default to 0.75em.
 
-        When unset, the code font size will be 0.875rem.
+        If this isn't set, the code font size will be 0.875rem.
     """,
 )
 
 _create_theme_options(
     "codeFontWeight",
-    categories=["theme"],
+    categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         The font weight for code blocks and code text.
 
-        This applies to inline code, code blocks (ex: `st.code`), and font in `st.json` and `st.help`.
-        Valid values are 100-900, in increments of 100.
+        This applies to font in inline code, code blocks, `st.json`, and
+        `st.help`. This is an integer multiple of 100. Values can be between
+        100 and 600, inclusive.
 
-        When unset, the default code font weight will be 400.
+        If this isn't set, the code font weight will be 400 (normal weight).
     """,
     type_=int,
 )
@@ -1395,7 +1431,7 @@ _create_theme_options(
         For example, you can use "10px", "0.5rem", or "2rem". To follow best
         practices, use rem instead of pixels when specifying a numeric size.
 
-        If no button radius is set, Streamlit uses `theme.baseRadius` instead.
+        If this isn't set, Streamlit uses `theme.baseRadius` instead.
     """,
 )
 
@@ -1413,8 +1449,7 @@ _create_theme_options(
     description="""
         The color of the border around dataframes and tables.
 
-        If no dataframe border color is set, Streamlit uses `theme.borderColor`
-        instead.
+        If this isn't set, Streamlit uses `theme.borderColor` instead.
     """,
 )
 
@@ -1424,8 +1459,11 @@ _create_theme_options(
     description="""
         The background color of the dataframe's header.
 
-        If no dataframe header background color is set, Streamlit uses a mix of
-        `theme.bgColor` and `theme.secondaryBg`.
+        This color applies to all non-interior cells of the dataframe. This
+        includes the header row, the row-selection column (if present), and
+        the bottom row of data editors with a dynamic number of rows. If this
+        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
+        `theme.secondaryBackgroundColor`.
     """,
 )
 
@@ -1453,11 +1491,17 @@ _create_theme_options(
     "chartCategoricalColors",
     categories=["theme"],
     description="""
-        An array of colors to use for categorical charts.
+        An array of colors to use for categorical chart data.
 
-        If no chart categorical colors are set, Streamlit uses a default set of
-        colors.
-        For light themes the default colors are:
+        This is a list of one or more color strings which are applied in order
+        to categorical data. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid colors are skipped, and colors repeat cyclically if there are
+        more categories than colors. If no chart categorical colors are set,
+        Streamlit uses a default set of colors.
+
+        For light themes, the following colors are the default:
         [
             "#0068c9", # blue80
             "#83c9ff", # blue40
@@ -1470,7 +1514,7 @@ _create_theme_options(
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
         ]
-        For dark themes the default colors are:
+        For dark themes, the following colors are the default:
         [
             "#83c9ff", # blue40
             "#0068c9", # blue80
@@ -1482,6 +1526,47 @@ _create_theme_options(
             "#ff8700", # orange80
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
+        ]
+    """,
+)
+
+_create_theme_options(
+    "chartSequentialColors",
+    categories=["theme"],
+    description="""
+        An array of ten colors to use for sequential or continuous chart data.
+
+        The ten colors create a gradient color scale. These colors apply to
+        Plotly, Altair, and Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+         For light themes, the following colors are the default:
+        [
+            "#e4f5ff", #blue10
+            "#c7ebff", #blue20
+            "#a6dcff", #blue30
+            "#83c9ff", #blue40
+            "#60b4ff", #blue50
+            "#3d9df3", #blue60
+            "#1c83e1", #blue70
+            "#0068c9", #blue80
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+        For dark themes, the following colors are the default:
+        [
+            "#004280", #blue100
+            "#0054a3", #blue90
+            "#0068c9", #blue80
+            "#1c83e1", #blue70
+            "#3d9df3", #blue60
+            "#60b4ff", #blue50
+            "#83c9ff", #blue40
+            "#a6dcff", #blue30
+            "#c7ebff", #blue20
+            "#e4f5ff", #blue10
         ]
     """,
 )
@@ -1817,7 +1902,7 @@ def get_config_options(
         # Short-circuit if config files were parsed while we were waiting on
         # the lock.
         if _config_options and not force_reparse:
-            return _config_options
+            return _config_options  # ty: ignore[invalid-return-type]
 
         old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)

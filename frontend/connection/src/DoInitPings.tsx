@@ -26,7 +26,6 @@ import { getLogger } from "loglevel"
 // Note we expect the polyfill to load from this import
 import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
-import { parseUriIntoBaseParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
@@ -35,6 +34,7 @@ import {
   SERVER_PING_PATH,
 } from "./constants"
 import { IHostConfigResponse, OnRetry } from "./types"
+import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DoInitPings")
 
@@ -91,6 +91,13 @@ export function doInitPings(
 
     retryCallback(totalTries, errorMarkdown, retryTimeout)
 
+    if (typeof window === "undefined") {
+      // There seems to be a race condition when tearing down test env
+      // that can lead to some flakiness in the tests.
+      // If the test environment is torn down, we don't need to
+      // schedule another retry.
+      return
+    }
     timeoutId = window.setTimeout(retryImmediately, retryTimeout)
   }
 
@@ -277,7 +284,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   connect()
 
   const cancel = (): void => {
-    if (notNullOrUndefined(timeoutId)) {
+    if (notNullOrUndefined(timeoutId) && typeof window !== "undefined") {
       window.clearTimeout(timeoutId)
     }
     reject(new PingCancelledError())

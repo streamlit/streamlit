@@ -23,42 +23,34 @@ import React, {
   useState,
 } from "react"
 
-import WaveSurfer from "wavesurfer.js"
-import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
+import WaveSurfer from "wavesurfer.js"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
 import { FormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { blend, convertRemToPx } from "~lib/theme/utils"
+import { usePrevious } from "~lib/util/Hooks"
+import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { blend, convertRemToPx } from "~lib/theme/utils"
-import { uploadFiles } from "~lib/util/uploadFiles"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
-import { usePrevious } from "~lib/util/Hooks"
-import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import useDownloadUrl from "~lib/hooks/useDownloadUrl"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  StyledAudioInputContainerDiv,
-  StyledWaveformContainerDiv,
-  StyledWaveformInnerDiv,
-  StyledWaveformTimeCode,
-  StyledWaveSurferDiv,
-  StyledWidgetLabelHelp,
-} from "./styled-components"
-import NoMicPermissions from "./NoMicPermissions"
-import Placeholder from "./Placeholder"
+import AudioInputActionButtons from "./AudioInputActionButtons"
+import AudioInputErrorState from "./AudioInputErrorState"
 import {
   BAR_GAP,
   BAR_RADIUS,
@@ -67,10 +59,18 @@ import {
   STARTING_TIME_STRING,
   WAVEFORM_PADDING,
 } from "./constants"
-import formatTime from "./formatTime"
-import AudioInputActionButtons from "./AudioInputActionButtons"
 import convertAudioToWav from "./convertAudioToWav"
-import AudioInputErrorState from "./AudioInputErrorState"
+import formatTime from "./formatTime"
+import NoMicPermissions from "./NoMicPermissions"
+import Placeholder from "./Placeholder"
+import {
+  StyledAudioInputContainerDiv,
+  StyledWaveformContainerDiv,
+  StyledWaveformInnerDiv,
+  StyledWaveformTimeCode,
+  StyledWaveSurferDiv,
+  StyledWidgetLabelHelp,
+} from "./styled-components"
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
@@ -442,7 +442,7 @@ const AudioInput: React.FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
-      <StyledWaveformContainerDiv>
+      <StyledWaveformContainerDiv disabled={disabled}>
         <Toolbar
           isFullScreen={false}
           disableFullscreenMode={true}
@@ -493,6 +493,7 @@ const AudioInput: React.FC<Props> = ({
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
           isPlayingOrRecording={isPlayingOrRecording}
+          disabled={disabled}
           data-testid="stAudioInputWaveformTimeCode"
         >
           {shouldUpdatePlaybackTime ? progressTime : recordingTime}

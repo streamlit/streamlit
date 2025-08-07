@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
@@ -28,9 +28,11 @@ from streamlit.deprecation_util import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.dialog import DialogWidth
+    from streamlit.runtime.state import WidgetCallback
 
 
 def _assert_no_nested_dialogs() -> None:
@@ -57,7 +59,7 @@ def _assert_no_nested_dialogs() -> None:
         raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 
 
-F = TypeVar("F", bound=Callable[..., None])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def _dialog_decorator(
@@ -66,6 +68,8 @@ def _dialog_decorator(
     *,
     width: DialogWidth = "small",
     should_show_deprecation_warning: bool = False,
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
@@ -80,7 +84,7 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=True, width=width
+            title=title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
         )
         dialog.open()
 
@@ -103,7 +107,7 @@ def _dialog_decorator(
         fragmented_dialog_content = cast(
             "Callable[[], None]",
             _fragment(
-                dialog_content, additional_hash_info=non_optional_func.__qualname__
+                dialog_content, additional_hash_info=get_object_name(non_optional_func)
             ),
         )
 
@@ -116,7 +120,11 @@ def _dialog_decorator(
 
 @overload
 def dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
+    title: str,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> Callable[[F], F]: ...
 
 
@@ -127,12 +135,22 @@ def dialog_decorator(
 # this 'trick'. The overload is required to have a good type hint for the decorated
 # function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
+def dialog_decorator(
+    title: F,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+) -> F: ...
 
 
 @gather_metrics("dialog")
 def dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
+    title: F | str,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F | Callable[[F], F]:
     r"""Function decorator to create a modal dialog.
 
@@ -145,11 +163,15 @@ def dialog_decorator(
     called. Any values from the dialog that need to be accessed from the wider
     app should generally be stored in Session State.
 
-    A user can dismiss a modal dialog by clicking outside of it, clicking the
-    "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
-    Dismissing a modal dialog does not trigger an app rerun. To close the modal
-    dialog programmatically, call ``st.rerun()`` explicitly inside of the
-    dialog function.
+    If a dialog is dismissible, a user can dismiss it by clicking outside of
+    it, clicking the "**X**" in its upper-right corner, or pressing ``ESC`` on
+    their keyboard. You can configure whether this triggers a rerun of the app
+    by setting the ``on_dismiss`` parameter.
+
+    If a dialog is not dismissible, it must be closed programmatically by
+    calling ``st.rerun()`` inside the dialog function. This is useful when you
+    want to ensure that the dialog is always closed programmatically, such as
+    when the dialog contains a form that must be submitted before closing.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -195,6 +217,33 @@ def dialog_decorator(
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
         modal dialog will be about 750 pixels wide.
 
+    dismissible : bool
+        Whether the modal dialog can be dismissed by the user. If this is
+        ``True`` (default), the user can dismiss the dialog by clicking
+        outside of it, clicking the "**X**" in its upper-right corner, or
+        pressing ``ESC`` on their keyboard. If this is ``False``, the "**X**"
+        in the upper-right corner is hidden and the dialog must be closed
+        programmatically by calling ``st.rerun()`` inside the dialog function.
+
+        .. note::
+            Setting ``dismissible`` to ``False`` does not guarantee that all
+            interactions in the main app are blocked. Don't rely on
+            ``dismissible`` for security-critical checks.
+
+    on_dismiss : "ignore", "rerun", or callable
+        How the dialog should respond to dismissal events.
+        This can be one of the following:
+
+        - ``"ignore"`` (default): Streamlit will not rerun the app when the
+          user dismisses the dialog.
+
+        - ``"rerun"``: Streamlit will rerun the app when the user dismisses
+          the dialog.
+
+        - A ``callable``: Streamlit will rerun the app when the user dismisses
+          the dialog and execute the ``callable`` as a callback function
+          before the rest of the app.
+
     Examples
     --------
     The following example demonstrates the basic usage of ``@st.dialog``.
@@ -232,13 +281,20 @@ def dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
-            return _dialog_decorator(non_optional_func=f, title=title, width=width)
+            return _dialog_decorator(
+                non_optional_func=f,
+                title=func_or_title,
+                width=width,
+                dismissible=dismissible,
+                on_dismiss=on_dismiss,
+            )
 
         return wrapper
 
     func: F = func_or_title
-    return _dialog_decorator(func, "", width=width)
+    return _dialog_decorator(
+        func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
+    )
 
 
 @overload
@@ -267,10 +323,9 @@ def experimental_dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
             return _dialog_decorator(
                 non_optional_func=f,
-                title=title,
+                title=func_or_title,
                 width=width,
                 should_show_deprecation_warning=True,
             )

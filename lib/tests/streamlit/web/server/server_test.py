@@ -271,16 +271,123 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_tornado_settings_applied(self):
         """Test that TORNADO_SETTINGS are properly applied to the app."""
-        from streamlit.web.server.server import TORNADO_SETTINGS
+        from streamlit.web.server.server import get_tornado_settings
 
+        # Reset config to test default behavior
+        config._set_option("server.websocketPingInterval", None, "test")
+
+        tornado_settings = get_tornado_settings()
         assert (
             self.app_settings["websocket_ping_interval"]
-            == TORNADO_SETTINGS["websocket_ping_interval"]
+            == tornado_settings["websocket_ping_interval"]
         )
         assert (
             self.app_settings["websocket_ping_timeout"]
-            == TORNADO_SETTINGS["websocket_ping_timeout"]
+            == tornado_settings["websocket_ping_timeout"]
         )
+
+        # In default case, timeout should always be 30
+        assert tornado_settings["websocket_ping_timeout"] == 30
+
+    @tornado.testing.gen_test
+    async def test_websocket_ping_interval_custom_config(self):
+        """Test that custom websocket ping interval is respected."""
+        from streamlit.web.server.server import (
+            _get_websocket_ping_interval_and_timeout,
+            get_tornado_settings,
+        )
+
+        # Test custom configuration that's valid for all versions
+        config._set_option("server.websocketPingInterval", 45, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 45
+        assert timeout == 45
+        settings = get_tornado_settings()
+        assert settings["websocket_ping_interval"] == 45
+        assert (
+            settings["websocket_ping_timeout"] == 45
+        )  # Timeout matches interval when configured
+
+        # Test high value
+        config._set_option("server.websocketPingInterval", 120, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 120
+        assert timeout == 120
+        settings = get_tornado_settings()
+        assert settings["websocket_ping_interval"] == 120
+        assert (
+            settings["websocket_ping_timeout"] == 120
+        )  # Timeout matches interval when configured
+
+        # Reset config for other tests
+        config._set_option("server.websocketPingInterval", None, "test")
+
+    @tornado.testing.gen_test
+    @patch("streamlit.web.server.server.is_tornado_version_less_than")
+    async def test_websocket_ping_interval_tornado_old(self, mock_version_check):
+        """Test websocket ping interval with Tornado < 6.5."""
+        from streamlit.web.server.server import (
+            _get_websocket_ping_interval_and_timeout,
+            get_tornado_settings,
+        )
+
+        # Mock old Tornado version
+        mock_version_check.return_value = True
+
+        # Test default with old Tornado
+        config._set_option("server.websocketPingInterval", None, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 1
+        assert timeout == 30
+        settings = get_tornado_settings()
+        assert settings["websocket_ping_interval"] == 1
+        assert (
+            settings["websocket_ping_timeout"] == 30
+        )  # Timeout still 30 in default case!
+
+        # Test low values are accepted
+        config._set_option("server.websocketPingInterval", 5, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 5
+        assert timeout == 5
+        settings = get_tornado_settings()
+        assert settings["websocket_ping_interval"] == 5
+        assert (
+            settings["websocket_ping_timeout"] == 5
+        )  # Timeout matches when configured
+
+        # Reset config
+        config._set_option("server.websocketPingInterval", None, "test")
+
+    @tornado.testing.gen_test
+    @patch("streamlit.web.server.server.is_tornado_version_less_than")
+    async def test_websocket_ping_interval_tornado_new(self, mock_version_check):
+        """Test websocket ping interval with Tornado >= 6.5."""
+        from streamlit.web.server.server import _get_websocket_ping_interval_and_timeout
+
+        # Mock new Tornado version
+        mock_version_check.return_value = False
+
+        # Test default with new Tornado
+        config._set_option("server.websocketPingInterval", None, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 30
+        assert timeout == 30
+
+        # Test that low values are respected
+        config._set_option("server.websocketPingInterval", 10, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 10
+        assert timeout == 10
+
+        # Test that values >= 30 are kept as-is
+        config._set_option("server.websocketPingInterval", 60, "test")
+        interval, timeout = _get_websocket_ping_interval_and_timeout()
+        assert interval == 60
+        assert timeout == 60
+
+        # Reset config
+        config._set_option("server.websocketPingInterval", None, "test")
 
 
 class PortRotateAHundredTest(unittest.TestCase):

@@ -20,10 +20,10 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockEndpoints } from "~lib/mocks/mocks"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { render, renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import Video, { VideoProps } from "./Video"
 
@@ -249,6 +249,128 @@ describe("Video Element", () => {
       const props = getProps()
       render(<Video {...props} />)
       expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("crossOrigin attribute", () => {
+    it.each([
+      { resourceCrossOriginMode: "anonymous" },
+      { resourceCrossOriginMode: "use-credentials" },
+      { resourceCrossOriginMode: undefined },
+    ] as const)(
+      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      async ({ resourceCrossOriginMode }) => {
+        const props = getProps({ url: "/media/mockVideoFile.mp4" })
+        renderWithContexts(<Video {...props} />, {
+          libConfig: { resourceCrossOriginMode },
+        })
+        const videoElement = await screen.findByTestId("stVideo")
+        expect(videoElement).not.toHaveAttribute("crossOrigin")
+      }
+    )
+
+    it("sets crossOrigin to 'anonymous' when in dev mode with subtitles regardless of resourceCrossOriginMode", async () => {
+      // Store original NODE_ENV
+      const originalNodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "development"
+
+      const props = getProps({
+        subtitles: [{ url: "https://mock.subtitle.url" }],
+      })
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+
+      // Restore original NODE_ENV
+      process.env.NODE_ENV = originalNodeEnv
+    })
+
+    describe("with BACKEND_BASE_URL set", () => {
+      const originalStreamlit = window.__streamlit
+
+      beforeEach(() => {
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+        }
+      })
+
+      afterEach(() => {
+        window.__streamlit = originalStreamlit
+      })
+
+      it.each([
+        {
+          expected: "anonymous",
+          resourceCrossOriginMode: "anonymous",
+          url: "/media/video.mp4",
+          scenario: "relative URL with anonymous mode",
+        },
+        {
+          expected: "use-credentials",
+          resourceCrossOriginMode: "use-credentials",
+          url: "/media/video.mp4",
+          scenario: "relative URL with use-credentials mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          url: "/media/video.mp4",
+          scenario: "relative URL with undefined mode",
+        },
+        {
+          expected: "anonymous",
+          resourceCrossOriginMode: "anonymous",
+          url: "https://backend.example.com:8080/media/video.mp4",
+          scenario: "same origin as BACKEND_BASE_URL with anonymous mode",
+        },
+        {
+          expected: "use-credentials",
+          resourceCrossOriginMode: "use-credentials",
+          url: "https://backend.example.com:8080/media/video.mp4",
+          scenario:
+            "same origin as BACKEND_BASE_URL with use-credentials mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          url: "https://backend.example.com:8080/media/video.mp4",
+          scenario: "same origin as BACKEND_BASE_URL with undefined mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          url: "https://external.example.com/media/video.mp4",
+          scenario: "different hostname than BACKEND_BASE_URL",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          url: "https://backend.example.com:9000/media/video.mp4",
+          scenario: "different port than BACKEND_BASE_URL",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          url: "http://backend.example.com:8080/media/video.mp4",
+          scenario: "different protocol than BACKEND_BASE_URL",
+        },
+      ] as const)(
+        "sets crossOrigin to $expected when $scenario",
+        async ({ expected, resourceCrossOriginMode, url }) => {
+          const props = getProps({ url })
+          renderWithContexts(<Video {...props} />, {
+            libConfig: { resourceCrossOriginMode },
+          })
+          const videoElement = await screen.findByTestId("stVideo")
+          if (expected) {
+            expect(videoElement).toHaveAttribute("crossOrigin", expected)
+          } else {
+            expect(videoElement).not.toHaveAttribute("crossOrigin")
+          }
+        }
+      )
     })
   })
 })

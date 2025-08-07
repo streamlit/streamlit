@@ -24,8 +24,8 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { notNullOrUndefined } from "@streamlit/utils"
 import { CustomThemeConfig } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
@@ -53,9 +53,23 @@ const setSidebarHeadingFontSizes = (
 }
 
 export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
-  let sidebarOverride = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sidebarOverride: Record<string, any> = {}
   if (notNullOrUndefined(theme.themeInput?.sidebar)) {
-    sidebarOverride = theme.themeInput.sidebar
+    // Create a mutable copy
+    sidebarOverride = { ...theme.themeInput.sidebar }
+
+    // Remove empty array fields to prevent them from being applied
+    // on top of the main theme.
+    // This is needed since the optional protobuf keyword is not allowed
+    // for repeated fields. Therefore, we are treating empty
+    // arrays as non-existent.
+    Object.keys(sidebarOverride).forEach(prop => {
+      const value = sidebarOverride[prop]
+      if (Array.isArray(value) && value.length === 0) {
+        delete sidebarOverride[prop]
+      }
+    })
   }
 
   // Handle configured vs. default header font sizes for sidebar
