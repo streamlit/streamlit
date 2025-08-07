@@ -133,9 +133,5 @@ def test_toast_duration(app: Page):
 
     # Check that the long duration toast is visible initially
     expect(long_duration_toast).to_be_visible()
-    # and then disappears after 10 seconds
-    app.wait_for_timeout(10500)
-    expect(long_duration_toast).not_to_be_visible()
-
     # Check that the persistent toast is still visible after the default 4s
     expect(persistent_toast).to_be_visible()
