@@ -96,8 +96,6 @@ class IframeMixin:
         marshall(
             iframe_proto,
             src=src,
-            width=width,
-            height=height,
             scrolling=scrolling,
             tab_index=tab_index,
         )
@@ -183,8 +181,6 @@ class IframeMixin:
         marshall(
             iframe_proto,
             srcdoc=html,
-            width=width,
-            height=height,
             scrolling=scrolling,
             tab_index=tab_index,
         )
@@ -205,8 +201,6 @@ def marshall(
     proto: IFrameProto,
     src: str | None = None,
     srcdoc: str | None = None,
-    width: int | None = None,
-    height: int | None = None,
     scrolling: bool = False,
     tab_index: int | None = None,
 ) -> None:
@@ -224,11 +218,6 @@ def marshall(
         The URL of the page to embed.
     srcdoc : str
         Inline HTML to embed. Overrides src.
-    width : int
-        The width of the frame in CSS pixels. Defaults to the app's
-        default element width.
-    height : int
-        The height of the frame in CSS pixels. Defaults to 150.
     scrolling : bool
         If true, show a scrollbar when the content is larger than the iframe.
         Otherwise, never show a scrollbar.
@@ -241,15 +230,6 @@ def marshall(
 
     if srcdoc is not None:
         proto.srcdoc = srcdoc
-
-    if width is not None:
-        proto.width = width
-        proto.has_width = True
-
-    if height is not None:
-        proto.height = height
-    else:
-        proto.height = 150
 
     proto.scrolling = scrolling
 
