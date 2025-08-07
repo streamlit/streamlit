@@ -36,6 +36,18 @@ components.iframe(src, width=200, height=100, scrolling=True, tab_index=-1)
 # Zero tab_index
 components.iframe(src, width=200, height=100, scrolling=True, tab_index=0)
 
+data_url = """data:text/html,
+<h1>Iframe Test</h1>
+<p>This content is stable for snapshot testing.</p>
+<div style='background-color: lightblue; padding: 10px;'>
+    Fixed content for reliable snapshots
+</div>
+""".replace("\n", "")
+# Dimensions tests
+components.iframe(data_url)
+components.iframe(data_url, width=200, height=100)
+components.iframe(data_url, width=200, height=100, scrolling=True)
+
 if st.toggle("Show custom component"):
     # Set a query parameter to ensure that it doesn't affect the path of the custom component,
     # since that would trigger a reload if the query param changes

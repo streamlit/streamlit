@@ -44,6 +44,20 @@ def test_components_iframe_rendering(
     assert_snapshot(elements.nth(0), name="st_components-html")
 
 
+def test_components_iframe_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that iframe correctly sets dimensions."""
+
+    no_width_height = app.locator("iframe").nth(6)
+    assert_snapshot(no_width_height, name="st_components-iframe-no-width-height")
+    fixed_width_height = app.locator("iframe").nth(7)
+    assert_snapshot(fixed_width_height, name="st_components-iframe-fixed-width-height")
+    fixed_width_height_scrolling = app.locator("iframe").nth(8)
+    assert_snapshot(
+        fixed_width_height_scrolling,
+        name="st_components-iframe-fixed-width-height-scrolling",
+    )
+
+
 def test_html_correctly_sets_attr(app: Page):
     """Test that html correctly sets attributes and rendered size."""
 
