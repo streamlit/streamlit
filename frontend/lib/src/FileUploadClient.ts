@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { CancelToken } from "axios"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
 import { v4 as uuidv4 } from "uuid"
@@ -95,7 +94,7 @@ export class FileUploadClient {
    * @param fileUploadUrl: the URL to upload the file to.
    * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
-   * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
+   * @param signal: an optional AbortSignal that can be used to cancel the in-progress upload.
    *
    * @return a Promise<void> that resolves with a void promise when the upload is complete.
    */
@@ -105,7 +104,7 @@ export class FileUploadClient {
     file: File,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    signal?: AbortSignal
   ): Promise<void> {
     this.offsetPendingRequestCount(widget.formId, 1)
     return this.endpoints
@@ -114,7 +113,7 @@ export class FileUploadClient {
         file,
         this.sessionInfo.current.sessionId,
         onUploadProgress,
-        cancelToken
+        signal
       )
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
