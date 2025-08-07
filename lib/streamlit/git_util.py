@@ -47,7 +47,7 @@ class GitRepo:
             self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
 
-            if self.git_version >= MIN_GIT_VERSION:
+            if self.git_version is not None and self.git_version >= MIN_GIT_VERSION:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
                 self.module = os.path.relpath(path, git_root)
         except Exception:

@@ -24,10 +24,10 @@ import {
   MultiSelect as MultiSelectProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Multiselect, { Props } from "./Multiselect"
 
@@ -159,24 +159,47 @@ describe("Multiselect widget", () => {
       expect(placeholder).toBeInTheDocument()
     })
 
-    it("renders with empty options", () => {
-      const props = getProps({ default: [], options: [] })
-      render(<Multiselect {...props} />)
-
-      const placeholder = screen.getByText("No options to select")
-      expect(placeholder).toBeInTheDocument()
-    })
-
-    it("renders with empty options when acceptNewOptions is true", () => {
+    it("renders with custom placeholder", () => {
       const props = getProps({
         default: [],
-        options: [],
-        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+        placeholder: "Custom placeholder text",
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Add options")).toBeInTheDocument()
-      expect(screen.getByRole("combobox")).not.toBeDisabled()
+      expect(screen.getByText("Custom placeholder text")).toBeInTheDocument()
+    })
+
+    it("integrates with placeholder utility for default behavior", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: "", // Empty string to trigger default placeholder
+        acceptNewOptions: false,
+      })
+      render(<Multiselect {...props} />)
+
+      // Verifies that the integration with getSelectPlaceholder utility works
+      expect(screen.getByText("Choose options")).toBeInTheDocument()
+    })
+
+    it("handles single space placeholder as a valid placeholder", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: " ",
+      })
+      render(<Multiselect {...props} />)
+
+      // Should not show any default placeholder text since single space is provided
+      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Choose or add options")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("No options to select")
+      ).not.toBeInTheDocument()
     })
   })
 

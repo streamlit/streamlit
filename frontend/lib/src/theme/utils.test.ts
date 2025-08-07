@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
-import { transparentize } from "color2k"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
@@ -689,6 +689,106 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  it.each([
+    // Test valid headingFontSize values
+    [
+      ["3rem", "2.875rem"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["3REM", "2.875REM"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50px", "45px"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50PX", "45PX"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50", "45"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["39.5px", "32.8px", "24.2px"],
+      ["2.46875rem", "2.05rem", "1.5125rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+  ])(
+    "correctly applies headingFontSizes '%s'",
+    (headingFontSizes, expectedHeadingFontSizes) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
+  it.each([
+    // Test invalid headingFontSize values
+    [
+      "h1FontSize",
+      ["Invalid"],
+      ["2.75rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h2FontSize",
+      ["3REM", "Invalid"],
+      ["3rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h3FontSize",
+      ["3rem", "2.875rem", "Invalid"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h4FontSize",
+      ["3rem", "2.875rem", "2.75rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h5FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h6FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "1rem"],
+    ],
+  ])(
+    "logs a warning and falls back to default for any invalid headingFontSizes '%s'",
+    (invalidHeadingConfig, headingFontSizes, expectedHeadingFontSizes) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for ${invalidHeadingConfig} in headingFontSizes in theme: Invalid. Falling back to default ${invalidHeadingConfig} in headingFontSizes.`
+      )
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
   it("adapts the radii theme props if baseRadius is provided", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       baseRadius: "1.2rem",
@@ -1171,6 +1271,198 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  it.each([
+    // Test valid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "white",
+      ],
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "white",
+      ],
+    ],
+    // Valid hex codes
+    [
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+    ],
+    // Valid hex codes passed without leading #
+    [
+      [
+        "dffde9",
+        "c0fcd3",
+        "9ef6bb",
+        "7defa1",
+        "5ce488",
+        "3dd56d",
+        "21c354",
+        "09ab3b",
+        "158237",
+        "177233",
+      ],
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+    ],
+    // Valid rgb values
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(255, 255, 0)",
+        "rgb(0, 255, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(128, 0, 128)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 128, 128)",
+        "rgb(0, 0, 0)",
+        "rgb(255, 255, 255)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(255, 255, 0)",
+        "rgb(0, 255, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(128, 0, 128)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 128, 128)",
+        "rgb(0, 0, 0)",
+        "rgb(255, 255, 255)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of sequential color config '%s'",
+    (chartSequentialColors, expectedSequentialColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartSequentialColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartSequentialColors).toEqual(
+        expectedSequentialColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "invalid",
+      ],
+      [
+        "#e4f5ff",
+        "#c7ebff",
+        "#a6dcff",
+        "#83c9ff",
+        "#60b4ff",
+        "#3d9df3",
+        "#1c83e1",
+        "#0068c9",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+    [
+      // When the array doesn't contain 10 colors, returns default colors
+      ["invalid"],
+      [
+        "#e4f5ff",
+        "#c7ebff",
+        "#a6dcff",
+        "#83c9ff",
+        "#60b4ff",
+        "#3d9df3",
+        "#1c83e1",
+        "#0068c9",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid sequential color configs '%s'",
+    (chartSequentialColors, expectedSequentialColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartSequentialColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Error log from parseColor (invalid color)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartSequentialColors in theme: "invalid"`
+      )
+      // Error log from validateChartColors (<10 colors)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
+      expect(theme.colors.chartSequentialColors).toEqual(
+        expectedSequentialColors
+      )
+    }
+  )
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)
@@ -1259,15 +1551,12 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test valid font weights
-    [100, 400, 600, 700, 100],
-    [200, 400, 600, 700, 200],
-    [300, 400, 600, 700, 300],
-    [400, 400, 600, 700, 400],
-    [500, 400, 600, 700, 500],
-    [600, 400, 600, 700, 600],
-    [700, 400, 600, 700, 700],
-    [800, 400, 600, 700, 800],
-    [900, 400, 600, 700, 900],
+    [100, 400, 600, 700, 100, 300, 400],
+    [200, 400, 600, 700, 200, 400, 500],
+    [300, 400, 600, 700, 300, 500, 600],
+    [400, 400, 600, 700, 400, 600, 700],
+    [500, 400, 600, 700, 500, 700, 800],
+    [600, 400, 600, 700, 600, 800, 900],
   ])(
     "sets the font weights based on the codeFontWeight config '%s'",
     (
@@ -1275,7 +1564,9 @@ describe("createEmotionTheme", () => {
       expectedNormal,
       expectedBold,
       expectedExtrabold,
-      expectedCode
+      expectedCode,
+      expectedCodeBold,
+      expectedCodeExtraBold
     ) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -1291,11 +1582,16 @@ describe("createEmotionTheme", () => {
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
       // codeFontWeight is set, so it overrides the default code font weight
       expect(theme.fontWeights.code).toBe(expectedCode)
+      expect(theme.fontWeights.codeBold).toBe(expectedCodeBold)
+      expect(theme.fontWeights.codeExtraBold).toBe(expectedCodeExtraBold)
     }
   )
 
   it.each([
     // Test invalid font weights
+    [700, 400, 600, 700, 400], // Not between 100 and 600
+    [800, 400, 600, 700, 400], // Not between 100 and 600
+    [900, 400, 600, 700, 400], // Not between 100 and 600
     [150, 400, 600, 700, 400], // Not an increment of 100
     [1000, 400, 600, 700, 400], // Not between 100 and 900
     [400.5, 400, 600, 700, 400], // Not an integer
@@ -1316,13 +1612,15 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
+        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
       expect(theme.fontWeights.code).toBe(expectedCode)
+      expect(theme.fontWeights.codeBold).toBe(expectedBold)
+      expect(theme.fontWeights.codeExtraBold).toBe(expectedExtrabold)
     }
   )
 
@@ -1573,7 +1871,11 @@ describe("Font weight configuration coverage", () => {
 
     // Filter out special cases
     const fontWeightsToCheck = allFontWeightKeys.filter(
-      key => !UNAFFECTED_BY_BASE_WEIGHT.includes(key) && key !== "code" // code is handled separately
+      key =>
+        !UNAFFECTED_BY_BASE_WEIGHT.includes(key) &&
+        key !== "code" && // code font weights are handled separately
+        key !== "codeBold" &&
+        key !== "codeExtraBold"
     )
 
     // Verify our expected list matches reality

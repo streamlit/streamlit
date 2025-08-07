@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -61,6 +62,10 @@ if TYPE_CHECKING:
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
+
+# On Windows, periodically check for signals when blocked in asyncio.wait()
+# This ensures Ctrl+C can be processed even when no sessions are connected
+_SIGNAL_CHECK_INTERVAL: Final = 0.5 if sys.platform == "win32" else None
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -609,16 +614,22 @@ class Runtime:
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
 
                     # Wait for new websocket connections (new sessions):
-                    _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
+                    done_tasks, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
+                        # On Windows, use a timeout to ensure signal handlers can be processed
+                        timeout=_SIGNAL_CHECK_INTERVAL,
                     )
                     # Clean up pending tasks to avoid memory leaks
                     for task in pending_tasks:
                         task.cancel()
+
+                    # If we timed out (Windows only), continue the loop to check must_stop
+                    if not done_tasks and _SIGNAL_CHECK_INTERVAL is not None:
+                        continue
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
@@ -643,12 +654,14 @@ class Runtime:
                     break
 
                 # Wait for new proto messages that need to be sent out:
-                _, pending_tasks = await asyncio.wait(
+                done_tasks, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
+                    # On Windows, use a timeout to ensure signal handlers can be processed
+                    timeout=_SIGNAL_CHECK_INTERVAL,
                 )
                 # We need to cancel the pending tasks (the `must_stop` one in most situations).
                 # Otherwise, this would stack up one waiting task per loop
@@ -656,6 +669,10 @@ class Runtime:
                 # causing an increase in memory (-> memory leak).
                 for task in pending_tasks:
                     task.cancel()
+
+                # If we timed out (Windows only), continue to check must_stop
+                if not done_tasks and _SIGNAL_CHECK_INTERVAL is not None:
+                    continue
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():

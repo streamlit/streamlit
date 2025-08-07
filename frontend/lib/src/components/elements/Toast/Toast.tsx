@@ -28,12 +28,12 @@ import { toaster, type ToastOverrides } from "baseui/toast"
 import { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Kind } from "~lib/components/shared/AlertContainer"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledMessageWrapper,
@@ -189,7 +189,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
 
     // Array must be empty to run as mount/cleanup
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

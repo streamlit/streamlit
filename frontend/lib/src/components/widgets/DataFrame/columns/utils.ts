@@ -98,6 +98,9 @@ export interface BaseColumn extends BaseColumnProps {
   // smart: Detects if value is a number or a string and sorts accordingly.
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
+  // An material icon identifier (":material/...") that is used
+  // as type icon in the column menu.
+  readonly typeIcon: string
   // Validate the input data for compatibility with the column type:
   // Either returns a boolean indicating if the data is valid or not, or
   // returns the corrected value.

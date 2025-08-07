@@ -27,6 +27,16 @@ import {
 import cloneDeep from "lodash/cloneDeep"
 
 import {
+  getMenuStructure,
+  openMenu,
+} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
+  ConnectionManager,
+  ConnectionState,
+  mockEndpoints,
+} from "@streamlit/connection"
+import {
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -70,19 +80,9 @@ import {
   SessionStatus,
   TextInput,
 } from "@streamlit/protobuf"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  ConnectionManager,
-  ConnectionState,
-  mockEndpoints,
-} from "@streamlit/connection"
-import {
-  getMenuStructure,
-  openMenu,
-} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 
-import { showDevelopmentOptions } from "./showDevelopmentOptions"
 import { App, LOG, Props } from "./App"
+import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 vi.mock("~lib/baseconsts", async () => {
   return {
@@ -1379,6 +1379,62 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+    })
+
+    it("button should be hidden when script changes on disk", async () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stAppDeployButton")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("button should reappear when script starts running after file change", () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+
+      // Send session status changed with script running
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
   })
 
@@ -2903,6 +2959,105 @@ describe("App", () => {
       })
       expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
     })
+
+    it("requests script rerun if fragmentIdsThisRun is not empty", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentIdsThisRun: ["myFragmentId"],
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
+      // Ensure sessionInfo.last exists so check based on lastRunWasInterrupted
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      expect(sessionInfo.last).toBeTruthy()
+
+      // Initialize spy here to verify triggered from handleConnectionStateChanged
+      const sendUpdateWidgetsMessageSpy = vi.spyOn(
+        widgetStateManager,
+        "sendUpdateWidgetsMessage"
+      )
+      sendUpdateWidgetsMessageSpy.mockClear()
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
+    })
+
+    it("requests script rerun if autoReruns is not empty", () => {
+      vi.useFakeTimers()
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("autoRerun", {
+        interval: 1,
+        fragmentId: "myFragmentId",
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
+      // Ensure sessionInfo.last exists so check based on lastRunWasInterrupted
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      expect(sessionInfo.last).toBeTruthy()
+
+      // Initialize spy here to verify triggered from handleConnectionStateChanged
+      const sendUpdateWidgetsMessageSpy = vi.spyOn(
+        widgetStateManager,
+        "sendUpdateWidgetsMessage"
+      )
+      sendUpdateWidgetsMessageSpy.mockClear()
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
   })
 
   describe("handles HostCommunication messaging", () => {
@@ -3456,7 +3611,7 @@ describe("App", () => {
         ],
       })
 
-      expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeVisible()
     })
 
     it("sets hideSidebarNav based on the server config option and host setting", () => {
@@ -3515,6 +3670,62 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+    })
+
+    it("shows toolbar in minimal mode when host menu items exist", () => {
+      prepareHostCommunicationManager()
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Initially no toolbar in minimal mode
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+
+      // Add host menu items
+      fireWindowPostMessage({
+        type: "SET_MENU_ITEMS",
+        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
+      })
+
+      // Toolbar should now be visible
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when host toolbar items exist", () => {
+      prepareHostCommunicationManager()
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Initially no toolbar actions in minimal mode
+      expect(screen.queryByTestId("stToolbarActions")).not.toBeInTheDocument()
+
+      // Add host toolbar items
+      fireWindowPostMessage({
+        type: "SET_TOOLBAR_ITEMS",
+        items: [
+          {
+            key: "favorite",
+            icon: "star.svg",
+          },
+        ],
+      })
+
+      // Toolbar actions should now be visible
+      expect(screen.getByTestId("stToolbarActions")).toBeVisible()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeVisible()
     })
 
     it("does not relay custom parent messages by default", () => {
@@ -4131,5 +4342,141 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     expect(
       connectionManager.incrementMessageCacheRunCount
     ).not.toHaveBeenCalled()
+  })
+
+  describe("Toolbar visibility in minimal mode", () => {
+    beforeEach(() => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isToolbarDisplayed).mockReturnValue(false)
+    })
+
+    it("shows toolbar in minimal mode when app-defined About menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set About menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          aboutSectionMd: "Version X",
+        },
+      })
+
+      // The toolbar should be visible because there's an About menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Get Help menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Get Help menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Get Help menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Report a Bug menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Report a Bug menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Report a Bug menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("hides toolbar in minimal mode when no menu items exist", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal with no menu items
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // The toolbar should not be visible because there are no menu items
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("hides toolbar in minimal mode when menu items are hidden", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set menu items but hide them
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: true,
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: true,
+        },
+      })
+
+      // The toolbar should not be visible because all menu items are hidden
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("shows toolbar in non-minimal modes regardless of menu items", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to VIEWER (non-minimal)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.VIEWER,
+        },
+      })
+
+      // The toolbar should be visible even without menu items
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
   })
 })

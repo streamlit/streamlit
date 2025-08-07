@@ -34,7 +34,7 @@ GITHUB_OWNER = "streamlit"
 GITHUB_REPO = "streamlit"
 GITHUB_WORKFLOW_FILE_NAME = "playwright.yml"
 GITHUB_WORKFLOW_FILE_NAME_CHANGED_FILES = "playwright-changed-files.yml"
-PLAYWRIGHT_RESULT_ARTIFACT_NAME = "playwright_test_results"
+PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX = "playwright_test_results_"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 E2E_SNAPSHOTS_DIR = os.path.join(BASE_DIR, "e2e_playwright", "__snapshots__")
 
@@ -205,7 +205,7 @@ def main() -> None:
         help="Only update snapshots for changed files",
     )
     args = parser.parse_args()
-    token = args.token
+    token: str | None = args.token
 
     if not token:
         print(
@@ -228,6 +228,7 @@ def main() -> None:
                 sys.exit(1)
         else:
             print("Token retrieved from git credential manager.")
+    token = str(token)
 
     print("Retrieving latest workflow run...")
 
@@ -252,33 +253,39 @@ def main() -> None:
         if not artifacts:
             print(f"No artifacts found for workflow run with ID {run_id}")
             sys.exit(1)
-        # Find the correct artifact:
+        # Find the correct artifact with the commit SHA in the name:
+        # Get the short SHA (first 6 characters)
+        short_sha = commit_sha[:6]
+        expected_artifact_name = f"{PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX}{short_sha}"
+
         artifact = next(
-            (a for a in artifacts if a["name"] == PLAYWRIGHT_RESULT_ARTIFACT_NAME), None
+            (a for a in artifacts if a["name"] == expected_artifact_name), None
         )
 
         if not artifact:
             print(
-                f"Artifact '{PLAYWRIGHT_RESULT_ARTIFACT_NAME}' not found in workflow run with ID {run_id}"
+                f"Artifact '{expected_artifact_name}' not found in workflow run with ID {run_id}"
             )
+            print(f"Available artifacts: {[a['name'] for a in artifacts]}")
             sys.exit(1)
-        artifact_id = artifact["id"]
-        print(f"Found artifact ID: {artifact_id}")
+        else:
+            artifact_id = artifact["id"]
+            print(f"Found artifact ID: {artifact_id}")
 
-        # Download the artifact
-        download_url = artifact["archive_download_url"]
-        with tempfile.TemporaryDirectory() as temp_dir:
-            zip_path = os.path.join(temp_dir, "artifact.zip")
-            print(f"Downloading artifact to {zip_path}")
-            download_artifact(download_url, token, zip_path)
+            # Download the artifact
+            download_url = artifact["archive_download_url"]
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, "artifact.zip")
+                print(f"Downloading artifact to {zip_path}")
+                download_artifact(download_url, token, zip_path)
 
-            # Extract and merge 'snapshot-updates' folder
-            print(
-                f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {E2E_SNAPSHOTS_DIR}"
-            )
-            extract_and_merge_snapshots(zip_path, E2E_SNAPSHOTS_DIR)
+                # Extract and merge 'snapshot-updates' folder
+                print(
+                    f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {E2E_SNAPSHOTS_DIR}"
+                )
+                extract_and_merge_snapshots(zip_path, E2E_SNAPSHOTS_DIR)
 
-        print("Artifact downloaded and snapshots merged successfully.")
+            print("Artifact downloaded and snapshots merged successfully.")
 
     except Exception as e:
         print(f"Error: {e}")

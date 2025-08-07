@@ -46,6 +46,7 @@ from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -315,7 +316,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         allow_nonexistent=allow_nonexistent,
                     )
                     self._watched_paths[path] = watched_path
-                except Exception as ex:
+                except StreamlitMaxRetriesError as ex:
                     _LOGGER.debug(
                         "Failed to calculate MD5 for path %s",
                         path,
@@ -439,7 +440,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
             changed_path_info.md5 = new_md5
             changed_path_info.on_changed.send(abs_changed_path)
-        except Exception as ex:
+        except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
                 "Ignoring file change. Failed to calculate MD5 for path %s",
                 abs_changed_path,

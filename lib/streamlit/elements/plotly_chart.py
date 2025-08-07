@@ -112,8 +112,8 @@ class PlotlySelectionState(TypedDict, total=False):
     displays additional information. Try selecting points in the following
     example:
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
     >>> df = px.data.iris()
     >>> fig = px.scatter(
@@ -189,10 +189,10 @@ class PlotlyState(TypedDict, total=False):
     box, or lasso). The current selection state is available through Session
     State or as the output of the chart function.
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
-    >>> df = px.data.iris()  # iris is a pandas DataFrame
+    >>> df = px.data.iris()
     >>> fig = px.scatter(df, x="sepal_width", y="sepal_length")
     >>>
     >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
@@ -328,8 +328,12 @@ class PlotlyMixin:
         you would call Plotly's ``py.plot`` or ``py.iplot``.
 
         .. Important::
-            You must install ``plotly`` to use this command. Your app's
-            performance may be enhanced by installing ``orjson`` as well.
+            You must install ``plotly>=4.0.0`` to use this command. Your app's
+            performance may be enhanced by installing ``orjson`` as well. You
+            can install all charting dependencies (except Bokeh) as an extra
+            with Streamlit:
+
+            >>> pip install streamlit[charts]
 
         Parameters
         ----------
@@ -338,6 +342,17 @@ class PlotlyMixin:
 
             The Plotly ``Figure`` or ``Data`` object to render. See
             https://plot.ly/python/ for examples of graph descriptions.
+
+            .. note::
+                If your chart contains more than 1000 data points, Plotly will
+                use a WebGL renderer to display the chart. Different browsers
+                have different limits on the number of WebGL contexts per page.
+                If you have multiple WebGL contexts on a page, you may need to
+                switch to SVG rendering mode. You can do this by setting
+                ``render_mode="svg"`` within the figure. For example, the
+                following code defines a Plotly Express line chart that will
+                render in SVG mode when passed to ``st.plotly_chart``:
+                ``px.line(df, x="x", y="y", render_mode="svg")``.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
@@ -351,6 +366,11 @@ class PlotlyMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
+
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
 
         key : str
             An optional string to use for giving this element a stable
@@ -394,7 +414,12 @@ class PlotlyMixin:
             All selections modes are activated by default.
 
         **kwargs
-            Any argument accepted by Plotly's ``plot()`` function.
+            Additional arguments accepted by Plotly's ``plot()`` function.
+
+            This supports ``config``, a dictionary of Plotly configuration
+            options. For more information about Plotly configuration options,
+            see Plotly's documentation on `Configuration in Python
+            <https://plotly.com/python/configuration-options/>`_.
 
         Returns
         -------
@@ -405,35 +430,57 @@ class PlotlyMixin:
             attribute notation. The attributes are described by the
             ``PlotlyState`` dictionary schema.
 
-        Example
-        -------
-        The example below comes straight from the examples at
-        https://plot.ly/python. Note that ``plotly.figure_factory`` requires
-        ``scipy`` to run.
+        Examples
+        --------
+        **Example 1: Basic Plotly chart**
 
-        >>> import streamlit as st
-        >>> import numpy as np
+        The example below comes from the examples at https://plot.ly/python.
+        Note that ``plotly.figure_factory`` requires ``scipy`` to run.
+
         >>> import plotly.figure_factory as ff
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> # Add histogram data
-        >>> x1 = np.random.randn(200) - 2
-        >>> x2 = np.random.randn(200)
-        >>> x3 = np.random.randn(200) + 2
+        >>> hist_data = [
+        ...     rng(0).standard_normal(200) - 2,
+        ...     rng(1).standard_normal(200),
+        ...     rng(2).standard_normal(200) + 2,
+        ... ]
+        >>> group_labels = ["Group 1", "Group 2", "Group 3"]
         >>>
-        >>> # Group data together
-        >>> hist_data = [x1, x2, x3]
-        >>>
-        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
-        >>>
-        >>> # Create distplot with custom bin_size
         >>> fig = ff.create_distplot(
-        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
+        ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
+        ... )
         >>>
-        >>> # Plot!
         >>> st.plotly_chart(fig)
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
+           height: 550px
+
+        **Example 2: Plotly Chart with configuration**
+
+        By default, Plotly charts have scroll zoom enabled. If you have a
+        longer page and want to avoid conflicts between page scrolling and
+        zooming, you can use Plotly's configuration options to disable scroll
+        zoom. In the following example, scroll zoom is disabled, but the zoom
+        buttons are still enabled in the modebar.
+
+        >>> import plotly.graph_objects as go
+        >>> import streamlit as st
+        >>>
+        >>> fig = go.Figure()
+        >>> fig.add_trace(
+        ...     go.Scatter(
+        ...         x=[1, 2, 3, 4, 5],
+        ...         y=[1, 3, 2, 5, 4]
+        ...     )
+        ... )
+        >>>
+        >>> st.plotly_chart(fig, config = {'scrollZoom': False})
+
+        .. output::
+           https://doc-plotly-chart-config.streamlit.app/
            height: 550px
 
         """
@@ -509,7 +556,6 @@ class PlotlyMixin:
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            form_id=plotly_chart_proto.form_id,
             dg=self.dg,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,

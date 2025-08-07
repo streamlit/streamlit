@@ -23,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.46.1"  # PEP-440
+VERSION = "1.48.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -31,7 +31,10 @@ VERSION = "1.46.1"  # PEP-440
 # - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
-    "altair>=4.0, <6",
+    # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
+    # that cause st.line_chart and other built-in charts to fail rendering.
+    # See: https://github.com/streamlit/streamlit/issues/12064
+    "altair>=4.0, <6, !=5.4.0, !=5.4.1",
     "blinker>=1.5.0, <2",
     "cachetools>=4.0, <7",
     "click>=7.0, <9",
@@ -75,10 +78,33 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 EXTRA_REQUIRES = {
+    # Optional dependency required for Snowflake connection:
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-    ]
+    ],
+    # Optional dependency required for auth:
+    "auth": [
+        "Authlib>=1.3.2",
+    ],
+    # Optional charting dependencies:
+    "charts": [
+        "matplotlib>=3.0.0",
+        "graphviz>=0.19.0",
+        "plotly>=4.0.0",
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+    ],
+    # Optional SQL connection dependency:
+    "sql": [
+        "SQLAlchemy>=2.0.0",
+    ],
+    # Install all optional dependencies:
+    "all": [
+        "streamlit[auth,charts,snowflake,sql]",
+        # Improved exception traceback formatting:
+        "rich>=11.0.0",
+    ],
 }
 
 
