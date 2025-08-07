@@ -85,7 +85,7 @@ class WebsocketSessionManager(SessionManager):
             and self._session_storage.get(existing_session_id)
         )
 
-        if session_info:
+        if isinstance(session_info, SessionInfo):
             existing_session = session_info.session
             existing_session.register_file_watchers()
 
