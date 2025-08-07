@@ -974,7 +974,10 @@ _create_option(
 
         Configures HTTP headers whose values, on websocket connect, will be saved in
         st.user. Each key is the header name to map, and each value is the key in
-        st.user to save the value under.
+        st.user to save the value under. If the configured header occurs multiple times
+        in the request, the first value will be used. Multiple headers may not point to
+        the same user key, and an error will be thrown on initialization if this is
+        done.
 
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
@@ -2042,6 +2045,21 @@ def _parse_trusted_user_headers() -> None:
             raise RuntimeError(
                 f"bad JSON value for server.trustedUserHeaders: {jde.msg}"
             )
+
+    # Fetch the latest value, since we might've updated it from JSON.
+    final_config_value = options["server.trustedUserHeaders"].value
+    # Ensure no user keys are duplicated.
+    values = set()
+    bad_keys = []
+    for user_key in final_config_value.values():
+        if user_key in values:
+            bad_keys.append(user_key)
+        values.add(user_key)
+
+    if bad_keys:
+        raise RuntimeError(
+            f"server.trustedUserHeaders had multiple mappings for user key(s) {bad_keys}"
+        )
 
 
 def on_config_parsed(

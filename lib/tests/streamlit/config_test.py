@@ -682,6 +682,18 @@ class ConfigTest(unittest.TestCase):
             "value_two": "v2",
         }
 
+    def test_parse_trusted_user_headers_forbids_duplicate_user_keys(self):
+        config._set_option(
+            "server.trustedUserHeaders",
+            {"hdr-one": "duplicate", "hdr-two": "duplicate", "hdr-three": "unique"},
+            "test",
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="had multiple mappings.*duplicate",
+        ):
+            config._parse_trusted_user_headers()
+
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
         assert config._maybe_convert_to_number("1234.5678") == 1234.5678
