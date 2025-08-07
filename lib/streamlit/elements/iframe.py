@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -100,7 +101,12 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the iframe to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @gather_metrics("_html")
     def _html(
@@ -182,7 +188,12 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the html to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -43,10 +43,20 @@ data_url = """data:text/html,
     Fixed content for reliable snapshots
 </div>
 """.replace("\n", "")
+long_html = """<h1>HTML Test</h1>
+<p>This content is stable for snapshot testing.</p>
+<div style='background-color: lightblue; padding: 10px;'>
+    Fixed content for reliable snapshots
+</div>
+""".replace("\n", "")
 # Dimensions tests
 components.iframe(data_url)
 components.iframe(data_url, width=200, height=100)
-components.iframe(data_url, width=200, height=100, scrolling=True)
+components.html(long_html)
+
+with st.container(key="html-iframe-in-vertical-container"):
+    components.html(long_html)
+    components.iframe(data_url)
 
 if st.toggle("Show custom component"):
     # Set a query parameter to ensure that it doesn't affect the path of the custom component,
