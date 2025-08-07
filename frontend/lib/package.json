@@ -10,10 +10,10 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/streamlit-lib.cjs.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/streamlit-lib.es.js",
-      "default": "./dist/streamlit-lib.umd.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/streamlit-lib.cjs.js",
+      "default": "./dist/streamlit-lib.umd.js"
     }
   },
   "sideEffects": [
