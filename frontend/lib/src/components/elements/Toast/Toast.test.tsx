@@ -173,13 +173,13 @@ describe("Toast Component", () => {
     renderComponent(props)
 
     const toast = screen.getByRole("alert")
-    expect(toast).toBeInTheDocument()
+    expect(toast).toBeVisible()
 
     // Advance time just before auto hide
     act(() => {
       vi.advanceTimersByTime(900)
     })
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(screen.getByRole("alert")).toBeVisible()
 
     // Cross the 1s threshold (Toast multiplies seconds by 1000)
     act(() => {
