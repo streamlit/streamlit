@@ -54,7 +54,10 @@ class IFrameTest(unittest.TestCase):
             with pytest.raises(StreamlitAPIException):
                 marshall(proto, src="https://example.com", tab_index=invalid_value)
 
+
     def test_marshall_deprecated_fields_not_set(self):
+        """Test that deprecated width, height, and has_width fields are not set on proto."""
+
         """Test that deprecated width, height, and has_width fields are not set on proto."""
         proto = IFrameProto()
         marshall(proto, src="https://example.com")
