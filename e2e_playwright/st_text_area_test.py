@@ -19,8 +19,12 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    expect_markdown,
     get_element_by_key,
+    get_text_area,
 )
+
+NUM_TEXT_AREAS = 23
 
 
 def test_text_area_widget_rendering(
@@ -28,32 +32,74 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(NUM_TEXT_AREAS)
 
-    assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
-    assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
-    assert_snapshot(text_area_widgets.nth(2), name="st_text_area-value_1234")
-    assert_snapshot(text_area_widgets.nth(3), name="st_text_area-value_None")
-    assert_snapshot(text_area_widgets.nth(4), name="st_text_area-placeholder")
-    assert_snapshot(text_area_widgets.nth(5), name="st_text_area-disabled")
-    assert_snapshot(text_area_widgets.nth(6), name="st_text_area-hidden_label")
-    assert_snapshot(text_area_widgets.nth(7), name="st_text_area-collapsed_label")
-    assert_snapshot(text_area_widgets.nth(8), name="st_text_area-callback_help")
-    assert_snapshot(text_area_widgets.nth(9), name="st_text_area-max_chars_5")
-    assert_snapshot(text_area_widgets.nth(15), name="st_text_area-markdown_label")
+    assert_snapshot(
+        get_text_area(themed_app, "text area 1 (default)"), name="st_text_area-default"
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 2 (value='some text')"),
+        name="st_text_area-value_some_text",
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 3 (value=1234)"),
+        name="st_text_area-value_1234",
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 4 (value=None)"),
+        name="st_text_area-value_None",
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 5 (placeholder)"),
+        name="st_text_area-placeholder",
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 6 (disabled)"),
+        name="st_text_area-disabled",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "text_area_7"), name="st_text_area-hidden_label"
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "text_area_8"),
+        name="st_text_area-collapsed_label",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "text_area_9"), name="st_text_area-callback_help"
+    )
+    assert_snapshot(
+        get_text_area(themed_app, "text area 10 (max_chars=5)"),
+        name="st_text_area-max_chars_5",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "text_area_16"),
+        name="st_text_area-markdown_label",
+    )
 
 
 def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(NUM_TEXT_AREAS)
 
-    assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
-    assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
+    assert_snapshot(
+        get_text_area(app, "text area 11 (height=250)"), name="st_text_area-height_250"
+    )
+    assert_snapshot(
+        get_text_area(app, "text area 12 (height=75)"), name="st_text_area-height_75"
+    )
     # Expect this to default to the minimum height of 68px
-    assert_snapshot(text_area_widgets.nth(12), name="st_text_area-height_60")
-    assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_200px")
-    assert_snapshot(text_area_widgets.nth(17), name="st_text_area-width_stretch")
+    assert_snapshot(
+        get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
+    )
+    assert_snapshot(
+        get_text_area(app, "text area 17 (width=200px)"),
+        name="st_text_area-width_200px",
+    )
+    assert_snapshot(
+        get_text_area(app, "text area 18 (width='stretch')"),
+        name="st_text_area-width_stretch",
+    )
 
     # Snapshot the form containing the stretch height text area
     form_container = app.get_by_test_id("stForm").nth(2)  # Third form (form3)
@@ -70,41 +116,33 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_help_tooltip_works(app: Page):
-    element_with_help = app.get_by_test_id("stTextArea").nth(8)
+    element_with_help = get_element_by_key(app, "text_area_9")
     expect_help_tooltip(app, element_with_help, "Help text")
 
 
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
-    markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(16)
-
-    expected = [
-        "value 1: ",
-        "value 2: some text",
-        "value 3: 1234",
-        "value 4: None",
-        "value 5: ",
-        "value 6: default text",
-        "value 7: default text",
-        "value 8: default text",
-        "value 9: ",
-        "text area changed: False",
-        "value 10: 1234",
-        "value 11: default text",
-        "value 12: default text",
-        "value 13: default text",
-        "text area 14 (value from state) - value: xyz",
-        "text area 15 (value from form) - value: ",
-    ]
-
-    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    expect_markdown(app, "value 1: ")
+    expect_markdown(app, "value 2: some text")
+    expect_markdown(app, "value 3: 1234")
+    expect_markdown(app, "value 4: None")
+    expect_markdown(app, "value 5: ")
+    expect_markdown(app, "value 6: default text")
+    expect_markdown(app, "value 7: default text")
+    expect_markdown(app, "value 8: default text")
+    expect_markdown(app, "value 9: ")
+    expect_markdown(app, "text area changed: False")
+    expect_markdown(app, "value 10: 1234")
+    expect_markdown(app, "value 11: default text")
+    expect_markdown(app, "value 12: default text")
+    expect_markdown(app, "value 13: default text")
+    expect_markdown(app, "text area 14 (value from state) - value: xyz")
+    expect_markdown(app, "text area 15 (value from form) - value: ")
 
 
 def test_text_area_shows_state_value(app: Page):
     expect(
-        app.get_by_test_id("stTextArea").nth(13).locator("textarea").first
+        get_element_by_key(app, "text_area_14").locator("textarea").first
     ).to_have_text("xyz")
 
 
@@ -112,7 +150,7 @@ def test_text_area_shows_instructions_when_dirty(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.text_area shows the instructions correctly when dirty."""
-    text_area = app.get_by_test_id("stTextArea").nth(9)
+    text_area = get_text_area(app, "text area 10 (max_chars=5)")
 
     text_area_field = text_area.locator("textarea").first
     text_area_field.fill("123")
@@ -122,39 +160,33 @@ def test_text_area_shows_instructions_when_dirty(
 
 def test_text_area_limits_input_via_max_chars(app: Page):
     """Test that st.text_area correctly limits the number of characters via max_chars."""
-    text_area_field = app.get_by_test_id("stTextArea").nth(9).locator("textarea").first
+    text_area = get_text_area(app, "text area 10 (max_chars=5)")
+    text_area_field = text_area.locator("textarea").first
     # Try typing in char by char:
     text_area_field.clear()
     text_area_field.type("12345678")
     text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
-        "value 10: 12345", use_inner_text=True
-    )
+    expect_markdown(app, "value 10: 12345")
 
     # Try filling in everything at once:
     text_area_field.focus()
     text_area_field.fill("12345678")
     text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
-        "value 10: 12345", use_inner_text=True
-    )
+    expect_markdown(app, "value 10: 12345")
 
 
 def test_text_area_has_correct_value_on_blur(app: Page):
     """Test that st.text_area has the correct value on blur."""
 
-    first_text_area_field = (
-        app.get_by_test_id("stTextArea").first.locator("textarea").first
-    )
+    first_text_area = get_text_area(app, "text area 1 (default)")
+    first_text_area_field = first_text_area.locator("textarea").first
     first_text_area_field.focus()
     first_text_area_field.fill("hello world")
     first_text_area_field.blur()
 
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: hello world", use_inner_text=True
-    )
+    expect_markdown(app, "value 1: hello world")
 
 
 @pytest.mark.skip_browser(
@@ -163,59 +195,47 @@ def test_text_area_has_correct_value_on_blur(app: Page):
 def test_text_area_has_correct_value_on_enter(app: Page):
     """Test that st.text_area has the correct value on enter."""
 
-    first_text_area_field = (
-        app.get_by_test_id("stTextArea").first.locator("textarea").first
-    )
+    first_text_area = get_text_area(app, "text area 1 (default)")
+    first_text_area_field = first_text_area.locator("textarea").first
     # Test control + enter:
     first_text_area_field.focus()
     first_text_area_field.fill("hello world")
     first_text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: hello world", use_inner_text=True
-    )
+    expect_markdown(app, "value 1: hello world")
 
     # Test command (Meta key) + enter:
     first_text_area_field.focus()
     first_text_area_field.fill("different value")
     first_text_area_field.press("Meta+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: different value", use_inner_text=True
-    )
+    expect_markdown(app, "value 1: different value")
 
 
 def test_text_area_has_correct_value_on_click_outside(app: Page):
     """Test that st.text_area has the correct value on click outside."""
 
-    first_text_area_field = (
-        app.get_by_test_id("stTextArea").first.locator("textarea").first
-    )
+    first_text_area = get_text_area(app, "text area 1 (default)")
+    first_text_area_field = first_text_area.locator("textarea").first
     first_text_area_field.focus()
     first_text_area_field.fill("hello world")
     app.get_by_test_id("stMarkdown").first.click()
 
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: hello world", use_inner_text=True
-    )
+    expect_markdown(app, "value 1: hello world")
 
 
 def test_empty_text_area_behaves_correctly(app: Page):
     """Test that st.text_area behaves correctly when empty."""
     # Should return None as value:
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value 4: None", use_inner_text=True
-    )
+    expect_markdown(app, "value 4: None")
 
     # Enter value in the empty widget:
-    empty_text_area = app.get_by_test_id("stTextArea").nth(3)
+    empty_text_area = get_text_area(app, "text area 4 (value=None)")
     empty_text_area_field = empty_text_area.locator("textarea").first
     empty_text_area_field.fill("hello world")
     empty_text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value 4: hello world", use_inner_text=True
-    )
+    expect_markdown(app, "value 4: hello world")
 
     # Press escape to clear value:
     empty_text_area_field.focus()
@@ -223,58 +243,40 @@ def test_empty_text_area_behaves_correctly(app: Page):
     empty_text_area_field.press("Control+Enter")
 
     # Should be set to empty string (we don't clear to None for text area):
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value 4: ", use_inner_text=True
-    )
+    expect_markdown(app, "value 4: ")
 
 
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
-    text_area_field = app.get_by_test_id("stTextArea").nth(8).locator("textarea").first
+    text_area = get_element_by_key(app, "text_area_9")
+    text_area_field = text_area.locator("textarea").first
 
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
-        "value 9: hello world",
-        use_inner_text=True,
-    )
-    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
-        "text area changed: True",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "value 9: hello world")
+    expect_markdown(app, "text area changed: True")
 
     # Change different widget to trigger delta path change
-    first_text_area_field = (
-        app.get_by_test_id("stTextArea").first.locator("textarea").first
-    )
+    first_text_area = get_text_area(app, "text area 1 (default)")
+    first_text_area_field = first_text_area.locator("textarea").first
     first_text_area_field.fill("hello world")
     first_text_area_field.press("Control+Enter")
 
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: hello world", use_inner_text=True
-    )
+    expect_markdown(app, "value 1: hello world")
 
     # Test if value is still correct after delta path change
-    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
-        "value 9: hello world",
-        use_inner_text=True,
-    )
-    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
-        "text area changed: False",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "value 9: hello world")
+    expect_markdown(app, "text area changed: False")
 
 
 def test_text_area_in_form_with_submit_by_enter(app: Page):
     """Test that text area in form can be submitted by pressing Command+Enter."""
-    text_area_field = app.get_by_test_id("stTextArea").nth(14).locator("textarea").first
+    text_area = get_element_by_key(app, "text_area_15")
+    text_area_field = text_area.locator("textarea").first
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
-    expect(app.get_by_test_id("stMarkdown").nth(15)).to_have_text(
-        "text area 15 (value from form) - value: hello world",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "text area 15 (value from form) - value: hello world")
 
 
 def test_check_top_level_class(app: Page):
@@ -284,7 +286,7 @@ def test_check_top_level_class(app: Page):
 
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
-    expect(get_element_by_key(app, "text_area9")).to_be_visible()
+    expect(get_element_by_key(app, "text_area_9")).to_be_visible()
 
 
 def test_text_area_content_height_expansion(

@@ -34,12 +34,18 @@ v6 = st.text_area("text area 6 (disabled)", "default text", disabled=True)
 st.write("value 6:", v6)
 
 v7 = st.text_area(
-    "text area 7 (hidden label)", "default text", label_visibility="hidden"
+    "text area 7 (hidden label)",
+    "default text",
+    label_visibility="hidden",
+    key="text_area_7",
 )
 st.write("value 7:", v7)
 
 v8 = st.text_area(
-    "text area 8 (collapsed label)", "default text", label_visibility="collapsed"
+    "text area 8 (collapsed label)",
+    "default text",
+    label_visibility="collapsed",
+    key="text_area_8",
 )
 st.write("value 8:", v8)
 
@@ -51,11 +57,11 @@ if runtime.exists():
 
     st.text_area(
         "text area 9 (callback, help)",
-        key="text_area9",
+        key="text_area_9",
         on_change=on_change,
         help="Help text",
     )
-    st.write("value 9:", st.session_state.text_area9)
+    st.write("value 9:", st.session_state.text_area_9)
     st.write("text area changed:", st.session_state.get("text_area_changed") is True)
     # Reset to False:
     st.session_state.text_area_changed = False
@@ -91,7 +97,8 @@ form_value = st.session_state.get("text_area_15", None)
 st.write("text area 15 (value from form) - value: ", form_value)
 
 st.text_area(
-    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_",
+    key="text_area_16",
 )
 
 st.text_area("text area 17 (width=200px)", "width test", width=200)
@@ -107,7 +114,7 @@ with st.form("form2", height=500):
 
 with st.container(horizontal=True, height=300, key="layout-horizontal-text-area"):
     st.text_area(
-        "text area (height='content') - Height adjusts to content.",
+        "text area in horizontal layout (height='content')",
         """Line 1\nLine 2\nLine 3""",
         width="stretch",
         height="content",
@@ -115,7 +122,7 @@ with st.container(horizontal=True, height=300, key="layout-horizontal-text-area"
 
 with st.form("form3", height=500):
     st.text_area(
-        "text area 20 (height='stretch)",
+        "text area 20 (height='stretch')",
         "Height stretches to fill space in fixed height form.",
         height="stretch",
     )
