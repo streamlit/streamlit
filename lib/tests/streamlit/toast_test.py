@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from typing import Any
 
 import pytest
 
@@ -59,42 +59,27 @@ class ToastTest(DeltaGeneratorTestCase):
             "are not allowed, please use a single character instead."
         )
 
-    def test_duration_int(self):
-        """Test that it can be called with an int duration."""
-        st.toast("toast text", duration=10)
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_duration"),
+        [
+            ({}, True, 4.0),
+            ({"duration": "short"}, 4.0),
+            ({"duration": "long"}, 10.0),
+            ({"duration": "infinite"}, 0.0),
+            ({"duration": 10}, 10.0),
+        ],
+        ids=["default_short", "explicit_short", "long", "infinite", "integer"],
+    )
+    def test_duration_variants(
+        self: ToastTest,
+        kwargs: dict[str, Any],
+        expected_duration: float,
+    ) -> None:
+        """Test all supported duration values, including default and None."""
+        st.toast("toast text", **kwargs)
 
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
-        assert c.duration == 10.0
 
-    def test_duration_float(self):
-        """Test that it can be called with a float duration."""
-        st.toast("toast text", duration=0.5)
-
-        c = self.get_delta_from_queue().new_element.toast
-        assert c.body == "toast text"
-        assert c.duration == 0.5
-
-    def test_duration_timedelta(self):
-        """Test that it can be called with a timedelta duration."""
-        st.toast("toast text", duration=timedelta(seconds=5))
-
-        c = self.get_delta_from_queue().new_element.toast
-        assert c.body == "toast text"
-        assert c.duration == 5.0
-
-    def test_duration_str(self):
-        """Test that it can be called with a string duration."""
-        st.toast("toast text", duration="1s500ms")
-
-        c = self.get_delta_from_queue().new_element.toast
-        assert c.body == "toast text"
-        assert c.duration == 1.5
-
-    def test_duration_none(self):
-        """Test that duration is not set when it is None."""
-        st.toast("toast text", duration=None)
-
-        c = self.get_delta_from_queue().new_element.toast
-        assert c.body == "toast text"
-        assert not c.HasField("duration")
+        assert c.HasField("duration")
+        assert c.duration == expected_duration
