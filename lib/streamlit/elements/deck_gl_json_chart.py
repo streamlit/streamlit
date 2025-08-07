@@ -521,7 +521,6 @@ class PydeckMixin:
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
                 spec=spec,
-                form_id=pydeck_proto.form_id,
             )
 
             serde = PydeckSelectionSerde()
