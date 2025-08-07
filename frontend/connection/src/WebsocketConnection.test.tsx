@@ -941,18 +941,25 @@ describe("WebsocketConnection", () => {
   let originalAxiosGet: any
 
   beforeEach(() => {
+    vi.useFakeTimers()
     server = new WS("ws://localhost:1234/_stcore/stream")
 
     originalAxiosGet = axios.get
-    axios.get = vi
-      .fn()
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+    // Use mockImplementation to handle any number of HTTP requests
+    // that might occur when timers are advanced
+    let callCount = 0
+    axios.get = vi.fn().mockImplementation(() => {
+      callCount++
+      // Alternate between health check (empty string) and host config responses
+      return Promise.resolve(
+        callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
+      )
+    })
 
     client = new WebsocketConnection(createMockArgs())
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     axios.get = originalAxiosGet
 
     // @ts-expect-error
@@ -962,6 +969,11 @@ describe("WebsocketConnection", () => {
     }
     client.disconnect()
     server.close()
+    // Drain and clear any pending timers scheduled by connection code
+    // We intentionally await all timers to avoid post-teardown callbacks
+    await vi.runAllTimersAsync()
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
@@ -1004,6 +1016,8 @@ describe("WebsocketConnection", () => {
   })
 
   it("sends message with correct arguments", async () => {
+    // Advance fake timers to allow connection process to complete
+    await vi.runAllTimersAsync()
     await server.connected
     // @ts-expect-error
     const sendSpy = vi.spyOn(client.websocket, "send")
@@ -1045,7 +1059,15 @@ describe("WebsocketConnection auth token handling", () => {
     websocketSpy = vi.spyOn(window, "WebSocket")
 
     originalAxiosGet = axios.get
-    axios.get = vi.fn()
+    // Use the same robust axios mock to handle any HTTP requests
+    let callCount = 0
+    axios.get = vi.fn().mockImplementation(() => {
+      callCount++
+      // Alternate between health check (empty string) and host config responses
+      return Promise.resolve(
+        callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
+      )
+    })
   })
 
   afterEach(() => {
