@@ -2038,7 +2038,7 @@ def _parse_trusted_user_headers() -> None:
                 parsed_value,
                 where_defined=trusted_user_headers.where_defined,
             )
-        except json.decoder.JSONDecodeError as jde:
+        except json.JSONDecodeError as jde:
             raise RuntimeError(
                 f"bad JSON value for server.trustedUserHeaders: {jde.msg}"
             )
