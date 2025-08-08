@@ -42,7 +42,7 @@ def _get_pdf_component() -> Any | None:
         None otherwise.
     """
     try:
-        import streamlit_pdf
+        import streamlit_pdf  # type: ignore[import-not-found]
 
         return streamlit_pdf.pdf_viewer
     except ImportError:
