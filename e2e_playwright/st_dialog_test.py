@@ -287,6 +287,7 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
 def test_large_width_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
+    """Test that a dialog with a large width displays correctly."""
     open_large_width_dialog(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
@@ -302,6 +303,7 @@ def test_large_width_dialog_displays_correctly(
 def test_medium_width_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
+    """Test that a dialog with a medium width displays correctly."""
     open_medium_width_dialog(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
