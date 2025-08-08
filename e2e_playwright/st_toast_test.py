@@ -116,10 +116,10 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(toaster, name="toast-above-dialog")
 
 
-def test_toast_adjusts_for_custom_theme_window_injection(
+def test_toast_adjusts_for_custom_theme(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that toasts adjust for custom theme via window.__streamlit injection."""
+    """Test that toasts adjust for custom theme."""
     # Apply custom theme using window injection
     apply_theme_via_window(
         app, base="light", textColor="#301934", backgroundColor="#CBC3E3"
@@ -135,4 +135,4 @@ def test_toast_adjusts_for_custom_theme_window_injection(
     toasts.nth(2).hover()
 
     expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
-    assert_snapshot(toasts.nth(2), name="toast-custom-theme-window")
+    assert_snapshot(toasts.nth(2), name="toast-custom-theme")
