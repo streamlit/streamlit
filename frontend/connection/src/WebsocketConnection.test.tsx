@@ -90,6 +90,18 @@ function createMockArgs(overrides?: Partial<Args>): Args {
   }
 }
 
+/** Create a robust axios mock that handles any number of HTTP requests */
+function createAxiosMock(): ReturnType<typeof vi.fn> {
+  let callCount = 0
+  return vi.fn().mockImplementation(() => {
+    callCount++
+    // Alternate between health check (empty string) and host config responses
+    return Promise.resolve(
+      callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
+    )
+  })
+}
+
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
     uri: [
@@ -941,18 +953,16 @@ describe("WebsocketConnection", () => {
   let originalAxiosGet: any
 
   beforeEach(() => {
+    vi.useFakeTimers()
     server = new WS("ws://localhost:1234/_stcore/stream")
 
     originalAxiosGet = axios.get
-    axios.get = vi
-      .fn()
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+    axios.get = createAxiosMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     axios.get = originalAxiosGet
 
     // @ts-expect-error
@@ -962,6 +972,11 @@ describe("WebsocketConnection", () => {
     }
     client.disconnect()
     server.close()
+    // Drain and clear any pending timers scheduled by connection code
+    // We intentionally await all timers to avoid post-teardown callbacks
+    await vi.runAllTimersAsync()
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
@@ -1004,6 +1019,8 @@ describe("WebsocketConnection", () => {
   })
 
   it("sends message with correct arguments", async () => {
+    // Advance fake timers to allow connection process to complete
+    await vi.runAllTimersAsync()
     await server.connected
     // @ts-expect-error
     const sendSpy = vi.spyOn(client.websocket, "send")
@@ -1045,7 +1062,7 @@ describe("WebsocketConnection auth token handling", () => {
     websocketSpy = vi.spyOn(window, "WebSocket")
 
     originalAxiosGet = axios.get
-    axios.get = vi.fn()
+    axios.get = createAxiosMock()
   })
 
   afterEach(() => {
