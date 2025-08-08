@@ -14,16 +14,16 @@
 from __future__ import annotations
 
 import re
-from re import Pattern
 from typing import TYPE_CHECKING
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
     expect_markdown,
     get_element_by_key,
+    get_selectbox,
 )
 
 if TYPE_CHECKING:
@@ -31,12 +31,6 @@ if TYPE_CHECKING:
 
 
 NUM_SELECTBOXES = 19
-
-
-def get_selectbox(locator: Page, label: str | Pattern[str]) -> Locator:
-    element = locator.get_by_test_id("stSelectbox").filter(has_text=label)
-    expect(element).to_be_visible()
-    return element
 
 
 def test_selectbox_widget_rendering(
