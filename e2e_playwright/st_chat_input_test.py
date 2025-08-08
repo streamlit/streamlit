@@ -452,3 +452,27 @@ def test_programmatically_set_value_in_session_state(app: Page):
     )
     expect_markdown(app, "Chat input 3 (callback) - session state value: Hello, world!")
     expect_markdown(app, "Chat input 3 (callback) - return value: Hello, world!")
+
+
+def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that chat input height resets to compact state after submission."""
+    chat_input = app.get_by_test_id("stChatInput").nth(0)
+    chat_input_area = chat_input.locator("textarea")
+
+    assert_snapshot(chat_input, name="st_chat_input-initial_compact_state")
+
+    multiline_text = (
+        "This is line one\n"
+        "This is line two\n"
+        "This is line three\n"
+        "This is line four with some longer text to ensure expansion"
+    )
+    chat_input_area.fill(multiline_text)
+
+    assert_snapshot(chat_input, name="st_chat_input-expanded_multiline_state")
+
+    chat_input_area.press("Enter")
+    wait_for_app_run(app)
+
+    expect(chat_input_area).to_have_value("")
+    assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")

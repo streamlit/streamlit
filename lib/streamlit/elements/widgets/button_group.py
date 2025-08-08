@@ -1031,7 +1031,6 @@ class ButtonGroupMixin:
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
-        widget_name = "button_group"
         ctx = get_script_run_ctx()
         form_id = current_form_id(self.dg)
         formatted_options = (
@@ -1042,10 +1041,12 @@ class ButtonGroupMixin:
                 for index, _ in enumerate(indexable_options)
             ]
         )
+
         element_id = compute_and_register_element_id(
-            widget_name,
+            # The borderless style is used by st.feedback, but users expect to see
+            # "feedback" in errors
+            "feedback" if style == "borderless" else style,
             user_key=key,
-            form_id=form_id,
             dg=self.dg,
             options=formatted_options,
             default=default,
@@ -1088,7 +1089,7 @@ class ButtonGroupMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
+        self.dg._enqueue("button_group", proto, layout_config=layout_config)
 
         return widget_state
 

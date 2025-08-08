@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Final, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, type_util, url_util
-from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -210,6 +209,7 @@ class MediaMixin:
             )
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(
+            self.dg,
             coordinates,
             audio_proto,
             data,
@@ -219,7 +219,6 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
-            form_id=current_form_id(self.dg),
             width=width,
         )
         return self.dg._enqueue("audio", audio_proto)
@@ -389,6 +388,7 @@ class MediaMixin:
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(
+            self.dg,
             coordinates,
             video_proto,
             data,
@@ -399,7 +399,6 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
-            form_id=current_form_id(self.dg),
             width=width,
         )
         return self.dg._enqueue("video", video_proto)
@@ -500,6 +499,7 @@ def _marshall_av_media(
 
 
 def marshall_video(
+    dg: DeltaGenerator,
     coordinates: str,
     proto: VideoProto,
     data: MediaData,
@@ -510,7 +510,6 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
-    form_id: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
@@ -555,9 +554,6 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
-    form_id: str | None
-        The ID of the form that this element is placed in. Provide None if
-        the element is not placed in a form.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -643,7 +639,7 @@ def marshall_video(
             "video",
             # video does not yet allow setting a user-defined key
             user_key=None,
-            form_id=form_id,
+            dg=dg,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -763,6 +759,7 @@ def _maybe_convert_to_wav_bytes(data: MediaData, sample_rate: int | None) -> Med
 
 
 def marshall_audio(
+    dg: DeltaGenerator,
     coordinates: str,
     proto: AudioProto,
     data: MediaData,
@@ -772,7 +769,6 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
-    form_id: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
@@ -800,9 +796,6 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
-    form_id: str | None
-        The ID of the form that this element is placed in. Provide None if
-        the element is not placed in a form.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -838,7 +831,7 @@ def marshall_audio(
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
-            form_id=form_id,
+            dg=dg,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,

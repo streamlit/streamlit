@@ -28,27 +28,27 @@ def test_vega_lite_chart(app: Page):
 
     for idx in range(VEGA_LITE_CHART_COUNT):
         chart = vega_lite_charts.nth(idx)
-        canvas = chart.locator("canvas").nth(0)
-        expect(canvas).to_be_visible()
-        expect(canvas).to_have_class("marks")
+        vega_display = chart.locator("[role='graphics-document']").nth(0)
+        expect(vega_display).to_be_visible()
+        expect(vega_display.locator("svg")).to_have_class("marks")
 
 
 def test_vega_lite_chart_sets_chart_width(themed_app: Page):
     """Tests that it sets the correct chart width."""
     vega_lite_charts = themed_app.get_by_test_id("stVegaLiteChart")
 
-    expect(vega_lite_charts.nth(0).locator("canvas").nth(0)).to_have_css(
-        "width", "704px"
-    )
-    expect(vega_lite_charts.nth(1).locator("canvas").nth(0)).to_have_css(
-        "width", "704px"
-    )
-    expect(vega_lite_charts.nth(2).locator("canvas").nth(0)).to_have_css(
-        "width", "400px"
-    )
-    expect(vega_lite_charts.nth(3).locator("canvas").nth(0)).to_have_css(
-        "width", "500px"
-    )
+    expect(
+        vega_lite_charts.nth(0).locator("[role='graphics-document']").nth(0)
+    ).to_have_css("width", "704px")
+    expect(
+        vega_lite_charts.nth(1).locator("[role='graphics-document']").nth(0)
+    ).to_have_css("width", "704px")
+    expect(
+        vega_lite_charts.nth(2).locator("[role='graphics-document']").nth(0)
+    ).to_have_css("width", "400px")
+    expect(
+        vega_lite_charts.nth(3).locator("[role='graphics-document']").nth(0)
+    ).to_have_css("width", "500px")
 
 
 @pytest.mark.skip_browser("firefox")
