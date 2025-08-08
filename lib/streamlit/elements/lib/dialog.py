@@ -110,8 +110,6 @@ class Dialog(DeltaGenerator):
             element_id = compute_and_register_element_id(
                 "dialog",
                 user_key=None,
-                # Dialogs within forms still trigger a normal rerun:
-                form_id="",
                 dg=parent,
                 title=title,
                 dismissible=dismissible,

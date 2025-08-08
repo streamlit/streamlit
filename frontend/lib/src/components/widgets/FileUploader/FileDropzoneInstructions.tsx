@@ -33,6 +33,7 @@ export interface Props {
   multiple: boolean
   acceptedExtensions: string[]
   maxSizeBytes: number
+  acceptDirectory?: boolean
   disabled?: boolean
 }
 
@@ -40,26 +41,46 @@ const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
   maxSizeBytes,
+  acceptDirectory = false,
   disabled,
-}: Props): React.ReactElement => (
-  <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
-    <StyledFileDropzoneInstructionsFileUploaderIcon>
-      <Icon content={CloudUpload} size="threeXL" />
-    </StyledFileDropzoneInstructionsFileUploaderIcon>
-    <StyledFileDropzoneInstructionsColumn>
-      <StyledFileDropzoneInstructionsText disabled={disabled}>
-        Drag and drop file{multiple ? "s" : ""} here
-      </StyledFileDropzoneInstructionsText>
-      <StyledFileDropzoneInstructionsSubtext disabled={disabled}>
-        {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
-        {acceptedExtensions.length
-          ? ` • ${acceptedExtensions
-              .map(ext => ext.replace(/^\./, "").toUpperCase())
-              .join(", ")}`
-          : null}
-      </StyledFileDropzoneInstructionsSubtext>
-    </StyledFileDropzoneInstructionsColumn>
-  </StyledFileDropzoneInstructions>
-)
+}: Props): React.ReactElement => {
+  // Determine what type of content we're accepting
+  const getContentTypeText = (): string => {
+    if (acceptDirectory) {
+      return "directories"
+    }
+    return multiple ? "files" : "file"
+  }
+
+  const getFileTypeInfo = (): string | null => {
+    if (acceptedExtensions.length) {
+      return ` • ${acceptedExtensions
+        .map(ext => ext.replace(/^\./, "").toUpperCase())
+        .join(", ")}`
+    }
+    return null
+  }
+
+  const getSizeLimit = (): string => {
+    return `Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`
+  }
+
+  return (
+    <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
+      <StyledFileDropzoneInstructionsFileUploaderIcon>
+        <Icon content={CloudUpload} size="threeXL" />
+      </StyledFileDropzoneInstructionsFileUploaderIcon>
+      <StyledFileDropzoneInstructionsColumn>
+        <StyledFileDropzoneInstructionsText disabled={disabled}>
+          Drag and drop {getContentTypeText()} here
+        </StyledFileDropzoneInstructionsText>
+        <StyledFileDropzoneInstructionsSubtext disabled={disabled}>
+          {getSizeLimit()}
+          {getFileTypeInfo()}
+        </StyledFileDropzoneInstructionsSubtext>
+      </StyledFileDropzoneInstructionsColumn>
+    </StyledFileDropzoneInstructions>
+  )
+}
 
 export default memo(FileDropzoneInstructions)
