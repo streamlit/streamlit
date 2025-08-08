@@ -18,7 +18,6 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { CancelTokenSource } from "axios"
 
 import { render } from "~lib/test_util"
 
@@ -34,7 +33,7 @@ describe("FileStatus widget", () => {
   it("shows progress bar when uploading", () => {
     const props = getProps({
       type: "uploading",
-      cancelToken: null as unknown as CancelTokenSource,
+      abortController: new AbortController(),
       progress: 40,
     })
     render(<UploadedFileStatus {...props} />)

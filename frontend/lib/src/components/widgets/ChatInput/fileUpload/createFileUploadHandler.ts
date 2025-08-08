@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import axios from "axios"
-
 import { IFileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
@@ -44,18 +42,20 @@ export const createUploadFileHandler =
   }: CreateUploadFileParams) =>
   (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    const cancelToken = axios.CancelToken.source()
+    // For directory uploads, prefer the webkitRelativePath so we preserve
+    // the original directory structure in the displayed file name.
+    const fileName =
+      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+      file.name
 
-    // For directory uploads, use the relative path to preserve directory structure
-    const fileName = file.webkitRelativePath || file.name
-
+    const abortController = new AbortController()
     const uploadingFileInfo = new UploadFileInfo(
       fileName,
       file.size,
       getNextLocalFileId(),
       {
         type: "uploading",
-        cancelToken,
+        abortController,
         progress: 1,
       }
     )
@@ -70,13 +70,13 @@ export const createUploadFileHandler =
         fileURLs.uploadUrl as string,
         file,
         e => onUploadProgress(e, uploadingFileInfo.id),
-        cancelToken.token
+        abortController.signal
       )
       .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
-        // If this was a cancel error, we don't show the user an error -
+        // If this was an abort error, we don't show the user an error -
         // the cancellation was in response to an action they took.
-        if (!axios.isCancel(err)) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
           updateFile(
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({

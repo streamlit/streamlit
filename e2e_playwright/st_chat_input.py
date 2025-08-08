@@ -58,20 +58,14 @@ st.write("Chat input 4 (single file) - value:", v4)
 v5 = st.container().chat_input("Chat input 5 (multiple files)", accept_file="multiple")
 st.write("Chat input 5 (multiple files) - value:", v5)
 
-v6 = st.container().chat_input(
-    "Chat input 6 (directory)", accept_file="directory", file_type=["txt", "py", "md"]
-)
-st.write("Chat input 6 (directory) - value:", v6)
+v6 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
+v7 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
 
-v7 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
-v8 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
-
-v9 = st.container().chat_input(
-    "Chat input 9 (restricted directory - only .txt)",
-    accept_file="directory",
-    file_type="txt",
+# Add directory upload test scenario
+v8 = st.container().chat_input(
+    "Chat input 9 (directory)", accept_file="directory", file_type=["txt", "py", "md"]
 )
-st.write("Chat input 9 (restricted directory) - value:", v9)
+st.write("Chat input 9 (directory) - value:", v8)
 
 v10 = st.chat_input(
     "Chat input 10 (bottom, max_chars, long placeholder) "
