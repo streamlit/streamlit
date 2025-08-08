@@ -213,6 +213,7 @@ class DataframeSelectionSerde:
         return cast("DataframeState", AttributeDictionary(selection_state))
 
     def serialize(self, editing_state: DataframeState) -> str:
+        # TODO(lukasmasuch): Do we hav to add special treatment for named tuples?
         return json.dumps(editing_state, default=str)
 
 

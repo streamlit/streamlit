@@ -264,8 +264,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
-        assert plotly_proto.form_id == form_proto.form.form_id
+        arrow_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        assert arrow_proto.form_id == form_proto.form.form_id
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_selectable_df_disallows_callbacks_inside_form(self):
@@ -389,7 +389,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             df, on_select="ignore", selection_mode=["single-row", "multi-column"]
         )
         el = self.get_delta_from_queue().new_element
-        assert el.plotly_chart.selection_mode == []
+        assert el.arrow_data_frame.selection_mode == []
 
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""

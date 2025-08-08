@@ -362,10 +362,11 @@ function DataFrame({
           }
         } else if (cell) {
           // Single-cell selection
-          if (!columns[cell[0]].isIndex) {
+          const [col, row] = cell
+          if (!columns[col].isIndex) {
             selectionState.selection.cells.push([
-              getOriginalIndex(cell[1]),
-              getColumnName(columns[cell[0]]),
+              getOriginalIndex(row),
+              getColumnName(columns[col]),
             ])
           }
         }
