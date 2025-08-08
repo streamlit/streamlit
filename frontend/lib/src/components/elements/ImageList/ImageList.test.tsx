@@ -24,16 +24,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps } from "./ImageList"
-
-// WidthBehavior enum values for backwards compatibility testing
-const WidthBehavior = {
-  ORIGINAL: -1,
-  COLUMN: -2,
-  AUTO: -3,
-  MIN_IMAGE_OR_CONTAINER: -4,
-  MAX_IMAGE_OR_CONTAINER: -5,
-}
+import ImageList, { ImageListProps, WidthBehavior } from "./ImageList"
 
 describe("ImageList Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
@@ -108,8 +99,8 @@ describe("ImageList Element", () => {
   })
 
   describe("Legacy WidthBehavior backwards compatibility", () => {
-    it("uses original size for ORIGINAL WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.ORIGINAL })
+    it("uses original size for OriginalWidth WidthBehavior", () => {
+      const props = getProps({ width: WidthBehavior.OriginalWidth })
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
@@ -118,8 +109,8 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("uses container width for COLUMN WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.COLUMN })
+    it("uses container width for ColumnWidth WidthBehavior", () => {
+      const props = getProps({ width: WidthBehavior.ColumnWidth })
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
@@ -128,8 +119,8 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("uses original size for AUTO WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.AUTO })
+    it("uses original size for AutoWidth WidthBehavior", () => {
+      const props = getProps({ width: WidthBehavior.AutoWidth })
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
@@ -138,8 +129,8 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("uses original size for MIN_IMAGE_OR_CONTAINER WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MIN_IMAGE_OR_CONTAINER })
+    it("uses original size for MinImageOrContainer WidthBehavior", () => {
+      const props = getProps({ width: WidthBehavior.MinImageOrContainer })
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
@@ -148,8 +139,8 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("uses container width for MAX_IMAGE_OR_CONTAINER WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MAX_IMAGE_OR_CONTAINER })
+    it("uses container width for MaxImageOrContainer WidthBehavior", () => {
+      const props = getProps({ width: WidthBehavior.MaxImageOrContainer })
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
@@ -202,7 +193,7 @@ describe("ImageList Element", () => {
     })
 
     it("falls back to legacy width when new widthConfig is null", () => {
-      const props = getProps({ width: WidthBehavior.COLUMN }, null)
+      const props = getProps({ width: WidthBehavior.ColumnWidth }, null)
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")

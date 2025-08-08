@@ -44,12 +44,14 @@ const LOG = getLogger("ImageList")
 
 // This is deprecated, but we want to support old versions
 // of the proto messages due to requirements of our integrations.
-enum WidthBehavior {
-  ORIGINAL = -1,
-  COLUMN = -2,
-  AUTO = -3,
-  MIN_IMAGE_OR_CONTAINER = -4,
-  MAX_IMAGE_OR_CONTAINER = -5,
+export enum WidthBehavior {
+  OriginalWidth = -1,
+  /** @deprecated */
+  ColumnWidth = -2,
+  /** @deprecated */
+  AutoWidth = -3,
+  MinImageOrContainer = -4,
+  MaxImageOrContainer = -5,
 }
 
 export interface ImageListProps {
@@ -65,18 +67,17 @@ export interface ImageListProps {
  *
  * @param widthConfig - The new width configuration from the element
  * @param legacyWidth - The legacy WidthBehavior width from element.width
- * @param elementWidth - The width of the container element
+ * @param containerWidth - The width of the container element
  * @returns The width to use for images, or undefined for original size
  */
 function getImageWidth(
   widthConfig: streamlit.IWidthConfig | null | undefined,
-  legacyWidth: number | null | undefined,
-  elementWidth: number
+  legacyWidth: WidthBehavior | null | undefined,
+  containerWidth: number
 ): number | undefined {
   if (widthConfig) {
     if (widthConfig.useStretch) {
-      // Use the full element width (stretch to container)
-      return elementWidth
+      return containerWidth
     }
 
     if (widthConfig.useContent) {
@@ -92,16 +93,15 @@ function getImageWidth(
   // Fall back to legacy WidthBehavior if no new config
   if (legacyWidth !== null && legacyWidth !== undefined) {
     switch (legacyWidth) {
-      case WidthBehavior.ORIGINAL:
-      case WidthBehavior.AUTO:
-      case WidthBehavior.MIN_IMAGE_OR_CONTAINER:
+      case WidthBehavior.OriginalWidth:
+      case WidthBehavior.AutoWidth:
+      case WidthBehavior.MinImageOrContainer:
         // Use original image size
         return undefined
 
-      case WidthBehavior.COLUMN:
-      case WidthBehavior.MAX_IMAGE_OR_CONTAINER:
-        // Use container width
-        return elementWidth
+      case WidthBehavior.ColumnWidth:
+      case WidthBehavior.MaxImageOrContainer:
+        return containerWidth
 
       default:
         // Positive integers are exact pixel widths
@@ -172,10 +172,10 @@ function ImageList({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  // The width of the element is the width of the container, not necessarily the image.
-  const elementWidth = width || 0
+  // The width of the container element, not necessarily the image.
+  const containerWidth = width || 0
 
-  const imageWidth = getImageWidth(widthConfig, element.width, elementWidth)
+  const imageWidth = getImageWidth(widthConfig, element.width, containerWidth)
 
   const imgStyle: CSSProperties = {}
 
@@ -210,7 +210,7 @@ function ImageList({
 
   return (
     <StyledToolbarElementContainer
-      width={elementWidth}
+      width={containerWidth}
       height={height}
       useContainerWidth={isFullScreen}
       topCentered

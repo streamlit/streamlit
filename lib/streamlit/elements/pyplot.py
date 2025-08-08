@@ -125,7 +125,6 @@ class PyplotMixin:
 
         """
 
-        # Handle deprecation of use_container_width
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
@@ -138,8 +137,8 @@ class PyplotMixin:
                 ),
                 show_in_browser=False,
             )
-            # Convert use_container_width to width if width wasn't explicitly set
-            if width == "stretch":  # Check if width is still the default value
+
+            if width == "stretch":
                 width = "stretch" if use_container_width else "content"
 
         if not fig:
