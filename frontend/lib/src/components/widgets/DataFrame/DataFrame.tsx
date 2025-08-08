@@ -318,6 +318,7 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    *
    * @param newSelection - The new selection state
+   * @param syncCellSelections - Whether to sync cell selections
    */
   const innerSyncSelectionState = useCallback(
     (newSelection: GridSelection, syncCellSelections: boolean) => {
@@ -343,11 +344,8 @@ function DataFrame({
           return getColumnName(columns[columnIdx])
         })
 
-      if (
-        syncCellSelections &&
-        newSelection.current // Check if current (the Item object) exists
-      ) {
-        const { cell, range } = newSelection.current // Destructure directly from the Item object
+      if (syncCellSelections && newSelection.current) {
+        const { cell, range } = newSelection.current
         if (range) {
           // Multi-cell selection
           for (let r = range.y; r < range.y + range.height; r++) {
