@@ -1182,6 +1182,10 @@ function DataFrame({
               ? "mixed"
               : "exclusive",
           })}
+          // Activate features required for cell selection:
+          {...(isCellSelectionActivated && {
+            rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
+          })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
             element.editingMode !== READ_ONLY &&
@@ -1195,16 +1199,6 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          // Streamlit-specific cell selection modes override the default for non-touch devices
-          {...(!disabled &&
-            !isTouchDevice &&
-            isCellSelectionActivated && {
-              rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
-            })}
-          // Disabled state takes highest precedence for rangeSelect (overwrites previous rangeSelect if disabled)
-          {...(disabled && {
-            rangeSelect: "none",
-          })}
           // If element is dynamic, enable adding & deleting rows:
           {...(!isEmptyTable &&
             element.editingMode === DYNAMIC && {
