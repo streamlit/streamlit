@@ -238,10 +238,12 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         assert selection.selection.rows == []
         assert selection.selection.columns == []
+        assert selection.selection.cells == []
 
         # Check that the selection state is added to the session state:
         assert st.session_state.selectable_df.selection.rows == []
         assert st.session_state.selectable_df.selection.columns == []
+        assert st.session_state.selectable_df.selection.cells == []
 
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
@@ -313,12 +315,39 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (("multi-row", "multi-column"), [1, 3]),
-            ({"single-row", "single-column"}, [0, 2]),
-            ({"single-row", "multi-column"}, [0, 3]),
-            (("multi-row", "single-column"), [1, 2]),
-            ("single-row", [0]),
-            ("multi-column", [3]),
+            (
+                ("multi-row", "multi-column"),
+                [
+                    ArrowProto.SelectionMode.MULTI_ROW,
+                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
+            (
+                {"single-row", "single-column"},
+                [
+                    ArrowProto.SelectionMode.SINGLE_ROW,
+                    ArrowProto.SelectionMode.SINGLE_COLUMN,
+                ],
+            ),
+            (
+                {"single-row", "multi-column"},
+                [
+                    ArrowProto.SelectionMode.SINGLE_ROW,
+                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
+            (
+                ("multi-row", "single-column", "single-cell"),
+                [
+                    ArrowProto.SelectionMode.MULTI_ROW,
+                    ArrowProto.SelectionMode.SINGLE_COLUMN,
+                    ArrowProto.SelectionMode.SINGLE_CELL,
+                ],
+            ),
+            ("single-row", [ArrowProto.SelectionMode.SINGLE_ROW]),
+            ("multi-column", [ArrowProto.SelectionMode.MULTI_COLUMN]),
+            ("single-cell", [ArrowProto.SelectionMode.SINGLE_CELL]),
+            ("multi-cell", [ArrowProto.SelectionMode.MULTI_CELL]),
         ]
     )
     def test_selection_mode_parsing(self, input_modes, expected_modes):
@@ -347,6 +376,11 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.dataframe(
                 df, on_select="rerun", selection_mode=["single-column", "multi-column"]
+            )
+
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["single-cell", "multi-cell"]
             )
 
         # If selections are deactivated, the selection mode list should be empty

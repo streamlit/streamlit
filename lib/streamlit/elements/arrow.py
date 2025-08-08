@@ -21,6 +21,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NamedTuple,
     TypedDict,
     cast,
     overload,
@@ -84,7 +85,7 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {
 }
 
 
-class DataframeCellPosition(TypedDict):
+class DataframeCellPosition(NamedTuple):
     row: int
     column: str
 
@@ -113,8 +114,8 @@ class DataframeSelectionState(TypedDict, total=False):
     columns : list[str]
         The selected columns, identified by their names.
     cells : list[DataframeCellPosition]
-        The selected cells, identified by their row integer position and
-        column name.
+        The selected cells, identified by a tuple of row integer position and
+        column name, e.g. ``(0, "col 1")``.
 
     Example
     -------
@@ -454,10 +455,6 @@ class ArrowMixin:
               selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
 
             When column selections are enabled, column sorting is disabled.
-            When multiple selection types are active (e.g., row and cell),
-            making a new selection of one type (e.g., clicking a cell) may
-            clear selections of other types (e.g., selected rows) due to the
-            underlying grid's behavior.
 
         row_height : int or None
             The height of each row in the dataframe in pixels. If ``row_height``
@@ -466,20 +463,13 @@ class ArrowMixin:
 
         Returns
         -------
-        element or DataframeState (dict)
+        element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element that can be used
             with the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``DataframeState``
-            dictionary schema:
-            - ``selection``: A dictionary containing the selection details.
-                - ``rows``: A list of original integer indices of selected rows.
-                - ``columns``: A list of string names of selected columns.
-                - ``cells``: A list of dictionaries, where each dictionary
-                  represents a selected cell and has ``row`` (original integer
-                  index) and ``column`` (string name) keys. Empty if no cells
-                  are selected or cell selection is not active.
+            dictionary schema.
 
         Examples
         --------

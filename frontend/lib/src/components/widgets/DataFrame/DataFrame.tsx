@@ -317,7 +317,7 @@ function DataFrame({
   // innerSyncSelectionState (the actual logic) will be defined after useSelectionHandler
   // so that it can use the values destructured from useSelectionHandler.
   const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
-    (newSelection: GridSelection) => {
+    (newSelection: GridSelection): void => {
       // This will call the innerSyncSelectionState that will be defined later.
       // This is a common pattern for breaking circular dependencies in React hooks and callbacks.
       innerSyncSelectionState(newSelection)
