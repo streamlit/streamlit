@@ -586,7 +586,7 @@ def test_single_cell_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-cell selection:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': [{'row': 0, 'column': 'col_1'}]}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [CellPosition(row=0, column='col_1')]}}",
         exact_match=True,
     )
 
@@ -598,7 +598,7 @@ def test_single_cell_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-cell selection:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': [{'row': 1, 'column': 'col_3'}]}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [CellPosition(row=1, column='col_3')]}}",
         exact_match=True,
     )
 
@@ -630,9 +630,11 @@ def test_multi_cell_select_by_dragging(app: Page):
         app,
         "Dataframe multi-cell selection:",
         "{'selection': {'rows': [], 'columns': [], 'cells': ["
-        "{'row': 0, 'column': 'col_1'}, {'row': 0, 'column': 'col_2'}, {'row': 0, 'column': 'col_3'}, "
-        "{'row': 1, 'column': 'col_1'}, {'row': 1, 'column': 'col_2'}, {'row': 1, 'column': 'col_3'}, "
-        "{'row': 2, 'column': 'col_1'}, {'row': 2, 'column': 'col_2'}, {'row': 2, 'column': 'col_3'}]}}",
+        "CellPosition(row=0, column='col_1'), CellPosition(row=0, column='col_2'), "
+        "CellPosition(row=0, column='col_3'), CellPosition(row=1, column='col_1'), "
+        "CellPosition(row=1, column='col_2'), CellPosition(row=1, column='col_3'), "
+        "CellPosition(row=2, column='col_1'), CellPosition(row=2, column='col_2'), "
+        "CellPosition(row=2, column='col_3')]}}",
         exact_match=True,
     )
 
@@ -655,7 +657,7 @@ def test_multi_row_and_single_cell_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row & single-cell selection:",
-        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [{'row': 1, 'column': 'col_2'}]}}",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [CellPosition(row=1, column='col_2')]}}",
         exact_match=True,
     )
 
@@ -667,7 +669,7 @@ def test_multi_row_and_single_cell_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row & single-cell selection:",
-        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [{'row': 3, 'column': 'col_1'}]}}",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [CellPosition(row=3, column='col_1')]}}",
         exact_match=True,
     )
 
@@ -711,10 +713,10 @@ def test_multi_row_column_and_cell_select(
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row, multi-column & multi-cell selection:",
-        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_2'], 'cells': [{'row': 0, 'column': 'col_1'}, "
-        "{'row': 0, 'column': 'col_2'}, {'row': 0, 'column': 'col_3'}, {'row': 1, 'column': 'col_1'}, "
-        "{'row': 1, 'column': 'col_2'}, {'row': 1, 'column': 'col_3'}, {'row': 2, 'column': 'col_1'}, "
-        "{'row': 2, 'column': 'col_2'}, {'row': 2, 'column': 'col_3'}]}}",
+        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_2'], 'cells': [CellPosition(row=0, column='col_1'), "
+        "CellPosition(row=0, column='col_2'), CellPosition(row=0, column='col_3'), CellPosition(row=1, column='col_1'), "
+        "CellPosition(row=1, column='col_2'), CellPosition(row=1, column='col_3'), CellPosition(row=2, column='col_1'), "
+        "CellPosition(row=2, column='col_2'), CellPosition(row=2, column='col_3')]}}",
         exact_match=True,
     )
 

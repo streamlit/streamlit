@@ -76,6 +76,7 @@ selection = st.dataframe(
 )
 st.write("Dataframe multi-row selection:", str(selection))
 
+
 st.subheader("multi-column select")
 selection = st.dataframe(
     df,
