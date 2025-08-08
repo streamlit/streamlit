@@ -66,7 +66,10 @@ function useSelectionHandler(
   isEmptyTable: boolean,
   isDisabled: boolean,
   columns: BaseColumn[],
-  syncSelectionState: (newSelection: GridSelection) => void
+  syncSelectionState: (
+    newSelection: GridSelection,
+    syncCellSelections: boolean
+  ) => void
 ): SelectionHandlerReturn {
   const [gridSelection, setGridSelection] = useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -205,7 +208,7 @@ function useSelectionHandler(
 
       if (syncSelection) {
         // Sync this selection with the widget state / backend
-        syncSelectionState(updatedSelection)
+        syncSelectionState(updatedSelection, isCellSelectionActivated)
       }
     },
     [
@@ -242,7 +245,7 @@ function useSelectionHandler(
         (!keepColumns && isColumnSelectionActivated) ||
         isCellSelectionActivated
       ) {
-        syncSelectionState(emptySelection)
+        syncSelectionState(emptySelection, isCellSelectionActivated)
       }
     },
     [

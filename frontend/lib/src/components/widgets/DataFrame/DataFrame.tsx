@@ -310,39 +310,6 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  // Define syncSelectionState (debounced) function that useSelectionHandler will call.
-  // innerSyncSelectionState (the actual logic) will be defined after useSelectionHandler
-  // so that it can use the values destructured from useSelectionHandler.
-  const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
-    (newSelection: GridSelection): void => {
-      // This will call the innerSyncSelectionState that will be defined later.
-      // This is a common pattern for breaking circular dependencies in React hooks and callbacks.
-      innerSyncSelectionState(newSelection)
-    },
-    DEBOUNCE_TIME_MS
-  )
-
-  const {
-    gridSelection,
-    isRowSelectionActivated,
-    isMultiRowSelectionActivated,
-    isColumnSelectionActivated,
-    isMultiColumnSelectionActivated,
-    isCellSelectionActivated,
-    isMultiCellSelectionActivated,
-    isRowSelected,
-    isColumnSelected,
-    isCellSelected,
-    clearSelection,
-    processSelectionChange,
-  } = useSelectionHandler(
-    element,
-    isEmptyTable,
-    disabled,
-    columns,
-    syncSelectionState
-  )
-
   /**
    * Synchronizes the selection state with the state of the widget state of the component.
    * This might also send a rerun message to the backend if the selection state has changed.
@@ -353,7 +320,7 @@ function DataFrame({
    * @param newSelection - The new selection state
    */
   const innerSyncSelectionState = useCallback(
-    (newSelection: GridSelection) => {
+    (newSelection: GridSelection, syncCellSelections: boolean) => {
       // If we want to support selections also with the editable mode,
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
@@ -377,11 +344,11 @@ function DataFrame({
         })
 
       if (
-        (isCellSelectionActivated || isMultiCellSelectionActivated) &&
+        syncCellSelections &&
         newSelection.current // Check if current (the Item object) exists
       ) {
         const { cell, range } = newSelection.current // Destructure directly from the Item object
-        if (isMultiCellSelectionActivated && range) {
+        if (range) {
           // Multi-cell selection
           for (let r = range.y; r < range.y + range.height; r++) {
             for (let c = range.x; c < range.x + range.width; c++) {
@@ -393,7 +360,7 @@ function DataFrame({
               }
             }
           }
-        } else if (isCellSelectionActivated && cell) {
+        } else if (cell) {
           // Single-cell selection
           if (!columns[cell[0]].isIndex) {
             selectionState.selection.cells.push([
@@ -435,9 +402,34 @@ function DataFrame({
       widgetMgr,
       fragmentId,
       getOriginalIndex,
-      isCellSelectionActivated,
-      isMultiCellSelectionActivated,
     ]
+  )
+
+  // Use a debounce to prevent rapid updates to the widget state.
+  const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
+    innerSyncSelectionState,
+    DEBOUNCE_TIME_MS
+  )
+
+  const {
+    gridSelection,
+    isRowSelectionActivated,
+    isMultiRowSelectionActivated,
+    isColumnSelectionActivated,
+    isMultiColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
+    isRowSelected,
+    isColumnSelected,
+    isCellSelected,
+    clearSelection,
+    processSelectionChange,
+  } = useSelectionHandler(
+    element,
+    isEmptyTable,
+    disabled,
+    columns,
+    syncSelectionState
   )
 
   useEffect(() => {
