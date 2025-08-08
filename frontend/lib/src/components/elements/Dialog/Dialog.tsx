@@ -124,10 +124,10 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       closeable={dismissible}
       onClose={handleClose}
       size={
-        width === BlockProto.Dialog.DialogWidth.LARGE
-          ? "full"
-          : width === BlockProto.Dialog.DialogWidth.STRETCH
-            ? "stretch"
+        width === BlockProto.Dialog.DialogWidth.MEDIUM
+          ? "medium"
+          : width === BlockProto.Dialog.DialogWidth.LARGE
+            ? "large"
             : "default"
       }
     >

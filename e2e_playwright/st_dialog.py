@@ -61,6 +61,18 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Medium-width Dialog", width="medium")
+def medium_width_dialog() -> None:
+    st.write("This dialog has a medium width.")
+
+    if st.button("Submit", key="medium-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open medium-width Dialog"):
+    medium_width_dialog()
+
+
 @st.dialog("Large-width Dialog", width="large")
 def large_width_dialog() -> None:
     st.write("This dialog has a large width.")
@@ -71,18 +83,6 @@ def large_width_dialog() -> None:
 
 if st.button("Open large-width Dialog"):
     large_width_dialog()
-
-
-@st.dialog("Stretch-width Dialog", width="stretch")
-def stretch_width_dialog() -> None:
-    st.write("This dialog has a stretch width.")
-
-    if st.button("Submit", key="stretch-dialog-btn"):
-        st.rerun()
-
-
-if st.button("Open stretch-width Dialog"):
-    stretch_width_dialog()
 
 
 @st.dialog("Dialog with headings")

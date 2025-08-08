@@ -95,7 +95,7 @@ message Block {
     enum DialogWidth {
       SMALL = 0;
       LARGE = 1;
-      STRETCH = 2;
+      MEDIUM = 2;
     }
 
     string title = 1;

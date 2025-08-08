@@ -813,7 +813,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("stretch", BlockProto.Dialog.DialogWidth.STRETCH),
+            ("medium", BlockProto.Dialog.DialogWidth.MEDIUM),
             ("large", BlockProto.Dialog.DialogWidth.LARGE),
             ("small", BlockProto.Dialog.DialogWidth.SMALL),
         ]

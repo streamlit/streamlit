@@ -46,8 +46,12 @@ def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
 
 
-def open_largewidth_dialog(app: Page):
+def open_large_width_dialog(app: Page):
     click_button(app, "Open large-width Dialog")
+
+
+def open_medium_width_dialog(app: Page):
+    click_button(app, "Open medium-width Dialog")
 
 
 def open_headings_dialogs(app: Page):
@@ -280,10 +284,10 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     assert_snapshot(dialog, name="st_dialog-default")
 
 
-def test_largewidth_dialog_displays_correctly(
+def test_large_width_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    open_largewidth_dialog(app)
+    open_large_width_dialog(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
@@ -293,6 +297,22 @@ def test_largewidth_dialog_displays_correctly(
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
+
+
+def test_medium_width_dialog_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    open_medium_width_dialog(app)
+    dialog = app.get_by_role("dialog")
+    # click on the dialog title to take away focus of all elements and make the
+    # screenshot stable. Then hover over the button for visual effect.
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Medium-width Dialog"
+    ).click()
+
+    submit_button = get_button(dialog, "Submit")
+    submit_button.hover()
+    assert_snapshot(dialog, name="st_dialog-with_medium_width")
 
 
 # its enough to test this on one browser as showing the error inline is more a backend
