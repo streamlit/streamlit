@@ -15,7 +15,8 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.theme_utils import apply_theme_via_window, click_button
+from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_default_toast_rendering(
