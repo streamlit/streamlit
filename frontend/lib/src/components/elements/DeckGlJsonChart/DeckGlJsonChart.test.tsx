@@ -16,21 +16,21 @@
 
 import React, { FC } from "react"
 
-import JSON5 from "json5"
-import { act, screen } from "@testing-library/react"
 import { PickingInfo } from "@deck.gl/core"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import JSON5 from "json5"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   render,
   renderHook,
 } from "~lib/components/shared/ElementFullscreen/testUtils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { mockTheme } from "~lib/mocks/mockTheme"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"

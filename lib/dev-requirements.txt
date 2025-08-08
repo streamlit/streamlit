@@ -1,8 +1,8 @@
 pre-commit
 # We fix ty to a version since its still in preview and likely breaks our CI on updates:
-ty==0.0.1a15
+ty==0.0.1a16
 # We fix ruff to a version to be in sync with the pre-commit hook:
-ruff==0.12.5
+ruff==0.12.7
 # We are pinning the upper version to not break our CI on updates,
 # and have dependabot handle the updates instead.
 mypy>=1.16.1,<1.18

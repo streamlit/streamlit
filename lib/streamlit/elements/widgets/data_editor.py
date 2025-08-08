@@ -726,8 +726,8 @@ class DataEditorMixin:
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -746,15 +746,17 @@ class DataEditorMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic usage**
+
         >>> import pandas as pd
+        >>> import streamlit as st
         >>>
         >>> df = pd.DataFrame(
         >>>     [
-        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
-        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
-        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
-        >>>    ]
+        >>>         {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>         {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>         {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>     ]
         >>> )
         >>> edited_df = st.data_editor(df)
         >>>
@@ -765,17 +767,20 @@ class DataEditorMixin:
            https://doc-data-editor.streamlit.app/
            height: 350px
 
-        You can also allow the user to add and delete rows by setting ``num_rows`` to "dynamic":
+        **Example 2: Allowing users to add and delete rows**
+
+        You can allow your users to add and delete rows by setting ``num_rows``
+        to "dynamic":
 
         >>> import streamlit as st
         >>> import pandas as pd
         >>>
         >>> df = pd.DataFrame(
         >>>     [
-        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
-        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
-        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
-        >>>    ]
+        >>>         {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>         {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>         {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>     ]
         >>> )
         >>> edited_df = st.data_editor(df, num_rows="dynamic")
         >>>
@@ -786,7 +791,9 @@ class DataEditorMixin:
            https://doc-data-editor1.streamlit.app/
            height: 450px
 
-        Or you can customize the data editor via ``column_config``, ``hide_index``,
+        **Example 3: Data editor configuration**
+
+        You can customize the data editor via ``column_config``, ``hide_index``,
         ``column_order``, or ``disabled``:
 
         >>> import pandas as pd
@@ -935,7 +942,6 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             data=arrow_bytes,
             width=width,

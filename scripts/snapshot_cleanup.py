@@ -65,6 +65,12 @@ DISALLOWED_SNAPSHOTS = {
     "st_pydeck_chart-fullscreen_collapsed[light_theme-chromium].png",
     "st_pydeck_chart-fullscreen_expanded[dark_theme-chromium].png",
     "st_pydeck_chart-fullscreen_collapsed[dark_theme-chromium].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[chromium].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[chromium].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[webkit].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[webkit].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[firefox].png",
+    "st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[firefox].png",
     # st_data_editor Firefox snapshots that are not detected by static analysis
     "st_data_editor-input_data_0[firefox].png",
     "st_data_editor-input_data_1[firefox].png",

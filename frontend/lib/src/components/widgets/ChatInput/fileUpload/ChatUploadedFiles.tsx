@@ -18,12 +18,12 @@ import React, { memo, ReactElement } from "react"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
+import ChatUploadedFile from "./ChatUploadedFile"
 import {
   StyledChatUploadedFiles,
   StyledUploadedChatFileList,
   StyledUploadedChatFileListItem,
 } from "./styled-components"
-import ChatUploadedFile from "./ChatUploadedFile"
 
 export interface Props {
   items: UploadFileInfo[]

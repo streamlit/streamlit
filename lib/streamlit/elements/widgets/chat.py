@@ -478,8 +478,8 @@ class ChatMixin:
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -624,8 +624,6 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            # chat_input is not allowed to be used in a form.
-            form_id=None,
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,

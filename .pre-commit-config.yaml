@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.12.5
+    rev: v0.12.7
     hooks:
       # Run the linter.
       - id: ruff
@@ -192,6 +192,18 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+  - repo: https://gitlab.com/bmares/check-json5
+    rev: v1.0.0
+    hooks:
+      # Check JSON files that are allowed to have comments
+      - id: check-json5
+        # Note that this should be the same as the check-json hook's exclude
+        # property
+        files: |
+          (?x)
+          ^\.vscode/.*\.json$
+          |tsconfig.*\.json$
+          |.*tsconfig\.json$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -204,10 +216,13 @@ repos:
           |\.snap$
       - id: check-added-large-files
       - id: check-json
+        # Note that this should be the same as the check-json5 hook's files
+        # property
         exclude: |
           (?x)
-          |^.vscode/launch\.json$
-          |^.vscode/settings\.json$
+          ^\.vscode/.*\.json$
+          |tsconfig.*\.json$
+          |.*tsconfig\.json$
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml

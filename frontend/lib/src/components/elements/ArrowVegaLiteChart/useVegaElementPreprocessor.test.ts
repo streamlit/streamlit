@@ -16,8 +16,8 @@
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 
-import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { VegaLiteChartElement } from "./arrowUtils"
+import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 
 const getElement = (
   elementProps: Partial<VegaLiteChartElement> = {}

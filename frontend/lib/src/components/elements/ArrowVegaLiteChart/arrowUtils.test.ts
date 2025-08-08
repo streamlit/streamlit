@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { Quiver } from "~lib/dataframes/Quiver"
 import {
   CATEGORICAL,
   DATE,
@@ -25,7 +26,6 @@ import {
   UINT64,
   UNICODE,
 } from "~lib/mocks/arrow"
-import { Quiver } from "~lib/dataframes/Quiver"
 
 import { getDataArray } from "./arrowUtils"
 

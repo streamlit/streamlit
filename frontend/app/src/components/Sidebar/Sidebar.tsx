@@ -29,6 +29,7 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
+import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import {
   shouldShowNavigation,
   SidebarNav,
@@ -41,11 +42,11 @@ import {
   IsSidebarContext,
   useEmotionTheme,
   useExecuteWhenChanged,
+  useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
 
 import {
   RESIZE_HANDLE_WIDTH,
@@ -97,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -213,7 +215,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         appLogo={appLogo}
         endpoints={endpoints}
         collapsed={isCollapsed}
-        sidebarWidth={sidebarWidth}
         componentName="Sidebar Logo"
         dataTestId="stSidebarLogo"
       />
@@ -259,10 +260,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       <StyledSidebarContent
         data-testid="stSidebarContent"
         ref={sidebarRef}
-        // Safari fix: hide scrollbars when not hovered. See globalStyles.ts
-        className={"hideScrollbar"}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        scrollbarGutterSize={scrollbarGutterSize}
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}

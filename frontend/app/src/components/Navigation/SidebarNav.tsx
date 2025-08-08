@@ -27,11 +27,11 @@ import React, {
 import groupBy from "lodash/groupBy"
 import { getLogger } from "loglevel"
 
-import { isMobile } from "@streamlit/lib"
-import { localStorageAvailable } from "@streamlit/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
-import { IAppPage } from "@streamlit/protobuf"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
+import { StreamlitEndpoints } from "@streamlit/connection"
+import { isMobile } from "@streamlit/lib"
+import { IAppPage } from "@streamlit/protobuf"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"

@@ -32,5 +32,5 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
 }))
 
 export const StyledErrorName = styled.strong(({ theme }) => ({
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.codeBold,
 }))

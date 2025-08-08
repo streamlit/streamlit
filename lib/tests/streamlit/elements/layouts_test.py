@@ -24,6 +24,8 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitInvalidColumnGapError,
+    StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -499,6 +501,138 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that invalid height values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.container(height=invalid_height)
+
+    @parameterized.expand(
+        [
+            (False, BlockProto.FlexContainer.Direction.VERTICAL),
+            (True, BlockProto.FlexContainer.Direction.HORIZONTAL),
+        ],
+    )
+    def test_container_direction(
+        self, direction: bool, expected_direction: int
+    ) -> None:
+        """Test that st.container sets the correct direction."""
+        st.container(horizontal=direction)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.direction == expected_direction
+
+    @parameterized.expand(
+        [
+            ("left", BlockProto.FlexContainer.Justify.JUSTIFY_START),
+            ("center", BlockProto.FlexContainer.Justify.JUSTIFY_CENTER),
+            ("right", BlockProto.FlexContainer.Justify.JUSTIFY_END),
+            ("distribute", BlockProto.FlexContainer.Justify.SPACE_BETWEEN),
+        ]
+    )
+    def test_container_horizontal_alignment(
+        self, horizontal_alignment: str, expected_justify: int
+    ) -> None:
+        """Test that st.container sets the correct horizontal alignment (justify)."""
+        st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.justify == expected_justify
+
+    @parameterized.expand(
+        [
+            ("top", BlockProto.FlexContainer.Align.ALIGN_START),
+            ("center", BlockProto.FlexContainer.Align.ALIGN_CENTER),
+            ("bottom", BlockProto.FlexContainer.Align.ALIGN_END),
+            ("distribute", BlockProto.FlexContainer.Align.ALIGN_UNDEFINED),
+        ],
+    )
+    def test_container_vertical_alignment(
+        self, vertical_alignment: str, expected_align: int
+    ) -> None:
+        """Test that st.container sets the correct vertical alignment (align)."""
+        st.container(horizontal=True, vertical_alignment=vertical_alignment)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.align == expected_align
+
+    @parameterized.expand(
+        [
+            ("top", BlockProto.FlexContainer.Justify.JUSTIFY_START),
+            ("center", BlockProto.FlexContainer.Justify.JUSTIFY_CENTER),
+            ("bottom", BlockProto.FlexContainer.Justify.JUSTIFY_END),
+            ("distribute", BlockProto.FlexContainer.Justify.SPACE_BETWEEN),
+        ]
+    )
+    def test_container_vertical_direction_vertical_alignment(
+        self, vertical_alignment: str, expected_justify: int
+    ) -> None:
+        """Test that st.container with direction='vertical' sets the correct justify value for vertical_alignment."""
+        st.container(horizontal=False, vertical_alignment=vertical_alignment)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.justify == expected_justify
+
+    @parameterized.expand(
+        [
+            ("left", BlockProto.FlexContainer.Align.ALIGN_START),
+            ("center", BlockProto.FlexContainer.Align.ALIGN_CENTER),
+            ("right", BlockProto.FlexContainer.Align.ALIGN_END),
+            ("distribute", BlockProto.FlexContainer.Align.ALIGN_UNDEFINED),
+        ]
+    )
+    def test_container_vertical_direction_horizontal_alignment(
+        self, horizontal_alignment: str, expected_align: int
+    ) -> None:
+        """Test that st.container with direction='vertical' sets the correct align value for horizontal_alignment."""
+        st.container(horizontal=False, horizontal_alignment=horizontal_alignment)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.align == expected_align
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ],
+    )
+    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
+        """Test that st.container sets the wrap property correctly."""
+        st.container(horizontal=direction)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.wrap == wrap
+
+    @parameterized.expand(
+        [
+            ("small", GapSize.SMALL),
+            ("medium", GapSize.MEDIUM),
+            ("large", GapSize.LARGE),
+            (None, GapSize.NONE),
+        ],
+    )
+    def test_container_gap(self, gap, expected_gap) -> None:
+        """Test that st.container sets the gap property correctly."""
+        st.container(gap=gap)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.gap_size == expected_gap
+        )
+
+    @parameterized.expand(
+        [
+            "invalid",
+            None,
+        ],
+    )
+    def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
+        """Test that st.container raises on invalid horizontal_alignment."""
+        import streamlit as st
+
+        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+            st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
+
+    @parameterized.expand(
+        [
+            "invalid",
+            None,
+        ],
+    )
+    def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
+        """Test that st.container raises on invalid vertical_alignment."""
+        import streamlit as st
+
+        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+            st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):

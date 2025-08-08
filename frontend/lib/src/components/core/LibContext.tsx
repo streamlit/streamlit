@@ -16,9 +16,9 @@
 
 import { createContext } from "react"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { baseTheme, ThemeConfig } from "~lib/theme"
 
 /**
@@ -42,6 +42,7 @@ export type LibConfig = {
 
   /**
    * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * It is only applied when window.__streamlit.BACKEND_BASE_URL is set.
    * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
    * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
    */
@@ -151,6 +152,7 @@ const noOpEndpoints: StreamlitEndpoints = {
   checkSourceUrlResponse: () => Promise.resolve(),
   buildComponentURL: () => "",
   buildMediaURL: () => "",
+  buildDownloadUrl: () => "",
   buildFileUploadURL: () => "",
   buildAppPageURL: () => "",
   uploadFileUploaderFile: () =>
