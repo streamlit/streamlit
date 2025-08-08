@@ -56,8 +56,6 @@ class IFrameTest(unittest.TestCase):
 
     def test_marshall_deprecated_fields_not_set(self):
         """Test that deprecated width, height, and has_width fields are not set on proto."""
-
-        """Test that deprecated width, height, and has_width fields are not set on proto."""
         proto = IFrameProto()
         marshall(proto, src="https://example.com")
 
