@@ -108,10 +108,7 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code.
-export interface DataframeCellPosition {
-  row: number
-  column: string
-}
+export type DataframeCellPosition = readonly [row: number, column: string]
 
 export interface DataframeState {
   selection: {
@@ -389,20 +386,20 @@ function DataFrame({
           for (let r = range.y; r < range.y + range.height; r++) {
             for (let c = range.x; c < range.x + range.width; c++) {
               if (!columns[c].isIndex) {
-                selectionState.selection.cells.push({
-                  row: getOriginalIndex(r),
-                  column: getColumnName(columns[c]),
-                })
+                selectionState.selection.cells.push([
+                  getOriginalIndex(r),
+                  getColumnName(columns[c]),
+                ])
               }
             }
           }
         } else if (isCellSelectionActivated && cell) {
           // Single-cell selection
           if (!columns[cell[0]].isIndex) {
-            selectionState.selection.cells.push({
-              row: getOriginalIndex(cell[1]),
-              column: getColumnName(columns[cell[0]]),
-            })
+            selectionState.selection.cells.push([
+              getOriginalIndex(cell[1]),
+              getColumnName(columns[cell[0]]),
+            ])
           }
         }
       }

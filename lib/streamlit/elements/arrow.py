@@ -113,7 +113,7 @@ class DataframeSelectionState(TypedDict, total=False):
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
-    cells : list[DataframeCellPosition]
+    cells : list[tuple[int, str]]
         The selected cells, identified by a tuple of row integer position and
         column name, e.g. ``(0, "col 1")``.
 
@@ -193,12 +193,23 @@ class DataframeSelectionSerde:
 
         if "selection" not in selection_state:
             selection_state = empty_selection_state
+
         if "rows" not in selection_state["selection"]:
             selection_state["selection"]["rows"] = []
+
         if "columns" not in selection_state["selection"]:
             selection_state["selection"]["columns"] = []
+
         if "cells" not in selection_state["selection"]:
             selection_state["selection"]["cells"] = []
+        else:
+            # Explicitly convert all cells to the named tuple.
+            # This is necessary since there isn't a concept of tuples in JSON
+            # The format that the data is transferred to the backend.
+            selection_state["selection"]["cells"] = [
+                DataframeCellPosition(*cell)
+                for cell in selection_state["selection"]["cells"]
+            ]
 
         return cast("DataframeState", AttributeDictionary(selection_state))
 
