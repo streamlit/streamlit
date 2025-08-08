@@ -16,6 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_default_toast_rendering(
@@ -135,3 +136,25 @@ def test_toast_duration(app: Page):
     expect(long_duration_toast).to_be_visible()
     # Check that the persistent toast is still visible after the default 4s
     expect(persistent_toast).to_be_visible()
+
+
+def test_toast_adjusts_for_custom_theme(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that toasts adjust for custom theme."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app, base="light", textColor="#301934", backgroundColor="#CBC3E3"
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+    app.wait_for_timeout(250)
+
+    toasts = app.get_by_test_id("stToast")
+    expect(toasts).to_have_count(3)
+    toasts.nth(2).hover()
+
+    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    assert_snapshot(toasts.nth(2), name="toast-custom-theme")
