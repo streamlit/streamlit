@@ -25,6 +25,9 @@ import React, {
 
 import { toaster, type ToastOverrides } from "baseui/toast"
 
+import { Toast as ToastProto } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
+
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
@@ -39,8 +42,7 @@ import {
 } from "./styled-components"
 
 export interface ToastProps {
-  body: string
-  icon?: string
+  element: ToastProto
 }
 
 function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
@@ -111,7 +113,8 @@ export function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
+function Toast({ element }: Readonly<ToastProps>): ReactElement {
+  const { body, icon, duration } = element
   const theme = useEmotionTheme()
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
@@ -166,6 +169,7 @@ function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
     // to reference that toast for update/removal
     const newKey = toaster.info(toastContent, {
       overrides: { ...styleOverrides },
+      autoHideDuration: notNullOrUndefined(duration) ? duration * 1000 : 4000,
     })
     setToastKey(newKey)
 
