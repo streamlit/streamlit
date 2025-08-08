@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.theme_utils import apply_theme_via_window
+from e2e_playwright.shared.theme_utils import apply_theme_via_window, click_button
 
 
 def test_default_toast_rendering(
@@ -114,6 +114,27 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     expect(toasts.nth(0)).to_contain_text("🎉Toast above dialogClose")
     toaster = app.get_by_test_id("stToastContainer")
     assert_snapshot(toaster, name="toast-above-dialog")
+
+
+def test_toast_duration(app: Page):
+    """Test that toasts with different durations are correctly handled."""
+
+    click_button(app, "Show duration toasts")
+
+    short_duration_toast = app.get_by_text("I am a toast with a short duration")
+    long_duration_toast = app.get_by_text("I am a toast with a long duration")
+    persistent_toast = app.get_by_text("I am a persistent toast")
+
+    # Check that the short duration toast is visible initially
+    expect(short_duration_toast).to_be_visible()
+    # and then disappears after 2 seconds
+    app.wait_for_timeout(2500)
+    expect(short_duration_toast).not_to_be_visible()
+
+    # Check that the long duration toast is visible initially
+    expect(long_duration_toast).to_be_visible()
+    # Check that the persistent toast is still visible after the default 4s
+    expect(persistent_toast).to_be_visible()
 
 
 def test_toast_adjusts_for_custom_theme(

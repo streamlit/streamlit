@@ -25,6 +25,7 @@ import {
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
+import { vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 
@@ -52,9 +53,12 @@ const createContainer = (): ReactElement => (
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
-  body: "This is a toast message",
-  icon: "🐶",
-  ...elementProps,
+  element: ToastProto.create({
+    body: "This is a toast message",
+    icon: "🐶",
+    duration: 4,
+    ...elementProps,
+  }),
 })
 
 const renderComponent = (props: ToastProps): RenderResult =>
@@ -161,6 +165,30 @@ describe("Toast Component", () => {
     // Click close button
     await user.click(closeButton)
     await waitForElementToBeRemoved(toast)
+  })
+
+  test("auto hides based on duration seconds", async () => {
+    vi.useFakeTimers()
+    const props = getProps({ duration: 1 })
+    renderComponent(props)
+
+    const toast = screen.getByRole("alert")
+    expect(toast).toBeVisible()
+
+    // Advance time just before auto hide
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+    expect(screen.getByRole("alert")).toBeVisible()
+
+    // Cross the 1s threshold (Toast multiplies seconds by 1000)
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+
+    await waitForElementToBeRemoved(toast)
+
+    vi.useRealTimers()
   })
 
   test("throws an error when called via st.sidebar.toast", () => {
