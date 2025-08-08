@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -41,6 +41,7 @@ class ToastMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        duration: Literal["short", "long", "infinite"] | int = "short",
     ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
         The toast appears in the app's top-right corner and disappears after four seconds.
@@ -79,6 +80,13 @@ class ToastMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+        duration : Literal["short", "long", "infinite"] | int
+            The time to display the toast message. Can be one of:
+
+            - "short" (default) for 4 seconds.
+            - "long" for 10 seconds.
+            - "infinite" shows the toast until the user dismisses it.
+            - A number specifying the time in seconds.
 
         Example
         -------
@@ -89,6 +97,23 @@ class ToastMixin:
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
+
+        if duration in ["short", "long", "infinite"] or (
+            isinstance(duration, int) and duration > 0
+        ):
+            if duration == "short":
+                toast_proto.duration = 4
+            elif duration == "long":
+                toast_proto.duration = 10
+            elif duration == "infinite":
+                toast_proto.duration = 0
+            else:
+                toast_proto.duration = duration
+        else:
+            raise StreamlitValueError(
+                "duration", ["short", "long", "infinite", "a positive integer"]
+            )
+
         return self.dg._enqueue("toast", toast_proto)
 
     @property
