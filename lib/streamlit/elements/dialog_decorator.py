@@ -213,7 +213,7 @@ def dialog_decorator(
         .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
     width : "small", "medium", "large"
-        The width of the modal dialog. If ``width`` is ``"small`` (default), the
+        The width of the modal dialog. If ``width`` is ``"small"`` (default), the
         modal dialog will be a maximum of 500 pixels wide. If ``width`` is ``"medium"``,
         the modal dialog will be up to 750 pixels wide. If ``width`` is ``"large"``,
         the modal dialog will be up to 1280 pixels wide.
