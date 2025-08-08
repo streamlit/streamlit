@@ -108,7 +108,7 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code.
-export type DataframeCellPosition = readonly [row: number, column: string]
+export type CellPosition = readonly [row: number, column: string]
 
 export interface DataframeState {
   selection: {
@@ -117,7 +117,7 @@ export interface DataframeState {
     // it easier to use and unify with how data editor edits
     // are stored.
     columns: string[]
-    cells: DataframeCellPosition[]
+    cells: CellPosition[]
   }
 }
 
@@ -363,7 +363,7 @@ function DataFrame({
         selection: {
           rows: [] as number[],
           columns: [] as string[],
-          cells: [] as DataframeCellPosition[],
+          cells: [] as CellPosition[],
         },
       }
 

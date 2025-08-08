@@ -85,7 +85,7 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {
 }
 
 
-class DataframeCellPosition(NamedTuple):
+class CellPosition(NamedTuple):
     row: int
     column: str
 
@@ -148,7 +148,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     rows: list[int]
     columns: list[str]
-    cells: list[DataframeCellPosition]
+    cells: list[CellPosition]
 
 
 class DataframeState(TypedDict, total=False):
@@ -207,8 +207,7 @@ class DataframeSelectionSerde:
             # This is necessary since there isn't a concept of tuples in JSON
             # The format that the data is transferred to the backend.
             selection_state["selection"]["cells"] = [
-                DataframeCellPosition(*cell)
-                for cell in selection_state["selection"]["cells"]
+                CellPosition(*cell) for cell in selection_state["selection"]["cells"]
             ]
 
         return cast("DataframeState", AttributeDictionary(selection_state))
