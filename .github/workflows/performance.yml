@@ -21,6 +21,7 @@ concurrency:
 jobs:
   performance:
     runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 25
 
     defaults:
       run:
