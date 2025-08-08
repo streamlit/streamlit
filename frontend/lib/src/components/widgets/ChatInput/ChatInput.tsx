@@ -154,7 +154,7 @@ function ChatInput({
           // Cancel request as the file hasn't been uploaded.
           // However, it may have been received by the server so we'd still
           // send out a request to delete it.
-          file.status.cancelToken.cancel()
+          file.status.abortController.abort()
         }
 
         if (
@@ -220,7 +220,7 @@ function ChatInput({
             fileId,
             file.setStatus({
               type: "uploading",
-              cancelToken: file.status.cancelToken,
+              abortController: file.status.abortController,
               progress: newProgress,
             }),
             prevFiles
