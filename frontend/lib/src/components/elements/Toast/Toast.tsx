@@ -66,9 +66,7 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         paddingBottom: theme.spacing.lg,
         paddingLeft: theme.spacing.twoXL,
         paddingRight: theme.spacing.twoXL,
-        backgroundColor: lightBackground
-          ? theme.colors.gray10
-          : theme.colors.gray90,
+        backgroundColor: theme.colors.bgColor,
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
         boxShadow: lightBackground

@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_default_toast_rendering(
@@ -113,3 +114,25 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     expect(toasts.nth(0)).to_contain_text("🎉Toast above dialogClose")
     toaster = app.get_by_test_id("stToastContainer")
     assert_snapshot(toaster, name="toast-above-dialog")
+
+
+def test_toast_adjusts_for_custom_theme_window_injection(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that toasts adjust for custom theme via window.__streamlit injection."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app, base="light", textColor="#301934", backgroundColor="#CBC3E3"
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+    app.wait_for_timeout(250)
+
+    toasts = app.get_by_test_id("stToast")
+    expect(toasts).to_have_count(3)
+    toasts.nth(2).hover()
+
+    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    assert_snapshot(toasts.nth(2), name="toast-custom-theme-window")
