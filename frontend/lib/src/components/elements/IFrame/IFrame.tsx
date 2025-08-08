@@ -55,7 +55,6 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       disableScrolling={!element.scrolling}
       src={src}
       srcDoc={srcDoc}
-      height={element.height}
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"

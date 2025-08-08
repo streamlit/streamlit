@@ -168,8 +168,7 @@ const getAlignItems = (
     case BlockProto.FlexContainer.Align.ALIGN_UNDEFINED:
     case undefined:
     case null:
-      // This is the existing default behavior
-      return "start"
+      return "stretch"
     default:
       assertNever(align)
   }
@@ -190,7 +189,6 @@ const getJustifyContent = (
     case BlockProto.FlexContainer.Justify.JUSTIFY_UNDEFINED:
     case undefined:
     case null:
-      // This is the existing default behavior
       return "start"
     default:
       assertNever(justify)

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -95,12 +96,15 @@ class IframeMixin:
         marshall(
             iframe_proto,
             src=src,
-            width=width,
-            height=height,
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the iframe to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @gather_metrics("_html")
     def _html(
@@ -177,12 +181,15 @@ class IframeMixin:
         marshall(
             iframe_proto,
             srcdoc=html,
-            width=width,
-            height=height,
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the html to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -194,8 +201,6 @@ def marshall(
     proto: IFrameProto,
     src: str | None = None,
     srcdoc: str | None = None,
-    width: int | None = None,
-    height: int | None = None,
     scrolling: bool = False,
     tab_index: int | None = None,
 ) -> None:
@@ -213,11 +218,6 @@ def marshall(
         The URL of the page to embed.
     srcdoc : str
         Inline HTML to embed. Overrides src.
-    width : int
-        The width of the frame in CSS pixels. Defaults to the app's
-        default element width.
-    height : int
-        The height of the frame in CSS pixels. Defaults to 150.
     scrolling : bool
         If true, show a scrollbar when the content is larger than the iframe.
         Otherwise, never show a scrollbar.
@@ -230,15 +230,6 @@ def marshall(
 
     if srcdoc is not None:
         proto.srcdoc = srcdoc
-
-    if width is not None:
-        proto.width = width
-        proto.has_width = True
-
-    if height is not None:
-        proto.height = height
-    else:
-        proto.height = 150
 
     proto.scrolling = scrolling
 
