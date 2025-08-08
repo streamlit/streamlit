@@ -152,7 +152,7 @@ export function calculateModalSize(
   padding?: string
 ): ModalProps["size"] {
   if (size === "large") {
-    return `80rem`
+    return "80rem"
   }
   if (size === "medium" && width && padding) {
     // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
