@@ -114,8 +114,8 @@ class DataframeSelectionState(TypedDict, total=False):
     columns : list[str]
         The selected columns, identified by their names.
     cells : list[tuple[int, str]]
-        The selected cells, identified by a tuple of row integer position and
-        column name, e.g. ``(0, "col 1")``.
+        The selected cells, provided as a named tuple of row integer position
+        and column name, e.g. ``(0, "col 1")``.
 
     Example
     -------
