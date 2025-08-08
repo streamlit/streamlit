@@ -78,12 +78,12 @@ def test_data_frame_resizing(app: Page):
 def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe should render as expected with width and height."""
     stretch_dataframe = app.get_by_test_id("stDataFrame").nth(14)
-    assert_snapshot(stretch_dataframe, name="stretch_dataframe")
+    assert_snapshot(stretch_dataframe, name="st_dataframe-stretch-width")
 
     content_dataframe_element = app.get_by_test_id("stDataFrame").nth(15)
-    assert_snapshot(content_dataframe_element, name="content_dataframe")
+    assert_snapshot(content_dataframe_element, name="st_dataframe-content-width")
 
     fixed_dimensions_dataframe_element = app.get_by_test_id("stDataFrame").nth(16)
     assert_snapshot(
-        fixed_dimensions_dataframe_element, name="fixed_dimensions_dataframe"
+        fixed_dimensions_dataframe_element, name="st_dataframe-fixed-dimensions"
     )

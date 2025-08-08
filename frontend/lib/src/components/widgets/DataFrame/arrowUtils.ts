@@ -578,11 +578,14 @@ export function shouldUseContainerWidth(
 export function getConfiguredWidth(
   element: ArrowProto,
   widthConfig?: streamlit.IWidthConfig | null
-): number | null | undefined {
-  if (widthConfig?.pixelWidth !== undefined) {
-    return widthConfig.pixelWidth
+): number | undefined {
+  if (widthConfig) {
+    if (widthConfig.pixelWidth) {
+      return widthConfig.pixelWidth
+    }
+    return undefined
   }
-  return element.width
+  return element.width || undefined
 }
 
 /**
@@ -592,4 +595,21 @@ export function shouldUseContentWidth(
   widthConfig?: streamlit.IWidthConfig | null
 ): boolean {
   return widthConfig?.useContent ?? false
+}
+
+/**
+ * Helper function to get the configured height from the heightConfig and element.
+ * This handles both the new heightConfig and legacy height fields.
+ */
+export function getConfiguredHeight(
+  element: ArrowProto,
+  heightConfig?: streamlit.IHeightConfig | null
+): number | undefined {
+  if (heightConfig) {
+    if (heightConfig.pixelHeight) {
+      return heightConfig.pixelHeight
+    }
+    return undefined
+  }
+  return element.height || undefined
 }

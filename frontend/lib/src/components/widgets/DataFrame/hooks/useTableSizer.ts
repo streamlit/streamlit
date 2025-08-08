@@ -26,6 +26,7 @@ import { Size as ResizableSize } from "re-resizable"
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
+  getConfiguredHeight,
   getConfiguredWidth,
   shouldUseContainerWidth,
   shouldUseContentWidth,
@@ -49,23 +50,6 @@ export type AutoSizerReturn = {
   resizableSize: ResizableSize
   // A callback function to change the size of the data grid.
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
-}
-
-/**
- * Helper function to get the configured height from the heightConfig and element.
- * This handles both the new heightConfig and legacy height fields.
- */
-function getConfiguredHeight(
-  element: ArrowProto,
-  heightConfig?: streamlit.IHeightConfig | null
-): number | undefined {
-  if (heightConfig) {
-    if (heightConfig.pixelHeight) {
-      return heightConfig.pixelHeight
-    }
-    return undefined
-  }
-  return element.height || undefined
 }
 
 /**

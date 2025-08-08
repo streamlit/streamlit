@@ -125,7 +125,6 @@ export interface DataFrameProps {
   widgetMgr: WidgetStateManager
   disableFullscreenMode?: boolean
   fragmentId?: string
-  height?: number
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }

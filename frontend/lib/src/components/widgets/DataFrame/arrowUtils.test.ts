@@ -51,6 +51,7 @@ import {
   extractCssProperty,
   getCellFromArrow,
   getColumnTypeFromArrow,
+  getConfiguredHeight,
   getConfiguredWidth,
   initAllColumnsFromArrow,
   initColumnFromArrow,
@@ -1315,23 +1316,57 @@ describe("width configuration utilities", () => {
       expect(getConfiguredWidth(element, null)).toBe(300)
     })
 
-    it("falls back to element.width when widthConfig is undefined", () => {
-      const element = ArrowProto.create({ width: 300 })
-
-      expect(getConfiguredWidth(element, undefined)).toBe(300)
-    })
-
     it("returns element.width when element.width is not set (default value)", () => {
       const element = ArrowProto.create({})
 
-      expect(getConfiguredWidth(element, null)).toBe(0)
+      expect(getConfiguredWidth(element, null)).toBe(undefined)
     })
 
-    it("returns 0 when widthConfig.pixelWidth is 0", () => {
+    it("returns undefined when widthConfig.pixelWidth is 0", () => {
       const element = ArrowProto.create({ width: 300 })
       const widthConfig = new streamlit.WidthConfig({ pixelWidth: 0 })
 
-      expect(getConfiguredWidth(element, widthConfig)).toBe(0)
+      expect(getConfiguredWidth(element, widthConfig)).toBe(undefined)
+    })
+
+    it("returns undefined when element.width is 0", () => {
+      const element = ArrowProto.create({ width: 0 })
+
+      expect(getConfiguredWidth(element, null)).toBe(undefined)
+    })
+  })
+
+  describe("getConfiguredHeight", () => {
+    it("returns heightConfig.pixelHeight when set", () => {
+      const element = ArrowProto.create({ height: 300 })
+      const heightConfig = new streamlit.HeightConfig({ pixelHeight: 400 })
+
+      expect(getConfiguredHeight(element, heightConfig)).toBe(400)
+    })
+
+    it("falls back to element.height when heightConfig is null", () => {
+      const element = ArrowProto.create({ height: 300 })
+
+      expect(getConfiguredHeight(element, null)).toBe(300)
+    })
+
+    it("returns undefined when element.height is not set (default value)", () => {
+      const element = ArrowProto.create({})
+
+      expect(getConfiguredHeight(element, null)).toBe(undefined)
+    })
+
+    it("returns undefined when heightConfig.pixelHeight is 0", () => {
+      const element = ArrowProto.create({ height: 300 })
+      const heightConfig = new streamlit.HeightConfig({ pixelHeight: 0 })
+
+      expect(getConfiguredHeight(element, heightConfig)).toBe(undefined)
+    })
+
+    it("returns undefined when element.height is 0", () => {
+      const element = ArrowProto.create({ height: 0 })
+
+      expect(getConfiguredHeight(element, null)).toBe(undefined)
     })
   })
 })
