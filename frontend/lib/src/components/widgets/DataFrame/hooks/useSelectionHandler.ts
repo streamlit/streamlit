@@ -116,22 +116,24 @@ function useSelectionHandler(
         newSelection.rows.toArray(),
         gridSelection.rows.toArray()
       )
+
       const columnSelectionChanged = !isEqual(
         newSelection.columns.toArray(),
         gridSelection.columns.toArray()
       )
+
       const cellSelectionChanged = !isEqual(
         newSelection.current,
         gridSelection.current
       )
 
+      // A flag to determine if the selection should be synced with the widget state
       let syncSelection =
         (isRowSelectionActivated && rowSelectionChanged) ||
         (isColumnSelectionActivated && columnSelectionChanged) ||
         (isCellSelectionActivated && cellSelectionChanged)
 
       let updatedSelection = newSelection
-
       if (
         (isRowSelectionActivated || isColumnSelectionActivated) &&
         newSelection.current !== undefined &&
@@ -145,9 +147,9 @@ function useSelectionHandler(
           rows: gridSelection.rows,
           columns: gridSelection.columns,
         }
-        // It should not sync the selection
-        // when only the cell selection changes
-        // and cell selection is not activated.
+
+        // Sync selections if cell selections are activated.
+        // Otherwise, treat this as normal grid navigation.
         syncSelection = isCellSelectionActivated
       }
 
@@ -226,7 +228,6 @@ function useSelectionHandler(
    */
   const clearSelection = useCallback(
     (keepRows = false, keepColumns = false) => {
-      const oldCellSelectionExisted = gridSelection.current !== undefined
       const emptySelection: GridSelection = {
         columns: keepColumns
           ? gridSelection.columns
@@ -236,19 +237,10 @@ function useSelectionHandler(
       }
       setGridSelection(emptySelection)
 
-      const cellSelectionCleared =
-        isCellSelectionActivated && oldCellSelectionExisted
-      const rowSelectionCleared =
-        !keepRows && isRowSelectionActivated && gridSelection.rows.length > 0
-      const columnSelectionCleared =
-        !keepColumns &&
-        isColumnSelectionActivated &&
-        gridSelection.columns.length > 0
-
       if (
-        cellSelectionCleared ||
-        rowSelectionCleared ||
-        columnSelectionCleared
+        (!keepRows && isRowSelectionActivated) ||
+        (!keepColumns && isColumnSelectionActivated) ||
+        isCellSelectionActivated
       ) {
         syncSelectionState(emptySelection)
       }
