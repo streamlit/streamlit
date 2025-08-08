@@ -499,8 +499,6 @@ function DataFrame({
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
 
-        const currentSelection: GridSelection["current"] = undefined
-
         selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
         })
@@ -509,35 +507,12 @@ function DataFrame({
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
-        // Reconstruct cell selection for initial load if applicable
-        // This part is a bit tricky as GlideDataGrid's GridSelection.current
-        // expects cell & range in terms of visual grid coordinates, not original data.
-        // For simplicity on initial load, we might not fully reconstruct the visual range selection perfectly,
-        // but ensure the `cells` data is sent to Python.
-        // If we want to visually highlight cells from initial state, more logic is needed here
-        // to map original row/col back to visual grid row/col after sorting/filtering etc.
-        if (selectionState.selection?.cells?.length > 0) {
-          if (isCellSelected || isMultiCellSelectionActivated) {
-            // For now, just ensure the selection state is correctly sent. Visual reconstruction is complex.
-            // To visually select, we'd need to find the first cell from selectionState.selection.cells,
-            // map its original row/col to visual grid coords, and set newSelection.current.cell.
-            // For multi-cell, we'd need to find min/max row/col from selectionState.selection.cells
-            // and construct newSelection.current.range.
-            // This is omitted for brevity but is a point for future improvement if visual persistence of cell selection is key.
-          }
-        }
-
-        if (
-          rowSelection.length > 0 ||
-          columnSelection.length > 0 ||
-          (currentSelection !== undefined &&
-            (isCellSelected || isMultiCellSelectionActivated))
-        ) {
+        if (rowSelection.length > 0 || columnSelection.length > 0) {
           // Update the initial selection state if something was selected
           const initialSelection: GridSelection = {
             rows: rowSelection,
             columns: columnSelection,
-            current: currentSelection, // This would be set if we reconstruct visual cell selection
+            current: undefined,
           }
           processSelectionChange(initialSelection)
         }
@@ -1166,9 +1141,12 @@ function DataFrame({
                 ? "multi"
                 : "single",
             rowSelectionBlending: "mixed",
-            rangeSelectionBlending: isCellSelectionActivated
-              ? "mixed"
-              : "exclusive",
+            // Deactivate the combination of row selections
+            // and cell selections. This will automatically clear
+            // selected cells when a row is selected.
+            // We are doing this to prevent some issues with drag
+            // and drop selection.
+            rangeSelectionBlending: "exclusive",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
@@ -1178,13 +1156,18 @@ function DataFrame({
                 ? "multi"
                 : "single",
             columnSelectionBlending: "mixed",
-            rangeSelectionBlending: isCellSelectionActivated
-              ? "mixed"
-              : "exclusive",
+            // Deactivate the combination of column selections
+            // and cell selections. This will automatically clear
+            // selected cells when a column is selected.
+            // We are doing this to prevent some issues with drag
+            // and drop selection.
+            rangeSelectionBlending: "exclusive",
           })}
           // Activate features required for cell selection:
           {...(isCellSelectionActivated && {
             rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
+            // Allow mixing cell selections with row and column selections:
+            rangeSelectionBlending: "mixed",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
