@@ -64,7 +64,7 @@ export function doInitPings(
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
   let uriNumber = 0
-  let timeout: NodeJS.Timeout | undefined
+  let timeout: NodeJS.Timeout | number | undefined
 
   // Hoist the connect() declaration.
   let connect = (): void => {}

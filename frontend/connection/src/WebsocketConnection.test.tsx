@@ -90,6 +90,18 @@ function createMockArgs(overrides?: Partial<Args>): Args {
   }
 }
 
+/** Create a robust axios mock that handles any number of HTTP requests */
+function createAxiosMock(): ReturnType<typeof vi.fn> {
+  let callCount = 0
+  return vi.fn().mockImplementation(() => {
+    callCount++
+    // Alternate between health check (empty string) and host config responses
+    return Promise.resolve(
+      callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
+    )
+  })
+}
+
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
     uri: [
@@ -945,16 +957,7 @@ describe("WebsocketConnection", () => {
     server = new WS("ws://localhost:1234/_stcore/stream")
 
     originalAxiosGet = axios.get
-    // Use mockImplementation to handle any number of HTTP requests
-    // that might occur when timers are advanced
-    let callCount = 0
-    axios.get = vi.fn().mockImplementation(() => {
-      callCount++
-      // Alternate between health check (empty string) and host config responses
-      return Promise.resolve(
-        callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
-      )
-    })
+    axios.get = createAxiosMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
@@ -1059,15 +1062,7 @@ describe("WebsocketConnection auth token handling", () => {
     websocketSpy = vi.spyOn(window, "WebSocket")
 
     originalAxiosGet = axios.get
-    // Use the same robust axios mock to handle any HTTP requests
-    let callCount = 0
-    axios.get = vi.fn().mockImplementation(() => {
-      callCount++
-      // Alternate between health check (empty string) and host config responses
-      return Promise.resolve(
-        callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
-      )
-    })
+    axios.get = createAxiosMock()
   })
 
   afterEach(() => {
