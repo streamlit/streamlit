@@ -22,7 +22,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -75,3 +75,12 @@ class ToastTest(DeltaGeneratorTestCase):
 
         assert c.HasField("duration")
         assert c.duration == expected_duration
+
+    def test_invalid_duration(self):
+        """Test that an error is raised if an invalid duration is provided."""
+        with pytest.raises(StreamlitValueError) as e:
+            st.toast("toast text", duration="invalid")
+        assert (
+            str(e.value)
+            == "Invalid `duration` value. Supported values: short, long, infinite, a positive integer."
+        )
