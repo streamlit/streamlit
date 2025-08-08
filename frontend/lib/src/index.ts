@@ -140,7 +140,6 @@ export {
   getTimezoneOffset,
   getUrl,
   hashString,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,

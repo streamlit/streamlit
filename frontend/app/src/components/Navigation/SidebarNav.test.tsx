@@ -164,7 +164,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     widgetsDisabled: false,
     gitInfo: null,
     showToolbar: true,
-    showColoredLine: true,
     ...context,
   }
 }

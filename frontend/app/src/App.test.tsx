@@ -43,7 +43,6 @@ import {
   getHostSpecifiedTheme,
   HOST_COMM_VERSION,
   HostCommunicationManager,
-  isColoredLineDisplayed,
   isEmbed,
   isToolbarDisplayed,
   lightTheme,
@@ -96,7 +95,6 @@ vi.mock("@streamlit/lib", async () => {
     ...actualLib,
     isEmbed: vi.fn(),
     isToolbarDisplayed: vi.fn(),
-    isColoredLineDisplayed: vi.fn(),
   }
 })
 
@@ -1252,7 +1250,6 @@ describe("App", () => {
     afterEach(() => {
       vi.mocked(isEmbed).mockReset()
       vi.mocked(isToolbarDisplayed).mockReset()
-      vi.mocked(isColoredLineDisplayed).mockReset()
 
       vi.clearAllMocks()
     })
@@ -1284,11 +1281,10 @@ describe("App", () => {
       expect(screen.getByTestId("stToolbarActions")).toBeVisible()
     })
 
-    it("does not render when app embedded & both showToolbar and showColoredLine false", () => {
+    it("does not render when app embedded & showToolbar is false", () => {
       // Mock returns of util functions
       vi.mocked(isEmbed).mockReturnValue(true)
       vi.mocked(isToolbarDisplayed).mockReturnValue(false)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(false)
 
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -1297,11 +1293,10 @@ describe("App", () => {
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 
-    it("renders when app embedded & only showToolbar is true", () => {
+    it("renders when app embedded & showToolbar is true", () => {
       // Mock returns of util functions
       vi.mocked(isEmbed).mockReturnValue(true)
       vi.mocked(isToolbarDisplayed).mockReturnValue(true)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(false)
 
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -1309,22 +1304,6 @@ describe("App", () => {
       // Header/main menu should render
       expect(screen.getByTestId("stHeader")).toBeVisible()
       expect(screen.getByTestId("stMainMenu")).toBeVisible()
-    })
-
-    it("renders when app embedded & only showColoredLine is true", () => {
-      // Mock returns of util functions
-      vi.mocked(isEmbed).mockReturnValue(true)
-      vi.mocked(isToolbarDisplayed).mockReturnValue(false)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(true)
-
-      renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-
-      // Header and decoration should render, but not MainMenu since toolbar is not visible
-      expect(screen.getByTestId("stHeader")).toBeVisible()
-      expect(screen.getByTestId("stDecoration")).toBeVisible()
-      // MainMenu should not exist since showToolbar is false
-      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
     })
   })
 
@@ -3983,7 +3962,7 @@ describe("App", () => {
 
     it("retains embed query params even if the page hash is different", () => {
       const embedParams =
-        "embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
+        "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
       renderApp(getProps())
 

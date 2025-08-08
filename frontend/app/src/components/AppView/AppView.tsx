@@ -24,7 +24,6 @@ import React, {
 
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
-import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
 import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import {
   shouldShowNavigation,
@@ -289,7 +288,6 @@ function AppView(props: AppViewProps): ReactElement {
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <>
-      <HeaderColoredLine />
       <StyledAppViewContainer
         className="stAppViewContainer appview-container"
         data-testid="stAppViewContainer"

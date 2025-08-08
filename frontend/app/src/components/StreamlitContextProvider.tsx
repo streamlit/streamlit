@@ -49,7 +49,6 @@ type AppContextValues = {
   widgetsDisabled: boolean
   gitInfo: IGitInfo | null
   showToolbar: boolean
-  showColoredLine: boolean
 }
 
 // Type for LibContext props
@@ -97,7 +96,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   widgetsDisabled,
   gitInfo,
   showToolbar,
-  showColoredLine,
   // LibContext
   isFullScreen,
   setFullScreen,
@@ -137,7 +135,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       widgetsDisabled,
       gitInfo,
       showToolbar,
-      showColoredLine,
     }),
     [
       initialSidebarState,
@@ -153,7 +150,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       widgetsDisabled,
       gitInfo,
       showToolbar,
-      showColoredLine,
     ]
   )
 

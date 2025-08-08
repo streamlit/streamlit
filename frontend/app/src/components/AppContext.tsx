@@ -118,15 +118,6 @@ export interface AppContextProps {
    * @see Header
    */
   showToolbar: boolean
-
-  /**
-   * Whether to show the colored line at the top of the app.
-   * Can be configured via host message.
-   * Pulled from appContext in Header and HeaderColoredLine
-   * @see Header
-   * @see HeaderColoredLine
-   */
-  showColoredLine: boolean
 }
 
 export const AppContext = createContext<AppContextProps | null>({
@@ -143,6 +134,5 @@ export const AppContext = createContext<AppContextProps | null>({
   widgetsDisabled: false,
   gitInfo: null,
   showToolbar: true,
-  showColoredLine: true,
 })
 AppContext.displayName = "AppContext"

@@ -37,7 +37,6 @@ const getMockAppContext = (
   > = {}
 ): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
   showToolbar: true,
-  showColoredLine: true,
   widgetsDisabled: false,
   initialSidebarState: 1,
   pageLinkBaseUrl: "",
