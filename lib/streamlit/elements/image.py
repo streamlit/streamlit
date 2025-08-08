@@ -94,11 +94,17 @@ class ImageMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
-        width : int or None
-            Image width. If this is ``None`` (default), Streamlit will use the
-            image's native width, up to the width of the parent container.
+        width : "content", "stretch", or int
+            Image width. This can be one of the following:
+
+            - ``"content"`` (default): The image width is set to the image's
+              native width, up to the width of the parent container.
+            - ``"stretch"``: The image width is set to the width of the parent
+              container.
+            - An integer specifying the width in pixels.
+
             When using an SVG image without a default width, you should declare
-            ``width`` or use ``use_container_width=True``.
+            ``width`` or use ``width="stretch"``.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
@@ -133,8 +139,14 @@ class ImageMixin:
             the image to match the width of the parent container.
 
         .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a future
+            release. Please use the ``width`` parameter instead.
+            For ``use_container_width=True``, use ``width="stretch"``.
+            For ``use_container_width=False``, use ``width="content"``.
+
+        .. deprecated::
             ``use_column_width`` is deprecated and will be removed in a future
-            release. Please use the ``use_container_width`` parameter instead.
+            release. Please use the ``width`` parameter instead.
 
         Example
         -------
