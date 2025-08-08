@@ -318,7 +318,8 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    *
    * @param newSelection - The new selection state
-   * @param syncCellSelections - Whether to sync cell selections
+   * @param syncCellSelections - Whether to sync cell selections. We don't want to sync selected
+   *   cells when cell selections are not activated.
    */
   const innerSyncSelectionState = useCallback(
     (newSelection: GridSelection, syncCellSelections: boolean) => {
