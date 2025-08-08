@@ -190,7 +190,17 @@ export class WebsocketConnection {
    * timeout fires. This field stores the timer ID from setTimeout, so we can
    * cancel it if needed.
    */
-  private wsConnectionTimeout?: NodeJS.Timeout
+  private wsConnectionTimeout?: NodeJS.Timeout | number
+
+  private get wsConnectionTimeoutId(): number | null {
+    if (isNullOrUndefined(this.wsConnectionTimeout)) {
+      return null
+    }
+    if (typeof this.wsConnectionTimeout === "number") {
+      return this.wsConnectionTimeout
+    }
+    return this.wsConnectionTimeout[Symbol.toPrimitive]()
+  }
 
   constructor(props: Args) {
     this.args = props
@@ -507,9 +517,7 @@ export class WebsocketConnection {
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
-    LOG.info(
-      `Set WS timeout ${this.wsConnectionTimeout[Symbol.toPrimitive]()}`
-    )
+    LOG.info(`Set WS timeout ${this.wsConnectionTimeoutId}`)
   }
 
   private closeConnection(): void {
@@ -525,9 +533,7 @@ export class WebsocketConnection {
     }
 
     if (notNullOrUndefined(this.wsConnectionTimeout)) {
-      LOG.info(
-        `Clearing WS timeout ${this.wsConnectionTimeout[Symbol.toPrimitive]()}`
-      )
+      LOG.info(`Clearing WS timeout ${this.wsConnectionTimeoutId}`)
       globalThis.clearTimeout(this.wsConnectionTimeout)
       this.wsConnectionTimeout = undefined
     }
