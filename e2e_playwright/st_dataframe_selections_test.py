@@ -714,8 +714,9 @@ def test_multi_row_column_and_cell_select(
         app,
         "Dataframe multi-row, multi-column & multi-cell selection:",
         "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_2'], 'cells': [CellPosition(row=0, column='col_1'), "
-        "CellPosition(row=0, column='col_2'), CellPosition(row=0, column='col_3'), CellPosition(row=1, column='col_1'), "
-        "CellPosition(row=1, column='col_2'), CellPosition(row=1, column='col_3'), CellPosition(row=2, column='col_1'), "
+        "CellPosition(row=0, column='col_2'), CellPosition(row=0, column='col_3'), "
+        "CellPosition(row=1, column='col_1'), CellPosition(row=1, column='col_2'), "
+        "CellPosition(row=1, column='col_3'), CellPosition(row=2, column='col_1'), "
         "CellPosition(row=2, column='col_2'), CellPosition(row=2, column='col_3')]}}",
         exact_match=True,
     )
