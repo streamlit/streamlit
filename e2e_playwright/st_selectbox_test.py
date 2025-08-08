@@ -14,9 +14,10 @@
 from __future__ import annotations
 
 import re
+from re import Pattern
 from typing import TYPE_CHECKING
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -31,6 +32,22 @@ if TYPE_CHECKING:
 
 
 NUM_SELECTBOXES = 19
+
+
+def get_selectbox_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get the input of a selectbox with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    Returns
+    -------
+    Locator
+        The input of the element.
+    """
+    return get_selectbox(locator, label).locator("input").first
 
 
 def test_selectbox_widget_rendering(
@@ -125,7 +142,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that selection of an option via the dropdown works correctly."""
-    get_selectbox(app, "selectbox 4 (more options)").locator("input").first.click()
+    get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
@@ -138,9 +155,7 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
 
 def test_handles_option_selection_via_typing(app: Page):
     """Test that selection of an option via typing works correctly."""
-    selectbox_input = (
-        get_selectbox(app, "selectbox 4 (more options)").locator("input").first
-    )
+    selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
     # Type an option:
     selectbox_input.type("e2e/scripts/st_warning.py")
@@ -154,9 +169,7 @@ def test_shows_correct_options_via_fuzzy_search(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the fuzzy matching of options via typing works correctly."""
-    selectbox_input = (
-        get_selectbox(app, "selectbox 4 (more options)").locator("input").first
-    )
+    selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
     # Start typing:
     selectbox_input.type("exp")
@@ -170,9 +183,7 @@ def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
-    empty_selectbox_input = (
-        get_selectbox(app, "selectbox 9 (empty selection)").locator("input").first
-    )
+    empty_selectbox_input = get_selectbox_input(app, "selectbox 9 (empty selection)")
 
     # Type an option:
     empty_selectbox_input.type("male")
@@ -194,7 +205,7 @@ def test_empty_selectbox_behaves_correctly(
 
 def test_keeps_value_on_selection_close(app: Page):
     """Test that the selection is kept when the dropdown is closed."""
-    get_selectbox(app, "selectbox 4 (more options)").locator("input").first.click()
+    get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
     expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
@@ -212,9 +223,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect_markdown(app, "value 8: female")
     expect_markdown(app, "selectbox changed: False")
 
-    get_selectbox(app, "selectbox 8 (with callback, help)").locator(
-        "input"
-    ).first.click()
+    get_selectbox_input(app, "selectbox 8 (with callback, help)").click()
 
     # Select last option:
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
@@ -228,9 +237,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     ).to_be_visible()
 
     # Change different input to trigger delta path change
-    empty_selectbox_input = (
-        get_selectbox(app, "selectbox 1 (default)").locator("input").first
-    )
+    empty_selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
 
     # Type an option:
     empty_selectbox_input.type("female")
@@ -288,9 +295,7 @@ def test_accept_new_options_feature(app: Page):
     the original options.
     """
     # Get the selectbox with accept_new_options=True
-    selectbox_input = (
-        get_selectbox(app, "selectbox 15 (accept new options)").locator("input").first
-    )
+    selectbox_input = get_selectbox_input(app, "selectbox 15 (accept new options)")
 
     # Type a new option that doesn't exist in the original options
     selectbox_input.click()
@@ -309,7 +314,7 @@ def test_does_not_accept_new_options_feature(app: Page):
     in the original options.
     """
     # Get any selectbox with accept_new_options=False
-    selectbox_input = get_selectbox(app, "selectbox 1 (default)").locator("input").first
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
     expect_markdown(app, "value 1: male")
 
     # Type a new option that doesn't exist in the original options
