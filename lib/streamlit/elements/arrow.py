@@ -21,7 +21,6 @@ from typing import (
     Any,
     Final,
     Literal,
-    NamedTuple,
     TypedDict,
     cast,
     overload,
@@ -85,11 +84,6 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {
 }
 
 
-class CellPosition(NamedTuple):
-    row: int
-    column: str
-
-
 class DataframeSelectionState(TypedDict, total=False):
     """
     The schema for the dataframe selection state.
@@ -114,7 +108,7 @@ class DataframeSelectionState(TypedDict, total=False):
     columns : list[str]
         The selected columns, identified by their names.
     cells : list[tuple[int, str]]
-        The selected cells, provided as a named tuple of row integer position
+        The selected cells, provided as a tuple of row integer position
         and column name, e.g. ``(0, "col 1")``.
 
     Example
@@ -148,7 +142,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     rows: list[int]
     columns: list[str]
-    cells: list[CellPosition]
+    cells: list[tuple[int, str]]
 
 
 class DataframeState(TypedDict, total=False):
@@ -207,14 +201,14 @@ class DataframeSelectionSerde:
             # This is necessary since there isn't a concept of tuples in JSON
             # The format that the data is transferred to the backend.
             selection_state["selection"]["cells"] = [
-                CellPosition(*cell) for cell in selection_state["selection"]["cells"]
+                tuple(cell)  # type: ignore
+                for cell in selection_state["selection"]["cells"]
             ]
 
         return cast("DataframeState", AttributeDictionary(selection_state))
 
     def serialize(self, editing_state: DataframeState) -> str:
-        # TODO(lukasmasuch): Do we hav to add special treatment for named tuples?
-        return json.dumps(editing_state, default=str)
+        return json.dumps(editing_state)
 
 
 def parse_selection_mode(
