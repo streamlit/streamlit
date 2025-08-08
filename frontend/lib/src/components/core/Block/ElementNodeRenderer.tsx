@@ -401,8 +401,7 @@ const RawElementNodeRenderer = (
         <Toast
           // React key needed so toasts triggered on re-run
           key={node.scriptRunId}
-          body={toastProto.body}
-          icon={toastProto.icon}
+          element={toastProto}
           {...elementProps}
         />
       )
