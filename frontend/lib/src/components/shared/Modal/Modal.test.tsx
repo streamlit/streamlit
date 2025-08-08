@@ -50,7 +50,7 @@ describe("calculateModalSize", () => {
     expect(size).toBe("calc(100px + 100px)")
   })
 
-  it("calculated the size based on the spacaing and content width when size is 'large'", () => {
+  it("calculates the size based on the spacing and content width when size is 'large'", () => {
     const size = calculateModalSize("large", "100px", "100px")
     expect(size).toBe("80rem")
   })
