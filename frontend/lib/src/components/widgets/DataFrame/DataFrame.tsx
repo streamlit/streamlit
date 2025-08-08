@@ -345,10 +345,11 @@ function DataFrame({
           return getColumnName(columns[columnIdx])
         })
 
+      // Parse cell selections into our widget state structure:
       if (syncCellSelections && newSelection.current) {
         const { cell, range } = newSelection.current
         if (range) {
-          // Multi-cell selection
+          // Multi-cell selection (rectangular structure)
           for (let r = range.y; r < range.y + range.height; r++) {
             for (let c = range.x; c < range.x + range.width; c++) {
               if (!columns[c].isIndex) {
