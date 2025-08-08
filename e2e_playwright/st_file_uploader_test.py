@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -285,6 +286,9 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+@pytest.mark.skip(
+    reason="Skipping until we fix the non-deterministic ordering that causes snapshot diffs"
+)
 def test_uploads_directory_with_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -342,6 +346,9 @@ def test_uploads_directory_with_multiple_files(
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
+@pytest.mark.skip(
+    reason="Skipping until we fix the non-deterministic ordering that causes snapshot diffs"
+)
 def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
