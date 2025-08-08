@@ -24,7 +24,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_IFRAMES = 6
+NUM_IFRAMES = 11
 
 
 def test_components_iframe_rendering(
@@ -42,6 +42,26 @@ def test_components_iframe_rendering(
     # Emulate dark theme OS setting:
     themed_app.emulate_media(color_scheme="dark")
     assert_snapshot(elements.nth(0), name="st_components-html")
+
+
+def test_components_iframe_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that iframe correctly sets dimensions."""
+
+    assert_snapshot(
+        app.locator("iframe").nth(6), name="st_components-iframe-no-width-height"
+    )
+    assert_snapshot(
+        app.locator("iframe").nth(7), name="st_components-iframe-fixed-width-height"
+    )
+    assert_snapshot(
+        app.locator("iframe").nth(9),
+        name="st_components-html-no-width-height-container",
+    )
+    # Fixed width/height html are already tested above.
+    assert_snapshot(
+        get_element_by_key(app, "html-iframe-in-vertical-container"),
+        name="st_components-html-iframe-in-vertical-container",
+    )
 
 
 def test_html_correctly_sets_attr(app: Page):
@@ -106,7 +126,7 @@ def test_declare_component_correctly_sets_attr(app: Page):
     checkbox_element = get_checkbox(app, "Show custom component")
     checkbox_element.locator("label").click()
 
-    declare_component = app.locator("iframe").nth(6)
+    declare_component = app.locator("iframe").nth(11)
 
     expect(declare_component).to_have_attribute(
         "title", "st_components_v1.test_component"
