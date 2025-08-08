@@ -215,8 +215,6 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
-        # IMP: CHANGE ON PYPI PUBLISH - remove this exclude when streamlit-pdf is on PyPI
-        exclude: ^lib/streamlit_pdf-.*\.whl$
       - id: check-json
         # Note that this should be the same as the check-json5 hook's files
         # property

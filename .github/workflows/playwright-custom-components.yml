@@ -45,15 +45,12 @@ jobs:
         run: python -m playwright install --with-deps
       - name: Run make frontend-fast
         run: make frontend-fast
-      # IMP: CHANGE ON PYPI PUBLISH - install from requirements.txt(PYPI) instead of local wheel
       - name: Run custom component playwright tests
         run: |
           source venv/bin/activate
           cd e2e_playwright
           echo "Installing custom components"
           uv pip install -r ./custom_components/components-e2e-requirements.txt
-          echo "Installing local streamlit_pdf wheel"
-          uv pip install ../lib/streamlit_pdf-1.0.0-py3-none-any.whl
           rm -rf ./test-results
           pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Get short SHA
