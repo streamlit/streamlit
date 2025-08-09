@@ -485,7 +485,7 @@ st.data_editor(
         ),
         "tags": st.column_config.ListColumn(
             "Tags",
-            help="Tags related to this app app",
+            help="Tags related to this app",
         ),
     },
     hide_index=True,
