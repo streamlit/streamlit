@@ -437,12 +437,6 @@ st.dataframe(
                 [
                     "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
                     "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
-                    "Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz Baz",
-                    "Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux Qux",
-                    "Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux Quux",
-                    "Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz Quuz",
-                    "Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge Corge",
-                    "Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault Grault",
                 ],
                 [],
                 [],
