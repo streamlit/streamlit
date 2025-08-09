@@ -146,11 +146,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
           if (typeof option === "string") {
             return option === cellData
           }
-          if (
-            typeof option === "object" &&
-            option !== null &&
-            "value" in option
-          ) {
+          if (typeof option === "object" && "value" in option) {
             return option.value === cellData
           }
           return false
