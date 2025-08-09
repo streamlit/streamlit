@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useState } from "react"
 
 import {
   LABEL_PLACEMENT,
@@ -155,6 +155,32 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const [isSelectAll, setIsSelectAll] = useState(true)
+
+  const onSelectAll = (): void => {
+    columns.map(column => {
+      const hiddenViaColumnOrder =
+        columnOrder.length && !column.isIndex
+          ? !columnOrder.includes(column.id) &&
+            !columnOrder.includes(column.name)
+          : false
+
+      if (isSelectAll) {
+        hideColumn(column.id)
+      } else {
+        showColumn(column.id)
+        if (hiddenViaColumnOrder) {
+          // Add the column to the column order list:
+          setColumnOrder((prevColumnOrder: string[]) => [
+            ...prevColumnOrder,
+            column.id,
+          ])
+        }
+      }
+    })
+
+    setIsSelectAll(prev => !prev)
+  }
 
   return (
     <UIPopover
@@ -169,6 +195,11 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             paddingBottom: theme.spacing.sm,
           }}
         >
+          <CheckboxItem
+            label={"Select all"}
+            initialValue={isSelectAll}
+            onChange={onSelectAll}
+          />
           {columns.map(column => {
             // A column can be hidden if configured in column config
             // or if the user has configured a column order that doesn't
