@@ -1579,7 +1579,7 @@ def MultiselectColumn(
     be used in the ``column_config`` parameter of ``st.dataframe`` or
     ``st.data_editor``.
 
-    This only support string-list values. This command needs to
+    This only supports string-list values. This command needs to
     be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
     When used with ``st.data_editor``, editing will be enabled with a multiselect widget.
 
