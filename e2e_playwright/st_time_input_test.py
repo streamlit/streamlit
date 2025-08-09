@@ -14,12 +14,13 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
     get_element_by_key,
 )
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_time_input_widget_rendering(
@@ -230,3 +231,34 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "time_input_6")).to_be_visible()
+
+
+def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that time input adjusts for custom theme."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app,
+        base="light",
+        primaryColor="#9867C5",
+        textColor="#301934",
+        secondaryBackgroundColor="#CBC3E3",
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    time_input_widgets = app.get_by_test_id("stTimeInput")
+    expect(time_input_widgets).to_have_count(12)
+
+    # Click on the first time input to open the dropdown
+    time_input_widgets.nth(0).locator("input").click()
+
+    # Hover over the first option:
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown.locator("li").nth(0).hover()
+
+    # Take a snapshot of the time selection dropdown:
+    assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")
+    # Take a snapshot of the time input:
+    assert_snapshot(time_input_widgets.nth(0), name="st_time_input-custom-theme")
