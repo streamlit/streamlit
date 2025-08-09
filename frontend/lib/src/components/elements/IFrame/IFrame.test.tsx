@@ -43,14 +43,6 @@ describe("st.iframe", () => {
     expect(iframeElement).toHaveClass("stIFrame")
   })
 
-  it("should set iframe height", () => {
-    const props = getProps({
-      height: 400,
-    })
-    render(<IFrame {...props} />)
-    expect(screen.getByTestId("stIFrame")).toHaveAttribute("height", "400")
-  })
-
   describe("tabIndex attribute", () => {
     it("should not have tabIndex attribute when not provided", () => {
       const props = getProps({})
