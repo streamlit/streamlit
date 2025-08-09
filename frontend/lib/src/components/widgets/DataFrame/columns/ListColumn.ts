@@ -39,8 +39,10 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
     style: "normal",
     copyData: "",
     data: {
+      // We are reusing the multi-select cell type for list columns:
       kind: "multi-select-cell",
       values: [],
+      // List column don't have options, and allow creation & duplication.
       options: undefined,
       allowCreation: true,
       allowDuplicates: true,
