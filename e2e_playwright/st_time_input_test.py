@@ -237,7 +237,11 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     """Test that time input adjusts for custom theme."""
     # Apply custom theme using window injection
     apply_theme_via_window(
-        app, base="light", textColor="#301934", backgroundColor="#CBC3E3"
+        app,
+        base="light",
+        primaryColor="#9867C5",
+        textColor="#301934",
+        secondaryBackgroundColor="#CBC3E3",
     )
 
     # Reload to apply the theme
