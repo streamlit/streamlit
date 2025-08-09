@@ -48,7 +48,7 @@ export const prepareOptions = (
   return options
     .filter(opt => opt !== null && opt !== "")
     .map(option => {
-      if (typeof option === "object" && option !== null && "value" in option) {
+      if (typeof option === "object" && "value" in option) {
         // Handle SelectOption type
         const optionValue = toSafeString(option.value).trim()
         return {
