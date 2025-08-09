@@ -1691,7 +1691,7 @@ def MultiselectColumn(
             option_dict = MultiselectOption(value=option)
 
             # Apply format_func to generate label if not already present
-            if "label" not in option_dict and format_func is not None:
+            if format_func is not None:
                 option_dict["label"] = format_func(option_dict["value"])
 
             # Apply color if provided and not already present
