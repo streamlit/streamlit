@@ -198,10 +198,10 @@ def _parse_value(
             return str(value)
 
         if column_data_kind == ColumnDataKind.INTEGER:
-            return int(value)
+            return int(value)  # type: ignore
 
         if column_data_kind == ColumnDataKind.FLOAT:
-            return float(value)
+            return float(value)  # type: ignore
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
@@ -233,6 +233,8 @@ def _parse_value(
 
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
+
+        # TODO(lukasmasuch): Add support for list columns?
 
     except (ValueError, pd.errors.ParserError) as ex:
         _LOGGER.warning(
