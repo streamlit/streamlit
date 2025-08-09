@@ -1617,7 +1617,7 @@ def MultiselectColumn(
 
         When a user enters and selects a new item, it is included in the
         returned cell list value as a string. The new item is not added to
-        the optionsdrop-down menu.
+        the options drop-down menu.
 
     color: str or Iterable of str or None
         The color to use for different options. This can be:
