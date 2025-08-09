@@ -21,10 +21,11 @@ from unittest.mock import Mock, patch
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.lib.image_utils import WidthBehavior
+from streamlit.errors import StreamlitAPIException
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -60,7 +61,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         st.pyplot(fig)
 
         el = self.get_delta_from_queue().new_element
-        assert el.imgs.width == -2
+        assert el.width_config.use_stretch
         assert el.imgs.imgs[0].caption == ""
         assert el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT)
 
@@ -100,11 +101,9 @@ class PyplotTest(DeltaGeneratorTestCase):
             else:
                 fig_clf.assert_not_called()
 
-    @parameterized.expand(
-        [(True, WidthBehavior.COLUMN), (False, WidthBehavior.ORIGINAL)]
-    )
+    @parameterized.expand([(True, "stretch"), (False, "content")])
     def test_st_pyplot_use_container_width(
-        self, use_container_width: bool, image_width: int
+        self, use_container_width: bool, expected_width_behavior: str
     ):
         """st.pyplot should set image width."""
         fig = plt.figure()
@@ -114,4 +113,87 @@ class PyplotTest(DeltaGeneratorTestCase):
         st.pyplot(fig, use_container_width=use_container_width)
 
         el = self.get_delta_from_queue().new_element
-        assert el.imgs.width == image_width
+        if expected_width_behavior == "stretch":
+            assert el.width_config.use_stretch
+        else:
+            assert el.width_config.use_content
+
+    def test_st_pyplot_width_stretch(self):
+        """Test st.pyplot with width='stretch'."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, width="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_stretch
+
+    def test_st_pyplot_width_content(self):
+        """Test st.pyplot with width='content'."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, width="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_content
+
+    def test_st_pyplot_width_pixel(self):
+        """Test st.pyplot with integer pixel width."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, width=400)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.pixel_width == 400
+
+    def test_st_pyplot_width_default(self):
+        """Test st.pyplot default width behavior."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig)
+
+        el = self.get_delta_from_queue().new_element
+        # Default for pyplot is "stretch"
+        assert el.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                "",
+                "Invalid width value: ''. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -1,
+                "Invalid width value: -1. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                None,
+                "Invalid width value: None. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+    )
+    def test_st_pyplot_invalid_width(self, invalid_width, expected_error_message):
+        """Test st.pyplot with invalid width values."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.pyplot(fig, width=invalid_width)
+
+        assert str(exc_info.value) == expected_error_message
