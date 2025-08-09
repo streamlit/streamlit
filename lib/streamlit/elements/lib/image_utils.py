@@ -204,8 +204,9 @@ def _ensure_image_size_and_format(
         # versions. The types don't seem to reflect this, though, hence the type: ignore
         # below.
         pil_image = pil_image.resize(
-            (target_width, new_height), resample=Image.BILINEAR
-        )  # type: ignore[attr-defined]
+            (target_width, new_height),
+            resample=Image.BILINEAR,  # type: ignore[attr-defined]
+        )
         return _pil_to_bytes(pil_image, format=image_format, quality=90)
 
     if pil_image.format != image_format:
