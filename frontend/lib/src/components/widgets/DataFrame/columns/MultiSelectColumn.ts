@@ -83,7 +83,7 @@ export const prepareOptions = (
         }
       }
 
-      // The upstream implemenation has some issues with the alpha channel.
+      // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
 
       const optionColor = option.color
