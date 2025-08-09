@@ -34,24 +34,24 @@ random.seed(0)
 st.set_page_config(layout="wide")
 
 st.subheader("Base types")
-st.data_editor(BASE_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(BASE_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Number types")
-st.data_editor(NUMBER_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(NUMBER_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Date, time and datetime types")
-st.data_editor(DATETIME_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(DATETIME_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("List types")
-st.data_editor(LIST_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(LIST_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Interval dtypes in pd.DataFrame")
-st.data_editor(INTERVAL_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(INTERVAL_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Special types")
 st.data_editor(
     SPECIAL_TYPES_DF,
-    use_container_width=True,
+    width="stretch",
     # Timedelta is only editable if it is explicitly configured as number column.
     # Reason is that the timedelta is provided as nanoseconds as default, which
     # quickly overflows the max value supported by Number in Javascript.
@@ -60,7 +60,7 @@ st.data_editor(
 )
 
 st.subheader("Period dtypes in pd.DataFrame")
-st.data_editor(PERIOD_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(PERIOD_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Unsupported types (string fallback)")
-st.data_editor(UNSUPPORTED_TYPES_DF, use_container_width=True, hide_index=True)
+st.data_editor(UNSUPPORTED_TYPES_DF, width="stretch", hide_index=True)

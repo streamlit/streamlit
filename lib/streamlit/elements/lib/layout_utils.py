@@ -74,7 +74,12 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
         raise StreamlitInvalidWidthError(width, allow_content)
 
 
-def validate_height(height: Height, allow_content: bool = False) -> None:
+def validate_height(
+    height: Height | Literal["auto"],
+    allow_content: bool = False,
+    allow_stretch: bool = True,
+    additional_allowed: list[str] | None = None,
+) -> None:
     """Validate the height parameter.
 
     Parameters
@@ -83,6 +88,10 @@ def validate_height(height: Height, allow_content: bool = False) -> None:
         The height value to validate.
     allow_content : bool
         Whether to allow "content" as a valid height value.
+    allow_stretch : bool
+        Whether to allow "stretch" as a valid height value.
+    additional_allowed : list[str] or None
+        Additional string values to allow beyond the base allowed values.
 
     Raises
     ------
@@ -93,9 +102,13 @@ def validate_height(height: Height, allow_content: bool = False) -> None:
         raise StreamlitInvalidHeightError(height, allow_content)
 
     if isinstance(height, str):
-        valid_strings = ["stretch"]
+        valid_strings = []
+        if allow_stretch:
+            valid_strings.append("stretch")
         if allow_content:
             valid_strings.append("content")
+        if additional_allowed:
+            valid_strings.extend(additional_allowed)
 
         if height not in valid_strings:
             raise StreamlitInvalidHeightError(height, allow_content)

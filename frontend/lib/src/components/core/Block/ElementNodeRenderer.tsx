@@ -186,6 +186,7 @@ const RawElementNodeRenderer = (
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
     widthConfig: node.element.widthConfig,
+    heightConfig: node.element.heightConfig,
   }
 
   const widgetProps = {

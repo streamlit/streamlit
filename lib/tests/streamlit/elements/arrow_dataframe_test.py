@@ -35,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 def mock_data_frame():
@@ -53,13 +54,18 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"a": [1, 2, 3]})
         st.dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        el = self.get_delta_from_queue().new_element
+        proto = el.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
         # Since dataframe and data editor share the same proto, we also test for
         # properties only relevant for an editable dataframe.
-        assert proto.use_container_width
-        assert proto.width == 0
         assert proto.height == 0
         assert proto.editing_mode == ArrowProto.EditingMode.READ_ONLY
         assert proto.selection_mode == []
@@ -79,15 +85,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
-
-    def test_dataframe_width_parameter(self):
-        """Test that it can be called with width and uses use_container_width=False
-        as default."""
-        st.dataframe(pd.DataFrame(), width=100)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.width == 100
-        assert not proto.use_container_width
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
