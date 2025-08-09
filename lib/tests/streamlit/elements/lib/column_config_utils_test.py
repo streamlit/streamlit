@@ -346,7 +346,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Check that non-editable column types are compatible to all data kinds:
         for data_kind in ColumnDataKind:
-            assert is_type_compatible("list", data_kind), (
+            assert is_type_compatible("image", data_kind), (
                 f"Expected list to be compatible with {data_kind}"
             )
 
