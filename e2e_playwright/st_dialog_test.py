@@ -436,7 +436,7 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
-    chart.hover(position={"x": 60, "y": 220})
+    chart.hover(position={"x": 80, "y": 200})
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
