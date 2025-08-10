@@ -432,7 +432,9 @@ def test_dialog_with_chart(app: Page):
     expect(main_dialog).to_be_visible()
 
     # Check for the chart & tooltip
-    chart = main_dialog.get_by_test_id("stVegaLiteChart")
+    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
+        "[role='graphics-document']"
+    )
     expect(chart).to_be_visible()
     chart.hover(position={"x": 60, "y": 220})
     tooltip = app.locator("#vg-tooltip-element")
