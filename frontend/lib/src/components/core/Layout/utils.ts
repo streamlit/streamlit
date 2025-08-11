@@ -21,6 +21,8 @@ export enum Direction {
   VERTICAL = "column",
 }
 
+export type MinFlexElementWidth = "fit-content" | "14rem" | "8rem" | undefined
+
 export function getDirectionOfBlock(block: BlockProto): Direction {
   if (block.flexContainer) {
     return block.flexContainer.direction ==

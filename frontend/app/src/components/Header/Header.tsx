@@ -16,13 +16,13 @@
 
 import React, { ReactElement, ReactNode, useContext } from "react"
 
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   BaseButton,
   BaseButtonKind,
   DynamicIcon,
   LibContext,
 } from "@streamlit/lib"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import {
   StyledHeader,

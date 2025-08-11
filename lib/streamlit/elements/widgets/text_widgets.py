@@ -206,8 +206,8 @@ class TextWidgetsMixin:
         on_change : callable
             An optional callback invoked when this text input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -328,7 +328,6 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=value,
@@ -535,8 +534,8 @@ class TextWidgetsMixin:
         on_change : callable
             An optional callback invoked when this text_area's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -643,7 +642,6 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=value,

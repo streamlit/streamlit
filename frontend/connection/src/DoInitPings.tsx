@@ -26,7 +26,6 @@ import { getLogger } from "loglevel"
 // Note we expect the polyfill to load from this import
 import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
-import { parseUriIntoBaseParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
@@ -35,6 +34,7 @@ import {
   SERVER_PING_PATH,
 } from "./constants"
 import { IHostConfigResponse, OnRetry } from "./types"
+import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DoInitPings")
 
@@ -64,7 +64,7 @@ export function doInitPings(
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
   let uriNumber = 0
-  let timeoutId: number | undefined
+  let timeout: NodeJS.Timeout | number | undefined
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -98,7 +98,8 @@ export function doInitPings(
       // schedule another retry.
       return
     }
-    timeoutId = window.setTimeout(retryImmediately, retryTimeout)
+    // Use globalThis to ensure timers can be cleared even if window is undefined later
+    timeout = globalThis.setTimeout(retryImmediately, retryTimeout)
   }
 
   const retryWhenTheresNoResponse = (): void => {
@@ -150,7 +151,11 @@ If you are trying to access a Streamlit app running on another server, this coul
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
 
-    const hostConfigBaseUrl = window.__streamlit?.HOST_CONFIG_BASE_URL
+    // Guard against environments where window may be undefined
+    const hostConfigBaseUrl =
+      typeof window !== "undefined"
+        ? window.__streamlit?.HOST_CONFIG_BASE_URL
+        : undefined
     const hostConfigServerUriParts = hostConfigBaseUrl
       ? parseUriIntoBaseParts(hostConfigBaseUrl)
       : uriParts
@@ -284,8 +289,9 @@ If you are trying to access a Streamlit app running on another server, this coul
   connect()
 
   const cancel = (): void => {
-    if (notNullOrUndefined(timeoutId) && typeof window !== "undefined") {
-      window.clearTimeout(timeoutId)
+    if (notNullOrUndefined(timeout)) {
+      // Use globalThis to clear timers safely without relying on window
+      globalThis.clearTimeout(timeout)
     }
     reject(new PingCancelledError())
   }

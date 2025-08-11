@@ -23,9 +23,10 @@ import React, { FC, memo } from "react"
 import Flake0 from "~lib/assets/img/snow/flake-0.png"
 import Flake1 from "~lib/assets/img/snow/flake-1.png"
 import Flake2 from "~lib/assets/img/snow/flake-2.png"
+import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
 import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
-import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
+import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 
 import { StyledFlake } from "./styled-components"
 
@@ -39,9 +40,17 @@ export interface Props {
   scriptRunId: string
 }
 
-const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
-  particleType,
-}) => <StyledFlake src={FLAKE_IMAGES[particleType]} />
+const Flake: FC<React.PropsWithChildren<ParticleProps>> = memo(
+  ({ particleType, resourceCrossOriginMode }) => {
+    const src = FLAKE_IMAGES[particleType]
+    return (
+      <StyledFlake
+        src={src}
+        crossOrigin={getCrossOriginAttribute(resourceCrossOriginMode, src)}
+      />
+    )
+  }
+)
 
 const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   scriptRunId,

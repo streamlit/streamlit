@@ -21,11 +21,12 @@ import { userEvent } from "@testing-library/user-event"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { mockEndpoints } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import DownloadButton, { createDownloadLink, Props } from "./DownloadButton"
+import DownloadButton, { Props } from "./DownloadButton"
 
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
@@ -112,25 +113,25 @@ describe("DownloadButton widget", () => {
         undefined
       )
 
-      expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
+      expect(props.endpoints.buildDownloadUrl).toHaveBeenCalledWith(
         "/media/mockDownloadURL"
       )
     })
 
     it("has a correct new tab behaviour download link", () => {
       const props = getProps()
-      const sameTabLink = createDownloadLink(
-        props.endpoints,
-        props.element.url,
-        false
-      )
+      const sameTabLink = createDownloadLinkElement({
+        enforceDownloadInNewTab: false,
+        url: props.element.url,
+        filename: "",
+      })
       expect(sameTabLink.getAttribute("target")).toBe("_self")
 
-      const newTabLink = createDownloadLink(
-        props.endpoints,
-        props.element.url,
-        true
-      )
+      const newTabLink = createDownloadLinkElement({
+        enforceDownloadInNewTab: true,
+        url: props.element.url,
+        filename: "",
+      })
       expect(newTabLink.getAttribute("target")).toBe("_blank")
     })
 
@@ -160,6 +161,7 @@ describe("DownloadButton widget", () => {
 
   it("triggers checkSourceUrlResponse to check download url", () => {
     const props = getProps()
+    props.endpoints.buildDownloadUrl = vi.fn(url => url)
     render(<DownloadButton {...props} />)
 
     expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(

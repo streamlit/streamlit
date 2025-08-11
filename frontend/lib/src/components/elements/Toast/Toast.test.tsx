@@ -16,15 +16,22 @@
 
 import React, { ReactElement } from "react"
 
-import { RenderResult, screen, waitFor, within } from "@testing-library/react"
-import { PLACEMENT, ToasterContainer } from "baseui/toast"
+import {
+  act,
+  RenderResult,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
+import { vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockTheme } from "~lib/mocks/mockTheme"
 import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import Toast, { shortenMessage, ToastProps } from "./Toast"
 
@@ -46,9 +53,13 @@ const createContainer = (): ReactElement => (
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
-  body: "This is a toast message",
-  icon: "🐶",
-  ...elementProps,
+  element: ToastProto.create({
+    body: "This is a toast message",
+    icon: "🐶",
+    // Default to no auto-hide in tests to avoid timers leaking past teardown
+    duration: 0,
+    ...elementProps,
+  }),
 })
 
 const renderComponent = (props: ToastProps): RenderResult =>
@@ -60,6 +71,18 @@ const renderComponent = (props: ToastProps): RenderResult =>
   )
 
 describe("Toast Component", () => {
+  afterEach(async () => {
+    // Clear all toasts to prevent timeouts from running after test completion
+    // eslint-disable-next-line @typescript-eslint/require-await
+    await act(async () => {
+      toaster.clear()
+    })
+    // Small delay to ensure cleanup completes
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+  })
+
   test("renders default toast", () => {
     const props = getProps()
     renderComponent(props)
@@ -142,8 +165,31 @@ describe("Toast Component", () => {
     expect(closeButton).toBeInTheDocument()
     // Click close button
     await user.click(closeButton)
-    // Wait for toast to be removed from DOM
-    await waitFor(() => expect(toast).not.toBeInTheDocument())
+    await waitForElementToBeRemoved(toast)
+  })
+
+  test("auto hides based on duration seconds", async () => {
+    vi.useFakeTimers()
+    const props = getProps({ duration: 1 })
+    renderComponent(props)
+
+    const toast = screen.getByRole("alert")
+    expect(toast).toBeVisible()
+
+    // Advance time just before auto hide
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+    expect(screen.getByRole("alert")).toBeVisible()
+
+    // Cross the 1s threshold (Toast multiplies seconds by 1000)
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+
+    await waitForElementToBeRemoved(toast)
+
+    vi.useRealTimers()
   })
 
   test("throws an error when called via st.sidebar.toast", () => {

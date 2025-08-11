@@ -494,6 +494,24 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         assert isinstance(self.runtime._get_async_objs(), AsyncObjects)
 
+    @pytest.mark.skipif(os.name == "nt", reason="Non-Windows test")
+    async def test_stop_works_with_no_sessions_non_windows(self):
+        """Test that Runtime.stop() continues to work on non-Windows platforms.
+
+        This ensures our Windows fix doesn't break behavior on other platforms.
+        """
+        await self.runtime.start()
+
+        # Ensure we're in NO_SESSIONS_CONNECTED state
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+        # Call stop()
+        self.runtime.stop()
+
+        # Should stop promptly on non-Windows platforms
+        await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
+        assert self.runtime.state == RuntimeState.STOPPED
+
 
 class ScriptCheckTest(RuntimeTestCase):
     """Tests for Runtime.does_script_run_without_error"""

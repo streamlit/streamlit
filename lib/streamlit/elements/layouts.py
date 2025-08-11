@@ -21,23 +21,30 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    Gap,
     Height,
+    HorizontalAlignment,
+    VerticalAlignment,
     Width,
     WidthWithoutContent,
+    get_align,
+    get_gap_size,
     get_height_config,
+    get_justify,
     get_width_config,
     validate_height,
+    validate_horizontal_alignment,
+    validate_vertical_alignment,
     validate_width,
 )
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -59,6 +66,10 @@ class LayoutsMixin:
         key: Key | None = None,
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
+        horizontal: bool = False,
+        horizontal_alignment: HorizontalAlignment = "left",
+        vertical_alignment: VerticalAlignment = "top",
+        gap: Gap | None = "small",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -66,26 +77,12 @@ class LayoutsMixin:
         multiple elements. This allows you to, for example, insert multiple
         elements into your app out of order.
 
-        To add elements to the returned container, you can use the ``with`` notation
-        (preferred) or just call methods directly on the returned object. See
-        examples below.
+        To add elements to the returned container, you can use the ``with``
+        notation (preferred) or just call commands directly on the returned
+        object. See examples below.
 
         Parameters
         ----------
-        height : int, "content", or "stretch"
-            Desired height of the container expressed in pixels. If ``content`` (default),
-            the container grows to fit its content. If a fixed height, scrolling is
-            enabled for large content and a grey border is shown around the container
-            to visually separate its scroll surface from the rest of the app. If ``stretch``,
-            Streamlit sets the height of the container to match the height of the parent container
-
-            .. note::
-                Use scrolling containers sparingly. If you use scrolling
-                containers, avoid heights that exceed 500 pixels. Otherwise,
-                the scroll surface of the container might cover the majority of
-                the screen on mobile devices, which makes it hard to scroll the
-                rest of the app.
-
         border : bool or None
             Whether to show a border around the container. If ``None`` (default), a
             border is shown if the container is set to a fixed height and not
@@ -97,15 +94,102 @@ class LayoutsMixin:
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
 
-        width : int or "stretch"
-            The desired width of the container expressed in pixels. If this is
-            ``"stretch"`` (default), Streamlit sets the width of the container to
-            match the width of the parent container. If an integer is provided,
-            the container will be set to the specified width.
+        width : "stretch" or int
+            The width of the container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
+
+        horizontal : bool
+            Whether to use horizontal flexbox layout. If this is ``False``
+            (default), the container's elements are laid out vertically. If
+            this is ``True``, the container's elements are laid out
+            horizontally and will overflow to the next line if they don't fit
+            within the container's width.
+
+        horizontal_alignment : "left", "center", "right", or "distribute"
+            The horizontal alignment of the elements inside the container. This
+            can be one of the following:
+
+            - ``"left"`` (default): Elements are aligned to the left side of
+              the container.
+            - ``"center"``: Elements are horizontally centered inside the
+              container.
+            - ``"right"``: Elements are aligned to the right side of the
+              container.
+            - ``"distribute"``: Elements are distributed evenly in the
+              container. This increases the horizontal gap between elements to
+              fill the width of the container. A standalone element is aligned
+              to the left.
+
+              When ``horizontal`` is ``False``, ``"distribute"`` aligns the
+              elements the same as ``"left"``.
+
+        vertical_alignment : "top", "center", "bottom", or "distribute"
+            The vertical alignment of the elements inside the container. This
+            can be one of the following:
+
+            - ``"top"`` (default): Elements are aligned to the top of the
+              container.
+            - ``"center"``: Elements are vertically centered inside the
+              container.
+            - ``"bottom"``: Elements are aligned to the bottom of the
+              container.
+            - ``"distribute"``: Elements are distributed evenly in the
+              container. This increases the vertical gap between elements to
+              fill the height of the container. A standalone element is aligned
+              to the top.
+
+              When ``horizontal`` is ``True``, ``"distribute"`` aligns the
+              elements the same as ``"top"``.
+
+        gap : "small", "medium", "large", or None
+            The minimum gap size between the elements inside the container.
+            This can be one of the following:
+
+            - ``"small"`` (default): 1rem gap between the elements.
+            - ``"medium"``: 2rem gap between the elements.
+            - ``"large"``: 4rem gap between the elements.
+            - ``None``: No gap between the elements.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
+
+            The minimum gap applies to both the vertical and horizontal gaps
+            between the elements. Elements may have larger gaps in one
+            direction if you use a distributed horizontal alignment or fixed
+            height.
 
         Examples
         --------
-        Inserting elements using ``with`` notation:
+        **Example 1: Inserting elements using ``with`` notation**
+
+        You can use the ``with`` statement to insert any element into a
+        container.
 
         >>> import streamlit as st
         >>>
@@ -121,7 +205,12 @@ class LayoutsMixin:
             https://doc-container1.streamlit.app/
             height: 520px
 
-        Inserting elements out of order:
+        **Example 2: Inserting elements out of order**
+
+        When you create a container, its position in the app remains fixed and
+        you can add elements to it at any time. This allows you to insert
+        elements out of order in your app. You can also write to the container
+        by calling commands directly on the container object.
 
         >>> import streamlit as st
         >>>
@@ -129,14 +218,16 @@ class LayoutsMixin:
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
         >>>
-        >>> # Now insert some more in the container
         >>> container.write("This is inside too")
 
         .. output ::
             https://doc-container2.streamlit.app/
             height: 300px
 
-        Using ``height`` to make a grid:
+        **Example 3: Grid layout with columns and containers**
+
+        You can create a grid with a fixed number of elements per row by using
+        columns and containers.
 
         >>> import streamlit as st
         >>>
@@ -151,7 +242,10 @@ class LayoutsMixin:
             https://doc-container3.streamlit.app/
             height: 350px
 
-        Using ``height`` to create a scrolling container for long content:
+        **Example 4: Vertically scrolling container**
+
+        You can create a vertically scrolling container by setting a fixed
+        height.
 
         >>> import streamlit as st
         >>>
@@ -164,11 +258,47 @@ class LayoutsMixin:
             https://doc-container4.streamlit.app/
             height: 400px
 
+        **Example 5: Horizontal container**
+
+        You can create a row of widgets using a horizontal container. Use
+        ``horizontal_alignment`` to specify the alignment of the elements.
+
+        >>> import streamlit as st
+        >>>
+        >>> flex = st.container(horizontal=True, horizontal_alignment="right")
+        >>>
+        >>> for card in range(3):
+        >>>     flex.button(f"Button {card + 1}")
+
+        .. output ::
+            https://doc-container5.streamlit.app/
+            height: 250px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
-        block_proto.flex_container.wrap = False
+        block_proto.flex_container.border = border or False
+        block_proto.flex_container.gap_config.gap_size = get_gap_size(
+            gap, "st.container"
+        )
+
+        validate_horizontal_alignment(horizontal_alignment)
+        validate_vertical_alignment(vertical_alignment)
+        if horizontal:
+            block_proto.flex_container.wrap = True
+            block_proto.flex_container.direction = (
+                BlockProto.FlexContainer.Direction.HORIZONTAL
+            )
+            block_proto.flex_container.justify = get_justify(horizontal_alignment)
+            block_proto.flex_container.align = get_align(vertical_alignment)
+        else:
+            block_proto.flex_container.wrap = False
+            block_proto.flex_container.direction = (
+                BlockProto.FlexContainer.Direction.VERTICAL
+            )
+            block_proto.flex_container.justify = get_justify(vertical_alignment)
+            block_proto.flex_container.align = get_align(horizontal_alignment)
 
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
@@ -193,7 +323,7 @@ class LayoutsMixin:
             # in the future. This might require including more container
             # parameters in the ID calculation.
             block_proto.id = compute_and_register_element_id(
-                "container", user_key=key, form_id=None
+                "container", user_key=key, dg=None
             )
 
         return self.dg._block(block_proto)
@@ -203,7 +333,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Literal["small", "medium", "large"] | None = "small",
+        gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
@@ -300,16 +430,16 @@ class LayoutsMixin:
         You can just call methods directly on the returned objects:
 
         >>> import streamlit as st
-        >>> import numpy as np
+        >>> from numpy.random import default_rng as rng
         >>>
+        >>> df = rng(0).standard_normal((10, 1))
         >>> col1, col2 = st.columns([3, 1])
-        >>> data = np.random.randn(10, 1)
         >>>
         >>> col1.subheader("A wide column with a chart")
-        >>> col1.line_chart(data)
+        >>> col1.line_chart(df)
         >>>
         >>> col2.subheader("A narrow column with the data")
-        >>> col2.write(data)
+        >>> col2.write(df)
 
         .. output ::
             https://doc-columns2.streamlit.app/
@@ -336,7 +466,6 @@ class LayoutsMixin:
         Adjust vertical alignment to customize your grid layouts.
 
         >>> import streamlit as st
-        >>> import numpy as np
         >>>
         >>> vertical_alignment = st.selectbox(
         >>>     "Vertical alignment", ["top", "center", "bottom"], index=2
@@ -389,28 +518,11 @@ class LayoutsMixin:
 
         if vertical_alignment not in vertical_alignment_mapping:
             raise StreamlitInvalidVerticalAlignmentError(
-                vertical_alignment=vertical_alignment
+                vertical_alignment=vertical_alignment,
+                element_type="st.columns",
             )
 
-        def column_gap(gap: str | None) -> GapSize.ValueType:
-            gap_mapping = {
-                "small": GapSize.SMALL,
-                "medium": GapSize.MEDIUM,
-                "large": GapSize.LARGE,
-            }
-
-            if isinstance(gap, str):
-                gap_size = gap.lower()
-                valid_sizes = gap_mapping.keys()
-
-                if gap_size in valid_sizes:
-                    return gap_mapping[gap_size]
-            elif gap is None:
-                return GapSize.NONE
-
-            raise StreamlitInvalidColumnGapError(gap=gap)
-
-        gap_size = column_gap(gap)
+        gap_size = get_gap_size(gap, "st.columns")
         gap_config = GapConfig()
         gap_config.gap_size = gap_size
 
@@ -432,6 +544,7 @@ class LayoutsMixin:
         block_proto.flex_container.wrap = True
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
+        block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
 
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width=width))
@@ -525,17 +638,17 @@ class LayoutsMixin:
         Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
-        >>> import numpy as np
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = rng(0).standard_normal((10, 1))
         >>>
         >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
-        >>> data = np.random.randn(10, 1)
         >>>
         >>> tab1.subheader("A tab with a chart")
-        >>> tab1.line_chart(data)
+        >>> tab1.line_chart(df)
         >>>
         >>> tab2.subheader("A tab with the data")
-        >>> tab2.write(data)
-
+        >>> tab2.write(df)
 
         .. output ::
             https://doc-tabs2.streamlit.app/
@@ -774,36 +887,40 @@ class LayoutsMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-                Whether to expand the button's width to fill its parent container.
-                If ``use_container_width`` is ``False`` (default), Streamlit sizes
-                the button to fit its contents. If ``use_container_width`` is
-                ``True``, the width of the button matches its parent container.
-                In both cases, if the contents of the button are wider than the
-                parent container, the contents will line wrap.
-                The popover container's minimum width matches the width of its
-                button. The popover container may be wider than its button to fit
-                the container's contents.
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its content. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the content of the button is wider than the
+            parent container, the content will line wrap.
+
+            The popover container's minimum width matches the width of its
+            button. The popover container may be wider than its button to fit
+            the container's content.
 
         width : int, "stretch", or "content"
-            An optional width for the popover button. This can be one of the
-            following:
+            The width of the button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
 
         .. deprecated::
-            ``use_container_width`` will be removed in a future version. Please use
-            the ``width`` parameter instead. For ``use_container_width=True``,
-            use ``width="stretch"``. For ``use_container_width=False``,
-            use ``width="content"``.
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Examples
         --------
@@ -995,7 +1112,7 @@ class LayoutsMixin:
         title: str,
         *,
         dismissible: bool = True,
-        width: Literal["small", "large"] = "small",
+        width: Literal["small", "large", "medium"] = "small",
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.

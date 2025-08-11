@@ -21,18 +21,18 @@ import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { StyledIcon } from "~lib/components/shared/Icon"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { Box } from "~lib/components/shared/Base/styled-components"
+import { StyledIcon } from "~lib/components/shared/Icon"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
 

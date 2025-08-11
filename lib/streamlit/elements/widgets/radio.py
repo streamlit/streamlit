@@ -229,8 +229,8 @@ class RadioMixin:
         on_change : callable
             An optional callback invoked when this radio's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -369,7 +369,6 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],

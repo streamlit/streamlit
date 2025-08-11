@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Spinner } from "baseui/spinner"
 
 import { computeSpacingStyle, IconSize } from "~lib/theme"
