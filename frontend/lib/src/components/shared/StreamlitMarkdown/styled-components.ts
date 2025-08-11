@@ -176,21 +176,11 @@ export const StyledStreamlitMarkdown =
           : useSmallerFontSize
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
-        // Ensure markdown respects the width of the parent container (e.g.,
-        // expander summary) so long inline content like code does not overflow.
-        maxWidth: "100%",
-        // When used as a label (e.g., inside expander summary), allow the
-        // markdown to take the remaining space next to leading icons and still
-        // shrink properly without overflowing.
-        ...(isLabel
-          ? {
-              flex: "1 1 auto",
-              minWidth: 0,
-            }
-          : {}),
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
+        // Always respect the width of the parent container:
+        maxWidth: "100%",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 

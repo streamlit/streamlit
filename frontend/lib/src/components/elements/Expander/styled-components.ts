@@ -54,9 +54,17 @@ export const StyledSummaryHeading = styled.span({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
-  // Allow flex children (like markdown labels) to shrink within the container
-  // so long content doesn't overflow the summary area.
   minWidth: 0,
+  width: "100%",
+  maxWidth: "100%",
+  overflow: "hidden",
+})
+
+export const StyledSummaryLabelWrapper = styled.div({
+  display: "flex",
+  width: "100%",
+  flexGrow: 1,
+  overflow: "hidden",
 })
 
 interface StyledSummaryProps {
