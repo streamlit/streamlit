@@ -154,7 +154,6 @@ def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunc
 
     # Wait for PDF to be fully loaded before taking snapshot
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
     assert_snapshot(iframe, name="st_pdf-basic_functionality")
 
 
@@ -184,7 +183,6 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Capture just the PDF iframe to focus on the height setting
     iframe = app.locator("iframe").first
@@ -205,7 +203,6 @@ def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Take snapshot of just the PDF iframe, following the good example from bytes_io test
     iframe = app.locator("iframe").first
@@ -219,7 +216,6 @@ def test_st_pdf_bytes_io(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded before taking snapshot
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     iframe = app.locator("iframe").first
     assert_snapshot(iframe, name="st_pdf-bytes_io")
@@ -319,7 +315,6 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Take snapshot of just the PDF iframe in initial state
     iframe = app.locator("iframe").first
@@ -334,7 +329,6 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to load again after reset
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Take snapshot after reset to verify state
     assert_snapshot(iframe, name="st_pdf-interactive_after_reset")
@@ -397,6 +391,9 @@ def test_st_pdf_different_heights_snapshots(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test PDF component with different height values for visual comparison."""
+    # Set a taller viewport to accommodate the maximum PDF height (800px)
+    app.set_viewport_size({"width": 1280, "height": 1000})
+
     _select_pdf_scenario(app, "customSize")
 
     height_slider = app.get_by_test_id("stSlider")
@@ -405,9 +402,6 @@ def test_st_pdf_different_heights_snapshots(
     # Wait for initial PDF to load
     _expect_iframe_attached(app)
     _wait_for_pdf_to_load(app)
-
-    # Reset zoom to ensure consistent snapshots
-    _reset_pdf_zoom(app)
 
     iframe = app.locator("iframe").first
 
@@ -428,7 +422,6 @@ def test_st_pdf_different_heights_snapshots(
     wait_for_app_run(app)
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Verify we actually reached a low height value (around 200px)
     wait_until(
@@ -452,7 +445,6 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
-    _reset_pdf_zoom(app)
 
     # Verify we actually reached a high height value (should be much larger than minimum)
     wait_until(
