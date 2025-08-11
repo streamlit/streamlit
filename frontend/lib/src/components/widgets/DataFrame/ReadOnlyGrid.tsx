@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { Arrow, Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 
@@ -37,10 +37,13 @@ export const ReadOnlyGrid = ({
     <DataFrame
       element={
         new ArrowProto({
+          // Use container width is deprecated, the
+          // more relevant attribute is the width config below:
           useContainerWidth: true,
+          // Enfroce read-only mode:
           editingMode: Arrow.EditingMode.READ_ONLY,
           disabled: true,
-          // data provided via the data property
+          // data provided via the data property below:
           data: undefined,
           styler: null,
           width: null,
@@ -58,6 +61,8 @@ export const ReadOnlyGrid = ({
       fragmentId={undefined}
       disableFullscreenMode={true}
       customToolbarActions={customToolbarActions}
+      widthConfig={new streamlit.WidthConfig({ useStretch: true })}
+      heightConfig={new streamlit.HeightConfig({ pixelHeight: height })}
     />
   )
 }
