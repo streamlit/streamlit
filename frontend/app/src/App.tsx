@@ -85,7 +85,6 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
-  isColoredLineDisplayed,
   isEmbed,
   isInChildFrame,
   isPaddingDisplayed,
@@ -178,7 +177,6 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
-  hideColoredLine: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   navigationPosition: Navigation.Position
@@ -312,7 +310,6 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
-      hideColoredLine: false,
       expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
@@ -1290,8 +1287,6 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    // Hide the colored line if a custom theme is selected:
-    this.setState({ hideColoredLine: !isPresetTheme(themeConfig) })
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
@@ -2118,7 +2113,6 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
-      hideColoredLine,
       expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
@@ -2162,8 +2156,6 @@ export class App extends PureComponent<Props, State> {
 
     // Determine toolbar visibility using helper method
     const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
-    const showColoredLine =
-      (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()
     const disableScrolling = isScrollingHidden()
 
@@ -2199,7 +2191,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
         showToolbar={showToolbar}
-        showColoredLine={showColoredLine}
       >
         <Hotkeys
           keyName="r,c,esc"
