@@ -151,8 +151,8 @@ function useSelectionHandler(
           columns: gridSelection.columns,
         }
 
-        // Sync selections if cell selections are activated.
-        // Otherwise, treat this as normal grid navigation.
+        // Sync selections with widget state if cell selections are activated.
+        // Otherwise, treat this as normal grid navigation with UI only updates.
         syncSelection = isCellSelectionActivated
       }
 
