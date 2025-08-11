@@ -102,13 +102,16 @@ export const StyledUploadedFileData = styled.div(({ theme }) => ({
   overflow: "hidden",
 }))
 
-export const StyledUploadedFileName = styled.div(({ theme }) => ({
-  marginRight: theme.spacing.sm,
-  marginBottom: theme.spacing.twoXS,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-}))
+export const StyledUploadedFileName = styled.div<{ disabled?: boolean }>(
+  ({ theme, disabled }) => ({
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+  })
+)
 
 export const StyledUploadedFile = styled.div(({ theme }) => ({
   display: "flex",
@@ -120,11 +123,13 @@ export const StyledErrorMessage = styled.span(({ theme }) => ({
   marginRight: theme.spacing.twoXS,
 }))
 
-export const StyledFileIcon = styled.div(({ theme }) => ({
-  display: "flex",
-  padding: theme.spacing.twoXS,
-  color: theme.colors.darkenedBgMix100,
-}))
+export const StyledFileIcon = styled.div<{ disabled?: boolean }>(
+  ({ theme, disabled }) => ({
+    display: "flex",
+    padding: theme.spacing.twoXS,
+    color: disabled ? theme.colors.fadedText40 : theme.colors.darkenedBgMix100,
+  })
+)
 
 export const StyledFileError = styled.small(({ theme }) => ({
   color: theme.colors.red,

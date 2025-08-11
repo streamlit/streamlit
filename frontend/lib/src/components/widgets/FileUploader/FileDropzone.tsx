@@ -67,6 +67,7 @@ const FileDropzone = ({
           data-testid="stFileUploaderDropzone"
           isDisabled={disabled}
           aria-label={label}
+          aria-disabled={disabled}
         >
           <input
             data-testid="stFileUploaderDropzoneInput"

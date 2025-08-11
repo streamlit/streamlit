@@ -76,7 +76,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(14)
+    expect(file_uploaders).to_have_count(15)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -802,10 +802,42 @@ def test_file_uploader_widths(
     """Test that file_uploader renders correctly with different width settings."""
     file_uploaders = app.get_by_test_id("stFileUploader")
 
-    expect(file_uploaders).to_have_count(14)
+    expect(file_uploaders).to_have_count(15)
 
     stretch_uploader = file_uploaders.nth(11)
     pixel_width_uploader = file_uploaders.nth(12)
 
     assert_snapshot(stretch_uploader, name="st_file_uploader-width_stretch")
     assert_snapshot(pixel_width_uploader, name="st_file_uploader-width_300px")
+
+
+def test_toggle_disable_after_upload_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Upload a file, then disable the uploader and snapshot its disabled visual state."""
+    # Index of the toggle uploader is the last one (added at the end of the script)
+    uploader_index = 14
+
+    # Upload a file
+    file_name = "snap.txt"
+    file_content = b"snapshot content"
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[FilePayload(name=file_name, mimeType="text/plain", buffer=file_content)]
+    )
+
+    wait_for_app_run(app)
+
+    # Toggle checkbox to disable the uploader (click label since input may be visually hidden)
+    app.get_by_test_id("stCheckbox").filter(has_text="Disable toggle uploader").click()
+    wait_for_app_run(app)
+
+    # Snapshot the uploader in disabled state with an uploaded file
+    toggled_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    assert_snapshot(
+        toggled_uploader, name="st_file_uploader-toggle_disabled_after_upload"
+    )
