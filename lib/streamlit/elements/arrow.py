@@ -200,7 +200,7 @@ class DataframeSelectionSerde:
         if "cells" not in selection_state["selection"]:
             selection_state["selection"]["cells"] = []
         else:
-            # Explicitly convert all cells to the named tuple.
+            # Explicitly convert all cells to a tuple (from list).
             # This is necessary since there isn't a concept of tuples in JSON
             # The format that the data is transferred to the backend.
             selection_state["selection"]["cells"] = [
