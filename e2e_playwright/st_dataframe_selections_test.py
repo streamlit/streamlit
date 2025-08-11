@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
+    click_on_cell,
     expect_canvas_to_be_visible,
     open_column_menu,
     select_column,
@@ -34,43 +35,67 @@ from e2e_playwright.shared.dataframe_utils import (
 
 
 def _get_single_row_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(0)
+    return get_element_by_key(app, "single_row_select").get_by_test_id("stDataFrame")
 
 
 def _get_single_column_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(1)
+    return get_element_by_key(app, "single_column_select").get_by_test_id("stDataFrame")
 
 
 def _get_multi_row_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(2)
+    return get_element_by_key(app, "multi_row_select").get_by_test_id("stDataFrame")
 
 
 def _get_multi_column_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(3)
+    return get_element_by_key(app, "multi_column_select").get_by_test_id("stDataFrame")
 
 
 def _get_multi_row_and_column_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(4)
+    return get_element_by_key(app, "multi_row_multi_column_select").get_by_test_id(
+        "stDataFrame"
+    )
 
 
 def _get_single_row_and_column_select_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(5)
+    return get_element_by_key(app, "single_row_single_column_select").get_by_test_id(
+        "stDataFrame"
+    )
 
 
 def _get_in_form_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(6)
+    return get_element_by_key(app, "df_selection_in_form").get_by_test_id("stDataFrame")
 
 
 def _get_callback_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(7)
+    return get_element_by_key(app, "df_selection").get_by_test_id("stDataFrame")
 
 
 def _get_fragment_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(8)
+    return get_element_by_key(app, "inside_fragment").get_by_test_id("stDataFrame")
 
 
 def _get_df_with_index(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(9)
+    return get_element_by_key(app, "with_index").get_by_test_id("stDataFrame")
+
+
+def _get_single_cell_select_df(app: Page) -> Locator:
+    return get_element_by_key(app, "single_cell_select").get_by_test_id("stDataFrame")
+
+
+def _get_multi_cell_select_df(app: Page) -> Locator:
+    return get_element_by_key(app, "multi_cell_select").get_by_test_id("stDataFrame")
+
+
+def _get_multi_row_and_single_cell_select_df(app: Page) -> Locator:
+    return get_element_by_key(app, "multi_row_single_cell_select").get_by_test_id(
+        "stDataFrame"
+    )
+
+
+def _get_multi_row_column_and_cell_select_df(app: Page) -> Locator:
+    return get_element_by_key(
+        app, "multi_row_multi_column_multi_cell_select"
+    ).get_by_test_id("stDataFrame")
 
 
 def test_single_row_select(app: Page):
@@ -81,9 +106,7 @@ def test_single_row_select(app: Page):
     select_row(canvas, 1)
     wait_for_app_run(app)
 
-    expected = (
-        "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': []}}"
-    )
+    expected = "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': [], 'cells': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -92,7 +115,7 @@ def test_single_row_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-row selection:",
-        "{'selection': {'rows': [1], 'columns': []}}",
+        "{'selection': {'rows': [1], 'columns': [], 'cells': []}}",
     )
 
 
@@ -104,9 +127,7 @@ def test_single_row_select_with_sorted_column(app: Page):
     select_row(canvas, 1)
     wait_for_app_run(app)
     # The dataframe is not sorted yet, so the first row is the first row:
-    expected = (
-        "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': []}}"
-    )
+    expected = "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': [], 'cells': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -116,9 +137,7 @@ def test_single_row_select_with_sorted_column(app: Page):
     wait_for_app_run(app)
 
     # The dataframe selection should be cleared
-    expected = (
-        "Dataframe single-row selection: {'selection': {'rows': [], 'columns': []}}"
-    )
+    expected = "Dataframe single-row selection: {'selection': {'rows': [], 'columns': [], 'cells': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -128,9 +147,7 @@ def test_single_row_select_with_sorted_column(app: Page):
 
     # The first row got selected, but the real numerical row index
     # should be different since the first column is sorted
-    expected = (
-        "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': []}}"
-    )
+    expected = "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': [], 'cells': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -145,7 +162,7 @@ def test_single_column_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -154,7 +171,7 @@ def test_single_column_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_2']}}",
+        "{'selection': {'rows': [], 'columns': ['col_2'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -164,7 +181,7 @@ def test_single_column_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-column selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -181,7 +198,7 @@ def test_multi_row_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [0, 2], 'columns': []}}",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -197,7 +214,7 @@ def test_multi_row_select_all_at_once(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [0, 1, 2, 3, 4], 'columns': []}}",
+        "{'selection': {'rows': [0, 1, 2, 3, 4], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -222,7 +239,7 @@ def test_multi_row_by_keeping_mouse_pressed(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [1, 2, 3], 'columns': []}}",
+        "{'selection': {'rows': [1, 2, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -241,7 +258,7 @@ def test_multi_column_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -251,7 +268,7 @@ def test_multi_column_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_3', 'col_4']}}",
+        "{'selection': {'rows': [], 'columns': ['col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -272,7 +289,7 @@ def _expect_multi_row_multi_column_selection(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -297,7 +314,7 @@ def test_single_row_select_and_sort(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-row selection:",
-        "{'selection': {'rows': [0], 'columns': []}}",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -309,7 +326,7 @@ def test_single_row_select_and_sort(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-row selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -331,7 +348,7 @@ def test_single_row_and_single_column_select_and_sort(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-row-single-column selection:",
-        "{'selection': {'rows': [0], 'columns': ['col_1']}}",
+        "{'selection': {'rows': [0], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -344,7 +361,7 @@ def test_single_row_and_single_column_select_and_sort(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe single-row-single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -364,7 +381,7 @@ def test_clear_selection_via_escape(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -390,7 +407,7 @@ def test_clear_selection_via_toolbar(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -405,7 +422,7 @@ def test_in_form_selection_and_session_state(app: Page):
     expect_prefixed_markdown(
         app,
         _markdown_prefix,
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -417,14 +434,14 @@ def test_in_form_selection_and_session_state(app: Page):
     expect_prefixed_markdown(
         app,
         _markdown_prefix,
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
     expect_prefixed_markdown(
         app,
         "Dataframe-in-form selection in session state:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -442,7 +459,7 @@ def test_multi_row_and_multi_column_selection_with_callback(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe selection callback:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -496,7 +513,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe-in-fragment selection:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -522,7 +539,7 @@ def test_that_index_cannot_be_selected(app: Page):
     expect_prefixed_markdown(
         app,
         "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': ['col_3']}}",
+        "{'selection': {'rows': [], 'columns': ['col_3'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -534,7 +551,7 @@ def test_that_index_cannot_be_selected(app: Page):
     expect_prefixed_markdown(
         app,
         "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -546,7 +563,7 @@ def test_that_index_cannot_be_selected(app: Page):
     expect_prefixed_markdown(
         app,
         "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -554,3 +571,161 @@ def test_that_index_cannot_be_selected(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "df_selection")).to_be_visible()
+
+
+def test_single_cell_select(app: Page):
+    """Test single cell selection mode."""
+    canvas = _get_single_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Click on cell at row 1, column 1 (col_1)
+    click_on_cell(canvas, 1, 1, column_width="small", has_row_marker_col=False)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [(0, 'col_1')]}}",
+        exact_match=True,
+    )
+
+    # Click on another cell at row 2, column 3 (col_3)
+    click_on_cell(canvas, 2, 3, column_width="small", has_row_marker_col=False)
+    wait_for_app_run(app)
+
+    # Only the new cell should be selected
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [(1, 'col_3')]}}",
+        exact_match=True,
+    )
+
+
+def test_multi_cell_select_by_dragging(app: Page):
+    """Test multi cell selection by dragging."""
+    canvas = _get_multi_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Get canvas bounding box for mouse operations
+    bounding_box = canvas.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+
+    # Drag from cell (1,1) to cell (3,3) - that's (row 0, col_1) to (row 2, col_3)
+    x1, y1 = calc_middle_cell_position(1, 1, has_row_marker_col=False)
+    x2, y2 = calc_middle_cell_position(3, 3, has_row_marker_col=False)
+
+    app.mouse.move(canvas_start_x_px + x1, canvas_start_y_px + y1)
+    app.mouse.down()
+    app.mouse.move(canvas_start_x_px + x2, canvas_start_y_px + y2)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    # Should select a rectangular region of cells from (0, col_1) to (2, col_3)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': ["
+        "(0, 'col_1'), (0, 'col_2'), (0, 'col_3'), (1, 'col_1'), (1, 'col_2'), "
+        "(1, 'col_3'), (2, 'col_1'), (2, 'col_2'), (2, 'col_3')]}}",
+        exact_match=True,
+    )
+
+
+def test_multi_row_and_single_cell_select(app: Page):
+    """Test combined multi-row and single-cell selection mode."""
+    canvas = _get_multi_row_and_single_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Select multiple rows first
+    select_row(canvas, 1)
+    select_row(canvas, 3)
+    wait_for_app_run(app)
+
+    # Then select a single cell (row 2, col 3 accounting for row marker = row 1, col_2)
+    click_on_cell(canvas, 2, 3, column_width="small", has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row & single-cell selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [(1, 'col_2')]}}",
+        exact_match=True,
+    )
+
+    # Click on another cell should replace the cell selection but keep rows
+    # (row 4, col 2 with row marker = row 3, col_1)
+    click_on_cell(canvas, 4, 2, column_width="small", has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row & single-cell selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [(3, 'col_1')]}}",
+        exact_match=True,
+    )
+
+
+def test_multi_row_column_and_cell_select(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test combined multi-row, multi-column and multi-cell selection mode."""
+    canvas = _get_multi_row_column_and_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Select some rows
+    select_row(canvas, 1)
+    select_row(canvas, 2)
+
+    # Select some columns (with command key)
+    app.keyboard.down(COMMAND_KEY)
+    select_column(canvas, 2, has_row_marker_col=True)
+    wait_for_app_run(app)
+    select_column(canvas, 3, has_row_marker_col=True)
+    app.keyboard.up(COMMAND_KEY)
+
+    # Select some individual cells
+    # Get canvas bounding box for mouse operations
+    bounding_box = canvas.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+
+    # Drag from cell (1,1) to cell (3,3) - that's (row 0, col_1) to (row 2, col_3)
+    x1, y1 = calc_middle_cell_position(1, 1, has_row_marker_col=False)
+    x2, y2 = calc_middle_cell_position(3, 3, has_row_marker_col=False)
+
+    app.mouse.move(canvas_start_x_px + x1, canvas_start_y_px + y1)
+    app.mouse.down()
+    app.mouse.move(canvas_start_x_px + x2, canvas_start_y_px + y2)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row, multi-column & multi-cell selection:",
+        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_2'], 'cells': [(0, 'col_1'), "
+        "(0, 'col_2'), (0, 'col_3'), (1, 'col_1'), (1, 'col_2'), (1, 'col_3'), "
+        "(2, 'col_1'), (2, 'col_2'), (2, 'col_3')]}}",
+        exact_match=True,
+    )
+
+    # Take a snapshot to ensure visual consistency:
+    assert_snapshot(canvas, name="st_dataframe-multi_row_column_and_cell_select")
+
+    # Press Escape to clear
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row, multi-column & multi-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )

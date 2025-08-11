@@ -21,12 +21,14 @@ import merge from "lodash/merge"
 import mergeWith from "lodash/mergeWith"
 import { getLogger } from "loglevel"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
+  getConfiguredWidth,
   initAllColumnsFromArrow,
   initEmptyIndexColumn,
+  shouldUseContainerWidth,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
@@ -279,7 +281,8 @@ function useColumnLoader(
   element: ArrowProto,
   data: Quiver,
   disabled: boolean,
-  columnOrder: string[]
+  columnOrder: string[],
+  widthConfig?: streamlit.IWidthConfig | null
 ): ColumnLoaderReturn {
   const theme = useEmotionTheme()
 
@@ -301,9 +304,19 @@ function useColumnLoader(
     setColumnConfigMapping(parsedColumnConfig)
   }, [parsedColumnConfig])
 
+  const shouldUseContainerWidthValue = useMemo(
+    () => shouldUseContainerWidth(element, widthConfig),
+    [element, widthConfig]
+  )
+
+  const configuredWidth = useMemo(
+    () => getConfiguredWidth(element, widthConfig),
+    [element, widthConfig]
+  )
+
   const stretchColumns: boolean =
-    element.useContainerWidth ||
-    (notNullOrUndefined(element.width) && element.width > 0)
+    shouldUseContainerWidthValue ||
+    (notNullOrUndefined(configuredWidth) && configuredWidth > 0)
 
   // Allow content wrapping if the configured row height is greater than 4rem.
   // 4rem was arbitrarily chosen because it looks and feels good. Its using rem

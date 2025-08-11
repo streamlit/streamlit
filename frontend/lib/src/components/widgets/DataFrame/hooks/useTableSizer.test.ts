@@ -16,7 +16,7 @@
 
 import { act, renderHook } from "@testing-library/react"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "~lib/mocks/arrow"
 
@@ -267,5 +267,163 @@ describe("useTableSizer hook", () => {
         mockTheme.defaultHeaderHeight +
         2 * mockTheme.tableBorderWidth
     )
+  })
+
+  describe("with widthConfig", () => {
+    it("applies useStretch configuration", () => {
+      const CONTAINER_WIDTH = 700
+      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          ArrowProto.create({
+            data: TEN_BY_TEN,
+            useContainerWidth: false, // Should be overridden by widthConfig
+          }),
+          mockTheme,
+          10,
+          false,
+          CONTAINER_WIDTH,
+          undefined,
+          false,
+          widthConfig
+        )
+      )
+
+      expect(result.current.resizableSize.width).toEqual(CONTAINER_WIDTH)
+      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+    })
+
+    it("applies pixelWidth configuration", () => {
+      const CONTAINER_WIDTH = 700
+      const PIXEL_WIDTH = 350
+      const widthConfig = new streamlit.WidthConfig({
+        pixelWidth: PIXEL_WIDTH,
+      })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          ArrowProto.create({
+            data: TEN_BY_TEN,
+            useContainerWidth: true, // Should be overridden by widthConfig
+          }),
+          mockTheme,
+          10,
+          false,
+          CONTAINER_WIDTH,
+          undefined,
+          false,
+          widthConfig
+        )
+      )
+
+      expect(result.current.resizableSize.width).toEqual(PIXEL_WIDTH)
+      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+    })
+
+    it("adapts pixelWidth to container width when larger", () => {
+      const CONTAINER_WIDTH = 200
+      const PIXEL_WIDTH = 350
+      const widthConfig = new streamlit.WidthConfig({
+        pixelWidth: PIXEL_WIDTH,
+      })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          ArrowProto.create({
+            data: TEN_BY_TEN,
+          }),
+          mockTheme,
+          10,
+          false,
+          CONTAINER_WIDTH,
+          undefined,
+          false,
+          widthConfig
+        )
+      )
+
+      // Should adapt to container width when configured width is larger
+      expect(result.current.resizableSize.width).toEqual(CONTAINER_WIDTH)
+      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+    })
+
+    it("prioritizes widthConfig over legacy useContainerWidth", () => {
+      const CONTAINER_WIDTH = 700
+      const PIXEL_WIDTH = 350
+      const widthConfig = new streamlit.WidthConfig({
+        pixelWidth: PIXEL_WIDTH,
+      })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          ArrowProto.create({
+            data: TEN_BY_TEN,
+            useContainerWidth: true, // This should be ignored
+            width: 500, // This should also be ignored
+          }),
+          mockTheme,
+          10,
+          false,
+          CONTAINER_WIDTH,
+          undefined,
+          false,
+          widthConfig
+        )
+      )
+
+      expect(result.current.resizableSize.width).toEqual(PIXEL_WIDTH)
+      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+    })
+
+    it("falls back to legacy behavior when widthConfig is null and useContainerWidth is false", () => {
+      const CONTAINER_WIDTH = 700
+      const TABLE_WIDTH = 350
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          ArrowProto.create({
+            data: TEN_BY_TEN,
+            useContainerWidth: false,
+            width: TABLE_WIDTH,
+          }),
+          mockTheme,
+          10,
+          false,
+          CONTAINER_WIDTH,
+          undefined,
+          false,
+          null
+        )
+      )
+
+      expect(result.current.resizableSize.width).toEqual(TABLE_WIDTH)
+      expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+    })
+  })
+
+  it("falls back to legacy behavior when widthConfig is null and useContainerWidth is true", () => {
+    const CONTAINER_WIDTH = 700
+    const TABLE_WIDTH = 350
+
+    const { result } = renderHook(() =>
+      useTableSizer(
+        ArrowProto.create({
+          data: TEN_BY_TEN,
+          useContainerWidth: true,
+          width: TABLE_WIDTH,
+        }),
+        mockTheme,
+        10,
+        false,
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        null
+      )
+    )
+
+    expect(result.current.resizableSize.width).toEqual(CONTAINER_WIDTH)
+    expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
   })
 })

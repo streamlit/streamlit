@@ -68,9 +68,8 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         paddingBottom: theme.spacing.lg,
         paddingLeft: theme.spacing.twoXL,
         paddingRight: theme.spacing.twoXL,
-        backgroundColor: lightBackground
-          ? theme.colors.gray10
-          : theme.colors.gray90,
+        backgroundColor: theme.colors.bgColor,
+        filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
         boxShadow: lightBackground
@@ -167,9 +166,15 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
 
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
+    const autoHideDurationMs = notNullOrUndefined(duration)
+      ? duration === 0
+        ? 0 // Explicitly disable auto-hide when duration is 0
+        : duration * 1000
+      : 4000 // Use default duration of 4 seconds
+
     const newKey = toaster.info(toastContent, {
       overrides: { ...styleOverrides },
-      autoHideDuration: notNullOrUndefined(duration) ? duration * 1000 : 4000,
+      autoHideDuration: autoHideDurationMs,
     })
     setToastKey(newKey)
 
