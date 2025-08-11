@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-import re
-
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
