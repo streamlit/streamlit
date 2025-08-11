@@ -399,6 +399,10 @@ ColumnConfigMapping: TypeAlias = dict[
     Union[IndexIdentifierType, str, int], ColumnConfig
 ]
 ColumnConfigMappingInput: TypeAlias = Mapping[
+    # TODO(lukasmasuch): This should also use int here to
+    # correctly type the support for positional index. However,
+    # allowing int here leads mypy to complain about simple dict[str, ...]
+    # as input -> which seems like a mypy bug.
     Union[IndexIdentifierType, str],
     Union[ColumnConfig, None, str],
 ]
