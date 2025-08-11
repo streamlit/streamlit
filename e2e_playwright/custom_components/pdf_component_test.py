@@ -97,6 +97,51 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     )
 
 
+def _reset_pdf_zoom(app: Page):
+    """Reset PDF zoom to fit width by clicking zoom out button until disabled.
+
+    This ensures consistent snapshot testing by normalizing the zoom level.
+    """
+    # Try to click zoom out button until it's disabled
+    # The button is within the iframe's document
+    try:
+        # Use JavaScript to interact with the iframe content
+        app.evaluate("""
+            () => {
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc) {
+                            // Look for zoom out button and click it until disabled
+                            let clickCount = 0;
+                            const maxClicks = 10; // Safety limit
+
+                            const clickZoomOut = () => {
+                                const zoomOutBtn = iframeDoc.querySelector('button[title="Zoom Out"]');
+                                if (zoomOutBtn && !zoomOutBtn.disabled && clickCount < maxClicks) {
+                                    zoomOutBtn.click();
+                                    clickCount++;
+                                    setTimeout(clickZoomOut, 100); // Wait a bit between clicks
+                                }
+                            };
+
+                            clickZoomOut();
+                        }
+                    } catch (e) {
+                        console.log('Could not access iframe content for zoom reset:', e);
+                    }
+                });
+            }
+        """)
+
+        # Give it a moment to settle after zoom changes
+        app.wait_for_timeout(500)
+    except Exception as e:
+        # If we can't reset zoom, continue anyway - test might still work
+        print(f"Warning: Could not reset PDF zoom: {e}")
+
+
 def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunction):
     """Test basic st.pdf component functionality with snapshot."""
     _select_pdf_scenario(app, "basic")
@@ -109,6 +154,7 @@ def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunc
 
     # Wait for PDF to be fully loaded before taking snapshot
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
     assert_snapshot(iframe, name="st_pdf-basic_functionality")
 
 
@@ -138,6 +184,7 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     # Capture just the PDF iframe to focus on the height setting
     iframe = app.locator("iframe").first
@@ -158,6 +205,7 @@ def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     # Take snapshot of just the PDF iframe, following the good example from bytes_io test
     iframe = app.locator("iframe").first
@@ -171,6 +219,7 @@ def test_st_pdf_bytes_io(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded before taking snapshot
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     iframe = app.locator("iframe").first
     assert_snapshot(iframe, name="st_pdf-bytes_io")
@@ -245,6 +294,9 @@ def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for both PDFs to load
     _wait_for_pdf_to_load(app)
 
+    # Reset zoom to ensure consistent snapshots
+    _reset_pdf_zoom(app)
+
     # Take snapshot focusing on the column layout with PDFs
     columns_container = app.get_by_test_id("stHorizontalBlock")
     assert_snapshot(columns_container, name="st_pdf-in_columns")
@@ -267,6 +319,7 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     # Take snapshot of just the PDF iframe in initial state
     iframe = app.locator("iframe").first
@@ -281,6 +334,7 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Wait for PDF to load again after reset
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     # Take snapshot after reset to verify state
     assert_snapshot(iframe, name="st_pdf-interactive_after_reset")
@@ -352,6 +406,9 @@ def test_st_pdf_different_heights_snapshots(
     _expect_iframe_attached(app)
     _wait_for_pdf_to_load(app)
 
+    # Reset zoom to ensure consistent snapshots
+    _reset_pdf_zoom(app)
+
     iframe = app.locator("iframe").first
 
     # Take snapshot at default height (500px)
@@ -371,6 +428,7 @@ def test_st_pdf_different_heights_snapshots(
     wait_for_app_run(app)
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
 
     # Verify we actually reached a low height value (around 200px)
     wait_until(
@@ -394,6 +452,8 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
+    _reset_pdf_zoom(app)
+
     # Verify we actually reached a high height value (should be much larger than minimum)
     wait_until(
         app,
