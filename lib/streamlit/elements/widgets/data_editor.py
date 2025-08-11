@@ -235,7 +235,7 @@ def _parse_value(
                 return datetime_value.time()
 
         if column_data_kind == ColumnDataKind.LIST:
-            return list(value) if is_list_like(value) else [value]
+            return list(value) if is_list_like(value) else [value]  # ty: ignore
 
     except (ValueError, pd.errors.ParserError) as ex:
         _LOGGER.warning(
