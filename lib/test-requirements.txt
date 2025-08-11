@@ -29,3 +29,4 @@ pytest-rerunfailures>=15.0
 pytest-github-actions-annotate-failures
 pytest-benchmark>=5.1.0
 pytest-repeat>=0.9.3
+streamlit-pdf>=1.0.0
