@@ -522,7 +522,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, width=100, use_container_width=False)
 
         el = self.get_delta_from_queue().new_element
-        assert el.width_config.use_content
+        assert el.width_config.pixel_width == 100
 
     def test_st_image_use_container_width_and_use_column_width(self):
         """Test st.image with use_container_width and use_column_width."""
