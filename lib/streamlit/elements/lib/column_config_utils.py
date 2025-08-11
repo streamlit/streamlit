@@ -399,7 +399,7 @@ ColumnConfigMapping: TypeAlias = dict[
     Union[IndexIdentifierType, str, int], ColumnConfig
 ]
 ColumnConfigMappingInput: TypeAlias = Mapping[
-    Union[IndexIdentifierType, str, int],
+    Union[IndexIdentifierType, str],
     Union[ColumnConfig, None, str],
 ]
 
