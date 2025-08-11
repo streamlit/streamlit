@@ -18,6 +18,9 @@ import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
 
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   AppRoot,
   BlockNode,
@@ -37,9 +40,6 @@ import {
   Navigation,
   PageConfig,
 } from "@streamlit/protobuf"
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
 
 import AppView, { AppViewProps } from "./AppView"
 
@@ -60,7 +60,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     widgetsDisabled: false,
     gitInfo: null,
     showToolbar: true,
-    showColoredLine: true,
     ...context,
   }
 }

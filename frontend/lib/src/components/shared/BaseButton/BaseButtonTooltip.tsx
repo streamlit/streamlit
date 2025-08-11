@@ -16,8 +16,8 @@
 
 import React, { ReactElement } from "react"
 
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 
 import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 

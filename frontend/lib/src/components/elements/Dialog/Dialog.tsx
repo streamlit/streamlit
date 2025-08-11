@@ -24,13 +24,37 @@ import React, {
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledDialogTitle } from "./styled-components"
+
+/**
+ * Maps the dialog width to the modal size.
+ * @param dialogWidth - The dialog width from the proto.
+ * @returns The modal size.
+ */
+function mapDialogWidthToModalSize(
+  dialogWidth: BlockProto.Dialog.DialogWidth
+): "default" | "medium" | "large" {
+  switch (dialogWidth) {
+    case BlockProto.Dialog.DialogWidth.MEDIUM:
+      return "medium"
+    case BlockProto.Dialog.DialogWidth.LARGE:
+      return "large"
+    case BlockProto.Dialog.DialogWidth.SMALL:
+      return "default"
+    default: {
+      // Ensure exhaustive checking if new enum values are added
+      assertNever(dialogWidth)
+      return "default"
+    }
+  }
+}
 
 export interface Props {
   element: BlockProto.Dialog
@@ -117,13 +141,12 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   if (!isOpen) {
     return <></>
   }
-
   return (
     <Modal
       isOpen
       closeable={dismissible}
       onClose={handleClose}
-      size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
+      size={mapDialogWidthToModalSize(width)}
     >
       <ModalHeader>
         <StyledDialogTitle>

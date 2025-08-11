@@ -16,7 +16,6 @@
 
 import inspect
 import unittest
-from dataclasses import dataclass
 from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
@@ -319,7 +318,7 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key", form_id=None
+            "button", label="the label", user_key="my_key", dg=None
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
@@ -357,7 +356,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["form_id", "user_key", "dg"]:
+        for kwarg in ["user_key", "dg"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -388,27 +387,11 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         """Test that active_script_hash and form ID are always included in
         element ID calculation."""
 
-        expected_form_id: str | None = "form_id"
-
-        @dataclass
-        class MockForm:
-            form_id = expected_form_id
-
         with patch(
             "streamlit.elements.lib.utils._compute_element_id",
             wraps=_compute_element_id,
         ) as patched_compute_element_id:
-            # Some elements cannot be used in a form:
-            if element_name not in ["button", "chat_input", "download_button"]:
-                with patch(
-                    "streamlit.elements.lib.form_utils._current_form",
-                    return_value=MockForm(),
-                ):
-                    widget_func()
-            else:
-                widget_func()
-                expected_form_id = None
-
+            widget_func()
         # Get call kwargs from patched_compute_element_id
         call_kwargs = patched_compute_element_id.call_args[1]
         assert "active_script_hash" in call_kwargs, (
@@ -416,10 +399,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         )
         "in element ID calculation."
 
-        # Elements that don't set a form ID
-        assert call_kwargs.get("form_id") == expected_form_id, (
-            "form_id is expected to be included in element ID calculation."
-        )
+        # Some elements cannot be used in a form
+        if element_name not in ["button", "chat_input", "download_button"]:
+            # For all other check that form_id is set:
+            assert call_kwargs.get("form_id") == "", (
+                "form_id is expected to be included in element ID calculation."
+            )
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
@@ -609,101 +594,10 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             match="There are multiple `button` elements with the same",
         ):
             compute_and_register_element_id(
-                element_type="button", user_key=None, form_id="form_id"
+                element_type="button", user_key=None, dg=None
             )
             compute_and_register_element_id(
-                element_type="button", user_key=None, form_id="form_id"
-            )
-
-    def test_duplicate_id_error_uses_style(self):
-        """Test that duplicate ID error uses style when provided."""
-        with pytest.raises(
-            errors.StreamlitDuplicateElementId,
-            match="There are multiple `my_style` elements with the same",
-        ):
-            compute_and_register_element_id(
-                element_type="some_element_type",
-                user_key=None,
-                form_id="form_id",
-                style="my_style",
-            )
-            compute_and_register_element_id(
-                element_type="some_element_type",
-                user_key=None,
-                form_id="form_id",
-                style="my_style",
-            )
-
-    def test_duplicate_id_error_uses_feedback_for_borderless_style(self):
-        """Test that duplicate ID error uses 'feedback' when style is 'borderless'."""
-        with pytest.raises(
-            errors.StreamlitDuplicateElementId,
-            match="There are multiple `feedback` elements with the same",
-        ):
-            compute_and_register_element_id(
-                element_type="some_element_type",
-                user_key=None,
-                form_id="form_id",
-                style="borderless",
-            )
-            compute_and_register_element_id(
-                element_type="some_element_type",
-                user_key=None,
-                form_id="form_id",
-                style="borderless",
-            )
-
-    def test_style_is_included_in_element_id_when_style_is_not_none(self):
-        """Test that style is included in element ID."""
-        compute_and_register_element_id(
-            element_type="button_group",
-            user_key=None,
-            form_id="form_id",
-            style="borderless",
-        )
-        compute_and_register_element_id(
-            element_type="button_group",
-            user_key=None,
-            form_id="form_id",
-            style="pills",
-        )
-
-    def test_style_is_not_included_in_element_id_when_style_is_none(self):
-        """Test that style is included in element ID."""
-        with pytest.raises(
-            errors.StreamlitDuplicateElementId,
-            match="There are multiple `test_element` elements with the same",
-        ):
-            compute_and_register_element_id(
-                element_type="test_element",
-                user_key=None,
-                form_id="form_id",
-                style=None,
-            )
-            compute_and_register_element_id(
-                element_type="test_element",
-                user_key=None,
-                form_id="form_id",
-                style=None,
-            )
-
-    def test_style_is_not_included_in_element_id_when_style_is_empty_string(self):
-        """Test that style is not included in element ID when style is empty string."""
-        with pytest.raises(
-            errors.StreamlitDuplicateElementId,
-            match="There are multiple `test_element` elements with the same",
-        ):
-            compute_and_register_element_id(
-                element_type="test_element",
-                user_key=None,
-                form_id="form_id",
-                style="",
-            )
-            compute_and_register_element_id(
-                element_type="test_element",
-                user_key=None,
-                form_id="form_id",
-                style="",
+                element_type="button", user_key=None, dg=None
             )
 
 

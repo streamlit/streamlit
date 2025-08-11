@@ -328,7 +328,6 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=value,
@@ -643,7 +642,6 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=value,

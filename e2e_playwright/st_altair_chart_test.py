@@ -26,7 +26,9 @@ def test_altair_chart_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     expect(
-        themed_app.get_by_test_id("stVegaLiteChart").locator("canvas")
+        themed_app.get_by_test_id("stVegaLiteChart").locator(
+            "[role='graphics-document']"
+        )
     ).to_have_count(NUM_CHARTS)
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
@@ -66,13 +68,18 @@ def test_check_top_level_class(app: Page):
 @pytest.mark.flaky(reruns=4)
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
-    pie_chart = app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    pie_chart = charts.nth(0)
     expect(pie_chart).to_be_visible()
     wait_for_react_stability(app)
     pie_chart.scroll_into_view_if_needed()
     wait_for_react_stability(app)
-    pie_chart.hover(position={"x": 60, "y": 60})
-    tooltip = app.locator("#vg-tooltip-element").first
+    pie_chart.locator("[role='graphics-document']").hover(
+        position={"x": 60, "y": 60}, force=True
+    )
+    tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
     assert_snapshot(tooltip, name="st_altair_chart-tooltip_styling")

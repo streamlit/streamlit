@@ -16,17 +16,24 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Field, Int64 } from "apache-arrow"
 
-import { render } from "~lib/test_util"
-import { NumberColumn } from "src/components/widgets/DataFrame/columns"
+import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { render } from "~lib/test_util"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
 describe("DataFrame ColumnMenu", () => {
+  // Mock navigator.clipboard
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: vi.fn(),
+    },
+  })
+
   const defaultProps: ColumnMenuProps = {
     top: 100,
     left: 100,
@@ -212,6 +219,37 @@ describe("DataFrame ColumnMenu", () => {
       await userEvent.click(screen.getByText("Hide column"))
       expect(onHideColumn).toHaveBeenCalled()
       expect(defaultProps.onCloseMenu).toHaveBeenCalled()
+    })
+  })
+
+  describe("copy column name functionality (isCopied state)", () => {
+    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
+    const mockWriteText = vi.mocked(navigator.clipboard.writeText)
+
+    test("shows copy icon initially and switches to check icon after copy", async () => {
+      mockWriteText.mockResolvedValue()
+
+      render(<ColumnMenu {...defaultProps} />)
+
+      const copyButton = screen.getByRole("button", {
+        name: "Copy column name",
+      })
+
+      // Initially shows the material copy icon inside the copy button
+      expect(
+        within(copyButton).getByTestId("stIconMaterial")
+      ).toHaveTextContent("content_copy")
+
+      await userEvent.click(copyButton)
+
+      expect(mockWriteText).toHaveBeenCalledWith("testColumn")
+
+      // After successful copy, the icon should switch to a check mark
+      await waitFor(() => {
+        expect(
+          within(copyButton).getByTestId("stIconMaterial")
+        ).toHaveTextContent("check")
+      })
     })
   })
 })

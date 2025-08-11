@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { getLogger } from "loglevel"
 
 import { IAppPage } from "@streamlit/protobuf"
@@ -249,10 +249,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     _sessionId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    signal?: AbortSignal
   ): Promise<void> {
     const form = new FormData()
-    form.append(file.name, file)
+    const { name, webkitRelativePath } = file
+    // For directory uploads, use the relative path as fileName to preserve directory structure
+    const fileName = webkitRelativePath || name
+    form.append(name, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()
 
@@ -260,7 +263,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     try {
       await this.csrfRequest<number>(uploadUrl, {
-        cancelToken,
+        signal,
         method: "PUT",
         data: form,
         responseType: "text",

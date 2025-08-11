@@ -16,14 +16,47 @@
 
 import React, { PureComponent, ReactNode } from "react"
 
-import moment from "moment"
-import Hotkeys from "react-hot-keys"
-import { enableMapSet, enablePatches } from "immer"
 import classNames from "classnames"
+import { enableMapSet, enablePatches } from "immer"
 import without from "lodash/without"
 import { getLogger } from "loglevel"
+import moment from "moment"
 import { flushSync } from "react-dom"
+import Hotkeys from "react-hot-keys"
 
+import AppView from "@streamlit/app/src/components/AppView"
+import DeployButton from "@streamlit/app/src/components/DeployButton"
+import MainMenu from "@streamlit/app/src/components/MainMenu"
+import StatusWidget from "@streamlit/app/src/components/StatusWidget"
+import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
+import {
+  ConnectionErrorProps,
+  DialogProps,
+  ScriptCompileErrorProps,
+  StreamlitDialog,
+  WarningProps,
+} from "@streamlit/app/src/components/StreamlitDialog"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
+import withScreencast, {
+  ScreenCastHOC,
+} from "@streamlit/app/src/hocs/withScreencast/withScreencast"
+import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
+import { StyledApp } from "@streamlit/app/src/styled-components"
+import getBrowserInfo from "@streamlit/app/src/util/getBrowserInfo"
+import {
+  AppConfig,
+  ConnectionManager,
+  ConnectionState,
+  DefaultStreamlitEndpoints,
+  IHostConfigResponse,
+  LibConfig,
+  parseUriIntoBaseParts,
+  StreamlitEndpoints,
+} from "@streamlit/connection"
 import {
   AppRoot,
   CircularBuffer,
@@ -52,7 +85,6 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
-  isColoredLineDisplayed,
   isEmbed,
   isInChildFrame,
   isPaddingDisplayed,
@@ -106,45 +138,12 @@ import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/utils"
-import getBrowserInfo from "@streamlit/app/src/util/getBrowserInfo"
-import AppView from "@streamlit/app/src/components/AppView"
-import StatusWidget from "@streamlit/app/src/components/StatusWidget"
-import MainMenu from "@streamlit/app/src/components/MainMenu"
-import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
-import DeployButton from "@streamlit/app/src/components/DeployButton"
-import {
-  ConnectionErrorProps,
-  DialogProps,
-  ScriptCompileErrorProps,
-  StreamlitDialog,
-  WarningProps,
-} from "@streamlit/app/src/components/StreamlitDialog"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import {
-  AppConfig,
-  ConnectionManager,
-  ConnectionState,
-  DefaultStreamlitEndpoints,
-  IHostConfigResponse,
-  LibConfig,
-  parseUriIntoBaseParts,
-  StreamlitEndpoints,
-} from "@streamlit/connection"
-import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
-import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { StyledApp } from "@streamlit/app/src/styled-components"
-import withScreencast, {
-  ScreenCastHOC,
-} from "@streamlit/app/src/hocs/withScreencast/withScreencast"
-import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { ThemeManager } from "./util/useThemeManager"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
 declare const PACKAGE_METADATA: {
@@ -178,7 +177,6 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
-  hideColoredLine: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   navigationPosition: Navigation.Position
@@ -312,7 +310,6 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
-      hideColoredLine: false,
       expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
@@ -1290,8 +1287,6 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    // Hide the colored line if a custom theme is selected:
-    this.setState({ hideColoredLine: !isPresetTheme(themeConfig) })
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
@@ -2066,6 +2061,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Checks if there are any app-defined menu items configured via st.set_page_config
+   */
+  private hasAppDefinedMenuItems = (): boolean => {
+    const { menuItems } = this.state
+    return Boolean(
+      menuItems?.aboutSectionMd ||
+        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+    )
+  }
+
+  /**
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
@@ -2076,11 +2083,18 @@ export class App extends PureComponent<Props, State> {
     // Show toolbar if not embedded or if specifically configured to display in embed mode
     const isToolbarAllowedInEmbed = !isEmbed() || isToolbarDisplayed()
 
-    // Show toolbar if not in minimal mode or if there are host items to display
-    const hasContentToShow =
-      this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
-      hostMenuItems.length > 0 ||
-      hostToolbarItems.length > 0
+    // Determine if toolbar has content to show based on toolbar mode
+    let hasContentToShow: boolean
+    if (this.state.toolbarMode === Config.ToolbarMode.MINIMAL) {
+      // In minimal mode, only show toolbar if there are menu items to display
+      hasContentToShow =
+        hostMenuItems.length > 0 ||
+        hostToolbarItems.length > 0 ||
+        this.hasAppDefinedMenuItems()
+    } else {
+      // In non-minimal modes, always show the toolbar
+      hasContentToShow = true
+    }
 
     return isToolbarAllowedInEmbed && hasContentToShow
   }
@@ -2099,7 +2113,6 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
-      hideColoredLine,
       expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
@@ -2143,8 +2156,6 @@ export class App extends PureComponent<Props, State> {
 
     // Determine toolbar visibility using helper method
     const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
-    const showColoredLine =
-      (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()
     const disableScrolling = isScrollingHidden()
 
@@ -2180,7 +2191,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
         showToolbar={showToolbar}
-        showColoredLine={showColoredLine}
       >
         <Hotkeys
           keyName="r,c,esc"

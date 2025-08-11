@@ -34,22 +34,22 @@ import {
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { LibContext } from "~lib/components/core/LibContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorElement from "~lib/components/shared/ErrorElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
-import useTimeout from "~lib/hooks/useTimeout"
+import ErrorElement from "~lib/components/shared/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useTimeout from "~lib/hooks/useTimeout"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
-import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 import {
@@ -236,11 +236,11 @@ function ComponentInstance(props: Props): ReactElement {
   const onBackMsgRef = useRef<IframeMessageHandlerProps>()
 
   // Show a log in the console as a soft-warning to the developer before showing the more disrupting warning element
-  const clearTimeoutLog = useTimeout(
+  const { clear: clearTimeoutLog } = useTimeout(
     () => LOG.warn(getWarnMessage(componentName, url)),
     COMPONENT_READY_WARNING_TIME_MS / 4
   )
-  const clearTimeoutWarningElement = useTimeout(() => {
+  const { clear: clearTimeoutWarningElement } = useTimeout(() => {
     /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
      * behavior the same as before introducing `createRoot` and after, we ensure
      * that the state updates are flushed immediately.

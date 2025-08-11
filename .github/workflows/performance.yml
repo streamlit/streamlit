@@ -21,6 +21,7 @@ concurrency:
 jobs:
   performance:
     runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 25
 
     defaults:
       run:
@@ -59,13 +60,21 @@ jobs:
         run: make python-performance-tests
       - name: Run make lighthouse-tests
         run: make lighthouse-tests
+      - name: Get short SHA
+        id: short_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - name: Set MY_DATE_TIME env var
         run: echo "MY_DATE_TIME=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright_test_results
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload Performance results
         uses: actions/upload-artifact@v4

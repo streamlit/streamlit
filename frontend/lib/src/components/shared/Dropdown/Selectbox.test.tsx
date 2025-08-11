@@ -19,10 +19,10 @@ import React from "react"
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
 
@@ -138,12 +138,12 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     await user.click(selectbox)
     const options = screen.getAllByRole("option")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
+    await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(screen.getByText(props.options[2])).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+    ).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
