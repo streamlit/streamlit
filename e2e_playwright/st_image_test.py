@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 37
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
