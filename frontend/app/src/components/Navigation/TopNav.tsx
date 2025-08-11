@@ -19,8 +19,8 @@ import React, { useCallback, useMemo } from "react"
 import groupBy from "lodash/groupBy"
 import Overflow from "rc-overflow"
 
-import { IAppPage } from "@streamlit/protobuf"
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
@@ -50,8 +50,10 @@ const TopNav: React.FC<Props> = ({
     return groupBy(appPages, p => p.sectionHeader)
   }, [appPages])
 
-  // NOTE: this is > 1, not > 0 which is why the line 56-58 ternary is needed
-  const hasSections = Object.keys(navSections).length > 1
+  // Check if there are ANY sections (including single sections)
+  const hasSections = Object.keys(navSections).some(
+    key => key !== "undefined" && key !== ""
+  )
 
   const data = hasSections
     ? Object.values(navSections)

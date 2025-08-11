@@ -330,6 +330,14 @@ class PydeckMixin:
         made available by Carto or Mapbox. The use of Carto or Mapbox is governed by
         their respective Terms of Use.
 
+        .. note::
+            Pydeck uses two WebGL contexts per chart, and different browsers
+            have different limits on the number of WebGL contexts per page.
+            If you exceed this limit, the oldest contexts will be dropped to
+            make room for the new ones. To avoid this limitation in most
+            browsers, don't display more than eight Pydeck charts on a single
+            page.
+
         Parameters
         ----------
         pydeck_obj : pydeck.Deck or None
@@ -402,13 +410,13 @@ class PydeckMixin:
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
         >>> import pydeck as pdk
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((1000, 2)) / [50, 50] + [37.76, -122.4],
         ...     columns=["lat", "lon"],
         ... )
         >>>
@@ -424,7 +432,7 @@ class PydeckMixin:
         ...         layers=[
         ...             pdk.Layer(
         ...                 "HexagonLayer",
-        ...                 data=chart_data,
+        ...                 data=df,
         ...                 get_position="[lon, lat]",
         ...                 radius=200,
         ...                 elevation_scale=4,
@@ -434,7 +442,7 @@ class PydeckMixin:
         ...             ),
         ...             pdk.Layer(
         ...                 "ScatterplotLayer",
-        ...                 data=chart_data,
+        ...                 data=df,
         ...                 get_position="[lon, lat]",
         ...                 get_color="[200, 30, 0, 160]",
         ...                 get_radius=200,
@@ -513,7 +521,6 @@ class PydeckMixin:
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
                 spec=spec,
-                form_id=pydeck_proto.form_id,
             )
 
             serde = PydeckSelectionSerde()

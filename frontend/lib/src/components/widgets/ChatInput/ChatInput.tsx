@@ -20,7 +20,6 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -30,6 +29,7 @@ import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
+import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
   FileUploaderState as FileUploaderStateProto,
@@ -38,25 +38,31 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import Icon from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import {
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { getAccept } from "~lib/components/widgets/FileUploader/utils"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import { FileSize, sizeConverter } from "~lib/util/FileHelper"
+import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
   AcceptFileValue,
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import Icon from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { isEnterKeyPressed } from "~lib/util/inputUtils"
-import {
-  UploadedStatus,
-  UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileSize, sizeConverter } from "~lib/util/FileHelper"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
+import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
+import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
+import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
+import { createDropHandler } from "./fileUpload/createDropHandler"
+import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
   StyledChatInput,
   StyledChatInputContainer,
@@ -64,11 +70,6 @@ import {
   StyledSendIconButton,
   StyledSendIconButtonContainer,
 } from "./styled-components"
-import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
-import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
-import { createDropHandler } from "./fileUpload/createDropHandler"
-import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
-import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 
 export interface Props {
   disabled: boolean
@@ -77,13 +78,6 @@ export interface Props {
   uploadClient: FileUploadClient
   fragmentId?: string
 }
-
-// We want to show easily that there's scrolling so we deliberately choose
-// a half size.
-const MAX_VISIBLE_NUM_LINES = 6.5
-// Rounding errors can arbitrarily create scrollbars. We add a rounding offset
-// to manage it better.
-const ROUNDING_OFFSET = 1
 
 const updateFile = (
   id: number,
@@ -107,20 +101,21 @@ function ChatInput({
 
   const { placeholder, maxChars } = element
 
-  const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const counterRef = useRef(0)
-  const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
+  const chatInputRef = useRef<HTMLTextAreaElement>(null)
 
   const [width, elementRef] = useCalculatedWidth()
+  const { innerWidth, innerHeight } = useWindowDimensionsContext()
 
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
   const [value, setValue] = useState(element.default)
-  // The value of the height of the textarea. It depends on a variety of factors including the default height, and autogrowing
-  const [scrollHeight, setScrollHeight] = useState(0)
-  const [isInputExtended, setIsInputExtended] = useState(false)
   const [files, setFiles] = useState<UploadFileInfo[]>([])
-
   const [fileDragged, setFileDragged] = useState(false)
+
+  const autoExpand = useTextInputAutoExpand({
+    textareaRef: chatInputRef,
+    dependencies: [placeholder],
+  })
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
@@ -159,7 +154,7 @@ function ChatInput({
           // Cancel request as the file hasn't been uploaded.
           // However, it may have been received by the server so we'd still
           // send out a request to delete it.
-          file.status.cancelToken.cancel()
+          file.status.abortController.abort()
         }
 
         if (
@@ -225,7 +220,7 @@ function ChatInput({
             fileId,
             file.setStatus({
               type: "uploading",
-              cancelToken: file.status.cancelToken,
+              abortController: file.status.abortController,
               progress: newProgress,
             }),
             prevFiles
@@ -273,18 +268,6 @@ function ChatInput({
     maxSize: maxFileSize,
   })
 
-  const getScrollHeight = (): number => {
-    let newScrollHeight = 0
-    const { current: textarea } = chatInputRef
-    if (textarea) {
-      textarea.style.height = "auto"
-      newScrollHeight = textarea.scrollHeight
-      textarea.style.height = ""
-    }
-
-    return newScrollHeight
-  }
-
   const handleSubmit = (): void => {
     // We want the chat input to always be in focus
     // even if the user clicks the submit button
@@ -309,7 +292,7 @@ function ChatInput({
     )
     setFiles([])
     setValue("")
-    setScrollHeight(0)
+    autoExpand.clearScrollHeight()
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -332,7 +315,7 @@ function ChatInput({
     }
 
     setValue(targetValue)
-    setScrollHeight(getScrollHeight())
+    autoExpand.updateScrollHeight()
   }
 
   useEffect(() => {
@@ -345,17 +328,6 @@ function ChatInput({
       setValue(val)
     }
   }, [element])
-
-  // Use a Layout Effect since we are dealing with measurements and we want to
-  // avoid flickering.
-  // @see https://react.dev/reference/react/useLayoutEffect#usage
-  useLayoutEffect(() => {
-    if (chatInputRef.current) {
-      const { offsetHeight } = chatInputRef.current
-      heightGuidance.current.minHeight = offsetHeight
-      heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
-    }
-  }, [chatInputRef])
 
   useEffect(() => {
     const handleDragEnter = (event: DragEvent): void => {
@@ -374,8 +346,7 @@ function ChatInput({
         // event could fire when user is dragging within the window
         if (
           (event.clientX <= 0 && event.clientY <= 0) ||
-          (event.clientX >= window.innerWidth &&
-            event.clientY >= window.innerHeight)
+          (event.clientX >= innerWidth && event.clientY >= innerHeight)
         ) {
           setFileDragged(false)
         }
@@ -399,25 +370,7 @@ function ChatInput({
       window.removeEventListener("drop", handleDrop)
       window.removeEventListener("dragleave", handleDragLeave)
     }
-  }, [fileDragged])
-
-  // Use a Layout Effect since we are dealing with measurements and we want to
-  // avoid flickering.
-  // @see https://react.dev/reference/react/useLayoutEffect#usage
-  useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
-    setIsInputExtended(
-      scrollHeight > 0 && chatInputRef.current
-        ? Math.abs(scrollHeight - minHeight) > ROUNDING_OFFSET
-        : false
-    )
-  }, [scrollHeight])
-
-  useLayoutEffect(() => {
-    setScrollHeight(getScrollHeight())
-  }, [placeholder])
-
-  const { maxHeight } = heightGuidance.current
+  }, [fileDragged, innerWidth, innerHeight])
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
 
@@ -436,14 +389,10 @@ function ChatInput({
             getRootProps={getRootProps}
             getInputProps={getInputProps}
             acceptFile={acceptFile}
-            inputHeight={
-              isInputExtended
-                ? `${scrollHeight + ROUNDING_OFFSET}px`
-                : theme.sizes.minElementHeight
-            }
+            inputHeight={autoExpand.height}
           />
         ) : (
-          <StyledChatInput extended={isInputExtended}>
+          <StyledChatInput extended={autoExpand.isExtended}>
             {acceptFile === AcceptFileValue.None ? null : (
               <ChatFileUploadButton
                 getRootProps={getRootProps}
@@ -482,14 +431,13 @@ function ChatInput({
                     "data-testid": "stChatInputTextArea",
                   },
                   style: {
+                    fontWeight: theme.fontWeights.normal,
                     lineHeight: theme.lineHeights.inputWidget,
                     "::placeholder": {
                       color: theme.colors.fadedText60,
                     },
-                    height: isInputExtended
-                      ? `${scrollHeight + ROUNDING_OFFSET}px`
-                      : "auto",
-                    maxHeight: maxHeight ? `${maxHeight}px` : "none",
+                    height: autoExpand.height,
+                    maxHeight: autoExpand.maxHeight,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingLeft: theme.spacing.none,
                     paddingBottom: theme.spacing.sm,
@@ -518,7 +466,7 @@ function ChatInput({
               <StyledSendIconButton
                 onClick={handleSubmit}
                 disabled={!dirty || disabled}
-                extended={isInputExtended}
+                extended={autoExpand.isExtended}
                 data-testid="stChatInputSubmitButton"
               >
                 <Icon content={Send} size="xl" color="inherit" />

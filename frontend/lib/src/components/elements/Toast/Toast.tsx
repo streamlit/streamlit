@@ -25,12 +25,15 @@ import React, {
 
 import { toaster, type ToastOverrides } from "baseui/toast"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Kind } from "~lib/components/shared/AlertContainer"
+import { Toast as ToastProto } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
+
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledMessageWrapper,
@@ -39,8 +42,7 @@ import {
 } from "./styled-components"
 
 export interface ToastProps {
-  body: string
-  icon?: string
+  element: ToastProto
 }
 
 function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
@@ -66,9 +68,8 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         paddingBottom: theme.spacing.lg,
         paddingLeft: theme.spacing.twoXL,
         paddingRight: theme.spacing.twoXL,
-        backgroundColor: lightBackground
-          ? theme.colors.gray10
-          : theme.colors.gray90,
+        backgroundColor: theme.colors.bgColor,
+        filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
         boxShadow: lightBackground
@@ -111,7 +112,8 @@ export function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
+function Toast({ element }: Readonly<ToastProps>): ReactElement {
+  const { body, icon, duration } = element
   const theme = useEmotionTheme()
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
@@ -164,8 +166,15 @@ function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
 
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
+    const autoHideDurationMs = notNullOrUndefined(duration)
+      ? duration === 0
+        ? 0 // Explicitly disable auto-hide when duration is 0
+        : duration * 1000
+      : 4000 // Use default duration of 4 seconds
+
     const newKey = toaster.info(toastContent, {
       overrides: { ...styleOverrides },
+      autoHideDuration: autoHideDurationMs,
     })
     setToastKey(newKey)
 

@@ -22,8 +22,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
 import type { StreamlitWindowObject } from "@streamlit/utils"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -133,6 +133,16 @@ export const isColor = (strColor: string): boolean => {
   const s = new Option().style
   s.color = strColor
   return s.color !== ""
+}
+
+/**
+ * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
+ * This is used to keep configured font sizes to (generally) round values for dialogs.
+ * See `convertFontSizes` in `StreamlitMarkdown/styled-components.ts`
+ * (ex: 0.78 -> 0.75)
+ */
+export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
+  return Math.round(remFontSize * 8) / 8
 }
 
 export const parseFont = (font: string): string => {
@@ -262,81 +272,200 @@ export const parseFontSize = (
 }
 
 /**
+ * Validate a font weight config
+ */
+const isValidFontWeight = (
+  weightConfigName: string,
+  fontWeight: number | null | undefined,
+  minWeight: number,
+  maxWeight: number,
+  inSidebar?: boolean
+): boolean => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  // If the font weight config is set, validate it (log warning if invalid)
+  if (notNullOrUndefined(fontWeight)) {
+    const isInteger = Number.isInteger(fontWeight)
+    const isIncrementOf100 = fontWeight % 100 === 0
+    const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
+
+    if (!isInteger || !isIncrementOf100 || !isInRange) {
+      LOG.warn(
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+      )
+      return false
+    }
+
+    return true
+  }
+
+  // If the font weight config is not set, return false
+  return false
+}
+
+/**
+ * Helper function to handle each heading font size in the headingFontSizes config
+ * @param configName: the name of the config option
+ * @param fontSize: the heading font size provided via theme config
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param inSidebar: whether this is the sidebar theme
+ * @returns the heading font size in rem
+ */
+const convertHeadingFontSizeToRem = (
+  configName: string,
+  fontSize: string,
+  baseFontSize: number,
+  inSidebar: boolean
+): string | undefined => {
+  // Validates the font size (logs warning & returns undefined if invalid)
+  const validatedSize = parseFontSize(configName, fontSize, inSidebar)
+
+  // Need each heading font size to be in rem
+  if (validatedSize && validatedSize.endsWith("rem")) {
+    return validatedSize
+  } else if (validatedSize && validatedSize.endsWith("px")) {
+    // Convert the font size to rem, and round to nearest 8th
+    const remValue = parseFloat(validatedSize) / baseFontSize
+    return `${remValue}rem`
+  }
+
+  // If invalid, return undefined
+  return undefined
+}
+
+/**
+ * Set the heading font sizes in the theme config
+ * @param defaultFontSizes: the default theme font sizes
+ * @param inSidebar: whether this is the sidebar theme
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param headingFontSizes: the h1-h6 heading font sizes provided via theme config
+ * @returns an updated emotion theme font sizes object
+ */
+const setHeadingFontSizes = (
+  defaultFontSizes: EmotionTheme["fontSizes"],
+  inSidebar: boolean,
+  baseFontSize: number,
+  headingFontSizes: string[] | null | undefined
+): EmotionTheme["fontSizes"] => {
+  const headingFontSizesOverrides = {
+    ...defaultFontSizes,
+  }
+
+  if (headingFontSizes) {
+    headingFontSizes.forEach((size, index) => {
+      const headingFontSizeKey = `h${index + 1}FontSize`
+      // Gets the heading font size in rem if not already & logs warning if invalid
+      const convertedSize = convertHeadingFontSizeToRem(
+        `${headingFontSizeKey} in headingFontSizes`,
+        size,
+        baseFontSize,
+        inSidebar
+      )
+
+      // If valid configured value, overwrite the default heading font size
+      if (convertedSize) {
+        // @ts-expect-error
+        headingFontSizesOverrides[headingFontSizeKey] = convertedSize
+      }
+    })
+  }
+
+  return headingFontSizesOverrides
+}
+
+/**
  * Helper function to set the normal, bold, and extrabold font weights based
  * on the baseFontWeight option
  * @param defaultFontWeights: the default theme font weights
+ * @param inSidebar: whether the theme is in the sidebar
  * @param baseFontWeight: the base font weight provided via theme config
  * @param codeFontWeight: the code font weight provided via theme config
+ * @param headingFontWeights: the h1-h6 heading font weights provided via theme config
  * @returns an updated emotion theme font weights object
  */
 const setFontWeights = (
   defaultFontWeights: EmotionTheme["fontWeights"],
+  inSidebar: boolean,
   baseFontWeight: number | null | undefined,
-  codeFontWeight: number | null | undefined
+  codeFontWeight: number | null | undefined,
+  headingFontWeights: number[] | null | undefined
 ): EmotionTheme["fontWeights"] => {
   const fontWeightOverrides = {
     ...defaultFontWeights,
+    // Override default h1FontWeight for sidebar to 600
+    // Default for main theme set in typography (700)
+    h1FontWeight: inSidebar ? 600 : defaultFontWeights.h1FontWeight,
   }
 
-  if (notNullOrUndefined(baseFontWeight)) {
-    // Validate the baseFontWeight provided is an integer between 100 and 600
-    // (in increments of 100)
-    const isInteger = Number.isInteger(baseFontWeight)
-    const isIncrementOf100 = baseFontWeight % 100 === 0
-    const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
+  // Validate the baseFontWeight provided is an integer between 100 and 600
+  if (
+    baseFontWeight &&
+    isValidFontWeight("baseFontWeight", baseFontWeight, 100, 600)
+  ) {
+    // Set each of the font weights based on the base weight provided
+    // The provided baseFontWeight sets the normal weight
+    fontWeightOverrides.normal = baseFontWeight
+    // The semiBold weight is set to the baseFontWeight + 100
+    fontWeightOverrides.semiBold = baseFontWeight + 100
+    // The bold weight is set to the baseFontWeight + 200
+    fontWeightOverrides.bold = baseFontWeight + 200
+    // The extrabold weight is set to the baseFontWeight + 300
+    fontWeightOverrides.extrabold = baseFontWeight + 300
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
-      LOG.warn(
-        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
-      )
-    } else {
-      // Set each of the font weights based on the base weight provided
-      // The provided baseFontWeight sets the normal weight
-      fontWeightOverrides.normal = baseFontWeight
-      // The semiBold weight is set to the baseFontWeight + 100
-      fontWeightOverrides.semiBold = baseFontWeight + 100
-      // The bold weight is set to the baseFontWeight + 200
-      fontWeightOverrides.bold = baseFontWeight + 200
-      // The extrabold weight is set to the baseFontWeight + 300
-      fontWeightOverrides.extrabold = baseFontWeight + 300
-
-      // Set fallback for code's font weight based on configured baseFontWeight
-      fontWeightOverrides.code = baseFontWeight
-
-      // Note: headerBold and headerExtraBold remain unchanged from defaults
-      // as baseFontWeight config does not affect headers
-    }
+    // Set fallback for code font weights based on configured baseFontWeight
+    fontWeightOverrides.code = baseFontWeight
+    fontWeightOverrides.codeBold = baseFontWeight + 200
+    fontWeightOverrides.codeExtraBold = baseFontWeight + 300
   }
 
-  if (notNullOrUndefined(codeFontWeight)) {
-    // Validate the codeFontWeight provided is an integer between 100 and 900
-    // (in increments of 100)
-    const codeIsInteger = Number.isInteger(codeFontWeight)
-    const codeIsIncrementOf100 = codeFontWeight % 100 === 0
-    const codeIsInRange = codeFontWeight >= 100 && codeFontWeight <= 900
+  if (
+    codeFontWeight &&
+    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 600)
+  ) {
+    // Set each of the code weights based on the base code font weight provided
+    fontWeightOverrides.code = codeFontWeight
+    // The bold weight is set to the codeFontWeight + 200
+    fontWeightOverrides.codeBold = codeFontWeight + 200
+    // The extrabold weight is set to the codeFontWeight + 300
+    fontWeightOverrides.codeExtraBold = codeFontWeight + 300
+  }
 
-    if (!codeIsInteger || !codeIsIncrementOf100 || !codeIsInRange) {
-      LOG.warn(
-        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
-      )
-    } else {
-      fontWeightOverrides.code = codeFontWeight
-    }
+  if (headingFontWeights) {
+    // Filling out the heading font weights array is handled in app_session.py
+    headingFontWeights.forEach((weight, index) => {
+      const headingFontWeightKey = `h${index + 1}FontWeight`
+      if (
+        isValidFontWeight(
+          `${headingFontWeightKey} in headingFontWeights`,
+          weight,
+          100,
+          900,
+          inSidebar
+        )
+      ) {
+        // @ts-expect-error
+        fontWeightOverrides[headingFontWeightKey] = weight
+      }
+    })
   }
 
   return fontWeightOverrides
 }
 
 /**
- * Helper function to validate each of the colors passed in the categorical colors config
- * @param colors: the categorical colors config passed in (array of strings)
+ * Helper function to validate each of the colors passed in the chart colors configs
+ * @param configName: the name of the config ("chartCategoricalColors", "chartSequentialColors" or "chartDivergingColors")
+ * @param colors: the colors config passed in (array of strings)
  * @returns the valid colors from the config
  */
-const validateCategoricalColors = (colors: string[]): string[] => {
+const validateChartColors = (
+  configName: string,
+  colors: string[]
+): string[] => {
   return (
     colors
       // parseColor returns undefined for invalid colors
-      .map(color => parseColor(color, "chartCategoricalColors"))
+      .map(color => parseColor(color, configName))
       // Filter any invalid colors
       .filter((color): color is string => color !== undefined)
   )
@@ -356,12 +485,15 @@ export const createEmotionTheme = (
     codeFontWeight,
     showWidgetBorder,
     headingFont,
+    headingFontSizes,
+    headingFontWeights,
     bodyFont,
     codeFont,
     showSidebarBorder,
     linkUnderline,
-    // Since categorical colors passed as array, handle separate from parsedColors
+    // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
+    chartSequentialColors,
     ...customColors
   } = themeInput
 
@@ -448,13 +580,35 @@ export const createEmotionTheme = (
     chartCategoricalColors.length > 0
   ) {
     // Validate the categorical colors config
-    const validatedCategoricalColors = validateCategoricalColors(
+    const validatedCategoricalColors = validateChartColors(
+      "chartCategoricalColors",
       chartCategoricalColors
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
       conditionalOverrides.colors.chartCategoricalColors =
         validatedCategoricalColors
+    }
+  }
+
+  if (
+    notNullOrUndefined(chartSequentialColors) &&
+    chartSequentialColors.length > 0
+  ) {
+    // Validate the sequential colors config
+    const validatedSequentialColors = validateChartColors(
+      "chartSequentialColors",
+      chartSequentialColors
+    )
+    // Set the validated colors, sequential colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedSequentialColors.length === 10) {
+      conditionalOverrides.colors.chartSequentialColors =
+        validatedSequentialColors
+    } else {
+      LOG.warn(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
     }
   }
 
@@ -514,23 +668,16 @@ export const createEmotionTheme = (
     }
   }
 
-  if (baseFontSize && baseFontSize > 0) {
-    conditionalOverrides.fontSizes = {
-      ...baseThemeConfig.emotion.fontSizes,
-    }
+  conditionalOverrides.fontSizes = {
+    ...baseThemeConfig.emotion.fontSizes,
+  }
 
+  if (baseFontSize && baseFontSize > 0) {
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
   }
 
   if (codeFontSize) {
-    // Handles case where codeFontSize is set, but not baseFontSize
-    if (!conditionalOverrides.fontSizes) {
-      conditionalOverrides.fontSizes = {
-        ...baseThemeConfig.emotion.fontSizes,
-      }
-    }
-
     // Returns font size as a string, or undefined if invalid
     const parsedCodeFontSize = parseFontSize(
       "codeFontSize",
@@ -544,17 +691,22 @@ export const createEmotionTheme = (
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
-  if (
-    notNullOrUndefined(baseFontWeight) ||
-    notNullOrUndefined(codeFontWeight)
-  ) {
-    // Set the font weights based on the baseFontWeight & codeFontWeight provided
-    conditionalOverrides.fontWeights = setFontWeights(
-      baseThemeConfig.emotion.fontWeights,
-      baseFontWeight,
-      codeFontWeight
-    )
-  }
+  // Set the heading font sizes based on the heading font sizes config provided
+  conditionalOverrides.fontSizes = setHeadingFontSizes(
+    conditionalOverrides.fontSizes,
+    inSidebar,
+    conditionalOverrides.fontSizes.baseFontSize,
+    headingFontSizes
+  )
+
+  // Set the font weights based on the font weight configs provided
+  conditionalOverrides.fontWeights = setFontWeights(
+    baseThemeConfig.emotion.fontWeights,
+    inSidebar,
+    baseFontWeight,
+    codeFontWeight,
+    headingFontWeights
+  )
 
   if (notNullOrUndefined(showSidebarBorder)) {
     conditionalOverrides.showSidebarBorder = showSidebarBorder

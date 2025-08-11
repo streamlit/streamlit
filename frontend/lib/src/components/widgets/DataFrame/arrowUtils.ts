@@ -26,7 +26,8 @@ import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { Field, Null } from "apache-arrow"
 import moment from "moment"
 
-import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+
 import {
   convertTimeToDate,
   format as formatArrowCell,
@@ -49,6 +50,7 @@ import {
   isTimeType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { fontSizes } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -553,4 +555,61 @@ export function getCellFromArrow(
     }
   }
   return cellTemplate
+}
+
+/**
+ * Helper function to determine if we should use container width based on the widthConfig and element's configuration.
+ * This handles both the new widthConfig and legacy useContainerWidth fields.
+ */
+export function shouldUseContainerWidth(
+  element: ArrowProto,
+  widthConfig?: streamlit.IWidthConfig | null
+): boolean {
+  if (widthConfig) {
+    return widthConfig?.useStretch ?? false
+  }
+  return element.useContainerWidth ?? false
+}
+
+/**
+ * Helper function to get the configured width from the widthConfig and element.
+ * This handles both the new widthConfig and legacy width fields.
+ */
+export function getConfiguredWidth(
+  element: ArrowProto,
+  widthConfig?: streamlit.IWidthConfig | null
+): number | undefined {
+  if (widthConfig) {
+    if (widthConfig.pixelWidth) {
+      return widthConfig.pixelWidth
+    }
+    return undefined
+  }
+  return element.width || undefined
+}
+
+/**
+ * Helper function to determine if the element is configured to use content width.
+ */
+export function shouldUseContentWidth(
+  widthConfig?: streamlit.IWidthConfig | null
+): boolean {
+  return widthConfig?.useContent ?? false
+}
+
+/**
+ * Helper function to get the configured height from the heightConfig and element.
+ * This handles both the new heightConfig and legacy height fields.
+ */
+export function getConfiguredHeight(
+  element: ArrowProto,
+  heightConfig?: streamlit.IHeightConfig | null
+): number | undefined {
+  if (heightConfig) {
+    if (heightConfig.pixelHeight) {
+      return heightConfig.pixelHeight
+    }
+    return undefined
+  }
+  return element.height || undefined
 }

@@ -17,3 +17,5 @@
 export type { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 
 export { default } from "./ArrowVegaLiteChart"
+export { applyStreamlitTheme } from "./CustomTheme"
+export { StyledVegaLiteChartTooltips } from "./styled-components"

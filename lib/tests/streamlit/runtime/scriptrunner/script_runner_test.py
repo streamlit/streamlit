@@ -243,7 +243,7 @@ class ScriptRunnerTest(AsyncTestCase):
     @parameterized.expand(
         [
             ("good_script.py", text_utf),
-            # These files are .txt to avoid being broken by "make headers".
+            # These files are .txt to avoid being broken by "make update-headers".
             ("good_script_no_encoding.py.txt", text_no_encoding),
             ("good_script_latin_encoding.py.txt", text_latin),
         ]
@@ -615,6 +615,7 @@ class ScriptRunnerTest(AsyncTestCase):
             assert call_kwargs["uncaught_exception"] == "AttributeError"
 
     @parameterized.expand([(True,), (False,)])
+    @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_runtime_error(self, show_error_details: bool):
         """Tests that we correctly handle scripts with runtime errors."""
         with testutil.patch_config_options(

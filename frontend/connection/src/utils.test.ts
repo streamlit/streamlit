@@ -22,52 +22,64 @@ import {
   parseUriIntoBaseParts,
 } from "./utils"
 
-const location: Partial<Location> = {}
+describe("parseUriIntoBaseParts", () => {
+  const location: Partial<Location> = {}
+  const { location: originalLocation } = window
 
-global.window = Object.create(window)
-Object.defineProperty(window, "location", { value: location })
-
-test("gets all window URI parts", () => {
-  location.href = "https://the_host:9988/foo"
-
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo",
+  beforeEach(() => {
+    Object.defineProperty(window, "location", { value: location })
   })
-})
 
-test("gets window URI parts without basePath", () => {
-  location.href = "https://the_host:9988"
-
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/",
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    })
   })
-})
 
-test("gets window URI parts with long basePath", () => {
-  location.href = "https://the_host:9988/foo/bar"
+  test("gets all window URI parts", () => {
+    location.href = "https://the_host:9988/foo"
 
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo/bar",
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo",
+    })
   })
-})
 
-test("gets window URI parts with weird basePath", () => {
-  location.href = "https://the_host:9988///foo/bar//"
+  test("gets window URI parts without basePath", () => {
+    location.href = "https://the_host:9988"
 
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo/bar",
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/",
+    })
+  })
+
+  test("gets window URI parts with long basePath", () => {
+    location.href = "https://the_host:9988/foo/bar"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
+  })
+
+  test("gets window URI parts with weird basePath", () => {
+    location.href = "https://the_host:9988///foo/bar//"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
   })
 })
 
@@ -169,14 +181,27 @@ test("builds WS URI with no base path", () => {
 
 describe("getPossibleBaseUris", () => {
   let originalPathName = ""
+  const { location: originalLocation } = window
 
   beforeEach(() => {
     originalPathName = window.location.pathname
+    Object.defineProperty(window, "location", {
+      writable: true,
+      configurable: true,
+      value: {
+        ...originalLocation,
+        origin: "https://app.example.com:8080",
+      },
+    })
   })
 
   afterEach(() => {
-    window.location.pathname = originalPathName
     window.__streamlit = undefined
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, pathname: originalPathName },
+      writable: true,
+      configurable: true,
+    })
   })
 
   const testCases = [

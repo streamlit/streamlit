@@ -24,7 +24,6 @@ from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
-    StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -188,11 +187,17 @@ class ChatTest(DeltaGeneratorTestCase):
             == RootContainerProto.BOTTOM
         )
 
-    def test_session_state_rules(self):
-        """Test that it disallows being called in containers (using with syntax)."""
-        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
-            st.session_state.my_key = "Foo"
-            st.chat_input(key="my_key")
+    def test_supports_programmatic_value_assignment(self):
+        """Test that it supports programmatically setting the value in session state."""
+        st.session_state.my_key = "Foo"
+        st.chat_input(key="my_key")
+
+        assert st.session_state.my_key is None
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.default == ""
+        assert c.value == "Foo"
+        assert c.set_value is True
 
     def test_chat_input_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

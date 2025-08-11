@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+
+import { FlexContext, IFlexContext } from "./FlexContext"
+import { Direction, MinFlexElementWidth } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -37,6 +40,7 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
+  minStretchBehavior?: MinFlexElementWidth
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
@@ -140,6 +144,43 @@ const getHeight = (
   return { pixels, type }
 }
 
+const getFlex = (
+  widthType: DimensionType | undefined,
+  widthPixels: number | undefined,
+  heightType: DimensionType | undefined,
+  heightPixels: number | undefined,
+  direction: Direction | undefined,
+  minStretchBehavior?: MinFlexElementWidth
+): string | undefined => {
+  if (
+    widthType === DimensionType.PIXEL &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return `0 0 ${widthPixels}px`
+  } else if (
+    heightType === DimensionType.PIXEL &&
+    direction === Direction.VERTICAL
+  ) {
+    return `0 0 ${heightPixels}px`
+  } else if (
+    widthType === DimensionType.CONTENT &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return "0 0 fit-content"
+  } else if (
+    widthType === DimensionType.STRETCH &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return `1 1 ${minStretchBehavior ?? "fit-content"}`
+  }
+}
+
+const getDirection = (
+  flexContext: IFlexContext | null
+): Direction | undefined => {
+  return flexContext?.direction
+}
+
 export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -154,9 +195,9 @@ export const useLayoutStyles = ({
   element,
   subElement,
   styleOverrides,
+  minStretchBehavior,
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
-  // Note: Consider rounding the width to the nearest pixel so we don't have
-  // subpixel widths, which leads to blurriness on screen
+  const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
     if (!element) {
       return {
@@ -165,7 +206,6 @@ export const useLayoutStyles = ({
         overflow: "visible",
       }
     }
-    let flex: React.CSSProperties["flex"] = undefined
 
     const { pixels: commandWidth, type: widthType } = getWidth(
       element,
@@ -194,10 +234,16 @@ export const useLayoutStyles = ({
     } else if (heightType === DimensionType.PIXEL) {
       height = `${commandHeight}px`
       overflow = "auto"
-      // TODO (lawilby): We only have vertical containers currently, but this will be
-      // modified to handle horizontal containers when direction on containers is implemented.
-      flex = `0 0 ${commandHeight}px`
     }
+
+    const flex = getFlex(
+      widthType,
+      commandWidth,
+      heightType,
+      commandHeight,
+      getDirection(flexContext),
+      minStretchBehavior
+    )
 
     const calculatedStyles = {
       width,
@@ -210,7 +256,7 @@ export const useLayoutStyles = ({
       ...calculatedStyles,
       ...styleOverrides,
     }
-  }, [element, subElement, styleOverrides])
+  }, [element, subElement, styleOverrides, flexContext, minStretchBehavior])
 
   return layoutStyles
 }

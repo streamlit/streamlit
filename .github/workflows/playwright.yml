@@ -45,8 +45,16 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Install playwright
         run: python -m playwright install --with-deps
-      - name: Run make frontend-build-with-profiler
-        run: make frontend-build-with-profiler
+      - name: Run make frontend-with-profiler
+        run: make frontend-with-profiler
+      - name: Get short SHA
+        id: short_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - name: Run playwright tests
         run: |
           cd e2e_playwright
@@ -56,5 +64,5 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright_test_results
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results

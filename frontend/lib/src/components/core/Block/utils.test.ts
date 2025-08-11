@@ -25,7 +25,6 @@ import {
   convertKeyToClassName,
   getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
-  getHeightBackwardsCompatible,
   getKeyFromId,
   isElementStale,
 } from "./utils"
@@ -306,42 +305,6 @@ describe("getBorderBackwardsCompatible", () => {
 
   test.each(testCases)("$description", ({ blockProto, expected }) => {
     expect(getBorderBackwardsCompatible(blockProto as BlockProto)).toBe(
-      expected
-    )
-  })
-})
-
-describe("getHeightBackwardsCompatible", () => {
-  const testCases = [
-    {
-      description:
-        "returns pixelHeight when flexContainer.heightConfig.pixelHeight exists",
-      blockProto: { heightConfig: { pixelHeight: 100 } },
-      expected: 100,
-    },
-    {
-      description: "returns height when vertical.height exists",
-      blockProto: { vertical: { height: 200 } },
-      expected: 200,
-    },
-    {
-      description: "returns undefined when none exist",
-      blockProto: {},
-      expected: undefined,
-    },
-    {
-      description:
-        "prioritizes flexContainer.heightConfig.pixelHeight when both exist",
-      blockProto: {
-        heightConfig: { pixelHeight: 300 },
-        vertical: { height: 400 },
-      },
-      expected: 300,
-    },
-  ]
-
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
-    expect(getHeightBackwardsCompatible(blockProto as BlockProto)).toBe(
       expected
     )
   })

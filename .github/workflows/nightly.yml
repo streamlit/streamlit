@@ -39,10 +39,6 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
 
       - name: Create tag
         id: create_tag
@@ -166,10 +162,6 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Verify git tag vs. version
         env:
           TAG: ${{ needs.create-nightly-tag.outputs.tag }}

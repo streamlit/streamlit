@@ -26,14 +26,17 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param theme The theme to use.
  * @returns The horizontal spacing for the sidebar.
  */
-export const getSidebarHorizontalSpacing = (theme: EmotionTheme): string => {
+export const getSidebarHorizontalSpacing = (
+  theme: EmotionTheme,
+  scrollbarGutterSize: number
+): string => {
   // This should be max(0px, ...), but there's a Chrome bug that
   // causes content to clip when scrollbar-gutter is set to "stable both-edges".
-  // So we change the min from 0px to --scrollbar-width to account for that.
+  // So we change the min from 0px to scrollbarGutterSize to account for that.
   // Chrome bug: https://issues.chromium.org/issues/40064879
   return `max(
-    calc(var(--scrollbar-width)),
-    calc(${theme.spacing.lg} - var(--scrollbar-width))
+    ${scrollbarGutterSize}px,
+    calc(${theme.spacing.xl} - ${scrollbarGutterSize}px)
   )`
 }
 
@@ -41,12 +44,13 @@ export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
   sidebarWidth: string
+  windowInnerWidth: number
 }
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
-  ({ theme, isCollapsed, adjustTop, sidebarWidth }) => {
-    const minWidth = isCollapsed ? 0 : Math.min(200, window.innerWidth)
-    const maxWidth = isCollapsed ? 0 : Math.min(600, window.innerWidth * 0.9)
+  ({ theme, isCollapsed, adjustTop, sidebarWidth, windowInnerWidth }) => {
+    const minWidth = isCollapsed ? 0 : Math.min(200, windowInnerWidth)
+    const maxWidth = isCollapsed ? 0 : Math.min(600, windowInnerWidth * 0.9)
 
     return {
       position: "relative",
@@ -96,26 +100,32 @@ export const StyledSidebarUserContent =
   styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
     paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
     paddingBottom: theme.sizes.sidebarTopSpace,
-    paddingLeft: getSidebarHorizontalSpacing(theme),
-    paddingRight: getSidebarHorizontalSpacing(theme),
   }))
 
-export const StyledSidebarContent = styled.div({
-  position: "relative",
-  height: "100%",
-  width: "100%",
-  overflow: "auto",
-  /**
-   * Ensure that space is reserved for scrollbars, even when they are not
-   * visible. This is necessary to prevent layout shifts when the scrollbars
-   * appear and disappear.
-   *
-   * We utilize both-edges so that things look visually centered and aligned.
-   *
-   * @see https://github.com/streamlit/streamlit/issues/10310
-   */
-  scrollbarGutter: "stable both-edges",
-})
+export interface StyledSidebarContentProps {
+  scrollbarGutterSize: number
+}
+
+export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
+  ({ theme, scrollbarGutterSize }) => ({
+    position: "relative",
+    height: "100%",
+    width: "100%",
+    overflow: "auto",
+    /**
+     * Ensure that space is reserved for scrollbars, even when they are not
+     * visible. This is necessary to prevent layout shifts when the scrollbars
+     * appear and disappear.
+     *
+     * We utilize both-edges so that things look visually centered and aligned.
+     *
+     * @see https://github.com/streamlit/streamlit/issues/10310
+     */
+    scrollbarGutter: "stable both-edges",
+    paddingLeft: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
+    paddingRight: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
+  })
+)
 
 export const RESIZE_HANDLE_WIDTH = "8px"
 
@@ -138,8 +148,6 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  paddingLeft: getSidebarHorizontalSpacing(theme),
-  paddingRight: getSidebarHorizontalSpacing(theme),
   marginBottom: theme.spacing.lg,
   height: theme.sizes.headerHeight,
 }))
@@ -166,25 +174,17 @@ function translateLogoHeight(theme: any, size: string): string {
   return theme.sizes.defaultLogoHeight
 }
 
-export const StyledLogo = styled.img<StyledLogoProps>(
-  ({ theme, size, sidebarWidth }) => ({
-    height: translateLogoHeight(theme, size),
-    // Extra margin to align small logo with sidebar collapse arrow
-    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginLeft: theme.spacing.none,
-    zIndex: theme.zIndices.header,
-    objectFit: "contain",
-    verticalAlign: "middle",
-    ...(sidebarWidth && {
-      // Control max width of logo so sidebar collapse button always shows (issue #8707)
-      // L & R padding (lg) + scrollbarGutter on both sides (2 * 8px) + R margin (sm) + collapse button (2.25rem)
-      maxWidth: `calc(${sidebarWidth}px - 2 * ${getSidebarHorizontalSpacing(
-        theme
-      )} - (2 * var(--scrollbar-width)) - ${theme.spacing.sm} - 2.25rem)`,
-    }),
-  })
-)
+export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
+  height: translateLogoHeight(theme, size),
+  // Extra margin to align small logo with sidebar collapse arrow
+  marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginLeft: theme.spacing.none,
+  zIndex: theme.zIndices.header,
+  objectFit: "contain",
+  verticalAlign: "middle",
+  maxWidth: `100%`,
+}))
 
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,
@@ -198,7 +198,9 @@ export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
     ({ showSidebarCollapse, theme }) => {
       return {
-        display: showSidebarCollapse ? "inline" : "none",
+        display: "inline",
+        visibility: showSidebarCollapse ? "visible" : "hidden",
+        marginLeft: theme.spacing.sm,
         transition: "left 300ms",
         transitionDelay: "left 300ms",
         color: hasLightBackgroundColor(theme)
@@ -207,11 +209,13 @@ export const StyledCollapseSidebarButton =
         lineHeight: "0",
 
         [`@media print`]: {
-          display: "none",
+          // Always hide the collapse button on print:
+          visibility: "hidden",
         },
 
         [`@media (max-width: ${theme.breakpoints.sm})`]: {
-          display: "inline",
+          // Always show the collapse button on small screens:
+          visibility: "visible",
         },
       }
     }

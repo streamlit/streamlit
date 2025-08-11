@@ -77,20 +77,6 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.download_button
         assert c.type == type
 
-    def test_use_container_width_can_be_set_to_true(self):
-        """Test use_container_width can be set to true."""
-        st.download_button("the label", data="juststring", use_container_width=True)
-
-        c = self.get_delta_from_queue().new_element.download_button
-        assert c.use_container_width
-
-    def test_use_container_width_is_false_by_default(self):
-        """Test use_container_width is false by default."""
-        st.download_button("the label", data="juststring")
-
-        c = self.get_delta_from_queue().new_element.download_button
-        assert not c.use_container_width
-
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.download_button("the label", data="juststring"))()

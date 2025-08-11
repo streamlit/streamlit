@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Spinner } from "baseui/spinner"
 
 import { computeSpacingStyle, IconSize } from "~lib/theme"
 
-interface StyledSpinnerIconProps {
-  usingCustomTheme: boolean
+export interface StyledSpinnerIconProps {
   size: IconSize
   margin: string
   padding: string
@@ -39,8 +38,8 @@ export const StyledSpinnerIcon = styled(Spinner, {
     justifyContents: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
-    borderColor: theme.colors.borderColor,
-    borderTopColor: theme.colors.secondary,
+    borderColor: theme.colors.fadedText10,
+    borderTopColor: theme.colors.bodyText,
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,

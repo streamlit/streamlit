@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 """
 ### Empty map
@@ -33,7 +36,7 @@ st.map()
 # Cast is needed due to mypy not understanding the outcome of dividing
 # an array by a list of numbers.
 np.random.seed(0)
-coords: "np.typing.NDArray[np.float64]" = cast(  # noqa: RUF005
+coords: "NDArray[np.float64]" = cast(  # noqa: RUF005
     "Any",
     np.random.randn(1000, 2) / [50, 50],
 ) + [37.76, -122.4]

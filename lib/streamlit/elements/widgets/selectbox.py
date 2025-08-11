@@ -14,7 +14,16 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import Never
 
@@ -54,7 +63,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
@@ -62,6 +70,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+
+T = TypeVar("T")
 
 
 class SelectboxSerde(Generic[T]):
@@ -308,7 +318,7 @@ class SelectboxMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-        index : int
+        index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.
             Defaults to 0 (the first option).
@@ -336,21 +346,26 @@ class SelectboxMixin:
         on_change : callable
             An optional callback invoked when this selectbox's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
         placeholder : str or None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays one of the two
-            following placeholder strings:
+            If this is ``None`` (default), the widget displays placeholder text
+            based on the widget's configuration:
 
-            - "Choose an option" is displayed if you set
+            - "Choose an option" is displayed when options are available and
               ``accept_new_options=False``.
-            - "Choose or add an option" is displayed if you set
+            - "Choose or add an option" is displayed when options are available
+              and ``accept_new_options=True``.
+            - "Add an option" is displayed when no options are available and
               ``accept_new_options=True``.
+            - "No options to select" is displayed when no options are available
+              and ``accept_new_options=False``. The widget is also disabled in
+              this case.
 
         disabled : bool
             An optional boolean that disables the selectbox if set to ``True``.
@@ -512,12 +527,12 @@ class SelectboxMixin:
                 "and less than the length of options."
             )
 
-        if placeholder is None:
-            placeholder = (
-                "Choose an option"
-                if not accept_new_options
-                else "Choose or add an option"
-            )
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
+        if placeholder == "":
+            placeholder = " "
 
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
@@ -526,7 +541,6 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -548,7 +562,7 @@ class SelectboxMixin:
             selectbox_proto.default = index
         selectbox_proto.options[:] = formatted_options
         selectbox_proto.form_id = current_form_id(self.dg)
-        selectbox_proto.placeholder = placeholder
+        selectbox_proto.placeholder = placeholder or ""
         selectbox_proto.disabled = disabled
         selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

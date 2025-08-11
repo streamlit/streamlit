@@ -83,6 +83,7 @@ export const createEmotionColors = (genericColors: {
 }): { [key: string]: string } => {
   const derivedColors = computeDerivedColors(genericColors)
   const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
+  const defaultSequentialColors = defaultSequentialColorsArray(genericColors)
 
   return {
     ...genericColors,
@@ -104,8 +105,10 @@ export const createEmotionColors = (genericColors: {
 
     headingColor: genericColors.bodyText,
 
-    // @ts-expect-error -- defaultCategoricalColors is a string[] vs. string
+    // @ts-expect-error -- chart colors are a string[] vs. string
     chartCategoricalColors: defaultCategoricalColors,
+    // @ts-expect-error
+    chartSequentialColors: defaultSequentialColors,
   }
 }
 
@@ -218,8 +221,7 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayAsc(colors: { [key: string]: string }): string[] {
   return [
     colors.blue10,
     colors.blue20,
@@ -233,8 +235,7 @@ function getBlueArrayAsc(theme: EmotionTheme): string[] {
     colors.blue100,
   ]
 }
-function getBlueArrayDesc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayDesc(colors: { [key: string]: string }): string[] {
   return [
     colors.blue100,
     colors.blue90,
@@ -247,12 +248,6 @@ function getBlueArrayDesc(theme: EmotionTheme): string[] {
     colors.blue20,
     colors.blue10,
   ]
-}
-
-export function getSequentialColorsArray(theme: EmotionTheme): string[] {
-  return hasLightBackgroundColor(theme)
-    ? getBlueArrayAsc(theme)
-    : getBlueArrayDesc(theme)
 }
 
 export function getDivergingColorsArray(theme: EmotionTheme): string[] {
@@ -269,6 +264,14 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
     colors.blue90,
     colors.blue100,
   ]
+}
+
+function defaultSequentialColorsArray(genericColors: {
+  [key: string]: string
+}): string[] {
+  return _isLightBackground(genericColors.bgColor)
+    ? getBlueArrayAsc(genericColors)
+    : getBlueArrayDesc(genericColors)
 }
 
 function defaultCategoricalColorsArray(genericColors: {

@@ -29,8 +29,8 @@ import {
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getSelectPlaceholder,
   getUrl,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,
@@ -79,7 +79,6 @@ describe("setCookie", () => {
 
 describe("embedParamValues", () => {
   const embedParamValuesShouldHave = [
-    "show_colored_line",
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
@@ -211,7 +210,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -227,7 +225,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -241,7 +238,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -274,7 +270,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(true)
@@ -289,7 +284,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(true)
     expect(isScrollingHidden()).toBe(false)
@@ -304,23 +298,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(true)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
-    expect(isLightThemeInQueryParams()).toBe(false)
-    expect(isDarkThemeInQueryParams()).toBe(false)
-  })
-
-  it("should show the colored line if in embed options", () => {
-    windowSpy.mockImplementation(() => ({
-      location: {
-        search: "?embed=true&embed_options=show_colored_line",
-      },
-    }))
-
-    expect(isColoredLineDisplayed()).toBe(true)
-    expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
     expect(isLightThemeInQueryParams()).toBe(false)
@@ -642,5 +620,89 @@ describe("getUrl", () => {
     }))
 
     expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+})
+
+describe("getSelectPlaceholder", () => {
+  describe("single-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        false
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, false)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add an option' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, false)
+      expect(result.placeholder).toBe("Add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose an option' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, false)
+      expect(result.placeholder).toBe("Choose an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add an option' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, false)
+      expect(result.placeholder).toBe("Choose or add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("multi-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        true
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, true)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add options' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, true)
+      expect(result.placeholder).toBe("Add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose options' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, true)
+      expect(result.placeholder).toBe("Choose options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add options' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, true)
+      expect(result.placeholder).toBe("Choose or add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("edge cases", () => {
+    it("handles single space placeholder as custom placeholder", () => {
+      const result = getSelectPlaceholder(" ", ["option1"], true, false)
+      expect(result.placeholder).toBe(" ")
+      expect(result.shouldDisable).toBe(false)
+    })
   })
 })

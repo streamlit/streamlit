@@ -90,18 +90,14 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Run Linters
-        run: make pylint
+        run: make python-lint
         env:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
-        run: make mypy
+        run: make python-types
       - name: Run Python Tests
-        run: make pytest
+        run: make python-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
@@ -139,16 +135,12 @@ jobs:
           # unit test job. The key generation for the cache resolves to the same key,
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Install integration dependencies
         run: |
           source venv/bin/activate
           uv pip install -r lib/integration-requirements.txt --force-reinstall
       - name: Run Python integration tests
-        run: make pytest-integration
+        run: make python-integration-tests
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
@@ -194,23 +186,21 @@ jobs:
         run: |
           source venv/bin/activate
           uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
-      - name: Generate Protobufs
-        run: make protobuf
       - name: Make local modules visible
         run: |
           source venv/bin/activate
           uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
-        run: make pytest
+        run: make python-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Validate min-constraints-gen
         run: |
-          make gen-min-dep-constraints
+          make update-min-deps
 
           git_status=$(git status --porcelain -- scripts/assets/min-constraints-gen.txt)
           if [[ -n $git_status ]]; then
-            echo "::error::The min constraints file is out of date! Please run \`make gen-min-dep-constraints\` and commit the result."
+            echo "::error::The min constraints file is out of date! Please run \`make update-min-deps\` and commit the result."
             echo "::group::git diff scripts/assets/min-constraints-gen.txt"
             git diff scripts/assets/min-constraints-gen.txt
             echo "::endgroup::"
@@ -252,7 +242,7 @@ jobs:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -324,7 +314,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}

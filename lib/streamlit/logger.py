@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Final
+from typing import Final, cast
 
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s %(name)s: %(message)s"
 
@@ -61,7 +61,7 @@ def setup_formatter(logger: logging.Logger) -> None:
     """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
-        logger.removeHandler(logger.streamlit_console_handler)
+        logger.removeHandler(cast("logging.Handler", logger.streamlit_console_handler))
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
 

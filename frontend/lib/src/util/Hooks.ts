@@ -55,7 +55,7 @@ export const useIsOverflowing = (
     // TODO: Update to match React best practices
     // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, current?.clientHeight])
+  }, [expanded, current?.clientHeight]) // eslint-disable-line streamlit-custom/no-force-reflow-access -- Existing usage
 
   // Window resizing can also affect the overflow state
   // so we need to check it as well

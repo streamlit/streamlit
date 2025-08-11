@@ -144,11 +144,15 @@ class FormMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
-        height : "content" or int
+        height : "content", "stretch", or int
             The height of the form container. This can be one of the following:
 
             - ``"content"`` (default): The height of the container matches the
               height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -242,7 +246,8 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> bool:
         r"""Display a form submit button.
 
@@ -274,6 +279,7 @@ class FormMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
             this is ``None`` (default), no tooltip is displayed.
@@ -281,12 +287,16 @@ class FormMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
-        args : tuple
-            An optional tuple of args to pass to the callback.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
             of the following:
@@ -296,7 +306,7 @@ class FormMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -314,6 +324,7 @@ class FormMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
             user can interact with the button. If this is ``True``, the button
@@ -332,12 +343,34 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
+        width : "content", "stretch", or int
+            The width of the button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
+
         Returns
         -------
         bool
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
@@ -355,8 +388,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     def _form_submit_button(
@@ -370,8 +403,8 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
@@ -386,8 +419,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @property

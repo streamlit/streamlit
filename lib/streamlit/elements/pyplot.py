@@ -42,7 +42,11 @@ class PyplotMixin:
         """Display a matplotlib.pyplot figure.
 
         .. Important::
-            You must install ``matplotlib`` to use this command.
+            You must install ``matplotlib>=3.0.0`` to use this command. You can
+            install all charting dependencies (except Bokeh) as an extra with
+            Streamlit:
+
+            >>> pip install streamlit[charts]
 
         Parameters
         ----------
@@ -79,11 +83,11 @@ class PyplotMixin:
 
         Example
         -------
-        >>> import streamlit as st
         >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> arr = np.random.normal(1, 1, size=100)
+        >>> arr = rng(0).normal(1, 1, size=100)
         >>> fig, ax = plt.subplots()
         >>> ax.hist(arr, bins=20)
         >>>
