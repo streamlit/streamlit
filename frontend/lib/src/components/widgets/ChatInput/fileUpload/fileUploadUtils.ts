@@ -74,6 +74,6 @@ export const getUploadDescription = (acceptFile: AcceptFileValue): string => {
     case AcceptFileValue.Directory:
       return "a directory"
     default:
-      return assertNever(acceptFile)
+      assertNever(acceptFile)
   }
 }
