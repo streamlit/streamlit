@@ -217,7 +217,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
   })
 
-  test("calls showColumn on all columns when unchecking select all", async () => {
+  test("calls showColumn on all columns when checking select all after it was unchecked", async () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByLabelText("Select all"))
