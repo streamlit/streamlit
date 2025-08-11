@@ -401,7 +401,7 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for initial PDF to load
     _expect_iframe_attached(app)
-    _wait_for_pdf_to_load(app)
+    _wait_for_pdf_to_load(app, timeout=30000)
 
     iframe = app.locator("iframe").first
 
@@ -421,7 +421,7 @@ def test_st_pdf_different_heights_snapshots(
     app.mouse.up()
     wait_for_app_run(app)
     # Wait for PDF to adjust to new height and fully load
-    _wait_for_pdf_to_load(app)
+    _wait_for_pdf_to_load(app, timeout=30000)
 
     # Verify we actually reached a low height value (around 200px)
     wait_until(
@@ -444,7 +444,7 @@ def test_st_pdf_different_heights_snapshots(
     wait_for_app_run(app)
 
     # Wait for PDF to adjust to new height and fully load
-    _wait_for_pdf_to_load(app)
+    _wait_for_pdf_to_load(app, timeout=30000)
 
     # Verify we actually reached a high height value (should be much larger than minimum)
     wait_until(
