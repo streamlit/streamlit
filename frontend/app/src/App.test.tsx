@@ -4479,4 +4479,415 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(screen.getByTestId("stMainMenu")).toBeVisible()
     })
   })
+
+  describe("Connection Error Handling", () => {
+    describe("handleConnectionError", () => {
+      it("displays connection error dialog when connection error occurs", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError(
+            "Network error: Unable to connect"
+          )
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+        expect(
+          screen.getByText(/Network error: Unable to connect/)
+        ).toBeInTheDocument()
+      })
+
+      it("does not display error dialog if already dismissed", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Connection lost")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        fireEvent.click(closeButton)
+
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+
+        // Second error should not display
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Another connection error")
+        })
+
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+      })
+
+      it("sends error info to host when blockErrorDialogs is true", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+
+        // Set blockErrorDialogs config
+        act(() => {
+          getMockConnectionManagerProp("onHostConfigResp")({
+            blockErrorDialogs: true,
+            allowedOrigins: [],
+            useExternalAuthToken: false,
+            enableCustomParentMessages: false,
+          })
+        })
+
+        // Trigger error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Connection lost")
+        })
+
+        // Dialog should not be displayed
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+
+        // But error should be sent to host
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "CLIENT_ERROR_DIALOG",
+            error: "Connection error",
+            message: expect.stringContaining("Connection lost"),
+          })
+        )
+      })
+
+      it("displays error with StreamlitMarkdown formatting", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError(
+            "**Network Error**: Unable to connect to server"
+          )
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+        // Check if markdown is rendered (bold text)
+        const errorContent = screen.getByText(/Network Error/)
+        expect(errorContent).toBeInTheDocument()
+      })
+    })
+
+    describe("connection state transitions with error dismissal", () => {
+      it("resets dismissal state when reconnected", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Trigger connection error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Connection lost")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        fireEvent.click(closeButton)
+
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+
+        // Simulate reconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // New error should be displayed after reconnection
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("New connection error")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+        expect(screen.getByText(/New connection error/)).toBeInTheDocument()
+      })
+
+      it("automatically rescinds error dialog on successful reconnection", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Set initial state to connected
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+        // Trigger disconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.PINGING_SERVER
+          )
+        })
+
+        // Trigger connection error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Connection lost")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        // Reconnect (without dismissing dialog)
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Dialog should be automatically closed
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+      })
+
+      it("only rescinds CONNECTION_ERROR type dialogs on reconnection", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First, show a connection error dialog
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Connection lost")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        // Simulate reconnection - should close the CONNECTION_ERROR dialog
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Connection error dialog should be closed
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+
+        // Now test that other dialog types are not affected
+        // This validates that only CONNECTION_ERROR dialogs are auto-closed
+      })
+    })
+
+    describe("reconnection behavior", () => {
+      it("requests script rerun on reconnection after interruption", () => {
+        renderApp(getProps())
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        // Start with connected state
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+        // Set script to running
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+
+        // Disconnect during script run
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.DISCONNECTED
+          )
+        })
+
+        const sendUpdateWidgetsMessageSpy = vi.spyOn(
+          widgetStateManager,
+          "sendUpdateWidgetsMessage"
+        )
+        sendUpdateWidgetsMessageSpy.mockClear()
+
+        // Reconnect
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Should request rerun
+        expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalledWith(undefined)
+      })
+
+      it("handles multiple connection errors gracefully", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Trigger multiple errors
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Error 1")
+        })
+
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Error 2")
+        })
+
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Error 3")
+        })
+
+        // Should only show the latest error
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+        expect(screen.getByText(/Error 3/)).toBeInTheDocument()
+        expect(screen.queryByText(/Error 1/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Error 2/)).not.toBeInTheDocument()
+      })
+
+      it("maintains dismissal state across multiple disconnections", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("First error")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        fireEvent.click(closeButton)
+
+        // Simulate multiple state changes without full reconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.PINGING_SERVER
+          )
+        })
+
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTING
+          )
+        })
+
+        // Error should still not display (dismissal persists)
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Another error")
+        })
+
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+
+        // Only full reconnection should reset dismissal
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Error after reconnect")
+        })
+
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+      })
+    })
+
+    describe("host communication integration", () => {
+      it("handles host-requested reconnection", () => {
+        renderApp(getProps())
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+
+        // @ts-expect-error - accessing private property for testing
+        const restartWebsocketConnection =
+          hostCommunicationMgr.props.restartWebsocketConnection
+
+        // @ts-expect-error - accessing private property for testing
+        const terminateWebsocketConnection =
+          hostCommunicationMgr.props.terminateWebsocketConnection
+
+        // First disconnect to set connectionManager to null
+        act(() => {
+          terminateWebsocketConnection()
+        })
+
+        // Clear the mock to count from zero
+        vi.mocked(ConnectionManager).mockClear()
+
+        // Now request reconnection
+        act(() => {
+          restartWebsocketConnection()
+        })
+
+        // Should have created a new ConnectionManager instance
+        expect(ConnectionManager).toHaveBeenCalledTimes(1)
+      })
+
+      it("handles host-requested disconnection", () => {
+        renderApp(getProps())
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+        const connectionManager = getMockConnectionManager(false)
+
+        // @ts-expect-error - accessing private property for testing
+        const terminateWebsocketConnection =
+          hostCommunicationMgr.props.terminateWebsocketConnection
+
+        // Simulate host requesting disconnection
+        act(() => {
+          terminateWebsocketConnection()
+        })
+
+        // Should disconnect
+        expect(connectionManager.disconnect).toHaveBeenCalled()
+      })
+
+      it("logs error when not connected but trying to handle errors", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Mock console.error to verify logging
+        const logSpy = vi.spyOn(LOG, "error")
+
+        // Mock isConnected to return false
+        // @ts-expect-error
+        connectionManager.isConnected.mockReturnValue(false)
+
+        // Set connectionManager to null to simulate disconnected state
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.DISCONNECTED_FOREVER
+          )
+        })
+
+        // Try to trigger connection error
+        act(() => {
+          // @ts-expect-error - connectionManager.props is private
+          connectionManager.props.onConnectionError("Error while disconnected")
+        })
+
+        // Should still show error dialog even when disconnected
+        expect(screen.getByText("Connection error")).toBeInTheDocument()
+
+        logSpy.mockRestore()
+      })
+    })
+  })
 })
