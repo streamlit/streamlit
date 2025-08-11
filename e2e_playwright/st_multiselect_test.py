@@ -50,6 +50,7 @@ def del_from_multiselect(page: Page, label: str, option_text: str) -> None:
     ms.locator(
         f'span[data-baseweb="tag"] span[title="{option_text}"] + span[role="presentation"]'
     ).first.click()
+    wait_for_app_run(page)
 
 
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -338,7 +339,6 @@ def test_multiselect_accept_new_options(app: Page):
 
     # Remove one option
     del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
-    wait_for_app_run(app)
 
     # Verify we can add another option after removing one
     multiselect_elem.locator("input").click()
@@ -398,7 +398,6 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     del_from_multiselect(
         app, "multiselect 16 - empty options with accept_new_options", "strawberry"
     )
-    wait_for_app_run(app)
 
     # Verify one option was removed
     expect_text(app, "value 16: ['blueberry']")
