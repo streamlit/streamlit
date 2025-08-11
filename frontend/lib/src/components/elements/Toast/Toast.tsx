@@ -166,9 +166,15 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
 
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
+    const autoHideDurationMs = notNullOrUndefined(duration)
+      ? duration === 0
+        ? 0 // Explicitly disable auto-hide when duration is 0
+        : duration * 1000
+      : 4000 // Use default duration of 4 seconds
+
     const newKey = toaster.info(toastContent, {
       overrides: { ...styleOverrides },
-      autoHideDuration: notNullOrUndefined(duration) ? duration * 1000 : 4000,
+      autoHideDuration: autoHideDurationMs,
     })
     setToastKey(newKey)
 

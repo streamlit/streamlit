@@ -56,7 +56,8 @@ const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   element: ToastProto.create({
     body: "This is a toast message",
     icon: "🐶",
-    duration: 4,
+    // Default to no auto-hide in tests to avoid timers leaking past teardown
+    duration: 0,
     ...elementProps,
   }),
 })
