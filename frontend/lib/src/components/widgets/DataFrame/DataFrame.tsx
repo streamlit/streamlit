@@ -47,7 +47,7 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibContext } from "~lib/components/core/LibContext"
@@ -125,7 +125,8 @@ export interface DataFrameProps {
   widgetMgr: WidgetStateManager
   disableFullscreenMode?: boolean
   fragmentId?: string
-  height?: number
+  widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
 /**
@@ -143,6 +144,8 @@ function DataFrame({
   widgetMgr,
   disableFullscreenMode,
   fragmentId,
+  widthConfig,
+  heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
   const {
     expanded: isFullScreen,
@@ -257,7 +260,7 @@ function DataFrame({
     columns: originalColumns,
     allColumns,
     setColumnConfigMapping,
-  } = useColumnLoader(element, data, disabled, columnOrder)
+  } = useColumnLoader(element, data, disabled, columnOrder, widthConfig)
 
   /**
    * On the first rendering, try to load initial widget state if
@@ -613,7 +616,9 @@ function DataFrame({
     usesGroupRow,
     containerWidth || 0,
     containerHeight,
-    isFullScreen
+    isFullScreen,
+    widthConfig,
+    heightConfig
   )
 
   // This is used as fallback in case the table is empty to
