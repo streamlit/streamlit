@@ -290,9 +290,6 @@ def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for both PDFs to load
     _wait_for_pdf_to_load(app)
 
-    # Reset zoom to ensure consistent snapshots
-    _reset_pdf_zoom(app)
-
     # Take snapshot focusing on the column layout with PDFs
     columns_container = app.get_by_test_id("stHorizontalBlock")
     assert_snapshot(columns_container, name="st_pdf-in_columns")
