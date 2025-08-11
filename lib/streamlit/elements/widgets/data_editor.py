@@ -198,10 +198,14 @@ def _parse_value(
             return str(value)
 
         if column_data_kind == ColumnDataKind.INTEGER:
-            return int(value)  # type: ignore
+            if isinstance(value, list):
+                raise ValueError("List values are not supported for integer columns.")  # noqa: TRY301
+            return int(value)
 
         if column_data_kind == ColumnDataKind.FLOAT:
-            return float(value)  # type: ignore
+            if isinstance(value, list):
+                raise ValueError("List values are not supported for float columns.")  # noqa: TRY301
+            return float(value)
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
@@ -220,7 +224,9 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)  # ty: ignore
+            if isinstance(value, list):
+                raise ValueError("List values are not supported for datetime columns.")  # noqa: TRY301
+            datetime_value = pd.Timestamp(value)
 
             if datetime_value is pd.NaT:
                 return None
