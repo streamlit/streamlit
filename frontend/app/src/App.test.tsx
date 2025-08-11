@@ -4706,7 +4706,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         // Disconnect during script run
         act(() => {
           getMockConnectionManagerProp("connectionStateChanged")(
-            ConnectionState.DISCONNECTED
+            ConnectionState.PINGING_SERVER
           )
         })
 
@@ -4814,12 +4814,12 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           HostCommunicationManager
         )
 
-        // @ts-expect-error - accessing private property for testing
         const restartWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
           hostCommunicationMgr.props.restartWebsocketConnection
 
-        // @ts-expect-error - accessing private property for testing
         const terminateWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
           hostCommunicationMgr.props.terminateWebsocketConnection
 
         // First disconnect to set connectionManager to null
@@ -4846,8 +4846,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         )
         const connectionManager = getMockConnectionManager(false)
 
-        // @ts-expect-error - accessing private property for testing
         const terminateWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
           hostCommunicationMgr.props.terminateWebsocketConnection
 
         // Simulate host requesting disconnection
