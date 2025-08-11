@@ -66,7 +66,7 @@ class BokehTest(DeltaGeneratorTestCase):
         "by Streamlit is not compatible with numpy 2.x.",
     )
     @patch("streamlit.elements.bokeh_chart.show_deprecation_warning")
-    def test_calling_fragment_does_not_show_warning(
+    def test_calling_bokeh_chart_shows_deprecation_warning(
         self, patched_show_deprecation_warning
     ):
         from bokeh.plotting import figure
@@ -75,7 +75,7 @@ class BokehTest(DeltaGeneratorTestCase):
         plot.line([1], [1])
         st.bokeh_chart(plot)
 
-        patched_show_deprecation_warning.assert_not_called()
+        patched_show_deprecation_warning.assert_called_once()
 
 
 class BokehMissingTest(DeltaGeneratorTestCase):
