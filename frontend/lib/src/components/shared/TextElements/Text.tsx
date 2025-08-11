@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
-
 import styled from "@emotion/styled"
 
 export enum Kind {
@@ -30,15 +28,13 @@ interface TextProps {
 export const Small = styled.small<TextProps>(({ kind, disabled, theme }) => {
   const { danger, fadedText60, fadedText40 } = theme.colors
 
-  const color = useMemo(() => {
-    if (disabled) {
-      return fadedText40
-    }
-    if (kind === Kind.DANGER) {
-      return danger
-    }
-    return fadedText60
-  }, [kind, disabled, danger, fadedText60, fadedText40])
+  let color = fadedText60
+  if (disabled) {
+    color = fadedText40
+  }
+  if (kind === Kind.DANGER) {
+    color = danger
+  }
 
   return {
     color,
