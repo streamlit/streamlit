@@ -142,13 +142,19 @@ function useSelectionHandler(
         newSelection.current !== undefined &&
         cellSelectionChanged
       ) {
-        // The default behavior is that row selections are cleared when a cell is selected.
+        // The default behavior is that row/column selections are cleared when a cell is selected.
         // This is not desired when row selection is activated. Instead, we want to keep the
-        // row selection and only update the cell selection.
+        // row/column selection and only update the cell selection.
         updatedSelection = {
           ...newSelection,
-          rows: gridSelection.rows,
-          columns: gridSelection.columns,
+          rows:
+            newSelection.rows.length === 0
+              ? gridSelection.rows
+              : newSelection.rows,
+          columns:
+            newSelection.columns.length === 0
+              ? gridSelection.columns
+              : newSelection.columns,
         }
 
         // Sync selections with widget state if cell selections are activated.
@@ -165,6 +171,7 @@ function useSelectionHandler(
         // Keep the column selection if row selection was changed
         updatedSelection = {
           ...updatedSelection,
+          rows: newSelection.rows,
           columns: gridSelection.columns,
         }
         syncSelection = true
@@ -179,6 +186,7 @@ function useSelectionHandler(
         // Keep the row and cell selection if column selection was changed
         updatedSelection = {
           ...updatedSelection,
+          columns: newSelection.columns,
           rows: gridSelection.rows,
           current: gridSelection.current,
         }

@@ -475,7 +475,11 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (!isRowSelectionActivated && !isColumnSelectionActivated) {
+      if (
+        !isRowSelectionActivated &&
+        !isColumnSelectionActivated &&
+        !isCellSelectionActivated
+      ) {
         // Only run this if selections are activated.
         return
       }
@@ -494,6 +498,7 @@ function DataFrame({
 
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
+        let cellSelection: GridCellPosition | undefined = undefined
 
         selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
@@ -503,12 +508,42 @@ function DataFrame({
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
-        if (rowSelection.length > 0 || columnSelection.length > 0) {
+        // Reconstruct for single cell selection:
+        if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
+          // If cell selection is activated but multi-cell selection is not,
+          // we need to set the current cell selection to the first cell in the selection.
+          const [rowIdx, columnName] =
+            selectionState.selection?.cells?.[0] ?? []
+          if (rowIdx !== undefined && columnName !== undefined) {
+            const columnIdx = columnNames.indexOf(columnName)
+
+            cellSelection = [columnIdx, rowIdx]
+          }
+        }
+
+        if (
+          rowSelection.length > 0 ||
+          columnSelection.length > 0 ||
+          cellSelection !== undefined
+        ) {
           // Update the initial selection state if something was selected
           const initialSelection: GridSelection = {
             rows: rowSelection,
             columns: columnSelection,
-            current: undefined,
+            current: cellSelection
+              ? {
+                  cell: cellSelection,
+                  range: {
+                    x: cellSelection[0],
+                    y: cellSelection[1],
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    width: 1,
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    height: 1,
+                  },
+                  rangeStack: [],
+                }
+              : undefined,
           }
           processSelectionChange(initialSelection)
         }
@@ -1072,6 +1107,9 @@ function DataFrame({
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
               }
+              // Close menus:
+              setShowMenu(undefined)
+              setShowColumnVisibilityMenu(false)
             }
           }}
           theme={gridTheme.glideTheme}
