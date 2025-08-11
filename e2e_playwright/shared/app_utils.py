@@ -69,6 +69,27 @@ def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
+def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a selectbox with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stSelectbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
