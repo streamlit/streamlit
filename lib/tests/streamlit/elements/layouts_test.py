@@ -945,6 +945,24 @@ class DialogTest(DeltaGeneratorTestCase):
         assert dialog_block.add_block.dialog.dismissible
         assert not dialog_block.add_block.dialog.id
 
+    @parameterized.expand(
+        [
+            ("medium", BlockProto.Dialog.DialogWidth.MEDIUM),
+            ("large", BlockProto.Dialog.DialogWidth.LARGE),
+            ("small", BlockProto.Dialog.DialogWidth.SMALL),
+        ]
+    )
+    def test_dialog_width(
+        self, width: str, expected_width: BlockProto.Dialog.DialogWidth.ValueType
+    ):
+        """Test that the dialog width parameter works correctly for all supported values"""
+        dialog = st._main._dialog(DialogTest.title, width=width)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.width == expected_width
+
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
         dialog = st._main._dialog(DialogTest.title)

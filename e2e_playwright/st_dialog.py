@@ -61,6 +61,18 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Medium-width Dialog", width="medium")
+def medium_width_dialog() -> None:
+    st.write("This dialog has a medium width.")
+
+    if st.button("Submit", key="medium-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open medium-width Dialog"):
+    medium_width_dialog()
+
+
 @st.dialog("Large-width Dialog", width="large")
 def large_width_dialog() -> None:
     st.write("This dialog has a large width.")
@@ -228,10 +240,6 @@ def non_dismissible_dialog() -> None:
 
 if st.button("Open Non-dismissible Dialog"):
     non_dismissible_dialog()
-
-
-st.divider()
-st.subheader("Dialog on_dismiss Tests")
 
 # Counter for tracking reruns caused by on_dismiss
 if "rerun_count" not in st.session_state:
