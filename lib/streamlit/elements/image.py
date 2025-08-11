@@ -189,6 +189,10 @@ class ImageMixin:
             )
             if use_container_width is True:
                 width = "stretch"
+            elif isinstance(width, int):
+                # Preserve the existing behavior with respect to use_container_width=False
+                # and width=int.
+                pass
             else:
                 width = "content"
 
