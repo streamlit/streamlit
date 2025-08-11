@@ -52,8 +52,8 @@ class BokehMixin:
         wherever you would call Bokeh's ``show``.
 
         .. Important::
-            Bokeh chart is deprecated. Please use our custom component,
-            |streamlit-bokeh|_ custom component instead.
+            Bokeh chart is deprecated and will be removed in a future version.
+            Please use our custom component, |streamlit-bokeh|_ instead.
 
         .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
         .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
