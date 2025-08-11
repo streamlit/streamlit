@@ -54,6 +54,9 @@ export const StyledSummaryHeading = styled.span({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
+  // Allow flex children (like markdown labels) to shrink within the container
+  // so long content doesn't overflow the summary area.
+  minWidth: 0,
 })
 
 interface StyledSummaryProps {
@@ -66,6 +69,10 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     position: "relative",
     display: "flex",
     width: "100%",
+    // Prevent chevron/user icon from overlapping content by ensuring
+    // children can shrink and the summary can clip excess inline overflow.
+    minWidth: 0,
+    overflow: "hidden",
     "&:focus": {
       outline: "none",
     },
