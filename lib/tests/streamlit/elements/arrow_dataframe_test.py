@@ -356,37 +356,30 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.arrow_data_frame.selection_mode == expected_modes
 
-    def test_selection_mode_parsing_invalid(self):
+    @parameterized.expand(
+        [
+            (["invalid", "single-row"],),
+            (["single-row", "multi-row"],),
+            (["single-column", "multi-column"],),
+            (["single-cell", "multi-cell"],),
+        ]
+    )
+    def test_selection_mode_parsing_invalid(self, invalid_modes):
         """Test that an exception is thrown if the selection_mode parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
         with pytest.raises(StreamlitAPIException):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["invalid", "single-row"]
-            )
+            st.dataframe(df, on_select="rerun", selection_mode=invalid_modes)
 
-        with pytest.raises(StreamlitAPIException):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["single-row", "multi-row"]
-            )
+    def test_selection_mode_deactivated(self):
+        """Test that selection modes are ignored when selections are deactivated."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["single-column", "multi-column"]
-            )
-
-        with pytest.raises(StreamlitAPIException):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["single-cell", "multi-cell"]
-            )
-
-        # If selections are deactivated, the selection mode list should be empty
-        # even if the selection_mode parameter is set.
         st.dataframe(
             df, on_select="ignore", selection_mode=["single-row", "multi-column"]
         )
         el = self.get_delta_from_queue().new_element
-        assert el.arrow_data_frame.selection_mode == []
+        assert len(el.arrow_data_frame.selection_mode) == 0
 
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
