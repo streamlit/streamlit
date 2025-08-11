@@ -456,7 +456,6 @@ st.dataframe(
     },
     use_container_width=False,
     hide_index=True,
-    row_height=200,
 )
 
 st.header("Bar chart column:")
