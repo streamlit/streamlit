@@ -1474,6 +1474,12 @@ def ListColumn(
     be used in the ``column_config`` parameter of ``st.dataframe`` or
     ``st.data_editor``.
 
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend disabling editing for these columns or conversion of all list values
+        to strings.
+
+
     Parameters
     ----------
     label: str or None
@@ -1577,11 +1583,13 @@ def MultiselectColumn(
 
     This is the default column type for list-like values. This command needs to
     be used in the ``column_config`` parameter of ``st.dataframe`` or
-    ``st.data_editor``.
+    ``st.data_editor``. When used with ``st.data_editor``, editing will
+    be enabled with a multiselect widget.
 
-    This only supports string-list values. This command needs to
-    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
-    When used with ``st.data_editor``, editing will be enabled with a multiselect widget.
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend disabling editing for these columns or conversion of all list values
+        to strings.
 
     Parameters
     ----------

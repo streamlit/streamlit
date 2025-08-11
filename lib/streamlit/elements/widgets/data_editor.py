@@ -60,7 +60,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import is_type
+from streamlit.type_util import is_list_like, is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -234,7 +234,8 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-        # TODO(lukasmasuch): Add support for list columns?
+        if column_data_kind == ColumnDataKind.LIST:
+            return list(value) if is_list_like(value) else [value]
 
     except (ValueError, pd.errors.ParserError) as ex:
         _LOGGER.warning(
