@@ -395,9 +395,11 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = dict[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMapping: TypeAlias = dict[
+    Union[IndexIdentifierType, str, int], ColumnConfig
+]
 ColumnConfigMappingInput: TypeAlias = Mapping[
-    Union[IndexIdentifierType, str],
+    Union[IndexIdentifierType, str, int],
     Union[ColumnConfig, None, str],
 ]
 
@@ -440,7 +442,9 @@ def process_config_mapping(
 
 
 def update_column_config(
-    column_config_mapping: ColumnConfigMapping, column: str, column_config: ColumnConfig
+    column_config_mapping: ColumnConfigMapping,
+    column: str | int,
+    column_config: ColumnConfig,
 ) -> None:
     """Updates the column config value for a single column within the mapping.
 
@@ -449,8 +453,9 @@ def update_column_config(
     column_config_mapping : ColumnConfigMapping
         The column config mapping to update.
 
-    column : str
-        The column to update the config value for.
+    column : str | int
+        The column to update the config value for. This can be the column name or
+        the numerical position of the column.
 
     column_config : ColumnConfig
         The column config to update.
