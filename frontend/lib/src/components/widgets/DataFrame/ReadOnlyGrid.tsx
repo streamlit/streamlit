@@ -43,7 +43,6 @@ export const ReadOnlyGrid = ({
           // data provided via the data property
           data: undefined,
           styler: null,
-          // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
           width: null,
           height: height ?? null,
           id: "",
