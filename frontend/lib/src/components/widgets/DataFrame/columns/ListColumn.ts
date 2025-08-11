@@ -24,6 +24,7 @@ import {
   arrayToCopyValue,
   BaseColumn,
   BaseColumnProps,
+  isEditableArrayValue,
   toSafeArray,
 } from "./utils"
 
@@ -80,6 +81,13 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
           values: cellData,
         },
         copyData: arrayToCopyValue(cellData),
+        ...(props.isEditable &&
+          !isEditableArrayValue(data) && {
+            readonly: true,
+            isError: true,
+            errorDetails:
+              "Editing of arrays with non-string values is not supported.",
+          }),
       } as MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {

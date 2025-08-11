@@ -23,6 +23,7 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
+import { Vector } from "apache-arrow"
 import merge from "lodash/merge"
 import toString from "lodash/toString"
 import moment, { Moment } from "moment"
@@ -347,6 +348,27 @@ export function toSafeArray(data: any): any[] {
   } catch (error) {
     return [toSafeString(data)]
   }
+}
+
+/**
+ * Checks if the provided data used as array value is supported for editing.
+ *
+ * @param data - The value to inspect.
+ * @returns True if `data` is supported for array-editing.
+ */
+export function isEditableArrayValue(data: unknown): boolean {
+  if (typeof data === "string" || data instanceof String) {
+    return true
+  }
+
+  if (data instanceof Vector) {
+    data = Array.from(data)
+  }
+
+  return (
+    Array.isArray(data) &&
+    data.every(v => typeof v === "string" || v instanceof String)
+  )
 }
 
 /**

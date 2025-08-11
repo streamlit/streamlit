@@ -16,7 +16,7 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
-import { unique } from "vega-lite"
+import uniqBy from "lodash/uniqBy"
 
 import {
   blend,
@@ -31,6 +31,7 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
+  isEditableArrayValue,
   mergeColumnParameters,
   toSafeArray,
   toSafeString,
@@ -121,9 +122,9 @@ function MultiSelectColumn(
   ) as MultiSelectColumnParams
 
   const preparedOptions = prepareOptions(parameters.options, theme)
-  const uniqueOptions = unique(
+  const uniqueOptions = uniqBy(
     preparedOptions.map(opt => opt.value),
-    x => x
+    (x: string) => x
   )
 
   const cellTemplate = {
@@ -195,6 +196,13 @@ function MultiSelectColumn(
           values: cellData,
         },
         copyData: arrayToCopyValue(cellData),
+        ...(props.isEditable &&
+          !isEditableArrayValue(data) && {
+            readonly: true,
+            isError: true,
+            errorDetails:
+              "Editing of arrays with non-string values is not supported.",
+          }),
       } as MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
