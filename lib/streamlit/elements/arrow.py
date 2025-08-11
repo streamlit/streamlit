@@ -207,8 +207,8 @@ class DataframeSelectionSerde:
 
         return cast("DataframeState", AttributeDictionary(selection_state))
 
-    def serialize(self, editing_state: DataframeState) -> str:
-        return json.dumps(editing_state)
+    def serialize(self, state: DataframeState) -> str:
+        return json.dumps(state)
 
 
 def parse_selection_mode(
