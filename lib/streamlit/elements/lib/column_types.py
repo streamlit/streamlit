@@ -1476,7 +1476,7 @@ def ListColumn(
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow serialization.
-        We recommend disabling editing for these columns or conversion of all list values
+        We recommend to disable editing for these columns or convert of all list values
         to strings.
 
 
@@ -1588,7 +1588,7 @@ def MultiselectColumn(
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow serialization.
-        We recommend disabling editing for these columns or conversion of all list values
+        We recommend to disable editing for these columns or convert of all list values
         to strings.
 
     Parameters
