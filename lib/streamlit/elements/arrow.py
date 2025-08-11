@@ -70,13 +70,20 @@ if TYPE_CHECKING:
 
 
 SelectionMode: TypeAlias = Literal[
-    "single-row", "multi-row", "single-column", "multi-column"
+    "single-row",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
     "multi-row",
     "single-column",
     "multi-column",
+    "single-cell",
+    "multi-cell",
 }
 
 
@@ -103,6 +110,9 @@ class DataframeSelectionState(TypedDict, total=False):
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
+    cells : list[tuple[int, str]]
+        The selected cells, provided as a tuple of row integer position
+        and column name, e.g. ``(0, "col 1")``.
 
     Example
     -------
@@ -135,6 +145,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     rows: list[int]
     columns: list[str]
+    cells: list[tuple[int, str]]
 
 
 class DataframeState(TypedDict, total=False):
@@ -170,6 +181,7 @@ class DataframeSelectionSerde:
             "selection": {
                 "rows": [],
                 "columns": [],
+                "cells": [],
             },
         }
         selection_state: DataframeState = (
@@ -179,10 +191,27 @@ class DataframeSelectionSerde:
         if "selection" not in selection_state:
             selection_state = empty_selection_state
 
+        if "rows" not in selection_state["selection"]:
+            selection_state["selection"]["rows"] = []
+
+        if "columns" not in selection_state["selection"]:
+            selection_state["selection"]["columns"] = []
+
+        if "cells" not in selection_state["selection"]:
+            selection_state["selection"]["cells"] = []
+        else:
+            # Explicitly convert all cells to a tuple (from list).
+            # This is necessary since there isn't a concept of tuples in JSON
+            # The format that the data is transferred to the backend.
+            selection_state["selection"]["cells"] = [
+                tuple(cell)  # type: ignore
+                for cell in selection_state["selection"]["cells"]
+            ]
+
         return cast("DataframeState", AttributeDictionary(selection_state))
 
-    def serialize(self, editing_state: DataframeState) -> str:
-        return json.dumps(editing_state, default=str)
+    def serialize(self, state: DataframeState) -> str:
+        return json.dumps(state)
 
 
 def parse_selection_mode(
@@ -212,6 +241,11 @@ def parse_selection_mode(
             "Only one of `single-column` or `multi-column` can be selected as selection mode."
         )
 
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
@@ -222,6 +256,10 @@ def parse_selection_mode(
             parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
             parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+        elif mode == "single-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+        elif mode == "multi-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
@@ -412,8 +450,8 @@ class ArrowMixin:
               input widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
-              rows or columns in the dataframe. In this case, ``st.dataframe``
-              will return the selection data as a dictionary.
+              rows, columns, or cells in the dataframe. In this case,
+              ``st.dataframe`` will return the selection data as a dictionary.
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
@@ -421,7 +459,7 @@ class ArrowMixin:
               as a dictionary.
 
         selection_mode : "single-row", "multi-row", "single-column", \
-            "multi-column", or Iterable of these
+            "multi-column", "single-cell", "multi-cell", or Iterable of these
             The types of selections Streamlit should allow when selections are
             enabled with ``on_select``. This can be one of the following:
 
@@ -429,8 +467,10 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
+            - "single-cell": Only one cell can be selected at a time.
+            - "multi-cell": A rectangular range of cells can be selected.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified.
+              selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
 
             When column selections are enabled, column sorting is disabled.
 
