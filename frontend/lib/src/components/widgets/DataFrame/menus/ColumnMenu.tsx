@@ -82,7 +82,7 @@ function ColumnMenu({
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const { colors, fontSizes, radii, fontWeights } = theme
 
-  const { copyToClipboard } = useCopyToClipboard()
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   // Disable page scrolling while the menu is open to keep the menu und
   // column header aligned.
@@ -131,7 +131,9 @@ function ColumnMenu({
                 aria-label="Copy column name"
               >
                 <DynamicIcon
-                  iconValue=":material/content_copy:"
+                  iconValue={
+                    isCopied ? ":material/check:" : ":material/content_copy:"
+                  }
                   size="sm"
                   margin="0"
                   color="inherit"
