@@ -4493,8 +4493,10 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(closeButton)
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          fireEvent.click(closeButton)
+        })
 
         expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
 
@@ -4575,8 +4577,10 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(closeButton)
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          fireEvent.click(closeButton)
+        })
 
         expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
 
@@ -4749,8 +4753,10 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(closeButton)
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          fireEvent.click(closeButton)
+        })
 
         expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
 
