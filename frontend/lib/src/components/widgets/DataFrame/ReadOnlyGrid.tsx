@@ -37,7 +37,7 @@ interface ReadOnlyGridProps {
  *
  * @param data - The arrow data to display in the grid.
  * @param height - The height of the grid.
- * @param customToolbarActions - Custom toolbar actions to display int the grid toolbar.
+ * @param customToolbarActions - Custom toolbar actions to display in the grid toolbar.
  *
  * @returns A React element that displays the data in a read-only grid.
  */
