@@ -365,14 +365,10 @@ def test_directory_upload_with_file_type_filtering(
 
     temp_dir = create_temp_directory_with_files(directory_data)
 
-    with app.expect_file_chooser(timeout=5000) as fc_info:
+    with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
-
-    # Add a small delay before setting files to ensure file chooser is ready
-    app.wait_for_timeout(100)
-
     file_chooser.set_files(files=[temp_dir])
 
     wait_for_app_run(app, wait_delay=1000)
