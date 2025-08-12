@@ -248,6 +248,26 @@ describe("toSafeNumber", () => {
 })
 
 describe("formatNumber", () => {
+  afterEach(() => {
+    // Restore original value after each test
+    Object.defineProperty(navigator, "languages", {
+      value: navigator.languages,
+      configurable: true,
+    })
+  })
+
+  it("handles localized currency format as narrow", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      value: ["pt-BR"],
+      configurable: true,
+    })
+
+    expect(formatNumber(10.123, "euro")).toEqual("€ 10,12")
+    expect(formatNumber(10.123, "dollar")).toEqual("$ 10,12")
+    expect(formatNumber(10.123, "yen")).toEqual("¥ 10") // would be JP¥ 10 if narrow symbol is not used
+  })
+
   it.each([
     [10, "10"],
     [10.1, "10.1"],
