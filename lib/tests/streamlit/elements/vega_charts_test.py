@@ -34,6 +34,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
@@ -883,8 +884,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             [[20, "b", 30], [20, "c", 50]],
             columns=[
                 "a",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
@@ -900,10 +901,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
-        assert (
-            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
-        )
+        assert chart_spec["encoding"]["y"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -919,8 +918,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             [[20, "b", 30], [20, "c", 50]],
             columns=[
                 "a",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
@@ -936,10 +935,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
-        assert (
-            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
-        )
+        assert chart_spec["encoding"]["y"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -952,7 +949,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         """Test st.line_chart with implicit x and explicit y."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, 30]], columns=["index -- streamlit-generated", "b"]
+            [[0, 30]], columns=[f"index{_PROTECTION_SUFFIX}", "b"]
         )
 
         chart_command(df, y="b")
@@ -966,7 +963,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             chart_spec = chart_spec["layer"][0]
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
-        assert chart_spec["encoding"]["x"]["field"] == "index -- streamlit-generated"
+        assert chart_spec["encoding"]["x"]["field"] == f"index{_PROTECTION_SUFFIX}"
         assert chart_spec["encoding"]["y"]["field"] == "b"
         assert "color" not in chart_spec["encoding"]
 
@@ -983,9 +980,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[0, "b", 30], [0, "c", 50]],
             columns=[
-                "index -- streamlit-generated",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"index{_PROTECTION_SUFFIX}",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
@@ -1000,11 +997,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             chart_spec = chart_spec["layer"][0]
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
-        assert chart_spec["encoding"]["x"]["field"] == "index -- streamlit-generated"
-        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
-        assert (
-            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
-        )
+        assert chart_spec["encoding"]["x"]["field"] == f"index{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["y"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1049,8 +1044,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             [[20, "b", 30], [20, "c", 50]],
             columns=[
                 "a",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
@@ -1066,10 +1061,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
-        assert (
-            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
-        )
+        assert chart_spec["encoding"]["y"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1197,8 +1190,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             [[20, "b", 30], [20, "c", 50]],
             columns=[
                 "a",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
@@ -1215,9 +1208,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
 
         # Color should be set to the melted column name.
-        assert (
-            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
-        )
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
 
         # Automatically-specified colors should have no legend title.
         assert chart_spec["encoding"]["color"]["title"] == " "
@@ -1346,8 +1337,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             index=[0, 1],
             columns=[
                 "a",
-                "color -- streamlit-generated",
-                "value -- streamlit-generated",
+                f"color{_PROTECTION_SUFFIX}",
+                f"value{_PROTECTION_SUFFIX}",
             ],
         )
 
