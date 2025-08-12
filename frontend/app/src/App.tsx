@@ -167,6 +167,7 @@ interface State {
   scriptRunState: ScriptRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
+  connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
@@ -290,6 +291,7 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
@@ -729,6 +731,11 @@ export class App extends PureComponent<Props, State> {
 
     if (newState === ConnectionState.CONNECTED) {
       LOG.info("Reconnected to server.")
+      // Reset the connection error dismissed state when we reconnect
+      if (this.state.connectionErrorDismissed) {
+        this.setState({ connectionErrorDismissed: false })
+      }
+
       // We request a script rerun if:
       //   1. this is the first time we establish a websocket connection to the
       //      server, or
@@ -1473,7 +1480,15 @@ export class App extends PureComponent<Props, State> {
    * Closes the upload dialog if it's open.
    */
   closeDialog = (): void => {
-    this.setState({ dialog: undefined })
+    // If we're closing a connection error dialog, mark it as dismissed
+    if (this.state.dialog?.type === DialogType.CONNECTION_ERROR) {
+      this.setState({
+        dialog: undefined,
+        connectionErrorDismissed: true,
+      })
+    } else {
+      this.setState({ dialog: undefined })
+    }
   }
 
   /**
@@ -1848,6 +1863,11 @@ export class App extends PureComponent<Props, State> {
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errMarkdown: string): void => {
+    // Don't show the error dialog if it has been dismissed for this session
+    if (this.state.connectionErrorDismissed) {
+      return
+    }
+
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
     this.showError(
