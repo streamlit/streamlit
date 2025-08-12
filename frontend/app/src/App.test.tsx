@@ -4472,9 +4472,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        // getByText throws if element is not found, so no assertion needed
-        screen.getByText("Connection error")
-        screen.getByText(/Network error: Unable to connect/)
+        // Verify error dialog and message are displayed
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(
+          screen.getByText(/Network error: Unable to connect/)
+        ).toBeVisible()
       })
 
       it("does not display error dialog if already dismissed", () => {
@@ -4487,7 +4489,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Connection lost")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
@@ -4552,9 +4554,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        screen.getByText("Connection error")
-        // Check if markdown is rendered (bold text) - getByText validates existence
-        screen.getByText(/Network Error/)
+        // Verify both error dialog and markdown content are displayed
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/Network Error/)).toBeVisible()
       })
     })
 
@@ -4569,7 +4571,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Connection lost")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
@@ -4591,8 +4593,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("New connection error")
         })
 
-        screen.getByText("Connection error")
-        screen.getByText(/New connection error/)
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/New connection error/)).toBeVisible()
       })
 
       it("automatically rescinds error dialog on successful reconnection", () => {
@@ -4621,7 +4623,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Connection lost")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         // Reconnect (without dismissing dialog)
         act(() => {
@@ -4644,7 +4646,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Connection lost")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         // Simulate reconnection - should close the CONNECTION_ERROR dialog
         act(() => {
@@ -4727,8 +4729,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Should only show the latest error
-        screen.getByText("Connection error")
-        screen.getByText(/Error 3/)
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/Error 3/)).toBeVisible()
         expect(screen.queryByText(/Error 1/)).not.toBeInTheDocument()
         expect(screen.queryByText(/Error 2/)).not.toBeInTheDocument()
       })
@@ -4743,7 +4745,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("First error")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
@@ -4785,7 +4787,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Error after reconnect")
         })
 
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
       })
     })
 
@@ -4866,7 +4868,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Should still show error dialog even when disconnected
-        screen.getByText("Connection error")
+        expect(screen.getByText("Connection error")).toBeVisible()
 
         logSpy.mockRestore()
       })
