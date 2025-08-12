@@ -129,7 +129,7 @@ describe("ArrowVegaLiteChart", () => {
     expect(screen.queryByTestId("stDataFrame")).toBeNull()
   })
 
-  it("shows data grid when 'Show data' is clicked for first dataset", async () => {
+  it("shows data grid when 'Show data' is clicked for first dataset", () => {
     const datasetQuiver = new Quiver({ data: UNICODE })
     render(
       <ArrowVegaLiteChart
