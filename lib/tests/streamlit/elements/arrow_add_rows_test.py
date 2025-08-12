@@ -44,8 +44,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     def test_charts_with_implict_x_and_y(self, chart_command):
         expected = pd.DataFrame(
             {
-                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3, 1, 2, 3, 1, 2, 3],
-                "color--p5bJXXpQgvPz6yvQMFiy": [
+                "index -- streamlit-generated": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+                "color -- streamlit-generated": [
                     "a",
                     "a",
                     "a",
@@ -56,7 +56,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
                     "c",
                     "c",
                 ],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 21, 22, 23, 31, 32, 33],
+                "value -- streamlit-generated": [11, 12, 13, 21, 22, 23, 31, 32, 33],
             }
         )
 
@@ -111,8 +111,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                "color -- streamlit-generated": ["a", "a", "a", "c", "c", "c"],
+                "value -- streamlit-generated": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -130,8 +130,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                "color -- streamlit-generated": ["a", "a", "a", "c", "c", "c"],
+                "value -- streamlit-generated": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -151,8 +151,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                "color -- streamlit-generated": ["a", "a", "a", "c", "c", "c"],
+                "value -- streamlit-generated": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -170,8 +170,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             {
                 "b": [21, 22, 23, 21, 22, 23],
                 "d": [41, 42, 43, 41, 42, 43],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                "color -- streamlit-generated": ["a", "a", "a", "c", "c", "c"],
+                "value -- streamlit-generated": [11, 12, 13, 31, 32, 33],
             }
         )
 

@@ -881,7 +881,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
-            columns=["a", "color--p5bJXXpQgvPz6yvQMFiy", "value--p5bJXXpQgvPz6yvQMFiy"],
+            columns=[
+                "a",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
+            ],
         )
 
         chart_command(df, x="a", y=["b", "c"])
@@ -896,8 +900,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
-        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
+        assert (
+            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
+        )
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -911,7 +917,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
-            columns=["a", "color--p5bJXXpQgvPz6yvQMFiy", "value--p5bJXXpQgvPz6yvQMFiy"],
+            columns=[
+                "a",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
+            ],
         )
 
         chart_command(df, x="a")
@@ -926,8 +936,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
-        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
+        assert (
+            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
+        )
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -940,7 +952,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         """Test st.line_chart with implicit x and explicit y."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, 30]], columns=["index--p5bJXXpQgvPz6yvQMFiy", "b"]
+            [[0, 30]], columns=["index -- streamlit-generated", "b"]
         )
 
         chart_command(df, y="b")
@@ -954,7 +966,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             chart_spec = chart_spec["layer"][0]
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
-        assert chart_spec["encoding"]["x"]["field"] == "index--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["x"]["field"] == "index -- streamlit-generated"
         assert chart_spec["encoding"]["y"]["field"] == "b"
         assert "color" not in chart_spec["encoding"]
 
@@ -971,9 +983,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[0, "b", 30], [0, "c", 50]],
             columns=[
-                "index--p5bJXXpQgvPz6yvQMFiy",
-                "color--p5bJXXpQgvPz6yvQMFiy",
-                "value--p5bJXXpQgvPz6yvQMFiy",
+                "index -- streamlit-generated",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
             ],
         )
 
@@ -988,9 +1000,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             chart_spec = chart_spec["layer"][0]
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
-        assert chart_spec["encoding"]["x"]["field"] == "index--p5bJXXpQgvPz6yvQMFiy"
-        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
-        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["x"]["field"] == "index -- streamlit-generated"
+        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
+        assert (
+            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
+        )
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1033,7 +1047,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50, 60]], columns=["a", "b", "c", "d"])
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
-            columns=["a", "color--p5bJXXpQgvPz6yvQMFiy", "value--p5bJXXpQgvPz6yvQMFiy"],
+            columns=[
+                "a",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
+            ],
         )
 
         chart_command(df, x="a", y=["b", "c"])
@@ -1048,8 +1066,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["field"] == "a"
-        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
-        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["y"]["field"] == "value -- streamlit-generated"
+        assert (
+            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
+        )
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1175,7 +1195,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
-            columns=["a", "color--p5bJXXpQgvPz6yvQMFiy", "value--p5bJXXpQgvPz6yvQMFiy"],
+            columns=[
+                "a",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
+            ],
         )
 
         chart_command(df, x="a", y=["b", "c"], color=["#f00", "#0ff"])
@@ -1191,7 +1215,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
 
         # Color should be set to the melted column name.
-        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
+        assert (
+            chart_spec["encoding"]["color"]["field"] == "color -- streamlit-generated"
+        )
 
         # Automatically-specified colors should have no legend title.
         assert chart_spec["encoding"]["color"]["title"] == " "
@@ -1318,7 +1344,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
             index=[0, 1],
-            columns=["a", "color--p5bJXXpQgvPz6yvQMFiy", "value--p5bJXXpQgvPz6yvQMFiy"],
+            columns=[
+                "a",
+                "color -- streamlit-generated",
+                "value -- streamlit-generated",
+            ],
         )
 
         st.line_chart(df)
