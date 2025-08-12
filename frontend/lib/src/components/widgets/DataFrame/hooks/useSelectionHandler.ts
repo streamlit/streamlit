@@ -16,7 +16,11 @@
 
 import { useCallback, useState } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  GridSelection,
+  Slice,
+} from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
@@ -100,7 +104,6 @@ function useSelectionHandler(
     !isDisabled &&
     (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_CELL) ||
       element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL))
-
   const isMultiCellSelectionActivated =
     isCellSelectionActivated &&
     element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL)
@@ -194,7 +197,40 @@ function useSelectionHandler(
         syncSelection = true
       }
 
-      if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+      if (isCellSelectionActivated) {
+        const minRow = updatedSelection.current?.cell[1] ?? 0
+        const minCol = updatedSelection.current?.cell[0] ?? 0
+        if (isMultiCellSelectionActivated) {
+          const selectedRange = updatedSelection.current?.range ?? {
+            width: 0,
+            height: 0,
+          }
+          const nSelectedCells = selectedRange.width * selectedRange.height
+          if (nSelectedCells <= 1) {
+            // We don't process a single-cell selection when multi-select is turned on
+            syncSelection = false
+          } else {
+            const rows: Slice = [minRow, minRow + selectedRange.height]
+            const cols: Slice = [minCol, minCol + selectedRange.width]
+            updatedSelection = {
+              ...updatedSelection,
+              rows: CompactSelection.fromSingleSelection(rows),
+              columns: CompactSelection.fromSingleSelection(cols),
+            }
+          }
+        } else {
+          updatedSelection = {
+            ...updatedSelection,
+            rows: CompactSelection.fromSingleSelection(minRow),
+            columns: CompactSelection.fromSingleSelection(minCol),
+          }
+        }
+      }
+
+      if (
+        (columnSelectionChanged || cellSelectionChanged) &&
+        updatedSelection.columns.length >= 0
+      ) {
         // Remove all index columns from the column selection
         // We don't want to allow selection of index columns.
         let cleanedColumns = updatedSelection.columns

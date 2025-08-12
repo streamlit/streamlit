@@ -98,6 +98,14 @@ def _get_multi_row_column_and_cell_select_df(app: Page) -> Locator:
     ).get_by_test_id("stDataFrame")
 
 
+def _get_fragment_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(10)
+
+
+def _get_df_with_index(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(11)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
     expect_canvas_to_be_visible(canvas)
