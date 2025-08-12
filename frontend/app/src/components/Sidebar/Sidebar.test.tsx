@@ -88,7 +88,6 @@ function getContextOutput(
     widgetsDisabled: false,
     gitInfo: null,
     showToolbar: true,
-    showColoredLine: true,
     ...context,
   }
 }

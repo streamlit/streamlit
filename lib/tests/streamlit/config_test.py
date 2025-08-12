@@ -391,6 +391,36 @@ class ConfigTest(unittest.TestCase):
         assert config.get_option("_test.tomlTest") == DESIRED_VAL
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
 
+    def test_parsing_to_map(self):
+        """Test that we can parse into a dict-valued option."""
+        DUMMY_DEFINITION = "<test definition>"
+        DEFAULT_VAL = {}
+        # Create a dummy default option.
+        config._create_option(
+            "_test.tomlTest",
+            description="This option tests the TOML parser.",
+            default_val=DEFAULT_VAL,
+        )
+        config.get_config_options(force_reparse=True)
+        assert config.get_option("_test.tomlTest") == DEFAULT_VAL
+        assert (
+            config.get_where_defined("_test.tomlTest")
+            == ConfigOption.DEFAULT_DEFINITION
+        )
+
+        # Validate that we can set nested values and get back a dict.
+        NEW_TOML = """
+            [_test.tomlTest]
+            one-value = "one"
+            two-value = "two"
+        """
+        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
+        assert config.get_option("_test.tomlTest") == {
+            "one-value": "one",
+            "two-value": "two",
+        }
+        assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
+
     def test_parsing_sensitive_options(self):
         """Test config._update_config_with_sensitive_env_var()."""
         # Some useful variables.
@@ -548,31 +578,32 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",
                 "secrets.files",
+                "server.address",
+                "server.allowRunOnSave",
                 "server.baseUrlPath",
-                "server.customComponentBaseUrlPath",
-                "server.enableCORS",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
-                "server.scriptHealthCheckEnabled",
+                "server.customComponentBaseUrlPath",
+                "server.disconnectedSessionTTL",
+                "server.enableArrowTruncation",
+                "server.enableCORS",
+                "server.enableStaticServing",
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",
                 "server.enableXsrfProtection",
                 "server.fileWatcherType",
-                "server.folderWatchList",
                 "server.folderWatchBlacklist",
+                "server.folderWatchList",
                 "server.headless",
-                "server.showEmailPrompt",
-                "server.address",
-                "server.allowRunOnSave",
+                "server.maxMessageSize",
+                "server.maxUploadSize",
                 "server.port",
                 "server.runOnSave",
-                "server.maxUploadSize",
-                "server.maxMessageSize",
-                "server.enableStaticServing",
-                "server.enableArrowTruncation",
+                "server.scriptHealthCheckEnabled",
+                "server.showEmailPrompt",
                 "server.sslCertFile",
                 "server.sslKeyFile",
-                "server.disconnectedSessionTTL",
+                "server.trustedUserHeaders",
                 "ui.hideTopBar",
             ]
         )
@@ -604,6 +635,64 @@ class ConfigTest(unittest.TestCase):
             match="browser.serverPort does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
+
+    def test_parse_trusted_user_headers_handles_bad_json(self):
+        # JSON that fails to parse.
+        config._set_option("server.trustedUserHeaders", "{123:}", "test")
+        with pytest.raises(
+            RuntimeError,
+            match="bad JSON value",
+        ):
+            config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_handles_non_objects(self):
+        # Non-object values.
+        for value in ("[]", "null", "123", "false", '"str"'):
+            config._set_option("server.trustedUserHeaders", value, "test")
+            with pytest.raises(
+                RuntimeError,
+                match="JSON must be an object",
+            ):
+                config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_handles_non_string_entries(self):
+        # Non-string object values.
+        for value in (
+            '{"key": null}',
+            '{"key": 123}',
+            '{"key": []}',
+            '{"good_key": "value", "bad_key": false}',
+        ):
+            config._set_option("server.trustedUserHeaders", value, "test")
+            with pytest.raises(
+                RuntimeError,
+                match="JSON must only have string values",
+            ):
+                config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_parses_good_json(self):
+        config._set_option(
+            "server.trustedUserHeaders",
+            '{"value_one": "val", "value_two": "v2"}',
+            "test",
+        )
+        config._parse_trusted_user_headers()
+        assert config.get_option("server.trustedUserHeaders") == {
+            "value_one": "val",
+            "value_two": "v2",
+        }
+
+    def test_parse_trusted_user_headers_forbids_duplicate_user_keys(self):
+        config._set_option(
+            "server.trustedUserHeaders",
+            {"hdr-one": "duplicate", "hdr-two": "duplicate", "hdr-three": "unique"},
+            "test",
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="had multiple mappings.*duplicate",
+        ):
+            config._parse_trusted_user_headers()
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234

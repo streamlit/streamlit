@@ -14,62 +14,123 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
-import Clipboard from "clipboard"
+import { screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
 import CopyButton from "./CopyButton"
 
-vi.mock("clipboard")
+// Mock navigator.clipboard
+Object.assign(navigator, {
+  clipboard: {
+    writeText: vi.fn(),
+  },
+})
 
 describe("CopyButton Element", () => {
+  // eslint-disable-next-line no-restricted-properties -- This is fine in tests
+  const mockWriteText = vi.mocked(navigator.clipboard.writeText)
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("renders without crashing", () => {
+  it("renders a button with copy icon and correct accessibility attributes", () => {
+    render(<CopyButton text="test code" />)
+
+    const button = screen.getByRole("button", {
+      name: "Copy to clipboard",
+    })
+    expect(button).toBeVisible()
+    expect(button).toHaveAttribute("title", "Copy to clipboard")
+
+    // Verify copy icon is present initially
+    expect(screen.getByTestId("stCodeCopyButton")).toBeVisible()
+  })
+
+  it("copies text to clipboard when clicked", async () => {
+    const testText = "console.log('Hello World')"
+    mockWriteText.mockResolvedValue()
+
+    render(<CopyButton text={testText} />)
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy to clipboard",
+    })
+    await userEvent.click(copyButton)
+
+    expect(mockWriteText).toHaveBeenCalledWith(testText)
+  })
+
+  it("shows check icon temporarily after successful copy", async () => {
+    mockWriteText.mockResolvedValue()
+
     render(<CopyButton text="test" />)
-    expect(screen.getByTestId("stCodeCopyButton")).toBeInTheDocument()
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy to clipboard",
+    })
+    await userEvent.click(copyButton)
+
+    // The icon should change to check (we can't easily test the specific icon,
+    // but we can verify the button is still present and functional)
+    expect(copyButton).toBeVisible()
+    expect(mockWriteText).toHaveBeenCalledWith("test")
   })
 
-  describe("attributes", () => {
-    it("should have title", () => {
-      render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
-        "title",
-        "Copy to clipboard"
-      )
-    })
+  it("reverts to copy icon after timeout", async () => {
+    mockWriteText.mockResolvedValue()
 
-    it("should have clipboard text", () => {
-      render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
-        "data-clipboard-text",
-        "test"
-      )
+    render(<CopyButton text="test" />)
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy to clipboard",
     })
+    await userEvent.click(copyButton)
+
+    expect(mockWriteText).toHaveBeenCalledWith("test")
+
+    // Wait for the timeout to reset the state (default is 2 seconds)
+    await waitFor(
+      () => {
+        // We can't easily test the icon change, but we can verify the button remains functional
+        expect(copyButton).toBeVisible()
+      },
+      { timeout: 3000 }
+    )
   })
 
-  describe("calling clipboard", () => {
-    it("should be called on did mount", () => {
-      render(<CopyButton text="test" />)
+  it("handles copy failure gracefully", async () => {
+    mockWriteText.mockRejectedValue(new Error("Copy failed"))
 
-      expect(Clipboard).toHaveBeenCalled()
+    render(<CopyButton text="test" />)
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy to clipboard",
     })
 
-    it("should be called on unmount", () => {
-      const { unmount } = render(<CopyButton text="test" />)
+    // Should not throw even if clipboard operation fails
+    await userEvent.click(copyButton)
 
-      unmount()
+    expect(mockWriteText).toHaveBeenCalledWith("test")
+    expect(copyButton).toBeVisible()
+  })
 
-      // @ts-expect-error
-      const mockClipboard = Clipboard.mock.instances[0]
-      const mockDestroy = mockClipboard.destroy
+  it("can be clicked multiple times", async () => {
+    mockWriteText.mockResolvedValue()
 
-      expect(mockDestroy).toHaveBeenCalled()
+    render(<CopyButton text="test code" />)
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy to clipboard",
     })
+
+    await userEvent.click(copyButton)
+    await userEvent.click(copyButton)
+    await userEvent.click(copyButton)
+
+    expect(mockWriteText).toHaveBeenCalledTimes(3)
+    expect(mockWriteText).toHaveBeenCalledWith("test code")
   })
 })

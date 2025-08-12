@@ -40,7 +40,10 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledClearIconContainer } from "./styled-components"
+import {
+  StyledClearIconContainer,
+  StyledTimeDropdownListItem,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -127,12 +130,7 @@ function TimeInput({
           },
 
           DropdownListItem: {
-            style: () => ({
-              paddingRight: theme.spacing.lg,
-              paddingLeft: theme.spacing.lg,
-              paddingTop: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-            }),
+            component: StyledTimeDropdownListItem,
           },
 
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off

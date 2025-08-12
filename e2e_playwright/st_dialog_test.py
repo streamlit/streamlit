@@ -46,8 +46,12 @@ def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
 
 
-def open_largewidth_dialog(app: Page):
+def open_large_width_dialog(app: Page):
     click_button(app, "Open large-width Dialog")
+
+
+def open_medium_width_dialog(app: Page):
+    click_button(app, "Open medium-width Dialog")
 
 
 def open_headings_dialogs(app: Page):
@@ -280,10 +284,11 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     assert_snapshot(dialog, name="st_dialog-default")
 
 
-def test_largewidth_dialog_displays_correctly(
+def test_large_width_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    open_largewidth_dialog(app)
+    """Test that a dialog with a large width displays correctly."""
+    open_large_width_dialog(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
@@ -293,6 +298,23 @@ def test_largewidth_dialog_displays_correctly(
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
+
+
+def test_medium_width_dialog_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a medium width displays correctly."""
+    open_medium_width_dialog(app)
+    dialog = app.get_by_role("dialog")
+    # click on the dialog title to take away focus of all elements and make the
+    # screenshot stable. Then hover over the button for visual effect.
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Medium-width Dialog"
+    ).click()
+
+    submit_button = get_button(dialog, "Submit")
+    submit_button.hover()
+    assert_snapshot(dialog, name="st_dialog-with_medium_width")
 
 
 # its enough to test this on one browser as showing the error inline is more a backend
@@ -370,10 +392,8 @@ def test_dialogs_have_different_fragment_ids(app: Page):
 def test_dialog_copy_buttons_work(app: Page):
     """Test that the copy buttons in the dialog work as expected.
 
-    We paste the copied content into an input field. We could use
-    playwright's app.evaluate("navigator.clipboard.readText()") to get
-    the copied text, but then we have to grant permission to the user
-    agent to allow accessing the clipboard.
+    We paste the copied content into an input field to verify that the copy
+    button works.
     """
 
     open_dialog_with_copy_buttons(app)
@@ -409,10 +429,14 @@ def test_dialog_with_chart(app: Page):
     open_dialog_with_chart(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
+    expect(main_dialog).to_be_visible()
 
     # Check for the chart & tooltip
-    chart = main_dialog.get_by_test_id("stVegaLiteChart")
-    chart.hover(position={"x": 60, "y": 220})
+    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
+        "[role='graphics-document']"
+    )
+    expect(chart).to_be_visible()
+    chart.hover(position={"x": 80, "y": 200})
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
