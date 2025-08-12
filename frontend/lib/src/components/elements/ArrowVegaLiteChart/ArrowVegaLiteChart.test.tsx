@@ -153,7 +153,9 @@ describe("ArrowVegaLiteChart", () => {
     await user.click(showDataButton)
 
     // Should switch to grid view (Show chart action appears)
-    await screen.findByRole("button", { name: "Show chart" })
+    expect(
+      await screen.findByRole("button", { name: "Show chart" })
+    ).toBeVisible()
   })
 
   it("does not show 'Show data' when neither data nor datasets are provided", () => {
