@@ -28,6 +28,19 @@ interface ReadOnlyGridProps {
   customToolbarActions?: React.ReactNode[]
 }
 
+/**
+ * A lightweight wrapper around the dataframe component that allows to reuse the
+ * component as a ready-only data grid for arrow data for other cases
+ * (e.g. to show underlying data of a chart).
+ *
+ * The width is always set to stretch, but the height can be configured.
+ *
+ * @param data - The arrow data to display in the grid.
+ * @param height - The height of the grid.
+ * @param customToolbarActions - Custom toolbar actions to display int the grid toolbar.
+ *
+ * @returns A React element that displays the data in a read-only grid.
+ */
 export const ReadOnlyGrid = ({
   data,
   height,
@@ -40,13 +53,13 @@ export const ReadOnlyGrid = ({
           // Use container width is deprecated, the
           // more relevant attribute is the width config below:
           useContainerWidth: true,
-          // Enfroce read-only mode:
+          // Enforces read-only mode:
           editingMode: Arrow.EditingMode.READ_ONLY,
           disabled: true,
-          // data provided via the data property below:
+          // Data is provided via the data property below:
           data: undefined,
           styler: null,
-          width: null,
+          width: undefined,
           height: height ?? null,
           id: "",
           columns: "",
@@ -62,7 +75,11 @@ export const ReadOnlyGrid = ({
       disableFullscreenMode={true}
       customToolbarActions={customToolbarActions}
       widthConfig={new streamlit.WidthConfig({ useStretch: true })}
-      heightConfig={new streamlit.HeightConfig({ pixelHeight: height })}
+      heightConfig={
+        height
+          ? new streamlit.HeightConfig({ pixelHeight: height })
+          : undefined
+      }
     />
   )
 }

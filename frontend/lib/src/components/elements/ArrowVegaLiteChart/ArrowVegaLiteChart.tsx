@@ -91,6 +91,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     elementRef: containerRef,
   } = useResizeObserver(
     useMemo(() => ["width", "height"], []),
+    // We need to update whenever the showData state changes because
+    // the underlying element ref that needs to be observed is updated.
     [showData]
   )
 
@@ -156,6 +158,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets, updateView, showData])
 
   useEffect(() => {
+    // We only show data if its provided via data or if there
+    // is one data set in the datasets array. In this case,
+    // only the first dataset is shown:
     if (data || (datasets && datasets[0]?.data)) {
       setEnableShowData(true)
     } else {

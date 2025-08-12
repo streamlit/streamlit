@@ -128,6 +128,7 @@ export interface DataFrameProps {
   widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
   fragmentId?: string
+  // Custom toolbar actions (as React nodes) to display in the grid toolbar.
   customToolbarActions?: React.ReactNode[]
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
