@@ -113,8 +113,10 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
         file_chooser = fc_info.value
         file_chooser.set_files(files=files)
 
-    # take away hover focus of button
+    # take away hover focus of button and move mouse away from upload area
     app.keyboard.press("Escape")
+    # Move mouse to top-left corner to avoid hovering over any interactive elements
+    app.mouse.move(0, 0)
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
     wait_for_app_run(app, 500)
@@ -382,11 +384,16 @@ def test_uploads_and_deletes_multiple_files(
     file_upload_helper(app, chat_input, files)
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(2)
+
+    # Move mouse away before taking snapshot to avoid hover effects
+    app.mouse.move(0, 0)
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
     expect(uploaded_file_names).to_have_count(2)
 
+    # Move mouse away before clicking delete to ensure no dropzone interference
+    app.mouse.move(0, 0)
     # Delete one uploaded file
     uploaded_files.get_by_test_id("stChatInputDeleteBtn").nth(0).click()
 
