@@ -24,7 +24,11 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
-import { StyledFileDropzoneSection } from "./styled-components"
+import {
+  StyledFileDropzoneBrowseButtonContainer,
+  StyledFileDropzoneContentRow,
+  StyledFileDropzoneSection,
+} from "./styled-components"
 import { getAccept } from "./utils"
 
 export interface Props {
@@ -74,20 +78,24 @@ const FileDropzone = ({
             {...inputProps}
             {...(acceptDirectory && { webkitdirectory: "" })}
           />
-          <FileDropzoneInstructions
-            multiple={multiple}
-            acceptedExtensions={acceptedExtensions}
-            maxSizeBytes={maxSizeBytes}
-            acceptDirectory={acceptDirectory}
-            disabled={disabled}
-          />
-          <BaseButton
-            kind={BaseButtonKind.SECONDARY}
-            disabled={disabled}
-            size={BaseButtonSize.SMALL}
-          >
-            {acceptDirectory ? "Browse directories" : "Browse files"}
-          </BaseButton>
+          <StyledFileDropzoneContentRow>
+            <FileDropzoneInstructions
+              multiple={multiple}
+              acceptedExtensions={acceptedExtensions}
+              maxSizeBytes={maxSizeBytes}
+              acceptDirectory={acceptDirectory}
+              disabled={disabled}
+            />
+            <StyledFileDropzoneBrowseButtonContainer>
+              <BaseButton
+                kind={BaseButtonKind.SECONDARY}
+                disabled={disabled}
+                size={BaseButtonSize.SMALL}
+              >
+                {acceptDirectory ? "Browse directories" : "Browse files"}
+              </BaseButton>
+            </StyledFileDropzoneBrowseButtonContainer>
+          </StyledFileDropzoneContentRow>
         </StyledFileDropzoneSection>
       )
     }}

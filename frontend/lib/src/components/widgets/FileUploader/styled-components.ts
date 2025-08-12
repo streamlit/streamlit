@@ -26,13 +26,18 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   ({ isDisabled, theme }) => ({
     display: "flex",
     alignItems: "center",
-    padding: theme.spacing.lg,
+    boxSizing: "border-box",
+    // Tune vertical padding so total height computes to 68px in the happy path
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
-    height: theme.sizes.largestElementHeight,
+    minHeight: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
@@ -40,6 +45,30 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
+  })
+)
+
+export const StyledFileDropzoneContentRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  width: theme.sizes.full,
+  // Inner row height = container minHeight - vertical paddings - borders
+  minHeight: `calc(${theme.sizes.largestElementHeight} - (${theme.spacing.md} + ${theme.spacing.lg}) - (2 * ${theme.sizes.borderWidth}))`,
+}))
+
+export const StyledFileDropzoneBrowseButtonContainer = styled.div(
+  ({ theme }) => ({
+    flex: 0,
+    whiteSpace: "nowrap",
+
+    "> button": {
+      // Match the button to the content row height.
+      boxSizing: "border-box",
+      height: `calc(${theme.sizes.largestElementHeight} - (${theme.spacing.md} + ${theme.spacing.lg}) - (2 * ${theme.sizes.borderWidth}))`,
+      paddingTop: theme.spacing.none,
+      paddingBottom: theme.spacing.none,
+    },
   })
 )
 
@@ -60,6 +89,7 @@ export const StyledFileDropzoneInstructionsText = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled }) => ({
   color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+  lineHeight: theme.lineHeights.tight,
 }))
 
 export const StyledFileDropzoneInstructionsSubtext = styled.span<{
@@ -67,11 +97,13 @@ export const StyledFileDropzoneInstructionsSubtext = styled.span<{
 }>(({ theme, disabled }) => ({
   fontSize: theme.fontSizes.sm,
   color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+  lineHeight: theme.lineHeights.tight,
 }))
 
 export const StyledFileDropzoneInstructionsColumn = styled.div({
   display: "flex",
   flexDirection: "column",
+  gap: "0.375rem",
 })
 
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
@@ -150,6 +182,18 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     flexDirection: "column",
     alignItems: "flex-start",
     height: "auto",
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneContentRow as any]: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    width: theme.sizes.full,
+    minHeight: "auto",
+    gap: theme.spacing.sm,
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructions as any]: {
@@ -181,6 +225,13 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFileData as any]: {
     flexDirection: "column",
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneBrowseButtonContainer as any]: {
+    marginTop: theme.spacing.sm,
+    "> button": {
+      height: theme.sizes.minElementHeight,
+    },
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileError as any]: {
