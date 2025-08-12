@@ -179,12 +179,13 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
         "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
         return_value=(
             MagicMock(
+                client_id="test_client_id",
                 load_server_metadata=MagicMock(
                     return_value={
                         # Use a fake ese-provider as google does not use end_session_endpoint
                         "end_session_endpoint": "https://ese-provider.example.com/logout"
                     }
-                )
+                ),
             ),
             "",
         ),
@@ -215,10 +216,11 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.code == 302
         assert '_streamlit_user="";' in response.headers["Set-Cookie"]
 
-        # Should redirect to provider's logout URL with post_logout_redirect_uri
+        # Should redirect to provider's logout URL with post_logout_redirect_uri and client_id
         location = response.headers["Location"]
         assert location.startswith("https://ese-provider.example.com/logout")
         assert "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501" in location
+        assert "client_id=test_client_id" in location
 
         # Verify create_oauth_client was called with the correct provider
         mock_create_oauth_client.assert_called_once_with("ese-provider")

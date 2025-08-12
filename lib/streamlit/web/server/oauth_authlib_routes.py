@@ -220,9 +220,12 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 _LOGGER.info("Redirect url could not be determined")
                 return None
 
-            logout_params = {"post_logout_redirect_uri": redirect_root}
+            logout_params = {
+                "client_id": client.client_id,
+                "post_logout_redirect_uri": redirect_root,
+                # Not using id_token_hint as we don't store the id token
+            }
 
-            # Not using id_token_hint as we don't store the id token
             return f"{end_session_endpoint}?{urlencode(logout_params)}"
 
         except Exception as e:
