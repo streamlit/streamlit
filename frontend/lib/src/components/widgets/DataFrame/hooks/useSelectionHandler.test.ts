@@ -50,9 +50,6 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isColumnSelectionActivated).toEqual(false)
     expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(false)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
   })
 
   it("detects multi row selection", () => {
@@ -73,9 +70,6 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isColumnSelectionActivated).toEqual(false)
     expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(false)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
   })
 
   it("detects single column selection", () => {
@@ -96,9 +90,6 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isColumnSelectionActivated).toEqual(true)
     expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(false)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
   })
   it("detects multi column selection", () => {
     const { result } = renderHook(() =>
@@ -118,53 +109,6 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isColumnSelectionActivated).toEqual(true)
     expect(result.current.isMultiColumnSelectionActivated).toEqual(true)
-
-    expect(result.current.isCellSelectionActivated).toEqual(false)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
-  })
-  it("detects single cell selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.SINGLE_CELL],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(true)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
-  })
-  it("detects multi cell selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.MULTI_CELL],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(true)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(true)
   })
   it("detects single cell selection", () => {
     const { result } = renderHook(() =>
