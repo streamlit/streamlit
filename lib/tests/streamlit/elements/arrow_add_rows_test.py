@@ -93,7 +93,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     def test_charts_with_implict_x_and_explicit_y(self, chart_command):
         expected = pd.DataFrame(
             {
-                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3],
+                f"index{_PROTECTION_SUFFIX}": [1, 2, 3],
                 "b": [21, 22, 23],
             }
         )
