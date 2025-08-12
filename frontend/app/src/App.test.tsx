@@ -4513,6 +4513,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
+        // eslint-disable-next-line testing-library/prefer-user-event
         fireEvent.click(closeButton)
 
         expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
@@ -4595,6 +4596,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
+        // eslint-disable-next-line testing-library/prefer-user-event
         fireEvent.click(closeButton)
 
         expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
@@ -4768,7 +4770,10 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
+        // eslint-disable-next-line testing-library/prefer-user-event
         fireEvent.click(closeButton)
+
+        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
 
         // Simulate multiple state changes without full reconnection
         act(() => {
