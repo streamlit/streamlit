@@ -65,7 +65,9 @@ if not directory_files:
     st.text("No directory upload")
 else:
     st.text(f"Directory contains {len(directory_files)} files:")
-    for file in directory_files:
+    # Sort files alphabetically by name for consistent ordering
+    sorted_files = sorted(directory_files, key=lambda f: f.name)
+    for file in sorted_files:
         st.text(f"- {file.name}: {len(file.read())} bytes")
         file.seek(0)  # Reset file pointer for potential reuse
 
@@ -157,7 +159,9 @@ if not restricted_directory:
     st.text("No restricted directory upload")
 else:
     st.text(f"Restricted directory contains {len(restricted_directory)} .txt files:")
-    for file in restricted_directory:
+    # Sort files alphabetically by name for consistent ordering
+    sorted_restricted_files = sorted(restricted_directory, key=lambda f: f.name)
+    for file in sorted_restricted_files:
         st.text(f"- {file.name}")
 
 if runtime.exists():

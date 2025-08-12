@@ -18,7 +18,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import pytest
 from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -286,9 +285,6 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
-@pytest.mark.skip(
-    reason="Skipping until we fix the non-deterministic ordering that causes snapshot diffs"
-)
 def test_uploads_directory_with_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -316,21 +312,19 @@ def test_uploads_directory_with_multiple_files(
     uploader_text = app.get_by_test_id("stText").nth(uploader_index)
     expect(uploader_text).to_contain_text("Directory contains 3 files:")
 
-    # Verify individual files are shown (order may vary)
-    # Get all text elements that might contain file info
-    all_texts = []
-    for i in range(1, 4):
-        text_elem = app.get_by_test_id("stText").nth(uploader_index + i)
-        all_texts.append(text_elem.inner_text())
+    # Verify individual files are shown in alphabetical order
+    # Files should be sorted: folder/file1.txt, folder/file2.py, folder/subfolder/file3.md
+    text_elem_1 = app.get_by_test_id("stText").nth(uploader_index + 1)
+    expect(text_elem_1).to_contain_text("folder/file1.txt")
+    expect(text_elem_1).to_contain_text("8 bytes")
 
-    # Check that all expected files are present somewhere in the output
-    combined_text = " ".join(all_texts)
-    assert "folder/file1.txt" in combined_text
-    assert "8 bytes" in combined_text
-    assert "folder/file2.py" in combined_text
-    assert "14 bytes" in combined_text
-    assert "folder/subfolder/file3.md" in combined_text
-    assert "10 bytes" in combined_text
+    text_elem_2 = app.get_by_test_id("stText").nth(uploader_index + 2)
+    expect(text_elem_2).to_contain_text("folder/file2.py")
+    expect(text_elem_2).to_contain_text("14 bytes")
+
+    text_elem_3 = app.get_by_test_id("stText").nth(uploader_index + 3)
+    expect(text_elem_3).to_contain_text("folder/subfolder/file3.md")
+    expect(text_elem_3).to_contain_text("10 bytes")
 
     # Take snapshot of directory upload state
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
@@ -346,9 +340,6 @@ def test_uploads_directory_with_multiple_files(
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-@pytest.mark.skip(
-    reason="Skipping until we fix the non-deterministic ordering that causes snapshot diffs"
-)
 def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -381,27 +372,12 @@ def test_directory_upload_with_file_type_filtering(
         text = elem.inner_text()
         if "Restricted directory contains" in text:
             expect(elem).to_contain_text("Restricted directory contains 3 .txt files:")
-            # Check subsequent elements for the file names
-            expected_files = [
-                "allowed.txt",
-                "another_allowed.txt",
-                "nested/deep/file.txt",
-            ]
-            # Collect all file names shown in subsequent text elements
-            displayed_files = []
-            for j in range(1, min(4, len(text_elements) - i)):
-                file_text = text_elements[i + j].inner_text()
-                if file_text.strip().startswith("-"):
-                    displayed_files.append(file_text)
-
-            # Verify all expected files are displayed
-            for expected_file in expected_files:
-                assert any(
-                    expected_file in displayed_text
-                    for displayed_text in displayed_files
-                ), (
-                    f"Expected to find {expected_file} in displayed files: {displayed_files}"
-                )
+            # Check subsequent elements for the file names in alphabetical order
+            # Files should be sorted: allowed.txt, another_allowed.txt, nested/deep/file.txt
+            if i + 3 < len(text_elements):
+                expect(text_elements[i + 1]).to_contain_text("allowed.txt")
+                expect(text_elements[i + 2]).to_contain_text("another_allowed.txt")
+                expect(text_elements[i + 3]).to_contain_text("nested/deep/file.txt")
             found = True
             break
 
