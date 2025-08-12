@@ -1891,8 +1891,7 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
       fireEvent.click(navLinks[1])
 
       const connectionManager = getMockConnectionManager()
@@ -4001,8 +4000,7 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
       fireEvent.click(navLinks[1])
 
       const connectionManager = getMockConnectionManager()
@@ -4494,11 +4492,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
         act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
           fireEvent.click(closeButton)
         })
 
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // Second error should not display
         act(() => {
@@ -4506,7 +4504,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Another connection error")
         })
 
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
       })
 
       it("sends error info to host when blockErrorDialogs is true", () => {
@@ -4533,7 +4531,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Dialog should not be displayed
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // But error should be sent to host
         expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith(
@@ -4578,11 +4576,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
         act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
           fireEvent.click(closeButton)
         })
 
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // Simulate reconnection
         act(() => {
@@ -4637,7 +4635,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Dialog should be automatically closed
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
       })
 
       it("only rescinds CONNECTION_ERROR type dialogs on reconnection", () => {
@@ -4660,7 +4658,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Connection error dialog should be closed
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // Now test that other dialog types are not affected
         // This validates that only CONNECTION_ERROR dialogs are auto-closed
@@ -4735,8 +4733,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         // Should only show the latest error
         expect(screen.getByText("Connection error")).toBeVisible()
         expect(screen.getByText(/Error 3/)).toBeVisible()
-        expect(screen.queryByText(/Error 1/)).not.toBeInTheDocument()
-        expect(screen.queryByText(/Error 2/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Error 1/)).toBeNull()
+        expect(screen.queryByText(/Error 2/)).toBeNull()
       })
 
       it("maintains dismissal state across multiple disconnections", () => {
@@ -4754,11 +4752,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
         act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causing timeout issues
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
           fireEvent.click(closeButton)
         })
 
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // Simulate multiple state changes without full reconnection
         act(() => {
@@ -4779,7 +4777,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           connectionManager.props.onConnectionError("Another error")
         })
 
-        expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+        expect(screen.queryByText("Connection error")).toBeNull()
 
         // Only full reconnection should reset dismissal
         act(() => {
