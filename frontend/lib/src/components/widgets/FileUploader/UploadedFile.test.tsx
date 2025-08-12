@@ -27,6 +27,7 @@ import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
 const getProps = (fileStatus: FileStatus): Props => ({
   fileInfo: new UploadFileInfo("filename.txt", 15, 1, fileStatus),
   onDelete: vi.fn(),
+  disabled: false,
 })
 
 describe("FileStatus widget", () => {

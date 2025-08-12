@@ -167,3 +167,18 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# Uploader that can be disabled after uploading for snapshot testing
+toggle_disable = st.checkbox(
+    "Disable toggle uploader", key="toggle_after_upload_disable"
+)
+toggle_after_upload = st.file_uploader(
+    "Toggle disabled after upload:",
+    type=["txt"],
+    key="toggle_after_upload",
+    disabled=toggle_disable,
+)
+if toggle_after_upload is None:
+    st.text("No upload")
+else:
+    st.text(toggle_after_upload.read())

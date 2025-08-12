@@ -683,6 +683,56 @@ describe("FileUploader widget tests", () => {
     )
   })
 
+  it("does not allow deleting files when disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: true }, { disabled: true })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+
+    // Seed an existing uploaded file before rendering (simulates server state)
+    props.widgetMgr.setFileUploaderStateValue(
+      props.element,
+      buildFileUploaderStateProto([
+        new FileURLsProto({
+          fileId: "file1.txt",
+          uploadUrl: "file1.txt",
+          deleteUrl: "file1.txt",
+        }),
+      ]),
+      { fromUi: false },
+      undefined
+    )
+
+    render(<FileUploader {...props} />)
+
+    // There should be one file displayed and a delete button present but disabled
+    const deleteBtns = screen.getAllByTestId("stFileUploaderDeleteBtn")
+    expect(deleteBtns.length).toBe(1)
+    const buttonEl = within(deleteBtns[0]).getByRole("button")
+    expect(buttonEl).toBeDisabled()
+
+    // Clicking should not change files nor trigger state update
+    await user.click(buttonEl)
+    expect(screen.getAllByTestId("stFileUploaderFile").length).toBe(1)
+  })
+
+  it("allows deleting files when enabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: true })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(
+      fileDropZoneInput,
+      new File(["a"], "file1.txt", { type: "text/plain" })
+    )
+    const deleteBtn = screen.getByTestId("stFileUploaderDeleteBtn")
+    const buttonEl = within(deleteBtn).getByRole("button")
+    expect(buttonEl).not.toBeDisabled()
+    await user.click(buttonEl)
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
+  })
+
   it("can delete in-progress upload", async () => {
     const user = userEvent.setup()
     const props = getProps()

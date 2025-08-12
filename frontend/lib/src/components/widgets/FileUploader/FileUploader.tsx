@@ -439,6 +439,9 @@ class FileUploader extends PureComponent<InnerProps, State> {
    * collect it.
    */
   public deleteFile = (fileId: number): void => {
+    if (this.props.disabled) {
+      return
+    }
     const file = this.getFile(fileId)
     if (isNullOrUndefined(file)) {
       return
@@ -625,6 +628,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
             pageSize={3}
             onDelete={this.deleteFile}
             resetOnAdd
+            disabled={disabled}
           />
         )}
       </StyledFileUploader>
