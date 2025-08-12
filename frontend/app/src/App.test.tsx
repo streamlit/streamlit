@@ -1891,7 +1891,8 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+      // TODO: Utilize user-event instead of fireEvent
+      // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
 
       const connectionManager = getMockConnectionManager()
@@ -4000,7 +4001,8 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+      // TODO: Utilize user-event instead of fireEvent
+      // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
 
       const connectionManager = getMockConnectionManager()
