@@ -18,8 +18,8 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import { render } from "@streamlit/lib"
 
 import Header, { HeaderProps } from "./Header"
 
@@ -37,7 +37,6 @@ const getMockAppContext = (
   > = {}
 ): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
   showToolbar: true,
-  showColoredLine: true,
   widgetsDisabled: false,
   initialSidebarState: 1,
   pageLinkBaseUrl: "",

@@ -20,8 +20,8 @@ import { screen } from "@testing-library/react"
 
 import { Html as HtmlProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import * as UseCalculatedWidth from "~lib/hooks/useCalculatedWidth"
+import { render } from "~lib/test_util"
 
 import Html, { HtmlProps } from "./Html"
 

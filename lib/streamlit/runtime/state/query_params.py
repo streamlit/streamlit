@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, MutableMapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 from urllib import parse
 
 from streamlit.errors import StreamlitAPIException
@@ -114,6 +114,7 @@ class QueryParams(MutableMapping[str, str]):
         # to ensure only one one ForwardMsg is sent.
         self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
+            other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
             for key in other.keys():  # noqa: SIM118
                 self.__set_item_internal(key, other[key])
         else:

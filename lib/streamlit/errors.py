@@ -239,22 +239,38 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
 class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for vertical_alignment."""
 
-    def __init__(self, vertical_alignment: str) -> None:
+    def __init__(self, vertical_alignment: str, element_type: str) -> None:
         super().__init__(
-            'The `vertical_alignment` argument to `st.columns` must be `"top"`, `"center"`, or `"bottom"`. \n'
+            "The `vertical_alignment` argument to `{element_type}` must be "
+            '`"top"`, `"center"`, `"bottom"`, or `"distribute"`. \n'
             "The argument passed was {vertical_alignment}.",
             vertical_alignment=vertical_alignment,
+            element_type=element_type,
         )
 
 
 class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for gap."""
 
-    def __init__(self, gap: str) -> None:
+    def __init__(self, gap: str, element_type: str) -> None:
         super().__init__(
-            'The `gap` argument to `st.columns` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
+            'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
+            element_type=element_type,
+        )
+
+
+class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for horizontal_alignment."""
+
+    def __init__(self, horizontal_alignment: str, element_type: str) -> None:
+        super().__init__(
+            "The `horizontal_alignment` argument to `{element_type}` must be "
+            '`"left"`, `"center"`, `"right"`, or `"distribute"`. \n'
+            "The argument passed was {horizontal_alignment}.",
+            horizontal_alignment=horizontal_alignment,
+            element_type=element_type,
         )
 
 
@@ -500,4 +516,15 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
             "Invalid height value: {height}. Height must be either {valid_values}.",
             height=repr(height),
             valid_values=valid_values,
+        )
+
+
+class StreamlitValueError(LocalizableStreamlitException):
+    """Exception raised when a value is not valid for a parameter."""
+
+    def __init__(self, parameter: str, valid_values: list[str]) -> None:
+        super().__init__(
+            "Invalid `{parameter}` value. Supported values: {valid_values}.",
+            parameter=parameter,
+            valid_values=", ".join(valid_values),
         )

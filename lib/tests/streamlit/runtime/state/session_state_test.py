@@ -771,6 +771,34 @@ class SessionStateMethodTests(unittest.TestCase):
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)
 
+    def test_reset_state_value(self):
+        """Test that reset_state_value correctly sets a new state value.
+
+        This test verifies that:
+        1. A non-existent key can be set using reset_state_value
+        2. The value is correctly stored in the session state
+        3. The key is properly marked as a new state value
+        """
+        assert "corge" not in self.session_state._new_session_state
+        self.session_state.reset_state_value("corge", "grault2")
+        assert self.session_state["corge"] == "grault2"
+        assert self.session_state.is_new_state_value("corge")
+
+    def test_reset_state_value_allows_setting_created_widget(self):
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = {"widget_id"}
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            self.session_state._key_id_mapper.set_key_id_mapping(
+                {"widget_id": "widget_id"}
+            )
+            # This would normally fail with setitem, but reset_state_value bypasses this check.
+            self.session_state.reset_state_value("widget_id", "blah")
+            assert self.session_state["widget_id"] == "blah"
+
     def test_delitem(self):
         del self.session_state["foo"]
         assert "foo" not in self.session_state

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -62,11 +63,14 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
+        *,
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
         height: Height = "content",
+        chart_data: OptionSequence[Any] | None = None,
+        chart_type: Literal["line", "bar", "area"] = "line",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -135,11 +139,14 @@ class MetricMixin:
             The height of the metric element. This can be one of the following:
 
             - ``"content"`` (default): The height of the element matches the
-              height of its content, but doesn't exceed the height of the
-              parent container.
-            - ``"stretch"``: The height of the element matches the height of the
-              parent container.
-            - An integer specifying the height in pixels.
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         width : "stretch", "content", or int
             The width of the metric element. This can be one of the following:
@@ -152,6 +159,17 @@ class MetricMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        chart_data : Iterable or None
+            A sequence of numeric values to display as a sparkline chart. If this
+            is ``None`` (default), no chart is displayed.
+            The sequence can be a ``list``, ``set``, or anything supported by
+            ``st.dataframe``. If the sequence is dataframe-like, the first
+            column will be used. Each value will be cast to ``float`` internally
+            by default.
+
+        chart_type : "line", "bar", or "area"
+            The type of sparkline chart to display. Defaults to line chart.
 
         Examples
         --------
@@ -235,6 +253,22 @@ class MetricMixin:
             label_visibility
         )
 
+        if chart_data is not None:
+            prepared_data: list[float] = []
+            for val in convert_anything_to_list(chart_data):
+                try:
+                    prepared_data.append(float(val))
+                except Exception as ex:  # noqa: PERF203
+                    raise StreamlitAPIException(
+                        "Only numeric values are supported for chart data sequence. The "
+                        f"value '{val}' is of type {type(val)} and "
+                        "cannot be converted to float."
+                    ) from ex
+            if len(prepared_data) > 0:
+                metric_proto.chart_data.extend(prepared_data)
+
+        metric_proto.chart_type = _parse_chart_type(chart_type)
+
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width, height=height)
@@ -244,6 +278,17 @@ class MetricMixin:
     @property
     def dg(self) -> DeltaGenerator:
         return cast("DeltaGenerator", self)
+
+
+def _parse_chart_type(
+    chart_type: Literal["line", "bar", "area"],
+) -> MetricProto.ChartType.ValueType:
+    if chart_type == "bar":
+        return MetricProto.ChartType.BAR
+    if chart_type == "area":
+        return MetricProto.ChartType.AREA
+    # Use line as default chart:
+    return MetricProto.ChartType.LINE
 
 
 def _parse_label(label: str) -> str:

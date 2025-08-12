@@ -204,6 +204,11 @@ export default tseslint.config([
           property: "innerHeight",
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -245,7 +250,7 @@ export default tseslint.config([
         },
       ],
       "import/order": [
-        1,
+        "error",
         {
           pathGroups: [
             {
@@ -255,6 +260,11 @@ export default tseslint.config([
             },
             {
               pattern: "@streamlit/**",
+              group: "internal",
+              position: "before",
+            },
+            {
+              pattern: "~lib/**",
               group: "internal",
               position: "before",
             },
@@ -269,6 +279,10 @@ export default tseslint.config([
             "index",
           ],
           "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
         },
       ],
       "streamlit-custom/no-hardcoded-theme-values": "error",
@@ -289,6 +303,12 @@ export default tseslint.config([
               message:
                 "Please use the useEmotionTheme hook instead of useTheme for type-safety",
               importNames: ["useTheme"],
+            },
+            {
+              name: "axios",
+              importNames: ["CancelToken"],
+              message:
+                "Please use the `AbortController` API instead of `CancelToken`",
             },
           ],
         },

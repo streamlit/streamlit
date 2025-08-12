@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.12.2
+    rev: v0.12.7
     hooks:
       # Run the linter.
       - id: ruff
@@ -81,6 +81,15 @@ repos:
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
+      - id: prettier-vscode-devcontainer-json
+        name: Prettier VSCode/devcontainer JSON
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
+        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
+        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.vscode/*.json" "../../.devcontainer/*.json" --write --config ../.prettierrc
+        files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
+        language: node
+        pass_filenames: false
       - id: license-headers
         name: Checks license headers
         entry: ./scripts/check_license_headers.py
@@ -98,6 +107,12 @@ repos:
         entry: ./scripts/generate_copilot_instructions.py
         language: system
         files: ^.cursor/.*\.(mdc)$
+        pass_filenames: false
+      - id: vscode-devcontainer-sync
+        name: Check VSCode/devcontainer sync
+        entry: ./scripts/sync_vscode_devcontainer.py --check
+        language: system
+        files: ^(.vscode/(settings|extensions)\.json|\.devcontainer/devcontainer\.json)$
         pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
@@ -177,6 +192,18 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+  - repo: https://gitlab.com/bmares/check-json5
+    rev: v1.0.0
+    hooks:
+      # Check JSON files that are allowed to have comments
+      - id: check-json5
+        # Note that this should be the same as the check-json hook's exclude
+        # property
+        files: |
+          (?x)
+          ^\.vscode/.*\.json$
+          |tsconfig.*\.json$
+          |.*tsconfig\.json$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -189,7 +216,13 @@ repos:
           |\.snap$
       - id: check-added-large-files
       - id: check-json
-        exclude: .vscode/launch.json
+        # Note that this should be the same as the check-json5 hook's files
+        # property
+        exclude: |
+          (?x)
+          ^\.vscode/.*\.json$
+          |tsconfig.*\.json$
+          |.*tsconfig\.json$
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml

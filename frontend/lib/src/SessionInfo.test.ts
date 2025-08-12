@@ -16,8 +16,8 @@
 
 import { NewSession } from "@streamlit/protobuf"
 
-import { SessionInfo } from "./SessionInfo"
 import { mockSessionInfoProps } from "./mocks/mocks"
+import { SessionInfo } from "./SessionInfo"
 
 test("Throws an error when used before initialization", () => {
   const sessionInfo = new SessionInfo()

@@ -24,7 +24,70 @@ from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
+COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
+
+
+def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a text input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stTextInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a text area with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stTextArea").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a selectbox with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stSelectbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
 
 
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
@@ -943,3 +1006,24 @@ def goto_app(page: Page, url: str) -> None:
     """
     page.goto(url)
     wait_for_app_loaded(page)
+
+
+def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a metric element with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the metric element.
+
+    label : str | Pattern[str]
+        The label of the metric element to get.
+
+    Returns
+    -------
+    Locator
+        The metric element.
+    """
+    element = locator.get_by_test_id("stMetric").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element

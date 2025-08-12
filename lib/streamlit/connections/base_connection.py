@@ -109,11 +109,11 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         are implementing their class' ``_connect`` method. User scripts should, for the
         most part, have no reason to use this property.
         """
-        connections_section = None
+        connections_section: AttrDict | None = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
 
-        if type(connections_section) is not AttrDict:
+        if connections_section is None or type(connections_section) is not AttrDict:
             return AttrDict({})
 
         return connections_section.get(self._connection_name, AttrDict({}))

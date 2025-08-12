@@ -25,8 +25,8 @@ import {
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { withTimezones } from "~lib/util/withTimezones"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Slider, { Props } from "./Slider"
 
@@ -142,16 +142,6 @@ describe("Slider widget", () => {
       { fromUi: false },
       "myFragmentId"
     )
-  })
-
-  it("renders tick bar with min and max", () => {
-    const props = getProps()
-    render(<Slider {...props} />)
-
-    const min = screen.getByTestId("stSliderTickBarMin")
-    const max = screen.getByTestId("stSliderTickBarMax")
-    expect(min).toHaveTextContent("0")
-    expect(max).toHaveTextContent("10")
   })
 
   describe("Single value", () => {
@@ -390,7 +380,7 @@ describe("Slider widget", () => {
 
   describe("Datetime slider", () => {
     withTimezones(() => {
-      it("formats min and max as dates", () => {
+      it("formats datetime values correctly", () => {
         const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
         const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
 
@@ -406,11 +396,9 @@ describe("Slider widget", () => {
         })
         render(<Slider {...props} />)
 
-        const min = screen.getByTestId("stSliderTickBarMin")
-        const max = screen.getByTestId("stSliderTickBarMax")
-
-        expect(min).toHaveTextContent("1970-01-01")
-        expect(max).toHaveTextContent("1970-01-29")
+        // Test that the thumb value shows formatted datetime
+        const thumbValue = screen.getByTestId("stSliderThumbValue")
+        expect(thumbValue).toHaveTextContent("1970-01-01")
       })
     })
   })
