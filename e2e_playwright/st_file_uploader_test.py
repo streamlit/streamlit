@@ -285,10 +285,14 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
-def test_uploads_directory_with_multiple_files(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that directory upload works correctly with multiple files."""
+def test_uploads_directory_with_multiple_files(app: Page):
+    """Test that directory upload works correctly with multiple files.
+
+    Note: We don't test the visual order of files in the widget because:
+    1. The frontend intentionally displays files in reverse chronological order (newest first)
+    2. The order in which browsers return directory files is non-deterministic
+    3. We verify functionality by checking that all files are uploaded correctly
+    """
     # Create temporary directory structure with multiple files
     directory_data = [
         {"path": "folder/file1.txt", "content": b"content1"},
@@ -312,8 +316,8 @@ def test_uploads_directory_with_multiple_files(
     uploader_text = app.get_by_test_id("stText").nth(uploader_index)
     expect(uploader_text).to_contain_text("Directory contains 3 files:")
 
-    # Verify individual files are shown in alphabetical order
-    # Files should be sorted: folder/file1.txt, folder/file2.py, folder/subfolder/file3.md
+    # Verify that all expected files are uploaded (order-independent)
+    # The Python backend sorts them alphabetically for display
     text_elem_1 = app.get_by_test_id("stText").nth(uploader_index + 1)
     expect(text_elem_1).to_contain_text("folder/file1.txt")
     expect(text_elem_1).to_contain_text("8 bytes")
@@ -326,9 +330,29 @@ def test_uploads_directory_with_multiple_files(
     expect(text_elem_3).to_contain_text("folder/subfolder/file3.md")
     expect(text_elem_3).to_contain_text("10 bytes")
 
-    # Take snapshot of directory upload state
+    # Verify files appear in the widget (without checking order)
+    # Get all file names from the specific file uploader widget
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    assert_snapshot(file_uploader, name="st_file_uploader-directory_uploaded")
+    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
+
+    # Extract the text from each file name element
+    uploaded_file_names = [elem.inner_text() for elem in file_name_elements]
+
+    # Should have exactly 3 files uploaded
+    assert len(uploaded_file_names) == 3, (
+        f"Expected 3 files, but found {len(uploaded_file_names)}"
+    )
+
+    # Verify all expected files are present (order-independent)
+    expected_files = [
+        "upload_dir/folder/file1.txt",
+        "upload_dir/folder/file2.py",
+        "upload_dir/folder/subfolder/file3.md",
+    ]
+    for expected_file in expected_files:
+        assert any(expected_file in name for name in uploaded_file_names), (
+            f"Expected to find {expected_file} in uploaded files: {uploaded_file_names}"
+        )
 
     # Test deleting files from directory upload
     delete_buttons = app.get_by_test_id("stFileUploaderDeleteBtn")
@@ -340,10 +364,14 @@ def test_uploads_directory_with_multiple_files(
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-def test_directory_upload_with_file_type_filtering(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that directory upload correctly filters files by type."""
+def test_directory_upload_with_file_type_filtering(app: Page):
+    """Test that directory upload correctly filters files by type.
+
+    Note: We don't test the visual order of files in the widget because:
+    1. The frontend intentionally displays files in reverse chronological order (newest first)
+    2. The order in which browsers return directory files is non-deterministic
+    3. We verify functionality by checking that files are filtered and uploaded correctly
+    """
     uploader_index = 13  # Restricted directory uploader index
 
     # Create a temporary directory with test files
@@ -373,7 +401,7 @@ def test_directory_upload_with_file_type_filtering(
         if "Restricted directory contains" in text:
             expect(elem).to_contain_text("Restricted directory contains 3 .txt files:")
             # Check subsequent elements for the file names in alphabetical order
-            # Files should be sorted: allowed.txt, another_allowed.txt, nested/deep/file.txt
+            # The Python backend sorts them alphabetically
             if i + 3 < len(text_elements):
                 expect(text_elements[i + 1]).to_contain_text("allowed.txt")
                 expect(text_elements[i + 2]).to_contain_text("another_allowed.txt")
@@ -383,8 +411,31 @@ def test_directory_upload_with_file_type_filtering(
 
     assert found, "Could not find restricted directory output"
 
+    # Verify files appear in the widget (without checking order)
+    # Get all file names from the specific file uploader widget
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    assert_snapshot(file_uploader, name="st_file_uploader-directory_filtered")
+    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
+
+    # Extract the text from each file name element
+    all_file_names = [elem.inner_text() for elem in file_name_elements]
+
+    # Should have exactly 3 .txt files uploaded
+    assert len(all_file_names) == 3, (
+        f"Expected 3 files, but found {len(all_file_names)}"
+    )
+
+    # Verify all expected .txt files are present (order-independent)
+    # and that .pdf file was filtered out
+    expected_txt_files = ["allowed.txt", "another_allowed.txt", "nested/deep/file.txt"]
+    for expected_file in expected_txt_files:
+        assert any(expected_file in name for name in all_file_names), (
+            f"Expected to find {expected_file} in uploaded files: {all_file_names}"
+        )
+
+    # Verify the .pdf file was NOT uploaded
+    assert not any("disallowed.pdf" in name for name in all_file_names), (
+        "PDF file should have been filtered out"
+    )
 
 
 def test_directory_upload_empty_directory(app: Page):
