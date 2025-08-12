@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from google.protobuf.message import Message
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType
 
@@ -59,6 +60,7 @@ class ElementMsgData:
     id_of_dg_called_on: str
     returned_dgs_id: str
     media_data: list[MediaMsgData] | None = None
+    layout_config: LayoutConfig | None = None
 
 
 @dataclass(frozen=True)
@@ -168,6 +170,7 @@ class CachedMessageReplayContext(threading.local):
         invoked_dg_id: str,
         used_dg_id: str,
         returned_dg_id: str,
+        layout_config: LayoutConfig | None = None,
     ) -> None:
         """Record the element protobuf as having been produced during any currently
         executing cached functions, so they can be replayed any time the function's
@@ -187,6 +190,7 @@ class CachedMessageReplayContext(threading.local):
                 id_to_save,
                 returned_dg_id,
                 media_data,
+                layout_config,
             )
             for msgs in self._cached_message_stack:
                 msgs.append(element_msg_data)
@@ -275,7 +279,9 @@ def replay_cached_messages(
                             data.media, data.mimetype, data.media_id
                         )
                 dg = returned_dgs[msg.id_of_dg_called_on]
-                maybe_dg = dg._enqueue(msg.delta_type, msg.message)
+                maybe_dg = dg._enqueue(
+                    msg.delta_type, msg.message, layout_config=msg.layout_config
+                )
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg
             elif isinstance(msg, BlockMsgData):
