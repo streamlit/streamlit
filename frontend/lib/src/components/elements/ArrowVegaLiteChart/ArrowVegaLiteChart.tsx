@@ -155,7 +155,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     updateView(data, datasets)
-  }, [data, datasets, updateView, showData])
+  }, [data, datasets, updateView])
 
   useEffect(() => {
     // We only show data if its provided via data or if there
