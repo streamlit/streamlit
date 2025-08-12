@@ -94,7 +94,7 @@ def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFun
     wait_for_app_loaded(app)
 
     # Retrieve the container containing the page link & button:
-    container = app.get_by_test_id("stLayoutWrapper")
+    container = app.get_by_test_id("stLayoutWrapper").nth(1)
     expect(container).to_be_visible()
 
     page_link = container.get_by_test_id("stPageLink")
