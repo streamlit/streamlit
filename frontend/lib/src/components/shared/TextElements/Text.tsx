@@ -22,13 +22,22 @@ export enum Kind {
 
 interface TextProps {
   kind?: Kind
+  disabled?: boolean
 }
 
-export const Small = styled.small<TextProps>(({ kind, theme }) => {
-  const { danger, fadedText60 } = theme.colors
+export const Small = styled.small<TextProps>(({ kind, disabled, theme }) => {
+  const { danger, fadedText60, fadedText40 } = theme.colors
+
+  let color = fadedText60
+  if (disabled) {
+    color = fadedText40
+  }
+  if (kind === Kind.DANGER) {
+    color = danger
+  }
 
   return {
-    color: kind === Kind.DANGER ? danger : fadedText60,
+    color,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.tight,
   }
