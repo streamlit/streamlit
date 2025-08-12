@@ -102,5 +102,5 @@ def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFun
     expect(button).to_have_count(1)
 
     # Hover over the page link to show background color & radius application
-    page_link.nth(11).hover()
+    page_link.hover()
     assert_snapshot(container, name="st_page_link-custom-theme")
