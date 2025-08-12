@@ -265,6 +265,3 @@ with st.container(key="width_tests"):
         st.form_submit_button("Content Width (Default)", width="content")
         st.form_submit_button("Stretch Width", width="stretch")
         st.form_submit_button("250px Width", width=250)
-
-
-st.write(st.session_state)
