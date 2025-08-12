@@ -70,6 +70,14 @@ def _get_callback_df(app: Page) -> Locator:
     return get_element_by_key(app, "df_selection").get_by_test_id("stDataFrame")
 
 
+def _get_fragment_df(app: Page) -> Locator:
+    return get_element_by_key(app, "inside_fragment").get_by_test_id("stDataFrame")
+
+
+def _get_df_with_index(app: Page) -> Locator:
+    return get_element_by_key(app, "with_index").get_by_test_id("stDataFrame")
+
+
 def _get_single_cell_select_df(app: Page) -> Locator:
     return get_element_by_key(app, "single_cell_select").get_by_test_id("stDataFrame")
 
@@ -88,14 +96,6 @@ def _get_multi_row_column_and_cell_select_df(app: Page) -> Locator:
     return get_element_by_key(
         app, "multi_row_multi_column_multi_cell_select"
     ).get_by_test_id("stDataFrame")
-
-
-def _get_fragment_df(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(10)
-
-
-def _get_df_with_index(app: Page) -> Locator:
-    return app.get_by_test_id("stDataFrame").nth(11)
 
 
 def test_single_row_select(app: Page):
