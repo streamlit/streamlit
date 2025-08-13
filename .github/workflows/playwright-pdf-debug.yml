@@ -1,0 +1,200 @@
+name: Debug PDF Test Flakiness
+
+on:
+  workflow_dispatch: # Manual trigger only for debugging
+  pull_request:
+    paths:
+      - "e2e_playwright/custom_components/pdf_component_test.py"
+      - "e2e_playwright/custom_components/pdf_component.py"
+      - ".github/workflows/playwright-pdf-debug.yml"
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-playwright-pdf-debug
+  cancel-in-progress: true
+
+jobs:
+  debug-pdf-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Continue running all iterations even if one fails
+      matrix:
+        iteration:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+          ]
+        browser: [webkit] # Focus on webkit since that's where it fails most
+
+    name: PDF Test Debug - Run ${{ matrix.iteration }} (${{ matrix.browser }})
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+
+      - name: Install playwright
+        run: python -m playwright install --with-deps
+
+      - name: Run make frontend-fast
+        run: make frontend-fast
+
+      - name: Install custom components
+        run: |
+          source venv/bin/activate
+          cd e2e_playwright
+          echo "Installing custom components for run ${{ matrix.iteration }}"
+          uv pip install -r ./custom_components/components-e2e-requirements.txt
+
+      - name: Run PDF test with verbose output
+        run: |
+          source venv/bin/activate
+          cd e2e_playwright
+          echo "========================================="
+          echo "Running iteration ${{ matrix.iteration }} on ${{ matrix.browser }}"
+          echo "========================================="
+
+          # Run with verbose output and capture both stdout and stderr
+          pytest ./custom_components/pdf_component_test.py::test_st_pdf_different_heights_snapshots \
+            --browser ${{ matrix.browser }} \
+            -vv \
+            --tb=short \
+            --capture=no \
+            2>&1 | tee test-output-${{ matrix.iteration }}.log
+
+          # Store exit code
+          echo "Exit code: ${PIPESTATUS[0]}"
+
+          # Always exit 0 to continue other iterations
+          exit 0
+
+      - name: Check for Loading PDF text in snapshots
+        if: always()
+        run: |
+          echo "Checking for 'Loading PDF' in test output..."
+          if grep -i "loading pdf" e2e_playwright/test-output-${{ matrix.iteration }}.log; then
+            echo "❌ FOUND 'Loading PDF' in test output for iteration ${{ matrix.iteration }}"
+            echo "This indicates the PDF was not fully loaded before snapshot"
+          else
+            echo "✅ No 'Loading PDF' found in iteration ${{ matrix.iteration }}"
+          fi
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pdf-test-debug-logs-${{ matrix.browser }}-${{ matrix.iteration }}
+          path: |
+            e2e_playwright/test-output-*.log
+            e2e_playwright/test-results/
+
+      - name: Upload snapshots if failed
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: pdf-test-snapshots-${{ matrix.browser }}-${{ matrix.iteration }}
+          path: |
+            e2e_playwright/__snapshots__/
+            e2e_playwright/test-results/
+
+  summarize-results:
+    needs: debug-pdf-test
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Analyze results
+        run: |
+          echo "## PDF Test Flakiness Analysis"
+          echo "================================"
+
+          total_runs=0
+          failed_runs=0
+          loading_pdf_found=0
+
+          for log in artifacts/pdf-test-debug-logs-*/test-output-*.log; do
+            if [ -f "$log" ]; then
+              total_runs=$((total_runs + 1))
+              iteration=$(basename "$log" | sed 's/test-output-\(.*\)\.log/\1/')
+
+              echo "Checking iteration $iteration..."
+
+              # Check for test failure
+              if grep -q "FAILED" "$log" || grep -q "ERROR" "$log"; then
+                failed_runs=$((failed_runs + 1))
+                echo "  ❌ Test failed in iteration $iteration"
+              else
+                echo "  ✅ Test passed in iteration $iteration"
+              fi
+
+              # Check for "Loading PDF" text
+              if grep -qi "loading pdf" "$log"; then
+                loading_pdf_found=$((loading_pdf_found + 1))
+                echo "  ⚠️  'Loading PDF' found in iteration $iteration"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "## Summary"
+          echo "Total runs: $total_runs"
+          echo "Failed runs: $failed_runs"
+          echo "Runs with 'Loading PDF': $loading_pdf_found"
+
+          if [ $total_runs -gt 0 ]; then
+            failure_rate=$((failed_runs * 100 / total_runs))
+            echo "Failure rate: ${failure_rate}%"
+          fi
+
+          # Create summary for GitHub
+          echo "## 📊 PDF Test Flakiness Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Runs | $total_runs |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed Runs | $failed_runs |" >> $GITHUB_STEP_SUMMARY
+          echo "| Runs with 'Loading PDF' | $loading_pdf_found |" >> $GITHUB_STEP_SUMMARY
+          if [ $total_runs -gt 0 ]; then
+            echo "| Failure Rate | ${failure_rate}% |" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -38,8 +38,8 @@ def _expect_iframe_attached(app: Page):
 def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     """Wait for PDF content to finish loading inside the iframe.
 
-    This function waits for the PDF viewer to finish loading by checking
-    that the "Loading PDF..." text is no longer present in the iframe content.
+    Since we can't access iframe content due to cross-origin restrictions,
+    we wait for the iframe to be stable and network to be idle.
 
     Parameters
     ----------
@@ -47,138 +47,34 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
         The page containing the PDF component
     timeout : int
         Maximum time to wait in milliseconds
-
-    Raises
-    ------
-    TimeoutError
-        If the PDF doesn't load within the timeout period
-    AssertionError
-        If the PDF is still showing loading text after the wait
     """
     iframe = app.locator("iframe").first
 
     # First ensure the iframe is attached and visible
-    expect(iframe).to_be_visible()
+    expect(iframe).to_be_visible(timeout=timeout)
 
-    # Then wait for the PDF content to load by checking that loading text is gone
-    def check_pdf_loaded() -> bool:
-        result = iframe.evaluate(
-            """
-            (iframe) => {
-                try {
-                    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-                    if (!doc) {
-                        return { loaded: false, reason: 'No document found' };
-                    }
+    # Wait for the iframe to have a stable src attribute
+    # This ensures the PDF component has initialized
+    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=timeout)
 
-                    // Get the body text content - trim whitespace for better comparison
-                    const bodyText = (doc.body ? doc.body.textContent || '' : '').trim();
-                    const bodyTextLower = bodyText.toLowerCase();
+    # Wait for network to be idle - this means PDF has finished downloading
+    try:
+        app.wait_for_load_state("networkidle", timeout=timeout)
+    except Exception:
+        # Even if networkidle times out, continue
+        pass
 
-                    // Check for loading indicators - be more thorough
-                    const loadingPhrases = [
-                        'loading pdf',
-                        'loading...',
-                        'loading',
-                        'please wait',
-                        'initializing'
-                    ];
-                    const hasLoadingText = loadingPhrases.some(phrase =>
-                        bodyTextLower.includes(phrase)
-                    );
+    # For the slider interaction test, ensure the slider is ready
+    # The slider should be visible and enabled before we interact with it
+    slider = app.get_by_test_id("stSlider")
+    if slider.count() > 0:
+        # If there's a slider on the page, wait for it to be ready
+        expect(slider).to_be_visible(timeout=5000)
+        expect(slider.get_by_role("slider")).to_be_enabled(timeout=5000)
 
-                    // For PDF.js based viewers, check if PDF pages are rendered
-                    // PDF.js creates divs with class 'page' for each PDF page
-                    const pdfPages = doc.querySelectorAll('.page, div[data-page-number]');
-                    const hasPdfPages = pdfPages.length > 0;
-
-                    // Check for canvas elements that PDF.js uses to render pages
-                    const canvasElements = doc.querySelectorAll('canvas');
-                    const hasRenderedCanvas = Array.from(canvasElements).some(canvas => {
-                        // Check if canvas has actual content (width/height > 0)
-                        return canvas.width > 0 && canvas.height > 0;
-                    });
-
-                    // Check for PDF viewer container elements
-                    const hasPdfViewerContainer =
-                        doc.querySelector('#viewer, .pdfViewer, .pdf-viewer') !== null ||
-                        doc.querySelector('div[id*="pdf"], div[class*="pdf"]') !== null;
-
-                    // For streamlit-pdf specifically, check if the component has initialized
-                    // The component should have either rendered pages or an embed/object element
-                    const hasEmbedElement =
-                        doc.querySelector('embed[type="application/pdf"]') !== null ||
-                        doc.querySelector('object[type="application/pdf"]') !== null;
-
-                    // Check if there's meaningful content beyond just loading text
-                    const hasContent = doc.body && doc.body.children.length > 0;
-
-                    // More strict loading check:
-                    // 1. No loading text
-                    // 2. Either has PDF pages, rendered canvas, or embed element
-                    // 3. Has some content in the body
-                    const isLoaded = !hasLoadingText &&
-                                     (hasPdfPages || hasRenderedCanvas || hasEmbedElement) &&
-                                     hasContent;
-
-                    // If we detect loading text, definitely not loaded
-                    if (hasLoadingText) {
-                        return {
-                            loaded: false,
-                            reason: 'Loading text detected',
-                            bodyText: bodyText.substring(0, 100)
-                        };
-                    }
-
-                    // If we have PDF pages or rendered canvas, it's loaded
-                    if (hasPdfPages || hasRenderedCanvas) {
-                        return {
-                            loaded: true,
-                            reason: 'PDF pages or canvas detected',
-                            pageCount: pdfPages.length,
-                            canvasCount: canvasElements.length
-                        };
-                    }
-
-                    // If we have an embed element (for native PDF rendering), it's loaded
-                    if (hasEmbedElement) {
-                        return {
-                            loaded: true,
-                            reason: 'PDF embed element detected'
-                        };
-                    }
-
-                    // If none of the above but has content and container, might still be loading
-                    if (hasPdfViewerContainer && hasContent) {
-                        return {
-                            loaded: false,
-                            reason: 'Container found but no rendered content yet',
-                            bodyLength: bodyText.length
-                        };
-                    }
-
-                    // Default: not loaded
-                    return {
-                        loaded: false,
-                        reason: 'No PDF content detected',
-                        bodyLength: bodyText.length
-                    };
-                } catch (e) {
-                    return { loaded: false, reason: 'Error: ' + e.message };
-                }
-            }
-            """,
-            iframe,
-        )
-
-        # Return true if loaded
-        return result.get("loaded", False) if isinstance(result, dict) else False
-
-    wait_until(
-        app,
-        check_pdf_loaded,
-        timeout=timeout,
-    )
+    # Give PDF.js time to render after download completes
+    # This is necessary because PDF.js renders asynchronously
+    app.wait_for_timeout(2000)
 
 
 def _reset_pdf_zoom(app: Page):
