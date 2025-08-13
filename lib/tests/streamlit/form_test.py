@@ -133,6 +133,13 @@ class FormAssociationTest(DeltaGeneratorTestCase):
 
         assert self._get_last_checkbox_form_id() == "form"
 
+    def test_setting_key(self):
+        """Test that the key can be set and that it is included in the
+        generated block element ID."""
+        st.form("form_key")
+        form_block = self.get_delta_from_queue()
+        assert "form_key" in form_block.add_block.id
+
     def test_form_in_sidebar(self):
         """Test that a form was successfully created in the sidebar."""
 

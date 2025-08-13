@@ -29,6 +29,7 @@ from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -227,6 +228,17 @@ class FormMixin:
         block_proto.width_config.CopyFrom(get_width_config(width))
         validate_height(height, allow_content=True)
         block_proto.height_config.CopyFrom(get_height_config(height))
+
+        if key:
+            # At the moment, the ID is only used for extracting the
+            # key on the frontend and setting it as CSS class.
+            # There are plans to use the ID for other features
+            # in the future. This might require including more form
+            # parameters in the ID calculation.
+            block_proto.id = compute_and_register_element_id(
+                "form", user_key=key, dg=None
+            )
+
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's

@@ -417,7 +417,11 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
   if (containerElement) {
     return (
-      <StyledLayoutWrapper data-testid="stLayoutWrapper" {...styles}>
+      <StyledLayoutWrapper
+        className={classNames("stLayoutWrapper")}
+        data-testid="stLayoutWrapper"
+        {...styles}
+      >
         {containerElement}
       </StyledLayoutWrapper>
     )

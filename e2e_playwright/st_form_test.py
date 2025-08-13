@@ -325,6 +325,11 @@ def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(height_container, name="st_form-height_container")
 
 
+def test_custom_css_class_via_key(app: Page):
+    """Test that the form has a custom css class via the key argument."""
+    expect(get_element_by_key(app, "form_1")).to_be_visible()
+
+
 def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a form with a dataframe renders correctly with the toolbar."""
     form_container = app.get_by_test_id("stVerticalBlock").nth(27)
