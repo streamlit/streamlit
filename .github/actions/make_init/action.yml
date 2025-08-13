@@ -75,6 +75,12 @@ runs:
         pip install --upgrade pip
         pip install uv
         make python-init
+        # Run editable install again to ensure that the local
+        # streamlit module takes precedence. This is
+        # needed to fix an issue with nightly CI where
+        # it might end up installing the latest streamlit version
+        # from pypi:
+        uv pip install --editable ./lib --no-deps
       shell: bash
     - name: Activate virtualenv
       run: echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH

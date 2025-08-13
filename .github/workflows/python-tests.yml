@@ -139,10 +139,6 @@ jobs:
         run: |
           source venv/bin/activate
           uv pip install -r lib/integration-requirements.txt --force-reinstall
-          # Install the local module again to ensure that it takes precedence
-          # over potentially other installed `streamlit` dependencies.
-          # This is relevant to make it work fine with `streamlit-nightly`.
-          uv pip install --editable ./lib --no-deps
       - name: Run Python integration tests
         run: make python-integration-tests
         env:

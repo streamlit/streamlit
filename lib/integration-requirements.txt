@@ -29,8 +29,3 @@ bokeh==2.4.3
 # We still need numpy < 2 for our bokeh tests since
 # bokeh 2.4.3 is incompatible with numpy 2.x:
 numpy<2
-
-# We test streamlit-pdf as integration dependency
-# since otherwise it causes issues with all our unit tests in
-# nightly CI runs (since it depends on streamlit).
-streamlit-pdf>=1.0.0
