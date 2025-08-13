@@ -186,6 +186,7 @@ const RawElementNodeRenderer = (
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
     widthConfig: node.element.widthConfig,
+    heightConfig: node.element.heightConfig,
   }
 
   const widgetProps = {
@@ -324,7 +325,12 @@ const RawElementNodeRenderer = (
       )
 
     case "metric":
-      return <Metric element={node.element.metric as MetricProto} />
+      return (
+        <Metric
+          element={node.element.metric as MetricProto}
+          {...elementProps}
+        />
+      )
 
     case "html":
       return (
@@ -396,8 +402,7 @@ const RawElementNodeRenderer = (
         <Toast
           // React key needed so toasts triggered on re-run
           key={node.scriptRunId}
-          body={toastProto.body}
-          icon={toastProto.icon}
+          element={toastProto}
           {...elementProps}
         />
       )

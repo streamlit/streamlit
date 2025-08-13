@@ -28,14 +28,23 @@ import withPagination, { PaginationProps } from "./withPagination"
 export interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
+  disabled: boolean
 }
 
-const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
+const UploadedFileList = ({
+  items,
+  onDelete,
+  disabled,
+}: Props): ReactElement => {
   return (
     <StyledUploadedFilesList>
       {items.map(file => (
         <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile fileInfo={file} onDelete={onDelete} />
+          <UploadedFile
+            fileInfo={file}
+            onDelete={onDelete}
+            disabled={disabled}
+          />
         </StyledUploadedFilesListItem>
       ))}
     </StyledUploadedFilesList>

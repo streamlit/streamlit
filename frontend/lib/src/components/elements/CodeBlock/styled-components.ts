@@ -242,6 +242,8 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
   transform: "scale(0)",
+  top: 0,
+  right: 0,
 
   [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {
     opacity: 1,

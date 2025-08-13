@@ -85,7 +85,6 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
-  isColoredLineDisplayed,
   isEmbed,
   isInChildFrame,
   isPaddingDisplayed,
@@ -168,6 +167,7 @@ interface State {
   scriptRunState: ScriptRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
+  connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
@@ -178,7 +178,6 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
-  hideColoredLine: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   navigationPosition: Navigation.Position
@@ -292,6 +291,7 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
@@ -312,7 +312,6 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
-      hideColoredLine: false,
       expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
@@ -732,6 +731,11 @@ export class App extends PureComponent<Props, State> {
 
     if (newState === ConnectionState.CONNECTED) {
       LOG.info("Reconnected to server.")
+      // Reset the connection error dismissed state when we reconnect
+      if (this.state.connectionErrorDismissed) {
+        this.setState({ connectionErrorDismissed: false })
+      }
+
       // We request a script rerun if:
       //   1. this is the first time we establish a websocket connection to the
       //      server, or
@@ -1290,8 +1294,6 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    // Hide the colored line if a custom theme is selected:
-    this.setState({ hideColoredLine: !isPresetTheme(themeConfig) })
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
@@ -1478,7 +1480,15 @@ export class App extends PureComponent<Props, State> {
    * Closes the upload dialog if it's open.
    */
   closeDialog = (): void => {
-    this.setState({ dialog: undefined })
+    // If we're closing a connection error dialog, mark it as dismissed
+    if (this.state.dialog?.type === DialogType.CONNECTION_ERROR) {
+      this.setState({
+        dialog: undefined,
+        connectionErrorDismissed: true,
+      })
+    } else {
+      this.setState({ dialog: undefined })
+    }
   }
 
   /**
@@ -1853,6 +1863,11 @@ export class App extends PureComponent<Props, State> {
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errMarkdown: string): void => {
+    // Don't show the error dialog if it has been dismissed for this session
+    if (this.state.connectionErrorDismissed) {
+      return
+    }
+
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
     this.showError(
@@ -2118,7 +2133,6 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
-      hideColoredLine,
       expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
@@ -2162,8 +2176,6 @@ export class App extends PureComponent<Props, State> {
 
     // Determine toolbar visibility using helper method
     const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
-    const showColoredLine =
-      (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()
     const disableScrolling = isScrollingHidden()
 
@@ -2199,7 +2211,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
         showToolbar={showToolbar}
-        showColoredLine={showColoredLine}
       >
         <Hotkeys
           keyName="r,c,esc"

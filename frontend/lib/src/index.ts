@@ -66,6 +66,7 @@ export { useWindowDimensionsContext } from "./components/shared/WindowDimensions
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
+export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { useRequiredContext } from "./hooks/useRequiredContext"
@@ -139,7 +140,6 @@ export {
   getTimezoneOffset,
   getUrl,
   hashString,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,

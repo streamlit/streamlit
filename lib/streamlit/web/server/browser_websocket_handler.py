@@ -180,6 +180,21 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             # extract it from the Sec-Websocket-Protocol header.
             pass
 
+        # Map in any user-configured headers. Note that these override anything coming
+        # from the auth cookie.
+        mapping_config = config.get_option("server.trustedUserHeaders")
+        for header_name, user_info_key in mapping_config.items():
+            header_values = self.request.headers.get_list(header_name)
+            if header_values:
+                # If there's at least one value, use the first value.
+                # NOTE: Tornado doesn't document the order of these values, so it's
+                # possible this won't be the first value that was received by the
+                # server.
+                user_info[user_info_key] = header_values[0]
+            else:
+                # Default to explicit None.
+                user_info[user_info_key] = None
+
         self._session_id = self._runtime.connect_session(
             client=self,
             user_info=user_info,

@@ -24,12 +24,12 @@ message Arrow {
   bytes data = 1;
   // Pandas styler information
   Styler styler = 2;
-  // Width in pixels
-  uint32 width = 3;
-  // Height in pixels
-  uint32 height = 4;
-  // If True, will overwrite the dataframe width to fit to container.
-  bool use_container_width = 5;
+  // DEPRECATED: Width in pixels. Use Element.width_config instead.
+  uint32 width = 3 [deprecated=true];
+  // DEPRECATED: Height in pixels. Use Element.height_config instead.
+  uint32 height = 4 [deprecated=true];
+  // DEPRECATED: Use Element.width_config.use_stretch instead.
+  bool use_container_width = 5 [deprecated=true];
   // The id of the widget, this is required if the dataframe is editable
   string id = 6;
   // Column configuration as JSON
@@ -60,6 +60,8 @@ message Arrow {
     MULTI_ROW = 1; // Multiple rows can be selected at a time.
     SINGLE_COLUMN = 2; // Only one column can be selected at a time.
     MULTI_COLUMN = 3; // Multiple columns can be selected at a time.
+    SINGLE_CELL = 4; // Only one cell can be selected at a time.
+    MULTI_CELL = 5; // Multiple cells (continuous range) can be selected.
   }
 }
 

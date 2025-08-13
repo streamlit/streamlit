@@ -517,3 +517,14 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
             height=repr(height),
             valid_values=valid_values,
         )
+
+
+class StreamlitValueError(LocalizableStreamlitException):
+    """Exception raised when a value is not valid for a parameter."""
+
+    def __init__(self, parameter: str, valid_values: list[str]) -> None:
+        super().__init__(
+            "Invalid `{parameter}` value. Supported values: {valid_values}.",
+            parameter=parameter,
+            valid_values=", ".join(valid_values),
+        )
