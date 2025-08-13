@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import altair as alt
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -20,7 +19,7 @@ import plotly.express as px
 import streamlit as st
 
 
-def run_chart_tester_app():
+def run_chart_colors_test_app():
     # Better show the charts by minimizing the dead space
     st.html("""
         <style>
@@ -47,12 +46,13 @@ def run_chart_tester_app():
 
     col1, col2 = st.columns(2)
 
-    # Set seed for reproducible data in E2E testing
-    np.random.seed(7)
-    data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
-
+    # Charts testing categorical colors.
     with col1:
-        st.write("**st.line_chart**")
+        st.write("**Categorical: `st.line_chart`**")
+        # Set seed for reproducible data in E2E testing
+        np.random.seed(7)
+        data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+
         st.line_chart(
             data, x_label="x label", y_label="y label", use_container_width=True
         )
@@ -60,7 +60,7 @@ def run_chart_tester_app():
             data, x_label="x label", y_label="y label", use_container_width=True
         )
 
-        st.write("**st.plotly_chart**")
+        st.write("**Categorical: `st.plotly_chart`**")
         categorical_data = pd.DataFrame(
             {
                 "sales": [120, 95, 150, 110, 135, 88, 175, 92, 148, 103],
@@ -84,50 +84,63 @@ def run_chart_tester_app():
         )
         st.plotly_chart(fig_categorical)
 
+    # Charts testing sequential colors.
     with col2:
-        st.write("**st.altair_chart**")
-        scatter_data = pd.DataFrame(
+        st.write("**Sequential: `st.area_chart`**")
+        stacked_data = []
+        categories = [
+            "Category A",
+            "Category B",
+            "Category C",
+            "Category D",
+            "Category E",
+        ]
+        time_points = np.arange(20)
+
+        for i, category in enumerate(categories):
+            for t in time_points:
+                stacked_data.append(
+                    {
+                        "time": t,
+                        "value": 5
+                        + 3 * np.sin(t * 0.3 + i * 0.5)
+                        + np.random.normal(0, 0.5),
+                        "category": category,
+                        "category_num": i,
+                    }
+                )
+
+        st.area_chart(
+            pd.DataFrame(stacked_data),
+            x="time",
+            y="value",
+            color="category_num",
+            use_container_width=True,
+        )
+
+        st.sidebar.area_chart(
+            pd.DataFrame(stacked_data),
+            x="time",
+            y="value",
+            color="category_num",
+            use_container_width=True,
+        )
+
+        st.write("**Sequential: `st.plotly_chart`**")
+        sequential_data = pd.DataFrame(
             {
-                "x": np.random.randn(50),
-                "y": np.random.randn(50),
-                "category": np.random.choice(["1", "2", "3"], 50),
+                "x": np.random.normal(0, 1, 100),
+                "y": np.random.normal(0, 1, 100),
+                "temperature": np.random.uniform(
+                    0, 100, 100
+                ),  # 0-100 temperature scale
             }
         )
 
-        altair_chart = (
-            alt.Chart(scatter_data)
-            .mark_circle(size=60)
-            .encode(
-                x="x:Q",
-                y="y:Q",
-                color=alt.Color("category:N", legend=alt.Legend(orient="bottom")),
+        fig_sequential = px.scatter(sequential_data, x="x", y="y", color="temperature")
+        fig_sequential.update_layout(
+            coloraxis_colorbar=dict(
+                orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, len=1
             )
         )
-        st.altair_chart(altair_chart, use_container_width=True)
-
-        st.write("**st.vega_lite_chart**")
-        categorical_data = pd.DataFrame(
-            {
-                "category": ["A", "B", "C", "A", "B", "C"] * 5,
-                "value": np.random.randint(10, 100, 30),
-                "x": list(range(30)),
-            }
-        )
-
-        vega_spec = {
-            "mark": "bar",
-            "encoding": {
-                "x": {
-                    "field": "x",
-                    "type": "quantitative",
-                    "scale": {"domain": [0, 30]},
-                },
-                "y": {"field": "value", "type": "quantitative"},
-                "color": {
-                    "field": "category",
-                    "type": "nominal",
-                    "legend": {"orient": "bottom"},
-                },
-            },
-        }
-        st.vega_lite_chart(categorical_data, vega_spec, use_container_width=True)
+        st.plotly_chart(fig_sequential, use_container_width=True)

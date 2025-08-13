@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import json
 import os
 
@@ -29,8 +28,8 @@ from e2e_playwright.shared.app_utils import (
 
 @pytest.fixture(scope="module")
 @pytest.mark.early
-def configure_custom_categorical_colors():
-    """Configure custom theme."""
+def configure_custom_chart_colors():
+    """Configure custom chart theme colors."""
     os.environ["STREAMLIT_THEME_CHART_CATEGORICAL_COLORS"] = json.dumps(
         [
             "#7fc97f",
@@ -45,12 +44,28 @@ def configure_custom_categorical_colors():
             "#beaed4",
         ]
     )
+    os.environ["STREAMLIT_THEME_CHART_SEQUENTIAL_COLORS"] = json.dumps(
+        [
+            "#bad0e4",
+            "#a8c2dd",
+            "#9ab0d4",
+            "#919cc9",
+            "#8d85be",
+            "#8b6db2",
+            "#8a55a6",
+            "#873c99",
+            "#822287",
+            "#6a00a8",
+        ]
+    )
     yield
     del os.environ["STREAMLIT_THEME_CHART_CATEGORICAL_COLORS"]
+    del os.environ["STREAMLIT_THEME_CHART_SEQUENTIAL_COLORS"]
 
 
-@pytest.mark.usefixtures("configure_custom_categorical_colors")
-def test_custom_categorical_colors(app: Page, assert_snapshot: ImageCompareFunction):
+@pytest.mark.usefixtures("configure_custom_chart_colors")
+def test_custom_chart_colors(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that custom chart colors are correctly applied to charts."""
     # Set bigger viewport to better show the charts
     app.set_viewport_size({"width": 1280, "height": 1000})
     # Make sure that all elements are rendered and no skeletons are shown:
@@ -61,12 +76,23 @@ def test_custom_categorical_colors(app: Page, assert_snapshot: ImageCompareFunct
     # creating flakiness:
     app.wait_for_timeout(10000)
 
-    assert_snapshot(app, name="custom_categorical_colors", image_threshold=0.0003)
+    assert_snapshot(app, name="custom_chart_colors", image_threshold=0.0003)
 
-    # Check chart in sidebar:
+
+@pytest.mark.usefixtures("configure_custom_chart_colors")
+def test_custom_chart_colors_sidebar(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that custom chart colors are correctly applied to charts in sidebar."""
+    # Set bigger viewport to better show the charts
+    app.set_viewport_size({"width": 1280, "height": 1000})
+    # Make sure that all elements are rendered and no skeletons are shown:
+    expect_no_skeletons(app, timeout=25000)
+    # Reset hovering to avoid flakiness from plotly toolbar
+    reset_hovering(app)
+    # Add some additional timeout to ensure that fonts can load without
+    # creating flakiness:
+    app.wait_for_timeout(10000)
+
     expand_sidebar(app)
-    sidebar_chart = app.get_by_test_id("stSidebarContent").get_by_test_id(
-        "stVegaLiteChart"
-    )
-    expect(sidebar_chart).to_be_visible()
-    assert_snapshot(sidebar_chart, name="custom_categorical_colors-sidebar")
+    sidebar_content = app.get_by_test_id("stSidebarContent")
+    expect(sidebar_content).to_be_visible()
+    assert_snapshot(sidebar_content, name="custom_chart_colors-sidebar")
