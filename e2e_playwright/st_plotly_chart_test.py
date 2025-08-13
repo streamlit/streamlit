@@ -16,8 +16,9 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 # Only do chromium as this can create a lot of screenshots
@@ -166,3 +167,35 @@ def test_allows_custom_toolbar_modifications(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPlotlyChart")
+
+
+def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that plotly chart adjusts for custom theme."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app,
+        base="light",
+        chartCategoricalColors=[
+            "#ff7f0e",  # orange
+            "#2ca02c",  # green
+            "#1f77b4",  # blue
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ],
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    plotly_elements = app.get_by_test_id("stPlotlyChart")
+    expect(plotly_elements).to_have_count(16)
+
+    # Take a snapshot of the single mark chart, shows it applies the first color
+    # from chartCategoricalColors (orange):
+    assert_snapshot(plotly_elements.nth(6), name="st_plotly_chart-custom-theme")

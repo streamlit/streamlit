@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from theme_chart_colors_app import run_chart_colors_test_app  # type: ignore
 
-from theme_chart_app import run_chart_tester_app  # type: ignore
-
-run_chart_tester_app()
+run_chart_colors_test_app()
