@@ -263,6 +263,7 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     expect(badge_container).to_contain_text("This is a very long badge")
     expect(badge_container).to_contain_text("Blue markdown badge")
     expect(badge_container).to_contain_text("🌱 Green markdown badge")
+    expect(badge_container).to_contain_text("Yellow markdown badge")
 
     # Take a snapshot of all badges together
     assert_snapshot(badge_container, name="st_badge-examples")
