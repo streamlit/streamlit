@@ -83,21 +83,18 @@ def verify_uploaded_files_in_widget(
     """
     # Get all file names from the specific file uploader widget
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
-
-    # Extract the text from each file name element
-    uploaded_file_names = [elem.inner_text() for elem in file_name_elements]
+    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName")
 
     # Verify the expected count
-    assert len(uploaded_file_names) == expected_count, (
-        f"Expected {expected_count} files, but found {len(uploaded_file_names)}: {uploaded_file_names}"
-    )
+    expect(file_name_elements).to_have_count(expected_count)
 
     # Verify all expected files are present (order-independent)
+    # We need to check that each expected file appears in at least one element
     for expected_file in expected_files:
-        assert any(expected_file in name for name in uploaded_file_names), (
-            f"Expected to find '{expected_file}' in uploaded files: {uploaded_file_names}"
-        )
+        # Create a locator that will match if any element contains the expected file
+        matching_elements = file_name_elements.filter(has_text=expected_file)
+        # Expect at least one element to contain this file
+        expect(matching_elements.first).to_be_visible()
 
 
 def test_file_uploader_render_correctly(
