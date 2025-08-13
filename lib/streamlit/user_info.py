@@ -299,18 +299,19 @@ def login(provider: str | None = None) -> None:
 def logout() -> None:
     """Logout the current user.
 
-    This command removes the user's information from ``st.user`` and deletes
-    their Streamlit identity cookie. If the OpenID Connect (OIDC) provider's
-    server metadata includes ``end_session_endpoint``, this command also
-    redirects the user to perform a logout from the identity provider before
-    returning to your app. Otherwise, it only performs a local logout from your
-    app. This creates a new session.
+    This command removes the user's information from ``st.user``,
+    deletes their identity cookie, and redirects them back to your app's home
+    page. This creates a new session.
 
-    If the user has multiple sessions open in the same browser, ``st.user``
-    will not be cleared in any other session. ``st.user`` only reads from the
-    identity cookie at the start of a session. After a session is running, you
-    must call ``st.login()`` or ``st.logout()`` within that session to update
-    ``st.user``.
+    If the user has multiple sessions open in the same browser,
+    ``st.user`` will not be cleared in any other session.
+    ``st.user`` only reads from the identity cookie at the start
+    of a session. After a session is running, you must call ``st.login()`` or
+    ``st.logout()`` within that session to update ``st.user``.
+
+    .. Note::
+        This does not log the user out of their underlying account from the
+        identity provider.
 
     Example
     -------

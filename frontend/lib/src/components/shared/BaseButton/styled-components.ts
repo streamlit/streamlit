@@ -222,6 +222,10 @@ export const StyledMinimalButton = styled(
   "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
   },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))
 
 export const StyledPrimaryFormSubmitButton =
