@@ -23,21 +23,19 @@ import { Arrow } from "@streamlit/protobuf"
 
 import type { Quiver } from "~lib/dataframes/Quiver"
 
+import type { DataFrameProps } from "./DataFrame"
+import { ReadOnlyGrid } from "./ReadOnlyGrid"
+
 // Mock the heavy DataFrame component so we can assert the props passed by ReadOnlyGrid
-// Use a precise type for the captured props to avoid `any` usage.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test-only prop capture to assert values
-let receivedProps: Record<string, any> | undefined
+let receivedProps: DataFrameProps | undefined
 vi.mock("./DataFrame", () => {
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test double
-    default: vi.fn((props: Record<string, any>) => {
+    default: vi.fn((props: DataFrameProps) => {
       receivedProps = props
       return <div data-testid="MockDataFrame" />
     }),
   }
 })
-
-import { ReadOnlyGrid } from "./ReadOnlyGrid"
 
 describe("ReadOnlyGrid", () => {
   beforeEach(() => {
