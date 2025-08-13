@@ -343,7 +343,6 @@ def check_credentials() -> None:
     check, since credential would be automatically set to an empty string.
 
     """
-    from streamlit import config
 
     if not _check_credential_file_exists() and (
         config.get_option("server.headless")
