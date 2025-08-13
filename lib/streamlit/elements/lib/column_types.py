@@ -1671,7 +1671,6 @@ def MultiselectColumn(
     >>>         ],
     >>>     )
     >>> },
-    >>> hide_index = (True,)
     >>> )
 
     .. output::
