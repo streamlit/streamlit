@@ -151,7 +151,7 @@ class Credentials:
             with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
-                raise RuntimeError  # noqa: TRY301
+                raise RuntimeError
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
