@@ -184,7 +184,7 @@ else:
     st.text(toggle_after_upload.read())
 
 
-MANY_FILE_TYPES: list[str] = [
+_MANY_FILE_TYPES: list[str] = [
     ".3d",
     ".3ds",
     ".3mf",
@@ -261,5 +261,5 @@ MANY_FILE_TYPES: list[str] = [
 st.file_uploader(
     "File uploader with many file types:",
     help="Select a file to be uploaded.",
-    type=MANY_FILE_TYPES,
+    type=_MANY_FILE_TYPES,
 )
