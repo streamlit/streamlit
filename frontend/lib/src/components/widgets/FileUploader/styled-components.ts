@@ -25,6 +25,7 @@ export interface StyledFileDropzone {
 export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   ({ isDisabled, theme }) => ({
     display: "flex",
+    gap: theme.spacing.lg,
     alignItems: "center",
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.secondaryBg,
@@ -43,18 +44,19 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div({
+export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
   marginRight: "auto",
   alignItems: "center",
   display: "flex",
+  gap: theme.spacing.lg,
   // Ensure flex children can shrink and allow text truncation
   minWidth: 0,
-})
+  width: "100%",
+}))
 
 export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   ({ theme }) => ({
     color: theme.colors.darkenedBgMix100,
-    marginRight: theme.spacing.lg,
   })
 )
 
