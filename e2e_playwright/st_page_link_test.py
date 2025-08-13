@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import get_expander
+from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 PAGE_LINK_COUNT = 17
@@ -94,7 +94,7 @@ def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFun
     wait_for_app_loaded(app)
 
     # Retrieve the container containing the page link & button:
-    container = app.get_by_test_id("stLayoutWrapper").nth(1)
+    container = get_element_by_key(app, "custom_theme")
     expect(container).to_be_visible()
 
     page_link = container.get_by_test_id("stPageLink")

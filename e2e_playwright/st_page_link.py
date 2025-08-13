@@ -64,6 +64,6 @@ with st.sidebar:
         width="content",
     )
 
-with st.container():
+with st.container(key="custom_theme"):
     st.page_link("http://www.example.com", label="Custom Theme Example")
     st.button("Button Example", type="primary")
