@@ -204,17 +204,22 @@ def _parse_value(
     import pandas as pd
 
     try:
+        if column_data_kind == ColumnDataKind.LIST:
+            return list(value) if is_list_like(value) else [value]  # ty: ignore
+
+        # List values aren't supported for anything else than list column data kind.
+        # To make the type checker happy, we raise a TypeError here. However,
+        # This isn't expected to happen.
+        if isinstance(value, list):
+            raise TypeError("List values are only supported by list columns.")  # noqa: TRY301
+
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
 
         if column_data_kind == ColumnDataKind.INTEGER:
-            if isinstance(value, list):
-                raise ValueError("List values are not supported for integer columns.")  # noqa: TRY301
             return int(value)
 
         if column_data_kind == ColumnDataKind.FLOAT:
-            if isinstance(value, list):
-                raise ValueError("List values are not supported for float columns.")  # noqa: TRY301
             return float(value)
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
@@ -234,8 +239,6 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            if isinstance(value, list):
-                raise ValueError("List values are not supported for datetime columns.")  # noqa: TRY301
             datetime_value = pd.Timestamp(value)
 
             if datetime_value is pd.NaT:
@@ -250,10 +253,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-        if column_data_kind == ColumnDataKind.LIST:
-            return list(value) if is_list_like(value) else [value]  # ty: ignore
-
-    except (ValueError, pd.errors.ParserError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
