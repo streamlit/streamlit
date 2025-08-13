@@ -248,6 +248,8 @@ class Credentials:
                 )
         else:
             if not config.get_option("server.showEmailPrompt"):
+                self.activation = _verify_email(email)
+                self.save()
                 return
             activated = False
 
