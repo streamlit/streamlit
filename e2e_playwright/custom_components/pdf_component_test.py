@@ -38,8 +38,8 @@ def _expect_iframe_attached(app: Page):
 def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     """Wait for PDF content to finish loading inside the iframe.
 
-    Since we can't access iframe content due to cross-origin restrictions,
-    we wait for the iframe to be stable and network to be idle.
+    We can't directly access iframe content due to cross-origin restrictions,
+    but we can use Playwright's frame locator to wait for elements inside the iframe.
 
     Parameters
     ----------
@@ -53,28 +53,31 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     # First ensure the iframe is attached and visible
     expect(iframe).to_be_visible(timeout=timeout)
 
-    # Wait for the iframe to have a stable src attribute
-    # This ensures the PDF component has initialized
-    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=timeout)
+    # Wait for the iframe to have a src attribute
+    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=5000)
 
-    # Wait for network to be idle - this means PDF has finished downloading
-    try:
-        app.wait_for_load_state("networkidle", timeout=timeout)
-    except Exception:
-        # Even if networkidle times out, continue
-        pass
+    # Get the frame locator to access content inside the iframe
+    # This works even with cross-origin iframes in Playwright
+    frame = app.frame_locator("iframe").first
+
+    # Wait for the loading indicator to disappear
+    # The PDF component shows a div with data-testid="pdf-loading" while loading
+    loading_indicator = frame.get_by_test_id("pdf-loading")
+
+    # Wait for the loading indicator to be hidden (not visible)
+    # This means the PDF has finished loading
+    expect(loading_indicator).to_be_hidden(timeout=timeout)
+
+    # Also ensure the PDF content container is visible
+    pdf_content = frame.get_by_test_id("pdf-content")
+    expect(pdf_content).to_be_visible(timeout=5000)
 
     # For the slider interaction test, ensure the slider is ready
-    # The slider should be visible and enabled before we interact with it
     slider = app.get_by_test_id("stSlider")
     if slider.count() > 0:
         # If there's a slider on the page, wait for it to be ready
         expect(slider).to_be_visible(timeout=5000)
         expect(slider.get_by_role("slider")).to_be_enabled(timeout=5000)
-
-    # Give PDF.js time to render after download completes
-    # This is necessary because PDF.js renders asynchronously
-    app.wait_for_timeout(2000)
 
 
 def _reset_pdf_zoom(app: Page):
