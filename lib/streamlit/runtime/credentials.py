@@ -248,7 +248,9 @@ class Credentials:
                 )
         else:
             if not config.get_option("server.showEmailPrompt"):
-                self.activation = _verify_email(email)
+                # Since self.activation is None, there is no real email to fall back
+                # to, so we just use "". (Which, of course, is considered "valid".)
+                self.activation = _verify_email("")
                 self.save()
                 return
             activated = False
