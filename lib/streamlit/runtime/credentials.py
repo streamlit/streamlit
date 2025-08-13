@@ -346,7 +346,7 @@ def check_credentials() -> None:
 
     if not _check_credential_file_exists() and (
         config.get_option("server.headless")
-        or config.get_option("server.showEmailPrompt")
+        or not config.get_option("server.showEmailPrompt")
     ):
         if not config.is_manually_set("browser.gatherUsageStats"):
             # If not manually defined, show short message about usage stats gathering.
