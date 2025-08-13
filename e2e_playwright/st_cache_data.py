@@ -85,8 +85,16 @@ def video():
     st.video(file)
 
 
+@st.cache_data
+def code():
+    st.code("print('Hello, world!')", width=300, height=200)
+
+
 audio()
 video()
+
+if st.checkbox("Show code", True):
+    code()
 
 
 @st.cache_data
