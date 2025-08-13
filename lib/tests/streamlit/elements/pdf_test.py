@@ -66,6 +66,7 @@ class PdfComponentAvailabilityTest(DeltaGeneratorTestCase):
             assert "pip install streamlit[pdf]" in str(exc_info.value)
 
 
+@pytest.mark.require_integration
 class PdfTest(DeltaGeneratorTestCase):
     """Test ability to marshall PDF protos."""
 
