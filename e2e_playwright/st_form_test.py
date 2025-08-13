@@ -20,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_prefixed_markdown,
     get_element_by_key,
 )
 
@@ -126,6 +127,8 @@ def test_changes_widget_values_after_form_submitted(app: Page):
     expect(markdown_elements.nth(9)).to_have_text("Text Input: bar")
     expect(markdown_elements.nth(10)).to_have_text("Time Input: 00:00:00")
     expect(markdown_elements.nth(11)).to_have_text("Toggle Input: True")
+
+    expect_prefixed_markdown(app, "Submit button session state:", "True")
 
 
 def test_form_with_stretched_button(
@@ -353,3 +356,9 @@ def test_form_submit_button_width_examples(
     assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
     assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
     assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")
+
+
+def test_submit_button_with_key(app: Page):
+    """Test that the submit button can have a custom css class via the key argument."""
+    submit_button = get_element_by_key(app, "submit_button_form_1")
+    expect(submit_button).to_be_visible()

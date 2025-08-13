@@ -29,6 +29,7 @@ from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -243,6 +244,7 @@ class FormMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
@@ -296,6 +298,11 @@ class FormMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
 
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
@@ -390,6 +397,7 @@ class FormMixin:
             disabled=disabled,
             ctx=ctx,
             width=width,
+            key=key,
         )
 
     def _form_submit_button(
@@ -400,6 +408,7 @@ class FormMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
@@ -407,7 +416,7 @@ class FormMixin:
         width: Width = "content",
     ) -> bool:
         form_id = current_form_id(self.dg)
-        submit_button_key = f"FormSubmitter:{form_id}-{label}"
+        submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
         return self.dg._button(
             label=label,
             key=submit_button_key,
