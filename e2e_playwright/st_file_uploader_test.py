@@ -102,7 +102,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(15)
+    expect(file_uploaders).to_have_count(16)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -116,6 +116,7 @@ def test_file_uploader_render_correctly(
     assert_snapshot(
         file_uploaders.nth(13), name="st_file_uploader-restricted_directory"
     )
+    assert_snapshot(file_uploaders.nth(15), name="st_file_uploader-many_file_types")
 
 
 def test_file_uploader_error_message_disallowed_files(
@@ -789,7 +790,7 @@ def test_file_uploader_widths(
     """Test that file_uploader renders correctly with different width settings."""
     file_uploaders = app.get_by_test_id("stFileUploader")
 
-    expect(file_uploaders).to_have_count(15)
+    expect(file_uploaders).to_have_count(16)
 
     stretch_uploader = file_uploaders.nth(11)
     pixel_width_uploader = file_uploaders.nth(12)
