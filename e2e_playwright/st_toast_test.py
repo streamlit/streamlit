@@ -154,7 +154,8 @@ def test_toast_adjusts_for_custom_theme(
 
     toasts = app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(2).hover()
+    toast = toasts.filter(has_text="🐶This is a default toast message")
+    expect(toast).to_be_visible()
+    toast.hover()
 
-    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
-    assert_snapshot(toasts.nth(2), name="toast-custom-theme")
+    assert_snapshot(toast, name="toast-custom-theme")

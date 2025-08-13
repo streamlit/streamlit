@@ -140,8 +140,8 @@ if st.button("Open Nested Dialogs"):
 @st.dialog("Dialog with error")
 def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
-        # key is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", key="foo")  # type: ignore[call-arg]
+        # foo is an invalid argument, so this shows an error
+        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg]
 
 
 if st.button("Open Dialog with Key Error"):

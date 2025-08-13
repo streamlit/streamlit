@@ -90,6 +90,36 @@ def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
+def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a multiselect with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # like "multiselect 1" also matching "multiselect 11".
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stMultiSelect").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
@@ -406,6 +436,24 @@ def expect_markdown(
         .filter(has_text=expected_message)
     )
     expect(markdown_el).to_be_visible()
+
+
+def expect_text(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect a st.text element with the given message to be visible.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the text element.
+
+    expected_message : str or Pattern[str]
+        The expected message to be displayed in the text element.
+    """
+    text_el = locator.get_by_test_id("stText").filter(has_text=expected_message)
+    expect(text_el).to_be_visible()
 
 
 def expect_exception(
