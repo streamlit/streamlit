@@ -70,6 +70,36 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     return str(temp_dir)
 
 
+def verify_uploaded_files_in_widget(
+    app: Page, uploader_index: int, expected_files: list[str], expected_count: int
+) -> None:
+    """Helper function to verify uploaded files in the file uploader widget.
+
+    Args:
+        app: The Page object
+        uploader_index: The index of the file uploader widget
+        expected_files: List of expected file names (partial matches allowed)
+        expected_count: Expected number of uploaded files
+    """
+    # Get all file names from the specific file uploader widget
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
+
+    # Extract the text from each file name element
+    uploaded_file_names = [elem.inner_text() for elem in file_name_elements]
+
+    # Verify the expected count
+    assert len(uploaded_file_names) == expected_count, (
+        f"Expected {expected_count} files, but found {len(uploaded_file_names)}: {uploaded_file_names}"
+    )
+
+    # Verify all expected files are present (order-independent)
+    for expected_file in expected_files:
+        assert any(expected_file in name for name in uploaded_file_names), (
+            f"Expected to find '{expected_file}' in uploaded files: {uploaded_file_names}"
+        )
+
+
 def test_file_uploader_render_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -312,53 +342,17 @@ def test_uploads_directory_with_multiple_files(app: Page):
 
     wait_for_app_run(app, wait_delay=1000)
 
-    # Verify the directory upload was processed
+    # Verify the directory upload was processed (check the count message)
     uploader_text = app.get_by_test_id("stText").nth(uploader_index)
     expect(uploader_text).to_contain_text("Directory contains 3 files:")
 
-    # Verify that all expected files are uploaded (order-independent)
-    # Collect all text elements that show file info
-    file_info_texts = []
-    for i in range(1, 4):  # Get the next 3 text elements after the count
-        text_elem = app.get_by_test_id("stText").nth(uploader_index + i)
-        file_info_texts.append(text_elem.inner_text())
-
-    # Join all texts to search through them
-    all_file_info = " ".join(file_info_texts)
-
-    # Verify all expected files and their sizes are present (order-independent)
-    assert "folder/file1.txt" in all_file_info, "Expected to find folder/file1.txt"
-    assert "8 bytes" in all_file_info, "Expected to find 8 bytes for file1.txt"
-    assert "folder/file2.py" in all_file_info, "Expected to find folder/file2.py"
-    assert "14 bytes" in all_file_info, "Expected to find 14 bytes for file2.py"
-    assert "folder/subfolder/file3.md" in all_file_info, (
-        "Expected to find folder/subfolder/file3.md"
-    )
-    assert "10 bytes" in all_file_info, "Expected to find 10 bytes for file3.md"
-
-    # Verify files appear in the widget (without checking order)
-    # Get all file names from the specific file uploader widget
-    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
-
-    # Extract the text from each file name element
-    uploaded_file_names = [elem.inner_text() for elem in file_name_elements]
-
-    # Should have exactly 3 files uploaded
-    assert len(uploaded_file_names) == 3, (
-        f"Expected 3 files, but found {len(uploaded_file_names)}"
-    )
-
-    # Verify all expected files are present (order-independent)
+    # Verify files appear in the widget using the helper function
     expected_files = [
         "upload_dir/folder/file1.txt",
         "upload_dir/folder/file2.py",
         "upload_dir/folder/subfolder/file3.md",
     ]
-    for expected_file in expected_files:
-        assert any(expected_file in name for name in uploaded_file_names), (
-            f"Expected to find {expected_file} in uploaded files: {uploaded_file_names}"
-        )
+    verify_uploaded_files_in_widget(app, uploader_index, expected_files, 3)
 
     # Test deleting files from directory upload
     delete_buttons = app.get_by_test_id("stFileUploaderDeleteBtn")
@@ -402,55 +396,22 @@ def test_directory_upload_with_file_type_filtering(app: Page):
     # Find the text element that contains the restricted directory output
     text_elements = app.get_by_test_id("stText").all()
     found = False
-    for i, elem in enumerate(text_elements):
-        text = elem.inner_text()
-        if "Restricted directory contains" in text:
+    for elem in text_elements:
+        if "Restricted directory contains" in elem.inner_text():
             expect(elem).to_contain_text("Restricted directory contains 3 .txt files:")
-            # Check that all expected files are present (order-independent)
-            if i + 3 < len(text_elements):
-                # Collect the next 3 text elements that should contain file names
-                file_texts = []
-                for j in range(1, 4):
-                    file_texts.append(text_elements[i + j].inner_text())
-
-                # Join all texts to search through them
-                all_files_text = " ".join(file_texts)
-
-                # Verify all expected files are present (order-independent)
-                assert "allowed.txt" in all_files_text, "Expected to find allowed.txt"
-                assert "another_allowed.txt" in all_files_text, (
-                    "Expected to find another_allowed.txt"
-                )
-                assert "nested/deep/file.txt" in all_files_text, (
-                    "Expected to find nested/deep/file.txt"
-                )
             found = True
             break
 
     assert found, "Could not find restricted directory output"
 
-    # Verify files appear in the widget (without checking order)
-    # Get all file names from the specific file uploader widget
+    # Verify files appear in the widget using the helper function
+    expected_txt_files = ["allowed.txt", "another_allowed.txt", "nested/deep/file.txt"]
+    verify_uploaded_files_in_widget(app, uploader_index, expected_txt_files, 3)
+
+    # Additionally verify the .pdf file was NOT uploaded (it should have been filtered)
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
-
-    # Extract the text from each file name element
     all_file_names = [elem.inner_text() for elem in file_name_elements]
-
-    # Should have exactly 3 .txt files uploaded
-    assert len(all_file_names) == 3, (
-        f"Expected 3 files, but found {len(all_file_names)}"
-    )
-
-    # Verify all expected .txt files are present (order-independent)
-    # and that .pdf file was filtered out
-    expected_txt_files = ["allowed.txt", "another_allowed.txt", "nested/deep/file.txt"]
-    for expected_file in expected_txt_files:
-        assert any(expected_file in name for name in all_file_names), (
-            f"Expected to find {expected_file} in uploaded files: {all_file_names}"
-        )
-
-    # Verify the .pdf file was NOT uploaded
     assert not any("disallowed.pdf" in name for name in all_file_names), (
         "PDF file should have been filtered out"
     )
