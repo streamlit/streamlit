@@ -14,7 +14,12 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_height,
     assert_vega_chart_width,
@@ -146,3 +151,35 @@ def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Snapshot the chart to verify colors are applied in correct order
     assert_snapshot(column_order_chart, name="st_line_chart-column_order_preserved")
+
+
+def test_line_chart_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that line chart adjusts for custom theme."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app,
+        base="light",
+        chartCategoricalColors=[
+            "#ff7f0e",  # orange
+            "#2ca02c",  # green
+            "#1f77b4",  # blue
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ],
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    line_chart_elements = app.get_by_test_id("stVegaLiteChart")
+    expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
+
+    # Take a snapshot of the single line chart, shows it applies the first color
+    # from chartCategoricalColors (orange):
+    assert_snapshot(line_chart_elements.nth(3), name="st_line_chart-custom-theme")
