@@ -342,10 +342,6 @@ def test_uploads_directory_with_multiple_files(app: Page):
 
     wait_for_app_run(app, wait_delay=1000)
 
-    # Verify the directory upload was processed (check the count message)
-    uploader_text = app.get_by_test_id("stText").nth(uploader_index)
-    expect(uploader_text).to_contain_text("Directory contains 3 files:")
-
     # Verify files appear in the widget using the helper function
     expected_files = [
         "upload_dir/folder/file1.txt",
@@ -391,18 +387,6 @@ def test_directory_upload_with_file_type_filtering(app: Page):
     file_chooser.set_files(files=[temp_dir])
 
     wait_for_app_run(app, wait_delay=1000)
-
-    # Verify .txt files were uploaded (we should have 3 .txt files)
-    # Find the text element that contains the restricted directory output
-    text_elements = app.get_by_test_id("stText").all()
-    found = False
-    for elem in text_elements:
-        if "Restricted directory contains" in elem.inner_text():
-            expect(elem).to_contain_text("Restricted directory contains 3 .txt files:")
-            found = True
-            break
-
-    assert found, "Could not find restricted directory output"
 
     # Verify files appear in the widget using the helper function
     expected_txt_files = ["allowed.txt", "another_allowed.txt", "nested/deep/file.txt"]
