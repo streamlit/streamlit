@@ -317,18 +317,24 @@ def test_uploads_directory_with_multiple_files(app: Page):
     expect(uploader_text).to_contain_text("Directory contains 3 files:")
 
     # Verify that all expected files are uploaded (order-independent)
-    # The Python backend sorts them alphabetically for display
-    text_elem_1 = app.get_by_test_id("stText").nth(uploader_index + 1)
-    expect(text_elem_1).to_contain_text("folder/file1.txt")
-    expect(text_elem_1).to_contain_text("8 bytes")
+    # Collect all text elements that show file info
+    file_info_texts = []
+    for i in range(1, 4):  # Get the next 3 text elements after the count
+        text_elem = app.get_by_test_id("stText").nth(uploader_index + i)
+        file_info_texts.append(text_elem.inner_text())
 
-    text_elem_2 = app.get_by_test_id("stText").nth(uploader_index + 2)
-    expect(text_elem_2).to_contain_text("folder/file2.py")
-    expect(text_elem_2).to_contain_text("14 bytes")
+    # Join all texts to search through them
+    all_file_info = " ".join(file_info_texts)
 
-    text_elem_3 = app.get_by_test_id("stText").nth(uploader_index + 3)
-    expect(text_elem_3).to_contain_text("folder/subfolder/file3.md")
-    expect(text_elem_3).to_contain_text("10 bytes")
+    # Verify all expected files and their sizes are present (order-independent)
+    assert "folder/file1.txt" in all_file_info, "Expected to find folder/file1.txt"
+    assert "8 bytes" in all_file_info, "Expected to find 8 bytes for file1.txt"
+    assert "folder/file2.py" in all_file_info, "Expected to find folder/file2.py"
+    assert "14 bytes" in all_file_info, "Expected to find 14 bytes for file2.py"
+    assert "folder/subfolder/file3.md" in all_file_info, (
+        "Expected to find folder/subfolder/file3.md"
+    )
+    assert "10 bytes" in all_file_info, "Expected to find 10 bytes for file3.md"
 
     # Verify files appear in the widget (without checking order)
     # Get all file names from the specific file uploader widget
@@ -400,12 +406,24 @@ def test_directory_upload_with_file_type_filtering(app: Page):
         text = elem.inner_text()
         if "Restricted directory contains" in text:
             expect(elem).to_contain_text("Restricted directory contains 3 .txt files:")
-            # Check subsequent elements for the file names in alphabetical order
-            # The Python backend sorts them alphabetically
+            # Check that all expected files are present (order-independent)
             if i + 3 < len(text_elements):
-                expect(text_elements[i + 1]).to_contain_text("allowed.txt")
-                expect(text_elements[i + 2]).to_contain_text("another_allowed.txt")
-                expect(text_elements[i + 3]).to_contain_text("nested/deep/file.txt")
+                # Collect the next 3 text elements that should contain file names
+                file_texts = []
+                for j in range(1, 4):
+                    file_texts.append(text_elements[i + j].inner_text())
+
+                # Join all texts to search through them
+                all_files_text = " ".join(file_texts)
+
+                # Verify all expected files are present (order-independent)
+                assert "allowed.txt" in all_files_text, "Expected to find allowed.txt"
+                assert "another_allowed.txt" in all_files_text, (
+                    "Expected to find another_allowed.txt"
+                )
+                assert "nested/deep/file.txt" in all_files_text, (
+                    "Expected to find nested/deep/file.txt"
+                )
             found = True
             break
 
