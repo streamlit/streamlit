@@ -42,8 +42,10 @@ import {
 
 const LOG = getLogger("ImageList")
 
-// This is deprecated, but we want to support old versions
-// of the proto messages due to requirements of our integrations.
+/**
+ * @deprecated This is deprecated, but we want to support old versions of the
+ * proto messages due to requirements of our integrations.
+ */
 export enum WidthBehavior {
   OriginalWidth = -1,
   /** @deprecated */
