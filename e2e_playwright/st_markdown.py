@@ -216,7 +216,7 @@ with st.container(key="badge_elements"):
         "Streamlit interface.",
     )
     st.markdown(
-        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge]"
+        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge] :yellow-badge[Yellow markdown badge]"
     )
 
 "---"
@@ -248,13 +248,13 @@ $$
 | --------- | ----------- |
 | Some      | :material/description: :streamlit: Data        |
 
-- :small[small], :small[:red[small red]], :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange],
-  :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
-- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet],
-  :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary],
-  :rainbow-background[rainbow]
-- [x] :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
-  :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
+- :small[small], :small[:red[small red]], :blue[blue], :green[green], :yellow[yellow], :red[red], :violet[violet],
+  :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
+- :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
+  :violet-background[violet], :orange-background[orange], :gray-background[gray],
+  :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
+  :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
