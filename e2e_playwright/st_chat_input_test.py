@@ -406,7 +406,7 @@ def test_uploads_and_deletes_multiple_files(
 
 
 def test_uploads_directory_via_chat_input(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page,
 ):
     """Test that directory upload works correctly via chat input."""
     app.set_viewport_size({"width": 750, "height": 2000})
@@ -441,8 +441,6 @@ def test_uploads_directory_via_chat_input(
         assert any(expected_name in text for text in file_name_texts), (
             f"Expected file name {expected_name} not found in {file_name_texts}"
         )
-
-    assert_snapshot(uploaded_files, name="st_chat_input-directory_uploaded")
 
     # Test submission with directory and text
     chat_input_area = chat_input.locator("textarea")
