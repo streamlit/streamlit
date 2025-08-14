@@ -61,6 +61,8 @@ export type AutoSizerReturn = {
  * @param containerWidth - The width of the surrounding container
  * @param containerHeight - The height of the surrounding container
  * @param isFullScreen - Whether the table is in fullscreen mode
+ * @param widthConfig - The width configuration of the table
+ * @param heightConfig - The height configuration of the table
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */

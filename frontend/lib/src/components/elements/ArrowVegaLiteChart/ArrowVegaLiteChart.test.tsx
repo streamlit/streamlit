@@ -17,8 +17,24 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
+// Avoid real Vega embedding side-effects in tests
+vi.mock("./useVegaEmbed", () => ({
+  useVegaEmbed: () => {
+    // Satisfy hooks rule by calling a React hook in this mock
+    React.useMemo(() => null, [])
+    return {
+      createView: () => Promise.resolve(null),
+      updateView: () => Promise.resolve(null),
+      finalizeView: () => {},
+    }
+  },
+}))
+
+import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { UNICODE } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -79,5 +95,69 @@ describe("ArrowVegaLiteChart", () => {
     const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
     expect(vegaLiteChart).toBeInTheDocument()
     expect(vegaLiteChart).toHaveClass("stVegaLiteChart")
+  })
+
+  it("shows data grid when 'Show data' is clicked for inline data, and toggles back to chart", async () => {
+    const user = userEvent.setup()
+
+    const dataQuiver = new Quiver({ data: UNICODE })
+    render(
+      <ArrowVegaLiteChart {...getProps({ data: dataQuiver, datasets: [] })} />
+    )
+
+    // Initially, the chart container should be present
+    expect(screen.getByTestId("stVegaLiteChart")).toBeVisible()
+
+    // The toolbar action should be present when data exists
+    const showDataButton = screen.getByRole("button", { name: "Show data" })
+
+    // Click to show the data grid
+    await user.click(showDataButton)
+
+    // Should switch to grid view (Show chart action appears) and chart container hidden
+    await screen.findByRole("button", { name: "Show chart" })
+    expect(screen.queryByTestId("stVegaLiteChart")).toBeNull()
+
+    // Click the custom toolbar action to show the chart again
+    const showChartButton = await screen.findByRole("button", {
+      name: "Show chart",
+    })
+    await user.click(showChartButton)
+
+    // Chart should be shown again
+    expect(await screen.findByTestId("stVegaLiteChart")).toBeInTheDocument()
+    expect(screen.queryByTestId("stDataFrame")).toBeNull()
+  })
+
+  it("shows data grid when 'Show data' is clicked for first dataset", () => {
+    const datasetQuiver = new Quiver({ data: UNICODE })
+    render(
+      <ArrowVegaLiteChart
+        {...getProps({
+          data: null,
+          datasets: [
+            {
+              name: "dataset0",
+              hasName: true,
+              data: datasetQuiver,
+            },
+          ],
+        })}
+      />
+    )
+
+    // Initially, the chart container should be present
+    expect(screen.getByTestId("stVegaLiteChart")).toBeVisible()
+
+    // The toolbar action should be present when data exists
+    expect(
+      screen.queryByRole("button", { name: "Show data" })
+    ).toBeInTheDocument()
+  })
+
+  it("does not show 'Show data' when neither data nor datasets are provided", () => {
+    render(<ArrowVegaLiteChart {...getProps({ data: null, datasets: [] })} />)
+
+    expect(screen.queryByRole("button", { name: "Show data" })).toBeNull()
   })
 })

@@ -118,11 +118,8 @@ _MELTED_Y_COLUMN_TITLE: Final = "value"
 _MELTED_COLOR_COLUMN_TITLE: Final = "color"
 
 # Crazy internal (non-user-visible) names for the index and melted columns, in order to
-# avoid collision with existing column names. The suffix below was generated with an
-# online random number generator. Rationale: because it makes it even less likely to
-# lead to a conflict than something that's human-readable (like "--streamlit-fake-field"
-# or something).
-_PROTECTION_SUFFIX: Final = "--p5bJXXpQgvPz6yvQMFiy"
+# avoid collision with existing column names.
+_PROTECTION_SUFFIX: Final = " -- streamlit-generated"
 _SEPARATED_INDEX_COLUMN_NAME: Final = _SEPARATED_INDEX_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_Y_COLUMN_NAME: Final = _MELTED_Y_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFFIX

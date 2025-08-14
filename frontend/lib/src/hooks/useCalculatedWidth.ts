@@ -27,6 +27,9 @@ import { useResizeObserver } from "./useResizeObserver"
  *
  * @template T - The type of HTML element being observed (defaults to HTMLDivElement)
  *
+ * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
+ * that will cause the observer to be re-evaluated.
+ *
  * @returns A tuple containing:
  *   - The current width of the observed element in pixels (or -1 if width is 0)
  *   - A ref object that should be attached to the element you want to observe
@@ -44,14 +47,16 @@ import { useResizeObserver } from "./useResizeObserver"
  * };
  * ```
  */
-export const useCalculatedWidth = <T extends HTMLDivElement>(): [
-  number,
-  MutableRefObject<T | null>,
-] => {
+export const useCalculatedWidth = <T extends HTMLDivElement>(
+  dependencies: React.DependencyList = []
+): [number, MutableRefObject<T | null>] => {
   const {
     values: [width],
     elementRef,
-  } = useResizeObserver<T>(useMemo(() => ["width"], []))
+  } = useResizeObserver<T>(
+    useMemo(() => ["width"], []),
+    dependencies
+  )
 
   return [width || -1, elementRef]
 }

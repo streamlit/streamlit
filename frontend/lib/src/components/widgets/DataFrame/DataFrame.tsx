@@ -125,9 +125,11 @@ export interface DataFrameProps {
   element: ArrowProto
   data: Quiver
   disabled: boolean
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
   fragmentId?: string
+  // Custom toolbar actions (as React nodes) to display in the grid toolbar.
+  customToolbarActions?: React.ReactNode[]
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }
@@ -147,6 +149,7 @@ function DataFrame({
   widgetMgr,
   disableFullscreenMode,
   fragmentId,
+  customToolbarActions,
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
@@ -275,7 +278,7 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (element.editingMode === READ_ONLY) {
+      if (element.editingMode === READ_ONLY || !widgetMgr) {
         // We don't need to load the initial widget state
         // for read-only dataframes.
         return
@@ -330,6 +333,10 @@ function DataFrame({
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
+
+      if (!widgetMgr) {
+        return
+      }
 
       const selectionState: DataframeState = {
         selection: {
@@ -476,9 +483,10 @@ function DataFrame({
   useEffect(
     () => {
       if (
-        !isRowSelectionActivated &&
-        !isColumnSelectionActivated &&
-        !isCellSelectionActivated
+        (!isRowSelectionActivated &&
+          !isColumnSelectionActivated &&
+          !isCellSelectionActivated) ||
+        !widgetMgr
       ) {
         // Only run this if selections are activated.
         return
@@ -578,6 +586,10 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    */
   const innerSyncEditState = useCallback(() => {
+    if (!widgetMgr) {
+      return
+    }
+
     const currentEditingState = editingState.current.toJson(columns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
@@ -695,7 +707,6 @@ function DataFrame({
     widthConfig,
     heightConfig
   )
-
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
   const getEmptyStateContent = useCallback(
@@ -867,6 +878,7 @@ function DataFrame({
         onCollapse={collapse}
         target={StyledResizableContainer}
       >
+        {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated && isRowSelected) ||
           (isColumnSelectionActivated && isColumnSelected) ||
           (isCellSelectionActivated && isCellSelected)) && (
