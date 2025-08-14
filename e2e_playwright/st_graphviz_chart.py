@@ -107,3 +107,18 @@ digraph Dot {
 }
 """
 st.graphviz_chart(horizontal_flow_chart, use_container_width=True)
+
+# Test width and height parameters
+st.subheader("Width and Height Parameters")
+
+# Width examples
+st.graphviz_chart(dot_code, width="content")
+st.graphviz_chart(dot_code, width="stretch")
+
+# Height examples
+st.graphviz_chart(dot_code, height="content")
+with st.container(height=400):
+    st.graphviz_chart(dot_code, height="stretch")
+
+# Combined width and height
+st.graphviz_chart(dot_code, width=300, height=400)
