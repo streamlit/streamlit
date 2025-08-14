@@ -38,11 +38,11 @@ st.write("Resized figure:")
 fig.set_size_inches(6.4 / 4, 4.8 / 4)
 st.pyplot(fig)
 
-st.write("Resized figure with `use_container_width=True`:")
-st.pyplot(fig, use_container_width=True)
+st.write("Resized figure with `width='stretch'`:")
+st.pyplot(fig, width="stretch")
 
-st.write("Resized figure with `use_container_width=False`:")
-st.pyplot(fig, use_container_width=False)
+st.write("Resized figure with `width='content'`:")
+st.pyplot(fig, width="content")
 
 st.write("Advanced Seaborn figure:")
 # Generate data
@@ -93,3 +93,19 @@ plt.clf()
 
 fig, ax = plt.subplots()
 st.pyplot(fig)
+
+st.write("width parameter examples:")
+
+# Create a simple figure for width testing
+fig_width_test, ax_width_test = plt.subplots(figsize=(4, 3))
+ax_width_test.plot([1, 2, 3, 4], [1, 4, 2, 3])
+ax_width_test.set_title("Width Parameter Test")
+
+st.write("width='content' (default):")
+st.pyplot(fig_width_test, width="content")
+
+st.write("width='stretch':")
+st.pyplot(fig_width_test, width="stretch")
+
+st.write("width=200 (pixels):")
+st.pyplot(fig_width_test, width=200)

@@ -912,7 +912,7 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
         # single URL
         st.image(url, caption=caption, width=200)
         element = self.get_delta_from_queue().new_element
-        assert element.imgs.width == 200
+        assert element.width_config.pixel_width == 200
         assert len(element.imgs.imgs) == 1
         assert element.imgs.imgs[0].url == url
         assert element.imgs.imgs[0].caption == caption

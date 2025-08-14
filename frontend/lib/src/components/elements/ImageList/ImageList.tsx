@@ -21,6 +21,7 @@ import { getLogger } from "loglevel"
 import {
   ImageList as ImageListProto,
   Image as ImageProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -41,17 +42,11 @@ import {
 
 const LOG = getLogger("ImageList")
 
-export interface ImageListProps {
-  endpoints: StreamlitEndpoints
-  element: ImageListProto
-  disableFullscreenMode?: boolean
-}
-
 /**
- * @see WidthBehavior on the Backend
- * @see the Image.proto file
+ * @deprecated This is deprecated, but we want to support old versions of the
+ * proto messages due to requirements of our integrations.
  */
-enum WidthBehavior {
+export enum WidthBehavior {
   OriginalWidth = -1,
   /** @deprecated */
   ColumnWidth = -2,
@@ -59,6 +54,69 @@ enum WidthBehavior {
   AutoWidth = -3,
   MinImageOrContainer = -4,
   MaxImageOrContainer = -5,
+}
+
+export interface ImageListProps {
+  endpoints: StreamlitEndpoints
+  element: ImageListProto
+  widthConfig?: streamlit.IWidthConfig | null
+  disableFullscreenMode?: boolean
+}
+
+/**
+ * Get the image width based on width configuration (new) or WidthBehavior (legacy).
+ * Prioritizes the new widthConfig if both are present.
+ *
+ * @param widthConfig - The new width configuration from the element
+ * @param legacyWidth - The legacy WidthBehavior width from element.width
+ * @param containerWidth - The width of the container element
+ * @returns The width to use for images, or undefined for original size
+ */
+function getImageWidth(
+  widthConfig: streamlit.IWidthConfig | null | undefined,
+  legacyWidth: WidthBehavior | null | undefined,
+  containerWidth: number
+): number | undefined {
+  if (widthConfig) {
+    if (widthConfig.useStretch) {
+      return containerWidth
+    }
+
+    if (widthConfig.useContent) {
+      // Use original image size (content width)
+      return undefined
+    }
+
+    if (widthConfig.pixelWidth) {
+      return widthConfig.pixelWidth
+    }
+  }
+
+  // Fall back to legacy WidthBehavior if no new config
+  if (legacyWidth !== null && legacyWidth !== undefined) {
+    switch (legacyWidth) {
+      case WidthBehavior.OriginalWidth:
+      case WidthBehavior.AutoWidth:
+      case WidthBehavior.MinImageOrContainer:
+        // Use original image size
+        return undefined
+
+      case WidthBehavior.ColumnWidth:
+      case WidthBehavior.MaxImageOrContainer:
+        return containerWidth
+
+      default:
+        // Positive integers are exact pixel widths
+        if (legacyWidth > 0) {
+          return legacyWidth
+        }
+        // Unknown negative values default to original size
+        return undefined
+    }
+  }
+
+  // Default fallback: use original image size
+  return undefined
 }
 
 const Image = ({
@@ -106,6 +164,7 @@ const Image = ({
 function ImageList({
   element,
   endpoints,
+  widthConfig,
   disableFullscreenMode,
 }: Readonly<ImageListProps>): ReactElement {
   const {
@@ -115,35 +174,10 @@ function ImageList({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  // The width of the element is the width of the container, not necessarily the image.
-  const elementWidth = width || 0
-  // The width field in the proto sets the image width, but has special
-  // cases the values in the WidthBehavior enum.
-  let imageWidth: number | undefined
-  const protoWidth = element.width
+  // The width of the container element, not necessarily the image.
+  const containerWidth = width || 0
 
-  if (
-    [
-      WidthBehavior.OriginalWidth,
-      WidthBehavior.AutoWidth,
-      WidthBehavior.MinImageOrContainer,
-    ].includes(protoWidth)
-  ) {
-    // Use the original image width.
-    imageWidth = undefined
-  } else if (
-    [WidthBehavior.ColumnWidth, WidthBehavior.MaxImageOrContainer].includes(
-      protoWidth
-    )
-  ) {
-    // Use the full element width (which handles the full screen case)
-    imageWidth = elementWidth
-  } else if (protoWidth > 0) {
-    // Set the image width explicitly.
-    imageWidth = protoWidth
-  } else {
-    throw Error(`Invalid image width: ${protoWidth}`)
-  }
+  const imageWidth = getImageWidth(widthConfig, element.width, containerWidth)
 
   const imgStyle: CSSProperties = {}
 
@@ -178,7 +212,7 @@ function ImageList({
 
   return (
     <StyledToolbarElementContainer
-      width={elementWidth}
+      width={containerWidth}
       height={height}
       useContainerWidth={isFullScreen}
       topCentered
