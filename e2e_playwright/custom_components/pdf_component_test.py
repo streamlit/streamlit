@@ -35,6 +35,23 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
+def _wait_for_slider_to_be_ready(app: Page, timeout: int = 5000):
+    """Wait for the slider to be ready for interaction.
+
+    Parameters
+    ----------
+    app : Page
+        The page containing the slider
+    timeout : int
+        Maximum time to wait in milliseconds
+    """
+    slider = app.get_by_test_id("stSlider")
+    if slider.count() > 0:
+        # If there's a slider on the page, wait for it to be ready
+        expect(slider).to_be_visible(timeout=timeout)
+        expect(slider.get_by_role("slider")).to_be_enabled(timeout=timeout)
+
+
 def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     """Wait for PDF content to finish loading inside the iframe.
 
@@ -54,7 +71,7 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     expect(iframe).to_be_visible(timeout=timeout)
 
     # Wait for the iframe to have a src attribute
-    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=5000)
+    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=timeout)
 
     # Get the frame locator to access content inside the iframe
     # This works even with cross-origin iframes in Playwright
@@ -68,16 +85,10 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     # This means the PDF has finished loading
     expect(loading_indicator).to_be_hidden(timeout=timeout)
 
-    # Also ensure the PDF content container is visible
-    pdf_content = frame.get_by_test_id("pdf-content")
-    expect(pdf_content).to_be_visible(timeout=5000)
-
-    # For the slider interaction test, ensure the slider is ready
-    slider = app.get_by_test_id("stSlider")
-    if slider.count() > 0:
-        # If there's a slider on the page, wait for it to be ready
-        expect(slider).to_be_visible(timeout=5000)
-        expect(slider.get_by_role("slider")).to_be_enabled(timeout=5000)
+    # Wait for the first page to actually render in the DOM
+    # The PDF component uses a virtualized list with data-index attributes for pages
+    first_page = frame.locator('[data-index="0"]')
+    expect(first_page).to_be_visible(timeout=timeout)
 
 
 def _reset_pdf_zoom(app: Page):
@@ -161,6 +172,9 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
+
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
 
     _expect_iframe_attached(app)
 
@@ -288,6 +302,9 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
 
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
+
     reset_button = app.get_by_test_id("stButton").filter(has_text="Reset Height")
     expect(reset_button).to_be_visible()
 
@@ -359,6 +376,9 @@ def test_st_pdf_widget_interactions(app: Page):
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
 
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
+
     slider_thumb = height_slider.locator("[role='slider']")
     expect(slider_thumb).to_be_visible()
     expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
@@ -378,6 +398,9 @@ def test_st_pdf_different_heights_snapshots(
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
+
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
 
     # Wait for initial PDF to load
     _expect_iframe_attached(app)
