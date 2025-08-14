@@ -439,7 +439,7 @@ describe("ChatInput widget", () => {
 
     // Check that file upload button is visible for directory uploads
     const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
-    expect(uploadButton).toBeInTheDocument()
+    expect(uploadButton).toBeVisible()
 
     // Verify aria labels and accessibility
     const chatInput = screen.getByTestId("stChatInputTextArea")
