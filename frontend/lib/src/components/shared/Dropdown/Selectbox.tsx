@@ -274,7 +274,9 @@ const Selectbox: React.FC<Props> = ({
             props: {
               // Change the 'readonly' prop to hide the mobile keyboard if options < 10
               readOnly:
-                isMobile() && !showKeyboardOnMobile ? "readonly" : null,
+                isMobile() && !showKeyboardOnMobile && !acceptNewOptions
+                  ? "readonly"
+                  : null,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
