@@ -208,22 +208,36 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.setColumnOrder).not.toHaveBeenCalled()
   })
 
-  test("calls showColumn on all columns when selecting an indeterminate select all", async () => {
+  test("calls hideColumn on all columns when selecting an indeterminate select all", async () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByLabelText("Select all")) // (Indeterminate, column 2 is hidden)
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
+  })
+
+  test("calls showColumn on all columns when selecting a unchecked select all", async () => {
+    const allHiddenProps = {
+      ...defaultProps,
+      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: true })),
+    }
+
+    render(<ColumnVisibilityMenu {...allHiddenProps} />)
+
+    await userEvent.click(screen.getByLabelText("Select all"))
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-1")
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
   })
 
-  test("calls hideColumn on all columns when selecting a checked select all", async () => {
-    render(<ColumnVisibilityMenu {...defaultProps} />)
+  test("calls hideColumn on all columns when clicking a checked select all", async () => {
+    const allVisibleProps = {
+      ...defaultProps,
+      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
+    }
 
-    await userEvent.click(screen.getByLabelText("Select all")) // Shows all columns
-    expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
-    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-1")
-    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
+    render(<ColumnVisibilityMenu {...allVisibleProps} />)
 
     await userEvent.click(screen.getByLabelText("Select all"))
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")

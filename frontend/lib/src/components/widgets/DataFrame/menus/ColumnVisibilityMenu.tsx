@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useState } from "react"
+import React, { memo, ReactElement } from "react"
 
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
-import { SIZE, StyledDivider as UIDivider } from "baseui/divider"
+import {
+  SIZE as DividerSIZE,
+  StyledDivider as UIDivider,
+} from "baseui/divider"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { transparentize } from "color2k"
 
@@ -164,9 +167,10 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
 
-  const [allChecked, setAllChecked] = useState(
-    columns.every(column => !column.isHidden)
-  )
+  // const [allChecked, setAllChecked] = useState(
+  //   columns.every(column => !column.isHidden)
+  // )
+  const allChecked = columns.every(column => !column.isHidden)
   const isIndeterminate =
     columns.some(column => !column.isHidden) && !allChecked
 
@@ -177,7 +181,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           ? !columnOrder.includes(column.id) &&
             !columnOrder.includes(column.name)
           : false
-      if (isIndeterminate || checked) {
+      if (checked && !isIndeterminate) {
         showColumn(column.id)
         if (hiddenViaColumnOrder) {
           // Add the column to the column order list:
@@ -190,7 +194,6 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
         hideColumn(column.id)
       }
     })
-    setAllChecked(checked)
   }
 
   return (
@@ -202,19 +205,31 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
       content={() => (
         <div
           style={{
-            paddingTop: theme.spacing.sm,
+            paddingTop: theme.spacing.none,
             paddingBottom: theme.spacing.sm,
+            maxHeight: theme.sizes.maxDropdownHeight,
+            overflow: "auto",
           }}
         >
-          <CheckboxItem
-            label={"Select all"}
-            isIndeterminate={isIndeterminate}
-            initialValue={allChecked}
-            onChange={checked => {
-              onSelectAll(checked)
+          <div
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: theme.zIndices.header,
+              paddingTop: theme.spacing.sm,
+              background: theme.colors.bgColor,
             }}
-          />
-          <UIDivider $size={SIZE.cell} />
+          >
+            <CheckboxItem
+              label={"Select all"}
+              isIndeterminate={isIndeterminate}
+              initialValue={allChecked}
+              onChange={checked => {
+                onSelectAll(checked)
+              }}
+            />
+            <UIDivider $size={DividerSIZE.cell} />
+          </div>
           <div>
             {columns.map(column => {
               // A column can be hidden if configured in column config
