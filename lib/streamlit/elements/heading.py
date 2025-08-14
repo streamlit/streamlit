@@ -79,7 +79,7 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+        divider : bool or “blue“, “green“, “orange“, “red“, “violet“, “yellow“, “gray“/“grey“, or “rainbow“
             Shows a colored divider below the header. If True, successive
             headers will cycle through divider colors. That is, the first
             header will have a blue line, the second header will have a
@@ -168,7 +168,7 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+        divider : bool or “blue“, “green“, “orange“, “red“, “violet“, “yellow“, “gray“/“grey“, or “rainbow“
             Shows a colored divider below the header. If True, successive
             headers will cycle through divider colors. That is, the first
             header will have a blue line, the second header will have a
