@@ -28,6 +28,7 @@ import {
   Direction,
   getDirectionOfBlock,
   MinFlexElementWidth,
+  shouldChildrenStretch,
 } from "~lib/components/core/Layout/utils"
 import { LibContext } from "~lib/components/core/LibContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
@@ -330,14 +331,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
-        stretchWidth={
-          // TODO (lawilby): This can be replaced by children
-          // should stretch util added in buttons PR.
-          node.deltaBlock.widthConfig?.useStretch ||
-          node.deltaBlock.widthConfig?.pixelWidth
-            ? true
-            : false
-        }
+        stretchWidth={shouldChildrenStretch(node.deltaBlock.widthConfig)}
       >
         {child}
       </Popover>
