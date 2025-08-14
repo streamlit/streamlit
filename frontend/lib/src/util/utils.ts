@@ -638,7 +638,9 @@ export function keysToSnakeCase(
 
       if (Array.isArray(value)) {
         value = value.map(item =>
-          typeof item === "object" ? keysToSnakeCase(item) : item
+          item !== null && typeof item === "object"
+            ? keysToSnakeCase(item)
+            : item
         )
       }
 
