@@ -410,7 +410,7 @@ class CliTest(unittest.TestCase):
 
             # Assert that makedirs was never called to create ~/.streamlit directory
             mock_makedirs.assert_not_called()
-            assert result.exit_code != 0
+            assert result.exit_code == 0
 
     def test_streamlit_folder_created_when_show_email_prompt_true(self):
         """Test that ~/.streamlit directory is created when server.showEmailPrompt=True."""
