@@ -160,7 +160,7 @@
     "@types/xxhashjs": "^0.2.2",
     "@vitejs/plugin-react-swc": "^4.0.0",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^9.32.0",
+    "eslint": "^9.33.0",
     "eslint-plugin-streamlit-custom": "workspace:^",
     "node-fetch": "3.3.2",
     "postinstall-postinstall": "^2.1.0",
