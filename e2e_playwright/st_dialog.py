@@ -160,15 +160,6 @@ if st.button("Open Dialog with Copy Buttons"):
     dialog_with_copy_buttons()
 
 
-@st.experimental_dialog("Usage of deprecated experimental_dialog")
-def dialog_with_deprecation_warning() -> None:
-    pass  # No need to write anything in the dialog body.
-
-
-if st.button("Open Dialog with deprecation warning"):
-    dialog_with_deprecation_warning()
-
-
 @st.fragment()
 def fragment() -> None:
     if st.button("Fragment Button"):

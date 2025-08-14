@@ -17,13 +17,12 @@ from __future__ import annotations
 import contextlib
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union
 
 from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
@@ -290,20 +289,3 @@ def replay_cached_messages(
                 returned_dgs[msg.returned_dgs_id] = new_dg
     except KeyError as ex:
         raise CacheReplayClosureError(cache_type, cached_func) from ex
-
-
-def show_widget_replay_deprecation(
-    decorator: Literal["cache_data", "cache_resource"],
-) -> None:
-    show_deprecation_warning(
-        "The cached widget replay feature was removed in 1.38. The "
-        "`experimental_allow_widgets` parameter will also be removed "
-        "in a future release. Please remove the `experimental_allow_widgets` parameter "
-        f"from the `@st.{decorator}` decorator and move all widget commands outside of "
-        "cached functions.\n\nTo speed up your app, we recommend moving your widgets "
-        "into fragments. Find out more about fragments in "
-        "[our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
-        "\n\nIf you have a specific use-case that requires the "
-        "`experimental_allow_widgets` functionality, please tell us via an "
-        "[issue on Github](https://github.com/streamlit/streamlit/issues)."
-    )

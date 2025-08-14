@@ -1005,15 +1005,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog()
 
-    def test_experimental_dialog_decorator_also_works(self):
-        """Test that the dialog decorator having a title does not throw an error"""
-
-        @st.experimental_dialog("example title")
-        def dialog():
-            return None
-
-        dialog()
-
     def test_dialog_decorator_title_required(self):
         """Test that the title is required in decorator"""
         with pytest.raises(TypeError) as e:

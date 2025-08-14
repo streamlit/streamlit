@@ -117,10 +117,6 @@ def test_displays_dialog_properly(app: Page):
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
-    # Verify that we don't print a deprecation warning for usage of @st.dialog. We check
-    # that a warning is printed for @st.experimental_dialog in a later test.
-    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
-
 
 def _test_dialog_closes_properly(app: Page):
     """Test that dialog closes after clicking on action button."""
@@ -410,19 +406,6 @@ def test_dialog_copy_buttons_work(app: Page):
 
     # we should see the pasted content written to the dialog
     expect_markdown(app, "[1,2,3]")
-
-
-def test_experimental_dialog_deprecation_warning(app: Page):
-    """Test that using @st.experimental_dialog instead of @st.dialog results in a
-    deprecation warning being displayed in the dialog.
-    """
-    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
-
-    open_dialog_with_deprecation_warning(app)
-
-    expect(app.get_by_test_id("stAlert")).to_have_text(
-        re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
-    )
 
 
 def test_dialog_with_chart(app: Page):

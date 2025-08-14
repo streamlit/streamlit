@@ -47,7 +47,6 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
     MsgData,
-    show_widget_replay_deprecation,
 )
 from streamlit.runtime.caching.storage import (
     CacheStorage,
@@ -358,7 +357,6 @@ class CacheDataAPI:
         show_spinner: bool | str = True,
         show_time: bool = False,
         persist: CachePersistType | bool = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
@@ -371,7 +369,6 @@ class CacheDataAPI:
         show_spinner: bool | str = True,
         show_time: bool = False,
         persist: CachePersistType | bool = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
@@ -381,7 +378,6 @@ class CacheDataAPI:
             persist=persist,
             show_spinner=show_spinner,
             show_time=show_time,
-            experimental_allow_widgets=experimental_allow_widgets,
             hash_funcs=hash_funcs,
         )
 
@@ -394,7 +390,6 @@ class CacheDataAPI:
         show_spinner: bool | str,
         show_time: bool = False,
         persist: CachePersistType | bool,
-        experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
@@ -469,9 +464,6 @@ class CacheDataAPI:
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
 
-        experimental_allow_widgets : bool
-            Allow widgets to be used in the cached function. Defaults to False.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -479,12 +471,6 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
-
-        .. deprecated::
-            The cached widget replay functionality was removed in 1.38. Please
-            remove the ``experimental_allow_widgets`` parameter from your
-            caching decorators. This parameter will be removed in a future
-            version.
 
         Example
         -------
@@ -589,9 +575,6 @@ class CacheDataAPI:
             raise StreamlitAPIException(
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
-
-        if experimental_allow_widgets:
-            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
             return make_cached_func_wrapper(
