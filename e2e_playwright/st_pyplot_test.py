@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_warning,
+    wait_for_all_images_to_be_loaded,
 )
 
 
@@ -55,6 +56,9 @@ def test_shows_deprecation_warning(app: Page):
 
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
     """Test the new width parameter options: content, stretch, and pixel values."""
+    # Wait for all images to be fully loaded before taking snapshots
+    wait_for_all_images_to_be_loaded(app)
+
     pyplot_elements = app.get_by_test_id("stImage").locator("img")
 
     content_pyplot = pyplot_elements.nth(8)
