@@ -413,10 +413,11 @@ describe("StreamlitMarkdown", () => {
   it("colours text properly", () => {
     const colorMapping = new Map([
       ["red", colors.red80],
+      ["orange", colors.orange100],
+      ["yellow", colors.yellow80],
       ["blue", colors.blue80],
       ["green", colors.green90],
       ["violet", colors.purple80],
-      ["orange", colors.orange100],
       ["gray", colors.gray80],
       ["grey", colors.gray80],
       ["rainbow", "rgba(0, 0, 0, 0)"],
@@ -458,6 +459,7 @@ describe("StreamlitMarkdown", () => {
   it("properly adds background colors", () => {
     const redbg = transparentize(colors.red80, 0.9)
     const orangebg = transparentize(colors.yellow70, 0.9)
+    const yellowbg = transparentize(colors.yellow80, 0.9)
     const greenbg = transparentize(colors.green70, 0.9)
     const bluebg = transparentize(colors.blue70, 0.9)
     const violetbg = transparentize(colors.purple70, 0.9)
@@ -465,10 +467,11 @@ describe("StreamlitMarkdown", () => {
 
     const colorMapping = new Map([
       ["red", redbg],
+      ["orange", orangebg],
+      ["yellow", yellowbg],
       ["blue", bluebg],
       ["green", greenbg],
       ["violet", violetbg],
-      ["orange", orangebg],
       ["gray", graybg],
       ["grey", graybg],
     ])
