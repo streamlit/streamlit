@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
@@ -71,7 +73,7 @@ def test_time_input_widget_rendering(
     assert_snapshot(
         get_time_input(
             themed_app,
-            "Time input 10 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+            re.compile(r"^Time input 10"),
         ),
         name="st_time_input-markdown_label",
     )
