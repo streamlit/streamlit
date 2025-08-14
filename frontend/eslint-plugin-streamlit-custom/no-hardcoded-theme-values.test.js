@@ -75,6 +75,14 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       code: "var a = { color: theme.colors.primary, lineHeight: 0 };",
     },
     {
+      name: "null is allowed",
+      code: "var a = { lineHeight: null };",
+    },
+    {
+      name: "undefined is allowed",
+      code: "var a = { lineHeight: undefined };",
+    },
+    {
       name: "em, vh, vw, % units after numbers are allowed",
       code: "var a = { color: theme.colors.primary, height: '1em', maxHeight: '100vh', width: '42vw', maxWidth: '99%' };",
     },

@@ -21,10 +21,6 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
-)
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -138,7 +134,6 @@ def _fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     additional_hash_info: str = "",
-    should_show_deprecation_warning: bool = False,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -178,15 +173,6 @@ def _fragment(
 
         def wrapped_fragment() -> Any:
             import streamlit as st
-
-            if should_show_deprecation_warning:
-                show_deprecation_warning(
-                    make_deprecated_name_warning(
-                        "experimental_fragment",
-                        "fragment",
-                        "2025-01-01",
-                    )
-                )
 
             # NOTE: We need to call get_script_run_ctx here again and can't just use the
             # value of ctx from above captured by the closure because subsequent
@@ -449,31 +435,3 @@ def fragment(
 
     """
     return _fragment(func, run_every=run_every)
-
-
-@overload
-def experimental_fragment(
-    func: F,
-    *,
-    run_every: int | float | timedelta | str | None = None,
-) -> F: ...
-
-
-# Support being able to pass parameters to this decorator (that is, being able to write
-# `@fragment(run_every=5.0)`).
-@overload
-def experimental_fragment(
-    func: None = None,
-    *,
-    run_every: int | float | timedelta | str | None = None,
-) -> Callable[[F], F]: ...
-
-
-@gather_metrics("experimental_fragment")
-def experimental_fragment(
-    func: F | None = None,
-    *,
-    run_every: int | float | timedelta | str | None = None,
-) -> Callable[[F], F] | F:
-    """Deprecated alias for @st.fragment. See the docstring for the decorator's new name."""
-    return _fragment(func, run_every=run_every, should_show_deprecation_warning=True)

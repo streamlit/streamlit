@@ -21,10 +21,6 @@ from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
 )
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
-)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
@@ -67,7 +63,6 @@ def _dialog_decorator(
     title: str,
     *,
     width: DialogWidth = "small",
-    should_show_deprecation_warning: bool = False,
     dismissible: bool = True,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
@@ -89,15 +84,6 @@ def _dialog_decorator(
         dialog.open()
 
         def dialog_content() -> None:
-            if should_show_deprecation_warning:
-                show_deprecation_warning(
-                    make_deprecated_name_warning(
-                        "experimental_dialog",
-                        "dialog",
-                        "2025-01-01",
-                    )
-                )
-
             # if the dialog should be closed, st.rerun() has to be called
             # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
@@ -295,45 +281,4 @@ def dialog_decorator(
     func: F = func_or_title
     return _dialog_decorator(
         func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
-    )
-
-
-@overload
-def experimental_dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
-) -> Callable[[F], F]: ...
-
-
-# 'title' can be a function since `dialog_decorator` is a decorator. We just call it
-# 'title' here though to make the user-doc more friendly as we want the user to pass a
-#  title, not a function. The user is supposed to call it like @st.dialog("my_title"),
-#  which makes 'title' a positional arg, hence this 'trick'. The overload is required to
-#  have a good type hint for the decorated function args.
-@overload
-def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
-
-
-@gather_metrics("experimental_dialog")
-def experimental_dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
-) -> F | Callable[[F], F]:
-    """Deprecated alias for @st.dialog.
-    See the docstring for the decorator's new name.
-    """
-    func_or_title = title
-    if isinstance(func_or_title, str):
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return _dialog_decorator(
-                non_optional_func=f,
-                title=func_or_title,
-                width=width,
-                should_show_deprecation_warning=True,
-            )
-
-        return wrapper
-
-    func: F = func_or_title
-    return _dialog_decorator(
-        func, "", width=width, should_show_deprecation_warning=True
     )

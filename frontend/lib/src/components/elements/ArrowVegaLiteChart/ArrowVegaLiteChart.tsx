@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect } from "react"
+import React, {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
+import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
   StyledToolbarElementContainer,
+  ToolbarAction,
 } from "~lib/components/shared/Toolbar"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -65,6 +75,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
   fragmentId,
   widgetMgr,
 }) => {
+  const [showData, setShowData] = useState(false)
+  const [enableShowData, setEnableShowData] = useState(false)
+
   const {
     expanded: isFullScreen,
     height,
@@ -72,7 +85,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const [width, containerRef] = useCalculatedWidth()
+
+  const {
+    values: [width, chartHeight],
+    elementRef: containerRef,
+  } = useResizeObserver(
+    useMemo(() => ["width", "height"], []),
+    // We need to update whenever the showData state changes because
+    // the underlying element ref that needs to be observed is updated.
+    [showData]
+  )
 
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
@@ -117,7 +139,15 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // We can't use width in this dependency array because it causes facet charts to enter a loop.
     // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
     // Are the changes in the spec enough?
-  }, [createView, finalizeView, spec, fullScreenWidth, height, containerRef])
+  }, [
+    createView,
+    finalizeView,
+    spec,
+    fullScreenWidth,
+    height,
+    showData,
+    containerRef,
+  ])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -126,6 +156,36 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     updateView(data, datasets)
   }, [data, datasets, updateView])
+
+  useEffect(() => {
+    // We only show data if its provided via data or if there
+    // is one data set in the datasets array. In this case,
+    // only the first dataset is shown:
+    if (data || (datasets && datasets[0]?.data)) {
+      setEnableShowData(true)
+    } else {
+      setEnableShowData(false)
+    }
+  }, [data, datasets])
+
+  if (showData) {
+    return (
+      <ReadOnlyGrid
+        data={data ?? datasets[0]?.data}
+        height={height ?? chartHeight ?? undefined}
+        customToolbarActions={[
+          <ToolbarAction
+            key="show-chart"
+            label="Show chart"
+            icon={InsertChart}
+            onClick={() => {
+              setShowData(false)
+            }}
+          />,
+        ]}
+      />
+    )
+  }
 
   // Create the container inside which Vega draws its content.
   // To style the Vega tooltip, we need to apply global styles since
@@ -141,7 +201,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
-      ></Toolbar>
+      >
+        {enableShowData && (
+          <ToolbarAction
+            label="Show data"
+            icon={TableChart}
+            onClick={() => {
+              setShowData(true)
+            }}
+          />
+        )}
+      </Toolbar>
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
