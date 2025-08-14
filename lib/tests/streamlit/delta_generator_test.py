@@ -99,7 +99,6 @@ class RunWarningTest(unittest.TestCase):
         expected_api = expected_api - {
             "spinner",
             "dialog",
-            "experimental_dialog",
             "echo",
             "logo",
             "login",
