@@ -74,9 +74,7 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(
-        10
-    )  # Updated count to include directory uploads
+    expect(chat_input_widgets).to_have_count(10)
 
     assert_snapshot(chat_input_widgets.nth(0), name="st_chat_input-inline")
     assert_snapshot(chat_input_widgets.nth(1), name="st_chat_input-in_column_disabled")
