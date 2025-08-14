@@ -208,7 +208,7 @@ st.image(
     caption=[f"Image list {i}" for i in range(3)],
 )
 
-st.header("use_container_width parameter")
+st.header("use_container_width parameter (deprecated)")
 
 with st.container(key="use_container_width"):
     col5, col6, col7, col8 = st.columns(4)
@@ -248,3 +248,13 @@ st.image(
 st.container(key="image_with_markdown_caption").image(
     img, caption="-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.header("width parameter")
+
+# Content width (default) - image's native width, up to container width
+st.image(img, width="content", caption="Small image with width='content' (default)")
+st.image(img800, width="content", caption="Large image with width='content'")
+
+# Stretch width - full container width
+st.image(img, width="stretch", caption="Small image with width='stretch'")
+st.image(img800, width="stretch", caption="Large image with width='stretch'")

@@ -123,20 +123,7 @@ export const StyledElementContainerLayoutWrapper: FC<
       styles.overflow = "visible"
     }
 
-    if (node.element.type === "imgs") {
-      if (isInHorizontalLayout) {
-        // st.image doesn't have the same proto style as other elements.
-        // this can be consolidated with handling of other elements after width
-        // changes are implemented for st.image.
-        if (node.element.imgs?.width) {
-          styles.width = `${node.element.imgs.width}px`
-          styles.flex = `0 0 ${node.element.imgs.width}px`
-        } else {
-          styles.flex = "1 1 fit-content"
-        }
-      }
-      return styles
-    } else if (node.element.type === "textArea") {
+    if (node.element.type === "textArea") {
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
@@ -182,7 +169,6 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.deckGlJsonChart?.useContainerWidth,
     node.element.deckGlJsonChart?.width,
     isInHorizontalLayout,
-    node.element.imgs?.width,
   ])
 
   const styles = useLayoutStyles({
