@@ -140,8 +140,7 @@ class PyplotMixin:
                 show_in_browser=False,
             )
 
-            if width == "stretch":
-                width = "stretch" if use_container_width else "content"
+            width = "stretch" if use_container_width else "content"
 
         if not fig:
             show_deprecation_warning("""

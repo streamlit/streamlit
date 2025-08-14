@@ -101,9 +101,9 @@ class PyplotTest(DeltaGeneratorTestCase):
             else:
                 fig_clf.assert_not_called()
 
-    @parameterized.expand([(True, "stretch"), (False, "content")])
+    @parameterized.expand([(True, "use_stretch"), (False, "use_content")])
     def test_st_pyplot_use_container_width(
-        self, use_container_width: bool, expected_width_behavior: str
+        self, use_container_width: bool, expected_attribute: str
     ):
         """st.pyplot should set image width."""
         fig = plt.figure()
@@ -113,10 +113,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         st.pyplot(fig, use_container_width=use_container_width)
 
         el = self.get_delta_from_queue().new_element
-        if expected_width_behavior == "stretch":
-            assert el.width_config.use_stretch
-        else:
-            assert el.width_config.use_content
+        assert getattr(el.width_config, expected_attribute)
 
     def test_st_pyplot_width_stretch(self):
         """Test st.pyplot with width='stretch'."""
@@ -197,3 +194,44 @@ class PyplotTest(DeltaGeneratorTestCase):
             st.pyplot(fig, width=invalid_width)
 
         assert str(exc_info.value) == expected_error_message
+
+    @parameterized.expand(
+        [
+            (
+                True,
+                "content",
+                "use_stretch",
+            ),  # use_container_width=True overrides width="content"
+            (
+                False,
+                "stretch",
+                "use_content",
+            ),  # use_container_width=False overrides width="stretch"
+            (True, 400, "use_stretch"),  # use_container_width=True overrides width=400
+            (
+                False,
+                400,
+                "use_content",
+            ),  # use_container_width=False overrides width=400
+        ]
+    )
+    @patch("streamlit.elements.pyplot.show_deprecation_warning")
+    def test_st_pyplot_use_container_width_overrides_width(
+        self,
+        use_container_width: bool,
+        original_width,
+        expected_attribute: str,
+        show_warning_mock: Mock,
+    ):
+        """Test that use_container_width parameter overrides the width parameter."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, width=original_width, use_container_width=use_container_width)
+
+        # Should show deprecation warning
+        show_warning_mock.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+        assert getattr(el.width_config, expected_attribute)
