@@ -115,22 +115,24 @@ export const createEmotionColors = (genericColors: {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function getDividerColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
+  const red = lightTheme ? theme.colors.red60 : theme.colors.red90
+  const orange = lightTheme ? theme.colors.orange60 : theme.colors.orange90
+  const yellow = lightTheme ? theme.colors.yellow80 : theme.colors.yellow70
   const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
   const green = lightTheme ? theme.colors.green60 : theme.colors.green90
-  const orange = lightTheme ? theme.colors.orange60 : theme.colors.orange90
-  const red = lightTheme ? theme.colors.red60 : theme.colors.red90
   const violet = lightTheme ? theme.colors.purple60 : theme.colors.purple80
   const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray70
 
   return {
+    red: red,
+    orange: orange,
+    yellow: yellow,
     blue: blue,
     green: green,
-    orange: orange,
-    red: red,
     violet: violet,
     gray: gray,
     grey: gray,
-    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${green}, ${blue}, ${violet})`,
+    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet})`,
   }
 }
 
@@ -139,10 +141,10 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
   const primary = theme.colors.primary
   const red = theme.colors.red
-  const yellow = theme.colors.yellow
-  const green = theme.colors.green
-  const blue = theme.colors.blue
   const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
+  const yellow = lightTheme ? theme.colors.yellow80 : theme.colors.yellow70
+  const blue = theme.colors.blue
+  const green = theme.colors.green
   const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
   const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
   const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
@@ -171,15 +173,15 @@ export function getMarkdownBgColors(theme: EmotionTheme): any {
     ),
     orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
     yellowbg: transparentize(
-      theme.colors[lightTheme ? "yellow70" : "yellow50"],
+      theme.colors[lightTheme ? "yellow80" : "yellow70"],
+      0.9
+    ),
+    bluebg: transparentize(
+      theme.colors[lightTheme ? "blue70" : "blue60"],
       lightTheme ? 0.9 : 0.7
     ),
     greenbg: transparentize(
       theme.colors[lightTheme ? "green70" : "green60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    bluebg: transparentize(
-      theme.colors[lightTheme ? "blue70" : "blue60"],
       lightTheme ? 0.9 : 0.7
     ),
     violetbg: transparentize(
