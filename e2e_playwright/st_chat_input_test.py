@@ -46,13 +46,37 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
     wait_for_app_run(app, 500)
 
 
+def directory_upload_helper(app: Page, chat_input: Locator):
+    """Helper function for directory upload tests."""
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    upload_button.scroll_into_view_if_needed()
+
+    # For directory upload, we simulate the interaction without actual files
+    # since we don't want to snapshot test with real directory uploads
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click()
+        file_chooser = fc_info.value
+        # Set directory flag (this would be a directory selection in real usage)
+        file_chooser.set_files(files=[])  # Empty for simulation
+
+    # Take away hover focus of button
+    app.keyboard.press("Escape")
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+
+    wait_for_app_run(app, 500)
+
+
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.chat_input widgets are correctly rendered via screenshot matching."""
     # set taller height to ensure inputs do not overlap
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(8)
+    expect(chat_input_widgets).to_have_count(
+        10
+    )  # Updated count to include directory uploads
 
     assert_snapshot(chat_input_widgets.nth(0), name="st_chat_input-inline")
     assert_snapshot(chat_input_widgets.nth(1), name="st_chat_input-in_column_disabled")
@@ -62,6 +86,8 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-width_300px")
     assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_stretch")
     assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(8), name="st_chat_input-directory")
+    assert_snapshot(chat_input_widgets.nth(9), name="st_chat_input-directory_disabled")
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
@@ -378,7 +404,7 @@ def test_single_file_upload_button_tooltip(app: Page):
 
 
 def test_multi_file_upload_button_tooltip(app: Page):
-    """Test that the single file upload button tooltip renders correctly."""
+    """Test that the multi file upload button tooltip renders correctly."""
     chat_input_upload_button = (
         app.get_by_test_id("stChatInput")
         .nth(4)
@@ -388,6 +414,54 @@ def test_multi_file_upload_button_tooltip(app: Page):
     chat_input_upload_button.scroll_into_view_if_needed()
     chat_input_upload_button.hover()
     expect(app.get_by_text("Upload or drag and drop files")).to_be_visible()
+
+
+def test_directory_upload_button_tooltip(app: Page):
+    """Test that the directory upload button tooltip renders correctly."""
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput")
+        .nth(8)
+        .get_by_test_id("stChatInputFileUploadButton")
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+    chat_input_upload_button.hover()
+    expect(app.get_by_text("Upload or drag and drop a folder")).to_be_visible()
+
+
+def test_directory_upload_disabled_state(app: Page):
+    """Test that disabled directory upload input cannot be interacted with."""
+    disabled_chat_input = app.get_by_test_id("stChatInput").nth(9)
+    disabled_upload_button = disabled_chat_input.get_by_test_id(
+        "stChatInputFileUploadButton"
+    )
+
+    # Check that the upload button is disabled
+    expect(disabled_upload_button).to_be_disabled()
+
+    # Check that the text area is also disabled
+    disabled_text_area = disabled_chat_input.locator("textarea")
+    expect(disabled_text_area).to_be_disabled()
+
+
+def test_directory_upload_button_interaction(app: Page):
+    """Test directory upload button can be clicked when enabled."""
+    chat_input = app.get_by_test_id("stChatInput").nth(8)
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    expect(upload_button).to_be_enabled()
+
+    # Test that clicking opens file chooser (without actually selecting a directory)
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click()
+        file_chooser = fc_info.value
+        # Cancel the file chooser
+        file_chooser.set_files(files=[])
+
+    # Ensure the app is still responsive
+    app.keyboard.press("Escape")
+    wait_for_app_run(app, 500)
 
 
 def test_chat_input_adjusts_for_long_placeholder(
