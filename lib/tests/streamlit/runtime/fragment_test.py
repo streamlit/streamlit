@@ -32,7 +32,6 @@ from streamlit.errors import (
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
     _fragment,
-    experimental_fragment,
     fragment,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -417,32 +416,6 @@ class FragmentTest(unittest.TestCase):
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
-
-    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
-    @patch("streamlit.runtime.fragment.show_deprecation_warning")
-    def test_calling_experimental_fragment_shows_warning(
-        self, patched_show_deprecation_warning
-    ):
-        @experimental_fragment
-        def my_fragment():
-            pass
-
-        my_fragment()
-
-        patched_show_deprecation_warning.assert_called_once()
-
-    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
-    @patch("streamlit.runtime.fragment.show_deprecation_warning")
-    def test_calling_fragment_does_not_show_warning(
-        self, patched_show_deprecation_warning
-    ):
-        @fragment
-        def my_fragment():
-            pass
-
-        my_fragment()
-
-        patched_show_deprecation_warning.assert_not_called()
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
