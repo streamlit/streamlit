@@ -272,7 +272,9 @@ const Selectbox: React.FC<Props> = ({
           },
           Input: {
             props: {
-              // Change the 'readonly' prop to hide the mobile keyboard if options < 10
+              // When on mobile, if there are less than 10 options and new
+              // options are not accepted, set the input to read-only to hide
+              // the mobile keyboard.
               readOnly:
                 isMobile() && !showKeyboardOnMobile && !acceptNewOptions
                   ? "readonly"
