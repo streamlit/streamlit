@@ -133,7 +133,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
     const checkboxes = screen.getAllByRole("checkbox")
-    expect(checkboxes[0]).toBeChecked() // Select All (visible)
+    expect(checkboxes[0]).not.toBeChecked() // Select All (visible but indeterminate)
     expect(checkboxes[1]).toBeChecked() // Index (visible)
     expect(checkboxes[2]).toBeChecked() // Column 1 (visible)
     expect(checkboxes[3]).not.toBeChecked() // Column 2 (hidden)
@@ -176,7 +176,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     render(<ColumnVisibilityMenu {...propsWithColumnOrder} />)
 
     const checkboxes = screen.getAllByRole("checkbox")
-    expect(checkboxes[0]).toBeChecked() // Select All (visible, ignored by columnOrder)
+    expect(checkboxes[0]).not.toBeChecked() // Select All (visible, ignored by columnOrder)
     expect(checkboxes[1]).toBeChecked() // Index (visible, ignored by columnOrder)
     expect(checkboxes[2]).not.toBeChecked() // Column 1 (hidden via columnOrder)
     expect(checkboxes[3]).not.toBeChecked() // Column 2 (hidden via isHidden)
@@ -208,26 +208,26 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.setColumnOrder).not.toHaveBeenCalled()
   })
 
-  test("calls hideColumn on all columns when unchecking select all", async () => {
+  test("calls showColumn on all columns when selecting an indeterminate select all", async () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
-    await userEvent.click(screen.getByLabelText("Select all"))
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
-  })
-
-  test("calls showColumn on all columns when checking select all after it was unchecked", async () => {
-    render(<ColumnVisibilityMenu {...defaultProps} />)
-
-    await userEvent.click(screen.getByLabelText("Select all"))
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
-
-    await userEvent.click(screen.getByLabelText("Select all"))
+    await userEvent.click(screen.getByLabelText("Select all")) // (Indeterminate, column 2 is hidden)
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-1")
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
+  })
+
+  test("calls hideColumn on all columns when selecting a checked select all", async () => {
+    render(<ColumnVisibilityMenu {...defaultProps} />)
+
+    await userEvent.click(screen.getByLabelText("Select all")) // Shows all columns
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-1")
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
+
+    await userEvent.click(screen.getByLabelText("Select all"))
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
+    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
   })
 })

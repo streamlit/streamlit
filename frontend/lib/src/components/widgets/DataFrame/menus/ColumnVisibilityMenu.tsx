@@ -21,6 +21,7 @@ import {
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
+import { SIZE, StyledDivider as UIDivider } from "baseui/divider"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { transparentize } from "color2k"
 
@@ -35,6 +36,8 @@ interface CheckboxItemProps {
   label: string
   // The initial value of the checkbox.
   initialValue: boolean
+  // The state of the checkbox.
+  isIndeterminate?: boolean
   // The callback that is called when the checkbox is checked/unchecked.
   onChange: (checked: boolean) => void
 }
@@ -42,12 +45,14 @@ interface CheckboxItemProps {
 const CheckboxItem: React.FC<CheckboxItemProps> = ({
   label,
   initialValue,
+  isIndeterminate,
   onChange,
 }) => {
   const theme = useEmotionTheme()
 
   return (
     <UICheckbox
+      isIndeterminate={isIndeterminate}
       checked={initialValue}
       onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
         onChange(e.target.checked)
@@ -75,13 +80,16 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
           style: ({
             $isFocusVisible,
             $checked,
+            $isIndeterminate,
           }: {
             $isFocusVisible: boolean
             $checked: boolean
+            $isIndeterminate: boolean
           }) => {
-            const borderColor = $checked
-              ? theme.colors.primary
-              : theme.colors.fadedText40
+            const borderColor =
+              $checked || $isIndeterminate
+                ? theme.colors.primary
+                : theme.colors.fadedText40
 
             return {
               outline: 0,
@@ -91,7 +99,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
               marginLeft: 0,
               marginBottom: 0,
               boxShadow:
-                $isFocusVisible && $checked
+                $isFocusVisible && ($checked || $isIndeterminate)
                   ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
                   : "",
               borderLeftWidth: theme.sizes.borderWidth,
@@ -155,19 +163,21 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
-  const [isSelectAll, setIsSelectAll] = useState(true)
 
-  const onSelectAll = (): void => {
-    columns.map(column => {
+  const [allChecked, setAllChecked] = useState(
+    columns.every(column => !column.isHidden)
+  )
+  const isIndeterminate =
+    columns.some(column => !column.isHidden) && !allChecked
+
+  const onSelectAll = (checked: boolean): void => {
+    columns.forEach(column => {
       const hiddenViaColumnOrder =
         columnOrder.length && !column.isIndex
           ? !columnOrder.includes(column.id) &&
             !columnOrder.includes(column.name)
           : false
-
-      if (isSelectAll) {
-        hideColumn(column.id)
-      } else {
+      if (isIndeterminate || checked) {
         showColumn(column.id)
         if (hiddenViaColumnOrder) {
           // Add the column to the column order list:
@@ -176,10 +186,11 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             column.id,
           ])
         }
+      } else {
+        hideColumn(column.id)
       }
     })
-
-    setIsSelectAll(prev => !prev)
+    setAllChecked(checked)
   }
 
   return (
@@ -197,47 +208,53 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
         >
           <CheckboxItem
             label={"Select all"}
-            initialValue={isSelectAll}
-            onChange={onSelectAll}
+            isIndeterminate={isIndeterminate}
+            initialValue={allChecked}
+            onChange={checked => {
+              onSelectAll(checked)
+            }}
           />
-          {columns.map(column => {
-            // A column can be hidden if configured in column config
-            // or if the user has configured a column order that doesn't
-            // include the column.
-            const hiddenViaColumnOrder =
-              columnOrder.length && !column.isIndex
-                ? !columnOrder.includes(column.id) &&
-                  !columnOrder.includes(column.name)
-                : false
+          <UIDivider $size={SIZE.cell} />
+          <div>
+            {columns.map(column => {
+              // A column can be hidden if configured in column config
+              // or if the user has configured a column order that doesn't
+              // include the column.
+              const hiddenViaColumnOrder =
+                columnOrder.length && !column.isIndex
+                  ? !columnOrder.includes(column.id) &&
+                    !columnOrder.includes(column.name)
+                  : false
 
-            return (
-              <CheckboxItem
-                key={column.id}
-                label={
-                  !column.title && column.isIndex
-                    ? NAMELESS_INDEX_NAME
-                    : column.title
-                }
-                initialValue={
-                  !(column.isHidden === true || hiddenViaColumnOrder)
-                }
-                onChange={checked => {
-                  if (checked) {
-                    showColumn(column.id)
-                    if (hiddenViaColumnOrder) {
-                      // Add the column to the column order list:
-                      setColumnOrder((prevColumnOrder: string[]) => [
-                        ...prevColumnOrder,
-                        column.id,
-                      ])
-                    }
-                  } else {
-                    hideColumn(column.id)
+              return (
+                <CheckboxItem
+                  key={column.id}
+                  label={
+                    !column.title && column.isIndex
+                      ? NAMELESS_INDEX_NAME
+                      : column.title
                   }
-                }}
-              />
-            )
-          })}
+                  initialValue={
+                    !(column.isHidden === true || hiddenViaColumnOrder)
+                  }
+                  onChange={checked => {
+                    if (checked) {
+                      showColumn(column.id)
+                      if (hiddenViaColumnOrder) {
+                        // Add the column to the column order list:
+                        setColumnOrder((prevColumnOrder: string[]) => [
+                          ...prevColumnOrder,
+                          column.id,
+                        ])
+                      }
+                    } else {
+                      hideColumn(column.id)
+                    }
+                  }}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
       isOpen={isOpen}
