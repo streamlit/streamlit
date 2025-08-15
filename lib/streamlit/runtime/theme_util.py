@@ -34,71 +34,89 @@ def parse_fonts_with_source(
 
     Args:
         msg: CustomThemeConfig message to be populated.
-        body_font_config: A string in the format "<font_family_name_here>:<source_url_here>".
-        code_font_config: A string in the format "<code_font_family_name_here>:<source_url_here>".
-        heading_font_config: A string in the format "<heading_font_family_name_here>:<source_url_here>".
+        body_font_config: A string with just the font name (e.g., "Inter") or in the format
+            "<font_family_name_here>:<source_url_here>".
+        code_font_config: A string with just the font name (e.g., "Roboto Mono") or in the format
+            "<code_font_family_name_here>:<source_url_here>".
+        heading_font_config: A string with just the font name (e.g., "Inter Bold") or in the format
+            "<heading_font_family_name_here>:<source_url_here>".
 
     Examples
     --------
-    font_config: "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap"
+    font_config: "Inter" (just font name)
+    font_config: "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap" (with source)
     code_font_config: "playwrite-cc-za:https://use.typekit.net/xxs7euo.css"
 
     Returns
     -------
         Updated CustomThemeConfig message with the font, codeFont, and headingFont fields set.
-        Also sets sources in font_sources field to be added to the html.
+        Also sets sources in font_sources field to be added to the html (only when source URLs are provided).
     """
 
     if body_font_config:
-        # Split the string passed to font theme config on the colon. Before the first colon
-        # should be the font family name, and after the first colon should be the source URL.
-        # If no source is specified, the source is assumed to be specified in the fontFaces field.
+        # If no source is specified (no colon), just use the font name.
+        # Otherwise, split the font theme config on the colon. Before the first colon should be the font family name,
+        # and after the first colon should be the source URL.
 
-        # Note: it is possible there are multiple colons in the string, so we need to split on the first colon.
-        body_font, body_source = body_font_config.split(":", 1)
-        # Also, we attempt to check that the href does not contain multiple fonts, so we confirm that "family="
-        # only shows up once in the source string (structure applies to Google Fonts only)
-        body_family_occurances = body_source.count("family=")
-        if body_family_occurances > 1:
-            raise StreamlitAPIException(
-                "The source URL specified in the font property of config.toml contains multiple fonts. "
-                "Please specify only one font in the source URL."
-            )
+        if ":" in body_font_config:
+            # Note: it is possible there are multiple colons in the string, so we need to split on the first colon.
+            body_font, body_source = body_font_config.split(":", 1)
+            # Also, we attempt to check that the href does not contain multiple fonts, so we confirm that "family="
+            # only shows up once in the source string (structure applies to Google Fonts only)
+            body_family_occurances = body_source.count("family=")
+            if body_family_occurances > 1:
+                raise StreamlitAPIException(
+                    "The source URL specified in the font property of config.toml contains multiple fonts. "
+                    "Please specify only one font in the source URL."
+                )
 
-        if body_font:
-            # Since the font field uses the deprecated enum, we need to put the font
-            # config into the body_font field instead:
-            msg.body_font = body_font
-        # If the source is a valid URL (http/https), add it to the font_sources field to be added to the html head
-        if body_source.startswith("http"):
-            msg.font_sources.add(config_name="font", source_url=body_source)
+            if body_font:
+                # Since the font field uses the deprecated enum, we need to put the font
+                # config into the body_font field instead:
+                msg.body_font = body_font
+            # If the source is a valid URL (http/https), add it to the font_sources field to be added to the html head
+            if body_source.startswith("http"):
+                msg.font_sources.add(config_name="font", source_url=body_source)
+        else:
+            # No colon found, treat the entire string as the font name
+            msg.body_font = body_font_config
 
     if code_font_config:
-        code_font, code_source = code_font_config.split(":", 1)
-        code_family_occurances = code_source.count("family=")
-        if code_family_occurances > 1:
-            raise StreamlitAPIException(
-                "The source URL specified in the codeFont property of config.toml contains multiple fonts. "
-                "Please specify only one font in the source URL."
-            )
+        if ":" in code_font_config:
+            code_font, code_source = code_font_config.split(":", 1)
+            code_family_occurances = code_source.count("family=")
+            if code_family_occurances > 1:
+                raise StreamlitAPIException(
+                    "The source URL specified in the codeFont property of config.toml contains multiple fonts. "
+                    "Please specify only one font in the source URL."
+                )
 
-        if code_font:
-            msg.code_font = code_font
-        if code_source.startswith("http"):
-            msg.font_sources.add(config_name="codeFont", source_url=code_source)
+            if code_font:
+                msg.code_font = code_font
+            if code_source.startswith("http"):
+                msg.font_sources.add(config_name="codeFont", source_url=code_source)
+        else:
+            # No colon found, treat the entire string as the font name
+            msg.code_font = code_font_config
 
     if heading_font_config:
-        heading_font, heading_source = heading_font_config.split(":", 1)
-        heading_family_occurances = heading_source.count("family=")
-        if heading_family_occurances > 1:
-            raise StreamlitAPIException(
-                "The source URL specified in the headingFont property of config.toml contains multiple fonts. "
-                "Please specify only one font in the source URL."
-            )
+        if ":" in heading_font_config:
+            heading_font, heading_source = heading_font_config.split(":", 1)
+            heading_family_occurances = heading_source.count("family=")
+            if heading_family_occurances > 1:
+                raise StreamlitAPIException(
+                    "The source URL specified in the headingFont property of config.toml contains multiple fonts. "
+                    "Please specify only one font in the source URL."
+                )
 
-        if heading_font:
-            msg.heading_font = heading_font
-        if heading_source.startswith("http"):
-            msg.font_sources.add(config_name="headingFont", source_url=heading_source)
+            if heading_font:
+                msg.heading_font = heading_font
+            if heading_source.startswith("http"):
+                msg.font_sources.add(
+                    config_name="headingFont", source_url=heading_source
+                )
+        else:
+            # No colon found, treat the entire string as the font name
+            msg.heading_font = heading_font_config
 
     return msg

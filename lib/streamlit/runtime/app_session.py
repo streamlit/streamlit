@@ -987,12 +987,6 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         theme_opts.get("headingFont", None),
     )
 
-    # Since the font field uses the deprecated enum, we need to put the font
-    # config into the body_font field instead:
-    body_font = theme_opts.get("font", None)
-    if body_font:
-        msg.body_font = body_font
-
     font_faces = theme_opts.get("fontFaces", None)
     # If fontFaces was configured via config.toml, it's already a parsed list of
     # dictionaries. However, if it was provided via env variable or via CLI arg,

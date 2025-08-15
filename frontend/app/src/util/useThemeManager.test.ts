@@ -39,11 +39,18 @@ const mockCustomThemeConfig = {
   widgetBorderColor: "#D3DAE8",
   // Option is deprecated, but we still test to ensure backwards compatibility:
   skeletonBackgroundColor: "#CCDDEE",
+  headingFont: "playwrite-cc-za",
   fontFaces: [
     {
       family: "Inter",
       url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
       weight: 400,
+    },
+  ],
+  fontSources: [
+    {
+      configName: "headingFont",
+      sourceUrl: "https://use.typekit.net/eor5wum.css",
     },
   ],
 }
@@ -179,5 +186,107 @@ describe("useThemeManager", () => {
 
     expect(fontFaces2).toHaveLength(1)
     expect(fontFaces2).toEqual(mockCustomThemeConfig.fontFaces)
+  })
+
+  it("handles a font source", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setImportedTheme(mockCustomThemeConfig)
+    })
+
+    // Check that the font source link has been added to the DOM
+    const fontSourceLinks = document.head.querySelectorAll("link")
+    expect(fontSourceLinks).toHaveLength(1)
+
+    const headingFontLink = document.getElementById(
+      "headingFont"
+    ) as HTMLLinkElement
+    expect(headingFontLink).not.toBeNull()
+    expect(headingFontLink.href).toBe("https://use.typekit.net/eor5wum.css")
+    expect(headingFontLink.rel).toBe("stylesheet")
+    expect(headingFontLink.id).toBe("headingFont")
+  })
+
+  it("handles multiple font sources and replaces existing ones", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    // First, set a theme with multiple font sources
+    const multiSourceThemeConfig = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+        {
+          configName: "codeFont",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+        },
+        {
+          configName: "headingFont",
+          sourceUrl: "https://use.typekit.net/eor5wum.css",
+        },
+      ],
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(multiSourceThemeConfig)
+    })
+
+    // Check that all font source links have been added to the DOM
+    const fontSourceLinks = document.head.querySelectorAll("link")
+    expect(fontSourceLinks).toHaveLength(3)
+
+    const bodyFontLink = document.getElementById("font") as HTMLLinkElement
+    expect(bodyFontLink).not.toBeNull()
+    expect(bodyFontLink.href).toBe(
+      "https://fonts.googleapis.com/css2?family=Inter&display=swap"
+    )
+
+    const codeFontLink = document.getElementById("codeFont") as HTMLLinkElement
+    expect(codeFontLink).not.toBeNull()
+    expect(codeFontLink.href).toBe(
+      "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap"
+    )
+
+    const headingFontLink = document.getElementById(
+      "headingFont"
+    ) as HTMLLinkElement
+    expect(headingFontLink).not.toBeNull()
+    expect(headingFontLink.href).toBe("https://use.typekit.net/eor5wum.css")
+
+    // Now update with a new theme that replaces the headingFont source
+    const updatedThemeConfig = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        {
+          configName: "headingFont",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap",
+        },
+      ],
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(updatedThemeConfig)
+    })
+
+    // Check that the old headingFont link was replaced
+    const updatedHeadingFontLink = document.getElementById(
+      "headingFont"
+    ) as HTMLLinkElement
+    expect(updatedHeadingFontLink).not.toBeNull()
+    expect(updatedHeadingFontLink.href).toBe(
+      "https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap"
+    )
+
+    // The previous font and codeFont links should still exist (not replaced)
+    expect(document.getElementById("font")).not.toBeNull()
+    expect(document.getElementById("codeFont")).not.toBeNull()
   })
 })
