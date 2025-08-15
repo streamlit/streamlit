@@ -394,42 +394,41 @@ class ArrowMixin:
             (default), the visibility of index columns is automatically
             determined based on the data.
 
-        column_order : Iterable of str or None
-            The ordered list of columns to display. If ``column_order`` is
-            ``None`` (default), Streamlit displays all columns in the order
-            inherited from the underlying data structure. If ``column_order``
-            is a list, the indicated columns will display in the order they
-            appear within the list. Columns may be omitted or repeated within
-            the list.
+        column_order : Iterable[str] or None
+            The ordered list of columns to display. If this is ``None``
+            (default), Streamlit displays all columns in the order inherited
+            from the underlying data structure. If this is a list, the
+            indicated columns will display in the order they appear within the
+            list. Columns may be omitted or repeated within the list.
 
             For example, ``column_order=("col2", "col1")`` will display
             ``"col2"`` first, followed by ``"col1"``, and will hide all other
             non-index columns.
 
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
+
         column_config : dict or None
-            Configuration to customize how columns display. If ``column_config``
-            is ``None`` (default), columns are styled based on the underlying
-            data type of each column.
+            Configuration to customize how columns are displayed. If this is
+            ``None`` (default), columns are styled based on the underlying data
+            type of each column.
 
             Column configuration can modify column names, visibility, type,
-            width, or format, among other things. ``column_config`` must be a
-            dictionary where each key is a column name and the associated value
-            is one of the following:
+            width, format, and more. If this is a dictionary, the keys are
+            column names (strings) and/or positional column indices (integers),
+            and the values are one of the following:
 
-            - ``None``: Streamlit hides the column.
+            - ``None`` to hide the column.
+            - A string to set the display label of the column.
+            - One of the column types defined under ``st.column_config``. For
+              example, to show a column as dollar amounts, use
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``.
+              See more info on the available column types and config options
+              `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
-            - A string: Streamlit changes the display label of the column to
-              the given string.
-
-            - A column type within ``st.column_config``: Streamlit applies the
-              defined configuration to the column. For example, use
-              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``
-              to change the displayed name of the column to "Dollar values"
-              and add a "$" prefix in each cell. For more info on the
-              available column types and config options, see
-              `Column configuration <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
-
-            To configure the index column(s), use ``_index`` as the column name.
+            To configure the index column(s), use ``"_index"`` as the column
+            name, or use a positional column index where ``0`` refers to the
+            first index column.
 
         key : str
             An optional string to use for giving this element a stable
