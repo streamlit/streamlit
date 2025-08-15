@@ -170,7 +170,7 @@ function ImageList({
   const {
     expanded: isFullScreen,
     width,
-    height,
+    height: fullScreenHeight,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
@@ -181,8 +181,8 @@ function ImageList({
 
   const imgStyle: CSSProperties = {}
 
-  if (height && isFullScreen) {
-    imgStyle.maxHeight = height
+  if (fullScreenHeight && isFullScreen) {
+    imgStyle.maxHeight = fullScreenHeight
     imgStyle.objectFit = "contain"
     // @see issue https://github.com/streamlit/streamlit/issues/10904
     // Ensure the image tries to fill the width to prevent sizeless SVGs from
@@ -213,7 +213,7 @@ function ImageList({
   return (
     <StyledToolbarElementContainer
       width={containerWidth}
-      height={height}
+      height={fullScreenHeight}
       useContainerWidth={isFullScreen}
       topCentered
     >

@@ -46,7 +46,7 @@ function GraphVizChart({
   const {
     expanded: isFullScreen,
     width,
-    height,
+    height: fullScreenHeight,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
@@ -81,7 +81,7 @@ function GraphVizChart({
   return (
     <StyledToolbarElementContainer
       width={width ?? 0}
-      height={height}
+      height={fullScreenHeight}
       useContainerWidth={isFullScreen || element.useContainerWidth}
     >
       <Toolbar
