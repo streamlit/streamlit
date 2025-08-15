@@ -535,6 +535,7 @@ class DeltaGenerator(
             invoked_dg_id=self.id,
             used_dg_id=dg.id,
             returned_dg_id=output_dg.id,
+            layout_config=layout_config,
         )
 
         return output_dg

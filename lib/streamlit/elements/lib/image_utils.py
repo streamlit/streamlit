@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
     from PIL import GifImagePlugin, Image, ImageFile
 
+    from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Image_pb2 import ImageList as ImageListProto
     from streamlit.type_util import NumpyShape
 
@@ -176,7 +177,7 @@ def _get_image_format_mimetype(image_format: ImageFormat) -> str:
 
 
 def _ensure_image_size_and_format(
-    image_data: bytes, width: int, image_format: ImageFormat
+    image_data: bytes, layout_config: LayoutConfig, image_format: ImageFormat
 ) -> bytes:
     """Resize an image if it exceeds the given width, or if exceeds
     MAXIMUM_CONTENT_WIDTH. Ensure the image's format corresponds to the given
@@ -187,17 +188,25 @@ def _ensure_image_size_and_format(
     pil_image: PILImage = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
-    if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
-        width = MAXIMUM_CONTENT_WIDTH
+    target_width = (
+        layout_config.width
+        if isinstance(layout_config.width, int)
+        else MAXIMUM_CONTENT_WIDTH
+    )
 
-    if width > 0 and actual_width > width:
+    # Resizing the image down if the embedded width is greater than
+    # the target width.
+    if target_width > 0 and actual_width > target_width:
         # We need to resize the image.
-        new_height = int(1.0 * actual_height * width / actual_width)
+        new_height = int(1.0 * actual_height * target_width / actual_width)
         # pillow reexports Image.Resampling.BILINEAR as Image.BILINEAR for backwards
         # compatibility reasons, so we use the reexport to support older pillow
         # versions. The types don't seem to reflect this, though, hence the type: ignore
         # below.
-        pil_image = pil_image.resize((width, new_height), resample=Image.BILINEAR)  # type: ignore[attr-defined]
+        pil_image = pil_image.resize(
+            (target_width, new_height),
+            resample=Image.BILINEAR,  # type: ignore[attr-defined]
+        )
         return _pil_to_bytes(pil_image, format=image_format, quality=90)
 
     if pil_image.format != image_format:
@@ -227,7 +236,7 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
 
 def image_to_url(
     image: AtomicImage,
-    width: int,
+    layout_config: LayoutConfig,
     clamp: bool,
     channels: Channels,
     output_format: ImageFormatOrAuto,
@@ -327,7 +336,7 @@ def image_to_url(
 
     # Determine the image's format, resize it, and get its mimetype
     image_format = _validate_image_format_string(image_data, output_format)
-    image_data = _ensure_image_size_and_format(image_data, width, image_format)
+    image_data = _ensure_image_size_and_format(image_data, layout_config, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
     if runtime.exists():
@@ -346,7 +355,7 @@ def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
     caption: str | npt.NDArray[Any] | list[str] | None,
-    width: int | WidthBehavior,
+    layout_config: LayoutConfig,
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
@@ -423,7 +432,6 @@ def marshall_images(
             f"Cannot pair {len(captions)} captions with {len(images)} images."
         )
 
-    proto_imgs.width = int(width)
     # Each image in an image list needs to be kept track of at its own coordinates.
     for coord_suffix, (single_image, single_caption) in enumerate(
         zip(images, captions)
@@ -437,5 +445,5 @@ def marshall_images(
         image_id = f"{coordinates}-{coord_suffix}"
 
         proto_img.url = image_to_url(
-            single_image, width, clamp, channels, output_format, image_id
+            single_image, layout_config, clamp, channels, output_format, image_id
         )

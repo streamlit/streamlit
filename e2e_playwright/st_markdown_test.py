@@ -85,7 +85,7 @@ def test_displays_individual_markdowns(app: Page):
     expect(rainbow_background).to_have_css(
         "background-image",
         "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), "
-        "rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), "
+        "rgba(250, 202, 43, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), "
         "rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
     )
     expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
@@ -263,6 +263,7 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     expect(badge_container).to_contain_text("This is a very long badge")
     expect(badge_container).to_contain_text("Blue markdown badge")
     expect(badge_container).to_contain_text("🌱 Green markdown badge")
+    expect(badge_container).to_contain_text("Yellow markdown badge")
 
     # Take a snapshot of all badges together
     assert_snapshot(badge_container, name="st_badge-examples")

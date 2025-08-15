@@ -32,7 +32,7 @@ from streamlit.elements.lib.file_uploader_utils import (
     normalize_upload_file_type,
 )
 from streamlit.elements.lib.form_utils import is_in_form
-from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
+from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
@@ -147,7 +147,7 @@ def _process_avatar_input(
     try:
         return AvatarType.IMAGE, image_to_url(
             avatar,
-            width=WidthBehavior.ORIGINAL,
+            layout_config=LayoutConfig(width="content"),
             clamp=False,
             channels="RGB",
             output_format="auto",

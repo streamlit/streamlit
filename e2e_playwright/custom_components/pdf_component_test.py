@@ -35,11 +35,28 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
+def _wait_for_slider_to_be_ready(app: Page, timeout: int = 5000):
+    """Wait for the slider to be ready for interaction.
+
+    Parameters
+    ----------
+    app : Page
+        The page containing the slider
+    timeout : int
+        Maximum time to wait in milliseconds
+    """
+    slider = app.get_by_test_id("stSlider")
+    if slider.count() > 0:
+        # If there's a slider on the page, wait for it to be ready
+        expect(slider).to_be_visible(timeout=timeout)
+        expect(slider.get_by_role("slider")).to_be_enabled(timeout=timeout)
+
+
 def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
     """Wait for PDF content to finish loading inside the iframe.
 
-    This function waits for the PDF viewer to finish loading by checking
-    that the "Loading PDF..." text is no longer present in the iframe content.
+    We can't directly access iframe content due to cross-origin restrictions,
+    but we can use Playwright's frame locator to wait for elements inside the iframe.
 
     Parameters
     ----------
@@ -47,54 +64,31 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 15000):
         The page containing the PDF component
     timeout : int
         Maximum time to wait in milliseconds
-
-    Raises
-    ------
-    TimeoutError
-        If the PDF doesn't load within the timeout period
-    AssertionError
-        If the PDF is still showing loading text after the wait
     """
     iframe = app.locator("iframe").first
 
     # First ensure the iframe is attached and visible
-    expect(iframe).to_be_visible()
+    expect(iframe).to_be_visible(timeout=timeout)
 
-    # Then wait for the PDF content to load by checking that loading text is gone
+    # Wait for the iframe to have a src attribute
+    expect(iframe).to_have_attribute("src", re.compile(r".+"), timeout=timeout)
 
-    wait_until(
-        app,
-        lambda: iframe.evaluate(
-            """
-            (iframe) => {
-                try {
-                    // Check if the iframe content has loaded and doesn't contain loading text
-                    const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (!doc) return false;
+    # Get the frame locator to access content inside the iframe
+    # This works even with cross-origin iframes in Playwright
+    frame = app.frame_locator("iframe").first
 
-                    // Look for loading indicators - if none found, PDF is likely loaded
-                    const bodyText = doc.body ? doc.body.textContent || '' : '';
-                    const hasLoadingText = bodyText.includes('Loading PDF') ||
-                                            bodyText.includes('Loading...') ||
-                                            bodyText.includes('loading');
+    # Wait for the loading indicator to disappear
+    # The PDF component shows a div with data-testid="pdf-loading" while loading
+    loading_indicator = frame.get_by_test_id("pdf-loading")
 
-                    // Also check if the document has meaningful content beyond just loading text
-                    const hasContent = doc.body && doc.body.children.length > 0;
+    # Wait for the loading indicator to be hidden (not visible)
+    # This means the PDF has finished loading
+    expect(loading_indicator).to_be_hidden(timeout=timeout)
 
-                    return hasContent && !hasLoadingText;
-                } catch (e) {
-                    // Since we're testing local PDFs, not URLs, this shouldn't happen
-                    // If it does, it's likely a real error we should know about
-                    console.error('Error accessing iframe content:', e);
-                    return false;
-                }
-            }
-            """,
-            iframe,
-        )
-        is True,
-        timeout=timeout,
-    )
+    # Wait for the first page to actually render in the DOM
+    # The PDF component uses a virtualized list with data-index attributes for pages
+    first_page = frame.locator('[data-index="0"]')
+    expect(first_page).to_be_visible(timeout=timeout)
 
 
 def _reset_pdf_zoom(app: Page):
@@ -178,6 +172,9 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
+
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
 
     _expect_iframe_attached(app)
 
@@ -305,6 +302,9 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
 
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
+
     reset_button = app.get_by_test_id("stButton").filter(has_text="Reset Height")
     expect(reset_button).to_be_visible()
 
@@ -376,6 +376,9 @@ def test_st_pdf_widget_interactions(app: Page):
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
 
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
+
     slider_thumb = height_slider.locator("[role='slider']")
     expect(slider_thumb).to_be_visible()
     expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
@@ -395,6 +398,9 @@ def test_st_pdf_different_heights_snapshots(
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
+
+    # Wait for slider to be ready for interaction
+    _wait_for_slider_to_be_ready(app)
 
     # Wait for initial PDF to load
     _expect_iframe_attached(app)

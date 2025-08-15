@@ -140,8 +140,8 @@ if st.button("Open Nested Dialogs"):
 @st.dialog("Dialog with error")
 def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
-        # key is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", key="foo")  # type: ignore[call-arg]
+        # foo is an invalid argument, so this shows an error
+        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg]
 
 
 if st.button("Open Dialog with Key Error"):
@@ -158,15 +158,6 @@ def dialog_with_copy_buttons() -> None:
 
 if st.button("Open Dialog with Copy Buttons"):
     dialog_with_copy_buttons()
-
-
-@st.experimental_dialog("Usage of deprecated experimental_dialog")
-def dialog_with_deprecation_warning() -> None:
-    pass  # No need to write anything in the dialog body.
-
-
-if st.button("Open Dialog with deprecation warning"):
-    dialog_with_deprecation_warning()
 
 
 @st.fragment()

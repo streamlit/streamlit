@@ -80,6 +80,18 @@ describe("DataFrame widget", () => {
     expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
   })
 
+  it("renders when widgetMgr is undefined", () => {
+    const propsWithoutWidgetMgr = {
+      ...getProps(new Quiver({ data: TEN_BY_TEN })),
+      widgetMgr: undefined,
+    }
+
+    render(<DataFrame {...propsWithoutWidgetMgr} />)
+
+    // If it renders, the main container should be in the document
+    expect(screen.getByTestId("stDataFrame")).toBeVisible()
+  })
+
   it("should have correct className", () => {
     render(<DataFrame {...props} />)
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -23,6 +23,7 @@ import {
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { getCrossOriginAttribute, LibContext } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
@@ -45,6 +46,8 @@ const LogoComponent = ({
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
+  const { libConfig } = useContext(LibContext)
+
   if (!appLogo) {
     return null
   }
@@ -66,6 +69,11 @@ const LogoComponent = ({
 
   const source = endpoints.buildMediaURL(displayImage)
 
+  const crossOrigin = getCrossOriginAttribute(
+    libConfig.resourceCrossOriginMode,
+    displayImage
+  )
+
   const logo = (
     <StyledLogo
       src={source}
@@ -75,6 +83,7 @@ const LogoComponent = ({
       data-testid={dataTestId}
       // Save to logo's src to send on load error
       onError={_ => handleLogoError(source)}
+      crossOrigin={crossOrigin}
     />
   )
 
