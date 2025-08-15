@@ -83,9 +83,10 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(chat_input_widgets.nth(4), name="st_chat_input-multiple-files")
     assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-width_300px")
     assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_stretch")
-    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-bottom")
-    assert_snapshot(chat_input_widgets.nth(8), name="st_chat_input-directory")
-    assert_snapshot(chat_input_widgets.nth(9), name="st_chat_input-directory_disabled")
+    # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
+    assert_snapshot(chat_input_widgets.nth(9), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-directory")
+    assert_snapshot(chat_input_widgets.nth(8), name="st_chat_input-directory_disabled")
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
