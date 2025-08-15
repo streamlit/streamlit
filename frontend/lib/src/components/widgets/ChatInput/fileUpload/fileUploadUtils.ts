@@ -52,12 +52,29 @@ export const isFileTypeAllowed = (
   const fileName = file.name.toLowerCase()
   return acceptedExtensions.some(ext => {
     const extLower = ext.toLowerCase()
-    // Ensure we're matching at an extension boundary (preceded by a period or starting with one)
-    return (
-      fileName.endsWith(extLower) &&
-      (extLower.startsWith(".") || fileName.endsWith(`.${extLower}`))
+
+    return fileName.endsWith(
+      extLower.startsWith(".") ? extLower : `.${extLower}`
     )
   })
+}
+
+/**
+ * Validates a file against allowed types and returns rejection info if invalid.
+ * This is the shared validation logic used by both regular uploads and directory uploads.
+ */
+export const validateFileType = (
+  file: File,
+  allowedTypes: string[]
+): { isValid: boolean; errorMessage?: string } => {
+  if (isFileTypeAllowed(file, allowedTypes)) {
+    return { isValid: true }
+  }
+
+  return {
+    isValid: false,
+    errorMessage: `${file.type || "This type of"} files are not allowed.`,
+  }
 }
 
 /**

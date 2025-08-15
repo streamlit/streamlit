@@ -27,7 +27,7 @@ import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileI
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
-import { isFileTypeAllowed } from "./fileUploadUtils"
+import { validateFileType } from "./fileUploadUtils"
 
 interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
@@ -53,7 +53,8 @@ const filterDirectoryFiles = (
   const rejected: FileRejection[] = []
 
   files.forEach(file => {
-    if (isFileTypeAllowed(file, element.fileType)) {
+    const validation = validateFileType(file, element.fileType)
+    if (validation.isValid) {
       accepted.push(file)
     } else {
       rejected.push({
@@ -61,7 +62,7 @@ const filterDirectoryFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
-            message: `${file.type} files are not allowed.`,
+            message: validation.errorMessage || "File type not allowed.",
           },
         ],
       })

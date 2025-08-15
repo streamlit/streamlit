@@ -677,7 +677,7 @@ class ChatMixin:
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
         serde = ChatInputSerde(
-            accept_files=bool(accept_file) or accept_file == "directory",
+            accept_files=accept_file in {True, "multiple", "directory"},
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]

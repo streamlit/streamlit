@@ -429,7 +429,7 @@ describe("ChatInput widget", () => {
     })
   })
 
-  it("renders directory upload UI correctly", () => {
+  it("displays directory upload button when directory upload is enabled", () => {
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
       fileType: ["txt", "py", "md"],
