@@ -185,6 +185,21 @@ class ColumnTypesTest(unittest.TestCase):
             "type_config": {"type": "selectbox", "options": ["a", "b", "c"]},
         }, "Should have all the properties defined."
 
+    def test_selectbox_column_with_format_func(self):
+        """Test SelectboxColumn creation with format_func applied to options."""
+
+        assert remove_none_values(
+            SelectboxColumn(options=["a", "b"], format_func=str.upper)
+        ) == {
+            "type_config": {
+                "type": "selectbox",
+                "options": [
+                    {"value": "a", "label": "A"},
+                    {"value": "b", "label": "B"},
+                ],
+            }
+        }, "Options should be transformed into value/label pairs via format_func."
+
     def test_datetime_column(self):
         """Test DatetimeColumn creation."""
 
