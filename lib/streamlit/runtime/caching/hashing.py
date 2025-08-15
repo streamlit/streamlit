@@ -622,7 +622,7 @@ class _CacheFuncHasher:
         elif type_util.is_pydantic_model(obj):
             try:
                 # We have a choice to use pickle.dumps(), obj.model_dump(), or
-                # obj.model_dump_json(). The advantace of pickle and JSON is that
+                # obj.model_dump_json(). The advantage of pickle and JSON is that
                 # we'd be treating Pydantic objects opaquely, so there are no surprises
                 # for Pydantic users. And the reason to choose JSON over pickle is
                 # that JSON is faster, weirdly enough.
