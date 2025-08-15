@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
@@ -84,9 +84,14 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
+class SelectboxOption(TypedDict):
+    value: str | int | float
+    label: NotRequired[str | None]
+
+
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[list[str | int | float] | None]
+    options: NotRequired[list[str | int | float | SelectboxOption] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -921,6 +926,7 @@ def SelectboxColumn(
     pinned: bool | None = None,
     default: str | int | float | None = None,
     options: Iterable[str | int | float] | None = None,
+    format_func: Callable[[str | int | float], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -983,6 +989,13 @@ def SelectboxColumn(
         column if its dtype is "category". For more information, see `Pandas docs
         <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
 
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
+
+
     Examples
     --------
     >>> import pandas as pd
@@ -1022,6 +1035,15 @@ def SelectboxColumn(
         height: 300px
     """
 
+    # Process options with format_func
+    processed_options: Iterable[str | int | float | SelectboxOption] | None = options
+    if options and format_func is not None:
+        processed_options = []
+        for option in options:
+            processed_options.append(
+                SelectboxOption(value=option, label=format_func(option))
+            )
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -1031,7 +1053,8 @@ def SelectboxColumn(
         pinned=pinned,
         default=default,
         type_config=SelectboxColumnConfig(
-            type="selectbox", options=list(options) if options is not None else None
+            type="selectbox",
+            options=list(processed_options) if processed_options is not None else None,
         ),
     )
 

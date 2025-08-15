@@ -88,8 +88,8 @@ describe("SelectboxColumn", () => {
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
       null,
-      "foo",
-      "bar",
+      { value: "foo", label: "foo" },
+      { value: "bar", label: "bar" },
     ])
   })
 
@@ -108,9 +108,9 @@ describe("SelectboxColumn", () => {
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
       null,
-      "1",
-      "2",
-      "3",
+      { value: "1", label: "1" },
+      { value: "2", label: "2" },
+      { value: "3", label: "3" },
     ])
   })
 
@@ -125,8 +125,8 @@ describe("SelectboxColumn", () => {
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
       null,
-      "true",
-      "false",
+      { value: "true", label: "true" },
+      { value: "false", label: "false" },
     ])
   })
 
@@ -140,8 +140,8 @@ describe("SelectboxColumn", () => {
     )
     const mockCell = mockColumn.getCell("foo")
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
-      "foo",
-      "bar",
+      { value: "foo", label: "foo" },
+      { value: "bar", label: "bar" },
     ])
 
     const errorCell = mockColumn.getCell(null, true)
@@ -183,4 +183,35 @@ describe("SelectboxColumn", () => {
       expect(isMissingValueCell(mockCell)).toEqual(true)
     }
   )
+
+  it("supports SelectOption objects with custom labels", () => {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
+      options: [
+        { value: "us", label: "United States" },
+        { value: "de", label: "Germany" },
+      ],
+    })
+
+    const mockCell = mockColumn.getCell("us")
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      null,
+      { value: "us", label: "United States" },
+      { value: "de", label: "Germany" },
+    ])
+    expect(mockColumn.getCellValue(mockCell)).toEqual("us")
+  })
+
+  it("defaults SelectOption label to value when not provided", () => {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
+      options: [{ value: "X" }, { value: "Y" }],
+    })
+
+    const mockCell = mockColumn.getCell("X")
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      null,
+      { value: "X", label: "X" },
+      { value: "Y", label: "Y" },
+    ])
+    expect(mockColumn.getCellValue(mockCell)).toEqual("X")
+  })
 })
