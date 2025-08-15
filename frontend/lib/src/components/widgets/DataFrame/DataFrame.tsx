@@ -1161,10 +1161,17 @@ function DataFrame({
           validateCell={validateCell}
           // Open column context menu:
           onHeaderMenuClick={(columnIdx, screenPosition) => {
-            setShowMenu({
-              columnIdx,
-              headerBounds: screenPosition,
-            })
+            // There is an issue that clicking on the column visibility menu
+            // can trigger a menu click event on the column header.
+            // To prevent another menu from opening, we check if column
+            // visibility menu open state.
+            // https://github.com/streamlit/streamlit/pull/12233
+            if (!showColumnVisibilityMenu) {
+              setShowMenu({
+                columnIdx,
+                headerBounds: screenPosition,
+              })
+            }
           }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
