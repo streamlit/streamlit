@@ -398,8 +398,15 @@ def test_single_file_upload_button_tooltip(app: Page):
     )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
-    chat_input_upload_button.hover(force=True)
-    expect(app.get_by_text("Upload or drag and drop a file")).to_be_visible()
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop a file"
+    )
 
 
 def test_multi_file_upload_button_tooltip(app: Page):
@@ -411,8 +418,15 @@ def test_multi_file_upload_button_tooltip(app: Page):
     )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
-    chat_input_upload_button.hover(force=True)
-    expect(app.get_by_text("Upload or drag and drop files")).to_be_visible()
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop files"
+    )
 
 
 def test_directory_upload_button_tooltip(app: Page):
@@ -424,10 +438,14 @@ def test_directory_upload_button_tooltip(app: Page):
     )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
-    # Force hover to avoid pointer event interception issues
-    chat_input_upload_button.hover(force=True)
-    expect(app.get_by_text("Upload or drag and drop a directory")).to_be_visible(
-        timeout=10000
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop a directory"
     )
 
 
