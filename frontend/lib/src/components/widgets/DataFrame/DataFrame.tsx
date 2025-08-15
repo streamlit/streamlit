@@ -1060,10 +1060,12 @@ function DataFrame({
           validateCell={validateCell}
           // Open column context menu:
           onHeaderMenuClick={(columnIdx, screenPosition) => {
-            setShowMenu({
-              columnIdx,
-              headerBounds: screenPosition,
-            })
+            if (!showColumnVisibilityMenu) {
+              setShowMenu({
+                columnIdx,
+                headerBounds: screenPosition,
+              })
+            }
           }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
