@@ -38,6 +38,7 @@ message ChatInput {
     NONE = 0;
     SINGLE = 1;
     MULTIPLE = 2;
+    DIRECTORY = 3;
   }
   AcceptFile accept_file = 9;
 

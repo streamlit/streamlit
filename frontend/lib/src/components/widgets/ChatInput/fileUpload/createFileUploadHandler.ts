@@ -42,9 +42,13 @@ export const createUploadFileHandler =
   }: CreateUploadFileParams) =>
   (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
+    // For directory uploads, prefer the webkitRelativePath so we preserve
+    // the original directory structure in the displayed file name.
+    const fileName = file.webkitRelativePath || file.name
+
     const abortController = new AbortController()
     const uploadingFileInfo = new UploadFileInfo(
-      file.name,
+      fileName,
       file.size,
       getNextLocalFileId(),
       {

@@ -459,6 +459,7 @@ export enum AcceptFileValue {
   None,
   Single,
   Multiple,
+  Directory,
 }
 
 export function chatInputAcceptFileProtoValueToEnum(
@@ -471,6 +472,8 @@ export function chatInputAcceptFileProtoValueToEnum(
       return AcceptFileValue.Single
     case ChatInputProto.AcceptFile.MULTIPLE:
       return AcceptFileValue.Multiple
+    case ChatInputProto.AcceptFile.DIRECTORY:
+      return AcceptFileValue.Directory
     default:
       assertNever(value)
       return AcceptFileValue.None

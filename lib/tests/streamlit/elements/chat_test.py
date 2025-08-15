@@ -226,7 +226,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.value)
-            == "The `accept_file` parameter must be a boolean or 'multiple'."
+            == "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
         )
 
     def test_file_type(self):
@@ -423,3 +423,124 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions for chat_input."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.chat_input("Placeholder", width=width)
+
+    def test_just_label(self):
+        """Test st.chat_input with just a label."""
+        st.chat_input("the label")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert not c.disabled
+        assert c.max_chars == 0
+
+    def test_just_disabled(self):
+        """Test st.chat_input with disabled=True."""
+        st.chat_input("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert c.disabled
+
+    def test_max_chars(self):
+        """Test st.chat_input with max_chars set."""
+        st.chat_input("the label", max_chars=10)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert c.max_chars == 10
+
+    def test_accept_file_single(self):
+        """Test st.chat_input with accept_file=True."""
+        st.chat_input("the label", accept_file=True, file_type=["txt", "csv"])
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert c.accept_file == ChatInput.AcceptFile.SINGLE
+        assert c.file_type == [".txt", ".csv"]
+
+    def test_accept_file_multiple(self):
+        """Test st.chat_input with accept_file='multiple'."""
+        st.chat_input("the label", accept_file="multiple", file_type=["txt"])
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert c.accept_file == ChatInput.AcceptFile.MULTIPLE
+        assert c.file_type == [".txt"]
+
+    def test_accept_file_directory(self):
+        """Test st.chat_input with accept_file='directory'."""
+        st.chat_input(
+            "the label", accept_file="directory", file_type=["py", "md", "txt"]
+        )
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.placeholder == "the label"
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.file_type == [".py", ".md", ".txt"]
+
+    def test_directory_upload_with_no_file_type(self):
+        """Test directory upload without file type restrictions."""
+        st.chat_input("Upload any directory", accept_file="directory")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.file_type == []  # No restrictions
+
+    def test_directory_upload_with_width(self):
+        """Test directory upload with width parameter."""
+        st.chat_input("Directory chat", accept_file="directory", width=400)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+
+    def test_directory_upload_disabled(self):
+        """Test disabled directory upload."""
+        st.chat_input("Disabled directory", accept_file="directory", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.disabled
+
+    def test_directory_upload_with_max_chars(self):
+        """Test directory upload with character limit."""
+        st.chat_input("Limited text", accept_file="directory", max_chars=100)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.max_chars == 100
+
+    def test_accept_file_invalid_value(self):
+        """Test that invalid accept_file values raise an error."""
+        with pytest.raises(StreamlitAPIException) as cm:
+            st.chat_input("the label", accept_file="invalid")
+
+        assert (
+            "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            in str(cm.value)
+        )
+
+    def test_directory_upload_with_callback(self):
+        """Test directory upload with on_submit callback."""
+
+        def callback():
+            pass
+
+        st.chat_input(
+            "Directory with callback", accept_file="directory", on_submit=callback
+        )
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+
+    def test_file_type_normalization_for_directory(self):
+        """Test that file types are properly normalized for directory upload."""
+        # Test with various file type formats
+        st.chat_input("Directory", accept_file="directory", file_type=".txt")
+        c1 = self.get_delta_from_queue().new_element.chat_input
+        assert c1.file_type == [".txt"]
+
+        st.chat_input(
+            "Directory", accept_file="directory", file_type=["py", ".md", "txt"]
+        )
+        c2 = self.get_delta_from_queue().new_element.chat_input
+        assert c2.file_type == [".py", ".md", ".txt"]
