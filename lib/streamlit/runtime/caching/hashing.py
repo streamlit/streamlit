@@ -412,6 +412,7 @@ class _CacheFuncHasher:
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
+
         if isinstance(obj, Enum):
             return str(obj).encode()
 
@@ -446,12 +447,14 @@ class _CacheFuncHasher:
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
                 df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
                 self.update(h, column_hash_bytes)
                 values_hash_bytes = self.to_bytes(hash_pandas_object(df_obj))
                 self.update(h, values_hash_bytes)
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Pandas DataFrame hash failed. Falling back to pickling the object.",
@@ -475,6 +478,7 @@ class _CacheFuncHasher:
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Polars Series hash failed. Falling back to pickling the object.",
@@ -484,6 +488,7 @@ class _CacheFuncHasher:
                 # Use pickle if polars cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
         elif type_util.is_type(obj, "polars.dataframe.frame.DataFrame"):
             import polars as pl  # noqa: TC002
 
@@ -503,6 +508,7 @@ class _CacheFuncHasher:
 
                 self.update(h, values_hash_bytes)
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Polars DataFrame hash failed. Falling back to pickling the object.",
@@ -512,6 +518,7 @@ class _CacheFuncHasher:
                 # Use pickle if polars cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
         elif type_util.is_type(obj, "numpy.ndarray"):
             np_obj: npt.NDArray[Any] = cast("npt.NDArray[Any]", obj)
             self.update(h, np_obj.shape)
@@ -525,6 +532,7 @@ class _CacheFuncHasher:
 
             self.update(h, np_obj.tobytes())
             return h.digest()
+
         elif type_util.is_type(obj, "PIL.Image.Image"):
             import numpy as np
 
@@ -562,7 +570,8 @@ class _CacheFuncHasher:
             # on-disk and in-memory StringIO/BytesIO file representations.
             # That means that this condition must come *before* the next
             # condition, which just checks for StringIO/BytesIO.
-            obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
+            # Just to appease MyPy.
+            obj_name = getattr(obj, "name", "wonthappen")
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
@@ -609,6 +618,27 @@ class _CacheFuncHasher:
             self.update(h, obj.func)
             self.update(h, obj.keywords)
             return h.digest()
+
+        elif type_util.is_pydantic_model(obj):
+            try:
+                # We have a choice to use pickle.dumps(), obj.model_dump(), or
+                # obj.model_dump_json(). The advantage of pickle and JSON is that
+                # we'd be treating Pydantic objects opaquely, so there are no surprises
+                # for Pydantic users. And the reason to choose JSON over pickle is
+                # that JSON is faster, weirdly enough.
+                any_obj = cast("Any", obj)
+                if hasattr(any_obj, "model_dump_json"):
+                    # Pydantic v2
+                    json_data = any_obj.model_dump_json()
+                else:
+                    # Pydantic v1
+                    json_data = any_obj.json()
+                self.update(h, json_data)
+                return h.digest()
+            except Exception as ex:
+                raise UnhashableTypeError("""
+                    Pydantic object contains unhashable members, such as functions.
+                """) from ex
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method
