@@ -25,7 +25,7 @@ import {
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
@@ -36,9 +36,9 @@ vi.mock("vega-embed", () => ({
   default: vi.fn(),
 }))
 
-// Mock useCalculatedWidth hook
-vi.mock("~lib/hooks/useCalculatedWidth", () => ({
-  useCalculatedWidth: vi.fn(),
+// Mock useCalculatedDimensions hook
+vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
+  useCalculatedDimensions: vi.fn(),
 }))
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -53,8 +53,12 @@ const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
 describe("Metric element", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default mock implementation for useCalculatedWidth
-    vi.mocked(useCalculatedWidth).mockReturnValue([200, { current: null }])
+    // Default mock implementation for useCalculatedDimensions
+    vi.mocked(useCalculatedDimensions).mockReturnValue({
+      width: 200,
+      height: 100,
+      elementRef: { current: null },
+    })
   })
 
   it("renders metric as expected", () => {
@@ -250,7 +254,11 @@ describe("Metric element", () => {
     })
 
     it("does not call vega-embed when width is zero", () => {
-      vi.mocked(useCalculatedWidth).mockReturnValue([0, { current: null }])
+      vi.mocked(useCalculatedDimensions).mockReturnValue({
+        width: 0,
+        height: 100,
+        elementRef: { current: null },
+      })
 
       const props = getProps({
         chartData: [1, 2, 3, 4, 5],
