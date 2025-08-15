@@ -595,7 +595,7 @@ class DataEditorMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -616,7 +616,7 @@ class DataEditorMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -637,7 +637,7 @@ class DataEditorMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -703,28 +703,42 @@ class DataEditorMixin:
             (default), the visibility of index columns is automatically
             determined based on the data.
 
-        column_order : Iterable of str or None
-            Specifies the display order of columns. This also affects which columns are
-            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
-            first, followed by 'col1', and will hide all other non-index columns. If
-            None (default), the order is inherited from the original data structure.
+        column_order : Iterable[str] or None
+            The ordered list of columns to display. If this is ``None``
+            (default), Streamlit displays all columns in the order inherited
+            from the underlying data structure. If this is a list, the
+            indicated columns will display in the order they appear within the
+            list. Columns may be omitted or repeated within the list.
+
+            For example, ``column_order=("col2", "col1")`` will display
+            ``"col2"`` first, followed by ``"col1"``, and will hide all other
+            non-index columns.
+
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
 
         column_config : dict or None
-            Configures how columns are displayed, e.g. their title, visibility, type, or
-            format, as well as editing properties such as min/max value or step.
-            This needs to be a dictionary where each key is a column name and the value
-            is one of:
+            Configuration to customize how columns are displayed. If this is
+            ``None`` (default), columns are styled based on the underlying data
+            type of each column.
+
+            Column configuration can modify column names, visibility, type,
+            width, format, editing properties like min/max, and more. If this
+            is a dictionary, the keys are column names (strings) and/or
+            positional column indices (integers), and the values are one of the
+            following:
 
             - ``None`` to hide the column.
-
             - A string to set the display label of the column.
+            - One of the column types defined under ``st.column_config``. For
+              example, to show a column as dollar amounts, use
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``.
+              See more info on the available column types and config options
+              `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
-            - One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values", format="$ %d")`` to show
-              a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
-
-            To configure the index column(s), use ``_index`` as the column name.
+            To configure the index column(s), use ``"_index"`` as the column
+            name, or use a positional column index where ``0`` refers to the
+            first index column.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -732,11 +746,20 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or Iterable of str
-            Controls the editing of columns. If True, editing is disabled for all columns.
-            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
-            only the specified columns will be disabled for editing. If False (default),
-            all columns that support editing are editable.
+        disabled : bool or Iterable[str | int]
+            Controls the editing of columns. This can be one of the following:
+
+            - ``False`` (default): All columns that support editing are editable.
+            - ``True``: All columns are disabled for editing.
+            - An Iterable of column names and/or positional indices: The
+              specified columns are disabled for editing while the remaining
+              columns are editable where supported. For example,
+              ``disabled=["col1", "col2"]`` will disable editing for the
+              columns named "col1" and "col2".
+
+            To disable editing for the index column(s), use ``"_index"`` as the
+            column name, or use a positional column index where ``0`` refers to
+            the first index column.
 
         key : str
             An optional string to use as the unique key for this widget. If this

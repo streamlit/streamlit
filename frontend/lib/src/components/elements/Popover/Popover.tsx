@@ -30,7 +30,7 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { StyledIcon } from "~lib/components/shared/Icon"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
 
@@ -60,7 +60,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // and therefore has a performance overhead. However, this is needed
   // to link the width of the button to the popover width. I think we
   // can remove the need for this as part of the BaseWeb migration.
-  const [calculatedWidth, elementRef] = useCalculatedWidth()
+  const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>

@@ -19,10 +19,10 @@ import { MutableRefObject, useMemo } from "react"
 import { useResizeObserver } from "./useResizeObserver"
 
 /**
- * A React hook that observes and returns the width of a DOM element.
+ * A React hook that observes and returns the width and/or height of a DOM element.
  *
- * This hook uses a ResizeObserver to track changes to an element's width in real-time.
- * It returns -1 instead of 0 when no width is detected to prevent visual flickering
+ * This hook uses a ResizeObserver to track changes to an element's dimensions in real-time.
+ * It returns -1 instead of 0 when no dimension is detected to prevent visual flickering
  * that might occur during initial rendering or when elements are temporarily hidden.
  *
  * @template T - The type of HTML element being observed (defaults to HTMLDivElement)
@@ -30,33 +30,38 @@ import { useResizeObserver } from "./useResizeObserver"
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
  *
- * @returns A tuple containing:
- *   - The current width of the observed element in pixels (or -1 if width is 0)
- *   - A ref object that should be attached to the element you want to observe
+ * @returns An object containing:
+ *   - width: The current width of the observed element in pixels (or -1 if width is 0)
+ *   - height: The current height of the observed element in pixels (or -1 if height is 0)
+ *   - elementRef: A ref object that should be attached to the element you want to observe
  *
  * @example
  * ```tsx
  * const MyComponent = () => {
- *   const [width, ref] = useCalculatedWidth();
+ *   const { width, height, elementRef } = useCalculatedDimensions();
  *
  *   return (
- *     <div ref={ref}>
- *       Current width: {width === -1 ? 'calculating...' : `${width}px`}
+ *     <div ref={elementRef}>
+ *       Current dimensions: {width === -1 ? 'calculating...' : `${width}px`} x {height === -1 ? 'calculating...' : `${height}px`}
  *     </div>
  *   );
  * };
  * ```
  */
-export const useCalculatedWidth = <T extends HTMLDivElement>(
+export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = []
-): [number, MutableRefObject<T | null>] => {
+): {
+  width: number
+  height: number
+  elementRef: MutableRefObject<T | null>
+} => {
   const {
-    values: [width],
+    values: [width, height],
     elementRef,
   } = useResizeObserver<T>(
-    useMemo(() => ["width"], []),
+    useMemo(() => ["width", "height"], []),
     dependencies
   )
 
-  return [width || -1, elementRef]
+  return { width: width || -1, height: height || -1, elementRef }
 }
