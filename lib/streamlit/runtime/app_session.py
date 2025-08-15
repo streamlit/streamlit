@@ -45,6 +45,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
@@ -946,6 +947,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "base",
                 "font",
                 "fontFaces",
+                "codeFont",
+                "headingFont",
                 "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
@@ -974,6 +977,15 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             )
         else:
             msg.base = base_map[base]
+
+    # Handle font, codeFont, and headingFont config options and if they are
+    # specified with a source URL
+    msg = parse_fonts_with_source(
+        msg,
+        theme_opts.get("font", None),
+        theme_opts.get("codeFont", None),
+        theme_opts.get("headingFont", None),
+    )
 
     # Since the font field uses the deprecated enum, we need to put the font
     # config into the body_font field instead:
