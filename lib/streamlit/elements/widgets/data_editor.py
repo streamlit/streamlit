@@ -207,14 +207,16 @@ def _parse_value(
         if column_data_kind == ColumnDataKind.LIST:
             return list(value) if is_list_like(value) else [value]  # ty: ignore
 
+        if column_data_kind == ColumnDataKind.STRING:
+            return str(value)
+
         # List values aren't supported for anything else than list column data kind.
         # To make the type checker happy, we raise a TypeError here. However,
         # This isn't expected to happen.
         if isinstance(value, list):
-            raise TypeError("List values are only supported by list columns.")  # noqa: TRY301
-
-        if column_data_kind == ColumnDataKind.STRING:
-            return str(value)
+            raise TypeError(  # noqa: TRY301
+                "List values are only supported by list and string columns."
+            )
 
         if column_data_kind == ColumnDataKind.INTEGER:
             return int(value)
