@@ -17,7 +17,7 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -54,9 +54,6 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
     ...props,
     kind: "list",
     sortMode: "default",
-    themeOverride: {
-      roundingRadius: Math.round(convertRemToPx(theme.radii.full)),
-    },
     typeIcon: ":material/list:",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
