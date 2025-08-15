@@ -33,7 +33,6 @@ from unittest.mock import MagicMock, Mock
 
 import numpy as np
 import pandas as pd
-import pydantic
 import pytest
 from parameterized import parameterized
 from PIL import Image
@@ -530,15 +529,18 @@ class HashTest(unittest.TestCase):
         assert get_hash(im4) == get_hash(im5)
         assert get_hash(im5) != get_hash(im6)
 
+    @pytest.mark.require_integration
     def test_pydantic_model(self):
         """Test that Pydantic models are properly hashed.
-        
+
         Verifies that:
         - The same model instance hashes consistently
         - Two identical model instances produce the same hash
         - Models with different field values produce different hashes
         - Different model classes with the same field values produce different hashes
         """
+        import pydantic
+
         class Foo(pydantic.BaseModel):
             name: str
 
