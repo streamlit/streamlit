@@ -30,6 +30,7 @@ import {
 } from "@streamlit/protobuf"
 
 import {
+  getElementId,
   getLoadingScreenType,
   isNullOrUndefined,
   LoadingScreenType,
@@ -455,7 +456,46 @@ export class BlockNode implements AppNode {
     const newChildren = this.children.slice()
     if (path.length === 1) {
       // Base case
-      newChildren[childIndex] = node
+      const newId =
+        node instanceof ElementNode ? getElementId(node.element) : undefined
+
+      if (newId) {
+        // If the new node has an ID, check if it's a replacement for an
+        // existing node.
+        for (let i = childIndex; i < newChildren.length; i++) {
+          const existingChild = newChildren[i]
+          if (
+            existingChild instanceof ElementNode &&
+            getElementId(existingChild.element) === newId
+          ) {
+            // If the new node has the same ID as an existing node,
+            // we remove the existing node.
+            newChildren.splice(i, 1)
+            break
+          }
+        }
+      }
+
+      const existingNode = newChildren[childIndex]
+      const existingId =
+        existingNode instanceof ElementNode
+          ? getElementId(existingNode.element)
+          : undefined
+
+      if (existingId && existingId !== newId) {
+        // The existing node is stateful (has an ID) and is being displaced
+        // by a new node (with a different ID or no ID).
+        // We treat this as an insertion to not cause the node to be unmounted
+        // and lose its state.
+        newChildren.splice(childIndex, 0, node)
+      } else {
+        // This is a replacement because either:
+        // - The existing node has no ID (cannot preserve state).
+        // - The existing node is a BlockNode.
+        // - The existing node has the same ID as the new node (direct update).
+        // - We're appending to the end (existingNode is undefined).
+        newChildren[childIndex] = node
+      }
     } else {
       // Pop the current element off our path, and recurse into our children
       newChildren[childIndex] = newChildren[childIndex].setIn(

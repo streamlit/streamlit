@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
@@ -63,6 +69,11 @@ function TextInput({
   const [uiValue, setUiValue] = useState<string | null>(
     () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
+
+  useEffect(() => {
+    console.log("mount")
+    return () => console.log("unmount")
+  }, [])
 
   const [width, elementRef] = useCalculatedWidth()
 
