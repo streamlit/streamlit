@@ -46,7 +46,7 @@ export const prepareOptions = (
   }
 
   return options
-    .filter(opt => opt !== null && opt !== "")
+    .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
     .map(option => {
       if (typeof option === "object" && "value" in option) {
         // Handle SelectOption type
@@ -58,7 +58,7 @@ export const prepareOptions = (
       }
 
       // Handle primitive types (string, number, boolean)
-      const optionValue = toSafeString(option).trim()
+      const optionValue = toSafeString(option).trim() // convert everything to string
       return {
         value: optionValue,
         label: optionValue,
