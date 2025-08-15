@@ -626,7 +626,13 @@ class _CacheFuncHasher:
                 # we'd be treating Pydantic objects opaquely, so there are no surprises
                 # for Pydantic users. And the reason to choose JSON over pickle is
                 # that JSON is faster, weirdly enough.
-                self.update(h, obj.model_dump_json())
+                if hasattr(obj, "model_dump_json"):
+                    # Pydantic v2
+                    json_data = obj.model_dump_json()
+                else:
+                    # Pydantic v1
+                    json_data = obj.json()
+                self.update(h, json_data)
                 return h.digest()
             except Exception as ex:
                 raise UnhashableTypeError("""
