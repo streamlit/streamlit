@@ -23,14 +23,10 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useFullscreen } from "./useFullscreen"
 
-type ElementFullscreenWrapperProps = PropsWithChildren<{
-  height?: number
-  width?: number
-}>
+type ElementFullscreenWrapperProps = PropsWithChildren
 
 const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
   children,
-  height,
 }) => {
   const theme = useEmotionTheme()
   const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
@@ -39,12 +35,12 @@ const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
   const fullscreenContextValue = useMemo(() => {
     return {
       width: expanded ? fullWidth : width,
-      height: expanded ? fullHeight : height,
+      height: expanded ? fullHeight : undefined,
       expanded,
       expand: zoomIn,
       collapse: zoomOut,
     }
-  }, [expanded, fullHeight, fullWidth, height, width, zoomIn, zoomOut])
+  }, [expanded, fullHeight, fullWidth, width, zoomIn, zoomOut])
 
   return (
     <ElementFullscreenContext.Provider value={fullscreenContextValue}>

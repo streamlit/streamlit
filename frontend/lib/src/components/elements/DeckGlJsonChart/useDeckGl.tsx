@@ -166,7 +166,7 @@ function updateWidgetMgrState(
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
-    height: propsHeight,
+    height: fullScreenHeight,
     width: propsWidth,
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
@@ -199,7 +199,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     element,
     isFullScreen,
     shouldUseContainerWidth,
-    container: { height: propsHeight, width: propsWidth },
+    container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
         ?.height || theme.sizes.defaultMapHeight,

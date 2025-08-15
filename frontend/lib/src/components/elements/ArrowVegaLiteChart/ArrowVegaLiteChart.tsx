@@ -80,7 +80,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   const {
     expanded: isFullScreen,
-    height,
+    height: fullScreenHeight,
     width: fullScreenWidth,
     expand,
     collapse,
@@ -112,7 +112,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     isFullScreen,
     // Facet charts enter a loop when using the width from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : width,
-    height ?? 0
+    fullScreenHeight ?? 0
   )
 
   // This hook provides lifecycle functions for creating and removing the view.
@@ -144,7 +144,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     finalizeView,
     spec,
     fullScreenWidth,
-    height,
+    fullScreenHeight,
     showData,
     containerRef,
   ])
@@ -172,7 +172,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     return (
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
-        height={height ?? chartHeight ?? undefined}
+        height={chartHeight ?? undefined}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -192,7 +192,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
-      height={height}
+      height={fullScreenHeight}
       useContainerWidth={element.useContainerWidth}
     >
       <Toolbar

@@ -158,7 +158,7 @@ function DataFrame({
     expand,
     collapse,
     width: containerWidth,
-    height: containerHeight,
+    height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
   const { isInHorizontalLayout } = useRequiredContext(FlexContext)
@@ -702,7 +702,7 @@ function DataFrame({
     numRows,
     usesGroupRow,
     containerWidth || 0,
-    containerHeight,
+    fullScreenHeight,
     isFullScreen,
     widthConfig,
     heightConfig
