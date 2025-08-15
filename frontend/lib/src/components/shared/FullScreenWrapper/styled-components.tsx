@@ -23,7 +23,6 @@ export interface StyledFullScreenFrameProps {
 export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
   ({ theme, isExpanded }) => ({
     width: "100%",
-    height: "100%",
     ...(isExpanded
       ? {
           position: "fixed",

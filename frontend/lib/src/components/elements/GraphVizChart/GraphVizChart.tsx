@@ -39,7 +39,6 @@ export interface GraphVizChartProps {
   element: GraphVizChartProto
   disableFullscreenMode?: boolean
   widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
 }
 export const LOG = getLogger("GraphVizChart")
 
@@ -47,7 +46,6 @@ function GraphVizChart({
   element,
   disableFullscreenMode,
   widthConfig,
-  heightConfig,
 }: Readonly<GraphVizChartProps>): ReactElement {
   const chartId = `st-graphviz-chart-${element.elementId}`
 
@@ -62,8 +60,6 @@ function GraphVizChart({
   // Determine if we should use container width based on layout config or legacy prop
   const shouldUseContainerWidth =
     shouldChildrenStretch(widthConfig) || element.useContainerWidth
-
-  const shouldUseContainerHeight = shouldChildrenStretch(heightConfig)
 
   useEffect(() => {
     try {
@@ -95,7 +91,7 @@ function GraphVizChart({
   return (
     <StyledToolbarElementContainer
       width={width ?? 0}
-      height={shouldUseContainerHeight ? fullScreenHeight : undefined}
+      height={fullScreenHeight}
       useContainerWidth={isFullScreen || shouldUseContainerWidth}
     >
       <Toolbar
@@ -111,7 +107,6 @@ function GraphVizChart({
         id={chartId}
         isFullScreen={isFullScreen}
         useContainerWidth={shouldUseContainerWidth}
-        useContainerHeight={shouldUseContainerHeight}
       />
     </StyledToolbarElementContainer>
   )

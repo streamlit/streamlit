@@ -112,37 +112,3 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue()
         assert getattr(delta.new_element.width_config, expected_field) == expected_value
-
-    @parameterized.expand(
-        [
-            ("content", "use_content", True),
-            ("stretch", "use_stretch", True),
-            (300, "pixel_height", 300),
-        ]
-    )
-    def test_height_parameter(self, height_value, expected_field, expected_value):
-        """Test that it can be called with different height values."""
-        graph = graphviz.Graph(comment="The Round Table")
-        graph.node("A", "King Arthur")
-        graph.node("B", "Sir Bedevere the Wise")
-        graph.edges(["AB"])
-
-        st.graphviz_chart(graph, height=height_value)
-
-        delta = self.get_delta_from_queue()
-        assert (
-            getattr(delta.new_element.height_config, expected_field) == expected_value
-        )
-
-    def test_width_and_height_together(self):
-        """Test that width and height can be used together."""
-        graph = graphviz.Graph(comment="The Round Table")
-        graph.node("A", "King Arthur")
-        graph.node("B", "Sir Bedevere the Wise")
-        graph.edges(["AB"])
-
-        st.graphviz_chart(graph, width="stretch", height=500)
-
-        delta = self.get_delta_from_queue()
-        assert delta.new_element.width_config.use_stretch
-        assert delta.new_element.height_config.pixel_height == 500
