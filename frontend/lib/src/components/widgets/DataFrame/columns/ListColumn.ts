@@ -55,7 +55,7 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
     kind: "list",
     sortMode: "default",
     themeOverride: {
-      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
+      roundingRadius: Math.round(convertRemToPx(theme.radii.full)),
     },
     typeIcon: ":material/list:",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

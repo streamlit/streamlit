@@ -18,12 +18,7 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import uniqBy from "lodash/uniqBy"
 
-import {
-  blend,
-  convertRemToPx,
-  EmotionTheme,
-  getMarkdownBgColors,
-} from "~lib/theme"
+import { blend, EmotionTheme, getMarkdownBgColors } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -143,19 +138,11 @@ function MultiSelectColumn(
     copyData: "",
   } as MultiSelectCellType
 
-  const badgeBackgroundColors = getMarkdownBgColors(theme)
-
   return {
     ...props,
     kind: "multiselect",
     sortMode: "default",
     typeIcon: ":material/checklist:",
-    themeOverride: {
-      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
-      bgBubble: badgeBackgroundColors.primarybg,
-      bgBubbleSelected: badgeBackgroundColors.primarybg,
-      textBubble: theme.colors.bodyText,
-    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
@@ -172,7 +159,7 @@ function MultiSelectColumn(
 
       let cellData = toSafeArray(data)
 
-      cellData = cellData.map((x: object) => toSafeString(x).trim())
+      cellData = cellData.map((x: unknown) => toSafeString(x).trim())
 
       if (
         validate &&
