@@ -82,7 +82,7 @@ def get_label_visibility_proto_value(
 
 
 def get_chat_input_accept_file_proto_value(
-    accept_file_value: bool | Literal["multiple"],
+    accept_file_value: Literal["multiple", "directory"] | bool,
 ) -> ChatInput.AcceptFile.ValueType:
     """Returns one of ChatInput.AcceptFile enum value based on string value."""
 
@@ -92,6 +92,8 @@ def get_chat_input_accept_file_proto_value(
         return ChatInput.AcceptFile.SINGLE
     if accept_file_value == "multiple":
         return ChatInput.AcceptFile.MULTIPLE
+    if accept_file_value == "directory":
+        return ChatInput.AcceptFile.DIRECTORY
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
 

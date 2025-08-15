@@ -313,11 +313,20 @@ class FileUploaderMixin:
                 or type extensions. The correct handling of uploaded files is
                 part of the app developer's responsibility.
 
-        accept_multiple_files : bool
-            Whether to accept more than one file in a submission. If this is
-            ``False`` (default), the user can only submit one file at a time.
-            If this is ``True``, the user can upload multiple files at the same
-            time, in which case the return value will be a list of files.
+        accept_multiple_files : bool or str
+            Whether to accept more than one file in a submission. This can be one
+            of the following values:
+
+            - ``False`` (default): The user can only submit one file at a time.
+            - ``True``: The user can upload multiple files at the same time,
+              in which case the return value will be a list of files.
+            - ``"directory"``: The user can upload an entire directory (all
+              files within the directory), in which case the return value will
+              be a list of files preserving the directory structure.
+
+            When the widget is configured to accept directories, the accepted file
+            types can be configured with the ``type`` parameter to filter files
+            within the directory.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -414,6 +423,17 @@ class FileUploaderMixin:
         ...     bytes_data = uploaded_file.read()
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
+
+        Insert a file uploader that accepts an entire directory:
+
+        >>> import streamlit as st
+        >>>
+        >>> uploaded_files = st.file_uploader(
+        ...     "Choose a directory", accept_multiple_files="directory"
+        ... )
+        >>> for uploaded_file in uploaded_files:
+        ...     st.write("filename:", uploaded_file.name)
+        ...     st.write("file size:", uploaded_file.size)
 
         .. output::
            https://doc-file-uploader.streamlit.app/
