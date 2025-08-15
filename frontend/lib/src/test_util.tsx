@@ -153,6 +153,34 @@ export function arrayFromVector(vector: any): any {
 }
 
 /**
+ * Helper function to create a simple test File object.
+ */
+export function createTestFile(
+  fileName: string,
+  content: string | ArrayBuffer = "content",
+  mimeType?: string
+): File {
+  // Auto-detect mime type from extension if not provided
+  if (!mimeType) {
+    const ext = fileName.split(".").pop()?.toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      txt: "text/plain",
+      pdf: "application/pdf",
+      exe: "application/exe",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      html: "text/html",
+      js: "application/javascript",
+      json: "application/json",
+    }
+    mimeType = mimeTypes[ext || ""] || "application/octet-stream"
+  }
+
+  return new File([content], fileName, { type: mimeType })
+}
+
+/**
  * Helper function to create a File object with webkitRelativePath for testing directory uploads.
  * This simulates how browsers provide files when a directory is selected.
  */

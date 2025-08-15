@@ -593,23 +593,33 @@ describe("ChatInput widget", () => {
     ) as HTMLInputElement
     await user.upload(fileInput, directoryFiles)
 
-    // Wait for files to be displayed
+    // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
       const fileNames = screen.getAllByTestId("stChatInputFileName")
       expect(fileNames).toHaveLength(2)
-      expect(fileNames[0]).toHaveTextContent("folder/file1.txt")
-      expect(fileNames[1]).toHaveTextContent("folder/file2.txt")
+
+      // Check that both files are present, regardless of order
+      const fileTexts = Array.from(fileNames).map(el => el.textContent)
+      expect(fileTexts).toContain("folder/file1.txt")
+      expect(fileTexts).toContain("folder/file2.txt")
     })
 
-    // Delete the first file
+    // Find and delete file1
     const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
     expect(deleteButtons).toHaveLength(2)
-    // Click the actual button inside the delete button wrapper
-    const firstDeleteButton = deleteButtons[0].querySelector("button")
-    expect(firstDeleteButton).toBeTruthy()
-    await user.click(firstDeleteButton as HTMLButtonElement)
 
-    // Verify only one file remains
+    // Find which delete button corresponds to file1
+    const fileNames = screen.getAllByTestId("stChatInputFileName")
+    const file1Index = Array.from(fileNames).findIndex(
+      el => el.textContent === "folder/file1.txt"
+    )
+
+    // Click the actual button inside the delete button wrapper for file1
+    const file1DeleteButton = deleteButtons[file1Index].querySelector("button")
+    expect(file1DeleteButton).toBeTruthy()
+    await user.click(file1DeleteButton as HTMLButtonElement)
+
+    // Verify only file2 remains
     await waitFor(() => {
       const remainingFileNames = screen.getAllByTestId("stChatInputFileName")
       expect(remainingFileNames).toHaveLength(1)

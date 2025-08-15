@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
+import { createTestFile } from "~lib/test_util"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -28,41 +29,33 @@ import {
 describe("fileUploadUtils", () => {
   describe("isFileTypeAllowed", () => {
     it("allows all files when no extensions are specified", () => {
-      const file = new File(["content"], "test.txt", { type: "text/plain" })
+      const file = createTestFile("test.txt")
       expect(isFileTypeAllowed(file, undefined)).toBe(true)
       expect(isFileTypeAllowed(file, [])).toBe(true)
     })
 
     it("correctly matches file extensions with dot", () => {
-      const txtFile = new File(["content"], "document.txt", {
-        type: "text/plain",
-      })
+      const txtFile = createTestFile("document.txt")
       expect(isFileTypeAllowed(txtFile, [".txt"])).toBe(true)
       expect(isFileTypeAllowed(txtFile, [".pdf"])).toBe(false)
       expect(isFileTypeAllowed(txtFile, [".txt", ".pdf"])).toBe(true)
     })
 
     it("correctly matches file extensions without dot", () => {
-      const txtFile = new File(["content"], "document.txt", {
-        type: "text/plain",
-      })
+      const txtFile = createTestFile("document.txt")
       expect(isFileTypeAllowed(txtFile, ["txt"])).toBe(true)
       expect(isFileTypeAllowed(txtFile, ["pdf"])).toBe(false)
       expect(isFileTypeAllowed(txtFile, ["txt", "pdf"])).toBe(true)
     })
 
     it("handles mixed format extensions", () => {
-      const txtFile = new File(["content"], "document.txt", {
-        type: "text/plain",
-      })
+      const txtFile = createTestFile("document.txt")
       expect(isFileTypeAllowed(txtFile, [".txt", "pdf"])).toBe(true)
       expect(isFileTypeAllowed(txtFile, ["txt", ".pdf"])).toBe(true)
     })
 
     it("is case insensitive", () => {
-      const file = new File(["content"], "Document.TXT", {
-        type: "text/plain",
-      })
+      const file = createTestFile("Document.TXT")
       expect(isFileTypeAllowed(file, [".txt"])).toBe(true)
       expect(isFileTypeAllowed(file, ["txt"])).toBe(true)
       expect(isFileTypeAllowed(file, [".TXT"])).toBe(true)
@@ -71,9 +64,11 @@ describe("fileUploadUtils", () => {
 
     it("does not match partial extensions (avoids false positives)", () => {
       // File with compound extension should not match partial extension
-      const backupFile = new File(["content"], "test.txt.backup", {
-        type: "text/plain",
-      })
+      const backupFile = createTestFile(
+        "test.txt.backup",
+        "content",
+        "text/plain"
+      )
       expect(isFileTypeAllowed(backupFile, [".txt"])).toBe(false)
       expect(isFileTypeAllowed(backupFile, ["txt"])).toBe(false)
       expect(isFileTypeAllowed(backupFile, [".backup"])).toBe(true)
@@ -81,9 +76,7 @@ describe("fileUploadUtils", () => {
     })
 
     it("handles files with multiple dots correctly", () => {
-      const file = new File(["content"], "my.document.v2.pdf", {
-        type: "application/pdf",
-      })
+      const file = createTestFile("my.document.v2.pdf")
       expect(isFileTypeAllowed(file, [".pdf"])).toBe(true)
       expect(isFileTypeAllowed(file, ["pdf"])).toBe(true)
       expect(isFileTypeAllowed(file, [".v2"])).toBe(false)
@@ -91,7 +84,7 @@ describe("fileUploadUtils", () => {
     })
 
     it("handles files without extensions", () => {
-      const file = new File(["content"], "README", { type: "text/plain" })
+      const file = createTestFile("README", "content", "text/plain")
       expect(isFileTypeAllowed(file, [".txt"])).toBe(false)
       expect(isFileTypeAllowed(file, ["txt"])).toBe(false)
       expect(isFileTypeAllowed(file, [""])).toBe(true)
@@ -99,7 +92,7 @@ describe("fileUploadUtils", () => {
     })
 
     it("handles files ending with a dot", () => {
-      const file = new File(["content"], "test.", { type: "text/plain" })
+      const file = createTestFile("test.", "content", "text/plain")
       expect(isFileTypeAllowed(file, [".txt"])).toBe(false)
       expect(isFileTypeAllowed(file, [""])).toBe(true)
       expect(isFileTypeAllowed(file, ["."])).toBe(true)
@@ -108,25 +101,21 @@ describe("fileUploadUtils", () => {
 
   describe("validateFileType", () => {
     it("returns valid for allowed file types", () => {
-      const file = new File(["content"], "test.txt", { type: "text/plain" })
+      const file = createTestFile("test.txt")
       const result = validateFileType(file, ["txt"])
       expect(result.isValid).toBe(true)
       expect(result.errorMessage).toBeUndefined()
     })
 
     it("returns error for disallowed file types", () => {
-      const file = new File(["content"], "test.exe", {
-        type: "application/exe",
-      })
+      const file = createTestFile("test.exe")
       const result = validateFileType(file, ["txt", "pdf"])
       expect(result.isValid).toBe(false)
       expect(result.errorMessage).toContain("files are not allowed")
     })
 
     it("returns valid when no restrictions", () => {
-      const file = new File(["content"], "test.anything", {
-        type: "application/octet-stream",
-      })
+      const file = createTestFile("test.anything")
       const result = validateFileType(file, [])
       expect(result.isValid).toBe(true)
     })
