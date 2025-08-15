@@ -167,9 +167,6 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
 
-  // const [allChecked, setAllChecked] = useState(
-  //   columns.every(column => !column.isHidden)
-  // )
   const allChecked = columns.every(column => !column.isHidden)
   const isIndeterminate =
     columns.some(column => !column.isHidden) && !allChecked
@@ -181,6 +178,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           ? !columnOrder.includes(column.id) &&
             !columnOrder.includes(column.name)
           : false
+
       if (checked && !isIndeterminate) {
         showColumn(column.id)
         if (hiddenViaColumnOrder) {
