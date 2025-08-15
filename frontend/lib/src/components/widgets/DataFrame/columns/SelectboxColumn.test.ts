@@ -20,7 +20,10 @@ import { Bool, Field, Int8 } from "apache-arrow"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import SelectboxColumn, { SelectboxColumnParams } from "./SelectboxColumn"
+import SelectboxColumn, {
+  prepareOptions,
+  SelectboxColumnParams,
+} from "./SelectboxColumn"
 import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_CATEGORICAL_TYPE: ArrowType = {
@@ -213,5 +216,75 @@ describe("SelectboxColumn", () => {
       { value: "Y", label: "Y" },
     ])
     expect(mockColumn.getCellValue(mockCell)).toEqual("X")
+  })
+})
+
+describe("prepareOptions", () => {
+  it.each([
+    [
+      ["foo", "bar"],
+      [
+        { value: "foo", label: "foo" },
+        { value: "bar", label: "bar" },
+      ],
+    ],
+    [
+      [1, 2],
+      [
+        { value: "1", label: "1" },
+        { value: "2", label: "2" },
+      ],
+    ],
+    [
+      [true, false],
+      [
+        { value: "true", label: "true" },
+        { value: "false", label: "false" },
+      ],
+    ],
+    [
+      [
+        { value: "us", label: "United States" },
+        { value: "de", label: "Germany" },
+      ],
+      [
+        { value: "us", label: "United States" },
+        { value: "de", label: "Germany" },
+      ],
+    ],
+    [
+      [{ value: "X" }, { value: "Y" }],
+      [
+        { value: "X", label: "X" },
+        { value: "Y", label: "Y" },
+      ],
+    ],
+    [
+      // Filters out empty string and null entries
+      ["", "A", null, "B"] as unknown as (
+        | string
+        | number
+        | boolean
+        | { value: string; label?: string }
+      )[],
+      [
+        { value: "A", label: "A" },
+        { value: "B", label: "B" },
+      ],
+    ],
+    [
+      // Trims whitespace around values
+      ["  foo  ", "bar "],
+      [
+        { value: "foo", label: "foo" },
+        { value: "bar", label: "bar" },
+      ],
+    ],
+    // Nullish options return an empty array
+    [null as unknown as unknown[], []],
+    [undefined as unknown as unknown[], []],
+  ])("normalizes %j into %j", (input, expected) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
+    expect(prepareOptions(input as any)).toEqual(expected)
   })
 })
