@@ -604,7 +604,10 @@ describe("ChatInput widget", () => {
     // Delete the first file
     const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
     expect(deleteButtons).toHaveLength(2)
-    await user.click(deleteButtons[0])
+    // Click the actual button inside the delete button wrapper
+    const firstDeleteButton = deleteButtons[0].querySelector("button")
+    expect(firstDeleteButton).toBeTruthy()
+    await user.click(firstDeleteButton as HTMLButtonElement)
 
     // Verify only one file remains
     await waitFor(() => {
@@ -617,7 +620,10 @@ describe("ChatInput widget", () => {
     const remainingDeleteButtons = screen.getAllByTestId(
       "stChatInputDeleteBtn"
     )
-    await user.click(remainingDeleteButtons[0])
+    const remainingDeleteButton =
+      remainingDeleteButtons[0].querySelector("button")
+    expect(remainingDeleteButton).toBeTruthy()
+    await user.click(remainingDeleteButton as HTMLButtonElement)
 
     // Verify all files are removed
     await waitFor(() => {
