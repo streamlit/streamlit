@@ -125,16 +125,21 @@ const Image = ({
   imgStyle,
   buildMediaURL,
   handleImageError,
+  shouldStretch,
 }: {
   itemKey: string
   image: ImageProto
   imgStyle: CSSProperties
   buildMediaURL: (url: string) => string
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
+  shouldStretch?: boolean
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   return (
-    <StyledImageContainer data-testid="stImageContainer">
+    <StyledImageContainer
+      data-testid="stImageContainer"
+      shouldStretch={shouldStretch}
+    >
       <img
         style={imgStyle}
         src={buildMediaURL(image.url)}
@@ -178,6 +183,10 @@ function ImageList({
   const containerWidth = width || 0
 
   const imageWidth = getImageWidth(widthConfig, element.width, containerWidth)
+
+  const shouldStretch =
+    widthConfig?.useStretch ||
+    (element.width as WidthBehavior) === WidthBehavior.MaxImageOrContainer
 
   const imgStyle: CSSProperties = {}
 
@@ -224,7 +233,11 @@ function ImageList({
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
       ></Toolbar>
-      <StyledImageList className="stImage" data-testid="stImage">
+      <StyledImageList
+        className="stImage"
+        data-testid="stImage"
+        shouldStretch={shouldStretch}
+      >
         {element.imgs.map(
           (iimage, idx): ReactElement => (
             <Image
@@ -236,6 +249,7 @@ function ImageList({
               imgStyle={imgStyle}
               buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
               handleImageError={handleImageError}
+              shouldStretch={shouldStretch}
             />
           )
         )}
