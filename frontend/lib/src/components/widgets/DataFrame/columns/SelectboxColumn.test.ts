@@ -217,6 +217,51 @@ describe("SelectboxColumn", () => {
     ])
     expect(mockColumn.getCellValue(mockCell)).toEqual("X")
   })
+
+  it("supports numeric SelectOption values and returns numbers", () => {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
+      options: [
+        { value: 1, label: "One" },
+        { value: 2, label: "Two" },
+      ],
+    })
+
+    const mockCell = mockColumn.getCell(1)
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      null,
+      { value: "1", label: "One" },
+      { value: "2", label: "Two" },
+    ])
+    expect(mockColumn.getCellValue(mockCell)).toEqual(1)
+  })
+
+  it("supports boolean SelectOption values and returns booleans", () => {
+    const mockColumn = getSelectboxColumn(MOCK_BOOLEAN_ARROW_TYPE, {
+      options: [
+        { value: true, label: "Yes" },
+        { value: false, label: "No" },
+      ],
+    })
+
+    const mockCell = mockColumn.getCell(true)
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      null,
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ])
+    expect(mockColumn.getCellValue(mockCell)).toEqual(true)
+  })
+
+  it("validates against object options as well", () => {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
+      options: [
+        { value: 1, label: "One" },
+        { value: 2, label: "Two" },
+      ],
+    })
+    const errorCell = mockColumn.getCell("3", true)
+    expect(isErrorCell(errorCell)).toEqual(true)
+  })
 })
 
 describe("prepareOptions", () => {
