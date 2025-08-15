@@ -718,6 +718,12 @@ def reset_hovering(locator: Locator | Page) -> None:
     )
 
 
+def reset_focus(locator: Locator | Page) -> None:
+    """Reset the focus of the app."""
+    page = locator.page if isinstance(locator, Locator) else locator
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+
+
 def expect_script_state(
     page: Page,
     state: Literal[

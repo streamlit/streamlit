@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     expect_markdown,
     get_date_input,
     get_element_by_key,
+    reset_focus,
 )
 
 
@@ -154,21 +155,20 @@ def test_empty_date_input_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.date_input behaves correctly when empty."""
-    empty_number_input = get_date_input(app, "Empty value").locator("input")
+    empty_date_element = get_date_input(app, "Empty value")
+    empty_data_input = empty_date_element.locator("input")
     # Since no min value set, min selectable date 10 years before today
-    empty_number_input.type("2025/01/02", delay=50)
-    empty_number_input.press("Enter")
+    empty_data_input.type("2025/01/02", delay=50)
+    empty_data_input.press("Enter")
     wait_for_app_run(app)
     expect_markdown(app, "Value 13: 2025-01-02")
 
-    # Click outside to remove focus:
-    app.get_by_text(
-        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
-    ).click()
+    reset_focus(app)
 
+    empty_date_element.scroll_into_view_if_needed()
     # Screenshot match clearable input:
     assert_snapshot(
-        get_date_input(app, "Empty value"),
+        empty_date_element,
         name="st_date_input-clearable_input",
         image_threshold=0.035,
     )
@@ -178,9 +178,7 @@ def test_empty_date_input_behaves_correctly(
     empty_number_input.focus()
     empty_number_input.press("Escape")
     # Click outside to enter value:
-    app.get_by_text(
-        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
-    ).click()
+    reset_focus(app)
 
     # Should be empty again:
     expect_markdown(app, "Value 13: None")
@@ -287,9 +285,7 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     date_input_field.clear()
 
     # Click on the large markdown element at the end to submit the cleared value
-    app.get_by_text(
-        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
-    ).click()
+    reset_focus(app)
 
     # Value should be reset to default
     expect_markdown(app, "Value 1: 1970-01-01")
@@ -321,9 +317,7 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
     date_input_field.clear()
 
     # Click on the large markdown element at the end to submit the cleared value
-    app.get_by_text(
-        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
-    ).click()
+    reset_focus(app)
 
     # Range should be empty
     expect_markdown(app, "Value 5: ()")
