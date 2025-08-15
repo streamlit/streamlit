@@ -151,3 +151,35 @@ export function arrayFromVector(vector: any): any {
 
   return vector
 }
+
+/**
+ * Helper function to create a File object with webkitRelativePath for testing directory uploads.
+ * This simulates how browsers provide files when a directory is selected.
+ */
+export function createFileWithPath(
+  content: string | ArrayBuffer,
+  fileName: string,
+  relativePath: string,
+  mimeType: string = "text/plain"
+): File {
+  const file = new File([content], fileName, { type: mimeType })
+  Object.assign(file, { webkitRelativePath: relativePath })
+  return file
+}
+
+/**
+ * Helper function to create multiple files representing a directory structure.
+ * Each file will have the appropriate webkitRelativePath set.
+ */
+export function createDirectoryFiles(
+  files: Array<{
+    content: string | ArrayBuffer
+    path: string
+    mimeType?: string
+  }>
+): File[] {
+  return files.map(({ content, path, mimeType = "text/plain" }) => {
+    const fileName = path.split("/").pop() || "file"
+    return createFileWithPath(content, fileName, path, mimeType)
+  })
+}

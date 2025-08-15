@@ -26,7 +26,11 @@ import {
 } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { render } from "~lib/test_util"
+import {
+  createDirectoryFiles,
+  createFileWithPath,
+  render,
+} from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatInput, { Props } from "./ChatInput"
@@ -502,8 +506,6 @@ describe("ChatInput widget", () => {
   })
 
   it("filters directory files by allowed types", () => {
-    const consoleSpy = vi.spyOn(console, "log")
-
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
       fileType: ["txt"], // Only allow .txt files
@@ -519,8 +521,6 @@ describe("ChatInput widget", () => {
 
     // Verify the component is configured with file type restrictions
     expect(props.element.fileType).toEqual(["txt"])
-
-    consoleSpy.mockRestore()
   })
 
   it("handles empty directory upload", async () => {
@@ -548,6 +548,7 @@ describe("ChatInput widget", () => {
   it("displays directory upload instructions correctly", () => {
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      placeholder: "Upload a directory",
     })
 
     render(<ChatInput {...props} />)
@@ -556,28 +557,73 @@ describe("ChatInput widget", () => {
     const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
     expect(uploadButton).toBeInTheDocument()
 
-    // Verify file input has directory attributes
-    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
-    const fileInput = fileUploadButton.querySelector('input[type="file"]')
+    // Verify file input has directory attributes for directory upload
+    const fileInput = uploadButton.querySelector('input[type="file"]')
     expect(fileInput).toHaveAttribute("webkitdirectory")
     expect(fileInput).toHaveAttribute("multiple")
+
+    // Verify placeholder text is displayed
+    const textarea = screen.getByTestId("stChatInputTextArea")
+    expect(textarea).toHaveAttribute("placeholder", "Upload a directory")
+
+    // The tooltip hover target should be present for directory upload
+    const tooltipTarget = uploadButton.querySelector(".stTooltipHoverTarget")
+    expect(tooltipTarget).toBeInTheDocument()
   })
 
-  it("removes directory files when deleted individually", () => {
+  it("removes directory files when deleted individually", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      maxUploadSizeMb: 50,
     })
 
     render(<ChatInput {...props} />)
 
-    // Verify the component is set up correctly for directory uploads
-    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
-    const fileInput = fileUploadButton.querySelector('input[type="file"]')
-    expect(fileInput).toHaveAttribute("webkitdirectory")
-    expect(fileInput).toHaveAttribute("multiple")
+    // Create test files with directory structure
+    const directoryFiles = createDirectoryFiles([
+      { content: "content1", path: "folder/file1.txt" },
+      { content: "content2", path: "folder/file2.txt" },
+    ])
 
-    // Verify the component accepts directories
-    expect(props.element.acceptFile).toBe(ChatInputProto.AcceptFile.DIRECTORY)
+    // Upload the files
+    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    const fileInput = fileUploadButton.querySelector(
+      "input"
+    ) as HTMLInputElement
+    await user.upload(fileInput, directoryFiles)
+
+    // Wait for files to be displayed
+    await waitFor(() => {
+      const fileNames = screen.getAllByTestId("stChatInputFileName")
+      expect(fileNames).toHaveLength(2)
+      expect(fileNames[0]).toHaveTextContent("folder/file1.txt")
+      expect(fileNames[1]).toHaveTextContent("folder/file2.txt")
+    })
+
+    // Delete the first file
+    const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
+    expect(deleteButtons).toHaveLength(2)
+    await user.click(deleteButtons[0])
+
+    // Verify only one file remains
+    await waitFor(() => {
+      const remainingFileNames = screen.getAllByTestId("stChatInputFileName")
+      expect(remainingFileNames).toHaveLength(1)
+      expect(remainingFileNames[0]).toHaveTextContent("folder/file2.txt")
+    })
+
+    // Delete the remaining file
+    const remainingDeleteButtons = screen.getAllByTestId(
+      "stChatInputDeleteBtn"
+    )
+    await user.click(remainingDeleteButtons[0])
+
+    // Verify all files are removed
+    await waitFor(() => {
+      const fileNames = screen.queryAllByTestId("stChatInputFileName")
+      expect(fileNames).toHaveLength(0)
+    })
   })
 
   it("handles directory upload with multiple files and preserves paths", async () => {
@@ -596,20 +642,10 @@ describe("ChatInput widget", () => {
     await user.type(chatInput, "Here are the project files")
 
     // Mock directory files with relative paths
-    const directoryFiles = [
-      Object.assign(
-        new File(["main content"], "main.py", { type: "text/plain" }),
-        {
-          webkitRelativePath: "project/main.py",
-        }
-      ),
-      Object.assign(
-        new File(["test content"], "test.py", { type: "text/plain" }),
-        {
-          webkitRelativePath: "project/tests/test.py",
-        }
-      ),
-    ]
+    const directoryFiles = createDirectoryFiles([
+      { content: "main content", path: "project/main.py" },
+      { content: "test content", path: "project/tests/test.py" },
+    ])
 
     const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
     const fileUploadInput = fileUploadButton.querySelector(
@@ -656,9 +692,10 @@ describe("ChatInput widget", () => {
     render(<ChatInput {...props} />)
 
     // Files with webkitRelativePath to simulate directory structure
-    const directoryFile = Object.assign(
-      new File(["content"], "readme.md", { type: "text/plain" }),
-      { webkitRelativePath: "docs/readme.md" }
+    const directoryFile = createFileWithPath(
+      "content",
+      "readme.md",
+      "docs/readme.md"
     )
 
     const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")

@@ -48,14 +48,26 @@ export const isFileTypeAllowed = (
     return true
   }
 
-  // Check if the file extension matches any of the accepted extensions
+  // Extract the actual file extension (after the last dot)
   const fileName = file.name.toLowerCase()
+  const lastDotIndex = fileName.lastIndexOf(".")
+
+  // If there's no extension, check if empty extension is allowed
+  if (lastDotIndex === -1 || lastDotIndex === fileName.length - 1) {
+    return acceptedExtensions.some(ext => ext === "" || ext === ".")
+  }
+
+  const fileExtension = fileName.substring(lastDotIndex) // includes the dot
+  const fileExtWithoutDot = fileName.substring(lastDotIndex + 1) // without the dot
+
+  // Check if the file extension matches any of the accepted extensions
   return acceptedExtensions.some(ext => {
     const extLower = ext.toLowerCase()
-
-    return fileName.endsWith(
-      extLower.startsWith(".") ? extLower : `.${extLower}`
-    )
+    // Handle both formats: with dot (e.g., ".txt") and without (e.g., "txt")
+    if (extLower.startsWith(".")) {
+      return fileExtension === extLower
+    }
+    return fileExtWithoutDot === extLower
   })
 }
 
