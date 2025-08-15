@@ -35,7 +35,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
@@ -248,7 +248,8 @@ export interface MetricProps {
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
-  const [chartWidth, chartContainerRef] = useCalculatedWidth()
+  const { width: chartWidth, elementRef: chartContainerRef } =
+    useCalculatedDimensions()
 
   const { MetricDirection } = MetricProto
   const {

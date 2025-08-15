@@ -45,8 +45,13 @@ describe("calculateModalSize", () => {
     const size = calculateModalSize("auto")
     expect(size).toBe("auto")
   })
-  it("calculated the size based on the spacaing and content width when size is 'full'", () => {
-    const size = calculateModalSize("full", "100px", "100px")
+  it("calculates the size based on the spacing and content width when size is 'medium'", () => {
+    const size = calculateModalSize("medium", "100px", "100px")
     expect(size).toBe("calc(100px + 100px)")
+  })
+
+  it("calculates the size based on the spacing and content width when size is 'large'", () => {
+    const size = calculateModalSize("large", "100px", "100px")
+    expect(size).toBe("80rem")
   })
 })

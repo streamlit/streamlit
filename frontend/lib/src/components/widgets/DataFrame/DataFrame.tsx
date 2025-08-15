@@ -108,6 +108,8 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code.
+export type CellPosition = readonly [row: number, column: string]
+
 export interface DataframeState {
   selection: {
     rows: number[]
@@ -115,6 +117,7 @@ export interface DataframeState {
     // it easier to use and unify with how data editor edits
     // are stored.
     columns: string[]
+    cells: CellPosition[]
   }
 }
 
@@ -122,9 +125,11 @@ export interface DataFrameProps {
   element: ArrowProto
   data: Quiver
   disabled: boolean
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
   fragmentId?: string
+  // Custom toolbar actions (as React nodes) to display in the grid toolbar.
+  customToolbarActions?: React.ReactNode[]
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }
@@ -144,6 +149,7 @@ function DataFrame({
   widgetMgr,
   disableFullscreenMode,
   fragmentId,
+  customToolbarActions,
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
@@ -152,7 +158,7 @@ function DataFrame({
     expand,
     collapse,
     width: containerWidth,
-    height: containerHeight,
+    height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
   const { isInHorizontalLayout } = useRequiredContext(FlexContext)
@@ -272,7 +278,7 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (element.editingMode === READ_ONLY) {
+      if (element.editingMode === READ_ONLY || !widgetMgr) {
         // We don't need to load the initial widget state
         // for read-only dataframes.
         return
@@ -318,18 +324,25 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    *
    * @param newSelection - The new selection state
+   * @param syncCellSelections - Whether to sync cell selections. We don't want to sync selected
+   *   cells when cell selections are not activated.
    */
   const innerSyncSelectionState = useCallback(
-    (newSelection: GridSelection) => {
+    (newSelection: GridSelection, syncCellSelections: boolean) => {
       // If we want to support selections also with the editable mode,
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
 
+      if (!widgetMgr) {
+        return
+      }
+
       const selectionState: DataframeState = {
         selection: {
           rows: [] as number[],
           columns: [] as string[],
+          cells: [] as CellPosition[],
         },
       }
 
@@ -341,6 +354,34 @@ function DataFrame({
         .map(columnIdx => {
           return getColumnName(columns[columnIdx])
         })
+
+      // Parse cell selections into our widget state structure:
+      if (syncCellSelections && newSelection.current) {
+        const { cell, range } = newSelection.current
+        if (range) {
+          // Multi-cell selection (rectangular structure)
+          for (let r = range.y; r < range.y + range.height; r++) {
+            for (let c = range.x; c < range.x + range.width; c++) {
+              if (!columns[c].isIndex) {
+                selectionState.selection.cells.push([
+                  getOriginalIndex(r),
+                  getColumnName(columns[c]),
+                ])
+              }
+            }
+          }
+        } else if (cell) {
+          // Single-cell selection
+          const [col, row] = cell
+          if (!columns[col].isIndex) {
+            selectionState.selection.cells.push([
+              getOriginalIndex(row),
+              getColumnName(columns[col]),
+            ])
+          }
+        }
+      }
+
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue({
         id: element.id,
@@ -387,6 +428,8 @@ function DataFrame({
     isMultiRowSelectionActivated,
     isColumnSelectionActivated,
     isMultiColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
     isRowSelected,
     isColumnSelected,
     isCellSelected,
@@ -401,6 +444,10 @@ function DataFrame({
   )
 
   useEffect(() => {
+    if (isCellSelectionActivated) {
+      // We don't clear anything if cell selection is activated.
+      return
+    }
     // Clear cell selections if fullscreen mode changes
     // but keep row & column selections.
     // In the past we saw some weird side-effects, so we decided to clean
@@ -435,7 +482,12 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (!isRowSelectionActivated && !isColumnSelectionActivated) {
+      if (
+        (!isRowSelectionActivated &&
+          !isColumnSelectionActivated &&
+          !isCellSelectionActivated) ||
+        !widgetMgr
+      ) {
         // Only run this if selections are activated.
         return
       }
@@ -454,6 +506,7 @@ function DataFrame({
 
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
+        let cellSelection: GridCellPosition | undefined = undefined
 
         selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
@@ -463,12 +516,42 @@ function DataFrame({
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
-        if (rowSelection.length > 0 || columnSelection.length > 0) {
+        // Reconstruct for single cell selection:
+        if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
+          // If cell selection is activated but multi-cell selection is not,
+          // we need to set the current cell selection to the first cell in the selection.
+          const [rowIdx, columnName] =
+            selectionState.selection?.cells?.[0] ?? []
+          if (rowIdx !== undefined && columnName !== undefined) {
+            const columnIdx = columnNames.indexOf(columnName)
+
+            cellSelection = [columnIdx, rowIdx]
+          }
+        }
+
+        if (
+          rowSelection.length > 0 ||
+          columnSelection.length > 0 ||
+          cellSelection !== undefined
+        ) {
           // Update the initial selection state if something was selected
           const initialSelection: GridSelection = {
             rows: rowSelection,
             columns: columnSelection,
-            current: undefined,
+            current: cellSelection
+              ? {
+                  cell: cellSelection,
+                  range: {
+                    x: cellSelection[0],
+                    y: cellSelection[1],
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    width: 1,
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    height: 1,
+                  },
+                  rangeStack: [],
+                }
+              : undefined,
           }
           processSelectionChange(initialSelection)
         }
@@ -503,6 +586,10 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    */
   const innerSyncEditState = useCallback(() => {
+    if (!widgetMgr) {
+      return
+    }
+
     const currentEditingState = editingState.current.toJson(columns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
@@ -615,12 +702,11 @@ function DataFrame({
     numRows,
     usesGroupRow,
     containerWidth || 0,
-    containerHeight,
+    fullScreenHeight,
     isFullScreen,
     widthConfig,
     heightConfig
   )
-
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
   const getEmptyStateContent = useCallback(
@@ -770,7 +856,8 @@ function DataFrame({
           !isTouchDevice &&
           !event.currentTarget.contains(
             event.relatedTarget as HTMLElement | null
-          )
+          ) &&
+          !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.
           clearSelection(true, true)
@@ -791,8 +878,10 @@ function DataFrame({
         onCollapse={collapse}
         target={StyledResizableContainer}
       >
+        {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated && isRowSelected) ||
-          (isColumnSelectionActivated && isColumnSelected)) && (
+          (isColumnSelectionActivated && isColumnSelected) ||
+          (isCellSelectionActivated && isCellSelected)) && (
           // Add clear selection action if selections are active
           // and a valid selections currently exists. Cell selections
           // are not relevant since they are not synced to the backend
@@ -960,7 +1049,16 @@ function DataFrame({
             handleTooltips?.(args)
           }}
           // Activate keybindings:
-          keybindings={{ downFill: true }}
+          keybindings={{
+            downFill: true,
+            ...(isCellSelectionActivated || isLargeTable
+              ? {
+                  // Deactivate select all to prevent potential performance issues
+                  // with too many selected cells being processed for cell selection:
+                  selectAll: false,
+                }
+              : {}),
+          }}
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
@@ -1021,6 +1119,9 @@ function DataFrame({
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
               }
+              // Close menus:
+              setShowMenu(undefined)
+              setShowColumnVisibilityMenu(false)
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1060,10 +1161,17 @@ function DataFrame({
           validateCell={validateCell}
           // Open column context menu:
           onHeaderMenuClick={(columnIdx, screenPosition) => {
-            setShowMenu({
-              columnIdx,
-              headerBounds: screenPosition,
-            })
+            // There is an issue that clicking on the column visibility menu
+            // can trigger a menu click event on the column header.
+            // To prevent another menu from opening, we check if column
+            // visibility menu open state.
+            // https://github.com/streamlit/streamlit/pull/12233
+            if (!showColumnVisibilityMenu) {
+              setShowMenu({
+                columnIdx,
+                headerBounds: screenPosition,
+              })
+            }
           }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
@@ -1109,6 +1217,12 @@ function DataFrame({
             // We are doing this to prevent some issues with drag
             // and drop selection.
             rangeSelectionBlending: "exclusive",
+          })}
+          // Activate features required for cell selection:
+          {...(isCellSelectionActivated && {
+            rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
+            // Allow mixing cell selections with row and column selections:
+            rangeSelectionBlending: "mixed",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&

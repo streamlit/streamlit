@@ -19,8 +19,12 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.lib.image_utils import WidthBehavior, marshall_images
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
+from streamlit.elements.lib.image_utils import marshall_images
+from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -36,7 +40,9 @@ class PyplotMixin:
         self,
         fig: Figure | None = None,
         clear_figure: bool | None = None,
-        use_container_width: bool = True,
+        *,
+        width: Width = "stretch",
+        use_container_width: bool | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
@@ -69,6 +75,15 @@ class PyplotMixin:
             - If ``fig`` is not set, defaults to ``True``. This simulates Jupyter's
               approach to matplotlib rendering.
 
+        width : "stretch", "content", or int
+            The width of the figure. This can be one of the following:
+
+            - ``"stretch"`` (default): The figure width is set to the width of
+              the parent container.
+            - ``"content"``: The figure width is set to the figure's native
+              width, up to the width of the parent container.
+            - An integer specifying the width in pixels.
+
         use_container_width : bool
             Whether to override the figure's native width with the width of
             the parent container. If ``use_container_width`` is ``True``
@@ -77,6 +92,12 @@ class PyplotMixin:
             ``False``, Streamlit sets the width of the chart to fit its
             contents according to the plotting library, up to the width of the
             parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a future
+            release. Please use the ``width`` parameter instead.
+            For ``use_container_width=True``, use ``width="stretch"``.
+            For ``use_container_width=False``, use ``width="content"``.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -106,6 +127,21 @@ class PyplotMixin:
 
         """
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+
+            width = "stretch" if use_container_width else "content"
+
         if not fig:
             show_deprecation_warning("""
 Calling `st.pyplot()` without providing a figure argument has been deprecated
@@ -125,16 +161,19 @@ If you have a specific use case that requires this functionality, please let us
 know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 """)
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         image_list_proto = ImageListProto()
         marshall(
             self.dg._get_delta_path_str(),
             image_list_proto,
+            layout_config,
             fig,
             clear_figure,
-            use_container_width,
             **kwargs,
         )
-        return self.dg._enqueue("imgs", image_list_proto)
+        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -145,9 +184,9 @@ know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 def marshall(
     coordinates: str,
     image_list_proto: ImageListProto,
+    layout_config: LayoutConfig,
     fig: Figure | None = None,
     clear_figure: bool | None = True,
-    use_container_width: bool = True,
     **kwargs: Any,
 ) -> None:
     try:
@@ -178,14 +217,11 @@ def marshall(
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
-    image_width = (
-        WidthBehavior.COLUMN if use_container_width else WidthBehavior.ORIGINAL
-    )
     marshall_images(
         coordinates=coordinates,
         image=image,
         caption=None,
-        width=image_width,
+        layout_config=layout_config,
         proto_imgs=image_list_proto,
         clamp=False,
         channels="RGB",

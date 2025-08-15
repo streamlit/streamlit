@@ -67,6 +67,7 @@ export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
+export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { useRequiredContext } from "./hooks/useRequiredContext"
@@ -129,6 +130,7 @@ export {
 } from "./util/performance"
 export { LocalStore } from "./util/storageUtils"
 export { Timer } from "./util/Timer"
+export { getCrossOriginAttribute } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,
   generateUID,

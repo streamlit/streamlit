@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
     StreamlitInvalidPageLayoutError,
@@ -91,7 +92,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     try:
         return image_to_url(
             page_icon,
-            width=-1,  # Always use full width for favicons
+            layout_config=LayoutConfig(
+                width="stretch"
+            ),  # Always use full width for favicons
             clamp=False,
             channels="RGB",
             output_format="auto",

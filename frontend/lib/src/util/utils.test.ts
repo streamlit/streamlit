@@ -467,6 +467,30 @@ describe("keysToSnakeCase", () => {
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
   })
+
+  it("should preserve null values inside arrays without throwing", () => {
+    const input = {
+      customdata: [1, null, { innerKey: 5, anotherNull: null }],
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      customdata: [1, null, { inner_key: 5, another_null: null }],
+    })
+  })
+
+  it("should not attempt to recurse into null values", () => {
+    const input = {
+      value: null,
+      array: [null],
+      nested: { child: null },
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      value: null,
+      array: [null],
+      nested: { child: null },
+    })
+  })
 })
 
 // Mock isInChildFrame since getUrl depends on it

@@ -23,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.48.0"  # PEP-440
+VERSION = "1.48.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -83,6 +83,10 @@ EXTRA_REQUIRES = {
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
+    # Optional dependency required for PDF rendering:
+    "pdf": [
+        "streamlit-pdf>=1.0.0",
+    ],
     # Optional dependency required for auth:
     "auth": [
         "Authlib>=1.3.2",
@@ -101,7 +105,7 @@ EXTRA_REQUIRES = {
     ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake,sql]",
+        "streamlit[auth,charts,snowflake,sql,pdf]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],
@@ -123,7 +127,7 @@ class VerifyVersionCommand(install):
 
 readme_path = THIS_DIRECTORY / ".." / "README.md"
 if readme_path.exists():
-    long_description = readme_path.read_text()
+    long_description = readme_path.read_text(encoding="utf-8")
 else:
     # In some build environments (specifically in conda), we may not have the README file
     # readily available. In these cases, just let long_description be the empty string.

@@ -84,7 +84,7 @@ export function PlotlyChart({
   const {
     expanded: isFullScreen,
     width: elWidth,
-    height,
+    height: fullScreenHeight,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
@@ -310,7 +310,7 @@ export function PlotlyChart({
 
   if (isFullScreen) {
     calculatedWidth = width
-    calculatedHeight = height
+    calculatedHeight = fullScreenHeight
   } else if (calculatedHeight === undefined) {
     calculatedHeight = DEFAULT_PLOTLY_HEIGHT
   }

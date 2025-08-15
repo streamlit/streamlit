@@ -14,15 +14,12 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
-import tornado.httputil
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from tornado.web import create_signed_value
 
 from streamlit.auth_util import encode_provider_token
 from streamlit.web.server import oauth_authlib_routes
@@ -32,7 +29,6 @@ from streamlit.web.server.oauth_authlib_routes import (
     AuthLoginHandler,
     AuthLogoutHandler,
 )
-from streamlit.web.server.server_util import AUTH_COOKIE_NAME
 
 
 class SecretMock(dict):
@@ -147,13 +143,6 @@ class LoginHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.headers["Location"] == "/"
 
 
-@patch(
-    "streamlit.auth_util.secrets_singleton",
-    MagicMock(
-        load_if_toml_exists=MagicMock(return_value=True),
-        get=MagicMock(return_value=SECRETS_MOCK),
-    ),
-)
 class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         return tornado.web.Application(
@@ -163,102 +152,15 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     AuthLogoutHandler,
                     {"base_url": ""},
                 )
-            ],
-            cookie_secret="test_cookie_secret",
+            ]
         )
 
-    def test_logout_success_no_cookie(self):
-        """Test logout handler success with no auth cookie."""
+    def test_logout_success(self):
+        """Test logout handler success clear cookie."""
         response = self.fetch("/auth/logout", follow_redirects=False)
         assert response.code == 302
         assert response.headers["Location"] == "/"
         assert '_streamlit_user="";' in response.headers["Set-Cookie"]
-
-    @patch(
-        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
-        return_value=(
-            MagicMock(
-                load_server_metadata=MagicMock(
-                    return_value={
-                        # Use a fake ese-provider as google does not use end_session_endpoint
-                        "end_session_endpoint": "https://ese-provider.example.com/logout"
-                    }
-                )
-            ),
-            "",
-        ),
-    )
-    def test_logout_with_oidc_end_session_endpoint(self, mock_create_oauth_client):
-        """Test logout handler redirects to provider's end_session_endpoint when available."""
-        # Create a signed cookie with provider info
-        cookie_data = {
-            "provider": "ese-provider",
-            "origin": "http://localhost:8501",
-            "is_logged_in": True,
-            "email": "test@example.com",
-        }
-
-        # Set the signed cookie
-        cookie_value = json.dumps(cookie_data)
-
-        # Create headers with the signed cookie
-        signed_cookie = create_signed_value(
-            "test_cookie_secret", AUTH_COOKIE_NAME, cookie_value
-        ).decode("utf-8")
-
-        headers = tornado.httputil.HTTPHeaders()
-        headers.add("Cookie", f"{AUTH_COOKIE_NAME}={signed_cookie}")
-
-        response = self.fetch("/auth/logout", headers=headers, follow_redirects=False)
-
-        assert response.code == 302
-        assert '_streamlit_user="";' in response.headers["Set-Cookie"]
-
-        # Should redirect to provider's logout URL with post_logout_redirect_uri
-        location = response.headers["Location"]
-        assert location.startswith("https://ese-provider.example.com/logout")
-        assert "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501" in location
-
-        # Verify create_oauth_client was called with the correct provider
-        mock_create_oauth_client.assert_called_once_with("ese-provider")
-
-    @patch(
-        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
-        return_value=(
-            MagicMock(load_server_metadata=MagicMock(return_value={})),
-            "",
-        ),
-    )
-    def test_logout_fallback_no_end_session_endpoint(self, mock_create_oauth_client):
-        """Test logout handler falls back to local logout when no end_session_endpoint."""
-        # Create a signed cookie with provider info
-        cookie_data = {
-            "provider": "google",
-            "origin": "http://localhost:8501",
-            "is_logged_in": True,
-            "email": "test@example.com",
-        }
-
-        # Set the signed cookie
-        self.get_app().settings["cookie_secret"] = "test_cookie_secret"
-        cookie_value = json.dumps(cookie_data)
-
-        # Create headers with the signed cookie
-        signed_cookie = create_signed_value(
-            "test_cookie_secret", AUTH_COOKIE_NAME, cookie_value
-        ).decode("utf-8")
-
-        headers = tornado.httputil.HTTPHeaders()
-        headers.add("Cookie", f"{AUTH_COOKIE_NAME}={signed_cookie}")
-
-        response = self.fetch("/auth/logout", headers=headers, follow_redirects=False)
-
-        assert response.code == 302
-        assert response.headers["Location"] == "/"  # Fallback to base
-        assert '_streamlit_user="";' in response.headers["Set-Cookie"]
-
-        # Verify create_oauth_client was called with the correct provider
-        mock_create_oauth_client.assert_called_once_with("google")
 
 
 @patch(
@@ -314,7 +216,6 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "email": "test@example.com",
                 "origin": "http://localhost:8501",
                 "is_logged_in": True,
-                "provider": "google",
             }
         )
 

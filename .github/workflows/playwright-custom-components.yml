@@ -45,14 +45,6 @@ jobs:
         run: python -m playwright install --with-deps
       - name: Run make frontend-fast
         run: make frontend-fast
-      - name: Run custom component playwright tests
-        run: |
-          source venv/bin/activate
-          cd e2e_playwright
-          echo "Installing custom components"
-          uv pip install -r ./custom_components/components-e2e-requirements.txt
-          rm -rf ./test-results
-          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Get short SHA
         id: short_sha
         run: |
@@ -61,6 +53,14 @@ jobs:
           else
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
+      - name: Run custom component playwright tests
+        run: |
+          source venv/bin/activate
+          cd e2e_playwright
+          echo "Installing custom components"
+          uv pip install -r ./custom_components/components-e2e-requirements.txt
+          rm -rf ./test-results
+          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()
