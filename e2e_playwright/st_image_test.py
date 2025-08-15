@@ -297,10 +297,6 @@ def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFuncti
 
     set_fullscreen(app, small_stretch_image.locator(".."), True)
 
-    wait_until(
-        app, lambda: app.locator("[data-testid='stFullScreenFrame']").is_visible()
-    )
-
     fullscreen_image = small_stretch_image.locator("img")
     assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
 
