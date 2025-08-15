@@ -167,3 +167,99 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# Uploader that can be disabled after uploading for snapshot testing
+toggle_disable = st.checkbox(
+    "Disable toggle uploader", key="toggle_after_upload_disable"
+)
+toggle_after_upload = st.file_uploader(
+    "Toggle disabled after upload:",
+    type=["txt"],
+    key="toggle_after_upload",
+    disabled=toggle_disable,
+)
+if toggle_after_upload is None:
+    st.text("No upload")
+else:
+    st.text(toggle_after_upload.read())
+
+
+_MANY_FILE_TYPES: list[str] = [
+    ".3d",
+    ".3ds",
+    ".3mf",
+    ".ac",
+    ".ac3d",
+    ".acc",
+    ".amf",
+    ".ase",
+    ".ask",
+    ".assbin",
+    ".b3d",
+    ".blend",
+    ".bsp",
+    ".bvh",
+    ".cob",
+    ".csm",
+    ".dae",
+    ".dxf",
+    ".enff",
+    ".fbx",
+    ".glb",
+    ".hmp",
+    ".ifc",
+    ".ifczip",
+    ".iqm",
+    ".irr",
+    ".irrmesh",
+    ".lwo",
+    ".lws",
+    ".lxo",
+    ".md2",
+    ".md3",
+    ".md5anim",
+    ".md5camera",
+    ".md5mesh",
+    ".mdc",
+    ".mdl",
+    ".mesh",
+    ".mesh.xml",
+    ".mot",
+    ".ms3d",
+    ".ndo",
+    ".nff",
+    ".obj",
+    ".off",
+    ".ogex",
+    ".pk3",
+    ".ply",
+    ".pmx",
+    ".prj",
+    ".q3o",
+    ".q3s",
+    ".raw",
+    ".scn",
+    ".sib",
+    ".smd",
+    ".step",
+    ".stl",
+    ".stp",
+    ".ter",
+    ".uc",
+    ".vrm",
+    ".vta",
+    ".x",
+    ".x3d",
+    ".x3db",
+    ".xgl",
+    ".xml",
+    ".zae",
+    ".zgl",
+]
+
+
+st.file_uploader(
+    "File uploader with many file types:",
+    help="Select a file to be uploaded.",
+    type=_MANY_FILE_TYPES,
+)

@@ -39,7 +39,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
 import {
@@ -90,7 +90,7 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })

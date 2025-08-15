@@ -32,7 +32,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
@@ -93,7 +93,7 @@ const TextArea: FC<Props> = ({
 }) => {
   const id = useRef(uniqueId("text_area_")).current
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.

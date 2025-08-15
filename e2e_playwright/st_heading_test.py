@@ -20,6 +20,11 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
+# Does not include divider header/subheaders
+TITLE_COUNT = 9
+HEADER_COUNT = 8
+SUBHEADER_COUNT = 11
+
 
 def _get_title_elements(app: Page) -> Locator:
     """Title elements are rendered as h1 elements."""
@@ -43,7 +48,7 @@ _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 def test_correct_number_and_content_of_title_elements(app: Page):
     """Test that correct number of st.title (=> h1) exist with the right content."""
     titles = _get_title_elements(app)
-    expect(titles).to_have_count(9)
+    expect(titles).to_have_count(TITLE_COUNT)
 
     expect(titles.nth(0)).to_have_text("info This title is awesome!")
     expect(titles.nth(1)).to_have_text("This title is awesome too!")
@@ -56,7 +61,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
 def test_correct_number_and_content_of_header_elements(app: Page):
     """Test that correct number of st.header (=> h2) exist with the right content."""
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
-    expect(headers).to_have_count(8)
+    expect(headers).to_have_count(HEADER_COUNT)
 
     expect(headers.nth(0)).to_have_text("info This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
@@ -70,7 +75,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(subheaders).to_have_count(11)
+    expect(subheaders).to_have_count(SUBHEADER_COUNT)
 
     expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
@@ -220,7 +225,8 @@ def test_links_are_rendered_correctly_snapshot(
     assert_snapshot(link, name="st_header-title_with_link")
 
 
-_number_of_colors = 8
+# 9 colors: red, orange, yellow, blue, green, violet, gray, grey, rainbow
+_number_of_colors = 9
 
 
 @pytest.mark.parametrize("color_index", range(_number_of_colors))

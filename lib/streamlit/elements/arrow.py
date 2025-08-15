@@ -40,6 +40,9 @@ from streamlit.elements.lib.column_config_utils import (
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
@@ -67,13 +70,20 @@ if TYPE_CHECKING:
 
 
 SelectionMode: TypeAlias = Literal[
-    "single-row", "multi-row", "single-column", "multi-column"
+    "single-row",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
     "multi-row",
     "single-column",
     "multi-column",
+    "single-cell",
+    "multi-cell",
 }
 
 
@@ -100,6 +110,9 @@ class DataframeSelectionState(TypedDict, total=False):
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
+    cells : list[tuple[int, str]]
+        The selected cells, provided as a tuple of row integer position
+        and column name, e.g. ``(0, "col 1")``.
 
     Example
     -------
@@ -132,6 +145,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     rows: list[int]
     columns: list[str]
+    cells: list[tuple[int, str]]
 
 
 class DataframeState(TypedDict, total=False):
@@ -167,6 +181,7 @@ class DataframeSelectionSerde:
             "selection": {
                 "rows": [],
                 "columns": [],
+                "cells": [],
             },
         }
         selection_state: DataframeState = (
@@ -176,10 +191,27 @@ class DataframeSelectionSerde:
         if "selection" not in selection_state:
             selection_state = empty_selection_state
 
+        if "rows" not in selection_state["selection"]:
+            selection_state["selection"]["rows"] = []
+
+        if "columns" not in selection_state["selection"]:
+            selection_state["selection"]["columns"] = []
+
+        if "cells" not in selection_state["selection"]:
+            selection_state["selection"]["cells"] = []
+        else:
+            # Explicitly convert all cells to a tuple (from list).
+            # This is necessary since there isn't a concept of tuples in JSON
+            # The format that the data is transferred to the backend.
+            selection_state["selection"]["cells"] = [
+                tuple(cell)  # type: ignore
+                for cell in selection_state["selection"]["cells"]
+            ]
+
         return cast("DataframeState", AttributeDictionary(selection_state))
 
-    def serialize(self, editing_state: DataframeState) -> str:
-        return json.dumps(editing_state, default=str)
+    def serialize(self, state: DataframeState) -> str:
+        return json.dumps(state)
 
 
 def parse_selection_mode(
@@ -209,6 +241,11 @@ def parse_selection_mode(
             "Only one of `single-column` or `multi-column` can be selected as selection mode."
         )
 
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
@@ -219,6 +256,10 @@ def parse_selection_mode(
             parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
             parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+        elif mode == "single-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+        elif mode == "multi-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
@@ -227,8 +268,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -244,8 +285,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -261,8 +302,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -318,20 +359,30 @@ class ArrowMixin:
 
             If ``data`` is ``None``, Streamlit renders an empty table.
 
-        width : int or None
-            Desired width of the dataframe expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the dataframe width to fit its
-            contents up to the width of the parent container. If ``width`` is
-            greater than the width of the parent container, Streamlit sets the
-            dataframe width to match the width of the parent container.
+        width : int, "stretch", or "content"
+            Desired width of the dataframe. If ``"stretch"`` (default),
+            Streamlit sets the width of the dataframe to match the width of
+            the parent container. If ``"content"``, Streamlit sets the width
+            of the dataframe to fit its contents up to the width of the parent
+            container. If an integer, Streamlit sets the width of the dataframe
+            to the specified number of pixels. If the specified width is greater
+            than the width of the parent container, Streamlit sets the dataframe
+            width to match the width of the parent container.
 
-        height : int or None
-            Desired height of the dataframe expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the dataframe element is
-            enabled when the height does not accommodate all rows.
+        height : int or "auto"
+            Desired height of the dataframe. If ``"auto"`` (default),
+            Streamlit sets the height to show at most ten rows. Vertical
+            scrolling within the dataframe element is enabled when the height
+            does not accommodate all rows. If an
+            integer, Streamlit sets the height of the dataframe to the
+            specified number of pixels.
 
         use_container_width : bool
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead.
+
             Whether to override ``width`` with the width of the parent
             container. If this is ``True`` (default), Streamlit sets the width
             of the dataframe to match the width of the parent container. If
@@ -399,8 +450,8 @@ class ArrowMixin:
               input widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
-              rows or columns in the dataframe. In this case, ``st.dataframe``
-              will return the selection data as a dictionary.
+              rows, columns, or cells in the dataframe. In this case,
+              ``st.dataframe`` will return the selection data as a dictionary.
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
@@ -408,7 +459,7 @@ class ArrowMixin:
               as a dictionary.
 
         selection_mode : "single-row", "multi-row", "single-column", \
-            "multi-column", or Iterable of these
+            "multi-column", "single-cell", "multi-cell", or Iterable of these
             The types of selections Streamlit should allow when selections are
             enabled with ``on_select``. This can be one of the following:
 
@@ -416,8 +467,10 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
+            - "single-cell": Only one cell can be selected at a time.
+            - "multi-cell": A rectangular range of cells can be selected.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified.
+              selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
 
             When column selections are enabled, column sorting is disabled.
 
@@ -572,22 +625,24 @@ class ArrowMixin:
                 enable_check_callback_rules=is_callback,
             )
 
+        if use_container_width is not None:
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
+
+        validate_width(width, allow_content=True)
+        validate_height(
+            height,
+            allow_content=False,
+            allow_stretch=False,
+            additional_allowed=["auto"],
+        )
+
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
         proto = ArrowProto()
-
-        if use_container_width is None:
-            # If use_container_width was not explicitly set by the user, we set
-            # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = width is None
-
-        proto.use_container_width = use_container_width
-
-        if width:
-            proto.width = width
-        if height:
-            proto.height = height
 
         if row_height:
             proto.row_height = row_height
@@ -629,6 +684,13 @@ class ArrowMixin:
             )
         marshall_column_config(proto, column_config_mapping)
 
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
+
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
@@ -639,7 +701,6 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
-                form_id=proto.form_id,
                 dg=self.dg,
                 data=proto.data,
                 width=width,
@@ -661,9 +722,9 @@ class ArrowMixin:
                 ctx=ctx,
                 value_type="string_value",
             )
-            self.dg._enqueue("arrow_data_frame", proto)
+            self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
             return widget_state.value
-        return self.dg._enqueue("arrow_data_frame", proto)
+        return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:

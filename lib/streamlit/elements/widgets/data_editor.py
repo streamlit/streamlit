@@ -33,6 +33,10 @@ from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -47,6 +51,12 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -578,8 +588,8 @@ class DataEditorMixin:
         self,
         data: EditableData,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -599,8 +609,8 @@ class DataEditorMixin:
         self,
         data: Any,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -620,8 +630,8 @@ class DataEditorMixin:
         self,
         data: DataTypes,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -658,20 +668,30 @@ class DataEditorMixin:
                   default to uneditable, but this can be changed through column
                   configuration.
 
-        width : int or None
-            Desired width of the data editor expressed in pixels. If ``width``
-            is ``None`` (default), Streamlit sets the data editor width to fit
-            its contents up to the width of the parent container. If ``width``
-            is greater than the width of the parent container, Streamlit sets
-            the data editor width to match the width of the parent container.
+        width : int, "stretch", or "content"
+            Desired width of the data editor. If ``"stretch"`` (default),
+            Streamlit sets the width of the data editor to match the width of
+            the parent container. If ``"content"``, Streamlit sets the width
+            of the data editor to fit its contents up to the width of the parent
+            container. If an integer, Streamlit sets the width of the data editor
+            to the specified number of pixels. If the specified width is greater
+            than the width of the parent container, Streamlit sets the data editor
+            width to match the width of the parent container.
 
-        height : int or None
-            Desired height of the data editor expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the data editor element is
-            enabled when the height does not accommodate all rows.
+        height : int or "auto"
+            Desired height of the data editor. If ``"auto"`` (default),
+            Streamlit sets the height to show at most ten rows. Vertical
+            scrolling within the data editor is enabled when the height
+            does not accommodate all rows. If an
+            integer, Streamlit sets the height of the data editor to the
+            specified number of pixels.
 
         use_container_width : bool
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will be removed
+                in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead.
+
             Whether to override ``width`` with the width of the parent
             container. If this is ``True`` (default), Streamlit sets the width
             of the data editor to match the width of the parent container. If
@@ -839,6 +859,14 @@ class DataEditorMixin:
 
         key = to_key(key)
 
+        validate_width(width, allow_content=True)
+        validate_height(
+            height,
+            allow_content=False,
+            allow_stretch=False,
+            additional_allowed=["auto"],
+        )
+
         check_widget_policies(
             self.dg,
             key,
@@ -846,6 +874,23 @@ class DataEditorMixin:
             default_value=None,
             writes_allowed=False,
         )
+
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
 
         if column_order is not None:
             column_order = list(column_order)
@@ -942,7 +987,6 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             data=arrow_bytes,
             width=width,
@@ -956,18 +1000,6 @@ class DataEditorMixin:
 
         proto = ArrowProto()
         proto.id = element_id
-
-        if use_container_width is None:
-            # If use_container_width was not explicitly set by the user, we set
-            # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = width is None
-
-        proto.use_container_width = use_container_width
-
-        if width:
-            proto.width = width
-        if height:
-            proto.height = height
 
         if row_height:
             proto.row_height = row_height
@@ -1005,6 +1037,13 @@ class DataEditorMixin:
 
         marshall_column_config(proto, column_config_mapping)
 
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
+
         serde = DataEditorSerde()
 
         widget_state = register_widget(
@@ -1019,7 +1058,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto)
+        self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

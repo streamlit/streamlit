@@ -87,9 +87,9 @@ export function assignDividerColor(
   const allColorMap = getDividerColors(theme)
   const allColorKeys = Object.keys(allColorMap)
 
-  // Limited colors for auto assignment
-  const { blue, green, orange, red, violet } = allColorMap
-  const autoColorMap = { blue, green, orange, red, violet }
+  // Limited colors for auto assignment - exclude gray/grey & rainbow
+  const { blue, green, orange, red, violet, yellow } = allColorMap
+  const autoColorMap = { blue, green, orange, red, violet, yellow }
   const autoColorKeys = Object.keys(autoColorMap)
   let dividerIndex = 0
 

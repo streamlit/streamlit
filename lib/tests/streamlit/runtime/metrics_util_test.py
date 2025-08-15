@@ -333,7 +333,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # which causes it not to be executed before an Exception is raised due to a
             # lack of required arguments.
             "connection",
-            "experimental_connection",
             "spinner",
             "progress",
             "context",

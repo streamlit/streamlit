@@ -23,8 +23,14 @@ import React, { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
+import {
+  getConfiguredHeight,
+  getConfiguredWidth,
+  shouldUseContainerWidth,
+  shouldUseContentWidth,
+} from "~lib/components/widgets/DataFrame/arrowUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
@@ -55,6 +61,8 @@ export type AutoSizerReturn = {
  * @param containerWidth - The width of the surrounding container
  * @param containerHeight - The height of the surrounding container
  * @param isFullScreen - Whether the table is in fullscreen mode
+ * @param widthConfig - The width configuration of the table
+ * @param heightConfig - The height configuration of the table
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
@@ -65,7 +73,9 @@ function useTableSizer(
   usesGroupRow: boolean,
   containerWidth: number,
   containerHeight?: number,
-  isFullScreen?: boolean
+  isFullScreen?: boolean,
+  widthConfig?: streamlit.IWidthConfig | null,
+  heightConfig?: streamlit.IHeightConfig | null
 ): AutoSizerReturn {
   const rowHeight = element.rowHeight ?? gridTheme.defaultRowHeight
   // Min height for the resizable table container:
@@ -86,18 +96,19 @@ function useTableSizer(
     minHeight
   )
 
-  // The initial height is either the default table height or the maximum
-  // (full) height based if its smaller than the default table height.
   // The reason why we have initial height is that the table itself is
   // resizable by the user. So, it starts with initial height but can be
   // resized between min and max height.
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
-  if (element.height) {
-    // User has explicitly configured a height
-    initialHeight = Math.max(element.height, minHeight)
-    maxHeight = Math.max(element.height, maxHeight)
+  const configuredHeight = getConfiguredHeight(element, heightConfig)
+
+  if (configuredHeight) {
+    // User has explicitly configured a height (integer value)
+    initialHeight = Math.max(configuredHeight, minHeight)
+    maxHeight = Math.max(configuredHeight, maxHeight)
   }
+  // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
@@ -105,7 +116,7 @@ function useTableSizer(
     initialHeight = Math.min(initialHeight, containerHeight)
     maxHeight = Math.min(maxHeight, containerHeight)
 
-    if (!element.height) {
+    if (!configuredHeight) {
       // If no explicit height is set, set height to max height (fullscreen mode)
       initialHeight = maxHeight
     }
@@ -131,18 +142,28 @@ function useTableSizer(
   // The maximum width of the data grid can be resized to.
   let maxWidth = availableWidth
 
-  if (element.useContainerWidth) {
-    // If user has set use_container_width,
+  const useContainerWidth = shouldUseContainerWidth(element, widthConfig)
+  const configuredWidth = getConfiguredWidth(element, widthConfig)
+  const useContentWidth = shouldUseContentWidth(widthConfig)
+
+  if (useContainerWidth) {
+    // If user has set use_container_width or width="stretch",
     // use the full container (available) width.
     initialWidth = availableWidth
-  } else if (element.width) {
+  } else if (configuredWidth) {
     // The user has explicitly configured a width
     // use it but keep between the MIN_TABLE_WIDTH
     // and the available width.
-    initialWidth = Math.min(Math.max(element.width, minWidth), availableWidth)
+    initialWidth = Math.min(
+      Math.max(configuredWidth, minWidth),
+      availableWidth
+    )
     // Make sure that the max width we configure is between the user
     // configured width and the available (container) width.
-    maxWidth = Math.min(Math.max(element.width, maxWidth), availableWidth)
+    maxWidth = Math.min(Math.max(configuredWidth, maxWidth), availableWidth)
+  } else if (useContentWidth) {
+    // width="content" - let the table auto-size to its content
+    initialWidth = undefined
   }
 
   const [resizableSize, setResizableSize] = useState<ResizableSize>({
@@ -156,7 +177,7 @@ function useTableSizer(
   useLayoutEffect(() => {
     // This prevents weird table resizing behavior if the container width
     // changes and the table uses the full container width.
-    if (element.useContainerWidth && resizableSize.width === "100%") {
+    if (useContainerWidth && resizableSize.width === "100%") {
       setResizableSize(prev => ({
         ...prev,
         width: availableWidth,
@@ -185,8 +206,8 @@ function useTableSizer(
   useLayoutEffect(() => {
     if (isFullScreen) {
       const stretchColumns: boolean =
-        element.useContainerWidth ||
-        (notNullOrUndefined(element.width) && element.width > 0)
+        useContainerWidth ||
+        (notNullOrUndefined(configuredWidth) && configuredWidth > 0)
       setResizableSize({
         width: stretchColumns ? maxWidth : "100%",
         height: maxHeight,

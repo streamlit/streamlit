@@ -24,7 +24,10 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
-import { StyledFileDropzoneSection } from "./styled-components"
+import {
+  StyledButtonNoWrapContainer,
+  StyledFileDropzoneSection,
+} from "./styled-components"
 import { getAccept } from "./utils"
 
 export interface Props {
@@ -67,6 +70,7 @@ const FileDropzone = ({
           data-testid="stFileUploaderDropzone"
           isDisabled={disabled}
           aria-label={label}
+          aria-disabled={disabled}
         >
           <input
             data-testid="stFileUploaderDropzoneInput"
@@ -80,13 +84,15 @@ const FileDropzone = ({
             acceptDirectory={acceptDirectory}
             disabled={disabled}
           />
-          <BaseButton
-            kind={BaseButtonKind.SECONDARY}
-            disabled={disabled}
-            size={BaseButtonSize.SMALL}
-          >
-            {acceptDirectory ? "Browse directories" : "Browse files"}
-          </BaseButton>
+          <StyledButtonNoWrapContainer>
+            <BaseButton
+              kind={BaseButtonKind.SECONDARY}
+              disabled={disabled}
+              size={BaseButtonSize.SMALL}
+            >
+              {acceptDirectory ? "Browse directories" : "Browse files"}
+            </BaseButton>
+          </StyledButtonNoWrapContainer>
         </StyledFileDropzoneSection>
       )
     }}

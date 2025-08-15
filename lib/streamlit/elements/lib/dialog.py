@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large"]
+DialogWidth: TypeAlias = Literal["small", "large", "medium"]
 
 
 def _process_dialog_width_input(
@@ -47,6 +47,8 @@ def _process_dialog_width_input(
     """
     if width == "large":
         return BlockProto.Dialog.DialogWidth.LARGE
+    if width == "medium":
+        return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
 
@@ -110,8 +112,6 @@ class Dialog(DeltaGenerator):
             element_id = compute_and_register_element_id(
                 "dialog",
                 user_key=None,
-                # Dialogs within forms still trigger a normal rerun:
-                form_id="",
                 dg=parent,
                 title=title,
                 dismissible=dismissible,

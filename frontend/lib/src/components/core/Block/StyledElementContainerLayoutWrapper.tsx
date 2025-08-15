@@ -91,10 +91,6 @@ export const StyledElementContainerLayoutWrapper: FC<
   }
 > = ({ node, ...rest }) => {
   const { isInHorizontalLayout } = useRequiredContext(FlexContext)
-  const isContentWidthDataframe =
-    node.element.type === "arrowDataFrame" &&
-    !node.element["arrowDataFrame"]?.width &&
-    !node.element["arrowDataFrame"]?.useContainerWidth
 
   let minStretchBehavior: MinFlexElementWidth = "fit-content"
   if (
@@ -127,20 +123,7 @@ export const StyledElementContainerLayoutWrapper: FC<
       styles.overflow = "visible"
     }
 
-    if (node.element.type === "imgs") {
-      if (isInHorizontalLayout) {
-        // st.image doesn't have the same proto style as other elements.
-        // this can be consolidated with handling of other elements after width
-        // changes are implemented for st.image.
-        if (node.element.imgs?.width) {
-          styles.width = `${node.element.imgs.width}px`
-          styles.flex = `0 0 ${node.element.imgs.width}px`
-        } else {
-          styles.flex = "1 1 fit-content"
-        }
-      }
-      return styles
-    } else if (node.element.type === "textArea") {
+    if (node.element.type === "textArea") {
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
@@ -160,14 +143,6 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (node.element.type === "arrowDataFrame") {
-      // TODO (lawilby): Some of this can be removed once the width changes
-      // are implemented for dataframe.
-      if (isContentWidthDataframe && isInHorizontalLayout) {
-        styles.width = "fit-content"
-        styles.flex = "0 0 auto"
-      }
-      return styles
     } else if (node.element.type === "deckGlJsonChart") {
       // TODO (lawilby): When width is implemented for deckGlJsonChart, we
       // should try to remove these custom styles.
@@ -193,9 +168,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.heightConfig?.useStretch,
     node.element.deckGlJsonChart?.useContainerWidth,
     node.element.deckGlJsonChart?.width,
-    isContentWidthDataframe,
     isInHorizontalLayout,
-    node.element.imgs?.width,
   ])
 
   const styles = useLayoutStyles({

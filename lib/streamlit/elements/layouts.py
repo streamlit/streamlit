@@ -323,7 +323,7 @@ class LayoutsMixin:
             # in the future. This might require including more container
             # parameters in the ID calculation.
             block_proto.id = compute_and_register_element_id(
-                "container", user_key=key, form_id=None
+                "container", user_key=key, dg=None
             )
 
         return self.dg._block(block_proto)
@@ -1112,7 +1112,7 @@ class LayoutsMixin:
         title: str,
         *,
         dismissible: bool = True,
-        width: Literal["small", "large"] = "small",
+        width: Literal["small", "large", "medium"] = "small",
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.

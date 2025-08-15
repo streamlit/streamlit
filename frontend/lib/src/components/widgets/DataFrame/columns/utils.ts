@@ -622,6 +622,7 @@ export function formatNumber(
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
+      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
@@ -629,6 +630,7 @@ export function formatNumber(
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
+      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 0,
       maximumFractionDigits: maxPrecision ?? 0,
     })
