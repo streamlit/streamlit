@@ -35,6 +35,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { formatNumber } from "~lib/components/widgets/DataFrame/columns"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
@@ -312,6 +313,29 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     }
   }, [chartData, color, theme, chartWidth, chartType, chartRef])
 
+  const numericBody = Number(body.replace(/,/g, "")) // remove commas if any
+  const formattedBody =
+    !Number.isNaN(numericBody) && Number.isFinite(numericBody)
+      ? formatNumber(
+          numericBody,
+          element.shortenNumbers ? "compact" : undefined,
+          4
+        ) // adjust precision as needed
+      : body
+
+  let formattedDelta: string | undefined
+  if (deltaExists) {
+    const numericDelta = Number(delta)
+    formattedDelta =
+      !Number.isNaN(numericDelta) && Number.isFinite(numericDelta)
+        ? formatNumber(
+            numericDelta,
+            element.shortenNumbers ? "compact" : undefined,
+            4
+          ) // adjust precision as needed
+        : delta
+  }
+
   return (
     <StyledMetricContainer
       className="stMetric"
@@ -333,8 +357,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText> {body} </StyledTruncateText>
+          <StyledTruncateText>{formattedBody}</StyledTruncateText>
         </StyledMetricValueText>
+
         {deltaExists && (
           <StyledMetricDeltaText
             data-testid="stMetricDelta"
@@ -352,7 +377,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 margin={arrowMargin}
               />
             )}
-            <StyledTruncateText> {delta} </StyledTruncateText>
+            <StyledTruncateText>{formattedDelta}</StyledTruncateText>
           </StyledMetricDeltaText>
         )}
       </StyledMetricContent>

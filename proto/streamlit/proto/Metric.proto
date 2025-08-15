@@ -50,4 +50,5 @@ message Metric {
     AREA = 2;
   }
   ChartType chart_type = 10;
+  bool shorten_numbers = 11;
 }

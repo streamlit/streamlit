@@ -71,6 +71,7 @@ class MetricMixin:
         height: Height = "content",
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
+        shorten_numbers: bool | int = False,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -171,6 +172,10 @@ class MetricMixin:
         chart_type : "line", "bar", or "area"
             The type of sparkline chart to display. Defaults to line chart.
 
+        shorten_numbers : bool
+            Whether to shorten long numbers in the value and delta. If True,
+            it will shorten long numbers without showing decimals (e.g. 1234 to 1k)
+
         Examples
         --------
         **Example 1: Show a metric**
@@ -240,6 +245,10 @@ class MetricMixin:
         metric_proto.body = _parse_value(value)
         metric_proto.label = _parse_label(label)
         metric_proto.delta = _parse_delta(delta)
+
+        if shorten_numbers is True:
+            metric_proto.shorten_numbers = True
+
         metric_proto.show_border = border
         if help is not None:
             metric_proto.help = dedent(help)
