@@ -90,7 +90,7 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  const [width, , elementRef] = useCalculatedDimensions()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })

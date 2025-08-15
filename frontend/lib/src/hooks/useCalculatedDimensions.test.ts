@@ -98,13 +98,17 @@ describe("useCalculatedDimensions", () => {
       )
 
       const { result } = renderHook(() => useCalculatedDimensions())
-      const [actualWidth, actualHeight, ref] = result.current
+      const {
+        width: actualWidth,
+        height: actualHeight,
+        elementRef,
+      } = result.current
 
       expect(actualWidth).toBe(expectedWidth)
       expect(actualHeight).toBe(expectedHeight)
-      expect(ref).toBeDefined()
-      expect(typeof ref).toBe("object")
-      expect("current" in ref).toBe(true)
+      expect(elementRef).toBeDefined()
+      expect(typeof elementRef).toBe("object")
+      expect("current" in elementRef).toBe(true)
     }
   )
 
@@ -145,10 +149,10 @@ describe("useCalculatedDimensions", () => {
     )
 
     const { result, rerender } = renderHook(() => useCalculatedDimensions())
-    const [, , initialRef] = result.current
+    const { elementRef: initialRef } = result.current
 
     rerender()
-    const [, , rerenderedRef] = result.current
+    const { elementRef: rerenderedRef } = result.current
 
     expect(initialRef).toBe(rerenderedRef)
   })

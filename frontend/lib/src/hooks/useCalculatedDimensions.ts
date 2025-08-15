@@ -30,18 +30,18 @@ import { useResizeObserver } from "./useResizeObserver"
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
  *
- * @returns A tuple containing:
- *   - The current width of the observed element in pixels (or -1 if width is 0)
- *   - The current height of the observed element in pixels (or -1 if height is 0)
- *   - A ref object that should be attached to the element you want to observe
+ * @returns An object containing:
+ *   - width: The current width of the observed element in pixels (or -1 if width is 0)
+ *   - height: The current height of the observed element in pixels (or -1 if height is 0)
+ *   - elementRef: A ref object that should be attached to the element you want to observe
  *
  * @example
  * ```tsx
  * const MyComponent = () => {
- *   const [width, height, ref] = useCalculatedDimensions();
+ *   const { width, height, elementRef } = useCalculatedDimensions();
  *
  *   return (
- *     <div ref={ref}>
+ *     <div ref={elementRef}>
  *       Current dimensions: {width === -1 ? 'calculating...' : `${width}px`} x {height === -1 ? 'calculating...' : `${height}px`}
  *     </div>
  *   );
@@ -50,7 +50,11 @@ import { useResizeObserver } from "./useResizeObserver"
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = []
-): [number, number, MutableRefObject<T | null>] => {
+): {
+  width: number
+  height: number
+  elementRef: MutableRefObject<T | null>
+} => {
   const {
     values: [width, height],
     elementRef,
@@ -59,5 +63,5 @@ export const useCalculatedDimensions = <T extends HTMLDivElement>(
     dependencies
   )
 
-  return [width || -1, height || -1, elementRef]
+  return { width: width || -1, height: height || -1, elementRef }
 }

@@ -104,7 +104,7 @@ function ChatInput({
   const counterRef = useRef(0)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
 
-  const [width, , elementRef] = useCalculatedDimensions()
+  const { width, elementRef } = useCalculatedDimensions()
   const { innerWidth, innerHeight } = useWindowDimensionsContext()
 
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.

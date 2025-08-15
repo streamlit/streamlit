@@ -248,7 +248,8 @@ export interface MetricProps {
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
-  const [chartWidth, , chartContainerRef] = useCalculatedDimensions()
+  const { width: chartWidth, elementRef: chartContainerRef } =
+    useCalculatedDimensions()
 
   const { MetricDirection } = MetricProto
   const {

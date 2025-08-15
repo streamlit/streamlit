@@ -93,7 +93,7 @@ const TextArea: FC<Props> = ({
 }) => {
   const id = useRef(uniqueId("text_area_")).current
 
-  const [width, , elementRef] = useCalculatedDimensions()
+  const { width, elementRef } = useCalculatedDimensions()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.

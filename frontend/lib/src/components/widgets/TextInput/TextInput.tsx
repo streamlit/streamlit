@@ -64,7 +64,7 @@ function TextInput({
     () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
 
-  const [width, , elementRef] = useCalculatedDimensions()
+  const { width, elementRef } = useCalculatedDimensions()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.

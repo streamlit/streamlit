@@ -34,7 +34,7 @@ const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
 }) => {
   const theme = useEmotionTheme()
   const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
-  const [width, , elementRef] = useCalculatedDimensions()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const fullscreenContextValue = useMemo(() => {
     return {

@@ -54,11 +54,11 @@ describe("Metric element", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default mock implementation for useCalculatedDimensions
-    vi.mocked(useCalculatedDimensions).mockReturnValue([
-      200,
-      100,
-      { current: null },
-    ])
+    vi.mocked(useCalculatedDimensions).mockReturnValue({
+      width: 200,
+      height: 100,
+      elementRef: { current: null },
+    })
   })
 
   it("renders metric as expected", () => {
@@ -254,11 +254,11 @@ describe("Metric element", () => {
     })
 
     it("does not call vega-embed when width is zero", () => {
-      vi.mocked(useCalculatedDimensions).mockReturnValue([
-        0,
-        100,
-        { current: null },
-      ])
+      vi.mocked(useCalculatedDimensions).mockReturnValue({
+        width: 0,
+        height: 100,
+        elementRef: { current: null },
+      })
 
       const props = getProps({
         chartData: [1, 2, 3, 4, 5],

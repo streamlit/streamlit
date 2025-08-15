@@ -28,7 +28,7 @@ export const withCalculatedWidth = <P extends { width?: number }>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>
 ): ComponentType<Omit<P, "width">> => {
   const EnhancedComponent = (props: Omit<P, "width">): ReactElement => {
-    const [width, , elementRef] = useCalculatedDimensions()
+    const { width, elementRef } = useCalculatedDimensions()
 
     return (
       <Box ref={elementRef}>
