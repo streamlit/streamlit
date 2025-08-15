@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
@@ -288,6 +289,33 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     const selectbox = screen.getByTestId("stSelectbox")
     expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
+  })
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.onChange).toHaveBeenCalledWith("mobile new option")
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: false, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
   })
 
   it("does not allow new options when acceptNewOptions is false", async () => {
