@@ -139,6 +139,36 @@ describe("useCalculatedDimensions", () => {
     expect(spy).toHaveBeenCalledWith(["width", "height"], dependencies)
   })
 
+  it("uses custom fallback value when provided", () => {
+    vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+      () => ({
+        values: [0, 0], // Zero dimensions
+        elementRef: { current: null },
+      })
+    )
+
+    const { result } = renderHook(() => useCalculatedDimensions([], 42))
+    const { width, height } = result.current
+
+    expect(width).toBe(42)
+    expect(height).toBe(42)
+  })
+
+  it("defaults to -1 fallback when no custom fallback provided", () => {
+    vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+      () => ({
+        values: [0, 0], // Zero dimensions
+        elementRef: { current: null },
+      })
+    )
+
+    const { result } = renderHook(() => useCalculatedDimensions())
+    const { width, height } = result.current
+
+    expect(width).toBe(-1)
+    expect(height).toBe(-1)
+  })
+
   it("maintains referential stability of the ref object", () => {
     const mockElementRef = { current: null }
     vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
