@@ -34,7 +34,7 @@ def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(7)
+    ).to_have_count(10)
 
 
 def test_shows_left_and_right_graph(app: Page):
