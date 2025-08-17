@@ -1625,7 +1625,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.body_font == "Inter"
 
         # Font source is added to the font_sources field
-        assert new_session_msg.custom_theme.font_sources == [
+        assert list(new_session_msg.custom_theme.font_sources) == [
             FontSource(
                 config_name="font",
                 source_url="https://fonts.googleapis.com/css2?family=Inter&display=swap",
@@ -1648,7 +1648,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.code_font == "Tagesschrift"
 
         # Font source is added to the font_sources field
-        assert new_session_msg.custom_theme.font_sources == [
+        assert list(new_session_msg.custom_theme.font_sources) == [
             FontSource(
                 config_name="codeFont",
                 source_url="https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap",
@@ -1673,7 +1673,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.heading_font == "playwrite-cc-za"
 
         # Font source is added to the font_sources field
-        assert new_session_msg.custom_theme.font_sources == [
+        assert list(new_session_msg.custom_theme.font_sources) == [
             FontSource(
                 config_name="headingFont",
                 source_url="https://use.typekit.net/eor5wum.css",
