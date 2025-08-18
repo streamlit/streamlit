@@ -46,7 +46,7 @@ export const prepareOptions = (
   }
 
   return options
-    .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
+    .filter(opt => notNullOrUndefined(opt) && opt !== "") // ignore empty option if it exists
     .map(option => {
       if (typeof option === "object" && "value" in option) {
         // Handle SelectOption type
