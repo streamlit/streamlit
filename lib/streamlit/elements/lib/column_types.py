@@ -235,7 +235,7 @@ class ColumnConfig(TypedDict, total=False):
     disabled: bool | None
     required: bool | None
     pinned: bool | None
-    default: str | bool | int | float | None
+    default: str | bool | int | float | list[str] | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
         NumberColumnConfig
@@ -1453,12 +1453,20 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
 ) -> ColumnConfig:
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. List columns are not editable
-    at the moment. This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe`` or ``st.data_editor``.
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend to disable editing for these columns or conversion of all list values
+        to strings.
 
     Parameters
     ----------
@@ -1489,6 +1497,16 @@ def ListColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
 
     Examples
     --------
@@ -1527,6 +1545,9 @@ def ListColumn(
         width=width,
         help=help,
         pinned=pinned,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
         type_config=ListColumnConfig(type="list"),
     )
 

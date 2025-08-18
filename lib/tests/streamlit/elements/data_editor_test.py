@@ -135,6 +135,21 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.TIMEDELTA,
                 pd.Timedelta(100000),
             ),
+            (
+                [1, 2, 3],
+                ColumnDataKind.LIST,
+                [1, 2, 3],
+            ),
+            (
+                ("1", "2", "3"),
+                ColumnDataKind.LIST,
+                ["1", "2", "3"],
+            ),
+            (
+                "foo",
+                ColumnDataKind.LIST,
+                ["foo"],
+            ),
         ]
     )
     def test_parse_value(

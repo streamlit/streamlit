@@ -23,6 +23,7 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
+import { Vector } from "apache-arrow"
 import merge from "lodash/merge"
 import toString from "lodash/toString"
 import moment, { Moment } from "moment"
@@ -350,6 +351,27 @@ export function toSafeArray(data: any): any[] {
 }
 
 /**
+ * Checks if the provided data used as array value is supported for editing.
+ *
+ * @param data - The value to inspect.
+ * @returns True if `data` is supported for array-editing.
+ */
+export function isEditableArrayValue(data: unknown): boolean {
+  if (typeof data === "string" || data instanceof String) {
+    return true
+  }
+
+  if (data instanceof Vector) {
+    data = Array.from(data)
+  }
+
+  return (
+    Array.isArray(data) &&
+    data.every(v => typeof v === "string" || v instanceof String)
+  )
+}
+
+/**
  * Efficient check to determine if a string is looks like a JSON string.
  *
  * This is only a heuristic check and does not guarantee that the string is a
@@ -466,6 +488,28 @@ export function toSafeNumber(value: any): number | null {
   }
 
   return Number(value)
+}
+
+/**
+ * Converts an array to a string representation suitable for copying.
+ *
+ * @param array - The array to convert.
+ * @returns The string representation of the array.
+ */
+export function arrayToCopyValue(array?: object[] | null): string {
+  if (isNullOrUndefined(array)) {
+    return ""
+  }
+
+  return toSafeString(
+    array.map((x: object) =>
+      // Replace commas with spaces since commas are used to
+      // separate the list items.
+      typeof x === "string" && (x as string).includes(",")
+        ? (x as string).replace(/,/g, " ")
+        : x
+    )
+  )
 }
 
 /**

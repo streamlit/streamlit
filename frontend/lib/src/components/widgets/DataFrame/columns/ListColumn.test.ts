@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import { BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCellKind } from "@glideapps/glide-data-grid"
+import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
+
+import { mockTheme } from "@streamlit/lib"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
@@ -50,25 +53,30 @@ const MOCK_LIST_COLUMN_PROPS = {
 
 describe("ListColumn", () => {
   it("creates a valid column instance", () => {
-    const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
+    const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
     expect(mockColumn.kind).toEqual("list")
     expect(mockColumn.title).toEqual(MOCK_LIST_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_LIST_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell(["foo", "bar"])
-    expect(mockCell.kind).toEqual(GridCellKind.Bubble)
-    expect((mockCell as BubbleCell).data).toEqual(["foo", "bar"])
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as MultiSelectCellType).data.values).toEqual([
+      "foo",
+      "bar",
+    ])
   })
 
-  it("ignores isEditable configuration", () => {
-    const mockColumn = ListColumn({
-      ...MOCK_LIST_COLUMN_PROPS,
-      isEditable: true,
-    })
+  it("Column supports editing", () => {
+    const mockColumn = ListColumn(
+      {
+        ...MOCK_LIST_COLUMN_PROPS,
+        isEditable: true,
+      },
+      mockTheme.emotion
+    )
 
-    // Column should be readonly, even if isEditable was true
-    expect(mockColumn.isEditable).toEqual(false)
+    expect(mockColumn.isEditable).toEqual(true)
   })
 
   it.each([
@@ -102,7 +110,7 @@ describe("ListColumn", () => {
     "supports array-compatible value (%p parsed as %p)",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any[] | null) => {
-      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -121,10 +129,9 @@ describe("ListColumn", () => {
     "correctly prepares data for copy (%p parsed as %p)",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, copyData: string | undefined) => {
-      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
       const cell = mockColumn.getCell(input)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      expect((cell as any).copyData).toEqual(copyData)
+      expect((cell as MultiSelectCellType).copyData).toEqual(copyData)
     }
   )
 })
