@@ -40,7 +40,6 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
-
 function isFacetChart(spec: string | object): boolean {
   try {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
@@ -92,21 +91,21 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Otherwise, it will be according to the user's settings
   // determined by styling on the StyledElementContainer.
   const {
-    width: containerWidth,
-    height: containerHeight,
+    width: chartContainerWidth,
+    height: chartContainerHeight,
     elementRef: containerRef,
   } = useCalculatedDimensions(
     // We need to update whenever the showData state changes because
     // the underlying element ref that needs to be observed is updated.
     [showData],
     // Use 0 as fallback instead of -1 because Vega-Lite cannot handle negative dimensions
-    0,
+    0
   )
 
-  const useContainerWidth = !!(
+  const usechartContainerWidth = !!(
     widthConfig?.useStretch || widthConfig?.pixelWidth
   )
-  const useContainerHeight = !!(
+  const usechartContainerHeight = !!(
     heightConfig?.useStretch || heightConfig?.pixelHeight
   )
 
@@ -124,10 +123,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const element = useVegaElementPreprocessor(
     inputElement,
     // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
-    isFacet ? (fullScreenWidth ?? 0) : containerWidth,
-    isFacet ? (fullScreenHeight ?? 0) : containerHeight,
-    useContainerWidth,
-    useContainerHeight
+    isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
+    isFacet ? (fullScreenHeight ?? 0) : chartContainerHeight,
+    usechartContainerWidth,
+    usechartContainerHeight
   )
 
   // This hook provides lifecycle functions for creating and removing the view.
@@ -152,7 +151,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     return finalizeView
-    // We can't use containerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
+    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
     // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
     // Are the changes in the spec enough?
   }, [
@@ -188,7 +187,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     return (
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
-        height={fullScreenHeight ?? containerHeight ?? undefined}
+        height={fullScreenHeight ?? chartContainerHeight ?? undefined}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -229,7 +228,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
-        useContainerWidth={element.useContainerWidth}
+        useContainerWidth={usechartContainerWidth}
         isFullScreen={isFullScreen}
         ref={containerRef}
       />
