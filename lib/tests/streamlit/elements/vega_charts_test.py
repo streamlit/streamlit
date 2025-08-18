@@ -20,7 +20,7 @@ import json
 import unittest
 from typing import Any, Callable
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import altair as alt
 import pandas as pd
@@ -1559,6 +1559,96 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # Verify the horizontal orientation is preserved after adding rows
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
+
+
+class LineChartWidthHeightTest(DeltaGeneratorTestCase):
+    """Test line_chart width and height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, height, expected_width_spec, expected_width_value, expected_height_spec, expected_height_value
+            (
+                "stretch",
+                "content",
+                "use_stretch",
+                True,
+                "use_content",
+                True,
+            ),  # defaults
+            ("content", "content", "use_content", True, "use_content", True),
+            ("stretch", "stretch", "use_stretch", True, "use_stretch", True),
+            (500, "content", "pixel_width", 500, "use_content", True),
+            ("stretch", 400, "use_stretch", True, "pixel_height", 400),
+            (600, 400, "pixel_width", 600, "pixel_height", 400),
+        ]
+    )
+    def test_line_chart_width_height_combinations(
+        self,
+        width: str | int,
+        height: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test line_chart with various width and height combinations."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        st.line_chart(df, x="a", y="b", width=width, height=height)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Check width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+        # Check height configuration
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            (True, "use_stretch"),  # use_container_width=True -> width="stretch"
+            (False, "use_content"),  # use_container_width=False -> width="content"
+        ]
+    )
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_line_chart_use_container_width_deprecation(
+        self, use_container_width: bool, expected_width_spec: str, mock_warning: Mock
+    ):
+        """Test that use_container_width shows deprecation warning and maps correctly."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        st.line_chart(df, x="a", y="b", use_container_width=use_container_width)
+
+        # Check deprecation warning is shown
+        mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+
+        # Should map to correct width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) is True
+
+    @parameterized.expand(
+        [
+            ("width", "invalid_width"),
+            ("height", "invalid_height"),
+            ("width", 0),  # width must be positive
+            ("height", 0),  # height must be positive
+            ("width", -100),  # negative width
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_line_chart_validation_errors(
+        self, param_name: str, invalid_value: str | int
+    ):
+        """Test that invalid width/height values raise validation errors."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.line_chart(df, x="a", y="b", **kwargs)
 
 
 class VegaUtilitiesTest(unittest.TestCase):
