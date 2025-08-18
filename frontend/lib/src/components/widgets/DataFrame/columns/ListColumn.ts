@@ -28,7 +28,8 @@ import {
 } from "./utils"
 
 /**
- * A column type that supports optimized rendering values of array/list types.
+ * A column type that supports optimized rendering and editing of
+ *  values of array/list types.
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -54,8 +55,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     kind: "list",
     sortMode: "default",
     typeIcon: ":material/list:",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
