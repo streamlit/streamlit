@@ -96,7 +96,7 @@ def open_browser(url: str) -> None:
             _open_browser_with_command(preferred_browser, url)
             return
         print_to_cli(
-            f'Warning: Browser "{preferred_browser}" is not a valid browser executable or command'
+            f'Warning: Browser "{preferred_browser}" is not a valid browser executable or command.'
         )
 
     if env_util.IS_WINDOWS:
