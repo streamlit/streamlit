@@ -30,7 +30,7 @@ import {
   toSafeString,
 } from "./utils"
 
-type SelectOption = { value: string; label?: string }
+type SelectOption = { value: string | number | boolean; label?: string }
 
 /**
  * Unifies the options into the format required by the selectbox cell.
@@ -46,7 +46,7 @@ export const prepareOptions = (
   }
 
   return options
-    .filter(opt => opt !== null && opt !== "")
+    .filter(opt => notNullOrUndefined(opt) && opt !== "") // ignore empty option if it exists
     .map(option => {
       if (typeof option === "object" && "value" in option) {
         // Handle SelectOption type
@@ -58,7 +58,7 @@ export const prepareOptions = (
       }
 
       // Handle primitive types (string, number, boolean)
-      const optionValue = toSafeString(option).trim()
+      const optionValue = toSafeString(option).trim() // convert everything to string
       return {
         value: optionValue,
         label: optionValue,
@@ -95,7 +95,21 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   ) as SelectboxColumnParams
 
-  const uniqueTypes = new Set(parameters.options.map(x => typeof x))
+  const isSelectOption = (obj: unknown): obj is SelectOption =>
+    typeof obj === "object" &&
+    obj !== null &&
+    "value" in (obj as Record<string, unknown>)
+
+  const getOptionValueType = (
+    x: string | number | boolean | SelectOption
+  ): string => {
+    if (isSelectOption(x)) {
+      return typeof x.value
+    }
+    return typeof x
+  }
+
+  const uniqueTypes = new Set(parameters.options.map(getOptionValueType))
   if (uniqueTypes.size === 1) {
     if (uniqueTypes.has("number") || uniqueTypes.has("bigint")) {
       dataType = "number"

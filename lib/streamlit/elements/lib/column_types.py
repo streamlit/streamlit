@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import datetime
-import itertools
 from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
@@ -86,14 +85,17 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
+SelectboxOptionValue: TypeAlias = Union[str, int, float, bool]
+
+
 class SelectboxOption(TypedDict):
-    value: str | int | float
+    value: SelectboxOptionValue
     label: NotRequired[str | None]
 
 
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[list[str | int | float | SelectboxOption] | None]
+    options: NotRequired[list[SelectboxOptionValue | SelectboxOption] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -939,9 +941,9 @@ def SelectboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    default: str | int | float | None = None,
-    options: Iterable[str | int | float] | None = None,
-    format_func: Callable[[str | int | float], str] | None = None,
+    default: SelectboxOptionValue | None = None,
+    options: Iterable[SelectboxOptionValue] | None = None,
+    format_func: Callable[[SelectboxOptionValue], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -998,7 +1000,7 @@ def SelectboxColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    options: Iterable of str or None
+    options: Iterable of str, int, float, bool, or None
         The options that can be selected during editing. If this is ``None``
         (default), the options will be inferred from the underlying dataframe
         column if its dtype is "category". For more information, see `Pandas docs
