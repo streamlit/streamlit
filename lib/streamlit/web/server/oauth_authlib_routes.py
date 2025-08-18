@@ -23,6 +23,7 @@ from streamlit.auth_util import (
     clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
+    get_redirect_uri,
     get_secrets_auth_section,
     set_cookie_with_chunks,
 )
@@ -41,7 +42,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
     """Create an OAuth client for the given provider based on secrets.toml configuration."""
     auth_section = get_secrets_auth_section()
     if auth_section:
-        redirect_uri = auth_section.get("redirect_uri", None)
+        redirect_uri = get_redirect_uri(auth_section)
         config = auth_section.to_dict()
     else:
         config = {}
@@ -253,7 +254,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         redirect_uri = None
         auth_section = get_secrets_auth_section()
         if auth_section:
-            redirect_uri = auth_section.get("redirect_uri", None)
+            redirect_uri = get_redirect_uri(auth_section)
 
         if not redirect_uri:
             return None
