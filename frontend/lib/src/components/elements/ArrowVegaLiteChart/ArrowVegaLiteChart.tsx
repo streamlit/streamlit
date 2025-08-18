@@ -21,6 +21,7 @@ import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
 import { streamlit } from "@streamlit/protobuf"
 
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
@@ -102,12 +103,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
     0
   )
 
-  const usechartContainerWidth = !!(
-    widthConfig?.useStretch || widthConfig?.pixelWidth
-  )
-  const usechartContainerHeight = !!(
-    heightConfig?.useStretch || heightConfig?.pixelHeight
-  )
+  const useStretchWidth =
+    shouldChildrenStretch(widthConfig) || inputElement.useContainerWidth
+
+  const useStretchHeight = shouldChildrenStretch(heightConfig)
 
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
@@ -124,9 +123,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
     inputElement,
     // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
-    isFacet ? (fullScreenHeight ?? 0) : chartContainerHeight,
-    usechartContainerWidth,
-    usechartContainerHeight
+    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
+    isFullScreen ? true : useStretchWidth,
+    isFullScreen ? true : useStretchHeight
   )
 
   // This hook provides lifecycle functions for creating and removing the view.
@@ -206,7 +205,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // To style the Vega tooltip, we need to apply global styles since
   // the tooltip element is drawn outside of this component.
   return (
-    <StyledToolbarElementContainer>
+    <StyledToolbarElementContainer
+      height={
+        useStretchHeight
+          ? isFullScreen
+            ? fullScreenHeight
+            : "100%"
+          : fullScreenHeight
+      }
+      useContainerWidth={isFullScreen ? true : useStretchWidth}
+    >
       <Toolbar
         target={StyledToolbarElementContainer}
         isFullScreen={isFullScreen}
@@ -228,7 +236,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
-        useContainerWidth={usechartContainerWidth}
+        useContainerWidth={useStretchWidth}
         isFullScreen={isFullScreen}
         ref={containerRef}
       />

@@ -198,6 +198,7 @@ export const useVegaElementPreprocessor = (
     [
       inputSpec,
       useContainerWidth,
+      useContainerHeight,
       vegaLiteTheme,
       selectionMode,
       theme,

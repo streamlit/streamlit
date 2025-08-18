@@ -2083,13 +2083,13 @@ class VegaChartsMixin:
             spec = {}
 
         # Set the default value for `use_container_width`.
-        if use_container_width is None:
+        if use_container_width is None and width is None:
             # Some multi-view charts (facet, horizontal concatenation, and repeat;
             # see https://altair-viz.github.io/user_guide/compound_charts.html)
             # don't work well with `use_container_width=True`, so we disable it for
             # those charts (see https://github.com/streamlit/streamlit/issues/9091).
             # All other charts (including vertical concatenation) default to
-            # `use_container_width=True`.
+            # `use_container_width=True` unless width is provided.
             is_facet_chart = "facet" in spec or (
                 "encoding" in spec
                 and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
@@ -2105,7 +2105,8 @@ class VegaChartsMixin:
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
-        vega_lite_proto.use_container_width = use_container_width
+        if use_container_width is not None:
+            vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
         if is_selection_activated:
