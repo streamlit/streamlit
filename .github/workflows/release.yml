@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
           # Save the access token to the local git config, so
