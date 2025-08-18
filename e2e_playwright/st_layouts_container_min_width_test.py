@@ -28,6 +28,7 @@ CONTAINER_KEYS = [
     "layout-horizontal-nested-containers",
     "layout-horizontal-columns",
     "layout-horizontal-button-groups",
+    "layout-horizontal-line-charts",
 ]
 
 

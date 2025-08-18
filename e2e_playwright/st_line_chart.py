@@ -86,6 +86,11 @@ st.write("height=stretch")
 with st.container(border=True, key="test_height_stretch", height=500):
     st.line_chart(df, height="stretch")
 
+with st.container(
+    border=True, horizontal=True, key="test_fixed_width_in_horizontal_container"
+):
+    st.line_chart(df, width=300)
+
 
 # Test that add_rows maintains original styling params:
 # color, width, height, use_container_width

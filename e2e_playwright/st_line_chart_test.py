@@ -26,7 +26,7 @@ from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_width,
 )
 
-TOTAL_LINE_CHARTS = 15
+TOTAL_LINE_CHARTS = 16
 
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -58,10 +58,12 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         line_chart_elements.nth(10), name="st_line_chart-custom_axis_labels"
     )
-    # The column_order chart (index 11) is tested separately in test_column_order_with_colors
-    # The width=content chart (index 12) is tested separately in test_line_chart_width_height
-    # The height=stretch chart (index 13) is tested separately in test_line_chart_width_height
-    # The add_rows chart (index 14) is tested separately in test_add_rows_preserves_styling
+    # Charts tested separately:
+    # - index 11: column_order chart in test_column_order_with_colors
+    # - index 12: width=content chart in test_line_chart_width_height
+    # - index 13: height=stretch chart in test_line_chart_width_height
+    # - index 14: fixed width in horizontal container in test_fixed_width_in_horizontal_container
+    # - index 15: add_rows chart in test_add_rows_preserves_styling
 
 
 def test_line_chart_width_height(app: Page, assert_snapshot: ImageCompareFunction):
@@ -76,13 +78,50 @@ def test_line_chart_width_height(app: Page, assert_snapshot: ImageCompareFunctio
     )
 
     stretch_height_chart_container = get_element_by_key(app, "test_height_stretch")
-
     # make sure the canvas is rendered.
     expect(stretch_height_chart_container.locator("canvas")).to_have_count(1)
     assert_snapshot(
         stretch_height_chart_container,
         name="st_line_chart-height_stretch",
     )
+
+
+def test_fixed_width_in_horizontal_container(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.line_chart renders correctly with fixed width in horizontal container."""
+    fixed_width_chart_container = get_element_by_key(
+        app, "test_fixed_width_in_horizontal_container"
+    )
+
+    # make sure the canvas is rendered.
+    expect(fixed_width_chart_container.locator("canvas")).to_have_count(1)
+    assert_snapshot(
+        fixed_width_chart_container,
+        name="st_line_chart-fixed_width_in_horizontal_container",
+    )
+
+
+def test_content_width_chart_show_data(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that content width line chart shows data correctly when toggled to dataframe view."""
+    content_width_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+    expect(content_width_chart).to_be_visible()
+
+    content_width_chart.hover(force=True)
+
+    toolbar = content_width_chart.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_visible()
+    toolbar_buttons = toolbar.get_by_test_id("stElementToolbarButton")
+
+    expect(toolbar_buttons.get_by_label("Show Data")).to_be_visible()
+    toolbar_buttons.get_by_label("Show Data").click()
+
+    dataframe = app.get_by_test_id("stDataFrame")
+    expect(dataframe).to_be_visible()
+
+    assert_snapshot(dataframe, name="st_line_chart-content_width_show_data")
 
 
 def test_themed_line_chart_rendering(
@@ -139,7 +178,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(14)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(15)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart
