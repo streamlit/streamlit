@@ -63,8 +63,8 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disableFullscreenMode?: boolean
-  widthConfig: streamlit.IWidthConfig
-  heightConfig: streamlit.IHeightConfig
+  widthConfig: streamlit.IWidthConfig | null | undefined
+  heightConfig: streamlit.IHeightConfig | null | undefined
 }
 
 const ArrowVegaLiteChart: FC<Props> = ({

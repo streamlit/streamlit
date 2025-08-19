@@ -70,16 +70,16 @@ def test_line_chart_width_height(app: Page, assert_snapshot: ImageCompareFunctio
     """Test that st.line_chart renders correctly with different width and height."""
     content_width_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
 
-    # make sure the canvas is rendered.
-    expect(content_width_chart.locator("canvas")).to_have_count(1)
+    expect(content_width_chart.locator("[role='graphics-document']")).to_have_count(1)
     assert_snapshot(
         content_width_chart,
         name="st_line_chart-width_content",
     )
 
     stretch_height_chart_container = get_element_by_key(app, "test_height_stretch")
-    # make sure the canvas is rendered.
-    expect(stretch_height_chart_container.locator("canvas")).to_have_count(1)
+    expect(
+        stretch_height_chart_container.locator("[role='graphics-document']")
+    ).to_have_count(1)
     assert_snapshot(
         stretch_height_chart_container,
         name="st_line_chart-height_stretch",
@@ -94,8 +94,9 @@ def test_fixed_width_in_horizontal_container(
         app, "test_fixed_width_in_horizontal_container"
     )
 
-    # make sure the canvas is rendered.
-    expect(fixed_width_chart_container.locator("canvas")).to_have_count(1)
+    expect(
+        fixed_width_chart_container.locator("[role='graphics-document']")
+    ).to_have_count(1)
     assert_snapshot(
         fixed_width_chart_container,
         name="st_line_chart-fixed_width_in_horizontal_container",
