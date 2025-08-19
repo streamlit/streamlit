@@ -268,7 +268,9 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]],
+    edited_rows: Mapping[
+        int, Mapping[str, str | int | float | bool | list[str] | None]
+    ],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -299,9 +301,11 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iloc[row_pos, col_pos] = _parse_value(
-                    value, dataframe_schema[col_name]
-                )
+                parse_val = _parse_value(value, dataframe_schema[col_name])
+                if isinstance(parse_val, list):
+                    df.iat[row_pos, col_pos] = parse_val  # noqa: PD009
+                else:
+                    df.iloc[row_pos, col_pos] = parse_val
 
 
 def _parse_added_row(
