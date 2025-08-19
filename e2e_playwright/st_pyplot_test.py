@@ -56,10 +56,9 @@ def test_shows_deprecation_warning(app: Page):
 
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
     """Test the new width parameter options: content, stretch, and pixel values."""
-    # Wait for all images to be fully loaded before taking snapshots
-    wait_for_all_images_to_be_loaded(app)
-
     pyplot_elements = app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(11)
+    wait_for_all_images_to_be_loaded(app)
 
     content_pyplot = pyplot_elements.nth(8)
     assert_snapshot(content_pyplot, name="st_pyplot-width_content")
