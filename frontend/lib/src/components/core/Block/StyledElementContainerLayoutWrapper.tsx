@@ -71,6 +71,10 @@ const WIDTH_STRETCH_OVERRIDE = [
   // images is managed in the ImageList component.
   // This also covers st.pyplot() which is a special case of st.image.
   "imgs",
+  // Without this style, the skeleton width relies on the flex container that
+  // wraps the page contents having align-items: stretch. There was a regression
+  // where this default was changed. It is more robust to ensure that the skeleton
+  // has this width.
   "skeleton",
 ]
 
