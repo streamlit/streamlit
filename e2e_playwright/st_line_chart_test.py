@@ -107,13 +107,18 @@ def test_content_width_chart_show_data(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that content width line chart shows data correctly when toggled to dataframe view."""
-    content_width_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+    all_charts = app.get_by_test_id("stVegaLiteChart")
+    expect(all_charts).to_have_count(16)
+
+    content_width_chart = all_charts.nth(12)
     expect(content_width_chart).to_be_visible()
+    expect(content_width_chart.locator("[role='graphics-document']")).to_be_visible()
+
+    # Get toolbar from parent container (standard DOM structure for Vega-Lite charts)
+    toolbar = content_width_chart.locator("..").get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_attached()
 
     content_width_chart.hover(force=True)
-
-    toolbar = content_width_chart.get_by_test_id("stElementToolbar")
-    expect(toolbar).to_be_visible()
     toolbar_buttons = toolbar.get_by_test_id("stElementToolbarButton")
 
     expect(toolbar_buttons.get_by_label("Show Data")).to_be_visible()
