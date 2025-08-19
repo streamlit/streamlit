@@ -141,6 +141,34 @@ def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locat
     return element
 
 
+def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a date input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stDateInput").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
@@ -709,6 +737,12 @@ def reset_hovering(locator: Locator | Page) -> None:
     page.get_by_test_id("stApp").hover(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
+
+
+def reset_focus(locator: Locator | Page) -> None:
+    """Reset the focus of the app."""
+    page = locator.page if isinstance(locator, Locator) else locator
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
 
 def expect_script_state(
