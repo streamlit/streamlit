@@ -54,6 +54,7 @@ ignore = [
   "B904",    # Checks for raise statements in exception handlers that lack a from clause.
   "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
   "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "PD009",   # Checks for usage of pd.DataFrame.iat.
   "PD901",   # Checks for usage of `df` variable name.
   "PIE790",  # Checks for unnecessary pass statements.
   "TD003",   # Checks for missing issue link in TODO comment.
@@ -93,7 +94,7 @@ ignore = [
   "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
-  "PLC0415", # Enforces imports to be at the top-level of the file.
+  "PLC0415", # Enforces imports to be at the top-level of the file
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
