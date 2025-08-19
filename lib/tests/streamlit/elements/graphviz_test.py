@@ -54,7 +54,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
             (False, "use_content", True),
         ]
     )
-    def test_use_container_width_deprecation(
+    def test_use_container_width(
         self, use_container_width_value, expected_field, expected_value
     ):
         """Test that use_container_width is properly converted to width parameter."""

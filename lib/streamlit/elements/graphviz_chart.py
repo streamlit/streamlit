@@ -21,6 +21,10 @@ from typing import TYPE_CHECKING, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
@@ -85,8 +89,6 @@ class GraphvizMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-
-
         .. deprecated::
             ``use_container_width`` is deprecated and will be removed in a
             future release. For ``use_container_width=True``, use
@@ -143,6 +145,17 @@ class GraphvizMixin:
 
         """
         if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
             width = "stretch" if use_container_width else "content"
 
         # Generate element ID from delta path
