@@ -961,7 +961,10 @@ _create_option(
 
         The server may choose to clean up session state, uploaded files, etc
         for a given session with no active websocket connection at any point
-        after this time has passed.
+        after this time has passed. If you are using load balancing or
+        replication in your deployment, you must enable session stickiness
+        in your proxy to guarantee reconnection to the existing session. For
+        more information, see https://docs.streamlit.io/replication.
     """,
     default_val=120,
     type_=int,
