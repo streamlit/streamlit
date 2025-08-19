@@ -2489,7 +2489,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByTestId("stAppSkeleton")).toBeInTheDocument()
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
 
       const skeletonElement = screen.getByTestId("stAppSkeleton")
@@ -2512,7 +2512,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByTestId("stAppSkeleton")).toBeInTheDocument()
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
     })
 
@@ -2563,7 +2563,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByTestId("stAppSkeleton")).toBeInTheDocument()
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -2587,7 +2587,7 @@ describe("App", () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText("Real app content")).toBeInTheDocument()
+        expect(screen.getByText("Real app content")).toBeVisible()
       })
       expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
     })
@@ -2612,7 +2612,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByTestId("stAppSkeleton")).toBeInTheDocument()
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
     })
   })
