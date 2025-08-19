@@ -208,13 +208,13 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.setColumnOrder).not.toHaveBeenCalled()
   })
 
-  test("calls hideColumn on all columns when selecting an indeterminate select all", async () => {
+  test("calls showColumn on all columns when selecting an indeterminate select all", async () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByLabelText("Select all")) // (Indeterminate, column 2 is hidden)
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
-    expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-1")
+    expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
   })
 
   test("calls showColumn on all columns when selecting a unchecked select all", async () => {

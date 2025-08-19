@@ -179,7 +179,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             !columnOrder.includes(column.name)
           : false
 
-      if (checked && !isIndeterminate) {
+      if (checked || isIndeterminate) {
         showColumn(column.id)
         if (hiddenViaColumnOrder) {
           // Add the column to the column order list:
@@ -215,7 +215,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
               top: 0,
               zIndex: theme.zIndices.header,
               paddingTop: theme.spacing.sm,
-              background: theme.colors.bgColor,
+              background: theme.colors.secondaryBg,
             }}
           >
             <CheckboxItem
