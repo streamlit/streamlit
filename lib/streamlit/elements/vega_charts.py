@@ -796,7 +796,7 @@ class VegaChartsMixin:
         chart_width = width if isinstance(width, int) else None
         chart_height = height if isinstance(height, int) else None
 
-        use_container_width_for_chart = width == "stretch" or isinstance(width, int)
+        use_container_width_for_chart = width == "stretch"
 
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.LINE,
@@ -2099,7 +2099,12 @@ class VegaChartsMixin:
 
         vega_lite_proto = ArrowVegaLiteChartProto()
 
-        spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
+        use_container_width_for_spec = (
+            use_container_width
+            if use_container_width is not None
+            else width == "stretch"
+        )
+        spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec, **kwargs)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
         # Prevent the spec from changing across reruns:
