@@ -82,7 +82,8 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
             readonly: true,
             isError: true,
             errorDetails:
-              "Editing of arrays with non-string values is not supported.",
+              "Editing of arrays with non-string values is not supported. " +
+              "Please disable editing or convert all values to strings.",
           }),
       } as MultiSelectCellType
     },
