@@ -303,6 +303,8 @@ def _apply_cell_edits(
                 col_pos = df.columns.get_loc(col_name)
                 parse_val = _parse_value(value, dataframe_schema[col_name])
                 if isinstance(parse_val, list):
+                    # We need to use the less efficient iat here to avoid this error:
+                    # ValueError: Must have equal len keys and value when setting with an iterable
                     df.iat[row_pos, col_pos] = parse_val  # noqa: PD009
                 else:
                     df.iloc[row_pos, col_pos] = parse_val
