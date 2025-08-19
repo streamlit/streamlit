@@ -61,7 +61,9 @@ def ensure_waveform_rendered(audio_input: Locator):
 def test_audio_input_renders(app: Page):
     """Test that the audio input component is rendered the correct number of times."""
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    count = 9  # Expected number of audio input elements
+    count = (
+        12  # Expected number of audio input elements (9 original + 3 sample rate tests)
+    )
 
     # Verify that the expected number of elements is rendered
     expect(audio_input_elements).to_have_count(count)
@@ -404,11 +406,49 @@ def test_audio_input_error_state(
 
 def test_audio_input_widths(app: Page, assert_snapshot: ImageCompareFunction):
     """Test audio_input with different width configurations."""
-    stretch_width_input = app.get_by_test_id("stAudioInput").nth(7)
-    pixel_width_input = app.get_by_test_id("stAudioInput").nth(8)
+    stretch_width_input = app.get_by_test_id("stAudioInput").nth(
+        10
+    )  # Updated index after adding sample rate tests
+    pixel_width_input = app.get_by_test_id("stAudioInput").nth(11)  # Updated index
 
     expect(stretch_width_input).to_be_visible()
     expect(pixel_width_input).to_be_visible()
 
     assert_snapshot(stretch_width_input, name="st_audio_input-width_stretch")
     assert_snapshot(pixel_width_input, name="st_audio_input-width_300px")
+
+
+def test_audio_input_sample_rates(app: Page):
+    """Test audio_input with different sample rate configurations."""
+    # Navigate to sample rate section
+    sample_rate_header = app.get_by_role("heading", name="Sample Rate Tests")
+    expect(sample_rate_header).to_be_visible()
+
+    # Test default sample rate widget
+    default_input = (
+        app.get_by_test_id("stAudioInput")
+        .filter(has=app.get_by_text("Default Sample Rate (16 kHz)"))
+        .first
+    )
+    expect(default_input).to_be_visible()
+
+    # Test 48 kHz widget
+    high_quality_input = (
+        app.get_by_test_id("stAudioInput")
+        .filter(has=app.get_by_text("High Quality (48 kHz)"))
+        .first
+    )
+    expect(high_quality_input).to_be_visible()
+
+    # Test browser default widget
+    browser_default_input = (
+        app.get_by_test_id("stAudioInput")
+        .filter(has=app.get_by_text("Browser Default"))
+        .first
+    )
+    expect(browser_default_input).to_be_visible()
+
+    # Verify all three widgets are independent
+    expect(app.get_by_test_id("stAudioInput")).to_have_count(
+        12
+    )  # Updated count including new widgets

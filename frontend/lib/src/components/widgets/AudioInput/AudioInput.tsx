@@ -98,15 +98,6 @@ const AudioInput: React.FC<Props> = ({
     key: "deleteFileUrl",
     defaultValue: null,
   })
-  const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
-  // to eventually show the user the available audio devices
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [availableAudioDevices, setAvailableAudioDevices] = useState<
-    MediaDeviceInfo[]
-  >([])
-  const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<
-    string | null
-  >(null)
 
   const [recordingUrl, setRecordingUrl] = useWidgetManagerElementState<
     string | null
@@ -142,56 +133,77 @@ const AudioInput: React.FC<Props> = ({
   const widgetId = element.id
   const widgetFormId = element.formId
 
+  // If sample_rate is not specified (null), the recorder will use browser default
+  const targetSampleRate = element.sampleRate || null
+
   const transcodeAndUploadFile = useCallback(
     async (blob: Blob) => {
-      setIsUploading(true)
-      if (notNullOrUndefined(widgetFormId))
-        widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
+      try {
+        setIsUploading(true)
+        if (notNullOrUndefined(widgetFormId))
+          widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
 
-      let wavBlob: Blob | undefined = undefined
+        let wavBlob: Blob | undefined = undefined
 
-      if (blob.type === "audio/wav") {
-        wavBlob = blob
-      } else {
-        wavBlob = await convertAudioToWav(blob)
-      }
+        if (blob.type === "audio/wav") {
+          wavBlob = blob
+        } else {
+          wavBlob = await convertAudioToWav(
+            blob,
+            targetSampleRate || undefined
+          )
+        }
 
-      if (!wavBlob) {
-        setIsError(true)
-        return
-      }
+        if (!wavBlob) {
+          setIsError(true)
+          return
+        }
 
-      const url = URL.createObjectURL(wavBlob)
-      const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
-      const file = new File([wavBlob], `${timestamp}_audio.wav`, {
-        type: wavBlob.type,
-      })
+        const url = URL.createObjectURL(wavBlob)
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 16)
+          .replace(":", "-")
+        const file = new File([wavBlob], `${timestamp}_audio.wav`, {
+          type: wavBlob.type,
+        })
 
-      setRecordingUrl(url)
+        setRecordingUrl(url)
 
-      void uploadFiles({
-        files: [file],
-        uploadClient,
-        widgetMgr,
-        widgetInfo: { id: widgetId, formId: widgetFormId },
-        fragmentId,
-      })
-        .then(({ successfulUploads, failedUploads }) => {
-          if (failedUploads.length > 0) {
+        uploadFiles({
+          files: [file],
+          uploadClient,
+          widgetMgr,
+          widgetInfo: { id: widgetId, formId: widgetFormId },
+          fragmentId,
+        })
+          .then(({ successfulUploads, failedUploads }) => {
+            if (failedUploads.length > 0) {
+              setIsError(true)
+              return
+            }
+            // Clear error state on successful upload
+            setIsError(false)
+            const upload = successfulUploads[0]
+            if (upload && upload.fileUrl.deleteUrl) {
+              setDeleteFileUrl(upload.fileUrl.deleteUrl)
+            }
+          })
+          .catch(() => {
             setIsError(true)
-            return
-          }
-          const upload = successfulUploads[0]
-          if (upload?.fileUrl.deleteUrl) {
-            setDeleteFileUrl(upload.fileUrl.deleteUrl)
-          }
-        })
-        .finally(() => {
-          if (notNullOrUndefined(widgetFormId))
-            widgetMgr.setFormsWithUploadsInProgress(new Set())
+          })
+          .finally(() => {
+            if (notNullOrUndefined(widgetFormId))
+              widgetMgr.setFormsWithUploadsInProgress(new Set())
 
-          setIsUploading(false)
-        })
+            setIsUploading(false)
+          })
+      } catch {
+        setIsError(true)
+        setIsUploading(false)
+        if (notNullOrUndefined(widgetFormId))
+          widgetMgr.setFormsWithUploadsInProgress(new Set())
+      }
     },
     [
       setRecordingUrl,
@@ -201,6 +213,7 @@ const AudioInput: React.FC<Props> = ({
       widgetFormId,
       fragmentId,
       setDeleteFileUrl,
+      targetSampleRate,
     ]
   )
 
@@ -218,8 +231,12 @@ const AudioInput: React.FC<Props> = ({
       setRecordingUrl(null)
       wavesurfer.empty()
       if (deleteFile) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        uploadClient.deleteFile(deleteFileUrl)
+        uploadClient.deleteFile(deleteFileUrl).catch(error => {
+          // Log error but don't fail the clear operation
+          if (error) {
+            // Silently handle deletion errors as they're not critical
+          }
+        })
       }
       setDeleteFileUrl(null)
       setProgressTime(STARTING_TIME_STRING)
@@ -262,6 +279,9 @@ const AudioInput: React.FC<Props> = ({
     return () => formClearHelper.disconnect()
   }, [widgetFormId, handleClear, widgetMgr])
 
+  const recordPluginRef = useRef<RecordPlugin | null>(null)
+  const recordedBlobRef = useRef<Blob | null>(null)
+
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
 
@@ -278,7 +298,42 @@ const AudioInput: React.FC<Props> = ({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       cursorWidth: CURSOR_WIDTH,
-      url: recordingUrl ?? undefined,
+      // Don't set URL here - we'll load it separately
+    })
+
+    // Initialize the Record plugin with sample rate if specified
+    const recordOptions: Record<string, unknown> = {
+      renderRecordedAudio: true, // Show real-time waveform during recording
+      scrollingWaveform: false,
+      mimeType: "audio/webm", // Use WebM for better browser support
+    }
+
+    // Add sample rate constraint if specified
+    if (targetSampleRate) {
+      recordOptions.mediaRecorderOptions = {
+        audioBitsPerSecond: targetSampleRate * 16, // 16-bit audio
+      }
+      recordOptions.audioContext = {
+        sampleRate: targetSampleRate,
+      }
+    }
+
+    const record = ws.registerPlugin(RecordPlugin.create(recordOptions))
+    recordPluginRef.current = record
+
+    // Update recording time during recording
+    record.on("record-progress", (time: number) => {
+      // WaveSurfer Record plugin gives time in milliseconds already!
+      setRecordingTime(formatTime(time))
+    })
+
+    // Handle recording end event - this is where we get the blob!
+    record.on("record-end", (blob: Blob) => {
+      // Process the blob directly here
+      if (blob && blob instanceof Blob) {
+        // Store the blob in a ref so we can process it in stopRecording
+        recordedBlobRef.current = blob
+      }
     })
 
     ws.on("timeupdate", time => {
@@ -289,37 +344,26 @@ const AudioInput: React.FC<Props> = ({
       forceRerender()
     })
 
-    const rp = ws.registerPlugin(
-      RecordPlugin.create({
-        scrollingWaveform: false,
-        renderRecordedAudio: true,
-      })
-    )
-
-    rp.on("record-end", blob => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      transcodeAndUploadFile(blob)
-    })
-
-    rp.on("record-progress", time => {
-      setRecordingTime(formatTime(time))
-    })
-
     setWavesurfer(ws)
-    setRecordPlugin(rp)
 
     return () => {
       if (ws) ws.destroy()
-      if (rp) rp.destroy()
     }
     // note: intentionally excluding theme so that we don't have to recreate the wavesurfer instance
     // and colors will be updated separately
     // TODO: Update to match React best practices
     // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcodeAndUploadFile])
+  }, [targetSampleRate])
 
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
+
+  // Load recording when URL changes
+  useEffect(() => {
+    if (wavesurfer && recordingUrl) {
+      void wavesurfer.load(recordingUrl)
+    }
+  }, [wavesurfer, recordingUrl])
 
   useEffect(() => {
     if (!isEqual(previousTheme, theme)) {
@@ -334,8 +378,12 @@ const AudioInput: React.FC<Props> = ({
 
   const onClickPlayPause = useCallback(() => {
     if (wavesurfer) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      wavesurfer.playPause()
+      void wavesurfer.playPause().catch(error => {
+        // Handle playback errors
+        if (error) {
+          setIsError(true)
+        }
+      })
       // This is because we want the time to be the duration of the audio when they stop recording,
       // but once they start playing it, we want it to be the current time. So, once they start playing it
       // we'll start keeping track of the playback time from that point onwards (until re-recording).
@@ -346,79 +394,84 @@ const AudioInput: React.FC<Props> = ({
   }, [wavesurfer])
 
   const startRecording = useCallback(async () => {
-    let audioDeviceId = activeAudioDeviceId
-
     if (!hasRequestedMicPermissions) {
-      // this first part is to ensure we prompt for getting the user's media devices
-      await navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(() =>
-          RecordPlugin.getAvailableAudioDevices().then(devices => {
-            setAvailableAudioDevices(devices)
-            if (devices.length > 0) {
-              const { deviceId } = devices[0]
-              setActiveAudioDeviceId(deviceId)
-              audioDeviceId = deviceId
-            }
-          })
-        )
-        .catch(_err => {
-          setHasNoMicPermissions(true)
-        })
       setHasRequestedMicPermissions(true)
     }
-
-    if (!recordPlugin || !audioDeviceId || !wavesurfer) {
-      return
-    }
-
-    wavesurfer.setOptions({
-      waveColor: theme.colors.primary,
-    })
 
     if (recordingUrl) {
       handleClear({ updateWidgetManager: false, deleteFile: true })
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    recordPlugin.startRecording({ deviceId: audioDeviceId }).then(() => {
-      // Update the record button to show the user that they can stop recording
-      forceRerender()
+    try {
+      // Use WaveSurfer's record plugin for visualization
+      if (recordPluginRef.current) {
+        await recordPluginRef.current.startRecording()
+        setRecordingTime("00:00")
+        forceRerender()
+      } else {
+        setIsError(true)
+      }
+    } catch (err) {
+      // Check if it's a permission error
+      if (err instanceof Error && err.message.includes("Permission")) {
+        setHasNoMicPermissions(true)
+      } else {
+        setIsError(true)
+      }
+    }
+  }, [recordingUrl, handleClear, hasRequestedMicPermissions, setRecordingTime])
+
+  const stopRecording = useCallback(async () => {
+    return new Promise<void>((resolve, reject) => {
+      if (!recordPluginRef.current) {
+        setIsError(true)
+        reject(new Error("Record plugin not initialized"))
+        return
+      }
+
+      // Set up one-time listener for the record-end event
+      const handleRecordEnd = (blob: Blob): void => {
+        // Clean up the listener
+        recordPluginRef.current?.un("record-end", handleRecordEnd)
+
+        if (blob && blob instanceof Blob && blob.size > 0) {
+          // Process the blob
+          transcodeAndUploadFile(blob)
+            .then(() => {
+              recordedBlobRef.current = null
+              resolve()
+            })
+            .catch(error => {
+              setIsError(true)
+              reject(error instanceof Error ? error : new Error(String(error)))
+            })
+        } else {
+          setIsError(true)
+          reject(new Error("Invalid or empty recording blob"))
+        }
+      }
+
+      // Register the listener before stopping
+      recordPluginRef.current.on("record-end", handleRecordEnd)
+
+      // Stop the recording - this will trigger the record-end event
+      try {
+        recordPluginRef.current.stopRecording()
+      } catch (err) {
+        recordPluginRef.current?.un("record-end", handleRecordEnd)
+        setIsError(true)
+        reject(err instanceof Error ? err : new Error(String(err)))
+      }
     })
-  }, [
-    activeAudioDeviceId,
-    recordPlugin,
-    theme,
-    wavesurfer,
-    recordingUrl,
-    handleClear,
-    hasRequestedMicPermissions,
-  ])
-
-  const stopRecording = useCallback(() => {
-    if (!recordPlugin) return
-
-    recordPlugin.stopRecording()
-
-    wavesurfer?.setOptions({
-      // We are blending this color instead of directly using the theme color (fadedText40)
-      // because the "faded" part of fadedText40 means introducing some transparency, which
-      // causes problems with the progress waveform color because wavesurfer is choosing to
-      // tint the waveColor with the progressColor instead of directly setting the progressColor.
-      // This means that the low opacity of fadedText40 causes the progress waveform to
-      // have the same opacity which makes it impossible to darken it enough to match designs.
-      // We fix this by blending the colors to figure out what the resulting color should be at
-      // full opacity, and we usee that color to set the waveColor.
-      waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
-    })
-  }, [recordPlugin, wavesurfer, theme])
+  }, [transcodeAndUploadFile])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
-  const isRecording = Boolean(recordPlugin?.isRecording())
+  const isRecording = recordPluginRef.current?.isRecording() || false
   const isPlaying = Boolean(wavesurfer?.isPlaying())
 
   const isPlayingOrRecording = isRecording || isPlaying
+  // Show placeholder when not recording and no recording exists
   const showPlaceholder = !isRecording && !recordingUrl && !hasNoMicPermissions
 
   const showNoMicPermissionsOrPlaceholderOrError =
@@ -471,15 +524,20 @@ const AudioInput: React.FC<Props> = ({
           isUploading={isUploading}
           isError={isError}
           recordingUrlExists={Boolean(recordingUrl)}
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises
-          startRecording={startRecording}
-          stopRecording={stopRecording}
+          startRecording={() => {
+            void startRecording()
+          }}
+          stopRecording={() => {
+            void stopRecording()
+          }}
           onClickPlayPause={onClickPlayPause}
           onClear={() => {
             handleClear({ updateWidgetManager: false, deleteFile: true })
             setIsError(false)
           }}
-          disabled={disabled || hasNoMicPermissions}
+          disabled={
+            disabled || hasNoMicPermissions || !recordPluginRef.current
+          }
         />
         <StyledWaveformInnerDiv>
           {isError && <AudioInputErrorState />}

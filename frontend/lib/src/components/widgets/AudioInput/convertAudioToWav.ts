@@ -13,92 +13,185 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// code in this file was adapted from recorder.js library
 
 import { getLogger } from "loglevel"
 
 const LOG = getLogger("convertAudioToWav")
 
 /**
- * Converts a file Blob (audio/video) to a WAV Blob.
- * @param fileBlob - The input file as a Blob.
- * @returns - A Promise resolving with the WAV file as a Blob.
+ * Converts an audio blob to WAV format with high-quality resampling.
+ * Uses the Web Audio API's OfflineAudioContext for professional-quality
+ * resampling with proper anti-aliasing filters instead of linear interpolation.
+ *
+ * @param fileBlob - The input audio blob to convert
+ * @param targetSampleRate - Optional target sample rate for the output WAV file
+ * @returns A Promise resolving to the WAV file as a Blob, or undefined on error
  */
-async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
-  const audioContext = new window.AudioContext()
-  const arrayBuffer = await fileBlob.arrayBuffer()
+async function convertFileToWav(
+  fileBlob: Blob,
+  targetSampleRate?: number
+): Promise<Blob | undefined> {
+  if (!fileBlob || fileBlob.size === 0) {
+    LOG.error("Invalid or empty blob provided")
+    return undefined
+  }
+
+  // Get the appropriate AudioContext constructor (with webkit fallback)
+  const AudioContextClass =
+    window.AudioContext ||
+    (
+      window as typeof window & {
+        webkitAudioContext?: typeof AudioContext
+      }
+    ).webkitAudioContext
+  if (!AudioContextClass) {
+    LOG.error("AudioContext not supported in this browser")
+    return undefined
+  }
+
+  // First, decode the audio at its original sample rate
+  const audioContext = new AudioContextClass()
+
+  let arrayBuffer: ArrayBuffer
+  try {
+    arrayBuffer = await fileBlob.arrayBuffer()
+  } catch (error) {
+    LOG.error("Failed to read blob as ArrayBuffer", error)
+    void audioContext.close()
+    return undefined
+  }
 
   let audioBuffer: AudioBuffer
   try {
     audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   } catch (error) {
-    LOG.error(error)
-    return undefined // Return undefined if decoding fails
+    LOG.error("Failed to decode audio data", error)
+    void audioContext.close()
+    return undefined
+  } finally {
+    void audioContext.close()
   }
 
-  const HEADER_HEIGHT = 44
+  // Determine the output sample rate
+  const outputSampleRate = targetSampleRate || audioBuffer.sampleRate
+
+  // If no resampling is needed, skip the expensive resampling step
+  // This is a common optimization - avoid unnecessary processing
+  if (outputSampleRate === audioBuffer.sampleRate) {
+    LOG.debug(
+      `No resampling needed, sample rate is already ${outputSampleRate}Hz`
+    )
+    return encodeWAV(audioBuffer, outputSampleRate)
+  }
+
+  LOG.debug(
+    `Resampling from ${audioBuffer.sampleRate}Hz to ${outputSampleRate}Hz`
+  )
+
+  // Use OfflineAudioContext for high-quality resampling
+  // This provides professional-quality sinc resampling with proper anti-aliasing
+  // Much better than linear interpolation which causes aliasing artifacts
+  const duration = audioBuffer.duration
+  const numberOfChannels = audioBuffer.numberOfChannels
+  const frameCount = Math.floor(duration * outputSampleRate)
+
+  const OfflineAudioContextClass =
+    window.OfflineAudioContext ||
+    (
+      window as typeof window & {
+        webkitOfflineAudioContext?: typeof OfflineAudioContext
+      }
+    ).webkitOfflineAudioContext
+  if (!OfflineAudioContextClass) {
+    LOG.error(
+      "OfflineAudioContext not supported, falling back to no resampling"
+    )
+    return encodeWAV(audioBuffer, audioBuffer.sampleRate)
+  }
+
+  const offlineContext = new OfflineAudioContextClass(
+    numberOfChannels,
+    frameCount,
+    outputSampleRate
+  )
+
+  // Create a buffer source node and connect it to the destination
+  const source = offlineContext.createBufferSource()
+  source.buffer = audioBuffer
+  source.connect(offlineContext.destination)
+  source.start(0)
+
+  try {
+    // Render the resampled audio
+    // The browser's native resampling uses high-quality algorithms
+    const resampledBuffer = await offlineContext.startRendering()
+    return encodeWAV(resampledBuffer, outputSampleRate)
+  } catch (error) {
+    LOG.error("Failed to resample audio using OfflineAudioContext", error)
+    // Fallback: return the original audio without resampling
+    return encodeWAV(audioBuffer, audioBuffer.sampleRate)
+  }
+}
+
+/**
+ * Encodes an AudioBuffer as a WAV file blob.
+ * Separated from the main function for better modularity and testability.
+ *
+ * @param audioBuffer - The audio buffer to encode
+ * @param sampleRate - The sample rate for the WAV header
+ * @returns A WAV file as a Blob
+ */
+function encodeWAV(audioBuffer: AudioBuffer, sampleRate: number): Blob {
+  const HEADER_SIZE = 44
   const numOfChan = audioBuffer.numberOfChannels
-  const sampleRate = audioBuffer.sampleRate
-  const length = audioBuffer.length * numOfChan * 2 + HEADER_HEIGHT
+  const length = audioBuffer.length * numOfChan * 2 + HEADER_SIZE
   const buffer = new ArrayBuffer(length)
   const view = new DataView(buffer)
 
-  // WAV header metadata
-  const wavHeader = {
-    0: { type: "string", value: "RIFF" },
-    4: { type: "uint32", value: length - 8 },
-    8: { type: "string", value: "WAVE" },
-    12: { type: "string", value: "fmt " },
-    16: { type: "uint32", value: 16 }, // PCM format
-    20: { type: "uint16", value: 1 }, // PCM format code
-    22: { type: "uint16", value: numOfChan }, // Number of channels
-    24: { type: "uint32", value: sampleRate }, // Sample rate
-    28: { type: "uint32", value: sampleRate * numOfChan * 2 }, // Byte rate
-    32: { type: "uint16", value: numOfChan * 2 }, // Block align
-    34: { type: "uint16", value: 16 }, // Bits per sample (16-bit)
-    36: { type: "string", value: "data" },
-    40: { type: "uint32", value: audioBuffer.length * numOfChan * 2 }, // Data chunk length
+  /**
+   * Helper function to write a string to the DataView
+   */
+  const writeString = (offset: number, string: string): void => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i))
+    }
   }
 
-  // Write WAV header from the dictionary using Object.entries
-  Object.entries(wavHeader).forEach(([offset, { type, value }]) => {
-    const intOffset = parseInt(offset, 10)
-    if (type === "string") {
-      writeString(view, intOffset, value as string)
-    } else if (type === "uint32") {
-      view.setUint32(intOffset, value as number, true)
-    } else if (type === "uint16") {
-      view.setUint16(intOffset, value as number, true)
-    }
-  })
+  // Write RIFF chunk descriptor
+  writeString(0, "RIFF")
+  view.setUint32(4, length - 8, true) // File size minus RIFF header
+  writeString(8, "WAVE")
 
-  // Write PCM data
-  let offset = HEADER_HEIGHT
+  // Write fmt sub-chunk
+  writeString(12, "fmt ")
+  view.setUint32(16, 16, true) // SubChunk1Size (16 for PCM)
+  view.setUint16(20, 1, true) // AudioFormat (1 for PCM)
+  view.setUint16(22, numOfChan, true) // NumChannels
+  view.setUint32(24, sampleRate, true) // SampleRate
+  view.setUint32(28, sampleRate * numOfChan * 2, true) // ByteRate
+  view.setUint16(32, numOfChan * 2, true) // BlockAlign
+  view.setUint16(34, 16, true) // BitsPerSample
+
+  // Write data sub-chunk
+  writeString(36, "data")
+  view.setUint32(40, length - HEADER_SIZE, true) // SubChunk2Size
+
+  // Write interleaved PCM samples
+  let offset = HEADER_SIZE
   for (let i = 0; i < audioBuffer.length; i++) {
     for (let channel = 0; channel < numOfChan; channel++) {
+      // Get the sample and clamp it to [-1, 1] range for safety
       const sample = Math.max(
         -1,
         Math.min(1, audioBuffer.getChannelData(channel)[i])
       )
+      // Convert from float [-1, 1] to 16-bit PCM
       view.setInt16(offset, sample * 0x7fff, true)
       offset += 2
     }
   }
 
-  const wavArray = new Uint8Array(buffer)
-  return new Blob([wavArray], { type: "audio/wav" })
-}
-
-/**
- * Writes a string to a DataView at the specified offset.
- * @param view - The DataView to write to.
- * @param offset - The starting offset in the DataView.
- * @param string - The string to write.
- */
-function writeString(view: DataView, offset: number, string: string): void {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i))
-  }
+  return new Blob([buffer], { type: "audio/wav" })
 }
 
 export default convertFileToWav
