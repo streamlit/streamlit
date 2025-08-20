@@ -408,6 +408,58 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
         )
 
+    def test_use_container_width_true_shows_deprecation_warning(self):
+        """Test that use_container_width=True shows deprecation warning and sets width='stretch'."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=True)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=True, it should set width='stretch'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_use_container_width_false_shows_deprecation_warning(self):
+        """Test that use_container_width=False shows deprecation warning and sets width='content'."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=False)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False, it should set width='content'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_use_container_width_false_with_integer_width(self):
+        """Test use_container_width=False with integer width preserves the integer."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(
+                pd.DataFrame({"a": [1, 2, 3]}), width=400, use_container_width=False
+            )
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False and width is integer, preserve integer width
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 400
+
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
