@@ -732,7 +732,7 @@ export const createEmotionTheme = (
   const fontsOverride: GenericFontOverride = {
     // Default values for the generic fonts
     ...genericFonts,
-    // Override properites if configured
+    // Override properties if configured
     bodyFont: bodyFont ? parseFont(bodyFont) : genericFonts.bodyFont,
     codeFont: codeFont ? parseFont(codeFont) : genericFonts.codeFont,
     headingFont: headingFont
