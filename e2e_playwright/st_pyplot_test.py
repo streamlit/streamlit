@@ -61,12 +61,15 @@ def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_all_images_to_be_loaded(app)
 
     content_pyplot = pyplot_elements.nth(8)
+    expect(content_pyplot).to_be_visible()
     assert_snapshot(content_pyplot, name="st_pyplot-width_content")
 
     stretch_pyplot = pyplot_elements.nth(9)
+    expect(stretch_pyplot).to_be_visible()
     assert_snapshot(stretch_pyplot, name="st_pyplot-width_stretch")
 
     pixel_pyplot = pyplot_elements.nth(10)
+    expect(pixel_pyplot).to_be_visible()
     assert_snapshot(pixel_pyplot, name="st_pyplot-width_pixel")
 
 
