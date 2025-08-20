@@ -21,10 +21,6 @@ import {
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
-import {
-  SIZE as DividerSIZE,
-  StyledDivider as UIDivider,
-} from "baseui/divider"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { transparentize } from "color2k"
 
@@ -32,7 +28,25 @@ import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
 
+import { StyledMenuDivider } from "./styled-components"
+
 const NAMELESS_INDEX_NAME = "(index)"
+
+/**
+ * Determines if a non-index column is effectively hidden by the configured column order.
+ * The column order may contain either ids or names.
+ *
+ * @param column - The column to check.
+ * @param columnOrder - The column order to check.
+ * @returns True if the column is effectively hidden, false otherwise.
+ */
+function isHiddenViaColumnOrder(
+  column: BaseColumn,
+  columnOrder: string[]
+): boolean {
+  if (!columnOrder.length || column.isIndex) return false
+  return !columnOrder.includes(column.id) && !columnOrder.includes(column.name)
+}
 
 interface CheckboxItemProps {
   // The label to display for the checkbox.
@@ -167,17 +181,16 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
 
-  const allChecked = columns.every(column => !column.isHidden)
-  const isIndeterminate =
-    columns.some(column => !column.isHidden) && !allChecked
+  // Determine column visibility based on hidden property and column order:
+  const isColumnVisible = (c: BaseColumn): boolean =>
+    !(c.isHidden === true || isHiddenViaColumnOrder(c, columnOrder))
+
+  const allChecked = columns.every(isColumnVisible)
+  const isIndeterminate = columns.some(isColumnVisible) && !allChecked
 
   const onSelectAll = (checked: boolean): void => {
     columns.forEach(column => {
-      const hiddenViaColumnOrder =
-        columnOrder.length && !column.isIndex
-          ? !columnOrder.includes(column.id) &&
-            !columnOrder.includes(column.name)
-          : false
+      const hiddenViaColumnOrder = isHiddenViaColumnOrder(column, columnOrder)
 
       // Default behavior of the indeterminate state will select all.
       if (checked) {
@@ -204,40 +217,30 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
       content={() => (
         <div
           style={{
-            paddingTop: theme.spacing.none,
+            paddingTop: theme.spacing.sm,
             paddingBottom: theme.spacing.sm,
             maxHeight: theme.sizes.maxDropdownHeight,
             overflow: "auto",
           }}
         >
-          <div
-            style={{
-              position: "sticky",
-              top: 0,
-              zIndex: theme.zIndices.header,
-              paddingTop: theme.spacing.sm,
+          <CheckboxItem
+            label={"Select all"}
+            isIndeterminate={isIndeterminate}
+            initialValue={allChecked}
+            onChange={checked => {
+              onSelectAll(checked)
             }}
-          >
-            <CheckboxItem
-              label={"Select all"}
-              isIndeterminate={isIndeterminate}
-              initialValue={allChecked}
-              onChange={checked => {
-                onSelectAll(checked)
-              }}
-            />
-            <UIDivider $size={DividerSIZE.cell} />
-          </div>
+          />
+          <StyledMenuDivider />
           <div>
             {columns.map(column => {
               // A column can be hidden if configured in column config
               // or if the user has configured a column order that doesn't
               // include the column.
-              const hiddenViaColumnOrder =
-                columnOrder.length && !column.isIndex
-                  ? !columnOrder.includes(column.id) &&
-                    !columnOrder.includes(column.name)
-                  : false
+              const hiddenViaColumnOrder = isHiddenViaColumnOrder(
+                column,
+                columnOrder
+              )
 
               return (
                 <CheckboxItem

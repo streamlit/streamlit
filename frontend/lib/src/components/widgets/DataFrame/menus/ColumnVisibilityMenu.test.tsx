@@ -120,13 +120,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   test("renders the visibility menu with all columns", () => {
     render(<ColumnVisibilityMenu {...defaultProps} />)
 
-    expect(
-      screen.getByTestId("stDataFrameColumnVisibilityMenu")
-    ).toBeInTheDocument()
-    expect(screen.getByText("Column 1")).toBeInTheDocument()
-    expect(screen.getByText("Column 2")).toBeInTheDocument()
-    expect(screen.getByText("(index)")).toBeInTheDocument()
-    expect(screen.getByText("Select all")).toBeInTheDocument()
+    expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
+    expect(screen.getByText("Column 1")).toBeVisible()
+    expect(screen.getByText("Column 2")).toBeVisible()
+    expect(screen.getByText("(index)")).toBeVisible()
+    expect(screen.getByText("Select all")).toBeVisible()
   })
 
   test("shows correct checkbox states based on column visibility", () => {
@@ -243,5 +241,20 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("index-0")
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
+  })
+
+  test("select all reflects columnOrder-hidden columns when none are explicitly hidden", () => {
+    const props = {
+      ...defaultProps,
+      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
+      columnOrder: ["index-0", "_column-1"], // exclude _column-2 via order
+    }
+
+    render(<ColumnVisibilityMenu {...props} />)
+
+    const selectAll = screen.getByLabelText("Select all")
+    expect(selectAll).not.toBeChecked()
+    // Indeterminate state should be reflected via aria-checked="mixed" if supported
+    expect(selectAll).toHaveAttribute("aria-checked", "mixed")
   })
 })
