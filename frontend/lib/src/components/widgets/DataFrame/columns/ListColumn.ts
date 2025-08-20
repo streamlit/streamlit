@@ -32,7 +32,7 @@ import {
  *  values of array/list types.
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: MultiSelectCellType = {
     kind: GridCellKind.Custom,
     readonly: !props.isEditable,
     allowOverlay: true,
@@ -48,7 +48,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
       allowCreation: true,
       allowDuplicates: true,
     },
-  } as MultiSelectCellType
+  }
 
   return {
     ...props,
@@ -63,9 +63,11 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
             ...cellTemplate.data,
             values: null,
           },
+          // @ts-expect-error - isMissingValue is not a valid property of MultiSelectCellType
+          // but needed to activate the missing cell handling.
           isMissingValue: true,
           copyData: "",
-        } as MultiSelectCellType
+        } satisfies MultiSelectCellType
       }
 
       const cellData = toSafeArray(data)
@@ -85,7 +87,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
               "Editing of arrays with non-string values is not supported. " +
               "Please disable editing or convert all values to strings.",
           }),
-      } as MultiSelectCellType
+      } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
       if (isNullOrUndefined(cell.data?.values)) {
