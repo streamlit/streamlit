@@ -315,6 +315,11 @@ update-min-deps:
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
 	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
+.PHONY: update-claude-instructions
+# Update CLAUDE.md files from cursor rules.
+update-claude-instructions:
+	python scripts/generate_claude_instructions.py
+
 .PHONY: debug-e2e-test
 # Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
 debug-e2e-test:
