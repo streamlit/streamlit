@@ -281,25 +281,10 @@ const AudioInput: React.FC<Props> = ({
 
   const recordPluginRef = useRef<RecordPlugin | null>(null)
   const recordedBlobRef = useRef<Blob | null>(null)
+  const [recordPluginInitialized, setRecordPluginInitialized] = useState(false)
 
-  const initializeWaveSurfer = useCallback(() => {
-    if (waveSurferRef.current === null) return
-
-    const ws = WaveSurfer.create({
-      container: waveSurferRef.current,
-      waveColor: recordingUrl
-        ? blend(theme.colors.fadedText40, theme.colors.secondaryBg)
-        : theme.colors.primary,
-      progressColor: theme.colors.bodyText,
-      height:
-        convertRemToPx(theme.sizes.largestElementHeight) -
-        2 * WAVEFORM_PADDING,
-      barWidth: BAR_WIDTH,
-      barGap: BAR_GAP,
-      barRadius: BAR_RADIUS,
-      cursorWidth: CURSOR_WIDTH,
-      // Don't set URL here - we'll load it separately
-    })
+  const initializeRecordPlugin = useCallback(() => {
+    if (!wavesurfer || recordPluginRef.current) return
 
     // Initialize the Record plugin with sample rate if specified
     const recordOptions: Record<string, unknown> = {
@@ -318,22 +303,53 @@ const AudioInput: React.FC<Props> = ({
       }
     }
 
-    const record = ws.registerPlugin(RecordPlugin.create(recordOptions))
-    recordPluginRef.current = record
+    try {
+      const record = wavesurfer.registerPlugin(
+        RecordPlugin.create(recordOptions)
+      )
+      recordPluginRef.current = record
 
-    // Update recording time during recording
-    record.on("record-progress", (time: number) => {
-      // WaveSurfer Record plugin gives time in milliseconds already!
-      setRecordingTime(formatTime(time))
-    })
+      // Update recording time during recording
+      record.on("record-progress", (time: number) => {
+        // WaveSurfer Record plugin gives time in milliseconds already!
+        setRecordingTime(formatTime(time))
+      })
 
-    // Handle recording end event - this is where we get the blob!
-    record.on("record-end", (blob: Blob) => {
-      // Process the blob directly here
-      if (blob && blob instanceof Blob) {
-        // Store the blob in a ref so we can process it in stopRecording
-        recordedBlobRef.current = blob
+      // Handle recording end event - this is where we get the blob!
+      record.on("record-end", (blob: Blob) => {
+        // Process the blob directly here
+        if (blob && blob instanceof Blob) {
+          // Store the blob in a ref so we can process it in stopRecording
+          recordedBlobRef.current = blob
+        }
+      })
+
+      setRecordPluginInitialized(true)
+    } catch (err) {
+      // Permission errors will be caught here for WebKit
+      if (err instanceof Error && err.message.includes("Permission")) {
+        setHasNoMicPermissions(true)
       }
+    }
+  }, [wavesurfer, targetSampleRate, setRecordingTime])
+
+  const initializeWaveSurfer = useCallback(() => {
+    if (waveSurferRef.current === null) return
+
+    const ws = WaveSurfer.create({
+      container: waveSurferRef.current,
+      waveColor: recordingUrl
+        ? blend(theme.colors.fadedText40, theme.colors.secondaryBg)
+        : theme.colors.primary,
+      progressColor: theme.colors.bodyText,
+      height:
+        convertRemToPx(theme.sizes.largestElementHeight) -
+        2 * WAVEFORM_PADDING,
+      barWidth: BAR_WIDTH,
+      barGap: BAR_GAP,
+      barRadius: BAR_RADIUS,
+      cursorWidth: CURSOR_WIDTH,
+      // Don't set URL here - we'll load it separately
     })
 
     ws.on("timeupdate", time => {
@@ -396,10 +412,25 @@ const AudioInput: React.FC<Props> = ({
   const startRecording = useCallback(async () => {
     if (!hasRequestedMicPermissions) {
       setHasRequestedMicPermissions(true)
+
+      // Explicitly request microphone permission for WebKit compatibility
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch (err) {
+        setHasNoMicPermissions(true)
+        return
+      }
     }
 
     if (recordingUrl) {
       handleClear({ updateWidgetManager: false, deleteFile: true })
+    }
+
+    // Initialize record plugin on first use (after permission granted)
+    if (!recordPluginRef.current && !hasNoMicPermissions) {
+      initializeRecordPlugin()
+      // Wait a bit for plugin initialization
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     try {
@@ -408,7 +439,7 @@ const AudioInput: React.FC<Props> = ({
         await recordPluginRef.current.startRecording()
         setRecordingTime("00:00")
         forceRerender()
-      } else {
+      } else if (!hasNoMicPermissions) {
         setIsError(true)
       }
     } catch (err) {
@@ -419,7 +450,14 @@ const AudioInput: React.FC<Props> = ({
         setIsError(true)
       }
     }
-  }, [recordingUrl, handleClear, hasRequestedMicPermissions, setRecordingTime])
+  }, [
+    recordingUrl,
+    handleClear,
+    hasRequestedMicPermissions,
+    setRecordingTime,
+    hasNoMicPermissions,
+    initializeRecordPlugin,
+  ])
 
   const stopRecording = useCallback(async () => {
     return new Promise<void>((resolve, reject) => {
@@ -535,9 +573,7 @@ const AudioInput: React.FC<Props> = ({
             handleClear({ updateWidgetManager: false, deleteFile: true })
             setIsError(false)
           }}
-          disabled={
-            disabled || hasNoMicPermissions || !recordPluginRef.current
-          }
+          disabled={disabled || hasNoMicPermissions}
         />
         <StyledWaveformInnerDiv>
           {isError && <AudioInputErrorState />}
