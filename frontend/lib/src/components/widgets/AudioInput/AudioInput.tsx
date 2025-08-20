@@ -281,7 +281,6 @@ const AudioInput: React.FC<Props> = ({
 
   const recordPluginRef = useRef<RecordPlugin | null>(null)
   const recordedBlobRef = useRef<Blob | null>(null)
-  const [recordPluginInitialized, setRecordPluginInitialized] = useState(false)
 
   const initializeRecordPlugin = useCallback(() => {
     if (!wavesurfer || recordPluginRef.current) return
@@ -324,7 +323,7 @@ const AudioInput: React.FC<Props> = ({
         }
       })
 
-      setRecordPluginInitialized(true)
+      // Plugin initialized successfully
     } catch (err) {
       // Permission errors will be caught here for WebKit
       if (err instanceof Error && err.message.includes("Permission")) {
@@ -416,7 +415,7 @@ const AudioInput: React.FC<Props> = ({
       // Explicitly request microphone permission for WebKit compatibility
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true })
-      } catch (err) {
+      } catch {
         setHasNoMicPermissions(true)
         return
       }
