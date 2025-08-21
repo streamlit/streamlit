@@ -861,4 +861,5 @@ st.dataframe(
         ),
     },
     width="content",
+    hide_index=True,
 )

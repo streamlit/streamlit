@@ -165,7 +165,7 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
     dataframe_element.scroll_into_view_if_needed()
 
     # Click on the first cell of the list column
-    click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
 
     cell_overlay = get_open_cell_overlay(app)
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
