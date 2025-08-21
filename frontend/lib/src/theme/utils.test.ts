@@ -625,331 +625,102 @@ describe("createEmotionTheme", () => {
     )
   })
 
-  it("uses bodyFont for headingFont when headingFont is not configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      bodyFont: "monospace",
-      // headingFont is intentionally not set
-    }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.genericFonts.bodyFont).toBe(theme.fonts.monospace)
-    expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
   })
 
-  it.each([
-    // Test valid codeFontSize values
-    // Inline code font size unaffected, set to 0.75em
-    ["0.875rem", "0.875rem", "0.75em"],
-    ["0.875REM", "0.875rem", "0.75em"],
-    ["14px", "14px", "0.75em"],
-    ["14PX", "14px", "0.75em"],
-    ["15", "15px", "0.75em"],
-  ])(
-    "correctly applies codeFontSize and inlineCodeFontSize '%s'",
-    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        codeFontSize,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
-      expect(theme.fontSizes.inlineCodeFontSize).toBe(
-        expectedInlineCodeFontSize
-      )
-    }
-  )
-
-  it.each([
-    // Test invalid codeFontSize values
-    ["invalid", "0.875rem", "0.75em"],
-    ["rem", "0.875rem", "0.75em"],
-    ["px", "0.875rem", "0.75em"],
-    [" ", "0.875rem", "0.75em"],
-  ])(
-    "logs a warning and falls back to default for any invalid codeFontSize '%s'",
-    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        codeFontSize,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      // Should log an error with the actual codeFontSize value
-      expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid size passed for codeFontSize in theme: ${codeFontSize}. Falling back to default codeFontSize.`
-      )
-
-      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
-      expect(theme.fontSizes.inlineCodeFontSize).toBe(
-        expectedInlineCodeFontSize
-      )
-    }
-  )
-
-  it.each([
-    // Test valid headingFontSize values
-    [
-      ["3rem", "2.875rem"],
-      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      ["3REM", "2.875REM"],
-      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      ["50px", "45px"],
-      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      ["50PX", "45PX"],
-      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      ["50", "45"],
-      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      ["39.5px", "32.8px", "24.2px"],
-      ["2.46875rem", "2.05rem", "1.5125rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-  ])(
-    "correctly applies headingFontSizes '%s'",
-    (headingFontSizes, expectedHeadingFontSizes) => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        headingFontSizes,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
-      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
-      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
-      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
-      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
-      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
-    }
-  )
-
-  it.each([
-    // Test invalid headingFontSize values
-    [
-      "h1FontSize",
-      ["Invalid"],
-      ["2.75rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      "h2FontSize",
-      ["3REM", "Invalid"],
-      ["3rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      "h3FontSize",
-      ["3rem", "2.875rem", "Invalid"],
-      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      "h4FontSize",
-      ["3rem", "2.875rem", "2.75rem", "Invalid"],
-      ["3rem", "2.875rem", "2.75rem", "1.5rem", "1.25rem", "1rem"],
-    ],
-    [
-      "h5FontSize",
-      ["3rem", "2.875rem", "2.75rem", "2.25rem", "Invalid"],
-      ["3rem", "2.875rem", "2.75rem", "2.25rem", "1.25rem", "1rem"],
-    ],
-    [
-      "h6FontSize",
-      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "Invalid"],
-      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "1rem"],
-    ],
-  ])(
-    "logs a warning and falls back to default for any invalid headingFontSizes '%s'",
-    (invalidHeadingConfig, headingFontSizes, expectedHeadingFontSizes) => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        headingFontSizes,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      // Should log an error with the actual codeFontSize value
-      expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid size passed for ${invalidHeadingConfig} in headingFontSizes in theme: Invalid. Falling back to default ${invalidHeadingConfig} in headingFontSizes.`
-      )
-
-      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
-      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
-      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
-      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
-      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
-      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
-    }
-  )
-
-  it("adapts the radii theme props if baseRadius is provided", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      baseRadius: "1.2rem",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.radii.default).toBe("1.2rem")
-    expect(theme.radii.md).toBe("0.6rem")
-    expect(theme.radii.xl).toBe("1.8rem")
-    expect(theme.radii.xxl).toBe("2.4rem")
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
   })
 
-  it.each([
-    // Test keyword values
-    ["full", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["none", "0rem", "0rem", "0rem", "0rem"],
-    ["small", "0.35rem", "0.17rem", "0.52rem", "0.7rem"],
-    ["medium", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "1.5rem", "2rem"],
-    // Test rem values
-    ["0.8rem", "0.8rem", "0.4rem", "1.2rem", "1.6rem"],
-    ["2rem", "2rem", "1rem", "3rem", "4rem"],
-    // Test px values
-    ["10px", "10px", "5px", "15px", "20px"],
-    ["24px", "24px", "12px", "36px", "48px"],
-    // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["  medium  ", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "1rem", "3rem", "4rem"],
-    // Test only numbers:
-    ["10", "10px", "5px", "15px", "20px"],
-    ["24foo", "24px", "12px", "36px", "48px"],
-  ])(
-    "correctly applies baseRadius '%s'",
-    (baseRadius, expectedDefault, expectedMd, expectedXl, expectedXxl) => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        baseRadius,
-      }
+  it("linkUnderline config is set to true by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.linkUnderline).toBe(true)
+  })
 
-      const theme = createEmotionTheme(themeInput)
+  it("sets the linkUnderline config to false if linkUnderline=false", () => {
+    const theme = createEmotionTheme({ linkUnderline: false })
+    expect(theme.linkUnderline).toBe(false)
+  })
 
-      expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
-      expect(theme.radii.xl).toBe(expectedXl)
-      expect(theme.radii.xxl).toBe(expectedXxl)
-    }
-  )
+  // Conditional Overrides - Colors Tests
 
-  it.each([
-    "invalid",
-    "rem", // Missing number
-    "px", // Missing number
-  ])(
-    "logs a warning and falls back to default for invalid baseRadius '%s'",
-    invalidBaseRadius => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        baseRadius: invalidBaseRadius,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      // Should log an error
-      expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid base radius: ${invalidBaseRadius}. Falling back to default base radius.`
-      )
-
-      // Should fall back to default values
-      expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
-      expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
-      expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
-    }
-  )
-
-  it.each([
-    // Test keyword values
-    ["full", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["none", "0rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["small", "0.35rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    // Test rem values
-    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2rem", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    // Test px values
-    ["10px", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24px", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["  medium  ", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    // Test only numbers:
-    ["10", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24foo", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-  ])(
-    "correctly handles buttonRadius config '%s' (does not impact other radii values)",
-    (
-      buttonRadius,
-      expectedButtonRadius,
-      expectedDefault,
-      expectedMd,
-      expectedXl,
-      expectedXxl
-    ) => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        buttonRadius,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      expect(theme.radii.button).toBe(expectedButtonRadius)
-      expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
-      expect(theme.radii.xl).toBe(expectedXl)
-      expect(theme.radii.xxl).toBe(expectedXxl)
-    }
-  )
-
-  it.each([
-    "invalid",
-    "rem", // Missing number
-    "px", // Missing number
-    "", // Empty string
-  ])(
-    "logs a warning and falls back to default for invalid buttonRadius '%s'",
-    invalidButtonRadius => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        buttonRadius: invalidButtonRadius,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      // Should log an error
-      expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid button radius: ${invalidButtonRadius}. Falling back to default button radius.`
-      )
-
-      // Should fall back to default values
-      expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
-      expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
-      expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
-      expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
-    }
-  )
-
-  it("sets buttonRadius based on baseRadius if buttonRadius not configured", () => {
+  it("sets the codeBackgroundColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
-      baseRadius: "0.77rem",
+      codeBackgroundColor: "pink",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.codeBackgroundColor).toBe("pink")
+  })
+
+  it("uses default codeBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.codeBackgroundColor).toBe(theme.colors.bgMix)
+  })
+
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("#FFC0CB")
+  })
+
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
+  })
+
+  it("sets the borderColor properties based on borderColor config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "blue",
+      // Note no specified dataframeBorderColor
     }
 
     const theme = createEmotionTheme(themeInput)
 
-    expect(theme.radii.button).toBe("0.77rem")
-    expect(theme.radii.default).toBe("0.77rem")
-    expect(theme.radii.md).toBe("0.39rem")
-    expect(theme.radii.xl).toBe("1.16rem")
-    expect(theme.radii.xxl).toBe("1.54rem")
+    expect(theme.colors.borderColor).toBe("blue")
+    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
+    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
+    // not configured
+    expect(theme.colors.dataframeBorderColor).toBe(
+      theme.colors.borderColorLight
+    )
+  })
+
+  it("sets the dataframeBorderColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "red",
+      dataframeBorderColor: "green",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.borderColor).toBe("red")
+    expect(theme.colors.dataframeBorderColor).toBe("green")
+  })
+
+  it("handles showWidgetBorder config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      showWidgetBorder: true,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
+  })
+
+  it("handles legacy widgetBorderColor config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      widgetBorderColor: "yellow",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.widgetBorderColor).toBe("yellow")
   })
 
   it.each([
@@ -1059,23 +830,6 @@ describe("createEmotionTheme", () => {
         expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
     }
   )
-
-  it("sets the borderColor properties based on borderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      borderColor: "blue",
-      // Note no specified dataframeBorderColor
-    }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.colors.borderColor).toBe("blue")
-    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
-    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
-    // not configured
-    expect(theme.colors.dataframeBorderColor).toBe(
-      theme.colors.borderColorLight
-    )
-  })
 
   it.each([
     // Test valid color values
@@ -1463,41 +1217,346 @@ describe("createEmotionTheme", () => {
     }
   )
 
-  it("showSidebarBorder config is set to false by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
-  })
+  // Conditional Overrides - Radii Tests
 
-  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
-    const theme = createEmotionTheme({ showSidebarBorder: true })
-    expect(theme.showSidebarBorder).toBe(true)
-  })
-
-  it("sets the dataframeBorderColor if configured", () => {
+  it("adapts the radii theme props if baseRadius is provided", () => {
     const themeInput: Partial<CustomThemeConfig> = {
-      borderColor: "red",
-      dataframeBorderColor: "green",
+      baseRadius: "1.2rem",
     }
 
     const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.borderColor).toBe("red")
-    expect(theme.colors.dataframeBorderColor).toBe("green")
+
+    expect(theme.radii.default).toBe("1.2rem")
+    expect(theme.radii.md).toBe("0.6rem")
+    expect(theme.radii.xl).toBe("1.8rem")
+    expect(theme.radii.xxl).toBe("2.4rem")
   })
 
-  it("sets the dataframeHeaderBackgroundColor if configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      dataframeHeaderBackgroundColor: "green",
+  it.each([
+    // Test keyword values
+    ["full", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
+    ["none", "0rem", "0rem", "0rem", "0rem"],
+    ["small", "0.35rem", "0.17rem", "0.52rem", "0.7rem"],
+    ["medium", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "1.5rem", "2rem"],
+    // Test rem values
+    ["0.8rem", "0.8rem", "0.4rem", "1.2rem", "1.6rem"],
+    ["2rem", "2rem", "1rem", "3rem", "4rem"],
+    // Test px values
+    ["10px", "10px", "5px", "15px", "20px"],
+    ["24px", "24px", "12px", "36px", "48px"],
+    // Test with whitespace and uppercase
+    [" FULL ", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
+    ["  medium  ", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["2 rem ", "2rem", "1rem", "3rem", "4rem"],
+    // Test only numbers:
+    ["10", "10px", "5px", "15px", "20px"],
+    ["24foo", "24px", "12px", "36px", "48px"],
+  ])(
+    "correctly applies baseRadius '%s'",
+    (baseRadius, expectedDefault, expectedMd, expectedXl, expectedXxl) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseRadius,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.radii.default).toBe(expectedDefault)
+      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.xl).toBe(expectedXl)
+      expect(theme.radii.xxl).toBe(expectedXxl)
     }
+  )
+
+  it.each([
+    "invalid",
+    "rem", // Missing number
+    "px", // Missing number
+  ])(
+    "logs a warning and falls back to default for invalid baseRadius '%s'",
+    invalidBaseRadius => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseRadius: invalidBaseRadius,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid base radius: ${invalidBaseRadius}. Falling back to default base radius.`
+      )
+
+      // Should fall back to default values
+      expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
+      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
+      expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
+    }
+  )
+
+  it.each([
+    // Test keyword values
+    ["full", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["none", "0rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["small", "0.35rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    // Test rem values
+    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["2rem", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    // Test px values
+    ["10px", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["24px", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    // Test with whitespace and uppercase
+    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["  medium  ", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    // Test only numbers:
+    ["10", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["24foo", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+  ])(
+    "correctly handles buttonRadius config '%s' (does not impact other radii values)",
+    (
+      buttonRadius,
+      expectedButtonRadius,
+      expectedDefault,
+      expectedMd,
+      expectedXl,
+      expectedXxl
+    ) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        buttonRadius,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.radii.button).toBe(expectedButtonRadius)
+      expect(theme.radii.default).toBe(expectedDefault)
+      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.xl).toBe(expectedXl)
+      expect(theme.radii.xxl).toBe(expectedXxl)
+    }
+  )
+
+  it.each([
+    "invalid",
+    "rem", // Missing number
+    "px", // Missing number
+    "", // Empty string
+  ])(
+    "logs a warning and falls back to default for invalid buttonRadius '%s'",
+    invalidButtonRadius => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        buttonRadius: invalidButtonRadius,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid button radius: ${invalidButtonRadius}. Falling back to default button radius.`
+      )
+
+      // Should fall back to default values
+      expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
+      expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
+      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
+      expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
+    }
+  )
+
+  it("sets buttonRadius based on baseRadius if buttonRadius not configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      baseRadius: "0.77rem",
+    }
+
     const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("green")
+
+    expect(theme.radii.button).toBe("0.77rem")
+    expect(theme.radii.default).toBe("0.77rem")
+    expect(theme.radii.md).toBe("0.39rem")
+    expect(theme.radii.xl).toBe("1.16rem")
+    expect(theme.radii.xxl).toBe("1.54rem")
   })
 
-  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
-      theme.colors.bgMix
-    )
+  // Conditional Overrides - Font Size Tests
+
+  it("uses baseFontSize when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      baseFontSize: 18,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.fontSizes.baseFontSize).toBe(18)
   })
+
+  it("maintains default if configured baseFontSize is not > 0", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      baseFontSize: 0,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.fontSizes.baseFontSize).toBe(16)
+  })
+
+  it.each([
+    // Test valid codeFontSize values
+    // Inline code font size unaffected, set to 0.75em
+    ["0.875rem", "0.875rem", "0.75em"],
+    ["0.875REM", "0.875rem", "0.75em"],
+    ["14px", "14px", "0.75em"],
+    ["14PX", "14px", "0.75em"],
+    ["15", "15px", "0.75em"],
+  ])(
+    "correctly applies codeFontSize and inlineCodeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid codeFontSize values
+    ["invalid", "0.875rem", "0.75em"],
+    ["rem", "0.875rem", "0.75em"],
+    ["px", "0.875rem", "0.75em"],
+    [" ", "0.875rem", "0.75em"],
+  ])(
+    "logs a warning and falls back to default for any invalid codeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for codeFontSize in theme: ${codeFontSize}. Falling back to default codeFontSize.`
+      )
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
+  it.each([
+    // Test valid headingFontSize values
+    [
+      ["3rem", "2.875rem"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["3REM", "2.875REM"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50px", "45px"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50PX", "45PX"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50", "45"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["39.5px", "32.8px", "24.2px"],
+      ["2.46875rem", "2.05rem", "1.5125rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+  ])(
+    "correctly applies headingFontSizes '%s'",
+    (headingFontSizes, expectedHeadingFontSizes) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
+  it.each([
+    // Test invalid headingFontSize values
+    [
+      "h1FontSize",
+      ["Invalid"],
+      ["2.75rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h2FontSize",
+      ["3REM", "Invalid"],
+      ["3rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h3FontSize",
+      ["3rem", "2.875rem", "Invalid"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h4FontSize",
+      ["3rem", "2.875rem", "2.75rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h5FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h6FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "1rem"],
+    ],
+  ])(
+    "logs a warning and falls back to default for any invalid headingFontSizes '%s'",
+    (invalidHeadingConfig, headingFontSizes, expectedHeadingFontSizes) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for ${invalidHeadingConfig} in headingFontSizes in theme: Invalid. Falling back to default ${invalidHeadingConfig} in headingFontSizes.`
+      )
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
+  // Conditional Overrides - Font Weight Tests
 
   it.each([
     // Test valid font weights
@@ -1711,14 +1770,48 @@ describe("createEmotionTheme", () => {
     }
   )
 
-  it("linkUnderline config is set to true by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.linkUnderline).toBe(true)
+  // Font Overrides
+
+  it("uses bodyFont when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      bodyFont: "Body Font Test",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.genericFonts.bodyFont).toBe("Body Font Test")
   })
 
-  it("sets the linkUnderline config to false if linkUnderline=false", () => {
-    const theme = createEmotionTheme({ linkUnderline: false })
-    expect(theme.linkUnderline).toBe(false)
+  it("uses codeFont when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      codeFont: "Code Font Test",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.genericFonts.codeFont).toBe("Code Font Test")
+  })
+
+  it("uses headingFont when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      headingFont: "Heading Font Test",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.genericFonts.headingFont).toBe("Heading Font Test")
+  })
+
+  it("uses bodyFont for headingFont when headingFont is not configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      bodyFont: "monospace",
+      // headingFont is intentionally not set
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.genericFonts.bodyFont).toBe(theme.fonts.monospace)
+    expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
   })
 })
 

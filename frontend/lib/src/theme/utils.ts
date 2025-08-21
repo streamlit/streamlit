@@ -510,9 +510,7 @@ export const createEmotionTheme = (
     {}
   )
 
-  // TODO: create an enum for this. Updating everything if a
-  // config option changes is a pain
-  // Mapping from CustomThemeConfig to color primitives
+  // Extract configured color values from parsedColors and map them to the correct theme color primitive
   const {
     secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
@@ -526,26 +524,50 @@ export const createEmotionTheme = (
     codeBackgroundColor,
   } = parsedColors
 
-  const newGenericColors = { ...colors }
-
-  if (primary) newGenericColors.primary = primary
-  if (bodyText) newGenericColors.bodyText = bodyText
-  if (secondaryBg) newGenericColors.secondaryBg = secondaryBg
-  if (bgColor) newGenericColors.bgColor = bgColor
-  if (linkColor) newGenericColors.link = linkColor
-
-  // Secondary color is not yet configurable. Set secondary color to primary color
-  // by default for all custom themes.
-  newGenericColors.secondary = newGenericColors.primary
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const conditionalOverrides: any = {}
-
-  conditionalOverrides.colors = createEmotionColors(newGenericColors)
-
-  if (notNullOrUndefined(codeBackgroundColor)) {
-    conditionalOverrides.colors.codeBackgroundColor = codeBackgroundColor
+  // Create a new generic colors object with configured colors, if they exist.
+  // Fallback to the default colors if they are not set. Necessary as createEmotionColors
+  // calculates some colors based on the generic colors.
+  const newGenericColors = {
+    ...colors,
+    primary: primary ?? colors.primary,
+    bodyText: bodyText ?? colors.bodyText,
+    secondaryBg: secondaryBg ?? colors.secondaryBg,
+    bgColor: bgColor ?? colors.bgColor,
+    link: linkColor ?? colors.link,
+    // Secondary color is not yet configurable. Set secondary color to primary color
+    // by default for all custom themes.
+    secondary: primary ?? colors.primary,
   }
+
+  type ConditionalOverrides = {
+    colors: ReturnType<typeof createEmotionColors>
+    showSidebarBorder: boolean
+    linkUnderline: boolean
+    radii: EmotionTheme["radii"]
+    fontSizes: EmotionTheme["fontSizes"]
+    fontWeights: EmotionTheme["fontWeights"]
+  }
+
+  const conditionalOverrides: ConditionalOverrides = {
+    colors: {
+      ...createEmotionColors(newGenericColors),
+    },
+    showSidebarBorder:
+      showSidebarBorder ?? baseThemeConfig.emotion.showSidebarBorder,
+    linkUnderline: linkUnderline ?? baseThemeConfig.emotion.linkUnderline,
+    // Copy over the default values for the other configurable theme properties
+    radii: { ...baseThemeConfig.emotion.radii },
+    fontSizes: { ...baseThemeConfig.emotion.fontSizes },
+    fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+  }
+
+  // Conditional Overrides - Colors
+
+  conditionalOverrides.colors.codeBackgroundColor =
+    codeBackgroundColor ?? colors.codeBackgroundColor
+
+  conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -560,11 +582,6 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(dataframeBorderColor)) {
     // If dataframeBorderColor explicitly set, override borderColorLight fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
-  }
-
-  if (notNullOrUndefined(dataframeHeaderBackgroundColor)) {
-    conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-      dataframeHeaderBackgroundColor
   }
 
   if (showWidgetBorder || widgetBorderColor) {
@@ -586,6 +603,7 @@ export const createEmotionTheme = (
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
+      // @ts-expect-error - chartCategoricalColors is a string[]
       conditionalOverrides.colors.chartCategoricalColors =
         validatedCategoricalColors
     }
@@ -603,6 +621,7 @@ export const createEmotionTheme = (
     // Set the validated colors, sequential colors should be an array of length 10
     // Also checked on BE, but check here again in case one of the entries is not a valid color
     if (validatedSequentialColors.length === 10) {
+      // @ts-expect-error - chartSequentialColors is a string[]
       conditionalOverrides.colors.chartSequentialColors =
         validatedSequentialColors
     } else {
@@ -612,11 +631,9 @@ export const createEmotionTheme = (
     }
   }
 
-  if (notNullOrUndefined(baseRadius)) {
-    conditionalOverrides.radii = {
-      ...baseThemeConfig.emotion.radii,
-    }
+  // Conditional Overrides - Radii
 
+  if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
@@ -649,13 +666,6 @@ export const createEmotionTheme = (
   }
 
   if (notNullOrUndefined(buttonRadius)) {
-    // Handles case where buttonRadius is the only radius set in the themeInput
-    if (!conditionalOverrides.radii) {
-      conditionalOverrides.radii = {
-        ...baseThemeConfig.emotion.radii,
-      }
-    }
-
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
@@ -668,9 +678,7 @@ export const createEmotionTheme = (
     }
   }
 
-  conditionalOverrides.fontSizes = {
-    ...baseThemeConfig.emotion.fontSizes,
-  }
+  // Conditional Overrides - Font Sizes
 
   if (baseFontSize && baseFontSize > 0) {
     // Set the root font size to the configured value (used on global styles):
@@ -699,6 +707,8 @@ export const createEmotionTheme = (
     headingFontSizes
   )
 
+  // Conditional Overrides - Font Weights
+
   // Set the font weights based on the font weight configs provided
   conditionalOverrides.fontWeights = setFontWeights(
     baseThemeConfig.emotion.fontWeights,
@@ -708,35 +718,36 @@ export const createEmotionTheme = (
     headingFontWeights
   )
 
-  if (notNullOrUndefined(showSidebarBorder)) {
-    conditionalOverrides.showSidebarBorder = showSidebarBorder
+  // Font Overrides
+
+  // Type for font overrides - represents genericFonts properties that can be overridden
+  type GenericFontOverride = {
+    bodyFont: string
+    codeFont: string
+    headingFont: string
+    // Not configurable through custom themes
+    iconFont: string
   }
 
-  if (notNullOrUndefined(linkUnderline)) {
-    conditionalOverrides.linkUnderline = linkUnderline
+  const fontsOverride: GenericFontOverride = {
+    // Default values for the generic fonts
+    ...genericFonts,
+    // Override properties if configured
+    bodyFont: bodyFont ? parseFont(bodyFont) : genericFonts.bodyFont,
+    codeFont: codeFont ? parseFont(codeFont) : genericFonts.codeFont,
+    headingFont: headingFont
+      ? parseFont(headingFont)
+      : genericFonts.headingFont,
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const fontOverrides: any = {}
-  if (headingFont) {
-    fontOverrides.headingFont = parseFont(headingFont)
-  } else if (bodyFont) {
-    fontOverrides.headingFont = parseFont(bodyFont)
+  // Handle headingFont fallback
+  if (bodyFont && !headingFont) {
+    fontsOverride.headingFont = parseFont(bodyFont)
   }
 
   return {
     ...baseThemeConfig.emotion,
-    colors: createEmotionColors(newGenericColors),
-    genericFonts: {
-      ...genericFonts,
-      ...(bodyFont && {
-        bodyFont: parseFont(bodyFont),
-      }),
-      ...(codeFont && {
-        codeFont: parseFont(codeFont),
-      }),
-      ...fontOverrides,
-    },
+    genericFonts: fontsOverride,
     ...conditionalOverrides,
   }
 }
