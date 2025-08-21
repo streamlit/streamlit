@@ -463,7 +463,6 @@ st.data_editor(
 
 st.header("Multiselect column:")
 
-
 result = st.data_editor(
     pd.DataFrame(
         {

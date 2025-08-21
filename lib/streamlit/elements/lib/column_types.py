@@ -1646,6 +1646,8 @@ def MultiselectColumn(
 
     Examples
     --------
+    **Example 1: Editable multiselect column**
+
     >>> import pandas as pd
     >>> import streamlit as st
     >>> data_df = pd.DataFrame(
@@ -1676,7 +1678,37 @@ def MultiselectColumn(
     >>> )
 
     .. output::
-        https://doc-multiselect-column.streamlit.app/
+        https://doc-multiselect-column-1.streamlit.app/
+        height: 300px
+
+    **Example 2: Colored tags for st.dataframe**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             options=["exploration", "visualization", "llm"],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-2.streamlit.app/
         height: 300px
     """
 
