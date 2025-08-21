@@ -1619,7 +1619,7 @@ def MultiselectColumn(
     options: Iterable of str or None
         The options that can be selected during editing.
 
-    accept_new_options: bool
+    accept_new_options: bool or None
         Whether the user can add selections that aren't included in ``options``.
         If this is ``False`` (default), the user can only select from the
         items in ``options``. If this is ``True``, the user can enter new
