@@ -18,8 +18,6 @@ import { GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
 
-import { mockTheme } from "@streamlit/lib"
-
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import ListColumn from "./ListColumn"
@@ -53,7 +51,7 @@ const MOCK_LIST_COLUMN_PROPS = {
 
 describe("ListColumn", () => {
   it("creates a valid column instance", () => {
-    const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
+    const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
     expect(mockColumn.kind).toEqual("list")
     expect(mockColumn.title).toEqual(MOCK_LIST_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_LIST_COLUMN_PROPS.id)
@@ -107,7 +105,7 @@ describe("ListColumn", () => {
     "supports array-compatible value (%p parsed as %p)",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any[] | null) => {
-      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -126,7 +124,7 @@ describe("ListColumn", () => {
     "correctly prepares data for copy (%p parsed as %p)",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, copyData: string | undefined) => {
-      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS, mockTheme.emotion)
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect((cell as MultiSelectCellType).copyData).toEqual(copyData)
     }
