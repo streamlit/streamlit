@@ -21,10 +21,10 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { blend, getMarkdownBgColors } from "~lib/theme"
 
-import MultiSelectColumn, {
-  type MultiSelectColumnParams,
+import MultiselectColumn, {
+  type MultiselectColumnParams,
   prepareOptions,
-} from "./MultiSelectColumn"
+} from "./MultiselectColumn"
 import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_MULTISELECT_COLUMN_PROPS: BaseColumnProps = {
@@ -54,11 +54,11 @@ const MOCK_MULTISELECT_COLUMN_PROPS: BaseColumnProps = {
   },
 }
 
-function getMultiSelectColumn(
-  params?: MultiSelectColumnParams,
+function getMultiselectColumn(
+  params?: MultiselectColumnParams,
   columnPropsOverwrite?: Partial<BaseColumnProps>
-): ReturnType<typeof MultiSelectColumn> {
-  return MultiSelectColumn(
+): ReturnType<typeof MultiselectColumn> {
+  return MultiselectColumn(
     {
       ...MOCK_MULTISELECT_COLUMN_PROPS,
       ...columnPropsOverwrite,
@@ -68,10 +68,10 @@ function getMultiSelectColumn(
   )
 }
 
-describe("MultiSelectColumn", () => {
+describe("MultiselectColumn", () => {
   it("creates a valid column instance with string options", () => {
     const options = ["foo", "bar"]
-    const mockColumn = getMultiSelectColumn({ options })
+    const mockColumn = getMultiselectColumn({ options })
     expect(mockColumn.kind).toEqual("multiselect")
     expect(mockColumn.title).toEqual(MOCK_MULTISELECT_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_MULTISELECT_COLUMN_PROPS.id)
@@ -92,7 +92,7 @@ describe("MultiSelectColumn", () => {
   })
 
   it("uses faded style for index columns", () => {
-    const mockColumn = getMultiSelectColumn(
+    const mockColumn = getMultiselectColumn(
       { options: ["foo"] },
       { isIndex: true }
     )
@@ -101,7 +101,7 @@ describe("MultiSelectColumn", () => {
   })
 
   it("respects accept_new_options config for creation", () => {
-    const mockColumn = getMultiSelectColumn({
+    const mockColumn = getMultiselectColumn({
       options: ["foo", "bar"],
       accept_new_options: true,
     })
@@ -111,14 +111,14 @@ describe("MultiSelectColumn", () => {
   })
 
   it("validates values against options when accept_new_options is false", () => {
-    const mockColumn = getMultiSelectColumn({ options: ["A", "B"] })
+    const mockColumn = getMultiselectColumn({ options: ["A", "B"] })
     const validatedCell = mockColumn.getCell(["A", "C"], true)
     expect(isErrorCell(validatedCell)).toEqual(false)
     expect((validatedCell as MultiSelectCellType).data.values).toEqual(["A"]) // filtered
   })
 
   it("creates error cell if values are not in options when validating", () => {
-    const mockColumn = getMultiSelectColumn({ options: ["A", "B"] })
+    const mockColumn = getMultiselectColumn({ options: ["A", "B"] })
     const errorCell = mockColumn.getCell(["Z"], true)
     expect(isErrorCell(errorCell)).toEqual(true)
   })
@@ -127,7 +127,7 @@ describe("MultiSelectColumn", () => {
     "%p is interpreted as missing value",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
     (input: any) => {
-      const mockColumn = getMultiSelectColumn({ options: ["foo", "bar"] })
+      const mockColumn = getMultiselectColumn({ options: ["foo", "bar"] })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(null)
       expect(isMissingValueCell(mockCell)).toEqual(true)
@@ -135,14 +135,14 @@ describe("MultiSelectColumn", () => {
   )
 
   it('"" (empty string) is interpreted as empty array, not missing', () => {
-    const mockColumn = getMultiSelectColumn({ options: ["foo", "bar"] })
+    const mockColumn = getMultiselectColumn({ options: ["foo", "bar"] })
     const mockCell = mockColumn.getCell("")
     expect(mockColumn.getCellValue(mockCell)).toEqual([])
     expect(isMissingValueCell(mockCell)).toEqual(false)
   })
 
   it("marks non-string array values as non-editable error when editing", () => {
-    const mockColumn = getMultiSelectColumn(
+    const mockColumn = getMultiselectColumn(
       { options: ["x"] },
       {
         isEditable: true,
@@ -161,7 +161,7 @@ describe("MultiSelectColumn", () => {
   ])(
     "correctly prepares data for copy (%p -> %p)",
     (input: string[], expectedCopy: string) => {
-      const mockColumn = getMultiSelectColumn({ options: ["a", "b", "c"] })
+      const mockColumn = getMultiselectColumn({ options: ["a", "b", "c"] })
       const cell = mockColumn.getCell(input) as MultiSelectCellType
       expect(cell.copyData).toEqual(expectedCopy)
     }

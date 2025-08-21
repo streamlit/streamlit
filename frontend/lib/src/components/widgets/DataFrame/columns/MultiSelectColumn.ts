@@ -103,7 +103,7 @@ export const prepareOptions = (
     })
 }
 
-export interface MultiSelectColumnParams {
+export interface MultiselectColumnParams {
   /**
    * A list of options available in the multi-select.
    * Every value in the column needs to match one of the options.
@@ -123,7 +123,7 @@ export interface MultiSelectColumnParams {
  * A column type that supports optimized rendering and editing for categorical values
  * by using a multi-select widget.
  */
-function MultiSelectColumn(
+function MultiselectColumn(
   props: BaseColumnProps,
   theme: EmotionTheme
 ): BaseColumn {
@@ -135,7 +135,7 @@ function MultiSelectColumn(
     },
     // User parameters:
     props.columnTypeOptions
-  ) as MultiSelectColumnParams
+  ) as MultiselectColumnParams
 
   const preparedOptions = prepareOptions(parameters.options, theme)
   const uniqueOptions = uniqBy(
@@ -225,6 +225,6 @@ function MultiSelectColumn(
   }
 }
 
-MultiSelectColumn.isEditableType = true
+MultiselectColumn.isEditableType = true
 
-export default MultiSelectColumn
+export default MultiselectColumn
