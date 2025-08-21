@@ -1521,11 +1521,6 @@ def ListColumn(
     default: Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
 
-    <<<<<<< HEAD
-
-    =======
-    >>>>>>> upstream/develop
-
     Examples
     --------
     >>> import pandas as pd
