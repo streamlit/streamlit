@@ -1586,6 +1586,8 @@ def MultiselectColumn(
     ``st.data_editor``. When used with ``st.data_editor``, editing will
     be enabled with a multiselect widget.
 
+    This column type is also useful for displaying colored labels in a read-only ``st.dataframe``.
+
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow serialization.
         We recommend to disable editing for these columns or conversion of all list values
