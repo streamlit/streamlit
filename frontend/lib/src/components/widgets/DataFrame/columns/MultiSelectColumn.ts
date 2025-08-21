@@ -104,10 +104,25 @@ export const prepareOptions = (
 }
 
 export interface MultiSelectColumnParams {
+  /**
+   * A list of options available in the multi-select.
+   * Every value in the column needs to match one of the options.
+   *
+   * Supports confgurations for the options:
+   * - `label`: The label to display for the option in the UI.
+   * - `color`: The color to use for the option as background.
+   */
   readonly options: (string | SelectOption)[]
+  /**
+   * Whether to allow adding new options to the cell in the UI.
+   */
   readonly accept_new_options?: boolean
 }
 
+/**
+ * A column type that supports optimized rendering and editing for categorical values
+ * by using a multi-select widget.
+ */
 function MultiSelectColumn(
   props: BaseColumnProps,
   theme: EmotionTheme
@@ -195,7 +210,8 @@ function MultiSelectColumn(
             readonly: true,
             isError: true,
             errorDetails:
-              "Editing of arrays with non-string values is not supported.",
+              "Editing of arrays with non-string values is not supported. " +
+              "Please disable editing or convert all values to strings.",
           }),
       } satisfies MultiSelectCellType
     },
