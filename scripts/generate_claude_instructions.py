@@ -29,9 +29,9 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BASE_DIR = SCRIPT_DIR.parent
@@ -66,7 +66,7 @@ def is_gitignored(file_path: Path) -> bool:
         return False
 
 
-def parse_frontmatter(content: str) -> tuple[dict[str, any], str]:
+def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """Parse YAML frontmatter from content.
 
     Returns
@@ -107,7 +107,7 @@ def get_rule_files() -> list[Path]:
     return sorted(rule_files)
 
 
-def read_rule_file(file_path: Path) -> tuple[dict[str, any], str]:
+def read_rule_file(file_path: Path) -> tuple[dict[str, Any], str]:
     """Read and return the frontmatter and content of a rule file.
 
     Returns
@@ -191,7 +191,7 @@ def generate_toc(content: str) -> str:
     return "## Table of Contents\n\n" + "\n".join(toc_lines) + "\n"
 
 
-def organize_rules_by_target() -> dict[str, list[tuple[Path, dict, str]]]:
+def organize_rules_by_target() -> dict[str, list[tuple[Path, dict[str, Any], str]]]:
     """Organize rules by their target CLAUDE.md location.
 
     Returns
@@ -212,7 +212,6 @@ def organize_rules_by_target() -> dict[str, list[tuple[Path, dict, str]]]:
         if not target:
             if frontmatter.get("alwaysApply", False):
                 target = DEFAULT_TARGET
-            # Simple heuristic based on filename
             elif "python" in rule_file.name and "test" in rule_file.name:
                 target = "lib/tests/CLAUDE.md"
             elif "python" in rule_file.name or "lib" in rule_file.name:
@@ -232,7 +231,7 @@ def organize_rules_by_target() -> dict[str, list[tuple[Path, dict, str]]]:
 
 
 def format_claude_content(
-    rules: list[tuple[Path, dict, str]],
+    rules: list[tuple[Path, dict[str, Any], str]],
     target_path: str,
     all_commands: dict[str, str],
 ) -> str:
