@@ -1633,7 +1633,7 @@ def MultiselectColumn(
         - None (default): the primary color is used for all options.
         - A single color value that is used for all options. This supports either
           a hex code, e.g. ``"#000000"``, or one of the following supported colors:
-          blue, green, orange, red, violet, gray/grey, or primary.
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
         - An iterable of color values that are mapped to the options.
 
     format_func: function or None

@@ -122,7 +122,7 @@ function MultiSelectColumn(
     (x: string) => x
   )
 
-  const cellTemplate = {
+  const cellTemplate: MultiSelectCellType = {
     kind: GridCellKind.Custom,
     readonly: !props.isEditable,
     allowOverlay: true,
@@ -136,15 +136,14 @@ function MultiSelectColumn(
       allowDuplicates: false,
     },
     copyData: "",
-  } as MultiSelectCellType
+  }
 
   return {
     ...props,
     kind: "multiselect",
     sortMode: "default",
     typeIcon: ":material/checklist:",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
@@ -152,9 +151,11 @@ function MultiSelectColumn(
             ...cellTemplate.data,
             values: null,
           },
+          // @ts-expect-error - isMissingValue is not a valid property of MultiSelectCellType
+          // but needed to activate the missing cell handling.
           isMissingValue: true,
           copyData: "",
-        } as MultiSelectCellType
+        } satisfies MultiSelectCellType
       }
 
       let cellData = toSafeArray(data)
@@ -190,7 +191,7 @@ function MultiSelectColumn(
             errorDetails:
               "Editing of arrays with non-string values is not supported.",
           }),
-      } as MultiSelectCellType
+      } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
       if (isNullOrUndefined(cell.data?.values)) {
