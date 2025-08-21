@@ -121,7 +121,7 @@ export function getDividerColors(theme: EmotionTheme): any {
   const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
   const green = lightTheme ? theme.colors.green60 : theme.colors.green90
   const violet = lightTheme ? theme.colors.purple60 : theme.colors.purple80
-  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray70
+  const gray = theme.colors.gray
 
   return {
     red: red,

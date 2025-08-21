@@ -36,8 +36,13 @@ export default {
   primary: colors.red70,
   secondaryBg: colors.gray90,
   disabled: colors.gray70,
-  red: colors.red70,
-  blue: colors.blue50,
-  green: colors.green60,
-  yellow: colors.yellow40,
+
+  // Default main theme colors (for dark theme)
+  // red: colors.red80,
+  // orange: colors.orange80,
+  // yellow: colors.yellow70,
+  // blue: colors.blue80,
+  // green: colors.green80,
+  // violet: colors.purple70,
+  gray: colors.gray80,
 }
