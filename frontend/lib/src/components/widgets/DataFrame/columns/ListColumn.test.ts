@@ -68,13 +68,10 @@ describe("ListColumn", () => {
   })
 
   it("Column supports editing", () => {
-    const mockColumn = ListColumn(
-      {
-        ...MOCK_LIST_COLUMN_PROPS,
-        isEditable: true,
-      },
-      mockTheme.emotion
-    )
+    const mockColumn = ListColumn({
+      ...MOCK_LIST_COLUMN_PROPS,
+      isEditable: true,
+    })
 
     expect(mockColumn.isEditable).toEqual(true)
   })

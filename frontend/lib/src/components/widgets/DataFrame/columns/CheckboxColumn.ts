@@ -54,10 +54,17 @@ function CheckboxColumn(
     typeIcon: ":material/check_box:",
     sortMode: "default",
     themeOverride: {
-      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
+      // Apply the theme's rounding radius so that it applies the correct
+      // rounding radius to the checkbox based on the theme config.
+      roundingRadius: Math.round(
+        // Use theme value, but a maximum rounding of maxCheckbox:
+        Math.min(
+          convertRemToPx(theme.radii.md),
+          convertRemToPx(theme.radii.maxCheckbox)
+        )
+      ),
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       let cellData = null
 
       cellData = toSafeBoolean(data)

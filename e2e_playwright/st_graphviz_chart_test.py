@@ -34,7 +34,7 @@ def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(7)
+    ).to_have_count(10)
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -151,4 +151,31 @@ def test_with_themed_app(themed_app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(
         themed_app.get_by_test_id("stGraphVizChart").nth(1).locator("svg"),
         name="st_graphviz_chart-theming",
+    )
+
+
+def test_width_content(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with width='content'."""
+    width_content_chart = app.get_by_test_id("stGraphVizChart").nth(7)
+    assert_snapshot(
+        width_content_chart.locator("svg"),
+        name="st_graphviz_chart_width_content",
+    )
+
+
+def test_width_stretch(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with width='stretch'."""
+    width_stretch_chart = app.get_by_test_id("stGraphVizChart").nth(8)
+    assert_snapshot(
+        width_stretch_chart.locator("svg"),
+        name="st_graphviz_chart_width_stretch",
+    )
+
+
+def test_width_pixels(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with width=300."""
+    width_pixels_chart = app.get_by_test_id("stGraphVizChart").nth(9)
+    assert_snapshot(
+        width_pixels_chart.locator("svg"),
+        name="st_graphviz_chart_width_pixels",
     )

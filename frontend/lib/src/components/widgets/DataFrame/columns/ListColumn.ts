@@ -17,7 +17,6 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
-import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -29,10 +28,11 @@ import {
 } from "./utils"
 
 /**
- * A column type that supports optimized rendering values of array/list types.
+ * A column type that supports optimized rendering and editing of
+ *  values of array/list types.
  */
-function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
-  const cellTemplate = {
+function ListColumn(props: BaseColumnProps): BaseColumn {
+  const cellTemplate: MultiSelectCellType = {
     kind: GridCellKind.Custom,
     readonly: !props.isEditable,
     allowOverlay: true,
@@ -48,15 +48,14 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
       allowCreation: true,
       allowDuplicates: true,
     },
-  } as MultiSelectCellType
+  }
 
   return {
     ...props,
     kind: "list",
     sortMode: "default",
     typeIcon: ":material/list:",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
@@ -64,9 +63,11 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
             ...cellTemplate.data,
             values: null,
           },
+          // @ts-expect-error - isMissingValue is not a valid property of MultiSelectCellType
+          // but needed to activate the missing cell handling.
           isMissingValue: true,
           copyData: "",
-        } as MultiSelectCellType
+        } satisfies MultiSelectCellType
       }
 
       const cellData = toSafeArray(data)
@@ -83,9 +84,10 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
             readonly: true,
             isError: true,
             errorDetails:
-              "Editing of arrays with non-string values is not supported.",
+              "Editing of arrays with non-string values is not supported. " +
+              "Please disable editing or convert all values to strings.",
           }),
-      } as MultiSelectCellType
+      } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
       if (isNullOrUndefined(cell.data?.values)) {

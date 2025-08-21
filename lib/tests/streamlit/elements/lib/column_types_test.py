@@ -426,12 +426,23 @@ class ColumnTypesTest(unittest.TestCase):
         )
 
         assert remove_none_values(
-            ListColumn("Col1", width="small", help="Help text", pinned=True)
+            ListColumn(
+                "Col1",
+                width="small",
+                help="Help text",
+                pinned=True,
+                disabled=False,
+                required=True,
+                default=["a", "b", "c"],
+            )
         ) == {
             "label": "Col1",
             "width": "small",
             "help": "Help text",
             "pinned": True,
+            "disabled": False,
+            "required": True,
+            "default": ["a", "b", "c"],
             "type_config": {"type": "list"},
         }, "Should have all the properties defined."
 

@@ -2462,6 +2462,161 @@ describe("App", () => {
     })
   })
 
+  describe("AppSkeleton rendering and styling", () => {
+    let originalLocation: Location
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      originalLocation = window.location
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    it("renders AppSkeleton with correct container width styling during initial load", async () => {
+      renderApp(getProps())
+
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+
+      const skeletonElement = screen.getByTestId("stAppSkeleton")
+      const elementContainer = skeletonElement.closest(
+        '[data-testid="stElementContainer"]'
+      )
+
+      expect(elementContainer).toBeInTheDocument()
+      expect(elementContainer).toHaveStyle("width: 100%")
+    })
+
+    it("shows skeleton with default V2 loading screen behavior", async () => {
+      renderApp(getProps())
+
+      // Skeleton should not be visible initially due to 500ms delay
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+    })
+
+    it("does not show skeleton when embedded with hide_loading_screen option", () => {
+      // This tests the embedding use case where the host wants to hide loading screens
+      Object.defineProperty(window, "location", {
+        value: { search: "?embed_options=hide_loading_screen" },
+        writable: true,
+        configurable: true,
+      })
+
+      renderApp(getProps())
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      // Skeleton should never appear when loading screen is hidden
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("shows 'Please wait...' text when embedded with V1 loading screen", async () => {
+      // This tests backwards compatibility for older embedding integrations
+      Object.defineProperty(window, "location", {
+        value: { search: "?embed_options=show_loading_screen_v1" },
+        writable: true,
+        configurable: true,
+      })
+
+      renderApp(getProps())
+
+      // Should show "Please wait..." instead of skeleton for V1 compatibility
+      await waitFor(() => {
+        expect(screen.getByText("Please wait...")).toBeInTheDocument()
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("replaces skeleton with real content when app loads", async () => {
+      renderApp(getProps())
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Real app content",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("Real app content")).toBeVisible()
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("skeleton timing works correctly with multiple renders", async () => {
+      const { unmount } = renderApp(getProps())
+
+      // First render - advance time but not enough
+      act(() => {
+        vi.advanceTimersByTime(300)
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      unmount()
+      renderApp(getProps())
+
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      // Now advance past the full delay
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+    })
+  })
+
   describe("App.handleAutoRerun and autoRerun interval handling", () => {
     beforeEach(() => {
       vi.useFakeTimers()

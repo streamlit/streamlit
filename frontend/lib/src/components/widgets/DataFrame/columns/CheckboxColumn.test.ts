@@ -19,6 +19,7 @@ import { Bool, Field } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { convertRemToPx } from "~lib/theme"
 
 import CheckboxColumn from "./CheckboxColumn"
 import { isErrorCell } from "./utils"
@@ -109,4 +110,24 @@ describe("CheckboxColumn", () => {
       expect(isErrorCell(cell)).toEqual(true)
     }
   )
+
+  it("applies themeOverride roundingRadius based on theme radii", () => {
+    const mockColumn = CheckboxColumn(
+      MOCK_CHECKBOX_COLUMN_PROPS,
+      mockTheme.emotion
+    )
+
+    expect(mockColumn.themeOverride).toBeDefined()
+
+    const expectedRoundingRadius = Math.round(
+      Math.min(
+        convertRemToPx(mockTheme.emotion.radii.md),
+        convertRemToPx(mockTheme.emotion.radii.maxCheckbox)
+      )
+    )
+
+    expect(mockColumn.themeOverride?.roundingRadius).toEqual(
+      expectedRoundingRadius
+    )
+  })
 })

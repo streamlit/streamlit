@@ -1478,9 +1478,8 @@ def ListColumn(
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow serialization.
-        We recommend to disable editing for these columns or convert of all list values
+        We recommend to disable editing for these columns or conversion of all list values
         to strings.
-
 
     Parameters
     ----------
@@ -1522,6 +1521,10 @@ def ListColumn(
     default: Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
 
+    <<<<<<< HEAD
+
+    =======
+    >>>>>>> upstream/develop
 
     Examples
     --------

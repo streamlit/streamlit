@@ -73,7 +73,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         must be installed in your environment to use this connection. You can
         install it as an extra with Streamlit:
 
-        >>> pip install streamlit[snowflake]
+        .. code-block:: shell
+
+           pip install streamlit[snowflake]
 
     .. Important::
         Account identifiers must be of the form ``<orgname>-<account_name>``

@@ -68,6 +68,7 @@ cell_overlay_test_df = pd.DataFrame(
     {
         "big_numbers": [1231231.41, 12012],
         "text": ["hello\nworld", "foo"],
+        "list": [["hello", "world"], ["c", "d", "e"]],
     }
 )
 
@@ -78,6 +79,9 @@ cell_overlay_test_column_config = {
         width="medium",
     ),
     "text": st.column_config.TextColumn(
+        width="medium",
+    ),
+    "list": st.column_config.ListColumn(
         width="medium",
     ),
 }
