@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
@@ -1581,14 +1582,13 @@ def MultiselectColumn(
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. This command needs to
-    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe`` or
     ``st.data_editor``. When used with ``st.data_editor``, editing will
     be enabled with a multiselect widget.
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow serialization.
-        We recommend to disable editing for these columns or convert of all list values
+        We recommend to disable editing for these columns or conversion of all list values
         to strings.
 
     Parameters
@@ -1634,8 +1634,7 @@ def MultiselectColumn(
         - A single color value that is used for all options. This supports either
           a hex code, e.g. ``"#000000"``, or one of the following supported colors:
           blue, green, orange, red, violet, gray/grey, or primary.
-        - An iterable of color values that are used for the options in order
-          looped through.
+        - An iterable of color values that are mapped to the options.
 
     format_func: function or None
         Function to modify the display of the options. It receives
@@ -1650,27 +1649,28 @@ def MultiselectColumn(
     >>> data_df = pd.DataFrame(
     >>>     {
     >>>         "category": [
-    >>>         ["exploration", "visualization"],
-    >>>         ["llm", "visualization"],
-    >>>         [],
-    >>>         ["exploration"],
-    >>>     ],
-    >>> }
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
     >>> )
     >>>
     >>> st.data_editor(
-    >>> (data_df,)
-    >>> column_config={
-    >>>     "category": st.column_config.MultiselectColumn(
-    >>>         "App Categories",
-    >>>         help="The categories of the app",
-    >>>         options=[
-    >>>             "exploration",
-    >>>             "visualization",
-    >>>             "llm",
-    >>>         ],
-    >>>     )
-    >>> },
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             help="The categories of the app",
+    >>>             options=[
+    >>>                 "exploration",
+    >>>                 "visualization",
+    >>>                 "llm",
+    >>>             ],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
     >>> )
 
     .. output::
