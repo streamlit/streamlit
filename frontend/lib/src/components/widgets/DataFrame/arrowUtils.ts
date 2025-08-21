@@ -22,7 +22,10 @@ import {
   TextCell,
   UriCell,
 } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import {
+  DatePickerType,
+  MultiSelectCellType,
+} from "@glideapps/glide-data-grid-cells"
 import { Field, Null } from "apache-arrow"
 import moment from "moment"
 
@@ -139,7 +142,11 @@ export function applyPandasStylerCss(
     themeOverride.textDark = fontColor
 
     // Apply text color also for cells that don't use textDark:
-    if (cell.kind === GridCellKind.Bubble) {
+    if (
+      cell.kind === GridCellKind.Bubble ||
+      (cell.kind === GridCellKind.Custom &&
+        (cell as MultiSelectCellType).data?.kind === "multi-select-cell")
+    ) {
       themeOverride.textBubble = fontColor
     }
     if (cell.kind === GridCellKind.Uri) {

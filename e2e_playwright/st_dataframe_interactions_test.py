@@ -595,6 +595,30 @@ def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFuncti
     )
 
 
+def test_list_cell_editing(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the list cell can be edited."""
+    cell_overlay_test_df = app.get_by_test_id("stDataFrame").nth(3)
+    expect_canvas_to_be_visible(cell_overlay_test_df)
+
+    # Click on the first cell of the list column
+    click_on_cell(cell_overlay_test_df, 1, 2, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    expect(cell_overlay).to_contain_text("hello")
+    assert_snapshot(cell_overlay, name="st_data_editor-list_col_editor")
+
+    # Change the value
+    cell_overlay.locator("input").fill("new val")
+    # Press Enter to insert the text as list value:
+    app.keyboard.press("Enter")
+    # Press Enter again to apply the change to the dataframe:
+    app.keyboard.press("Enter")
+    wait_for_app_run(app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(app, "Edited DF:", "new val", exact_match=False)
+
+
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "data_editor")).to_be_visible()

@@ -70,7 +70,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import is_type
+from streamlit.type_util import is_list_like, is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -180,14 +180,14 @@ class DataEditorSerde:
 
 
 def _parse_value(
-    value: str | int | float | bool | None,
+    value: str | int | float | bool | list[str] | None,
     column_data_kind: ColumnDataKind,
 ) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
-    value : str | int | float | bool | None
+    value : str | int | float | bool | list[str] | None
         The value to convert.
 
     column_data_kind : ColumnDataKind
@@ -204,8 +204,19 @@ def _parse_value(
     import pandas as pd
 
     try:
+        if column_data_kind == ColumnDataKind.LIST:
+            return list(value) if is_list_like(value) else [value]  # ty: ignore
+
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
+
+        # List values aren't supported for anything else than list column data kind.
+        # To make the type checker happy, we raise a TypeError here. However,
+        # This isn't expected to happen.
+        if isinstance(value, list):
+            raise TypeError(  # noqa: TRY301
+                "List values are only supported by list and string columns."
+            )
 
         if column_data_kind == ColumnDataKind.INTEGER:
             return int(value)
@@ -244,7 +255,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
@@ -257,7 +268,9 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]],
+    edited_rows: Mapping[
+        int, Mapping[str, str | int | float | bool | list[str] | None]
+    ],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -288,7 +301,7 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iloc[row_pos, col_pos] = _parse_value(
+                df.iat[row_pos, col_pos] = _parse_value(
                     value, dataframe_schema[col_name]
                 )
 
@@ -659,7 +672,7 @@ class DataEditorMixin:
                   precedence over text and number formatting from ``pandas.Styler``.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
+                  ``complex``, ``tuple``, ``bytes``, ``bytearray``,
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.

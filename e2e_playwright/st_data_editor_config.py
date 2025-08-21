@@ -380,7 +380,11 @@ st.data_editor(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(
+            disabled=False,
+            required=True,
+            default=["a", "b", "c"],
+        ),
     },
     width="content",
     hide_index=True,

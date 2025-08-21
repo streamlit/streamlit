@@ -104,6 +104,11 @@ _EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = 
         ColumnDataKind.EMPTY,
     ],
     "link": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
+    "list": [
+        ColumnDataKind.LIST,
+        ColumnDataKind.STRING,
+        ColumnDataKind.EMPTY,
+    ],
 }
 
 
