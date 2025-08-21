@@ -107,6 +107,7 @@ describe("MultiSelectColumn", () => {
     })
     const mockCell = mockColumn.getCell(["foo"]) as MultiSelectCellType
     expect(mockCell.data.allowCreation).toEqual(true)
+    expect(mockCell.data.allowDuplicates).toEqual(false)
   })
 
   it("validates values against options when accept_new_options is false", () => {
@@ -218,7 +219,7 @@ describe("prepareOptions", () => {
   })
 
   it("blends custom color with theme background when color is not mapped", () => {
-    const customColor = "rgba(0,128,0,0.5)"
+    const customColor = "#008000"
     const opts = prepareOptions(
       [{ value: "ok", color: customColor }],
       mockTheme.emotion
