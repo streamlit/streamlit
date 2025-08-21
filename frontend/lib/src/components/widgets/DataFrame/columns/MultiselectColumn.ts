@@ -108,7 +108,7 @@ export interface MultiselectColumnParams {
    * A list of options available in the multi-select.
    * Every value in the column needs to match one of the options.
    *
-   * Supports confgurations for the options:
+   * Supports configurations for the options:
    * - `label`: The label to display for the option in the UI.
    * - `color`: The color to use for the option as background.
    */
