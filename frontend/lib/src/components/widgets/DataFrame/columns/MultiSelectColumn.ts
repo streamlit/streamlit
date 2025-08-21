@@ -34,6 +34,13 @@ import {
 
 type SelectOption = { value: string; label?: string; color?: string }
 
+/**
+ * Get the color mapping to map a user-defined color to the our
+ * theme color (text background.)
+ *
+ * @param theme The theme to use.
+ * @returns The color mapping.
+ */
 const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
   const textBackgroundColors = getMarkdownBgColors(theme)
 
@@ -81,7 +88,6 @@ export const prepareOptions = (
 
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
-
       const optionColor = option.color
         ? blend(
             colorMapping.get(option.color) ?? option.color,
