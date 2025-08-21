@@ -42,7 +42,6 @@ export default {
   red: colors.red70,
   blue: colors.blue50,
   green: colors.green60,
-  yellow: colors.yellow40,
 
   // Default main theme colors (dark theme)
   redColor: colors.red80,

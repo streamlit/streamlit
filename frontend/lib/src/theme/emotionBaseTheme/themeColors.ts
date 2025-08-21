@@ -45,7 +45,6 @@ const requiredThemeColors = {
   red: colors.red80,
   blue: colors.blue80,
   green: colors.green90,
-  yellow: colors.yellow100,
 
   // Default main theme colors (light theme)
   redColor: colors.red70,
