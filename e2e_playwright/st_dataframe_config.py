@@ -825,7 +825,7 @@ st.dataframe(
     },
 )
 
-st.header("Multi-select column:")
+st.header("Multiselect column:")
 
 st.dataframe(
     pd.DataFrame(
@@ -836,7 +836,7 @@ st.dataframe(
     ),
     column_config={
         "col_0": st.column_config.MultiselectColumn(
-            "Multi-select column",
+            "Multiselect column",
             width="medium",
             help="This is a multi-select column",
             required=True,  # Should be ignored
