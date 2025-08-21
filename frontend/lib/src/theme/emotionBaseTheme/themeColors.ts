@@ -39,10 +39,22 @@ const requiredThemeColors = {
   lightGray: colors.gray30,
   gray: colors.gray60,
   darkGray: colors.gray70,
+
+  // TODO (mgbarnes): Reduce/remove these colors to avoid
+  // confusion with the default main/text/bg theme colors
   red: colors.red80,
   blue: colors.blue80,
   green: colors.green90,
   yellow: colors.yellow100,
+
+  // Default main theme colors (light theme)
+  redColor: colors.red70,
+  orangeColor: colors.orange70,
+  yellowColor: colors.yellow80,
+  blueColor: colors.blue70,
+  greenColor: colors.green70,
+  violetColor: colors.purple70,
+  grayColor: colors.gray40,
 }
 
 export type RequiredThemeColors = Record<
