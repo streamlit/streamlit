@@ -75,8 +75,9 @@ def test_multiselect_cell_editing(
     # Click on the first cell of the list column
     click_on_cell(multiselect_column_df, 1, 0, double_click=True, column_width="medium")
 
+    # Get the cell overlay and check if it looks correct:
     cell_overlay = get_open_cell_overlay(themed_app)
-    expect(cell_overlay).to_contain_text("exploration")
+    expect(cell_overlay).to_contain_text("Exploration")
     assert_snapshot(cell_overlay, name="st_data_editor-multiselect_col_editor")
 
     # Change the value
@@ -101,6 +102,7 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     # Click on the first cell of the second multiselect column
     click_on_cell(multiselect_column_df, 1, 1, double_click=True, column_width="medium")
 
+    # Get the cell overlay and check if it looks correct:
     cell_overlay = get_open_cell_overlay(app)
     expect(cell_overlay).to_contain_text("Option a")
 

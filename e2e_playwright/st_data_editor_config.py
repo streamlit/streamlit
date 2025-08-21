@@ -487,6 +487,7 @@ result = st.data_editor(
             accept_new_options=False,
             options=["exploration", "visualization", "llm", "finance", "geography"],
             color=["green", "blue", "red", "#19747E", "orange"],
+            format_func=lambda x: x.capitalize(),
         ),
         "col_1": st.column_config.MultiselectColumn(
             width="medium",
