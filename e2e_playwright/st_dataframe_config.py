@@ -831,7 +831,7 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [["a", "b"], ["b", "c", "d"], [], None],
-            "col_1": [["a", "b"], ["b", "c", "d"], [], None],
+            "col_1": ["a,b", "b,c,d", "", None],
         }
     ),
     column_config={
@@ -848,8 +848,6 @@ st.dataframe(
                 "green",
                 "blue",
                 "red",
-                # "#ebfdea",
-                # "#ffc38a",
                 "#19747E",
             ],
         ),
