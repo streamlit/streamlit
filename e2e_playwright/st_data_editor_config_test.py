@@ -84,6 +84,8 @@ def test_multiselect_cell_editing(
     cell_overlay.locator("input").fill("geography")
     # Press Enter to insert the text as list value:
     themed_app.keyboard.press("Enter")
+    expect(cell_overlay).to_contain_text("Geography")
+
     # Press Enter again to apply the change to the dataframe:
     themed_app.keyboard.press("Enter")
     wait_for_app_run(themed_app)
@@ -110,6 +112,8 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     cell_overlay.locator("input").fill("new value")
     # Press Enter to insert the text as list value:
     app.keyboard.press("Enter")
+    expect(cell_overlay).to_contain_text("new value")
+
     # Press Enter again to apply the change to the dataframe:
     app.keyboard.press("Enter")
     wait_for_app_run(app)
