@@ -18,6 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_prefixed_markdown,
+    reset_focus,
 )
 from e2e_playwright.shared.dataframe_utils import (
     click_on_cell,
@@ -88,6 +89,8 @@ def test_multiselect_cell_editing(
 
     # Press Enter again to apply the change to the dataframe:
     themed_app.keyboard.press("Enter")
+    # Reset focus to ensure that the overlay is closed:
+    reset_focus(themed_app)
     wait_for_app_run(themed_app)
 
     # Check if that the value was submitted
@@ -116,6 +119,8 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
 
     # Press Enter again to apply the change to the dataframe:
     app.keyboard.press("Enter")
+    # Reset focus to ensure that the overlay is closed:
+    reset_focus(app)
     wait_for_app_run(app)
 
     # Check if that the value was submitted
