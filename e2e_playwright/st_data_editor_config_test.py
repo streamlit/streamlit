@@ -25,7 +25,7 @@ from e2e_playwright.shared.dataframe_utils import (
     get_open_cell_overlay,
 )
 
-NUM_DATAFRAME_ELEMENTS = 23
+_NUM_DATAFRAME_ELEMENTS = 23
 
 
 def test_data_editor_supports_various_configurations(
@@ -35,7 +35,7 @@ def test_data_editor_supports_various_configurations(
     # The dataframe config test is already testing with themed apps, so using the
     # default theme only is fine here.
     elements = app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(NUM_DATAFRAME_ELEMENTS)
+    expect(elements).to_have_count(_NUM_DATAFRAME_ELEMENTS)
 
     # The dataframe component might require a bit more time for rendering the canvas
     app.wait_for_timeout(500)
