@@ -461,66 +461,45 @@ st.data_editor(
     hide_index=True,
 )
 
+st.header("Multiselect column:")
 
-st.header("Multi select column:")
-
-data_df = pd.DataFrame(
-    {
-        "category": [
-            ["exploration", "visualization"],
-            ["llm", "visualization"],
-            ["finance"],
-            ["geography"],
-        ],
-        "tags": [["statistics"], ["ai", "bots"], ["stocks", "crypto"], None],
-    }
-)
-
-st.data_editor(
-    data_df,
-    column_config={
-        "category": st.column_config.MultiselectColumn(
-            "App Categories",
-            help="The categories of the app",
-            options=["exploration", "llm", "geography", "visualization", "finance"],
-            accept_new_options=True,
-            color=["#ffc38a", "#ebfdea", "#19747E", "#FFE8D6", "#90E0EF"],
-            format_func=lambda x: x.capitalize(),
-        ),
-        "tags": st.column_config.ListColumn(
-            "Tags",
-            help="Tags related to this app",
-        ),
-    },
-    hide_index=True,
-)
-
-
-st.header("Multi select column:")
 
 result = st.data_editor(
     pd.DataFrame(
         {
-            "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": [["a", "B"], ["c", "d", "e"], [], None],
-            "col_2": [None, None, None, None],
-            "col_3": ["a,b", "c,d,e", "", None],
+            "col_0": [
+                ["exploration", "visualization"],
+                ["llm", "visualization", "finance"],
+                [],
+                None,
+            ],
+            "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [[1], [2, 3], [], None],
         }
     ),
     column_config={
         "col_0": st.column_config.MultiselectColumn(
-            "Multi select column",
+            "Multiselect column",
             width="medium",
-            help="This is a list column",
-            accept_new_options=True,
+            help="This is a multi-select column",
+            required=True,
+            disabled=False,
+            default=["exploration", "visualization"],
+            accept_new_options=False,
+            options=["exploration", "visualization", "llm", "finance", "geography"],
+            color=["green", "blue", "red", "#19747E", "orange"],
         ),
         "col_1": st.column_config.MultiselectColumn(
-            options=["a", "B", "c", "d", "e"], default=["a", "B"], disabled=True
+            width="medium",
+            options=["a", "b", "c", "d", "e"],
+            color="primary",
+            accept_new_options=True,
+            format_func=lambda x: f"Option {x}",
         ),
-        "col_2": st.column_config.ListColumn(),
-        "col_3": st.column_config.ListColumn(),
+        "col_2": st.column_config.MultiselectColumn("Unsupported values"),
     },
-    key="multi_select_2",
-    num_rows="dynamic",
+    width="content",
+    hide_index=True,
 )
-st.dataframe(result)
+
+st.write("Multiselect column return:", str(result))
