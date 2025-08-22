@@ -249,8 +249,7 @@ const ThemeAnalysis = {
    */
   getTemporaryColors() {
     return [
-      "primaryBg", // Used in MainMenu but not properly defined
-      "progressbarTrackFill", // Used in ProgressBar but can probably transition to actual theme color
+      "progressbarTrackFill", // Used in ProgressBar (accessed from baseui theme overrides, not directly from theme)
     ]
   },
 }
