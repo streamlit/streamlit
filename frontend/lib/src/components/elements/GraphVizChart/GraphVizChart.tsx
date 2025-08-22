@@ -16,7 +16,6 @@
 
 import React, { memo, ReactElement, useEffect } from "react"
 
-import { select } from "d3"
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
 
