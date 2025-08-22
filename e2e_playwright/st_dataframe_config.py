@@ -512,20 +512,34 @@ st.header("Area chart column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
-            "col_1": ["1,2,3,4", "6, 5, 1, 10", "invalid", None],
+            "blue": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "orange": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "green": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "trend": [[1, 5, 2, 6], [6, 2, 5, 1]],  # up and down trend
+            "gray": [[1, 5, 2, 6], [2, 3, 5, 1]],
         }
     ),
     column_config={
-        "col_0": st.column_config.AreaChartColumn(
-            "Area chart column",
-            width="medium",
-            help="This is an area chart column",
-            y_min=-5,
-            y_max=5,
+        "blue": st.column_config.AreaChartColumn(
+            "Blue",
+            color="blue",
+        ),
+        "orange": st.column_config.AreaChartColumn(
+            "Orange",
+            color="orange",
+        ),
+        "green": st.column_config.AreaChartColumn(
+            "Green",
+            color="green",
+        ),
+        "trend": st.column_config.AreaChartColumn(
+            "Trend",
             color="trend",
         ),
-        "col_1": st.column_config.AreaChartColumn(),
+        "gray": st.column_config.AreaChartColumn(
+            "Gray",
+            color="gray",
+        ),
     },
     use_container_width=False,
     hide_index=True,

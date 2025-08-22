@@ -21,7 +21,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { EmotionTheme, getDividerColors } from "~lib/theme"
+import { EmotionTheme, getMarkdownTextColors } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -48,29 +48,50 @@ export const BAR_CHART_TYPE = "bar_chart"
  * @returns The color mapping.
  */
 const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
-  const dividerColor = getDividerColors(theme)
+  // const dividerColor = getDividerColors(theme)
+  const textColors = getMarkdownTextColors(theme)
   return new Map(
     Object.entries({
-      // red: theme.colors.red,
-      // blue: theme.colors.blue,
-      // green: theme.colors.green,
-      // yellow: theme.colors.yellow,
-      // violet: theme.colors.violet,
-      // purple: theme.colors.purple,
-      // orange: theme.colors.orange,
-      // gray: theme.colors.gray,
-      // grey: theme.colors.gray,
-      // primary: theme.colors.primary,
-      red: dividerColor.red,
-      blue: dividerColor.blue,
-      green: dividerColor.green,
-      yellow: dividerColor.yellow,
-      violet: dividerColor.violet,
-      purple: dividerColor.purple,
-      orange: dividerColor.orange,
-      gray: dividerColor.gray,
-      grey: dividerColor.gray,
-      primary: dividerColor.primary,
+      // red: textColors.red,
+      // blue: textColors.blue,
+      // green: textColors.green,
+      // yellow: textColors.yellow,
+      // violet: textColors.violet,
+      // purple: textColors.purple,
+      // orange: textColors.orange,
+      // gray: textColors.gray,
+      // grey: textColors.gray,
+      // primary: textColors.primary,
+      // red: textBgColors.redbg,
+      // blue: textBgColors.bluebg,
+      // green: textBgColors.greenbg,
+      // yellow: textBgColors.yellowbg,
+      // violet: textBgColors.violetbg,
+      // purple: textBgColors.purplebg,
+      // orange: textBgColors.orangebg,
+      // gray: textBgColors.graybg,
+      // grey: textBgColors.graybg,
+      // primary: textBgColors.primarybg,
+      red: theme.colors.red,
+      blue: theme.colors.blue,
+      green: theme.colors.green,
+      yellow: theme.colors.yellow,
+      violet: theme.colors.violet,
+      purple: theme.colors.purple,
+      orange: theme.colors.orange,
+      gray: theme.colors.gray,
+      grey: theme.colors.gray,
+      primary: theme.colors.primary,
+      // red: dividerColor.red,
+      // blue: dividerColor.blue,
+      // green: dividerColor.green,
+      // yellow: dividerColor.yellow,
+      // violet: dividerColor.violet,
+      // purple: dividerColor.purple,
+      // orange: dividerColor.orange,
+      // gray: dividerColor.gray,
+      // grey: dividerColor.gray,
+      // primary: dividerColor.primary,
     })
   )
 }
@@ -118,8 +139,9 @@ function BaseChartColumn(
 
   let defaultColor: string | undefined
   if (parameters.color === "trend" || parameters.color === "trend-inverse") {
-    defaultColor = colorMapping.get("green")
+    // defaultColor = colorMapping.get("green")
     // defaultColor = getIncreasingGreen(theme)
+    defaultColor = theme.colors.metricPositiveDeltaColor
   } else {
     defaultColor = parameters.color
       ? (colorMapping.get(parameters.color) ?? parameters.color)
@@ -253,16 +275,18 @@ function BaseChartColumn(
         normalizedChartData[0] >
           normalizedChartData[normalizedChartData.length - 1]
       ) {
-        chartColor = colorMapping.get("red")
+        // chartColor = colorMapping.get("red")
         // chartColor = getDecreasingRed(theme)
+        chartColor = theme.colors.metricNegativeDeltaColor
       } else if (
         parameters.color === "trend-inverse" &&
         // Chart is pointing up:
         normalizedChartData[0] <
           normalizedChartData[normalizedChartData.length - 1]
       ) {
-        chartColor = colorMapping.get("red")
+        // chartColor = colorMapping.get("red")
         // chartColor = getDecreasingRed(theme)
+        chartColor = theme.colors.metricNegativeDeltaColor
       }
 
       return {
