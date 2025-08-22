@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     expect_warning,
     wait_for_all_images_to_be_loaded,
 )
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 
 
 def test_displays_a_pyplot_figures(
@@ -62,15 +63,21 @@ def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
 
     content_pyplot = pyplot_elements.nth(8)
     expect(content_pyplot).to_be_visible()
-    assert_snapshot(content_pyplot, name="st_pyplot-width_content")
+    take_stable_snapshot(
+        app, content_pyplot, assert_snapshot, name="st_pyplot-width_content"
+    )
 
     stretch_pyplot = pyplot_elements.nth(9)
     expect(stretch_pyplot).to_be_visible()
-    assert_snapshot(stretch_pyplot, name="st_pyplot-width_stretch")
+    take_stable_snapshot(
+        app, stretch_pyplot, assert_snapshot, name="st_pyplot-width_stretch"
+    )
 
     pixel_pyplot = pyplot_elements.nth(10)
     expect(pixel_pyplot).to_be_visible()
-    assert_snapshot(pixel_pyplot, name="st_pyplot-width_pixel")
+    take_stable_snapshot(
+        app, pixel_pyplot, assert_snapshot, name="st_pyplot-width_pixel"
+    )
 
 
 def test_check_top_level_class(app: Page):
