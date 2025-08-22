@@ -25,7 +25,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
