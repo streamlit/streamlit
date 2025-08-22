@@ -204,8 +204,27 @@ function DateInput({
         return
       }
 
+      /**
+       * Normalize selected dates to start of day (00:00) to avoid time
+       * component inconsistencies. Specifically, BaseWeb quick select uses
+       * 12:00 for the selected date, which can cause validation errors.
+       *
+       * @see https://github.com/streamlit/streamlit/issues/12293
+       */
+      const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
+        date
+      )
+        ? date
+            .filter((d): d is Date => Boolean(d))
+            .map(d => normalizeToStartOfDay(d))
+        : normalizeToStartOfDay(date)
+
       // Handles FE date validation
-      const { errorType, newDates } = validateDates(date, minDate, maxDate)
+      const { errorType, newDates } = validateDates(
+        normalizedDateInput,
+        minDate,
+        maxDate
+      )
       if (errorType) {
         setError(createErrorMessage(errorType))
       }
@@ -511,7 +530,10 @@ function updateWidgetMgrState(
   let isValid = true
 
   // Check if date(s) outside of allowed min/max
-  const { errorType } = validateDates(vws.value, minDate, maxDate)
+  const normalizedStateValues = (vws.value || []).map(d =>
+    normalizeToStartOfDay(d)
+  )
+  const { errorType } = validateDates(normalizedStateValues, minDate, maxDate)
   if (errorType) {
     isValid = false
   }
@@ -527,8 +549,10 @@ function updateWidgetMgrState(
   }
 }
 
+type DateOrEmpty = Date | null | undefined
+
 function validateDates(
-  dates: Date | (Date | null | undefined)[] | null | undefined,
+  dates: DateOrEmpty[] | DateOrEmpty,
   minDate: Date,
   maxDate: Date | undefined
 ): ValidationResult {
@@ -571,6 +595,12 @@ function getMaxDate(element: DateInputProto): Date | undefined {
   return maxDate && maxDate.length > 0
     ? moment(maxDate, DATE_FORMAT).toDate()
     : undefined
+}
+
+function normalizeToStartOfDay(date: Date): Date {
+  const normalized = new Date(date.getTime())
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
 }
 
 export default memo(DateInput)
