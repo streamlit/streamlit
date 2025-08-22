@@ -18,6 +18,7 @@ const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
 const enforceMemo = require("./enforce-memo")
 const noForceReflowAccess = require("./no-force-reflow-access")
+const validateThemeColors = require("./validate-theme-colors")
 
 module.exports = {
   rules: {
@@ -25,5 +26,6 @@ module.exports = {
     "no-hardcoded-theme-values": noHardcodedThemeValues,
     "enforce-memo": enforceMemo,
     "no-force-reflow-access": noForceReflowAccess,
+    "validate-theme-colors": validateThemeColors,
   },
 }
