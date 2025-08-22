@@ -24,211 +24,377 @@
 const fs = require("fs")
 const path = require("path")
 
+// Cache the result since file analysis is expensive
+let cachedValidColors = null
+
 /**
- * Handle dynamic analysis of theme colors.
+ * Utility functions for file parsing
  */
-function getValidThemeColors() {
-  try {
-    const colors = new Set()
+const FileUtils = {
+  /**
+   * Read a TypeScript file
+   */
+  readTsFile(filePath) {
+    try {
+      return fs.readFileSync(filePath, "utf8")
+    } catch (error) {
+      throw new Error(`Failed to read ${filePath}: ${error.message}`)
+    }
+  },
 
-    // 1. Get base colors that are passed to createEmotionColors
-    const baseColors = getBaseThemeColors()
-    baseColors.forEach(color => colors.add(color))
+  /**
+   * Extract object properties from "const objectName = { ... }" pattern
+   */
+  extractObjectProperties(content, objectName) {
+    const objectPattern = new RegExp(
+      `(?:export\\s+)?const\\s+${objectName}\\s*=\\s*\\{([\\s\\S]*?)\\n\\}`,
+      "m"
+    )
+    const match = content.match(objectPattern)
+    if (!match) return []
 
-    // 2. Analyze createEmotionColors to see what it adds
-    const computedColors = analyzeCreateEmotionColors()
-    computedColors.forEach(color => colors.add(color))
+    const propertyPattern = /\s*(\w+):/g
+    const properties = []
+    let propMatch
+    while ((propMatch = propertyPattern.exec(match[1])) !== null) {
+      const propName = propMatch[1].trim()
+      if (propName && !propName.startsWith("//")) {
+        properties.push(propName)
+      }
+    }
+    return properties
+  },
 
-    // TODO (mgbarnes): Move to valid theme colors
-    const remainingColors = [
+  /**
+   * Extract interface properties from "interface InterfaceName { ... }" pattern
+   */
+  extractInterfaceProperties(content, interfaceName) {
+    const interfacePattern = new RegExp(
+      `interface\\s+${interfaceName}\\s*\\{([\\s\\S]*?)\\n\\}`,
+      "m"
+    )
+    const match = content.match(interfacePattern)
+    if (!match) return []
+
+    const optionalPropPattern = /\s*(\w+)\?\s*:\s*[^,\n]+/g
+    const properties = []
+    let propMatch
+    while ((propMatch = optionalPropPattern.exec(match[1])) !== null) {
+      const propName = propMatch[1].trim()
+      if (propName && !propName.startsWith("//")) {
+        properties.push(propName)
+      }
+    }
+    return properties
+  },
+
+  /**
+   * Extract type definition properties from "export type TypeName = { ... }" pattern
+   */
+  extractTypeProperties(content, typeName) {
+    const typePattern = new RegExp(
+      `export\\s+type\\s+${typeName}\\s*=\\s*\\{([\\s\\S]*?)\\}`,
+      "m"
+    )
+    const match = content.match(typePattern)
+    if (!match) return []
+
+    const propertyPattern = /^\s*(\w+):\s*\w+/gm
+    const properties = []
+    let propMatch
+    while ((propMatch = propertyPattern.exec(match[1])) !== null) {
+      const propName = propMatch[1].trim()
+      if (propName && !propName.startsWith("//")) {
+        properties.push(propName)
+      }
+    }
+    return properties
+  },
+
+  /**
+   * Extract function call parameter
+   */
+  extractFunctionCallParam(content, functionName) {
+    const callPattern = new RegExp(`${functionName}\\(([^)]+)\\)`)
+    const match = content.match(callPattern)
+    return match ? match[1].trim() : null
+  },
+
+  /**
+   * Extract import statement
+   */
+  extractImport(content, importName) {
+    const importPattern = new RegExp(
+      `import\\s+${importName}\\s+from\\s+["']([^"']+)["']`
+    )
+    const match = content.match(importPattern)
+    return match ? match[1] : null
+  },
+
+  /**
+   * Extract return object properties from function
+   */
+  extractFunctionReturnProperties(content, functionName) {
+    const functionPattern = new RegExp(
+      `export\\s+const\\s+${functionName}\\s*=[\\s\\S]*?return\\s*\\{([\\s\\S]*?)\\n\\}`,
+      "m"
+    )
+    const match = content.match(functionPattern)
+    if (!match) return []
+
+    const propertyPattern = /\s*(\w+):\s*[^,\n]+/g
+    const properties = []
+    let propMatch
+    while ((propMatch = propertyPattern.exec(match[1])) !== null) {
+      const propName = propMatch[1].trim()
+      if (propName && !propName.startsWith("//")) {
+        properties.push(propName)
+      }
+    }
+    return properties
+  },
+}
+
+/**
+ * Theme color analysis functions
+ */
+const ThemeAnalysis = {
+  basePath: path.resolve(__dirname, "../lib/src/theme"),
+
+  /**
+   * Get primitive colors from colors.ts
+   */
+  getPrimitiveColors() {
+    const colorsPath = path.join(this.basePath, "primitives/colors.ts")
+    const content = FileUtils.readTsFile(colorsPath)
+    return FileUtils.extractObjectProperties(content, "colors")
+  },
+
+  /**
+   * Get base theme colors (required + optional)
+   */
+  getBaseThemeColors() {
+    const colors = []
+
+    // Read the base theme file to find what gets passed to createEmotionColors
+    const baseThemePath = path.join(this.basePath, "emotionBaseTheme/index.ts")
+    const baseThemeContent = FileUtils.readTsFile(baseThemePath)
+
+    const createEmotionParam = FileUtils.extractFunctionCallParam(
+      baseThemeContent,
+      "createEmotionColors"
+    )
+
+    if (createEmotionParam) {
+      const importPath = FileUtils.extractImport(
+        baseThemeContent,
+        createEmotionParam
+      )
+      if (importPath) {
+        const colorsFilePath = path.resolve(
+          path.dirname(baseThemePath),
+          importPath + ".ts"
+        )
+        const colorsContent = FileUtils.readTsFile(colorsFilePath)
+
+        // Add primitive colors if included
+        if (colorsContent.includes("...colors")) {
+          colors.push(...this.getPrimitiveColors())
+        }
+
+        // Add required theme colors
+        colors.push(
+          ...FileUtils.extractObjectProperties(
+            colorsContent,
+            "requiredThemeColors"
+          )
+        )
+
+        // Add optional theme colors
+        colors.push(
+          ...FileUtils.extractInterfaceProperties(
+            colorsContent,
+            "OptionalThemeColors"
+          )
+        )
+      }
+    }
+
+    return colors
+  },
+
+  /**
+   * Get derived colors from DerivedColors type
+   */
+  getDerivedColors() {
+    const getColorsPath = path.join(this.basePath, "getColors.ts")
+    const content = FileUtils.readTsFile(getColorsPath)
+    return FileUtils.extractTypeProperties(content, "DerivedColors")
+  },
+
+  /**
+   * Get additional colors from createEmotionColors function
+   */
+  getEmotionColors() {
+    const getColorsPath = path.join(this.basePath, "getColors.ts")
+    const content = FileUtils.readTsFile(getColorsPath)
+    return FileUtils.extractFunctionReturnProperties(
+      content,
+      "createEmotionColors"
+    )
+  },
+
+  /**
+   * Get temporary colors that should eventually be removed
+   */
+  getTemporaryColors() {
+    return [
       "text", // Used in BaseButton but not properly defined
       "primaryBg", // Used in MainMenu but not properly defined
       "progressbarTrackFill", // Used in ProgressBar but can probably transition to actual theme color
     ]
-    remainingColors.forEach(color => colors.add(color))
+  },
+}
 
-    return colors
+/**
+ * Main function to get all valid theme colors
+ */
+function getValidThemeColors() {
+  if (cachedValidColors) {
+    return cachedValidColors
+  }
+
+  try {
+    const allColors = new Set()
+
+    // Collect all color types
+    const colorSources = [
+      ThemeAnalysis.getBaseThemeColors(),
+      ThemeAnalysis.getDerivedColors(),
+      ThemeAnalysis.getEmotionColors(),
+      ThemeAnalysis.getTemporaryColors(),
+    ]
+
+    colorSources.forEach(colors => {
+      colors.forEach(color => allColors.add(color))
+    })
+
+    cachedValidColors = allColors
+    return allColors
   } catch (error) {
-    console.error("Failed to analyze theme colors - ESLint rule disabled")
-    return new Set() // Disable validation entirely
-  }
-}
-
-/**
- * Get the base colors that are passed to createEmotionColors.
- * This analyzes the actual theme structure.
- */
-function getBaseThemeColors() {
-  const colors = new Set()
-
-  // Read the base theme file to see what gets passed to createEmotionColors
-  const baseThemePath = path.resolve(
-    __dirname,
-    "../lib/src/theme/emotionBaseTheme/index.ts"
-  )
-  const baseThemeContent = fs.readFileSync(baseThemePath, "utf8")
-
-  // Find: colors: createEmotionColors(genericColors)
-  const colorsCallMatch = baseThemeContent.match(
-    /colors:\s*createEmotionColors\(([^)]+)\)/
-  )
-  if (colorsCallMatch) {
-    const paramName = colorsCallMatch[1].trim()
-
-    // Find where this parameter is imported/defined
-    const importMatch = baseThemeContent.match(
-      new RegExp(`import\\s+${paramName}\\s+from\\s+["']([^"']+)["']`)
+    console.error(
+      "Failed to analyze theme colors - ESLint rule disabled:",
+      error.message
     )
-    if (importMatch) {
-      const importPath = importMatch[1]
-      const fullPath = path.resolve(
-        path.dirname(baseThemePath),
-        importPath + ".ts"
-      )
-
-      // Read the colors file
-      const colorsContent = fs.readFileSync(fullPath, "utf8")
-
-      // The file exports: export default { ...colors, ...requiredThemeColors, ...optionalThemeColors }
-      // So we need to get all the spread objects
-
-      // Get primitive colors
-      if (colorsContent.includes("...colors")) {
-        const primitiveColors = getPrimitiveColors()
-        primitiveColors.forEach(color => colors.add(color))
-      }
-
-      // Get required theme colors
-      const requiredMatch = colorsContent.match(
-        /const requiredThemeColors = \{([\s\S]*?)\n\}/m
-      )
-      if (requiredMatch) {
-        const props = requiredMatch[1].match(/\s*(\w+):\s*[^,\n]+,?/g)
-        if (props) {
-          props.forEach(prop => {
-            const propName = prop.trim().split(":")[0].trim()
-            if (propName && !propName.startsWith("//")) {
-              colors.add(propName)
-            }
-          })
-        }
-      }
-
-      // Get optional theme colors from the interface
-      const optionalMatch = colorsContent.match(
-        /interface OptionalThemeColors \{([\s\S]*?)\n\}/m
-      )
-      if (optionalMatch) {
-        const props = optionalMatch[1].match(/\s*(\w+)\?\s*:\s*[^,\n]+/g)
-        if (props) {
-          props.forEach(prop => {
-            const propName = prop.trim().split("?")[0].trim()
-            if (propName && !propName.startsWith("//")) {
-              colors.add(propName)
-            }
-          })
-        }
-      }
-    }
+    return new Set() // Disable validation on error
   }
-
-  return colors
 }
 
 /**
- * Get primitive colors from colors.ts
+ * Color validation utilities
  */
-function getPrimitiveColors() {
-  const colors = new Set()
-  const colorsPath = path.resolve(
-    __dirname,
-    "../lib/src/theme/primitives/colors.ts"
-  )
-  const colorsContent = fs.readFileSync(colorsPath, "utf8")
-
-  const colorsMatch = colorsContent.match(
-    /export const colors = \{([\s\S]*?)\n\}/m
-  )
-  if (colorsMatch) {
-    const colorProps = colorsMatch[1].match(/^\s*(\w+):\s*"[^"]+",?$/gm)
-    if (colorProps) {
-      colorProps.forEach(prop => {
-        const colorName = prop.trim().split(":")[0].trim()
-        if (colorName) colors.add(colorName)
-      })
+const ColorValidation = {
+  /**
+   * Check if a color name contains "grey" and convert it to "gray"
+   */
+  getGraySuggestion(colorName) {
+    if (/grey/i.test(colorName)) {
+      const grayVersion = colorName.replace(/grey/gi, "gray")
+      if (getValidThemeColors().has(grayVersion)) {
+        return grayVersion
+      }
     }
-  }
+    return null
+  },
 
-  return colors
+  /**
+   * Array/object methods that should not trigger validation
+   */
+  excludedMethods: new Set([
+    "map",
+    "filter",
+    "forEach",
+    "find",
+    "some",
+    "every",
+    "reduce",
+    "length",
+    "push",
+    "pop",
+    "shift",
+    "unshift",
+    "slice",
+    "splice",
+    "indexOf",
+    "includes",
+    "join",
+    "toString",
+    "valueOf",
+    "hasOwnProperty",
+    "propertyIsEnumerable",
+    "isPrototypeOf",
+    "toLocaleString",
+  ]),
 }
 
 /**
- * This is the key insight: Analyze createEmotionColors to see what it computes.
- * We don't execute it, we analyze its structure - just like @typescript-eslint does.
+ * ESLint rule implementation
  */
-function analyzeCreateEmotionColors() {
-  const colors = new Set()
-  const getColorsPath = path.resolve(
-    __dirname,
-    "../lib/src/theme/getColors.ts"
-  )
-  const getColorsContent = fs.readFileSync(getColorsPath, "utf8")
+function createRule(context) {
+  const validColors = getValidThemeColors()
 
-  // 1. Find the DerivedColors type to see what computeDerivedColors produces
-  const derivedTypeMatch = getColorsContent.match(
-    /export type DerivedColors = \{([\s\S]*?)\}/m
-  )
-  if (derivedTypeMatch) {
-    const derivedProps = derivedTypeMatch[1].match(/^\s*(\w+):\s*string$/gm)
-    if (derivedProps) {
-      derivedProps.forEach(prop => {
-        const propName = prop.trim().split(":")[0].trim()
-        if (propName) colors.add(propName)
-      })
+  function checkMemberExpression(node) {
+    let colorName = null
+    let isValidPattern = false
+
+    // Check for theme.colors.colorName pattern
+    if (
+      node.object &&
+      node.object.type === "MemberExpression" &&
+      node.object.property &&
+      node.object.property.name === "colors" &&
+      node.property &&
+      node.property.type === "Identifier"
+    ) {
+      colorName = node.property.name
+      isValidPattern = true
+    }
+    // Check for colors.colorName pattern (direct import usage)
+    else if (
+      node.object &&
+      node.object.type === "Identifier" &&
+      node.object.name === "colors" &&
+      node.property &&
+      node.property.type === "Identifier" &&
+      !ColorValidation.excludedMethods.has(node.property.name)
+    ) {
+      colorName = node.property.name
+      isValidPattern = true
+    }
+
+    if (isValidPattern && colorName && !validColors.has(colorName)) {
+      // Check if this might be a "grey" typo that should be "gray"
+      const graySuggestion = ColorValidation.getGraySuggestion(colorName)
+
+      if (graySuggestion) {
+        context.report({
+          node: node.property,
+          messageId: "typoSuggestion",
+          data: { colorName, suggestion: graySuggestion },
+        })
+      } else {
+        context.report({
+          node: node.property,
+          messageId: "invalidColor",
+          data: { colorName },
+        })
+      }
     }
   }
 
-  // 2. Analyze the return statement of createEmotionColors function specifically
-  const createEmotionColorsMatch = getColorsContent.match(
-    /export const createEmotionColors = [\s\S]*?return \{([\s\S]*?)\n\}/m
-  )
-  if (createEmotionColorsMatch) {
-    const returnContent = createEmotionColorsMatch[1]
-
-    // Find explicit property assignments (not spread operators)
-    const explicitProps = returnContent.match(/\s*(\w+):\s*[^,\n]+,?/g)
-
-    if (explicitProps) {
-      explicitProps.forEach(prop => {
-        const propName = prop.trim().split(":")[0].trim()
-        if (propName && !propName.startsWith("//")) {
-          colors.add(propName)
-        }
-      })
-    }
+  return {
+    MemberExpression: checkMemberExpression,
   }
-
-  return colors
-}
-
-// Get valid colors by analyzing the actual code structure
-const VALID_THEME_COLORS = getValidThemeColors()
-
-/**
- * Check if a color name contains "grey" and convert it to the "gray" equivalent
- */
-function getGraySuggestion(colorName) {
-  // Check if the color contains "grey" (case-insensitive)
-  if (/grey/i.test(colorName)) {
-    // Convert all variations of "grey" to "gray" (lowercase)
-    const grayVersion = colorName.replace(/grey/gi, "gray")
-
-    // Check if this gray version exists in our valid colors
-    if (VALID_THEME_COLORS.has(grayVersion)) {
-      return grayVersion
-    }
-  }
-  return null
 }
 
 module.exports = {
@@ -247,87 +413,5 @@ module.exports = {
     },
     schema: [],
   },
-
-  create(context) {
-    return {
-      MemberExpression(node) {
-        let colorName = null
-        let isValidPattern = false
-
-        // Check for theme.colors.colorName pattern
-        if (
-          node.object &&
-          node.object.type === "MemberExpression" &&
-          node.object.property &&
-          node.object.property.name === "colors" &&
-          node.property &&
-          node.property.type === "Identifier"
-        ) {
-          colorName = node.property.name
-          isValidPattern = true
-        }
-        // Check for colors.colorName pattern (direct import usage)
-        // But exclude common array/object methods to avoid false positives
-        else if (
-          node.object &&
-          node.object.type === "Identifier" &&
-          node.object.name === "colors" &&
-          node.property &&
-          node.property.type === "Identifier" &&
-          // Exclude common array/object methods
-          ![
-            "map",
-            "filter",
-            "forEach",
-            "find",
-            "some",
-            "every",
-            "reduce",
-            "length",
-            "push",
-            "pop",
-            "shift",
-            "unshift",
-            "slice",
-            "splice",
-            "indexOf",
-            "includes",
-            "join",
-            "toString",
-            "valueOf",
-            "hasOwnProperty",
-            "propertyIsEnumerable",
-            "isPrototypeOf",
-            "toLocaleString",
-          ].includes(node.property.name)
-        ) {
-          colorName = node.property.name
-          isValidPattern = true
-        }
-
-        if (
-          isValidPattern &&
-          colorName &&
-          !VALID_THEME_COLORS.has(colorName)
-        ) {
-          // Check if this might be a "grey" typo that should be "gray"
-          const graySuggestion = getGraySuggestion(colorName)
-
-          if (graySuggestion) {
-            context.report({
-              node: node.property,
-              messageId: "typoSuggestion",
-              data: { colorName, suggestion: graySuggestion },
-            })
-          } else {
-            context.report({
-              node: node.property,
-              messageId: "invalidColor",
-              data: { colorName },
-            })
-          }
-        }
-      },
-    }
-  },
+  create: createRule,
 }
