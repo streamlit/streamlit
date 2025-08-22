@@ -65,6 +65,8 @@ ColumnType: TypeAlias = Literal[
     "json",
 ]
 
+ChartColor: TypeAlias = Union[Literal["trend", "trend-inverse"], str]
+
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
@@ -108,18 +110,21 @@ class BarChartColumnConfig(TypedDict):
     type: Literal["bar_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class LineChartColumnConfig(TypedDict):
     type: Literal["line_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class AreaChartColumnConfig(TypedDict):
     type: Literal["area_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class ImageColumnConfig(TypedDict):
@@ -1071,6 +1076,7 @@ def BarChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a bar chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1116,6 +1122,18 @@ def BarChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "trend", "trend-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"trend"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1155,7 +1173,9 @@ def BarChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        type_config=BarChartColumnConfig(type="bar_chart", y_min=y_min, y_max=y_max),
+        type_config=BarChartColumnConfig(
+            type="bar_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1168,6 +1188,7 @@ def LineChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a line chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1213,10 +1234,22 @@ def LineChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "trend", "trend-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"trend"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
-    >>> import streamlit as st
+    >>> import streamlit as sts
     >>>
     >>> data_df = pd.DataFrame(
     >>>     {
@@ -1253,7 +1286,9 @@ def LineChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        type_config=LineChartColumnConfig(type="line_chart", y_min=y_min, y_max=y_max),
+        type_config=LineChartColumnConfig(
+            type="line_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1266,6 +1301,7 @@ def AreaChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure an area chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1311,6 +1347,18 @@ def AreaChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "trend", "trend-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"trend"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1351,7 +1399,9 @@ def AreaChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        type_config=AreaChartColumnConfig(type="area_chart", y_min=y_min, y_max=y_max),
+        type_config=AreaChartColumnConfig(
+            type="area_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 

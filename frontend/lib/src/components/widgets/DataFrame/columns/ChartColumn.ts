@@ -21,6 +21,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
+import { EmotionTheme, getDividerColors } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -39,6 +40,41 @@ export const LINE_CHART_TYPE = "line_chart"
 export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
 
+/**
+ * Get the color mapping to map a user-defined color to the our
+ * theme color (markdown text color)
+ *
+ * @param theme The theme to use.
+ * @returns The color mapping.
+ */
+const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
+  const dividerColor = getDividerColors(theme)
+  return new Map(
+    Object.entries({
+      // red: theme.colors.red,
+      // blue: theme.colors.blue,
+      // green: theme.colors.green,
+      // yellow: theme.colors.yellow,
+      // violet: theme.colors.violet,
+      // purple: theme.colors.purple,
+      // orange: theme.colors.orange,
+      // gray: theme.colors.gray,
+      // grey: theme.colors.gray,
+      // primary: theme.colors.primary,
+      red: dividerColor.red,
+      blue: dividerColor.blue,
+      green: dividerColor.green,
+      yellow: dividerColor.yellow,
+      violet: dividerColor.violet,
+      purple: dividerColor.purple,
+      orange: dividerColor.orange,
+      gray: dividerColor.gray,
+      grey: dividerColor.gray,
+      primary: dividerColor.primary,
+    })
+  )
+}
+
 export interface ChartColumnParams {
   /**
    * The minimum value used for plotting the chart. Defaults to 0.
@@ -48,6 +84,13 @@ export interface ChartColumnParams {
    * The maximum value used for plotting the chart. Defaults to 1.
    */
   readonly y_max?: number
+  /**
+   * The color to use for the charts. Can be:
+   * - trend & trend-inverse: To color the charts green or red depending on the data.
+   * - red, blue, green, yellow, orange, violet, gray/grey, primary
+   * - a color value compatible with canvas rendering
+   */
+  readonly color?: string
 }
 
 /**
@@ -57,17 +100,31 @@ export interface ChartColumnParams {
 function BaseChartColumn(
   kind: string,
   props: BaseColumnProps,
-  chart_type: "line" | "bar" | "area"
+  chart_type: "line" | "bar" | "area",
+  theme: EmotionTheme
 ): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
       y_min: null,
       y_max: null,
+      color: undefined,
     },
     // User parameters:
     props.columnTypeOptions
   ) as ChartColumnParams
+
+  const colorMapping = getColorMapping(theme)
+
+  let defaultColor: string | undefined
+  if (parameters.color === "trend" || parameters.color === "trend-inverse") {
+    defaultColor = colorMapping.get("green")
+    // defaultColor = getIncreasingGreen(theme)
+  } else {
+    defaultColor = parameters.color
+      ? (colorMapping.get(parameters.color) ?? parameters.color)
+      : undefined
+  }
 
   const cellTemplate: SparklineCellType = {
     kind: GridCellKind.Custom,
@@ -79,6 +136,7 @@ function BaseChartColumn(
       values: [],
       displayValues: [],
       graphKind: chart_type,
+      color: defaultColor,
       yAxis: [parameters.y_min ?? 0, parameters.y_max ?? 1],
     },
   }
@@ -187,6 +245,26 @@ function BaseChartColumn(
         normalizedChartData = convertedChartData
       }
 
+      // Check if the first value is larger than the second value
+      let chartColor = defaultColor
+      if (
+        parameters.color === "trend" &&
+        // Chart is pointing down
+        normalizedChartData[0] >
+          normalizedChartData[normalizedChartData.length - 1]
+      ) {
+        chartColor = colorMapping.get("red")
+        // chartColor = getDecreasingRed(theme)
+      } else if (
+        parameters.color === "trend-inverse" &&
+        // Chart is pointing up:
+        normalizedChartData[0] <
+          normalizedChartData[normalizedChartData.length - 1]
+      ) {
+        chartColor = colorMapping.get("red")
+        // chartColor = getDecreasingRed(theme)
+      }
+
       return {
         ...cellTemplate,
         copyData: convertedChartData.join(","), // Column sorting is done via the copyData value
@@ -195,6 +273,7 @@ function BaseChartColumn(
           values: normalizedChartData,
           displayValues: convertedChartData.map(v => formatNumber(v)),
           yAxis: [minValueDefault, maxValueDefault],
+          color: chartColor,
         },
         isMissingValue: isNullOrUndefined(data),
       } as SparklineCellType
@@ -217,8 +296,11 @@ function BaseChartColumn(
  *
  * This column type is currently read-only.
  */
-export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn(LINE_CHART_TYPE, props, "line")
+export function LineChartColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
+  return BaseChartColumn(LINE_CHART_TYPE, props, "line", theme)
 }
 
 LineChartColumn.isEditableType = false
@@ -229,8 +311,11 @@ LineChartColumn.isEditableType = false
  *
  * This column type is currently read-only.
  */
-export function BarChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn(BAR_CHART_TYPE, props, "bar")
+export function BarChartColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
+  return BaseChartColumn(BAR_CHART_TYPE, props, "bar", theme)
 }
 
 BarChartColumn.isEditableType = false
@@ -241,8 +326,11 @@ BarChartColumn.isEditableType = false
  *
  * This column type is currently read-only.
  */
-export function AreaChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn(AREA_CHART_TYPE, props, "area")
+export function AreaChartColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
+  return BaseChartColumn(AREA_CHART_TYPE, props, "area", theme)
 }
 
 AreaChartColumn.isEditableType = false
