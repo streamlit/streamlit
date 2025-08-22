@@ -796,22 +796,6 @@ class VegaChartsMixin:
         chart_width = width if isinstance(width, int) else None
         chart_height = height if isinstance(height, int) else None
 
-        use_container_width_for_chart = width == "stretch"
-
-        chart, add_rows_metadata = generate_chart(
-            chart_type=ChartType.LINE,
-            data=data,
-            x_from_user=x,
-            y_from_user=y,
-            x_axis_label=x_label,
-            y_axis_label=y_label,
-            color_from_user=color,
-            size_from_user=None,
-            width=chart_width,
-            height=chart_height,
-            use_container_width=use_container_width_for_chart,
-        )
-
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
@@ -825,6 +809,20 @@ class VegaChartsMixin:
                 show_in_browser=False,
             )
             width = "stretch" if use_container_width else "content"
+
+        chart, add_rows_metadata = generate_chart(
+            chart_type=ChartType.LINE,
+            data=data,
+            x_from_user=x,
+            y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
+            color_from_user=color,
+            size_from_user=None,
+            width=chart_width,
+            height=chart_height,
+            use_container_width=(width == "stretch"),
+        )
 
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
