@@ -245,7 +245,8 @@ const ThemeAnalysis = {
   },
 
   /**
-   * Get temporary colors that should eventually be removed
+   * Get exception colors not defined in our theme
+   * TODO: (mgbarnes) Remove remaining exception
    */
   getTemporaryColors() {
     return [
