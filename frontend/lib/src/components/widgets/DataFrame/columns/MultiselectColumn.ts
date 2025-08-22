@@ -16,7 +16,6 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
-import uniqBy from "lodash/uniqBy"
 
 import { blend, EmotionTheme, getMarkdownBgColors } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
@@ -138,10 +137,7 @@ function MultiselectColumn(
   ) as MultiselectColumnParams
 
   const preparedOptions = prepareOptions(parameters.options, theme)
-  const uniqueOptions = uniqBy(
-    preparedOptions.map(opt => opt.value),
-    (x: string) => x
-  )
+  const uniqueOptions = new Set(preparedOptions.map(opt => opt.value))
 
   const cellTemplate: MultiSelectCellType = {
     kind: GridCellKind.Custom,
@@ -189,7 +185,7 @@ function MultiselectColumn(
         parameters.accept_new_options === false
       ) {
         // Filter out values that are not in the options list:
-        cellData = cellData.filter((x: string) => uniqueOptions.includes(x))
+        cellData = cellData.filter((x: string) => uniqueOptions.has(x))
         if (cellData.length === 0) {
           return getErrorCell(
             toSafeString(data),
