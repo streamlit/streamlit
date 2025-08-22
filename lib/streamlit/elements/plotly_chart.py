@@ -552,12 +552,14 @@ class PlotlyMixin:
         plotly_chart_proto.theme = theme or ""
         plotly_chart_proto.form_id = current_form_id(self.dg)
 
+
         if config is None:
             config = dict(kwargs.get("config", {}))
-        # Copy over some kwargs to config dict. Plotly does the same in plot().
-        # TODO: Remove this once we remove the kwargs support.
-        config.setdefault("showLink", kwargs.get("show_link", False))
-        config.setdefault("linkText", kwargs.get("link_text", False))
+            # Copy over some kwargs to config dict. Plotly does the same in plot().
+            # TODO: Remove this once we remove the kwargs support.
+            config.setdefault("showLink", kwargs.get("show_link", False))
+            config.setdefault("linkText", kwargs.get("link_text", False))
+
 
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
