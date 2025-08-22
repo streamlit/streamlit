@@ -35,40 +35,40 @@ st.set_page_config(layout="wide")
 st.header("Index types")
 
 st.subheader("String Index (pd.Index)")
-st.dataframe(BASE_TYPES_DF.set_index("string"), use_container_width=True)
+st.dataframe(BASE_TYPES_DF.set_index("string"), width="stretch")
 
 st.subheader("Float64 Index (pd.Float64Index)")
-st.dataframe(NUMBER_TYPES_DF.set_index("float64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("float64"), width="stretch")
 
 st.subheader("Int64 Index (pd.Int64Index)")
-st.dataframe(NUMBER_TYPES_DF.set_index("int64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("int64"), width="stretch")
 
 st.subheader("Uint64 Index (pd.UInt64Index)")
-st.dataframe(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("uint64"), width="stretch")
 
 st.subheader("Datetime Index (pd.DatetimeIndex)")
-st.dataframe(DATETIME_TYPES_DF.set_index("datetime"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("datetime"), width="stretch")
 
 st.subheader("Date Index (pd.Index)")
-st.dataframe(DATETIME_TYPES_DF.set_index("date"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("date"), width="stretch")
 
 st.subheader("Time Index (pd.Index)")
-st.dataframe(DATETIME_TYPES_DF.set_index("time"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("time"), width="stretch")
 
 st.subheader("Interval Index (pd.IntervalIndex)")
-st.dataframe(INTERVAL_TYPES_DF.set_index("int64_both"), use_container_width=True)
+st.dataframe(INTERVAL_TYPES_DF.set_index("int64_both"), width="stretch")
 
 st.subheader("List Index (pd.Index)")
-st.dataframe(LIST_TYPES_DF.set_index("string_list"), use_container_width=True)
+st.dataframe(LIST_TYPES_DF.set_index("string_list"), width="stretch")
 
 st.subheader("Multi Index (pd.MultiIndex)")
-st.dataframe(BASE_TYPES_DF.set_index(["string", "int64"]), use_container_width=True)
+st.dataframe(BASE_TYPES_DF.set_index(["string", "int64"]), width="stretch")
 
 st.subheader("Categorical Index (pd.CategoricalIndex)")
-st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)
+st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), width="stretch")
 
 st.subheader("Period Index (pd.PeriodIndex)")
-st.dataframe(PERIOD_TYPES_DF.set_index("D"), use_container_width=True)
+st.dataframe(PERIOD_TYPES_DF.set_index("D"), width="stretch")
 
 st.subheader("Timedelta Index (pd.TimedeltaIndex)")
-st.dataframe(SPECIAL_TYPES_DF.set_index("timedelta"), use_container_width=True)
+st.dataframe(SPECIAL_TYPES_DF.set_index("timedelta"), width="stretch")

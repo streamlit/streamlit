@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
@@ -26,7 +27,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -62,6 +63,7 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "multiselect",
     "json",
 ]
 
@@ -128,6 +130,18 @@ class ImageColumnConfig(TypedDict):
 
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
+
+
+class MultiselectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | None]
+
+
+class MultiselectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[Iterable[MultiselectOption | str] | None]
+    accept_new_options: NotRequired[bool | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -252,6 +266,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | MultiselectColumnConfig
         | JsonColumnConfig
         | None
     )
@@ -998,7 +1013,6 @@ def SelectboxColumn(
         the label to be shown for that option. If this is ``None`` (default),
         the raw option is used as the label.
 
-
     Examples
     --------
     >>> import pandas as pd
@@ -1549,6 +1563,196 @@ def ListColumn(
         required=required,
         default=None if default is None else list(default),
         type_config=ListColumnConfig(type="list"),
+    )
+
+
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+    options: Iterable[str] | None = None,
+    accept_new_options: bool | None = None,
+    color: str | Iterable[str] | None = None,
+    format_func: Callable[[str], str] | None = None,
+) -> ColumnConfig:
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``. When used with ``st.data_editor``, editing will
+    be enabled with a multiselect widget.
+
+    This column type is also useful for displaying colored labels in a read-only ``st.dataframe``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend to disable editing for these columns or conversion of all list values
+        to strings.
+
+    Parameters
+    ----------
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of "small", "medium", or "large".
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    options: Iterable of str or None
+        The options that can be selected during editing.
+
+    accept_new_options: bool or None
+        Whether the user can add selections that aren't included in ``options``.
+        If this is ``False`` (default), the user can only select from the
+        items in ``options``. If this is ``True``, the user can enter new
+        items that don't exist in ``options``.
+
+        When a user enters and selects a new item, it is included in the
+        returned cell list value as a string. The new item is not added to
+        the options drop-down menu.
+
+    color: str or Iterable of str or None
+        The color to use for different options. This can be:
+
+        - None (default): the primary color is used for all options.
+        - A single color value that is used for all options. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+        - An iterable of color values that are mapped to the options.
+
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
+
+    Examples
+    --------
+    **Example 1: Editable multiselect column**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             help="The categories of the app",
+    >>>             options=[
+    >>>                 "exploration",
+    >>>                 "visualization",
+    >>>                 "llm",
+    >>>             ],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-1.streamlit.app/
+        height: 300px
+
+    **Example 2: Colored tags for st.dataframe**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             options=["exploration", "visualization", "llm"],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-2.streamlit.app/
+        height: 300px
+    """
+
+    # Process options with color and format_func:
+    processed_options: list[MultiselectOption] | None = None
+    if options is not None:
+        processed_options = []
+
+        # Convert color to an iterator
+        color_iter: Iterator[str] | None = None
+        if color is not None:
+            if isinstance(color, str):
+                # Single color for all options
+                color_iter = itertools.repeat(color)
+            else:
+                # Iterable of colors - cycle through them
+                color_iter = itertools.cycle(color)
+
+        for option in options:
+            # Start with the option value
+            option_dict = MultiselectOption(value=option)
+
+            # Apply format_func to generate label if not already present
+            if format_func is not None:
+                option_dict["label"] = format_func(option_dict["value"])
+
+            # Apply color if provided and not already present
+            if color_iter is not None and "color" not in option_dict:
+                option_dict["color"] = next(color_iter)
+
+            processed_options.append(option_dict)
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
+        type_config=MultiselectColumnConfig(
+            type="multiselect",
+            options=processed_options,
+            accept_new_options=accept_new_options,
+        ),
     )
 
 

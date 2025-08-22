@@ -14,8 +14,19 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_prefixed_markdown,
+    reset_focus,
+)
+from e2e_playwright.shared.dataframe_utils import (
+    click_on_cell,
+    expect_canvas_to_be_visible,
+    get_open_cell_overlay,
+)
+
+_NUM_DATAFRAME_ELEMENTS = 23
 
 
 def test_data_editor_supports_various_configurations(
@@ -25,7 +36,7 @@ def test_data_editor_supports_various_configurations(
     # The dataframe config test is already testing with themed apps, so using the
     # default theme only is fine here.
     elements = app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(22)
+    expect(elements).to_have_count(_NUM_DATAFRAME_ELEMENTS)
 
     # The dataframe component might require a bit more time for rendering the canvas
     app.wait_for_timeout(500)
@@ -52,6 +63,70 @@ def test_data_editor_supports_various_configurations(
     assert_snapshot(elements.nth(19), name="st_data_editor-bar_chart_column")
     assert_snapshot(elements.nth(20), name="st_data_editor-line_chart_column")
     assert_snapshot(elements.nth(21), name="st_data_editor-image_column")
+    assert_snapshot(elements.nth(22), name="st_data_editor-multiselect_column")
+
+
+def test_multiselect_cell_editing(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the multiselect cell can be edited."""
+    multiselect_column_df = themed_app.get_by_test_id("stDataFrame").nth(22)
+    expect_canvas_to_be_visible(multiselect_column_df)
+
+    # Click on the first cell of the list column
+    click_on_cell(multiselect_column_df, 1, 0, double_click=True, column_width="medium")
+
+    # Get the cell overlay and check if it looks correct:
+    cell_overlay = get_open_cell_overlay(themed_app)
+    expect(cell_overlay).to_contain_text("Exploration")
+    assert_snapshot(cell_overlay, name="st_data_editor-multiselect_col_editor")
+
+    # Change the value
+    cell_overlay.locator("input").fill("geography")
+    # Press Enter to insert the text as list value:
+    themed_app.keyboard.press("Enter")
+    expect(cell_overlay).to_contain_text("Geography")
+
+    # Press Enter again to apply the change to the dataframe:
+    themed_app.keyboard.press("Enter")
+    # Reset focus to ensure that the overlay is closed:
+    reset_focus(themed_app)
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(
+        themed_app, "Multiselect column return:", "geography", exact_match=False
+    )
+
+
+def test_multiselect_cell_editing_with_new_options(app: Page):
+    """Test that the multiselect allows adding new values when accept_new_options is True."""
+    multiselect_column_df = app.get_by_test_id("stDataFrame").nth(22)
+    expect_canvas_to_be_visible(multiselect_column_df)
+
+    # Click on the first cell of the second multiselect column
+    click_on_cell(multiselect_column_df, 1, 1, double_click=True, column_width="medium")
+
+    # Get the cell overlay and check if it looks correct:
+    cell_overlay = get_open_cell_overlay(app)
+    expect(cell_overlay).to_contain_text("Option a")
+
+    # Type in a new value:
+    cell_overlay.locator("input").fill("new value")
+    # Press Enter to insert the text as list value:
+    app.keyboard.press("Enter")
+    expect(cell_overlay).to_contain_text("new value")
+
+    # Press Enter again to apply the change to the dataframe:
+    app.keyboard.press("Enter")
+    # Reset focus to ensure that the overlay is closed:
+    reset_focus(app)
+    wait_for_app_run(app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(
+        app, "Multiselect column return:", "new value", exact_match=False
+    )
 
 
 def test_check_top_level_class(app: Page):
