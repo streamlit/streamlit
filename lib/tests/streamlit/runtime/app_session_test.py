@@ -719,6 +719,13 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "redColor": "red",
+        "orangeColor": "orange",
+        "yellowColor": "yellow",
+        "blueColor": "blue",
+        "greenColor": "green",
+        "violetColor": "violet",
+        "grayColor": "gray",
     }
 
     if overrides.get("sidebar") is not None:
@@ -795,6 +802,13 @@ def _mock_get_options_for_section(
             "#158237",
             "#177233",
         ],
+        "redColor": "#7d353b",
+        "orangeColor": "#d95a00",
+        "yellowColor": "#916e10",
+        "blueColor": "#004280",
+        "greenColor": "#177233",
+        "violetColor": "#3f3163",
+        "grayColor": "#0e1117",
     }
 
     for k, v in overrides.items():
@@ -1261,6 +1275,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
                 }
             )
         )
@@ -1304,6 +1325,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
                 }
             )
         )
@@ -1347,6 +1375,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1368,6 +1403,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "textColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "redColor": None,
+                        "orangeColor": None,
+                        "yellowColor": None,
+                        "blueColor": None,
+                        "greenColor": None,
+                        "violetColor": None,
+                        "grayColor": None,
                     },
                 }
             )
@@ -1406,6 +1448,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("red_color")
+        assert not new_session_msg.custom_theme.HasField("orange_color")
+        assert not new_session_msg.custom_theme.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.HasField("blue_color")
+        assert not new_session_msg.custom_theme.HasField("green_color")
+        assert not new_session_msg.custom_theme.HasField("violet_color")
+        assert not new_session_msg.custom_theme.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.heading_font_sizes
@@ -1446,6 +1495,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("blue_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("green_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("violet_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
@@ -1485,6 +1541,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.red_color == "#7d353b"
+        assert new_session_msg.custom_theme.orange_color == "#d95a00"
+        assert new_session_msg.custom_theme.yellow_color == "#916e10"
+        assert new_session_msg.custom_theme.blue_color == "#004280"
+        assert new_session_msg.custom_theme.green_color == "#177233"
+        assert new_session_msg.custom_theme.violet_color == "#3f3163"
+        assert new_session_msg.custom_theme.gray_color == "#0e1117"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1587,6 +1650,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
         )
+        assert new_session_msg.custom_theme.sidebar.red_color == "red"
+        assert new_session_msg.custom_theme.sidebar.orange_color == "orange"
+        assert new_session_msg.custom_theme.sidebar.yellow_color == "yellow"
+        assert new_session_msg.custom_theme.sidebar.blue_color == "blue"
+        assert new_session_msg.custom_theme.sidebar.green_color == "green"
+        assert new_session_msg.custom_theme.sidebar.violet_color == "violet"
+        assert new_session_msg.custom_theme.sidebar.gray_color == "gray"
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0

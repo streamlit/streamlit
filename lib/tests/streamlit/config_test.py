@@ -537,6 +537,13 @@ class ConfigTest(unittest.TestCase):
                 "theme.showSidebarBorder",
                 "theme.chartCategoricalColors",
                 "theme.chartSequentialColors",
+                "theme.redColor",
+                "theme.orangeColor",
+                "theme.yellowColor",
+                "theme.blueColor",
+                "theme.greenColor",
+                "theme.violetColor",
+                "theme.grayColor",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -557,6 +564,13 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.linkUnderline",
                 "theme.sidebar.codeBackgroundColor",
                 "theme.sidebar.dataframeHeaderBackgroundColor",
+                "theme.sidebar.redColor",
+                "theme.sidebar.orangeColor",
+                "theme.sidebar.yellowColor",
+                "theme.sidebar.blueColor",
+                "theme.sidebar.greenColor",
+                "theme.sidebar.violetColor",
+                "theme.sidebar.grayColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -794,6 +808,13 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": None,
             "chartCategoricalColors": None,
             "chartSequentialColors": None,
+            "redColor": None,
+            "orangeColor": None,
+            "yellowColor": None,
+            "blueColor": None,
+            "greenColor": None,
+            "violetColor": None,
+            "grayColor": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -846,6 +867,13 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
+        config._set_option("theme.redColor", "red", "test")
+        config._set_option("theme.orangeColor", "orange", "test")
+        config._set_option("theme.yellowColor", "yellow", "test")
+        config._set_option("theme.blueColor", "blue", "test")
+        config._set_option("theme.greenColor", "green", "test")
+        config._set_option("theme.violetColor", "violet", "test")
+        config._set_option("theme.grayColor", "gray", "test")
 
         expected = {
             "base": "dark",
@@ -888,6 +916,13 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
+            "redColor": "red",
+            "orangeColor": "orange",
+            "yellowColor": "yellow",
+            "blueColor": "blue",
+            "greenColor": "green",
+            "violetColor": "violet",
+            "grayColor": "gray",
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -919,6 +954,13 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
         )
+        config._set_option("theme.sidebar.redColor", "#7d353b", "test")
+        config._set_option("theme.sidebar.orangeColor", "#d95a00", "test")
+        config._set_option("theme.sidebar.yellowColor", "#916e10", "test")
+        config._set_option("theme.sidebar.blueColor", "#004280", "test")
+        config._set_option("theme.sidebar.greenColor", "#177233", "test")
+        config._set_option("theme.sidebar.violetColor", "#3f3163", "test")
+        config._set_option("theme.sidebar.grayColor", "#0e1117", "test")
 
         expected = {
             "primaryColor": "#FFF000",
@@ -941,6 +983,13 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "redColor": "#7d353b",
+            "orangeColor": "#d95a00",
+            "yellowColor": "#916e10",
+            "blueColor": "#004280",
+            "greenColor": "#177233",
+            "violetColor": "#3f3163",
+            "grayColor": "#0e1117",
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 
