@@ -59,7 +59,7 @@ function GraphVizChart({
 
   // Determine if we should use container width based on layout config or legacy prop
   const shouldUseContainerWidth =
-    shouldChildrenStretch(widthConfig) || element.useContainerWidth
+    shouldWidthStretch(widthConfig) || element.useContainerWidth
 
   useEffect(() => {
     try {

@@ -21,7 +21,10 @@ import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
 import { streamlit } from "@streamlit/protobuf"
 
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import {
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
@@ -104,9 +107,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
   )
 
   const useStretchWidth =
-    shouldChildrenStretch(widthConfig) || inputElement.useContainerWidth
+    shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
 
-  const useStretchHeight = shouldChildrenStretch(heightConfig)
+  const useStretchHeight = shouldHeightStretch(heightConfig)
 
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
