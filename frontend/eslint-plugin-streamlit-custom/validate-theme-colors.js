@@ -249,7 +249,6 @@ const ThemeAnalysis = {
    */
   getTemporaryColors() {
     return [
-      "text", // Used in BaseButton but not properly defined
       "primaryBg", // Used in MainMenu but not properly defined
       "progressbarTrackFill", // Used in ProgressBar but can probably transition to actual theme color
     ]
