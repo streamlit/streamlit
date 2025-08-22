@@ -1616,7 +1616,8 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
     def test_line_chart_use_container_width_deprecation(
         self, use_container_width: bool, expected_width_spec: str, mock_warning: Mock
     ):
-        """Test that use_container_width shows deprecation warning and maps correctly."""
+        """Test that use_container_width shows deprecation warning and is correctly translated to
+        the new width parameter."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
         st.line_chart(df, x="a", y="b", use_container_width=use_container_width)
@@ -1626,7 +1627,7 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        # Should map to correct width configuration
+        # Should be translated to the correct width configuration
         assert el.width_config.WhichOneof("width_spec") == expected_width_spec
         assert getattr(el.width_config, expected_width_spec) is True
 
