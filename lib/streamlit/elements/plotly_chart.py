@@ -316,6 +316,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
+        config: dict | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
@@ -415,6 +416,12 @@ class PlotlyMixin:
 
             All selections modes are activated by default.
 
+        config : dict or None
+            A dictionary of Plotly configuration options. This is passed to
+            Plotly's ``plot()`` function. For more information about Plotly
+            configuration options, see Plotly's documentation on `Configuration
+            in Python <https://plotly.com/python/configuration-options/>`_.
+
         **kwargs
             Additional arguments accepted by Plotly's ``plot()`` function.
 
@@ -422,6 +429,9 @@ class PlotlyMixin:
             options. For more information about Plotly configuration options,
             see Plotly's documentation on `Configuration in Python
             <https://plotly.com/python/configuration-options/>`_.
+
+            .. deprecated:: 1.48.2
+               The keyword arguments are deprecated. use ``config`` instead.
 
         Returns
         -------
@@ -542,8 +552,10 @@ class PlotlyMixin:
         plotly_chart_proto.theme = theme or ""
         plotly_chart_proto.form_id = current_form_id(self.dg)
 
-        config = dict(kwargs.get("config", {}))
+        if not config:
+            config = dict(kwargs.get("config", {}))
         # Copy over some kwargs to config dict. Plotly does the same in plot().
+        # TODO: Remove this once we remove the kwargs support.
         config.setdefault("showLink", kwargs.get("show_link", False))
         config.setdefault("linkText", kwargs.get("link_text", False))
 
