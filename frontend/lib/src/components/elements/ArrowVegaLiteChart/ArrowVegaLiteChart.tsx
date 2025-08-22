@@ -237,7 +237,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
         useContainerWidth={useStretchWidth}
-        isFullScreen={isFullScreen}
+        useContainerHeight={useStretchHeight}
         ref={containerRef}
       />
     </StyledToolbarElementContainer>
