@@ -505,7 +505,7 @@ class PlotlyMixin:
 
         if kwargs:
             show_deprecation_warning(
-                "The keyword arguments has been deprecated and will be removed "
+                "The keyword arguments have been deprecated and will be removed "
                 "in a future release. Use `config` instead to specify Plotly "
                 "configuration options."
             )
