@@ -76,6 +76,14 @@ describe("st.tabs", () => {
     })
   })
 
+  it("sets the correct default tab index", () => {
+    const node = makeTabsNode(3)
+    node.deltaBlock.tabContainer = { defaultTabIndex: 2 }
+    render(<Tabs {...getProps({ node })} />)
+    const tabs = screen.getAllByRole("tab")
+    expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+  })
+
   it("doesn't disable tabs when widgets are disabled", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
