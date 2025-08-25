@@ -31,6 +31,15 @@ import streamlit as st
 
 st.set_page_config(initial_sidebar_state="expanded", layout="wide")
 
+# Better show the app content by minimizing the dead space
+st.html("""
+    <style>
+        .stMainBlockContainer {
+            padding-top: 4rem;
+        }
+    </style>
+""")
+
 st.header("Custom Colors :rainbow[App]")
 
 
@@ -93,7 +102,7 @@ with col2:
         assistant_message.write("Hello :dog:")
 
 with col3:
-    st.subheader("Dividers (Main Colors):")
+    st.subheader("Dividers - Main Colors:")
     st.subheader("Red test", divider="red")
     st.subheader("Orange test", divider="orange")
     st.subheader("Yellow test", divider="yellow")
@@ -103,7 +112,7 @@ with col3:
     st.subheader("Gray test", divider="gray")
 
 with st.sidebar:
-    st.header("Dividers (Main Colors):")
+    st.header("Dividers - Main Colors:")
     st.subheader("Red test", divider="red")
     st.subheader("Orange test", divider="orange")
     st.subheader("Yellow test", divider="yellow")
