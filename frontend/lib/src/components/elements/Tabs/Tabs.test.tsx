@@ -84,6 +84,22 @@ describe("st.tabs", () => {
     expect(tabs[2]).toHaveAttribute("aria-selected", "true")
   })
 
+  it("selects the first occurrence when default points to the second duplicate", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTab("Unique"), makeTab("Dupe"), makeTab("Dupe")],
+      new BlockProto({ allowEmpty: true })
+    )
+    node.deltaBlock.tabContainer = { defaultTabIndex: 2 }
+
+    render(<Tabs {...getProps({ node })} />)
+    const tabs = screen.getAllByRole("tab")
+
+    // Default points to index 2 ("Dupe"), but since there is a duplicate at index 1,
+    // the first occurrence by label should be selected (index 1), not 0.
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true")
+  })
+
   it("doesn't disable tabs when widgets are disabled", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")

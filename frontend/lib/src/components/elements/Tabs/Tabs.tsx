@@ -53,10 +53,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
-  const [activeTabName, setActiveTabName] = useState<string>(
-    // @ts-expect-error
-    node.children[defaultTabIndex].deltaBlock.tab.label || "0"
-  )
+  const [activeTabName, setActiveTabName] = useState<string>(() => {
+    const tab = node.children[defaultTabIndex] as BlockNode
+
+    return tab?.deltaBlock?.tab?.label ?? "0"
+  })
 
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()

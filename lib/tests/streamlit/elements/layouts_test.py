@@ -974,6 +974,26 @@ class TabsTest(DeltaGeneratorTestCase):
 
         assert labels == tabs
 
+    def test_default_tab_with_duplicate_labels_picks_first_occurrence_zero(self):
+        """If default label appears multiple times, pick the first occurrence (index 0)."""
+        tabs = ["Dupe", "Unique", "Dupe"]
+        st.tabs(tabs, default="Dupe")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 0
+
+    def test_default_tab_with_duplicate_labels_picks_first_occurrence_non_zero(self):
+        """If the first occurrence is not at index 0, pick that non-zero index."""
+        tabs = ["X", "Dupe", "Unique", "Dupe"]
+        st.tabs(tabs, default="Dupe")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 1
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog
