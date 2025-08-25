@@ -33,15 +33,15 @@ df = pd.DataFrame(
 
 
 st.header(":material/visibility_off: Hide index parameter:")
-st.dataframe(df, hide_index=True, use_container_width=False)
-st.dataframe(df, hide_index=False, use_container_width=False)
+st.dataframe(df, hide_index=True, width="content")
+st.dataframe(df, hide_index=False, width="content")
 
 st.header("Column order parameter:")
 column_order = ["col_4", "col_3", "col_0"]
 if st.button("Change column order"):
     column_order = ["col_0", "col_3", "col_4"]
 
-st.dataframe(df, column_order=column_order, use_container_width=False)
+st.dataframe(df, column_order=column_order, width="content")
 
 st.header("Set column labels:")
 st.dataframe(
@@ -57,7 +57,7 @@ st.header("Hide columns:")
 st.dataframe(
     df,
     column_config={"col_1": None, "col_3": {"hidden": True}},
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set column width:")
@@ -68,7 +68,7 @@ st.dataframe(
         "col_1": st.column_config.Column(width="medium"),
         "col_4": {"width": "large"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set help tooltips:")
@@ -83,7 +83,7 @@ st.dataframe(
         "col_0": st.column_config.Column(help="This :red[is] a **tooltip** 🌟"),
         "_index": {"help": "Index tooltip!"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 
@@ -95,7 +95,7 @@ st.dataframe(
         }
     ),
     column_config={"col_0": st.column_config.Column(disabled=False, required=True)},
-    use_container_width=False,
+    width="content",
 )
 
 
@@ -121,7 +121,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.TextColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -149,7 +149,7 @@ st.dataframe(
             format="%.2f%%",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -172,7 +172,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.CheckboxColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -198,7 +198,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -259,7 +259,7 @@ st.dataframe(
             display_text=":material/open_in_new:",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -306,7 +306,7 @@ st.dataframe(
         ),
         "col_2": st.column_config.DatetimeColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -350,7 +350,7 @@ st.dataframe(
         "col_1": st.column_config.DateColumn(),
         "col_2": st.column_config.DateColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -396,7 +396,7 @@ st.dataframe(
         ),
         "col_2": st.column_config.TimeColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -423,7 +423,7 @@ st.dataframe(
             step=0.0001,
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -454,7 +454,7 @@ st.dataframe(
         "col_1": st.column_config.ListColumn(width="medium"),
         "col_2": st.column_config.ListColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -477,7 +477,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.BarChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -501,7 +501,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.LineChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -524,7 +524,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.AreaChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -550,7 +550,7 @@ st.dataframe(
             help="This is a image column",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -579,7 +579,7 @@ st.dataframe(
             "K",
         ],
     ),
-    use_container_width=False,
+    width="content",
 )
 
 st.subheader("Hierarchical headers")
@@ -600,7 +600,7 @@ st.dataframe(
             names=["first", "second", "third"],
         ),
     ),
-    use_container_width=False,
+    width="content",
 )
 
 df = pd.DataFrame(
@@ -620,7 +620,7 @@ st.dataframe(
     # Use reversed column order to test that pinned columns
     # use the column order as well.
     column_order=reversed(df.columns.tolist()),
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Configurable row height:")
@@ -645,7 +645,7 @@ st.dataframe(
         "col_1": st.column_config.ImageColumn("Logo", width="medium"),
     },
     row_height=100,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("NumberColumn Formatting:")
@@ -683,7 +683,7 @@ st.dataframe(
         "custom format": st.column_config.NumberColumn(format="%.2f"),
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Date Time Formatting:")
@@ -742,7 +742,7 @@ st.dataframe(
         # "distance": st.column_config.DatetimeColumn(format="distance"),  # noqa: ERA001
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Json column:")
@@ -792,7 +792,7 @@ st.dataframe(
         "incompatible values": st.column_config.JsonColumn(width="medium"),
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Localized Date/Number Formatting:")
@@ -823,4 +823,41 @@ st.dataframe(
             step=60,
         ),
     },
+)
+
+st.header("Multiselect column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [["a", "b"], ["b", "c", "d"], [], None],
+            "col_1": ["a,b", "b,c,d", "", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MultiselectColumn(
+            "Multiselect column",
+            width="medium",
+            help="This is a multi-select column",
+            required=True,  # Should be ignored
+            disabled=False,  # Should be ignored
+            default=["a", "b"],  # Should be ignored
+            accept_new_options=False,  # Should be ignored
+            options=["a", "b", "c", "d", "e"],
+            color=[
+                "green",
+                "blue",
+                "red",
+                "#19747E",
+            ],
+        ),
+        "col_1": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["a", "b", "c", "d", "e"],
+            color="primary",
+            format_func=lambda x: f"Option {x}",
+        ),
+    },
+    width="content",
+    hide_index=True,
 )

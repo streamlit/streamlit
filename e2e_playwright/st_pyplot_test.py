@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     expect_warning,
     wait_for_all_images_to_be_loaded,
 )
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 
 
 def test_displays_a_pyplot_figures(
@@ -56,19 +57,27 @@ def test_shows_deprecation_warning(app: Page):
 
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
     """Test the new width parameter options: content, stretch, and pixel values."""
-    # Wait for all images to be fully loaded before taking snapshots
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(11)
     wait_for_all_images_to_be_loaded(app)
 
-    pyplot_elements = app.get_by_test_id("stImage").locator("img")
-
     content_pyplot = pyplot_elements.nth(8)
-    assert_snapshot(content_pyplot, name="st_pyplot-width_content")
+    expect(content_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, content_pyplot, assert_snapshot, name="st_pyplot-width_content"
+    )
 
     stretch_pyplot = pyplot_elements.nth(9)
-    assert_snapshot(stretch_pyplot, name="st_pyplot-width_stretch")
+    expect(stretch_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, stretch_pyplot, assert_snapshot, name="st_pyplot-width_stretch"
+    )
 
     pixel_pyplot = pyplot_elements.nth(10)
-    assert_snapshot(pixel_pyplot, name="st_pyplot-width_pixel")
+    expect(pixel_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, pixel_pyplot, assert_snapshot, name="st_pyplot-width_pixel"
+    )
 
 
 def test_check_top_level_class(app: Page):

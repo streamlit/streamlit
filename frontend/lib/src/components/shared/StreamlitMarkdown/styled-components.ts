@@ -179,6 +179,8 @@ export const StyledStreamlitMarkdown =
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
+        // Always respect the width of the parent container:
+        maxWidth: "100%",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 
