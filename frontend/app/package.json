@@ -55,7 +55,7 @@
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",
     "typed-signals": "^3.0.0",
-    "ua-parser-js": "^1.0.40",
+    "ua-parser-js": "^1.0.41",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
