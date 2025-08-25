@@ -120,3 +120,5 @@ export const colors = {
   purple90: "#583f84",
   purple100: "#3f3163",
 }
+
+export type PrimitiveColors = Record<keyof typeof colors, string>

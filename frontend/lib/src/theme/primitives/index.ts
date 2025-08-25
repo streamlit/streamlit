@@ -15,15 +15,15 @@
  */
 
 export { breakpoints } from "./breakpoints"
-export { colors } from "./colors"
+export { colors, type PrimitiveColors } from "./colors"
 export { iconSizes } from "./iconSizes"
 export { radii } from "./radii"
 export { sizes } from "./sizes"
 export { spacing } from "./spacing"
 export {
+  fonts,
   fontSizes,
   fontWeights,
-  fonts,
   genericFonts,
   lineHeights,
 } from "./typography"

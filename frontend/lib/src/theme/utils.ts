@@ -43,12 +43,9 @@ import {
 } from "~lib/util/utils"
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
-import {
-  computeDerivedColors,
-  createEmotionColors,
-  DerivedColors,
-} from "./getColors"
+import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
+import { DerivedColors } from "./types"
 
 // Extended theme config type to include properties not in the protobuf definition
 export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
@@ -603,7 +600,6 @@ export const createEmotionTheme = (
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
-      // @ts-expect-error - chartCategoricalColors is a string[]
       conditionalOverrides.colors.chartCategoricalColors =
         validatedCategoricalColors
     }
@@ -621,7 +617,6 @@ export const createEmotionTheme = (
     // Set the validated colors, sequential colors should be an array of length 10
     // Also checked on BE, but check here again in case one of the entries is not a valid color
     if (validatedSequentialColors.length === 10) {
-      // @ts-expect-error - chartSequentialColors is a string[]
       conditionalOverrides.colors.chartSequentialColors =
         validatedSequentialColors
     } else {

@@ -20,8 +20,86 @@ import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
+import {
+  OptionalThemeColors,
+  RequiredThemeColors,
+} from "./emotionBaseTheme/themeColors"
+import { PrimitiveColors } from "./primitives"
 
-export type EmotionTheme = typeof emotionBaseTheme
+/**
+ * Comprehensive type for emotion theme colors.
+ * Combines:
+ * - PrimitiveColors: Base color palette from primitives/colors.ts
+ * - RequiredThemeColors: Required theme colors declared in base/dark themeColors.ts
+ * - OptionalThemeColors: Optional theme colors declared in base/dark themeColors.ts
+ * - DerivedColors: Computed colors based on the 3 color segments above
+ * - SpecialEmotionColors: Extra colors added by createEmotionColors (related to custom theming)
+ */
+export type EmotionThemeColors = PrimitiveColors &
+  RequiredThemeColors &
+  OptionalThemeColors &
+  DerivedColors &
+  SpecialEmotionColors
+
+/**
+ * Subsegment of EmotionThemeColors that is passed to createEmotionColors to create the full emotion theme colors.
+ * - PrimitiveColors: Base color palette from primitives/colors.ts
+ * - RequiredThemeColors: Required theme colors declared in base/dark themeColors.ts
+ * - OptionalThemeColors: Optional theme colors declared in base/dark themeColors.ts
+ */
+export type GenericColors = PrimitiveColors &
+  RequiredThemeColors &
+  OptionalThemeColors
+
+/**
+ * Computed colors based on GenericColors
+ */
+export type DerivedColors = {
+  fadedText05: string
+  fadedText10: string
+  fadedText20: string
+  fadedText40: string
+  fadedText60: string
+
+  bgMix: string
+  darkenedBgMix100: string
+  darkenedBgMix25: string
+  darkenedBgMix15: string
+  lightenedBg05: string
+}
+
+/**
+ * Extra colors added by createEmotionColors (related to custom theming)
+ */
+export type SpecialEmotionColors = {
+  codeTextColor: string
+  codeBackgroundColor: string
+
+  metricPositiveDeltaColor: string
+  metricNegativeDeltaColor: string
+  metricNeutralDeltaColor: string
+
+  borderColor: string
+  borderColorLight: string
+
+  // Used for borders around dataframes and tables
+  dataframeBorderColor: string
+  // Used for dataframe header background
+  dataframeHeaderBackgroundColor: string
+
+  headingColor: string
+
+  // Chart colors (these are arrays of colors)
+  chartCategoricalColors: string[]
+  chartSequentialColors: string[]
+}
+
+/**
+ * Complete emotion theme type with explicitly typed colors
+ */
+export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
+  colors: EmotionThemeColors
+}
 
 export type ThemeConfig = {
   name: string
@@ -41,12 +119,10 @@ export type CachedTheme = {
 }
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
-type ThemeColors = typeof emotionBaseTheme.colors
 export type ThemeSizings = typeof emotionBaseTheme.sizes
 export type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
-export type ThemeColor = Extract<keyof ThemeColors, string>
 export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"

@@ -45,7 +45,11 @@ const requiredThemeColors = {
   yellow: colors.yellow100,
 }
 
-interface OptionalThemeColors {
+export type RequiredThemeColors = Record<
+  keyof typeof requiredThemeColors,
+  string
+>
+export interface OptionalThemeColors {
   widgetBorderColor?: string
 }
 
