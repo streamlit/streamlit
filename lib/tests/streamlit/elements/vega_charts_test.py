@@ -1608,28 +1608,77 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, "use_stretch"),  # use_container_width=True -> width="stretch"
-            (False, "use_content"),  # use_container_width=False -> width="content"
+            # Test parameters: use_container_width, width, expected_width_spec, expected_width_value
+            (
+                True,
+                None,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True -> width="stretch"
+            (
+                False,
+                None,
+                "use_content",
+                True,
+            ),  # use_container_width=False -> width="content"
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides integer width
+            (
+                True,
+                "content",
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides string width
+            (
+                False,
+                "content",
+                "use_content",
+                True,
+            ),  # use_container_width=False, width="content"
+            (
+                False,
+                500,
+                "pixel_width",
+                500,
+            ),  # use_container_width=False, integer width -> respect integer
+            (
+                False,
+                300,
+                "pixel_width",
+                300,
+            ),  # use_container_width=False, different integer -> respect integer
         ]
     )
     @patch("streamlit.elements.vega_charts.show_deprecation_warning")
     def test_line_chart_use_container_width_deprecation(
-        self, use_container_width: bool, expected_width_spec: str, mock_warning: Mock
+        self,
+        use_container_width: bool,
+        width: int | str | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_warning: Mock,
     ):
         """Test that use_container_width shows deprecation warning and is correctly translated to
         the new width parameter."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st.line_chart(df, x="a", y="b", use_container_width=use_container_width)
+        kwargs = {"use_container_width": use_container_width}
+        if width is not None:
+            kwargs["width"] = width
 
-        # Check deprecation warning is shown
+        st.line_chart(df, x="a", y="b", **kwargs)
+
         mock_warning.assert_called_once()
 
         el = self.get_delta_from_queue().new_element
 
         # Should be translated to the correct width configuration
         assert el.width_config.WhichOneof("width_spec") == expected_width_spec
-        assert getattr(el.width_config, expected_width_spec) is True
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
 
     @parameterized.expand(
         [

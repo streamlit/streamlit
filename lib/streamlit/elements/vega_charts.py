@@ -808,7 +808,12 @@ class VegaChartsMixin:
                 ),
                 show_in_browser=False,
             )
-            width = "stretch" if use_container_width else "content"
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                # This preserves the existing behavior of setting use_container_width
+                # to False combined with an integer width.
+                width = "content"
 
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.LINE,

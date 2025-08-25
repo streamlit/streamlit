@@ -93,7 +93,7 @@ with st.container(
 
 
 # Test that add_rows maintains original styling params:
-# color, width, height, use_container_width
+# color, width, height
 line_data = pd.DataFrame({"Line 1": [], "Line 2": []})
 
 empty_line = st.line_chart(
@@ -102,7 +102,6 @@ empty_line = st.line_chart(
     color=["#800080", "#0000FF"],  # Purple and Blue
     width=600,
     height=300,
-    use_container_width=False,
 )
 
 if st.button("Add data to Line Chart"):
