@@ -1952,6 +1952,49 @@ describe("App", () => {
       // Should not have called setImportedTheme
       expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
     })
+
+    it("calls setImportedTheme when a fontSource is provided", () => {
+      const fontSources = [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+      ]
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources,
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should have called setImportedTheme
+      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+    })
+
+    it("doesn't call setImportedTheme when fontSources is empty", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources: [],
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should not have called setImportedTheme
+      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+    })
   })
 
   describe("App.handleScriptFinished", () => {

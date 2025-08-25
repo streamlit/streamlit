@@ -26,12 +26,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit import config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace
+from streamlit.proto.NewSession_pb2 import FontFace, FontSource
 from streamlit.runtime import Runtime, app_session
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -1607,6 +1608,95 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         app_session._populate_theme_msg(new_session_msg.custom_theme)
 
         patched_logger.warning.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the body_font field
+        assert new_session_msg.custom_theme.body_font == "Inter"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="font",
+                source_url="https://fonts.googleapis.com/css2?family=Inter&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_code_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "codeFont": "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the code_font field
+        assert new_session_msg.custom_theme.code_font == "Tagesschrift"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="codeFont",
+                source_url="https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_heading_font_config(
+        self, patched_config
+    ):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {"headingFont": "playwrite-cc-za:https://use.typekit.net/eor5wum.css"}
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the heading_font field
+        assert new_session_msg.custom_theme.heading_font == "playwrite-cc-za"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="headingFont",
+                source_url="https://use.typekit.net/eor5wum.css",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_raises_exception_if_source_contains_multiple_fonts(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&family=Inter+Bold&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        with pytest.raises(StreamlitAPIException) as ctx:
+            app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        assert (
+            "The source URL specified in the font property of config.toml contains multiple fonts."
+            in str(ctx.value)
+        )
 
 
 @patch.object(
