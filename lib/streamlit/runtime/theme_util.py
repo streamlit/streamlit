@@ -18,9 +18,73 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.proto.NewSession_pb2 import CustomThemeConfig
+
+
+def _parse_font_config(
+    font_config: str | None,
+    property_name: str,
+) -> tuple[str, str | None]:
+    """Parse a single font configuration string.
+
+    Args:
+        font_config: The font configuration string (e.g., "Inter" or "Inter:https://...")
+        property_name: The property name for error messages ("font", "codeFont", "headingFont")
+
+    Returns
+    -------
+        A tuple of (font_name, source_url). source_url is None if not provided or not valid.
+    """
+    if not font_config:
+        return "", None
+
+    # Strip leading/trailing whitespace from the config
+    font_config = font_config.strip()
+
+    if ":" not in font_config:
+        # No colon found, treat the entire string as the font name
+        return font_config, None
+
+    # Note: it is possible there are multiple colons in the string, so we need to split on the first colon.
+    font_name, source_url = font_config.split(":", 1)
+    # Strip whitespace from both font name and source
+    font_name = font_name.strip()
+    source_url = source_url.strip()
+
+    # Check that the href does not contain multiple fonts, so we confirm that "family="
+    # only shows up once in the source string (structure applies to Google Fonts only)
+    family_occurrences = source_url.count("family=")
+    if family_occurrences > 1:
+        raise StreamlitAPIException(
+            f"The source URL specified in the {property_name} property of config.toml contains multiple fonts. "
+            "Please specify only one font in the source URL."
+        )
+
+    is_valid_url = is_url(source_url)
+
+    # If the source is a valid URL (http/https) but no font name is provided, throw an exception
+    if is_valid_url and not font_name:
+        raise StreamlitAPIException(
+            f"A font family name is required when specifying a source URL "
+            f"for the {property_name} property in config.toml."
+        )
+
+    if is_valid_url:
+        return font_name, source_url
+
+    return font_name, None
+
+
+def _get_font_source_config_name(property_name: str, section: str) -> str:
+    """Get the config name for font sources based on property and section. This is used on the FE
+    as the id for the font source link in the html head.
+    """
+    if section == "theme":
+        return property_name
+    return f"{property_name}-sidebar"
 
 
 def parse_fonts_with_source(
@@ -55,73 +119,30 @@ def parse_fonts_with_source(
         Also sets sources in font_sources field to be added to the html (only when source URLs are provided).
     """
 
-    if body_font_config:
-        # If no source is specified (no colon), just use the font name.
-        # Otherwise, split the font theme config on the colon. Before the first colon should be the font family name,
-        # and after the first colon should be the source URL.
+    # Parse body font config
+    body_font_name, body_font_source = _parse_font_config(body_font_config, "font")
+    if body_font_name:
+        msg.body_font = body_font_name
+    if body_font_source:
+        config_name = _get_font_source_config_name("font", section)
+        msg.font_sources.add(config_name=config_name, source_url=body_font_source)
 
-        if ":" in body_font_config:
-            # Note: it is possible there are multiple colons in the string, so we need to split on the first colon.
-            body_font, body_source = body_font_config.split(":", 1)
-            # Also, we attempt to check that the href does not contain multiple fonts, so we confirm that "family="
-            # only shows up once in the source string (structure applies to Google Fonts only)
-            body_family_occurances = body_source.count("family=")
-            if body_family_occurances > 1:
-                raise StreamlitAPIException(
-                    "The source URL specified in the font property of config.toml contains multiple fonts. "
-                    "Please specify only one font in the source URL."
-                )
+    # Parse code font config
+    code_font_name, code_font_source = _parse_font_config(code_font_config, "codeFont")
+    if code_font_name:
+        msg.code_font = code_font_name
+    if code_font_source:
+        config_name = _get_font_source_config_name("codeFont", section)
+        msg.font_sources.add(config_name=config_name, source_url=code_font_source)
 
-            if body_font:
-                # Since the font field uses the deprecated enum, we need to put the font
-                # config into the body_font field instead:
-                msg.body_font = body_font
-            # If the source is a valid URL (http/https), add it to the font_sources field to be added to the html head
-            if body_source.startswith("http"):
-                config_name = "font" if section == "theme" else "font-sidebar"
-                msg.font_sources.add(config_name=config_name, source_url=body_source)
-        else:
-            # No colon found, treat the entire string as the font name
-            msg.body_font = body_font_config
-
-    if code_font_config:
-        if ":" in code_font_config:
-            code_font, code_source = code_font_config.split(":", 1)
-            code_family_occurances = code_source.count("family=")
-            if code_family_occurances > 1:
-                raise StreamlitAPIException(
-                    "The source URL specified in the codeFont property of config.toml contains multiple fonts. "
-                    "Please specify only one font in the source URL."
-                )
-
-            if code_font:
-                msg.code_font = code_font
-            if code_source.startswith("http"):
-                config_name = "codeFont" if section == "theme" else "codeFont-sidebar"
-                msg.font_sources.add(config_name=config_name, source_url=code_source)
-        else:
-            # No colon found, treat the entire string as the font name
-            msg.code_font = code_font_config
-
-    if heading_font_config:
-        if ":" in heading_font_config:
-            heading_font, heading_source = heading_font_config.split(":", 1)
-            heading_family_occurances = heading_source.count("family=")
-            if heading_family_occurances > 1:
-                raise StreamlitAPIException(
-                    "The source URL specified in the headingFont property of config.toml contains multiple fonts. "
-                    "Please specify only one font in the source URL."
-                )
-
-            if heading_font:
-                msg.heading_font = heading_font
-            if heading_source.startswith("http"):
-                config_name = (
-                    "headingFont" if section == "theme" else "headingFont-sidebar"
-                )
-                msg.font_sources.add(config_name=config_name, source_url=heading_source)
-        else:
-            # No colon found, treat the entire string as the font name
-            msg.heading_font = heading_font_config
+    # Parse heading font config
+    heading_font_name, heading_font_source = _parse_font_config(
+        heading_font_config, "headingFont"
+    )
+    if heading_font_name:
+        msg.heading_font = heading_font_name
+    if heading_font_source:
+        config_name = _get_font_source_config_name("headingFont", section)
+        msg.font_sources.add(config_name=config_name, source_url=heading_font_source)
 
     return msg
