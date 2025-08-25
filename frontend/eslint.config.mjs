@@ -290,7 +290,7 @@ export default tseslint.config([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "streamlit-custom/validate-theme-colors": "error",
+
       "no-restricted-imports": [
         "error",
         {
