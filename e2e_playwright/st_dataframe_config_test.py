@@ -36,7 +36,7 @@ def test_dataframe_supports_various_configurations(
 ):
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(30)
+    expect(dataframe_elements).to_have_count(31)
     # Wait for material icons font to be loaded for more stable tests:
     expect_font(themed_app, "Material Symbols Rounded")
 
@@ -83,6 +83,7 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-json_column")
     # 29th is the localized date/number formatting test - screenshot taken separately
     # below so that the set locale doesn't impact other tests/screenshots
+    assert_snapshot(dataframe_elements.nth(30), name="st_dataframe-multiselect_column")
 
 
 def test_check_top_level_class(app: Page):
@@ -155,6 +156,19 @@ def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
 
     cell_overlay = get_open_cell_overlay(themed_app)
     assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
+
+
+def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the multiselect column overlay works correctly."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(30)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on a cell of the multiselect column
+    click_on_cell(dataframe_element, 2, 0, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
 
 
 def test_number_column_formatting_via_ui(

@@ -16,24 +16,15 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
-import { EmotionTheme } from "./types"
-
-export type DerivedColors = {
-  fadedText05: string
-  fadedText10: string
-  fadedText20: string
-  fadedText40: string
-  fadedText60: string
-
-  bgMix: string
-  darkenedBgMix100: string
-  darkenedBgMix25: string
-  darkenedBgMix15: string
-  lightenedBg05: string
-}
+import {
+  DerivedColors,
+  EmotionTheme,
+  EmotionThemeColors,
+  GenericColors,
+} from "./types"
 
 export const computeDerivedColors = (
-  genericColors: Record<string, string>
+  genericColors: GenericColors
 ): DerivedColors => {
   const { bodyText, secondaryBg, bgColor } = genericColors
 
@@ -78,9 +69,9 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return _isLightBackground(theme.colors.bgColor)
 }
 
-export const createEmotionColors = (genericColors: {
-  [key: string]: string
-}): { [key: string]: string } => {
+export const createEmotionColors = (
+  genericColors: GenericColors
+): EmotionThemeColors => {
   const derivedColors = computeDerivedColors(genericColors)
   const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
   const defaultSequentialColors = defaultSequentialColorsArray(genericColors)
@@ -98,16 +89,13 @@ export const createEmotionColors = (genericColors: {
 
     borderColor: derivedColors.fadedText10,
     borderColorLight: derivedColors.fadedText05,
-    // Used for borders around dataframes and tables
+
     dataframeBorderColor: derivedColors.fadedText05,
-    // Used for dataframe header background
     dataframeHeaderBackgroundColor: derivedColors.bgMix,
 
     headingColor: genericColors.bodyText,
 
-    // @ts-expect-error -- chart colors are a string[] vs. string
     chartCategoricalColors: defaultCategoricalColors,
-    // @ts-expect-error
     chartSequentialColors: defaultSequentialColors,
   }
 }
@@ -223,7 +211,7 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(colors: { [key: string]: string }): string[] {
+function getBlueArrayAsc(colors: GenericColors): string[] {
   return [
     colors.blue10,
     colors.blue20,
@@ -237,7 +225,7 @@ function getBlueArrayAsc(colors: { [key: string]: string }): string[] {
     colors.blue100,
   ]
 }
-function getBlueArrayDesc(colors: { [key: string]: string }): string[] {
+function getBlueArrayDesc(colors: GenericColors): string[] {
   return [
     colors.blue100,
     colors.blue90,
@@ -268,17 +256,15 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
   ]
 }
 
-function defaultSequentialColorsArray(genericColors: {
-  [key: string]: string
-}): string[] {
+function defaultSequentialColorsArray(genericColors: GenericColors): string[] {
   return _isLightBackground(genericColors.bgColor)
     ? getBlueArrayAsc(genericColors)
     : getBlueArrayDesc(genericColors)
 }
 
-function defaultCategoricalColorsArray(genericColors: {
-  [key: string]: string
-}): string[] {
+function defaultCategoricalColorsArray(
+  genericColors: GenericColors
+): string[] {
   return _isLightBackground(genericColors.bgColor)
     ? [
         genericColors.blue80,
