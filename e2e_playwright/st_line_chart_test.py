@@ -182,7 +182,7 @@ def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
 # Issue #11312 - add_rows should preserve styling params
 def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that add_rows preserves the original styling params (color, width, height,
-    use_container_width).
+    use_container_width) and that dimensions are maintained after fullscreen mode.
     """
     add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(15)
     expect(add_rows_chart).to_be_visible()
@@ -200,6 +200,31 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     assert_vega_chart_height(add_rows_chart, 300)
 
     assert_snapshot(add_rows_chart, name="st_line_chart-add_rows_preserves_styling")
+
+    # Test fullscreen mode - this tests if the width/height is correctly set on
+    # the stElementContainer after adding rows to an empty chart.
+    widget_toolbar = add_rows_chart.locator("..").get_by_test_id("stElementToolbar")
+    fullscreen_button = widget_toolbar.get_by_test_id("stElementToolbarButton").last
+
+    add_rows_chart.hover()
+    expect(widget_toolbar).to_have_css("opacity", "1")
+
+    fullscreen_button.click()
+    expect(
+        widget_toolbar.get_by_role("button", name="Close fullscreen")
+    ).to_be_visible()
+
+    fullscreen_button.click()
+    expect(widget_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    # Wait a moment for dimensions to stabilize
+    app.wait_for_timeout(100)
+
+    # Verify dimensions are restored after exiting fullscreen
+    assert_vega_chart_width(add_rows_chart, 600)
+    assert_vega_chart_height(add_rows_chart, 300)
+
+    assert_snapshot(add_rows_chart, name="st_line_chart-add_rows_after_fullscreen")
 
 
 def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFunction):

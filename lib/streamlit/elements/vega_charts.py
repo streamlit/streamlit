@@ -793,9 +793,6 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart_width = width if isinstance(width, int) else None
-        chart_height = height if isinstance(height, int) else None
-
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
@@ -824,8 +821,8 @@ class VegaChartsMixin:
             y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
-            width=chart_width,
-            height=chart_height,
+            width=width,
+            height=height,
             use_container_width=(width == "stretch"),
         )
 
