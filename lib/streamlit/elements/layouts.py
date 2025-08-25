@@ -557,9 +557,9 @@ class LayoutsMixin:
     def tabs(
         self,
         tabs: Sequence[str],
-        default: str | None = None,
         *,
         width: WidthWithoutContent = "stretch",
+        default: str | None = None,
     ) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
@@ -608,6 +608,11 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        default : str or None
+            The default tab to select. If this is ``None`` (default), the first
+            tab is selected. If this is a string, it must be one of the tab
+            labels.
 
         Returns
         -------
