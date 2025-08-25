@@ -28,6 +28,7 @@ def parse_fonts_with_source(
     body_font_config: str | None,
     code_font_config: str | None,
     heading_font_config: str | None,
+    section: str,
 ) -> CustomThemeConfig:
     """Populate the CustomThemeConfig message with the font, codeFont, and headingFont fields set,
     as well as the font_sources field to be added to the html head.
@@ -40,12 +41,13 @@ def parse_fonts_with_source(
             "<code_font_family_name_here>:<source_url_here>".
         heading_font_config: A string with just the font name (e.g., "Inter Bold") or in the format
             "<heading_font_family_name_here>:<source_url_here>".
+        section: The section of the config.toml file to parse the fonts from.
 
     Examples
     --------
-    font_config: "Inter" (just font name)
-    font_config: "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap" (with source)
-    code_font_config: "playwrite-cc-za:https://use.typekit.net/xxs7euo.css"
+    body_font_config: "Inter" (just font name)
+    code_font_config: "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap" (with source)
+    heading_font_config: "playwrite-cc-za:https://use.typekit.net/xxs7euo.css"
 
     Returns
     -------
@@ -76,7 +78,8 @@ def parse_fonts_with_source(
                 msg.body_font = body_font
             # If the source is a valid URL (http/https), add it to the font_sources field to be added to the html head
             if body_source.startswith("http"):
-                msg.font_sources.add(config_name="font", source_url=body_source)
+                config_name = "font" if section == "theme" else "font-sidebar"
+                msg.font_sources.add(config_name=config_name, source_url=body_source)
         else:
             # No colon found, treat the entire string as the font name
             msg.body_font = body_font_config
@@ -94,7 +97,8 @@ def parse_fonts_with_source(
             if code_font:
                 msg.code_font = code_font
             if code_source.startswith("http"):
-                msg.font_sources.add(config_name="codeFont", source_url=code_source)
+                config_name = "codeFont" if section == "theme" else "codeFont-sidebar"
+                msg.font_sources.add(config_name=config_name, source_url=code_source)
         else:
             # No colon found, treat the entire string as the font name
             msg.code_font = code_font_config
@@ -112,9 +116,10 @@ def parse_fonts_with_source(
             if heading_font:
                 msg.heading_font = heading_font
             if heading_source.startswith("http"):
-                msg.font_sources.add(
-                    config_name="headingFont", source_url=heading_source
+                config_name = (
+                    "headingFont" if section == "theme" else "headingFont-sidebar"
                 )
+                msg.font_sources.add(config_name=config_name, source_url=heading_source)
         else:
             # No colon found, treat the entire string as the font name
             msg.heading_font = heading_font_config

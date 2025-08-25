@@ -38,10 +38,22 @@ def configure_custom_fonts():
         # Adobe Fonts option - case-insensitive
         "FLEGREI:https://use.typekit.net/zru6msp.css"
     )
+    os.environ["STREAMLIT_THEME_SIDEBAR_FONT"] = (
+        "Ojuju:https://fonts.googleapis.com/css2?family=Ojuju:wght@200..800&display=swap"
+    )
+    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT"] = (
+        "Rubik Distressed:https://fonts.googleapis.com/css2?family=Rubik+Distressed&display=swap"
+    )
+    os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT"] = (
+        "Oswald:https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
+    )
     yield
     del os.environ["STREAMLIT_THEME_FONT"]
     del os.environ["STREAMLIT_THEME_CODE_FONT"]
     del os.environ["STREAMLIT_THEME_HEADING_FONT"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_FONT"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT"]
 
 
 @pytest.mark.usefixtures("configure_custom_fonts")

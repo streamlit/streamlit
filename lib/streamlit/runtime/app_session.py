@@ -985,6 +985,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         theme_opts.get("font", None),
         theme_opts.get("codeFont", None),
         theme_opts.get("headingFont", None),
+        section,
     )
 
     font_faces = theme_opts.get("fontFaces", None)

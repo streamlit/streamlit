@@ -31,6 +31,7 @@ import {
 } from "@streamlit/lib"
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
+export type FontSources = Record<string, string>
 export interface ThemeManager {
   activeTheme: ThemeConfig
   availableThemes: ThemeConfig[]
@@ -39,12 +40,17 @@ export interface ThemeManager {
   setImportedTheme: (themeInfo: ICustomThemeConfig) => void
 }
 
-export function useThemeManager(): [ThemeManager, object[]] {
+export function useThemeManager(): [
+  ThemeManager,
+  object[],
+  FontSources | null,
+] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
   const [fontFaces, setFontFaces] = useState<object[]>(
     defaultTheme.themeInput?.fontFaces ?? []
   )
+  const [fontSources, setFontSources] = useState<FontSources | null>(null)
   const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>(() => [
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -89,25 +95,24 @@ export function useThemeManager(): [ThemeManager, object[]] {
         setFontFaces(themeInfo.fontFaces as object[])
       }
 
-      // If font sources are set, we need to add them to the head of index.html
-      if (themeInfo.fontSources) {
-        themeInfo.fontSources.forEach(fontSource => {
-          // Should never be the case that configName or sourceUrl is undefined
-          if (fontSource.sourceUrl && fontSource.configName) {
-            // Check for and remove link with that config name set as id
-            const existingLink = document.getElementById(fontSource.configName)
-            if (existingLink) {
-              existingLink.remove()
-            }
+      // Collect and process font sources from both main theme and sidebar theme
+      const allFontSources = [
+        ...(themeInfo.fontSources || []),
+        ...(themeInfo.sidebar?.fontSources || []),
+      ]
 
-            const link = document.createElement("link")
-            link.rel = "stylesheet"
-            link.href = fontSource.sourceUrl
-            link.id = fontSource.configName
-            document.head.appendChild(link)
-          }
-        })
-      }
+      const newFontSources: FontSources = {}
+      allFontSources.forEach(fontSource => {
+        // Should never be the case that configName or sourceUrl is undefined
+        if (fontSource.sourceUrl && fontSource.configName) {
+          newFontSources[fontSource.configName] = fontSource.sourceUrl
+        }
+      })
+
+      // Set valid font sources if there are any
+      setFontSources(
+        Object.keys(newFontSources).length > 0 ? newFontSources : null
+      )
 
       const themeConfigProto = new CustomThemeConfig(themeInfo)
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
@@ -137,5 +142,6 @@ export function useThemeManager(): [ThemeManager, object[]] {
       setImportedTheme,
     },
     fontFaces,
+    fontSources,
   ]
 }
