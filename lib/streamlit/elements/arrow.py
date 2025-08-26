@@ -116,7 +116,9 @@ class DataframeSelectionState(TypedDict, total=False):
         The selected columns, identified by their names.
     cells : list[tuple[int, str]]
         The selected cells, provided as a tuple of row integer position
-        and column name, e.g. ``(0, "col 1")``.
+        and column name. For example, the first cell in a column named "col 1"
+        is represented as ``(0, "col 1")``. Cells within index columns are not
+        returned.
 
     Example
     -------
@@ -136,7 +138,7 @@ class DataframeSelectionState(TypedDict, total=False):
     ...     df,
     ...     key="data",
     ...     on_select="rerun",
-    ...     selection_mode=["multi-row", "multi-column"],
+    ...     selection_mode=["multi-row", "multi-column", "multi-cell"],
     ... )
     >>>
     >>> event.selection
@@ -470,10 +472,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
-            - "single-cell": Only one cell can be selected at a time.
             - "multi-cell": A rectangular range of cells can be selected.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
+              selection based on the modes specified. For example, to allow the
+              user to select multiple rows and multiple cells, use
+              ``["multi-row", "multi-cell"]``.
 
             When column selections are enabled, column sorting is disabled.
 
