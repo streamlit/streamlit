@@ -18,7 +18,7 @@ import React, { memo, ReactElement } from "react"
 
 import range from "lodash/range"
 
-import { Arrow } from "@streamlit/protobuf"
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -43,15 +43,16 @@ import {
 } from "./styled-components"
 
 export interface TableProps {
-  element: Quiver
+  element: ArrowProto
+  data: Quiver
 }
 
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
-  const table = props.element
+  const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns } = table.dimensions
   const dataRowIndices = range(numDataRows)
-  const border = table.border
+  const border = props.element.border
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
@@ -97,11 +98,12 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
  */
 function generateTableHeader(
   table: Quiver,
-  border: Arrow.BorderMode
+  border: ArrowProto.BorderMode
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
-    border === Arrow.BorderMode.NONE || border === Arrow.BorderMode.HORIZONTAL
+    border === ArrowProto.BorderMode.NONE ||
+    border === ArrowProto.BorderMode.HORIZONTAL
 
   return (
     <thead>
@@ -147,7 +149,7 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  border: Arrow.BorderMode
+  border: ArrowProto.BorderMode
 ): ReactElement {
   return (
     <tr key={rowIndex}>
@@ -165,7 +167,7 @@ function generateTableCell(
   table: Quiver,
   rowIndex: number,
   columnIndex: number,
-  border: Arrow.BorderMode
+  border: ArrowProto.BorderMode
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)

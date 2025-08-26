@@ -19,7 +19,7 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import { Arrow, IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -144,9 +144,6 @@ export class Quiver {
   /** [optional] Pandas Styler data. This will be defined if the user styled the dataframe. */
   private readonly _styler?: PandasStylerData
 
-  /** Whether to show borders around the table and between cells. */
-  private readonly _border: Arrow.BorderMode
-
   /** Number of bytes in the Arrow IPC bytes. */
   private _num_bytes: number
 
@@ -172,7 +169,6 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._border = element.border ?? Arrow.BorderMode.ALL
     this._num_bytes = element.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
@@ -198,11 +194,6 @@ export class Quiver {
    */
   public get styler(): PandasStylerData | undefined {
     return this._styler
-  }
-
-  /** Whether to show borders around the table and between cells. */
-  public get border(): Arrow.BorderMode {
-    return this._border
   }
 
   /** Dimensions of the DataFrame. */
