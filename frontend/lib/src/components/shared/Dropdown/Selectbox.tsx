@@ -29,7 +29,6 @@ import {
   type Option,
   Select as UISelect,
 } from "baseui/select"
-import sortBy from "lodash/sortBy"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
@@ -40,13 +39,8 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { isMobile } from "~lib/util/isMobile"
-import {
-  getSelectPlaceholder,
-  isNullOrUndefined,
-  LabelVisibilityOptions,
-} from "~lib/util/utils"
-import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
+import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   value: string | null
@@ -60,34 +54,6 @@ export interface Props {
   placeholder: string
   clearable?: boolean
   acceptNewOptions: boolean
-}
-
-interface SelectOption {
-  label: string
-  value: string
-}
-
-// Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indices
-// More details: https://github.com/streamlit/streamlit/issues/1010
-// Also filters using fuzzy search.
-export function fuzzyFilterSelectOptions(
-  options: SelectOption[],
-  pattern: string
-): readonly SelectOption[] {
-  if (!pattern) {
-    return options
-  }
-
-  const filteredOptions = options.filter((opt: SelectOption) =>
-    hasMatch(pattern, opt.label)
-  )
-  return sortBy(
-    filteredOptions,
-    // Use the negative score to sort the list in a stable manner
-    // This ensures highest score is first
-    (opt: SelectOption) => -score(pattern, opt.label, true)
-  )
 }
 
 const Selectbox: React.FC<Props> = ({
@@ -147,43 +113,30 @@ const Selectbox: React.FC<Props> = ({
     }
   }, [])
 
-  const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] =>
-      fuzzyFilterSelectOptions(options as SelectOption[], filterValue),
-    []
-  )
-
   const opts = propOptions
 
-  let selectValue: Option[] = []
-  if (!isNullOrUndefined(value)) {
-    selectValue = [{ label: value, value }]
-  }
-
-  // Get placeholder and disabled state using utility function
-  const { placeholder: selectboxPlaceholder, shouldDisable } =
-    getSelectPlaceholder(
-      placeholder,
-      opts,
-      acceptNewOptions,
-      false // isMultiSelect = false for single select
-    )
+  const {
+    placeholder: selectboxPlaceholder,
+    disabled: shouldDisable,
+    selectOptions,
+    inputReadOnly,
+    valueToUiSingle,
+    createFilterOptions,
+  } = useSelectCommon({
+    options: opts as string[],
+    isMulti: false,
+    acceptNewOptions,
+    placeholderInput: placeholder,
+  })
 
   const selectDisabled = disabled || shouldDisable
 
-  const selectOptions: SelectOption[] = opts.map(
-    (option: string, index: number) => ({
-      label: option,
-      value: option,
-      // We are using an id because if multiple options are equal,
-      // we have observed weird UI glitches
-      id: `${option}_${index}`,
-    })
+  const filterOptions = React.useMemo(
+    () => createFilterOptions(),
+    [createFilterOptions]
   )
 
-  // Check if we have more than 10 options in the selectbox.
-  // If that's true, we show the keyboard on mobile. If not, we hide it.
-  const showKeyboardOnMobile = opts.length > 10
+  const selectValue: Option[] = valueToUiSingle(value)
 
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
@@ -275,10 +228,7 @@ const Selectbox: React.FC<Props> = ({
               // When on mobile, if there are less than 10 options and new
               // options are not accepted, set the input to read-only to hide
               // the mobile keyboard.
-              readOnly:
-                isMobile() && !showKeyboardOnMobile && !acceptNewOptions
-                  ? "readonly"
-                  : null,
+              readOnly: inputReadOnly,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
