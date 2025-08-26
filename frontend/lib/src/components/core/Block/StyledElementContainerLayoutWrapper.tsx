@@ -162,7 +162,9 @@ export const StyledElementContainerLayoutWrapper: FC<
       return styles
     } else if (node.element.type === "arrowVegaLiteChart") {
       if (node.element.widthConfig?.useContent) {
-        // This is necessary due to the read-only grid feature.
+        // This is necessary due to the read-only grid feature because the dataframe
+        // does not render correctly if it has a parent with fit-content styling which
+        // is the default for width.
         // TODO (lawilby): Investigate if we can alter dataframes so that we
         // don't need this.
         styles.width = "100%"
