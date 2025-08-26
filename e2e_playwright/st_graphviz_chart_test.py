@@ -26,6 +26,8 @@ def click_fullscreen(app: Page):
     fullscreen_button = app.get_by_role("button", name="Fullscreen").nth(0)
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
+    # Wait for the animation to finish
+    app.wait_for_timeout(1000)
 
 
 def test_initial_setup(app: Page):
