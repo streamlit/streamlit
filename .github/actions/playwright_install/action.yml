@@ -1,3 +1,13 @@
+# Composite action to install Playwright browsers quickly and reliably.
+#
+# Key ideas:
+# - Cache the browser binaries that Playwright downloads in ~/.cache/ms-playwright.
+# - Use a cache key that includes OS, architecture, and Playwright version so
+#   upgrades automatically bust the cache while maximizing hit rate otherwise.
+# - Restore the cache BEFORE running the installer so the install becomes a
+#   quick validation/no-op on cache hits.
+# - On Linux, remove man-db to avoid costly apt trigger processing during
+#   playwright's --with-deps step.
 name: Install Playwright with Cache
 description: Install Playwright browsers with OS- and version-aware caching
 
@@ -10,6 +20,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Determine the Playwright Python package version from the active environment.
+    # We use this to key the browser-cache so that browser upgrades (driven by
+    # Playwright version changes) automatically invalidate the cache.
     - id: pw-version
       name: Determine Playwright version
       shell: bash
@@ -20,6 +33,7 @@ runs:
           echo "Playwright is not available in the current Python environment. Ensure it is installed before running this action." 1>&2
           exit 1
         fi
+        # Extract a plain semver like 1.54.0 from e.g. "Version 1.54.0".
         VERSION=$(echo "$VERSION_RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
         if [[ -z "$VERSION" ]]; then
           echo "Could not parse Playwright version from: $VERSION_RAW" 1>&2
@@ -27,6 +41,11 @@ runs:
         fi
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+    # Restore the Playwright browser cache. Playwright downloads browsers into
+    # ~/.cache/ms-playwright. These binaries are OS/arch-specific (not
+    # Python-version-specific), so our cache key includes:
+    #   - runner.os and runner.arch: to scope to the correct platform
+    #   - Playwright version: to bust cache on browser upgrades
     - name: Cache Playwright browsers
       uses: actions/cache@v4
       with:
@@ -35,6 +54,9 @@ runs:
         restore-keys: |
           ${{ runner.os }}-${{ runner.arch }}-playwright-
 
+    # On Ubuntu runners, apt triggers for man-db can take significant time.
+    # Purging man-db (which we don't need in CI) avoids those triggers during
+    # Playwright's --with-deps step and speeds up installs considerably.
     - name: Disable man-db to speed up apt (Linux only)
       if: ${{ runner.os == 'Linux' }}
       shell: bash
@@ -47,6 +69,10 @@ runs:
           sudo apt-get -y autoremove || true
         fi
 
+    # Install the Playwright browsers. On cache hits, this is mostly a quick
+    # validation and no-op. When inputs.with-deps is true, Playwright installs
+    # required system packages using apt; we set DEBIAN_FRONTEND=noninteractive
+    # to suppress prompts for fully non-interactive CI runs.
     - name: Install Playwright browsers
       shell: bash
       run: |
