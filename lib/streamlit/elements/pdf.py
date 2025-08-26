@@ -62,12 +62,15 @@ class PdfMixin:
 
         .. Important::
 
-            You must install ``streamlit-pdf`` to use this command. You can
+            You must install |streamlit-pdf|_ to use this command. You can
             install it as an extra with Streamlit:
 
             .. code-block:: shell
 
                 pip install streamlit[pdf]
+
+        .. |streamlit-pdf| replace:: ``streamlit-pdf``
+        .. _streamlit-pdf: https://github.com/streamlit/streamlit-pdf
 
         Parameters
         ----------
