@@ -67,6 +67,7 @@ export function useSelectCommon(
     [options]
   )
 
+  // Get placeholder and disabled state using utility function
   const { placeholder, shouldDisable } = useMemo(
     () =>
       getSelectPlaceholder(
@@ -109,8 +110,10 @@ export function useSelectCommon(
         filterValue: string
       ): readonly Option[] => {
         const base = Array.isArray(selectedValues)
-          ? optionsList.filter(opt => !selectedValues.includes(opt.value))
+          ? // We need to manually filter for previously selected options here
+            optionsList.filter(opt => !selectedValues.includes(opt.value))
           : optionsList
+
         return fuzzyFilterSelectOptions(
           base as { label: string; value: string }[],
           filterValue
@@ -120,7 +123,10 @@ export function useSelectCommon(
   )
 
   const maxHeight = useMemo(() => {
-    if (!isMulti) return undefined
+    if (!isMulti) {
+      return undefined
+    }
+
     const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
     const pxMaxHeight = Math.round(optionHeight * 4.25)
     return `${pxMaxHeight}px`

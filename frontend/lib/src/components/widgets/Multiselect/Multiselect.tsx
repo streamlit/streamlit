@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useContext, useMemo } from "react"
+import { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
@@ -189,11 +189,11 @@ const Multiselect: FC<Props> = props => {
   })
 
   const filterOptions = useCallback(
-    (opts: readonly Option[], fv: string): readonly Option[] => {
+    (options: readonly Option[], filterValue: string): readonly Option[] => {
       if (overMaxSelections) {
         return []
       }
-      return createFilterOptions(value)(opts, fv)
+      return createFilterOptions(value)(options, filterValue)
     },
     [createFilterOptions, overMaxSelections, value]
   )

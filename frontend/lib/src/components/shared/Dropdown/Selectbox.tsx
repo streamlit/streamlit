@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-import React, {
+import {
+  FC,
   memo,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
 import { ChevronDown } from "baseui/icon"
-import {
-  type OnChangeParams,
-  type Option,
-  Select as UISelect,
-} from "baseui/select"
+import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
@@ -56,7 +54,7 @@ export interface Props {
   acceptNewOptions: boolean
 }
 
-const Selectbox: React.FC<Props> = ({
+const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
   onChange,
@@ -131,12 +129,12 @@ const Selectbox: React.FC<Props> = ({
 
   const selectDisabled = disabled || shouldDisable
 
-  const filterOptions = React.useMemo(
+  const filterOptions = useMemo(
     () => createFilterOptions(),
     [createFilterOptions]
   )
 
-  const selectValue: Option[] = valueToUiSingle(value)
+  const selectValue = valueToUiSingle(value)
 
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
