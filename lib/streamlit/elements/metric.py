@@ -172,9 +172,9 @@ class MetricMixin:
             The type of sparkline chart to display. This can be one of the
             following:
 
-            - "line" (default): A simple sparkline.
-            - "area": A sparkline with area shading.
-            - "bar": A bar chart.
+            - ``"line"`` (default): A simple sparkline.
+            - ``"area"``: A sparkline with area shading.
+            - ``"bar"``: A bar chart.
 
         Examples
         --------
