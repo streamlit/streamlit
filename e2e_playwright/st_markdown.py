@@ -329,3 +329,71 @@ with st.expander("Badge Width Examples", expanded=True):
         st.badge("Fixed 100px badge", width=100)
 
         st.badge("Stretch badge", width="stretch")
+
+with st.container(border=True):
+    st.markdown("---")
+    st.write("---")
+
+with st.container(border=True, horizontal_alignment="center"):
+    st.markdown("""
+        Here is some code:
+
+        ```python
+        abc = 123
+        ```
+
+        And here is some more:
+
+        ```python
+        abc = 123
+        ```
+    """)
+
+    st.markdown("""
+        You can print something in python like this `print("Hello, world!")`
+    """)
+
+    st.markdown(
+        """
+        Here's how to define a function in Python:
+
+            def greet_user(name):
+                return f"Hello, {name}!"
+
+            result = greet_user("Streamlit")
+            print(result)
+
+        The function above demonstrates basic Python syntax.
+        """
+    )
+    st.markdown(
+        """
+        Here's some code in an HTML pre block:
+
+        <pre><code class="language-python">
+        def hello_world():
+            print("Hello from HTML!")
+            return "success"
+        </code></pre>
+
+        This will render with full width and syntax highlighting.
+        """,
+        unsafe_allow_html=True,
+    )
+
+with st.container(border=True, horizontal=True):
+    st.markdown("""
+        Here is some code:
+
+        ```python
+        abc = 123
+        ```
+
+        And here is some more:
+
+        ```python
+        abc = 123
+        ```
+    """)
+    st.title("Test")
+    st.write("The markdown has a code block.")

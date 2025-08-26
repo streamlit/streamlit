@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
@@ -35,6 +36,39 @@ if TYPE_CHECKING:
 MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
+def _has_code_content(markdown_text: str) -> bool:
+    """Detect if markdown contains code blocks that will be syntax highlighted when rendered.
+
+    This includes:
+    - Fenced code blocks (``` or ~~~ with optional language)
+    - Indented code blocks (4+ spaces or 1+ tabs at start of line)
+    - HTML code blocks with language class (e.g., <code class="language-python">)
+
+    Args:
+        markdown_text: The markdown text to analyze
+
+    Returns
+    -------
+        True if the text contains code blocks that will be rendered with syntax highlighting
+    """
+    # 1. Fenced code blocks (``` or ~~~ with optional language)
+    fenced_pattern = r"```[\s\S]*?```|~~~[\s\S]*?~~~"
+
+    # 2. Indented code blocks (4+ spaces or 1+ tabs at start of line)
+    indented_pattern = r"(?:^|\n)(?:    |\t)+\S.*(?:\n(?:    |\t)+.*)*"
+
+    # 3. HTML code blocks with language class (when unsafe_allow_html=True)
+    # Matches <code class="language-{lang}">...</code> (with or without surrounding <pre>)
+    html_code_pattern = r'<code\s+class=["\']language-\w+["\'][\s\S]*?</code>'
+
+    # Check for any of these patterns
+    return bool(
+        re.search(fenced_pattern, markdown_text)
+        or re.search(indented_pattern, markdown_text, re.MULTILINE)
+        or re.search(html_code_pattern, markdown_text, re.IGNORECASE)
+    )
+
+
 class MarkdownMixin:
     @gather_metrics("markdown")
     def markdown(
@@ -43,7 +77,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
-        width: Width = "stretch",
+        width: Width | Literal["auto"] = "auto",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -152,16 +186,31 @@ class MarkdownMixin:
            height: 350px
 
         """
+        clean_text_body = clean_text(body)
+        if clean_text_body == MARKDOWN_HORIZONTAL_RULE_EXPRESSION:
+            # Use st.divider here for styling reasons. Don't use content width
+            # when the markdown is just a horizontal rule.
+            return self.divider(
+                width=width if width not in ["content", "auto"] else "stretch"
+            )
+
+        # Override width to "stretch" when markdown contains code and width is "auto"
+        effective_width = width
+        if width == "auto" and _has_code_content(clean_text_body):
+            effective_width = "stretch"
+        elif width == "auto":
+            effective_width = "content"
+
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = clean_text(body)
+        markdown_proto.body = clean_text_body
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         if help:
             markdown_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        validate_width(effective_width, allow_content=True)
+        layout_config = LayoutConfig(width=effective_width)
 
         return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
