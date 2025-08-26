@@ -163,6 +163,7 @@ message CustomThemeConfig {
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;
+  repeated FontSource font_sources = 37;
   // DEPRECATED: Please use the base_font_size theme config instead:
   FontSizes font_sizes = 16;
   // DEPRECATED: This color is not applied anymore:
@@ -178,12 +179,16 @@ message CustomThemeConfig {
   optional int32 base_font_weight = 30;
   optional int32 code_font_weight = 32;
   optional string code_font_size = 28;
+  repeated string heading_font_sizes = 35;
+  repeated int32 heading_font_weights = 34;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
+  repeated string chart_categorical_colors = 33;
+  repeated string chart_sequential_colors = 36;
 
-  // Next ID: 33
+  // Next ID: 38
 }
 
 message FontFace {
@@ -198,6 +203,13 @@ message FontFace {
   string style = 4;
   // Equivalent to unicode-range @font-face CSS property.
   string unicode_range = 6;
+}
+
+message FontSource {
+  // Supports passing links to font config options - these are the sources
+  // used in the <link> tag (href) to embed the font in html
+  string config_name = 1;
+  string source_url = 2;
 }
 
 // DEPRECATED: Please use the base_radius theme config instead.

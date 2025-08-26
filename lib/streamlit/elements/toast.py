@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -41,6 +41,7 @@ class ToastMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        duration: Literal["short", "long", "infinite"] | int = "short",
     ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
         The toast appears in the app's top-right corner and disappears after four seconds.
@@ -79,16 +80,91 @@ class ToastMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+        duration : "short", "long", "infinite", or int
+            The time to display the toast message. This can be one of the
+            following:
 
-        Example
-        -------
+            - ``"short"`` (default): Displays for 4 seconds.
+            - ``"long"``: Displays for 10 seconds.
+            - ``"infinite"``: Shows the toast until the user dismisses it.
+            - An integer: Displays for the specified number of seconds.
+
+        Examples
+        --------
+        **Example 1: Show a toast message**
+
         >>> import streamlit as st
         >>>
-        >>> st.toast('Your edited image was saved!', icon='😍')
+        >>> st.toast("Your edited image was saved!", icon="😍")
+
+        .. output::
+            https://doc-status-toast.streamlit.app
+            height: 200px
+
+        **Example 2: Show multiple toasts**
+
+        When multiple toasts are generated, they will stack. Hovering over a
+        toast will stop it from disappearing. When hovering ends, the toast
+        will disappear after time specified in ``duration``.
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> if st.button("Three cheers"):
+        >>>     st.toast("Hip!")
+        >>>     time.sleep(0.5)
+        >>>     st.toast("Hip!")
+        >>>     time.sleep(0.5)
+        >>>     st.toast("Hooray!", icon="🎉")
+
+        .. output::
+            https://doc-status-toast1.streamlit.app
+            height: 300px
+
+        **Example 3: Update a toast message**
+
+        Toast messages can also be updated. Assign ``st.toast(my_message)`` to
+        a variable and use the ``.toast()`` method to update it. If a toast has
+        already disappeared or been dismissed, the update will not be seen.
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> def cook_breakfast():
+        >>>     msg = st.toast("Gathering ingredients...")
+        >>>     time.sleep(1)
+        >>>     msg.toast("Cooking...")
+        >>>     time.sleep(1)
+        >>>     msg.toast("Ready!", icon="🥞")
+        >>>
+        >>> if st.button("Cook breakfast"):
+        >>>     cook_breakfast()
+
+        .. output::
+            https://doc-status-toast2.streamlit.app
+            height: 200px
+
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
+
+        if duration in ["short", "long", "infinite"] or (
+            isinstance(duration, int) and duration > 0
+        ):
+            if duration == "short":
+                toast_proto.duration = 4
+            elif duration == "long":
+                toast_proto.duration = 10
+            elif duration == "infinite":
+                toast_proto.duration = 0
+            else:
+                toast_proto.duration = duration
+        else:
+            raise StreamlitValueError(
+                "duration", ["short", "long", "infinite", "a positive integer"]
+            )
+
         return self.dg._enqueue("toast", toast_proto)
 
     @property

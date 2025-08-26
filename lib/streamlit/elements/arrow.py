@@ -16,19 +16,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
 
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -38,6 +34,12 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -64,13 +66,20 @@ if TYPE_CHECKING:
 
 
 SelectionMode: TypeAlias = Literal[
-    "single-row", "multi-row", "single-column", "multi-column"
+    "single-row",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
     "multi-row",
     "single-column",
     "multi-column",
+    "single-cell",
+    "multi-cell",
 }
 
 
@@ -97,27 +106,32 @@ class DataframeSelectionState(TypedDict, total=False):
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
+    cells : list[tuple[int, str]]
+        The selected cells, provided as a tuple of row integer position
+        and column name. For example, the first cell in a column named "col 1"
+        is represented as ``(0, "col 1")``. Cells within index columns are not
+        returned.
 
     Example
     -------
     The following example has multi-row and multi-column selections enabled.
-    Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
-    selecting columns. Hold ``Shift`` to select a range of columns.
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
+    or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
+    range of columns.
 
-    >>> import streamlit as st
     >>> import pandas as pd
-    >>> import numpy as np
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
-    >>> if "df" not in st.session_state:
-    >>>     st.session_state.df = pd.DataFrame(
-    ...         np.random.randn(12, 5), columns=["a", "b", "c", "d", "e"]
-    ...     )
+    >>> df = pd.DataFrame(
+    ...     rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+    ... )
     >>>
     >>> event = st.dataframe(
-    ...     st.session_state.df,
+    ...     df,
     ...     key="data",
     ...     on_select="rerun",
-    ...     selection_mode=["multi-row", "multi-column"],
+    ...     selection_mode=["multi-row", "multi-column", "multi-cell"],
     ... )
     >>>
     >>> event.selection
@@ -130,6 +144,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     rows: list[int]
     columns: list[str]
+    cells: list[tuple[int, str]]
 
 
 class DataframeState(TypedDict, total=False):
@@ -165,6 +180,7 @@ class DataframeSelectionSerde:
             "selection": {
                 "rows": [],
                 "columns": [],
+                "cells": [],
             },
         }
         selection_state: DataframeState = (
@@ -174,10 +190,27 @@ class DataframeSelectionSerde:
         if "selection" not in selection_state:
             selection_state = empty_selection_state
 
+        if "rows" not in selection_state["selection"]:
+            selection_state["selection"]["rows"] = []
+
+        if "columns" not in selection_state["selection"]:
+            selection_state["selection"]["columns"] = []
+
+        if "cells" not in selection_state["selection"]:
+            selection_state["selection"]["cells"] = []
+        else:
+            # Explicitly convert all cells to a tuple (from list).
+            # This is necessary since there isn't a concept of tuples in JSON
+            # The format that the data is transferred to the backend.
+            selection_state["selection"]["cells"] = [
+                tuple(cell)  # type: ignore
+                for cell in selection_state["selection"]["cells"]
+            ]
+
         return cast("DataframeState", AttributeDictionary(selection_state))
 
-    def serialize(self, editing_state: DataframeState) -> str:
-        return json.dumps(editing_state, default=str)
+    def serialize(self, state: DataframeState) -> str:
+        return json.dumps(state)
 
 
 def parse_selection_mode(
@@ -207,6 +240,11 @@ def parse_selection_mode(
             "Only one of `single-column` or `multi-column` can be selected as selection mode."
         )
 
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
@@ -217,6 +255,10 @@ def parse_selection_mode(
             parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
             parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+        elif mode == "single-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+        elif mode == "multi-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
@@ -238,8 +280,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -255,8 +297,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -272,8 +314,8 @@ class ArrowMixin:
     def dataframe(
         self,
         data: Data = None,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: int | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -329,18 +371,28 @@ class ArrowMixin:
 
             If ``data`` is ``None``, Streamlit renders an empty table.
 
-        width : int or None
-            Desired width of the dataframe expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the dataframe width to fit its
-            contents up to the width of the parent container. If ``width`` is
-            greater than the width of the parent container, Streamlit sets the
-            dataframe width to match the width of the parent container.
+        width : "stretch", "content", or int
+            The width of the dataframe element. This can be one of the following:
 
-        height : int or None
-            Desired height of the dataframe expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the dataframe element is
-            enabled when the height does not accommodate all rows.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        height : int or "auto"
+            The height of the dataframe element. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - An integer specifying the height in pixels: The element has a
+              fixed height.
+
+            Vertical scrolling within the dataframe element is enabled when the
+            height does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -354,42 +406,41 @@ class ArrowMixin:
             (default), the visibility of index columns is automatically
             determined based on the data.
 
-        column_order : Iterable of str or None
-            The ordered list of columns to display. If ``column_order`` is
-            ``None`` (default), Streamlit displays all columns in the order
-            inherited from the underlying data structure. If ``column_order``
-            is a list, the indicated columns will display in the order they
-            appear within the list. Columns may be omitted or repeated within
-            the list.
+        column_order : Iterable[str] or None
+            The ordered list of columns to display. If this is ``None``
+            (default), Streamlit displays all columns in the order inherited
+            from the underlying data structure. If this is a list, the
+            indicated columns will display in the order they appear within the
+            list. Columns may be omitted or repeated within the list.
 
             For example, ``column_order=("col2", "col1")`` will display
             ``"col2"`` first, followed by ``"col1"``, and will hide all other
             non-index columns.
 
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
+
         column_config : dict or None
-            Configuration to customize how columns display. If ``column_config``
-            is ``None`` (default), columns are styled based on the underlying
-            data type of each column.
+            Configuration to customize how columns are displayed. If this is
+            ``None`` (default), columns are styled based on the underlying data
+            type of each column.
 
             Column configuration can modify column names, visibility, type,
-            width, or format, among other things. ``column_config`` must be a
-            dictionary where each key is a column name and the associated value
-            is one of the following:
+            width, format, and more. If this is a dictionary, the keys are
+            column names (strings) and/or positional column indices (integers),
+            and the values are one of the following:
 
-            - ``None``: Streamlit hides the column.
+            - ``None`` to hide the column.
+            - A string to set the display label of the column.
+            - One of the column types defined under ``st.column_config``. For
+              example, to show a column as dollar amounts, use
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``.
+              See more info on the available column types and config options
+              `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
-            - A string: Streamlit changes the display label of the column to
-              the given string.
-
-            - A column type within ``st.column_config``: Streamlit applies the
-              defined configuration to the column. For example, use
-              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``
-              to change the displayed name of the column to "Dollar values"
-              and add a "$" prefix in each cell. For more info on the
-              available column types and config options, see
-              `Column configuration <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
-
-            To configure the index column(s), use ``_index`` as the column name.
+            To configure the index column(s), use ``"_index"`` as the column
+            name, or use a positional column index where ``0`` refers to the
+            first index column.
 
         key : str
             An optional string to use for giving this element a stable
@@ -410,8 +461,8 @@ class ArrowMixin:
               input widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
-              rows or columns in the dataframe. In this case, ``st.dataframe``
-              will return the selection data as a dictionary.
+              rows, columns, or cells in the dataframe. In this case,
+              ``st.dataframe`` will return the selection data as a dictionary.
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
@@ -419,7 +470,7 @@ class ArrowMixin:
               as a dictionary.
 
         selection_mode : "single-row", "multi-row", "single-column", \
-            "multi-column", or Iterable of these
+            "multi-column", "single-cell", "multi-cell", or Iterable of these
             The types of selections Streamlit should allow when selections are
             enabled with ``on_select``. This can be one of the following:
 
@@ -427,8 +478,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
+            - "multi-cell": A rectangular range of cells can be selected.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified.
+              selection based on the modes specified. For example, to allow the
+              user to select multiple rows and multiple cells, use
+              ``["multi-row", "multi-cell"]``.
 
             When column selections are enabled, column sorting is disabled.
 
@@ -436,6 +491,11 @@ class ArrowMixin:
             The height of each row in the dataframe in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``.
 
         Returns
         -------
@@ -451,13 +511,15 @@ class ArrowMixin:
         --------
         **Example 1: Display a dataframe**
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((50, 20)), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
-        >>> st.dataframe(df)  # Same as st.write(df)
+        >>> st.dataframe(df)
 
         .. output::
            https://doc-dataframe.streamlit.app/
@@ -468,11 +530,13 @@ class ArrowMixin:
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(10, 20), columns=("col %d" % i for i in range(20)))
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((10, 20)), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
@@ -484,34 +548,39 @@ class ArrowMixin:
 
         You can customize a dataframe via ``column_config``, ``hide_index``, or ``column_order``.
 
-        >>> import random
         >>> import pandas as pd
         >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df = pd.DataFrame(
-        >>>     {
-        >>>         "name": ["Roadmap", "Extras", "Issues"],
-        >>>         "url": ["https://roadmap.streamlit.app", "https://extras.streamlit.app", "https://issues.streamlit.app"],
-        >>>         "stars": [random.randint(0, 1000) for _ in range(3)],
-        >>>         "views_history": [[random.randint(0, 5000) for _ in range(30)] for _ in range(3)],
-        >>>     }
-        >>> )
+        ...     {
+        ...         "name": ["Roadmap", "Extras", "Issues"],
+        ...         "url": [
+        ...             "https://roadmap.streamlit.app",
+        ...             "https://extras.streamlit.app",
+        ...             "https://issues.streamlit.app",
+        ...         ],
+        ...         "stars": rng(0).integers(0, 1000, size=3),
+        ...         "views_history": rng(0).integers(0, 5000, size=(3, 30)).tolist(),
+        ...     }
+        ... )
+        >>>
         >>> st.dataframe(
-        >>>     df,
-        >>>     column_config={
-        >>>         "name": "App name",
-        >>>         "stars": st.column_config.NumberColumn(
-        >>>             "Github Stars",
-        >>>             help="Number of stars on GitHub",
-        >>>             format="%d ⭐",
-        >>>         ),
-        >>>         "url": st.column_config.LinkColumn("App URL"),
-        >>>         "views_history": st.column_config.LineChartColumn(
-        >>>             "Views (past 30 days)", y_min=0, y_max=5000
-        >>>         ),
-        >>>     },
-        >>>     hide_index=True,
-        >>> )
+        ...     df,
+        ...     column_config={
+        ...         "name": "App name",
+        ...         "stars": st.column_config.NumberColumn(
+        ...             "Github Stars",
+        ...             help="Number of stars on GitHub",
+        ...             format="%d ⭐",
+        ...         ),
+        ...         "url": st.column_config.LinkColumn("App URL"),
+        ...         "views_history": st.column_config.LineChartColumn(
+        ...             "Views (past 30 days)", y_min=0, y_max=5000
+        ...         ),
+        ...     },
+        ...     hide_index=True,
+        ... )
 
         .. output::
            https://doc-dataframe-config.streamlit.app/
@@ -521,22 +590,28 @@ class ArrowMixin:
 
         You can use column configuration to format your index.
 
-        >>> import streamlit as st
+        >>> from datetime import datetime, date
+        >>> import numpy as np
         >>> import pandas as pd
-        >>> from datetime import date
+        >>> import streamlit as st
         >>>
-        >>> df = pd.DataFrame(
-        >>>     {
-        >>>         "Date": [date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)],
-        >>>         "Total": [13429, 23564, 23452],
-        >>>     }
-        >>> )
-        >>> df.set_index("Date", inplace=True)
+        >>> @st.cache_data
+        >>> def load_data():
+        >>>     year = datetime.now().year
+        >>>     df = pd.DataFrame(
+        ...         {
+        ...             "Date": [date(year, month, 1) for month in range(1, 4)],
+        ...             "Total": np.random.randint(1000, 5000, size=3),
+        ...         }
+        ...     )
+        >>>     df.set_index("Date", inplace=True)
+        >>>     return df
         >>>
+        >>> df = load_data()
         >>> config = {
-        >>>     "_index": st.column_config.DateColumn("Month", format="MMM YYYY"),
-        >>>     "Total": st.column_config.NumberColumn("Total ($)"),
-        >>> }
+        ...     "_index": st.column_config.DateColumn("Month", format="MMM YYYY"),
+        ...     "Total": st.column_config.NumberColumn("Total ($)"),
+        ... }
         >>>
         >>> st.dataframe(df, column_config=config)
 
@@ -568,22 +643,35 @@ class ArrowMixin:
                 enable_check_callback_rules=is_callback,
             )
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
+
+        validate_width(width, allow_content=True)
+        validate_height(
+            height,
+            allow_content=False,
+            allow_stretch=False,
+            additional_allowed=["auto"],
+        )
+
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
         proto = ArrowProto()
-
-        if use_container_width is None:
-            # If use_container_width was not explicitly set by the user, we set
-            # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = width is None
-
-        proto.use_container_width = use_container_width
-
-        if width:
-            proto.width = width
-        if height:
-            proto.height = height
 
         if row_height:
             proto.row_height = row_height
@@ -625,6 +713,13 @@ class ArrowMixin:
             )
         marshall_column_config(proto, column_config_mapping)
 
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
+
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
@@ -635,7 +730,6 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
-                form_id=proto.form_id,
                 dg=self.dg,
                 data=proto.data,
                 width=width,
@@ -657,9 +751,9 @@ class ArrowMixin:
                 ctx=ctx,
                 value_type="string_value",
             )
-            self.dg._enqueue("arrow_data_frame", proto)
+            self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
             return widget_state.value
-        return self.dg._enqueue("arrow_data_frame", proto)
+        return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
 
     @gather_metrics("table")
     def table(
@@ -700,7 +794,6 @@ class ArrowMixin:
         --------
         **Example 1: Display a confusion matrix**
 
-        >>> import streamlit as st
         >>> import pandas as pd
         >>>
         >>> confusion_matrix = pd.DataFrame(
@@ -758,10 +851,17 @@ class ArrowMixin:
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
+        # Tables dimensions are not configurable, this ensures that
+        # styles are applied correctly on the element container in the frontend.
+        layout_config = LayoutConfig(
+            width="stretch",
+            height="content",
+        )
+
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
         proto.border = border_mode
-        return self.dg._enqueue("arrow_table", proto)
+        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
@@ -778,32 +878,30 @@ class ArrowMixin:
 
         Example
         -------
-        >>> import streamlit as st
+        >>> import time
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df1 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
-        >>>
-        >>> my_table = st.table(df1)
+        >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
         >>>
         >>> df2 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
+        >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
         >>>
+        >>> my_table = st.table(df1)
+        >>> time.sleep(1)
         >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
 
         You can do the same thing with plots. For example, if you want to add
         more data to a line chart:
 
         >>> # Assuming df1 and df2 from the example above still exist...
         >>> my_chart = st.line_chart(df1)
+        >>> time.sleep(1)
         >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
 
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
@@ -869,30 +967,30 @@ def _arrow_add_rows(
 
     Example
     -------
-    >>> import streamlit as st
+    >>> import time
     >>> import pandas as pd
-    >>> import numpy as np
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
     >>> df1 = pd.DataFrame(
-    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-    ... )
-    >>> my_table = st.table(df1)
+    >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
     >>>
     >>> df2 = pd.DataFrame(
-    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-    ... )
+    >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
+    >>>
+    >>> my_table = st.table(df1)
+    >>> time.sleep(1)
     >>> my_table.add_rows(df2)
-    >>> # Now the table shown in the Streamlit app contains the data for
-    >>> # df1 followed by the data for df2.
 
     You can do the same thing with plots. For example, if you want to add
     more data to a line chart:
 
     >>> # Assuming df1 and df2 from the example above still exist...
     >>> my_chart = st.line_chart(df1)
+    >>> time.sleep(1)
     >>> my_chart.add_rows(df2)
-    >>> # Now the chart shown in the Streamlit app contains the data for
-    >>> # df1 followed by the data for df2.
 
     And for plots whose datasets are named, you can pass the data with a
     keyword argument where the key is the name:

@@ -118,11 +118,8 @@ _MELTED_Y_COLUMN_TITLE: Final = "value"
 _MELTED_COLOR_COLUMN_TITLE: Final = "color"
 
 # Crazy internal (non-user-visible) names for the index and melted columns, in order to
-# avoid collision with existing column names. The suffix below was generated with an
-# online random number generator. Rationale: because it makes it even less likely to
-# lead to a conflict than something that's human-readable (like "--streamlit-fake-field"
-# or something).
-_PROTECTION_SUFFIX: Final = "--p5bJXXpQgvPz6yvQMFiy"
+# avoid collision with existing column names.
+_PROTECTION_SUFFIX: Final = " -- streamlit-generated"
 _SEPARATED_INDEX_COLUMN_NAME: Final = _SEPARATED_INDEX_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_Y_COLUMN_NAME: Final = _MELTED_Y_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFFIX
@@ -356,7 +353,13 @@ def prep_chart_data_for_add_rows(
         df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
         add_rows_metadata.last_index = stop - 1
 
-    out_data, *_ = _prep_data(df, **add_rows_metadata.columns)
+    out_data, *_ = _prep_data(
+        df,
+        x_column=add_rows_metadata.columns["x_column"],
+        y_column_list=add_rows_metadata.columns["y_column_list"],
+        color_column=add_rows_metadata.columns["color_column"],
+        size_column=add_rows_metadata.columns["size_column"],
+    )
 
     return out_data, add_rows_metadata
 
@@ -597,7 +600,7 @@ def _maybe_reset_index_in_place(
             x_column = _SEPARATED_INDEX_COLUMN_NAME
         else:
             # Reuse index's name for the new column.
-            x_column = df.index.name
+            x_column = str(df.index.name)
 
         df.index.name = x_column
         df.reset_index(inplace=True)  # noqa: PD002
@@ -988,7 +991,9 @@ def _get_color_encoding(
                 return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                scale=alt.Scale(
+                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
+                ),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",

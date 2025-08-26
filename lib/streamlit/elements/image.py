@@ -25,14 +25,17 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.image_utils import (
     Channels,
     ImageFormatOrAuto,
     ImageOrImageList,
-    WidthBehavior,
     marshall_images,
 )
+from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -51,13 +54,13 @@ class ImageMixin:
         # TODO: Narrow type of caption, dependent on type of image,
         #  by way of overload
         caption: str | list[str] | None = None,
-        width: int | None = None,
+        width: Width = "content",
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -91,11 +94,21 @@ class ImageMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
-        width : int or None
-            Image width. If this is ``None`` (default), Streamlit will use the
-            image's native width, up to the width of the parent container.
-            When using an SVG image without a default width, you should declare
-            ``width`` or use ``use_container_width=True``.
+        width : "content", "stretch", or int
+            The width of the image element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+            When using an SVG image without a default width, use ``"stretch"``
+            or an integer.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
@@ -130,8 +143,14 @@ class ImageMixin:
             the image to match the width of the parent container.
 
         .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
+
+        .. deprecated::
             ``use_column_width`` is deprecated and will be removed in a future
-            release. Please use the ``use_container_width`` parameter instead.
+            release. Please use the ``width`` parameter instead.
 
         Example
         -------
@@ -144,50 +163,58 @@ class ImageMixin:
 
         """
 
-        if use_container_width is True and use_column_width is not None:
-            raise StreamlitAPIException(
-                "`use_container_width` and `use_column_width` cannot be set at the same time.",
-                "Please utilize `use_container_width` since `use_column_width` is deprecated.",
-            )
-
-        image_width: int = (
-            WidthBehavior.ORIGINAL if (width is None or width <= 0) else width
-        )
-
         if use_column_width is not None:
+            if use_container_width is not None:
+                raise StreamlitAPIException(
+                    "`use_container_width` and `use_column_width` cannot be set at the same time.",
+                    "Please utilize `use_container_width` since `use_column_width` is deprecated.",
+                )
+
             show_deprecation_warning(
                 "The `use_column_width` parameter has been deprecated and will be removed "
                 "in a future release. Please utilize the `use_container_width` parameter instead."
             )
-
-            if use_column_width == "auto":
-                image_width = WidthBehavior.AUTO
+            if use_column_width in {"auto", "never"} or use_column_width is False:
+                width = "content"
             elif use_column_width == "always" or use_column_width is True:
-                image_width = WidthBehavior.COLUMN
-            elif use_column_width == "never" or use_column_width is False:
-                image_width = WidthBehavior.ORIGINAL
+                width = "stretch"
 
-        elif use_container_width is True:
-            image_width = WidthBehavior.MAX_IMAGE_OR_CONTAINER
-        elif image_width is not None and image_width > 0:
-            # Use the given width. It will be capped on the frontend if it
-            # exceeds the container width.
-            pass
-        elif use_container_width is False:
-            image_width = WidthBehavior.MIN_IMAGE_OR_CONTAINER
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width is True:
+                width = "stretch"
+            elif isinstance(width, int):
+                # Preserve the existing behavior with respect to use_container_width=False
+                # and width=int.
+                pass
+            else:
+                width = "content"
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
 
         image_list_proto = ImageListProto()
         marshall_images(
             self.dg._get_delta_path_str(),
             image,
             caption,
-            image_width,
+            layout_config,
             image_list_proto,
             clamp,
             channels,
             output_format,
         )
-        return self.dg._enqueue("imgs", image_list_proto)
+        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

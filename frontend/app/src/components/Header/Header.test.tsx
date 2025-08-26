@@ -18,8 +18,8 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import { render } from "@streamlit/lib"
 
 import Header, { HeaderProps } from "./Header"
 
@@ -29,6 +29,39 @@ const getProps = (propOverrides: Partial<HeaderProps> = {}): HeaderProps => ({
   onToggleSidebar: vi.fn(),
   ...propOverrides,
 })
+
+// Helper function to create mock app context with overrides
+const getMockAppContext = (
+  overrides: Partial<
+    ReturnType<typeof StreamlitContextProviderModule.useAppContext>
+  > = {}
+): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
+  showToolbar: true,
+  widgetsDisabled: false,
+  initialSidebarState: 1,
+  pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: vi.fn(),
+  navSections: [],
+  appPages: [],
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+  gitInfo: null,
+  ...overrides,
+})
+
+// Helper function to setup app context mock
+const mockAppContext = (
+  overrides: Partial<
+    ReturnType<typeof StreamlitContextProviderModule.useAppContext>
+  > = {}
+): void => {
+  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+    getMockAppContext(overrides)
+  )
+}
 
 describe("Header", () => {
   afterEach(() => {
@@ -41,191 +74,164 @@ describe("Header", () => {
     expect(screen.getByTestId("stHeader")).toBeInTheDocument()
   })
 
-  it("renders toolbar when showToolbar is true in context and content exists", () => {
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue({
-      showToolbar: true,
-      showColoredLine: true,
-      widgetsDisabled: false,
-      initialSidebarState: 1,
-      pageLinkBaseUrl: "",
-      currentPageScriptHash: "",
-      onPageChange: vi.fn(),
-      navSections: [],
-      appPages: [],
-      appLogo: null,
-      sidebarChevronDownshift: 0,
-      expandSidebarNav: false,
-      hideSidebarNav: false,
-      gitInfo: null,
+  describe("Toolbar visibility", () => {
+    it("renders toolbar when showToolbar is true and rightContent exists", () => {
+      mockAppContext({ showToolbar: true })
+      render(<Header {...getProps({ rightContent: <div>Right</div> })} />)
+
+      expect(screen.getByTestId("stToolbar")).toBeVisible()
     })
 
-    render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
-    expect(screen.getByTestId("stToolbar")).toBeVisible()
-  })
+    it("renders toolbar with navigation when showToolbar is false but navigation exists", () => {
+      mockAppContext({ showToolbar: false })
+      render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
 
-  it("renders toolbar with navigation when showToolbar is false but navigation exists", () => {
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue({
-      showToolbar: false,
-      showColoredLine: true,
-      widgetsDisabled: false,
-      initialSidebarState: 1,
-      pageLinkBaseUrl: "",
-      currentPageScriptHash: "",
-      onPageChange: vi.fn(),
-      navSections: [],
-      appPages: [],
-      appLogo: null,
-      sidebarChevronDownshift: 0,
-      expandSidebarNav: false,
-      hideSidebarNav: false,
-      gitInfo: null,
+      expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
     })
 
-    render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
-    // Toolbar should be rendered when navigation exists, even if showToolbar is false
-    expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
+    it("does not render toolbar when no content exists", () => {
+      mockAppContext({ showToolbar: true })
+      render(<Header {...getProps()} />)
+
+      expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
+    })
   })
 
-  it("does not show right content when showToolbar is false", () => {
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue({
-      showToolbar: false,
-      showColoredLine: true,
-      widgetsDisabled: false,
-      initialSidebarState: 1,
-      pageLinkBaseUrl: "",
-      currentPageScriptHash: "",
-      onPageChange: vi.fn(),
-      navSections: [],
-      appPages: [],
-      appLogo: null,
-      sidebarChevronDownshift: 0,
-      expandSidebarNav: false,
-      hideSidebarNav: false,
-      gitInfo: null,
+  describe("Right content visibility", () => {
+    it("does not show right content when showToolbar is false", () => {
+      mockAppContext({ showToolbar: false })
+      const rightContent = <div data-testid="test-right">Right Content</div>
+      render(<Header {...getProps({ rightContent })} />)
+
+      expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
     })
 
-    const rightContent = <div data-testid="test-right">Right Content</div>
-    render(<Header {...getProps({ rightContent })} />)
-    // Right content should not be shown when showToolbar is false
-    expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
+    it("renders right content in the right section when showToolbar is true", () => {
+      mockAppContext({ showToolbar: true })
+      const rightContent = <div data-testid="test-right">Right Content</div>
+      render(<Header {...getProps({ rightContent })} />)
+
+      expect(screen.getByTestId("test-right")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbar")).toContainElement(
+        screen.getByTestId("test-right")
+      )
+    })
   })
 
-  it("renders with transparent background when isTransparentBackground is true", () => {
-    render(<Header {...getProps({ isTransparentBackground: true })} />)
+  describe("Background color", () => {
+    it.each([
+      {
+        description:
+          "transparent background when header is completely empty to blend seamlessly into page",
+        props: {},
+        hasTransparentBg: true,
+      },
+      {
+        description:
+          "solid background when navigation exists to provide contrast for user interaction",
+        props: { navigation: <div>Nav</div> },
+        hasTransparentBg: false,
+      },
+      {
+        description:
+          "solid background when logo exists (sidebar closed) to ensure brand visibility",
+        props: {
+          logoComponent: <div data-testid="test-logo">Logo</div>,
+          isSidebarOpen: false,
+        },
+        hasTransparentBg: false,
+      },
+    ])("renders with $description", ({ props, hasTransparentBg }) => {
+      render(<Header {...getProps(props)} />)
+      const header = screen.getByTestId("stHeader")
 
-    const header = screen.getByTestId("stHeader")
-    expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+      if (hasTransparentBg) {
+        expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+      } else {
+        expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+      }
+    })
   })
 
-  it("renders with default background when isTransparentBackground is false", () => {
-    render(<Header {...getProps({ isTransparentBackground: false })} />)
+  describe("Content rendering", () => {
+    it("renders navigation content in the toolbar", () => {
+      const navigationContent = <div data-testid="test-nav">Navigation</div>
+      render(<Header {...getProps({ navigation: navigationContent })} />)
 
-    const header = screen.getByTestId("stHeader")
-    // Check that it doesn't have transparent background
-    expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-  })
-
-  it("renders navigation content in the left section", () => {
-    const navigationContent = <div data-testid="test-nav">Navigation</div>
-    render(<Header {...getProps({ navigation: navigationContent })} />)
-
-    expect(screen.getByTestId("test-nav")).toBeInTheDocument()
-    // Navigation is rendered directly in the toolbar, not in a specific section
-    expect(screen.getByTestId("stToolbar")).toContainElement(
-      screen.getByTestId("test-nav")
-    )
-  })
-
-  it("renders right content in the right section", () => {
-    const rightContent = <div data-testid="test-right">Right Content</div>
-    render(<Header {...getProps({ rightContent })} />)
-
-    expect(screen.getByTestId("test-right")).toBeInTheDocument()
-    // Right content is rendered in the toolbar
-    expect(screen.getByTestId("stToolbar")).toContainElement(
-      screen.getByTestId("test-right")
-    )
-  })
-
-  it("renders logo in the left section when provided", () => {
-    const logo = <div data-testid="test-logo">Logo</div>
-    render(<Header {...getProps({ logoComponent: logo })} />)
-
-    expect(screen.getByTestId("test-logo")).toBeInTheDocument()
-    // Logo is rendered in the toolbar
-    expect(screen.getByTestId("stToolbar")).toContainElement(
-      screen.getByTestId("test-logo")
-    )
-  })
-
-  it("renders sidebar expand button when hasSidebar is true", () => {
-    render(<Header {...getProps({ hasSidebar: true })} />)
-
-    expect(screen.getByTestId("stExpandSidebarButton")).toBeInTheDocument()
-  })
-
-  it("does not render sidebar expand button when hasSidebar is false", () => {
-    render(<Header {...getProps({ hasSidebar: false })} />)
-
-    expect(
-      screen.queryByTestId("stExpandSidebarButton")
-    ).not.toBeInTheDocument()
-  })
-
-  it("calls onToggleSidebar when expand button is clicked", () => {
-    const onToggleSidebar = vi.fn()
-    render(<Header {...getProps({ hasSidebar: true, onToggleSidebar })} />)
-
-    const expandButton = screen.getByTestId("stExpandSidebarButton")
-    expandButton.click()
-
-    expect(onToggleSidebar).toHaveBeenCalled()
-  })
-
-  it("does not render toolbar when no content exists", () => {
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue({
-      showToolbar: true,
-      showColoredLine: true,
-      widgetsDisabled: false,
-      initialSidebarState: 1,
-      pageLinkBaseUrl: "",
-      currentPageScriptHash: "",
-      onPageChange: vi.fn(),
-      navSections: [],
-      appPages: [],
-      appLogo: null,
-      sidebarChevronDownshift: 0,
-      expandSidebarNav: false,
-      hideSidebarNav: false,
-      gitInfo: null,
+      expect(screen.getByTestId("test-nav")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbar")).toContainElement(
+        screen.getByTestId("test-nav")
+      )
     })
 
-    render(<Header {...getProps()} />) // No navigation or rightContent
-    expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
+    it("renders logo in the toolbar when provided", () => {
+      const logo = <div data-testid="test-logo">Logo</div>
+      render(<Header {...getProps({ logoComponent: logo })} />)
+
+      expect(screen.getByTestId("test-logo")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbar")).toContainElement(
+        screen.getByTestId("test-logo")
+      )
+    })
+  })
+
+  describe("Sidebar functionality", () => {
+    it.each([
+      {
+        description:
+          "renders sidebar expand button when sidebar exists and is closed",
+        hasSidebar: true,
+        isSidebarOpen: false,
+        shouldRender: true,
+      },
+      {
+        description:
+          "does not render sidebar expand button when sidebar doesn't exist",
+        hasSidebar: false,
+        isSidebarOpen: false,
+        shouldRender: false,
+      },
+      {
+        description:
+          "does not render sidebar expand button when sidebar is open",
+        hasSidebar: true,
+        isSidebarOpen: true,
+        shouldRender: false,
+      },
+    ])("$description", ({ hasSidebar, isSidebarOpen, shouldRender }) => {
+      render(<Header {...getProps({ hasSidebar, isSidebarOpen })} />)
+
+      const expandButton = screen.queryByTestId("stExpandSidebarButton")
+      if (shouldRender) {
+        expect(expandButton).toBeInTheDocument()
+      } else {
+        expect(expandButton).not.toBeInTheDocument()
+      }
+    })
+
+    it("calls onToggleSidebar when expand button is clicked", () => {
+      const onToggleSidebar = vi.fn()
+      render(
+        <Header
+          {...getProps({
+            hasSidebar: true,
+            isSidebarOpen: false,
+            onToggleSidebar,
+          })}
+        />
+      )
+
+      const expandButton = screen.getByTestId("stExpandSidebarButton")
+      expandButton.click()
+
+      expect(onToggleSidebar).toHaveBeenCalled()
+    })
   })
 
   describe("Embed mode behavior", () => {
     describe("When embed=true (showToolbar=false)", () => {
       beforeEach(() => {
-        vi.spyOn(
-          StreamlitContextProviderModule,
-          "useAppContext"
-        ).mockReturnValue({
-          showToolbar: false, // This is false when embed=true without show_toolbar
-          showColoredLine: true,
-          widgetsDisabled: false,
-          initialSidebarState: 1,
-          pageLinkBaseUrl: "",
-          currentPageScriptHash: "",
-          onPageChange: vi.fn(),
-          navSections: [],
-          appPages: [],
-          appLogo: null,
-          sidebarChevronDownshift: 0,
-          expandSidebarNav: false,
-          hideSidebarNav: false,
-          gitInfo: null,
-        })
+        mockAppContext({ showToolbar: false })
       })
 
       it("should show logo when provided and sidebar is closed", () => {
@@ -266,6 +272,8 @@ describe("Header", () => {
         render(<Header {...getProps({ rightContent })} />)
 
         expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
+        // But toolbar should still not render because no other content exists
+        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
       })
 
       it("should show all left-side content together", () => {
@@ -295,25 +303,7 @@ describe("Header", () => {
 
     describe("When embed=true&embed_options=show_toolbar (showToolbar=true)", () => {
       beforeEach(() => {
-        vi.spyOn(
-          StreamlitContextProviderModule,
-          "useAppContext"
-        ).mockReturnValue({
-          showToolbar: true, // This is true when embed_options=show_toolbar
-          showColoredLine: true,
-          widgetsDisabled: false,
-          initialSidebarState: 1,
-          pageLinkBaseUrl: "",
-          currentPageScriptHash: "",
-          onPageChange: vi.fn(),
-          navSections: [],
-          appPages: [],
-          appLogo: null,
-          sidebarChevronDownshift: 0,
-          expandSidebarNav: false,
-          hideSidebarNav: false,
-          gitInfo: null,
-        })
+        mockAppContext({ showToolbar: true })
       })
 
       it("should show all content including rightContent", () => {
@@ -342,93 +332,67 @@ describe("Header", () => {
     })
 
     describe("Background transparency logic", () => {
-      it("should have transparent background when NO content is shown", () => {
-        render(<Header {...getProps({ isTransparentBackground: true })} />)
+      const testCases = [
+        {
+          description:
+            "transparent background when header has no content to create seamless page integration",
+          props: {},
+          expectTransparent: true,
+          expectToolbar: false,
+        },
+        {
+          description:
+            "solid background when logo is shown to provide brand contrast and readability",
+          props: {
+            logoComponent: <div data-testid="test-logo">Logo</div>,
+            isSidebarOpen: false,
+          },
+          expectTransparent: false,
+          expectToolbar: true,
+        },
+        {
+          description:
+            "solid background when sidebar expand button is shown to define clickable area",
+          props: { hasSidebar: true, isSidebarOpen: false },
+          expectTransparent: false,
+          expectToolbar: true,
+        },
+        {
+          description:
+            "solid background when navigation is shown to provide clear container for nav elements",
+          props: { navigation: <div data-testid="test-nav">Navigation</div> },
+          expectTransparent: false,
+          expectToolbar: true,
+        },
+      ]
 
-        const header = screen.getByTestId("stHeader")
-        expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
-      })
+      it.each(testCases)(
+        "should have $description",
+        ({ props, expectTransparent, expectToolbar }) => {
+          render(<Header {...getProps(props)} />)
 
-      it("should have solid background when logo is shown", () => {
-        const logo = <div data-testid="test-logo">Logo</div>
-        render(
-          <Header
-            {...getProps({
-              logoComponent: logo,
-              isSidebarOpen: false,
-              isTransparentBackground: false,
-            })}
-          />
-        )
+          const header = screen.getByTestId("stHeader")
+          if (expectTransparent) {
+            expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+          } else {
+            expect(header).not.toHaveStyle(
+              "background-color: rgba(0, 0, 0, 0)"
+            )
+          }
 
-        const header = screen.getByTestId("stHeader")
-        expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-        expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
-      })
-
-      it("should have solid background when sidebar button is shown", () => {
-        render(
-          <Header
-            {...getProps({
-              hasSidebar: true,
-              isSidebarOpen: false,
-              isTransparentBackground: false,
-            })}
-          />
-        )
-
-        const header = screen.getByTestId("stHeader")
-        expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-        expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
-      })
-
-      it("should have solid background when navigation is shown", () => {
-        const navigation = <div data-testid="test-nav">Navigation</div>
-        render(
-          <Header
-            {...getProps({
-              navigation,
-              isTransparentBackground: false,
-            })}
-          />
-        )
-
-        const header = screen.getByTestId("stHeader")
-        expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-        expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
-      })
+          const toolbar = screen.queryByTestId("stToolbar")
+          if (expectToolbar) {
+            expect(toolbar).toBeInTheDocument()
+          } else {
+            expect(toolbar).not.toBeInTheDocument()
+          }
+        }
+      )
 
       it("should have solid background when rightContent is shown (and showToolbar=true)", () => {
-        vi.spyOn(
-          StreamlitContextProviderModule,
-          "useAppContext"
-        ).mockReturnValue({
-          showToolbar: true,
-          showColoredLine: true,
-          widgetsDisabled: false,
-          initialSidebarState: 1,
-          pageLinkBaseUrl: "",
-          currentPageScriptHash: "",
-          onPageChange: vi.fn(),
-          navSections: [],
-          appPages: [],
-          appLogo: null,
-          sidebarChevronDownshift: 0,
-          expandSidebarNav: false,
-          hideSidebarNav: false,
-          gitInfo: null,
-        })
-
+        mockAppContext({ showToolbar: true })
         const rightContent = <div data-testid="test-right">Toolbar</div>
-        render(
-          <Header
-            {...getProps({
-              rightContent,
-              isTransparentBackground: false,
-            })}
-          />
-        )
+        render(<Header {...getProps({ rightContent })} />)
 
         const header = screen.getByTestId("stHeader")
         expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")
@@ -437,53 +401,62 @@ describe("Header", () => {
     })
 
     describe("Edge cases", () => {
-      it("should not show logo when sidebar is open", () => {
-        const logo = <div data-testid="test-logo">Logo</div>
-        render(
-          <Header
-            {...getProps({
-              logoComponent: logo,
-              hasSidebar: true,
-              isSidebarOpen: true,
-            })}
-          />
-        )
+      const edgeCases = [
+        {
+          description: "not show logo when sidebar is open",
+          props: {
+            logoComponent: <div data-testid="test-logo">Logo</div>,
+            hasSidebar: true,
+            isSidebarOpen: true,
+          },
+          expectLogo: false,
+          expectToolbar: false,
+        },
+        {
+          description: "not show expand button when sidebar is already open",
+          props: { hasSidebar: true, isSidebarOpen: true },
+          expectExpandButton: false,
+          expectToolbar: false,
+        },
+        {
+          description: "not show expand button when no sidebar exists",
+          props: { hasSidebar: false, isSidebarOpen: false },
+          expectExpandButton: false,
+          expectToolbar: false,
+        },
+      ]
 
-        expect(screen.queryByTestId("test-logo")).not.toBeInTheDocument()
-        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
-      })
+      it.each(edgeCases)(
+        "should $description",
+        ({ props, expectLogo, expectExpandButton, expectToolbar }) => {
+          render(<Header {...getProps(props)} />)
 
-      it("should not show expand button when sidebar is open", () => {
-        render(
-          <Header
-            {...getProps({
-              hasSidebar: true,
-              isSidebarOpen: true,
-            })}
-          />
-        )
+          if (expectLogo !== undefined) {
+            const logo = screen.queryByTestId("test-logo")
+            if (expectLogo) {
+              expect(logo).toBeInTheDocument()
+            } else {
+              expect(logo).not.toBeInTheDocument()
+            }
+          }
 
-        expect(
-          screen.queryByTestId("stExpandSidebarButton")
-        ).not.toBeInTheDocument()
-        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
-      })
+          if (expectExpandButton !== undefined) {
+            const expandButton = screen.queryByTestId("stExpandSidebarButton")
+            if (expectExpandButton) {
+              expect(expandButton).toBeInTheDocument()
+            } else {
+              expect(expandButton).not.toBeInTheDocument()
+            }
+          }
 
-      it("should not show expand button when no sidebar exists", () => {
-        render(
-          <Header
-            {...getProps({
-              hasSidebar: false,
-              isSidebarOpen: false,
-            })}
-          />
-        )
-
-        expect(
-          screen.queryByTestId("stExpandSidebarButton")
-        ).not.toBeInTheDocument()
-        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
-      })
+          const toolbar = screen.queryByTestId("stToolbar")
+          if (expectToolbar) {
+            expect(toolbar).toBeInTheDocument()
+          } else {
+            expect(toolbar).not.toBeInTheDocument()
+          }
+        }
+      )
     })
   })
 })

@@ -86,7 +86,8 @@ class WriteMixin:
             The generator or iterable to stream.
 
             If you pass an async generator, Streamlit will internally convert
-            it to a sync generator.
+            it to a sync generator. If the generator depends on a cached object
+            with async references, this can raise an error.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to
@@ -208,7 +209,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -380,19 +381,19 @@ class WriteMixin:
 
         Oh, one more thing: ``st.write`` accepts chart objects too! For example:
 
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
         >>> import altair as alt
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
-        >>> c = (
+        >>> df = pd.DataFrame(rng(0).standard_normal((200, 3)), columns=["a", "b", "c"])
+        >>> chart = (
         ...     alt.Chart(df)
         ...     .mark_circle()
         ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.write(c)
+        >>> st.write(chart)
 
         ..  output::
             https://doc-vega-lite-chart.streamlit.app/

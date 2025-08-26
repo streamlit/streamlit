@@ -19,10 +19,11 @@ import React from "react"
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
 
@@ -35,6 +36,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
   onChange: vi.fn(),
   placeholder: "Select...",
+  acceptNewOptions: false,
   ...props,
 })
 
@@ -86,6 +88,7 @@ describe("Selectbox widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
+  // Placeholder tests
   it("pass placeholder prop correctly", () => {
     props = getProps({
       value: undefined,
@@ -95,27 +98,17 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("Please select")).toBeInTheDocument()
   })
 
-  it("renders a placeholder with empty options", () => {
+  it("integrates with placeholder utility - disabled state when no options", () => {
     props = getProps({
       options: [],
       value: undefined,
+      placeholder: "", // Empty string triggers default logic
     })
     render(<Selectbox {...props} />)
 
+    // Verifies integration with getSelectPlaceholder utility works
     expect(screen.getByText("No options to select")).toBeInTheDocument()
     expect(screen.getByRole("combobox")).toBeDisabled()
-  })
-
-  it("renders a placeholder with empty options when acceptNewOptions is true", () => {
-    props = getProps({
-      options: [],
-      acceptNewOptions: true,
-      value: undefined,
-    })
-    render(<Selectbox {...props} />)
-
-    expect(screen.getByText("Add an option")).toBeInTheDocument()
-    expect(screen.getByRole("combobox")).not.toBeDisabled()
   })
 
   it("renders options", async () => {
@@ -146,12 +139,12 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     await user.click(selectbox)
     const options = screen.getAllByRole("option")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
+    await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(screen.getByText(props.options[2])).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+    ).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
@@ -296,6 +289,33 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     const selectbox = screen.getByTestId("stSelectbox")
     expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
+  })
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.onChange).toHaveBeenCalledWith("mobile new option")
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: false, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
   })
 
   it("does not allow new options when acceptNewOptions is false", async () => {

@@ -93,7 +93,7 @@ _CHANNELS: Final = {
     "column",
 }
 
-VegaLiteSpec: TypeAlias = "dict[str, Any]"
+VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
     "alt.Chart",
     "alt.ConcatChart",
@@ -132,18 +132,14 @@ class VegaLiteState(TypedDict, total=False):
     The point selection parameter is named ``"point_selection"``. The interval
     or box selection parameter is named ``"interval_selection"``.
 
-    The follow example uses ``st.altair_chart``:
+    **Example 1: Chart selections with ``st.altair_chart``**
 
-    >>> import streamlit as st
-    >>> import pandas as pd
-    >>> import numpy as np
     >>> import altair as alt
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
-    >>> if "data" not in st.session_state:
-    >>>     st.session_state.data = pd.DataFrame(
-    ...         np.random.randn(20, 3), columns=["a", "b", "c"]
-    ...     )
-    >>> df = st.session_state.data
+    >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
     >>>
     >>> point_selector = alt.selection_point("point_selection")
     >>> interval_selector = alt.selection_interval("interval_selection")
@@ -165,16 +161,13 @@ class VegaLiteState(TypedDict, total=False):
     >>>
     >>> event
 
-    The following example uses ``st.vega_lite_chart``:
+    **Example 2: Chart selections with ``st.vega_lite_chart``**
 
-    >>> import streamlit as st
     >>> import pandas as pd
-    >>> import numpy as np
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
-    >>> if "data" not in st.session_state:
-    >>>     st.session_state.data = pd.DataFrame(
-    ...         np.random.randn(20, 3), columns=["a", "b", "c"]
-    ...     )
+    >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
     >>>
     >>> spec = {
     ...     "mark": {"type": "circle", "tooltip": True},
@@ -194,9 +187,7 @@ class VegaLiteState(TypedDict, total=False):
     ...     },
     ... }
     >>>
-    >>> event = st.vega_lite_chart(
-    ...     st.session_state.data, spec, key="vega_chart", on_select="rerun"
-    ... )
+    >>> event = st.vega_lite_chart(df, spec, key="vega_chart", on_select="rerun")
     >>>
     >>> event
 
@@ -296,8 +287,16 @@ def _prepare_vega_lite_spec(
         # on vconcat with use_container_width=True as there are unintended
         # consequences of changing the default autosize for all charts.
         # fit-x fits the width and height can be adjusted.
+        is_facet_chart = "facet" in spec or (
+            "encoding" in spec
+            and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
+        )
         if "vconcat" in spec and use_container_width:
             spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+
+        elif is_facet_chart:
+            spec["autosize"] = {"type": "pad", "contains": "padding"}
+
         else:
             spec["autosize"] = {"type": "fit", "contains": "padding"}
 
@@ -387,10 +386,15 @@ def _convert_altair_to_vega_lite_spec(
 
     alt.data_transformers.register("id", id_transform)  # type: ignore[arg-type,attr-defined,unused-ignore]
 
+    # alt.themes was deprecated in Altair 5.5.0 in favor of alt.theme
+    alt_theme = (
+        alt.themes if type_util.is_altair_version_less_than("5.5.0") else alt.theme  # ty: ignore[unresolved-attribute]
+    )
+
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
     # "none" to avoid those defaults.
-    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore[attr-defined,unused-ignore]
+    with alt_theme.enable("none") if alt_theme.active == "default" else nullcontext():  # ty: ignore
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
@@ -673,6 +677,9 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
+            You can set the default colors in the ``theme.chartCategoryColors``
+            configuration option.
+
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
             ``None`` (default), Streamlit sets the width of the chart to fit
@@ -697,57 +704,72 @@ class VegaChartsMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic line chart from a dataframe**
+
+        If you don't use any of the optional parameters, Streamlit plots each
+        column as a separate line, uses the index as the x values, and labels
+        each series with the column name:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.line_chart(chart_data)
+        >>> st.line_chart(df)
 
         .. output::
            https://doc-line-chart.streamlit.app/
            height: 440px
 
-        You can also choose different columns to use for x and y, as well as set
-        the color dynamically based on a 3rd column (assuming your dataframe is in
-        long format):
+        **Example 2: Line chart from specific dataframe columns**
 
-        >>> import streamlit as st
+        You can choose different columns to use for the x and y values. If your
+        dataframe is in long format (all y-values in one column), you can set
+        the line colors from another column.
+
+        If the column contains color strings, the colors will be applied
+        directly and the series will be unlabeled. If the column contains other
+        values, those values will label each line, and the line colors will be
+        selected from the default color palette. You can configure this color
+        palette in the ``theme.chartCategoryColors`` configuration option.
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
+        >>> df = pd.DataFrame(
         ...     {
-        ...         "col1": np.random.randn(20),
-        ...         "col2": np.random.randn(20),
-        ...         "col3": np.random.choice(["A", "B", "C"], 20),
+        ...         "col1": list(range(20)) * 3,
+        ...         "col2": rng(0).standard_normal(60),
+        ...         "col3": ["a"] * 20 + ["b"] * 20 + ["c"] * 20,
         ...     }
         ... )
         >>>
-        >>> st.line_chart(chart_data, x="col1", y="col2", color="col3")
+        >>> st.line_chart(df, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-line-chart1.streamlit.app/
            height: 440px
 
-        Finally, if your dataframe is in wide format, you can group multiple
-        columns under the y argument to show multiple lines with different
-        colors:
+        **Example 3: Line chart from wide-format dataframe**
 
-        >>> import streamlit as st
+        If your dataframe is in wide format (y-values are in multiple columns),
+        you can pass a list of columns to the ``y`` parameter. Each column
+        name becomes a series label. To override the default colors, pass a
+        list of colors to the ``color`` parameter, one for each series:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
-        ... )
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
         >>> st.line_chart(
-        ...     chart_data,
-        ...     x="col1",
-        ...     y=["col2", "col3"],
-        ...     color=["#FF0000", "#0000FF"],  # Optional
+        ...     df,
+        ...     x="a",
+        ...     y=["b", "c"],
+        ...     color=["#FF0000", "#0000FF"],
         ... )
 
         .. output::
@@ -871,6 +893,9 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
+            You can set the default colors in the ``theme.chartCategoryColors``
+            configuration option.
+
         stack : bool, "normalize", "center", or None
             Whether to stack the areas. If this is ``None`` (default),
             Streamlit uses Vega's default. Other values can be as follows:
@@ -907,72 +932,97 @@ class VegaChartsMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic area chart from a dataframe**
+
+        If you don't use any of the optional parameters, Streamlit plots each
+        column as a separate area, uses the index as the x values, and labels
+        each series with the column name:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.area_chart(chart_data)
+        >>> st.area_chart(df)
 
         .. output::
            https://doc-area-chart.streamlit.app/
            height: 440px
 
-        You can also choose different columns to use for x and y, as well as set
-        the color dynamically based on a 3rd column (assuming your dataframe is in
-        long format):
+        **Example 2: Area chart from specific dataframe columns**
 
-        >>> import streamlit as st
+        You can choose different columns to use for the x and y values. If your
+        dataframe is in long format (all y-values in one column), you can set
+        the area colors from another column.
+
+        If the column contains color strings, the colors will be applied
+        directly and the series will be unlabeled. If the column contains other
+        values, those values will label each area, and the area colors will be
+        selected from the default color palette. You can configure this color
+        palette in the ``theme.chartCategoryColors`` configuration option.
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
+        >>> df = pd.DataFrame(
         ...     {
-        ...         "col1": np.random.randn(20),
-        ...         "col2": np.random.randn(20),
-        ...         "col3": np.random.choice(["A", "B", "C"], 20),
+        ...         "col1": list(range(20)) * 3,
+        ...         "col2": rng(0).standard_normal(60),
+        ...         "col3": ["a"] * 20 + ["b"] * 20 + ["c"] * 20,
         ...     }
         ... )
         >>>
-        >>> st.area_chart(chart_data, x="col1", y="col2", color="col3")
+        >>> st.area_chart(df, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-area-chart1.streamlit.app/
            height: 440px
 
-        If your dataframe is in wide format, you can group multiple
-        columns under the y argument to show multiple series with different
-        colors:
+        **Example 3: Area chart from wide-format dataframe**
 
-        >>> import streamlit as st
+        If your dataframe is in wide format (y-values are in multiple columns),
+        you can pass a list of columns to the ``y`` parameter. Each column
+        name becomes a series label. To override the default colors, pass a
+        list of colors to the ``color`` parameter, one for each series. If your
+        areas are overlapping, use colors with some transparency (alpha
+        channel) for the best results.
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "col1": list(range(20)),
+        ...         "col2": rng(0).standard_normal(20),
+        ...         "col3": rng(1).standard_normal(20),
+        ...     }
         ... )
         >>>
         >>> st.area_chart(
-        ...     chart_data,
+        ...     df,
         ...     x="col1",
         ...     y=["col2", "col3"],
-        ...     color=["#FF0000", "#0000FF"],  # Optional
+        ...     color=["#FF000080", "#0000FF80"],
         ... )
 
         .. output::
            https://doc-area-chart2.streamlit.app/
            height: 440px
 
-        You can adjust the stacking behavior by setting ``stack``. Create a
-        steamgraph:
+        **Example 4: Area chart with different stacking**
+
+        You can adjust the stacking behavior by setting ``stack``. You can
+        create a streamgraph by setting ``stack="center"``:
 
         >>> import streamlit as st
         >>> from vega_datasets import data
         >>>
-        >>> source = data.unemployment_across_industries()
+        >>> df = data.unemployment_across_industries()
         >>>
-        >>> st.area_chart(source, x="date", y="count", color="series", stack="center")
+        >>> st.area_chart(df, x="date", y="count", color="series", stack="center")
 
         .. output::
            https://doc-area-chart-steamgraph.streamlit.app/
@@ -1114,6 +1164,9 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
+            You can set the default colors in the ``theme.chartCategoryColors``
+            configuration option.
+
         horizontal : bool
             Whether to make the bars horizontal. If this is ``False``
             (default), the bars display vertically. If this is ``True``,
@@ -1157,68 +1210,90 @@ class VegaChartsMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic bar chart from a dataframe**
+
+        If you don't use any of the optional parameters, Streamlit plots each
+        column as a series of bars, uses the index as the x values, and labels
+        each series with the column name:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.bar_chart(chart_data)
+        >>> st.bar_chart(df)
 
         .. output::
            https://doc-bar-chart.streamlit.app/
            height: 440px
 
-        You can also choose different columns to use for x and y, as well as set
-        the color dynamically based on a 3rd column (assuming your dataframe is in
-        long format):
+        **Example 2: Bar chart from specific dataframe columns**
 
-        >>> import streamlit as st
+        You can choose different columns to use for the x and y values. If your
+        dataframe is in long format (all y-values in one column), you can set
+        the bar colors from another column.
+
+        If the column contains color strings, the colors will be applied
+        directly and the series will be unlabeled. If the column contains other
+        values, those values will label each series, and the bar colors will be
+        selected from the default color palette. You can configure this color
+        palette in the ``theme.chartCategoryColors`` configuration option.
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
+        >>> df = pd.DataFrame(
         ...     {
         ...         "col1": list(range(20)) * 3,
-        ...         "col2": np.random.randn(60),
-        ...         "col3": ["A"] * 20 + ["B"] * 20 + ["C"] * 20,
+        ...         "col2": rng(0).standard_normal(60),
+        ...         "col3": ["a"] * 20 + ["b"] * 20 + ["c"] * 20,
         ...     }
         ... )
         >>>
-        >>> st.bar_chart(chart_data, x="col1", y="col2", color="col3")
+        >>> st.bar_chart(df, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
            height: 440px
 
-        If your dataframe is in wide format, you can group multiple
-        columns under the y argument to show multiple series with different
-        colors:
+        **Example 3: Bar chart from wide-format dataframe**
 
-        >>> import streamlit as st
+        If your dataframe is in wide format (y-values are in multiple columns),
+        you can pass a list of columns to the ``y`` parameter. Each column
+        name becomes a series label. To override the default colors, pass a
+        list of colors to the ``color`` parameter, one for each series:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
+        >>> df = pd.DataFrame(
         ...     {
         ...         "col1": list(range(20)),
-        ...         "col2": np.random.randn(20),
-        ...         "col3": np.random.randn(20),
+        ...         "col2": rng(0).standard_normal(20),
+        ...         "col3": rng(1).standard_normal(20),
         ...     }
         ... )
         >>>
         >>> st.bar_chart(
-        ...     chart_data,
+        ...     df,
         ...     x="col1",
         ...     y=["col2", "col3"],
-        ...     color=["#FF0000", "#0000FF"],  # Optional
+        ...     color=["#FF0000", "#0000FF"],
         ... )
 
         .. output::
            https://doc-bar-chart2.streamlit.app/
            height: 440px
 
-        You can rotate your bar charts to display horizontally.
+        **Example 4: Horizontal bar chart**
+
+        You can use the ``horizontal`` parameter to display horizontal bars
+        instead of vertical bars. This is useful when you have long labels on
+        the x-axis, or when you want to display a large number of categories.
+        This example requires ``vega_datasets`` to be installed.
 
         >>> import streamlit as st
         >>> from vega_datasets import data
@@ -1231,7 +1306,11 @@ class VegaChartsMixin:
            https://doc-bar-chart-horizontal.streamlit.app/
            height: 440px
 
-        You can unstack your bar charts.
+        **Example 5: Unstacked bar chart**
+
+        You can configure the stacking behavior of the bars by setting the
+        ``stack`` parameter. Set it to ``False`` to display bars side by side.
+        This example requires ``vega_datasets`` to be installed.
 
         >>> import streamlit as st
         >>> from vega_datasets import data
@@ -1414,33 +1493,48 @@ class VegaChartsMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic scatter chart from a dataframe**
+
+        If you don't use any of the optional parameters, Streamlit plots each
+        column as a color-coded group of points, uses the index as the x
+        values, and labels each group with the column name:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.scatter_chart(chart_data)
+        >>> st.scatter_chart(df)
 
         .. output::
            https://doc-scatter-chart.streamlit.app/
            height: 440px
 
-        You can also choose different columns to use for x and y, as well as set
-        the color dynamically based on a 3rd column (assuming your dataframe is in
-        long format):
+        **Example 2: Scatter chart from specific dataframe columns**
 
-        >>> import streamlit as st
+        You can choose different columns to use for the x and y values. If your
+        dataframe is in long format (all y-values in one column), you can set
+        the scatter point colors from another column.
+
+        If the column contains color strings, the colors will be applied
+        directly and each color group will be unlabeled. If the column contains
+        other values, those values will label each group, and the scatter point
+        colors will be selected from the default color palette. You can
+        configure this color palette in the ``theme.chartCategoryColors``
+        configuration option.
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((20, 3)), columns=["col1", "col2", "col3"]
         ... )
-        >>> chart_data["col4"] = np.random.choice(["A", "B", "C"], 20)
+        >>> df["col4"] = rng(0).choice(["a", "b", "c"], 20)
         >>>
         >>> st.scatter_chart(
-        ...     chart_data,
+        ...     df,
         ...     x="col1",
         ...     y="col2",
         ...     color="col4",
@@ -1451,24 +1545,28 @@ class VegaChartsMixin:
            https://doc-scatter-chart1.streamlit.app/
            height: 440px
 
-        Finally, if your dataframe is in wide format, you can group multiple
-        columns under the y argument to show multiple series with different
-        colors:
+        **Example 3: Scatter chart from wide-format dataframe**
 
-        >>> import streamlit as st
+        If your dataframe is in wide format (y-values are in multiple columns),
+        you can pass a list of columns to the ``y`` parameter. Each column
+        name becomes a group label. To override the default colors, pass a
+        list of colors to the ``color`` parameter, one for each group:
+
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4), columns=["col1", "col2", "col3", "col4"]
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((20, 4)),
+        ...     columns=["col1", "col2", "col3", "col4"],
         ... )
         >>>
         >>> st.scatter_chart(
-        ...     chart_data,
+        ...     df,
         ...     x="col1",
         ...     y=["col2", "col3"],
         ...     size="col4",
-        ...     color=["#FF0000", "#0000FF"],  # Optional
+        ...     color=["#FF0000", "#0000FF"],
         ... )
 
         .. output::
@@ -1569,6 +1667,11 @@ class VegaChartsMixin:
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
 
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
+
         key : str
             An optional string to use for giving this element a stable
             identity. If ``key`` is ``None`` (default), this element's identity
@@ -1629,20 +1732,20 @@ class VegaChartsMixin:
         Example
         -------
 
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
         >>> import altair as alt
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((60, 3)), columns=["a", "b", "c"])
         >>>
-        >>> c = (
-        ...    alt.Chart(chart_data)
-        ...    .mark_circle()
-        ...    .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+        >>> chart = (
+        ...     alt.Chart(df)
+        ...     .mark_circle()
+        ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.altair_chart(c)
+        >>> st.altair_chart(chart)
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -1737,6 +1840,11 @@ class VegaChartsMixin:
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
 
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
+
         key : str
             An optional string to use for giving this element a stable
             identity. If ``key`` is ``None`` (default), this element's identity
@@ -1800,23 +1908,23 @@ class VegaChartsMixin:
 
         Example
         -------
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+        >>> df = pd.DataFrame(rng(0).standard_normal((60, 3)), columns=["a", "b", "c"])
         >>>
         >>> st.vega_lite_chart(
-        ...    chart_data,
-        ...    {
-        ...        "mark": {"type": "circle", "tooltip": True},
-        ...        "encoding": {
-        ...            "x": {"field": "a", "type": "quantitative"},
-        ...            "y": {"field": "b", "type": "quantitative"},
-        ...            "size": {"field": "c", "type": "quantitative"},
-        ...            "color": {"field": "c", "type": "quantitative"},
-        ...        },
-        ...    },
+        ...     df,
+        ...     {
+        ...         "mark": {"type": "circle", "tooltip": True},
+        ...         "encoding": {
+        ...             "x": {"field": "a", "type": "quantitative"},
+        ...             "y": {"field": "b", "type": "quantitative"},
+        ...             "size": {"field": "c", "type": "quantitative"},
+        ...             "color": {"field": "c", "type": "quantitative"},
+        ...         },
+        ...     },
         ... )
 
         .. output::
@@ -1971,7 +2079,6 @@ class VegaChartsMixin:
             vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
-                form_id=vega_lite_proto.form_id,
                 dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data

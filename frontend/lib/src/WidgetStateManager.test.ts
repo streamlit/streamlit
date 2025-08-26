@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Mock } from "vitest"
 import { enableMapSet, enablePatches } from "immer"
+import { Mock } from "vitest"
 
 import {
   ArrowTable as ArrowTableProto,

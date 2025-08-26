@@ -20,7 +20,8 @@ import range from "lodash/range"
 
 import { Arrow } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
   DataFrameCellType,
   isNumericType,
@@ -29,8 +30,7 @@ import {
   getStyledCell,
   getStyledHeaders,
 } from "~lib/dataframes/pandasStylerUtils"
-import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Quiver } from "~lib/dataframes/Quiver"
 
 import {
   StyledEmptyTableCell,

@@ -1,0 +1,42 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# Streamlit Repo Overview
+
+## Folder Structure
+
+- `lib/`: All backend code and assets.
+- `lib/streamlit/`: The main Streamlit library package.
+- `lib/streamlit/elements/`: Backend code of elements and widgets.
+- `lib/tests`: Python unit tests.
+- `frontend/`: All frontend code and assets.
+- `frontend/app/`: Streamlit application UI.
+- `frontend/lib/`: Shared TS library that contains elements, widgets, and layouts.
+- `frontend/utils/`: Shared utils.
+- `frontend/connection/`: WebSocket connection handling logic.
+- `proto/`: Protobuf definitions for client-server communication.
+- `e2e_playwright/`: E2E tests using playwright.
+- `scripts/`: Utility scripts for development and CI/CD.
+- `component-lib/`: Library for building custom components.
+
+## `make` commands
+
+Selection of `make` commands executable from root relevant for development:
+
+help                       Show all available commands.
+protobuf                   Recompile Protobufs for Python and the frontend.
+python-lint                Lint and check formatting of Python files.
+python-tests               Run all Python unit tests.
+python-types               Run the Python type checker.
+frontend-fast              Build the frontend.
+frontend-dev               Start the frontend development server.
+frontend-lint              Lint and check formatting of frontend files.
+frontend-types             Run the frontend type checker.
+frontend-format            Format frontend files.
+frontend-tests             Run all frontend unit tests.
+autofix                    Autofix linting and formatting errors.
+debug-e2e-test             Run e2e test in debug mode, via: `make debug-e2e-test st_command_test.py`.
+run-e2e-test               Run e2e test, via: `make run-e2e-test st_command_test.py`.

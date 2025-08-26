@@ -72,8 +72,8 @@ def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
     """
     import pandas as pd
 
-    index = map(_maybe_tuple_to_list, index.values)
-    index_df = pd.DataFrame(index)
+    index_values = map(_maybe_tuple_to_list, index.values)
+    index_df = pd.DataFrame(index_values)
     proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
 
 
@@ -92,8 +92,8 @@ def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
     """
     import pandas as pd
 
-    columns = map(_maybe_tuple_to_list, columns.values)
-    columns_df = pd.DataFrame(columns)
+    values = map(_maybe_tuple_to_list, columns.values)
+    columns_df = pd.DataFrame(values)
     proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
 
 

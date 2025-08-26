@@ -23,9 +23,9 @@ import {
   NumberInput as NumberInputProto,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import NumberInput, { Props } from "./NumberInput"
 
@@ -412,6 +412,33 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
       expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue("1")
     })
+
+    it("resets its formatted value when form is cleared", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        formId: "form",
+        default: 5.5,
+        format: "%0.3f",
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInputField")
+
+      // Modify the value so that the widget becomes dirty.
+      await user.clear(numberInput)
+      await user.type(numberInput, "8.123")
+
+      expect(numberInput).toHaveDisplayValue("8.123")
+
+      // "Submit" the form – this should trigger the widget reset.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // The displayed value should reset to the default value.
+      expect(numberInput).toHaveDisplayValue("5.5")
+    })
   })
 
   describe("IntData", () => {
@@ -704,5 +731,458 @@ describe("NumberInput widget", () => {
     const forId2 = numberInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+
+  describe("formattedValue", () => {
+    describe("Initial state formatting", () => {
+      it.each([
+        {
+          description: "formats initial INT value correctly",
+          propsFactory: () => getIntProps({ default: 42 }),
+          expected: "42",
+        },
+        {
+          description: "formats initial FLOAT value correctly",
+          propsFactory: () => getFloatProps({ default: 42.5 }),
+          expected: "42.50",
+        },
+        {
+          description: "handles null initial value",
+          propsFactory: () => getIntProps({ default: null }),
+          expected: "",
+        },
+        {
+          description: "formats initial value with custom format string",
+          propsFactory: () =>
+            getFloatProps({
+              default: 42.123456,
+              format: "%0.2f",
+            }),
+          expected: "42.12",
+        },
+        {
+          description: "handles malformed format string gracefully",
+          propsFactory: () =>
+            getFloatProps({
+              default: 42.123456,
+              format: "%invalid",
+            }),
+          expected: "",
+        },
+        {
+          description: "formats initial negative value",
+          propsFactory: () => getIntProps({ default: -42, min: -100 }),
+          expected: "-42",
+        },
+        {
+          description: "formats initial zero value",
+          propsFactory: () => getIntProps({ default: 0 }),
+          expected: "0",
+        },
+        {
+          description: "formats initial value with custom step",
+          propsFactory: () =>
+            getFloatProps({
+              default: 1.0,
+              step: 0.001,
+            }),
+          expected: "1.000",
+        },
+      ])("$description", ({ propsFactory, expected }) => {
+        const props = propsFactory()
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          expected
+        )
+      })
+
+      it("uses value from widgetMgr when available", () => {
+        const props = getIntProps({ default: 10 })
+        props.widgetMgr.getIntValue = vi.fn(() => 25)
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "25"
+        )
+      })
+    })
+
+    describe("commitValue formatting", () => {
+      it("formats value after committing valid INT", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 100 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "25")
+        await user.keyboard("{enter}")
+
+        expect(input).toHaveDisplayValue("25")
+      })
+
+      it("formats value after committing valid FLOAT", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({
+          default: 10.0,
+          min: 0,
+          max: 100,
+          format: "%0.1f",
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "25.7")
+        await user.keyboard("{enter}")
+
+        expect(input).toHaveDisplayValue("25.7")
+      })
+
+      it("formats value with custom format after commit", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({
+          default: 10.0,
+          min: 0,
+          max: 100,
+          format: "%0.3f",
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "25.1")
+        await user.keyboard("{enter}")
+
+        expect(input).toHaveDisplayValue("25.1")
+      })
+
+      it("formats null value after clearing", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: null, min: 0, max: 100 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.type(input, "25")
+        await user.clear(input)
+        await user.keyboard("{enter}")
+
+        expect(input).toHaveDisplayValue("")
+      })
+
+      it("reverts to default when committing null with default value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 42, min: 0, max: 100 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.keyboard("{enter}")
+
+        expect(input).toHaveDisplayValue("42")
+      })
+
+      it("handles out-of-range values by not updating formatted value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+
+        // Mock reportValidity to track if it's called
+        const mockReportValidity = vi.fn()
+        HTMLInputElement.prototype.reportValidity = mockReportValidity
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100") // Above max
+        await user.keyboard("{enter}")
+
+        // Should not change the formatted value and call reportValidity
+        expect(input).toHaveDisplayValue("100") // Still shows the invalid input
+        expect(mockReportValidity).toHaveBeenCalled()
+
+        // Cleanup
+        HTMLInputElement.prototype.reportValidity = () => true
+      })
+
+      it.each([
+        {
+          description: "formats value after increment",
+          step: 5,
+          action: async (user: ReturnType<typeof userEvent.setup>) =>
+            await user.click(screen.getByTestId("stNumberInputStepUp")),
+          expected: "15",
+        },
+        {
+          description: "formats value after decrement",
+          step: 3,
+          action: async (user: ReturnType<typeof userEvent.setup>) =>
+            await user.click(screen.getByTestId("stNumberInputStepDown")),
+          expected: "7",
+        },
+      ])("$description", async ({ step, action, expected }) => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, step })
+        render(<NumberInput {...props} />)
+
+        await action(user)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          expected
+        )
+      })
+
+      it("formats value when using arrow keys", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({
+          default: 10.0,
+          step: 0.5,
+          format: "%0.1f",
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.type(input, "{arrowup}")
+
+        expect(input).toHaveDisplayValue("10.5")
+      })
+    })
+
+    describe("onChange formatting", () => {
+      it("sets formatted value to null when input is empty", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+
+        expect(input).toHaveDisplayValue("")
+      })
+
+      it.each([
+        {
+          description: "sets formatted value to raw input for valid INT",
+          propsFactory: () => getIntProps({ default: 10 }),
+          inputValue: "25",
+          expected: "25",
+        },
+        {
+          description: "sets formatted value to raw input for valid FLOAT",
+          propsFactory: () => getFloatProps({ default: 10.0 }),
+          inputValue: "25.75",
+          expected: "25.75",
+        },
+        {
+          description: "handles negative number input",
+          propsFactory: () => getIntProps({ default: 10, min: -100 }),
+          inputValue: "-25",
+          expected: "-25",
+        },
+        {
+          description: "handles decimal input for INT type",
+          propsFactory: () => getIntProps({ default: 10 }),
+          inputValue: "25.7",
+          expected: "25",
+        },
+        {
+          description: "handles very long number input",
+          propsFactory: () => getIntProps({ default: 10 }),
+          inputValue: "123456789012345",
+          expected: "123456789012345",
+        },
+        {
+          description: "handles leading zeros",
+          propsFactory: () => getIntProps({ default: 10 }),
+          inputValue: "007",
+          expected: "7",
+        },
+        {
+          description: "handles scientific notation input",
+          propsFactory: () => getFloatProps({ default: 10.0 }),
+          inputValue: "1.5e3",
+          expected: "1500",
+        },
+      ])("$description", async ({ propsFactory, inputValue, expected }) => {
+        const user = userEvent.setup()
+        const props = propsFactory()
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, inputValue)
+
+        expect(input).toHaveDisplayValue(expected)
+      })
+    })
+
+    describe("updateFromProtobuf formatting", () => {
+      it("formats value when updating from protobuf with setValue=true", () => {
+        const props = getIntProps({ default: 10, value: 25, setValue: true })
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "25"
+        )
+      })
+
+      it("formats FLOAT value from protobuf with custom format", () => {
+        const props = getFloatProps({
+          default: 10.0,
+          value: 25.123,
+          setValue: true,
+          format: "%0.2f",
+        })
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "25.12"
+        )
+      })
+
+      it("formats null value from protobuf", () => {
+        const props = getIntProps({
+          default: 10,
+          value: null,
+          setValue: true,
+        })
+        render(<NumberInput {...props} />)
+
+        // When value is null but default exists, it uses the default
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "10"
+        )
+      })
+
+      it("formats value with step from protobuf", () => {
+        const props = getFloatProps({
+          default: 10.0,
+          value: 25.0,
+          setValue: true,
+          step: 0.01,
+        })
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "25.00"
+        )
+      })
+    })
+
+    describe("Edge cases and special values", () => {
+      it.each([
+        {
+          description: "handles very small decimal numbers",
+          propsFactory: () =>
+            getFloatProps({
+              default: 0.000001,
+              format: "%0.6f",
+            }),
+          expected: "0.000001",
+        },
+        {
+          description: "handles very large numbers",
+          propsFactory: () =>
+            getIntProps({
+              default: 999999999999,
+            }),
+          expected: "999999999999",
+        },
+        {
+          description: "handles formatting with different data types",
+          propsFactory: () =>
+            getIntProps({
+              default: 42,
+              format: "%0.2f",
+            }),
+          expected: "42.00",
+        },
+      ])("$description", ({ propsFactory, expected }) => {
+        const props = propsFactory()
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          expected
+        )
+      })
+
+      it("handles multiple decimal points gracefully", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({ default: 10.0 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "25.5.5")
+
+        // HTML number inputs normalize multiple decimal points
+        expect(input).toHaveDisplayValue("25.55")
+      })
+
+      it("handles form clearing with formatted values", () => {
+        const props = getFloatProps({
+          formId: "form",
+          default: 42.123,
+          format: "%0.2f",
+        })
+        props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+        render(<NumberInput {...props} />)
+
+        // Submit the form to trigger clearing
+        act(() => {
+          props.widgetMgr.submitForm("form", undefined)
+        })
+
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "42.12"
+        )
+      })
+
+      it("handles step changes and reformatting", () => {
+        const props = getFloatProps({
+          default: 1.0,
+          step: 0.1,
+        })
+        const { rerender } = render(<NumberInput {...props} />)
+
+        // Initially formatted with 1 decimal place
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "1.0"
+        )
+
+        // Change step to require more precision
+        const newProps = getFloatProps({
+          default: 1.0,
+          step: 0.001,
+        })
+        rerender(<NumberInput {...newProps} />)
+
+        // Should automatically reformat with new step precision
+        expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue(
+          "1.000"
+        )
+      })
+
+      it("handles rapid user input changes", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+
+        // Rapidly change values
+        await user.clear(input)
+        await user.type(input, "1")
+        expect(input).toHaveDisplayValue("1")
+
+        await user.type(input, "23")
+        expect(input).toHaveDisplayValue("123")
+
+        await user.keyboard("{backspace}{backspace}")
+        expect(input).toHaveDisplayValue("1")
+      })
+    })
   })
 })

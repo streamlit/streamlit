@@ -24,7 +24,6 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
-
   captionSide: "bottom",
 }))
 
@@ -56,7 +55,6 @@ export const StyledTableBorder = styled.div<{ $border: Arrow.BorderMode }>(
 export const StyledTable = styled.table(({ theme }) => ({
   width: theme.sizes.full,
   color: theme.colors.bodyText,
-
   borderSpacing: 0,
 }))
 

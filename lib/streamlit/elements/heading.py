@@ -79,13 +79,13 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool, “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, successive
-            headers will cycle through divider colors. That is, the first
-            header will have a blue line, the second header will have a
-            green line, and so on. If a string, the color can be set to one of
-            the following: blue, green, orange, red, violet, gray/grey, or
-            rainbow.
+        divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+            Shows a colored divider below the header. If this is ``True``,
+            successive headers will cycle through divider colors, except gray
+            and rainbow. That is, the first header will have a blue line, the
+            second header will have a green line, and so on. If this is a
+            string, the color can be set to one of the following: blue, green,
+            orange, red, violet, yellow, gray/grey, or rainbow.
 
         width : "stretch", "content", or int
             The width of the header element. This can be one of the following:
@@ -168,13 +168,13 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, successive
-            headers will cycle through divider colors. That is, the first
-            header will have a blue line, the second header will have a
-            green line, and so on. If a string, the color can be set to one of
-            the following: blue, green, orange, red, violet, gray/grey, or
-            rainbow.
+        divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+            Shows a colored divider below the header. If this is ``True``,
+            successive headers will cycle through divider colors, except gray
+            and rainbow. That is, the first header will have a blue line, the
+            second header will have a green line, and so on. If this is a
+            string, the color can be set to one of the following: blue, green,
+            orange, red, violet, yellow, gray/grey, or rainbow.
 
         width : "stretch", "content", or int
             The width of the subheader element. This can be one of the following:
@@ -304,10 +304,11 @@ class HeadingMixin:
         if divider is True:
             return "auto"
         valid_colors = [
+            "red",
+            "orange",
+            "yellow",
             "blue",
             "green",
-            "orange",
-            "red",
             "violet",
             "gray",
             "grey",

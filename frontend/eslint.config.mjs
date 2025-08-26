@@ -183,6 +183,32 @@ export default tseslint.config([
             "Please use window.localStorage instead since localStorage is not " +
             "supported in some browsers (e.g. Android WebView).",
         },
+        {
+          name: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          name: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          object: "window",
+          property: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -224,7 +250,7 @@ export default tseslint.config([
         },
       ],
       "import/order": [
-        1,
+        "error",
         {
           pathGroups: [
             {
@@ -234,6 +260,11 @@ export default tseslint.config([
             },
             {
               pattern: "@streamlit/**",
+              group: "internal",
+              position: "before",
+            },
+            {
+              pattern: "~lib/**",
               group: "internal",
               position: "before",
             },
@@ -248,12 +279,17 @@ export default tseslint.config([
             "index",
           ],
           "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
         },
       ],
       "streamlit-custom/no-hardcoded-theme-values": "error",
       "streamlit-custom/use-strict-null-equality-checks": "error",
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
+      "streamlit-custom/no-force-reflow-access": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -267,6 +303,12 @@ export default tseslint.config([
               message:
                 "Please use the useEmotionTheme hook instead of useTheme for type-safety",
               importNames: ["useTheme"],
+            },
+            {
+              name: "axios",
+              importNames: ["CancelToken"],
+              message:
+                "Please use the `AbortController` API instead of `CancelToken`",
             },
           ],
         },
@@ -308,6 +350,8 @@ export default tseslint.config([
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
+      // Allow force reflow access in test files
+      "streamlit-custom/no-force-reflow-access": "off",
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",

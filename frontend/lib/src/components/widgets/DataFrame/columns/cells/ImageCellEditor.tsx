@@ -15,8 +15,8 @@
  */
 import React from "react"
 
-import { ImageEditorType } from "@glideapps/glide-data-grid"
 import styled from "@emotion/styled"
+import { ImageEditorType } from "@glideapps/glide-data-grid"
 
 const StyledImage = styled.img({
   maxWidth: "100%",

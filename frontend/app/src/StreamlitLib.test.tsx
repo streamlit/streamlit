@@ -78,6 +78,10 @@ class Endpoints implements StreamlitEndpoints {
     return url
   }
 
+  public buildDownloadUrl(url: string): string {
+    return url
+  }
+
   public buildFileUploadURL(url: string): string {
     return url
   }

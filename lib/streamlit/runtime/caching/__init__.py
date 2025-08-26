@@ -32,6 +32,7 @@ from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
+    from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
 
 
@@ -41,16 +42,27 @@ def save_element_message(
     invoked_dg_id: str,
     used_dg_id: str,
     returned_dg_id: str,
+    layout_config: LayoutConfig | None = None,
 ) -> None:
     """Save the message for an element to a thread-local callstack, so it can
     be used later to replay the element when a cache-decorated function's
     execution is skipped.
     """
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_element_message(
-        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        delta_type,
+        element_proto,
+        invoked_dg_id,
+        used_dg_id,
+        returned_dg_id,
+        layout_config,
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
-        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        delta_type,
+        element_proto,
+        invoked_dg_id,
+        used_dg_id,
+        returned_dg_id,
+        layout_config,
     )
 
 

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from playwright.sync_api import expect
@@ -37,7 +38,7 @@ def is_expected_error(
 
     # There is an expected error with pydeck and firefox related to WebGL rendering
     # This seems to be an issue with firefox used with playwright:
-    if msg.text == "deck: o is null undefined" and browser_name == "firefox":
+    if re.search(r"deck:.*is null undefined", msg.text) and browser_name == "firefox":
         return True
 
     # TODO(lukasmasuch): Investigate why firefox is running into this eval issue:

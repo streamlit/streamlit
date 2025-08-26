@@ -27,6 +27,7 @@ from streamlit.proto.NewSession_pb2 import (
     EnvironmentInfo,
     FontFace,
     FontSizes,
+    FontSource,
     Initialize,
     NewSession,
     Radii,
@@ -105,6 +106,7 @@ FD = FieldDescriptor
                 ("code_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
+                ("font_sources", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("base_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
@@ -117,6 +119,8 @@ FD = FieldDescriptor
                 ("link_underline", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("base_font_size", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("base_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("heading_font_sizes", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("heading_font_weights", FD.LABEL_REPEATED, FD.TYPE_INT32),
                 ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 (
@@ -125,6 +129,8 @@ FD = FieldDescriptor
                     FD.TYPE_STRING,
                 ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },
         ),
@@ -137,6 +143,13 @@ FD = FieldDescriptor
                 ("weight_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("style", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("unicode_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+            },
+        ),
+        (
+            FontSource,
+            {
+                ("config_name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("source_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (

@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -31,10 +31,6 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
 
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Install newest version of emoji package
         run: pip install emoji --upgrade
 
