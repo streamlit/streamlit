@@ -986,7 +986,7 @@ def SelectboxColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    options: Iterable of str, int, float, bool, or None
+    options: Iterable[str, int, float, bool] or None
         The options that can be selected during editing. If this is ``None``
         (default), the options will be inferred from the underlying dataframe
         column if its dtype is "category". For more information, see `Pandas docs
