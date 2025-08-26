@@ -60,6 +60,15 @@ class PdfMixin:
     ) -> DeltaGenerator:
         """Display a PDF viewer.
 
+        .. Important::
+
+            You must install ``streamlit-pdf`` to use this command. You can
+            install it as an extra with Streamlit:
+
+            .. code-block:: shell
+
+                pip install streamlit[pdf]
+
         Parameters
         ----------
         data : str, Path, BytesIO, or bytes
