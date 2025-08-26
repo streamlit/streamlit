@@ -913,6 +913,7 @@ class ButtonMixin:
 
         element_id = compute_and_register_element_id(
             "download_button",
+            key_as_main_identity=True,
             user_key=key,
             dg=self.dg,
             label=label,
@@ -1120,6 +1121,7 @@ class ButtonMixin:
         form_id = current_form_id(self.dg) if is_form_submitter else ""
         element_id = compute_and_register_element_id(
             "button",
+            key_as_main_identity=True,
             user_key=key,
             dg=self.dg,
             label=label,
