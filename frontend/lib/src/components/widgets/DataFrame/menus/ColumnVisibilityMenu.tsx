@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useState } from "react"
 
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
+import { Search as UISearchIcon } from "baseui/icon"
+import { Input as UIInput, SIZE as UIInputSize } from "baseui/input"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { transparentize } from "color2k"
 
@@ -180,6 +182,14 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const [columnVisibilitySearchTerm, setcolumnVisibilitySearchTerm] =
+    useState("")
+
+  const onColumnSearch = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
+    setcolumnVisibilitySearchTerm(event.target.value)
+  }
 
   // Determine column visibility based on hidden property and column order:
   const isColumnVisible = (c: BaseColumn): boolean =>
@@ -223,6 +233,56 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             overflow: "auto",
           }}
         >
+          <UIInput
+            type="string"
+            startEnhancer={
+              <UISearchIcon size={theme.sizes.clearIconSize} title="" />
+            }
+            size={UIInputSize.mini}
+            placeholder="Search"
+            value={columnVisibilitySearchTerm}
+            onChange={onColumnSearch}
+            overrides={{
+              Root: {
+                style: {
+                  borderLeftWidth: theme.spacing.none,
+                  borderRightWidth: theme.spacing.none,
+                  borderTopWidth: theme.spacing.none,
+                  borderBottomWidth: theme.spacing.none,
+                  borderLeftColor: theme.colors.primary,
+                  borderRightColor: theme.colors.primary,
+                  borderTopColor: theme.colors.primary,
+                  borderBottomColor: theme.colors.primary,
+                  paddingLeft: theme.spacing.md,
+                  paddingRight: theme.spacing.md,
+                  backgroundColor: theme.colors.none,
+                },
+              },
+              Input: {
+                style: {
+                  backgroundColor: theme.colors.none,
+                  paddingLeft: theme.spacing.sm,
+                },
+              },
+              StartEnhancer: {
+                style: {
+                  paddingRight: theme.spacing.none,
+                  paddingLeft: theme.spacing.none,
+                  backgroundColor: theme.colors.none,
+                },
+              },
+              ClearIconContainer: {
+                style: {
+                  backgroundColor: theme.colors.none,
+                },
+              },
+              ClearIcon: {
+                style: {
+                  backgroundColor: theme.colors.none,
+                },
+              },
+            }}
+          />
           <CheckboxItem
             label={"Select all"}
             isIndeterminate={isIndeterminate}
@@ -233,43 +293,55 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           />
           <StyledMenuDivider />
           <div>
-            {columns.map(column => {
-              // A column can be hidden if configured in column config
-              // or if the user has configured a column order that doesn't
-              // include the column.
-              const hiddenViaColumnOrder = isHiddenViaColumnOrder(
-                column,
-                columnOrder
-              )
+            {columns
+              .filter(column => {
+                if (columnVisibilitySearchTerm === "") {
+                  return column
+                } else if (
+                  column.id
+                    .toLowerCase()
+                    .includes(columnVisibilitySearchTerm.toLowerCase())
+                ) {
+                  return column
+                }
+              })
+              .map(column => {
+                // A column can be hidden if configured in column config
+                // or if the user has configured a column order that doesn't
+                // include the column.
+                const hiddenViaColumnOrder = isHiddenViaColumnOrder(
+                  column,
+                  columnOrder
+                )
 
-              return (
-                <CheckboxItem
-                  key={column.id}
-                  label={
-                    !column.title && column.isIndex
-                      ? NAMELESS_INDEX_NAME
-                      : column.title
-                  }
-                  initialValue={
-                    !(column.isHidden === true || hiddenViaColumnOrder)
-                  }
-                  onChange={checked => {
-                    if (checked) {
-                      showColumn(column.id)
-                      if (hiddenViaColumnOrder) {
-                        // Add the column to the column order list:
-                        setColumnOrder((prevColumnOrder: string[]) => [
-                          ...prevColumnOrder,
-                          column.id,
-                        ])
-                      }
-                    } else {
-                      hideColumn(column.id)
+                return (
+                  <CheckboxItem
+                    key={column.id}
+                    label={
+                      !column.title && column.isIndex
+                        ? NAMELESS_INDEX_NAME
+                        : column.title
                     }
-                  }}
-                />
-              )
-            })}
+                    initialValue={
+                      !(column.isHidden === true || hiddenViaColumnOrder)
+                    }
+                    onChange={checked => {
+                      if (checked) {
+                        showColumn(column.id)
+                        if (hiddenViaColumnOrder) {
+                          // Add the column to the column order list:
+                          setColumnOrder((prevColumnOrder: string[]) => [
+                            ...prevColumnOrder,
+                            column.id,
+                          ])
+                        }
+                      } else {
+                        hideColumn(column.id)
+                      }
+                    }}
+                  />
+                )
+              })}
           </div>
         </div>
       )}
