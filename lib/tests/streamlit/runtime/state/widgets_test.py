@@ -356,7 +356,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["user_key", "dg"]:
+        for kwarg in ["user_key", "dg", "key_as_main_identity"]:
             kwargs[kwarg] = ANY
 
         return kwargs
