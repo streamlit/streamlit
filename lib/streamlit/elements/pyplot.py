@@ -82,8 +82,8 @@ class PyplotMixin:
 
             - ``"stretch"`` (default): The width of the element matches the
               width of the parent container.
-            - ``"content"``: The width of the element matches the figure's
-              native width, but doesn't exceed the width of the parent
+            - ``"content"``: The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
