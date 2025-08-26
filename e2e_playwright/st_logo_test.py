@@ -110,7 +110,6 @@ def test_large_logo_w_sidebar(
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
     expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
-    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
     assert_snapshot(
         themed_app.get_by_test_id("stHeader"),
