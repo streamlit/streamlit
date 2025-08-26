@@ -118,8 +118,6 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // replaced by useSelectCommon valuesToUiMulti
-
   const generateNewState = useCallback(
     (data: OnChangeParams): MultiselectValue => {
       switch (data.type) {
