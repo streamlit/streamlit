@@ -198,8 +198,7 @@ class ColumnConfig(TypedDict, total=False):
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -303,8 +302,7 @@ def Column(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -408,8 +406,7 @@ def NumberColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -571,8 +568,7 @@ def TextColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -694,8 +690,7 @@ def LinkColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -853,8 +848,7 @@ def CheckboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -963,8 +957,7 @@ def SelectboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1500,8 +1493,7 @@ def ListColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1610,8 +1602,7 @@ def DatetimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1773,8 +1764,7 @@ def TimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1927,8 +1917,7 @@ def DateColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
