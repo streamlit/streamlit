@@ -163,6 +163,7 @@ message CustomThemeConfig {
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;
+  repeated FontSource font_sources = 37;
   // DEPRECATED: Please use the base_font_size theme config instead:
   FontSizes font_sizes = 16;
   // DEPRECATED: This color is not applied anymore:
@@ -187,7 +188,7 @@ message CustomThemeConfig {
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
 
-  // Next ID: 37
+  // Next ID: 38
 }
 
 message FontFace {
@@ -202,6 +203,13 @@ message FontFace {
   string style = 4;
   // Equivalent to unicode-range @font-face CSS property.
   string unicode_range = 6;
+}
+
+message FontSource {
+  // Supports passing links to font config options - these are the sources
+  // used in the <link> tag (href) to embed the font in html
+  string config_name = 1;
+  string source_url = 2;
 }
 
 // DEPRECATED: Please use the base_radius theme config instead.

@@ -21,6 +21,7 @@ import React, { StrictMode } from "react"
 
 import log from "loglevel"
 import { createRoot } from "react-dom/client"
+import { HelmetProvider } from "react-helmet-async"
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 
@@ -42,8 +43,10 @@ const reactRoot = createRoot(rootDomNode)
 
 reactRoot.render(
   <StrictMode>
-    <StyletronProvider value={engine}>
-      <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
-    </StyletronProvider>
+    <HelmetProvider>
+      <StyletronProvider value={engine}>
+        <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
+      </StyletronProvider>
+    </HelmetProvider>
   </StrictMode>
 )

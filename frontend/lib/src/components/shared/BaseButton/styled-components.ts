@@ -244,7 +244,6 @@ const StyledButtonGroupBaseButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     background: theme.colors.bgColor,
-    color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
