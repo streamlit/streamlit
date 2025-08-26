@@ -100,6 +100,10 @@ const LogoComponent = ({
     )
   }
 
+  // Wrapping the logo into a div makes it easier to correctly
+  // handle the width in all cases. It already gets wrapped via a
+  // link element (<a>) above when link is provided.
+  // https://github.com/streamlit/streamlit/issues/12326
   return <div>{logo}</div>
 }
 
