@@ -35,11 +35,23 @@ runs:
         restore-keys: |
           ${{ runner.os }}-${{ runner.arch }}-playwright-
 
+    - name: Disable man-db to speed up apt (Linux only)
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        set -e
+        # Prevent automatic man-db updates and remove the package to avoid triggers.
+        sudo rm -f /var/lib/man-db/auto-update || true
+        if dpkg -s man-db >/dev/null 2>&1; then
+          sudo apt-get -y purge man-db || true
+          sudo apt-get -y autoremove || true
+        fi
+
     - name: Install Playwright browsers
       shell: bash
       run: |
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
-          python -m playwright install --with-deps
+          DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
         else
           python -m playwright install
         fi
