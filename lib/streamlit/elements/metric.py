@@ -161,15 +161,20 @@ class MetricMixin:
               of the parent container.
 
         chart_data : Iterable or None
-            A sequence of numeric values to display as a sparkline chart. If this
-            is ``None`` (default), no chart is displayed.
-            The sequence can be a ``list``, ``set``, or anything supported by
-            ``st.dataframe``. If the sequence is dataframe-like, the first
-            column will be used. Each value will be cast to ``float`` internally
-            by default.
+            A sequence of numeric values to display as a sparkline chart. If
+            this is ``None`` (default), no chart is displayed. The sequence can
+            be anything supported by ``st.dataframe``, including a ``list`` or
+            ``set``. If the sequence is dataframe-like, the first column will
+            be used. Each value will be cast to ``float`` internally by
+            default.
 
         chart_type : "line", "bar", or "area"
-            The type of sparkline chart to display. Defaults to line chart.
+            The type of sparkline chart to display. This can be one of the
+            following:
+
+            - ``"line"`` (default): A simple sparkline.
+            - ``"area"``: A sparkline with area shading.
+            - ``"bar"``: A bar chart.
 
         Examples
         --------
@@ -207,7 +212,10 @@ class MetricMixin:
         >>> st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
         >>>
         >>> st.metric(
-        ...     label="Active developers", value=123, delta=123, delta_color="off"
+        ...     label="Active developers",
+        ...     value=123,
+        ...     delta=123,
+        ...     delta_color="off",
         ... )
 
         .. output::
@@ -232,6 +240,33 @@ class MetricMixin:
         .. output::
             https://doc-metric-example4.streamlit.app/
             height: 350px
+
+        **Example 5: Show sparklines**
+
+        To show trends over time, add sparklines.
+
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> changes = list(rng(4).standard_normal(20))
+        >>> data = [sum(changes[:i]) for i in range(20)]
+        >>> delta = round(data[-1], 2)
+        >>>
+        >>> row = st.container(horizontal=True)
+        >>> with row:
+        >>>     st.metric(
+        ...         "Line", 10, delta, chart_data=data, chart_type="line", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Area", 10, delta, chart_data=data, chart_type="area", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Bar", 10, delta, chart_data=data, chart_type="bar", border=True
+        ...     )
+
+        .. output::
+            https://doc-metric-example5.streamlit.app/
+            height: 300px
 
         """
         maybe_raise_label_warnings(label, label_visibility)

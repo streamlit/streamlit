@@ -52,8 +52,12 @@ class BokehMixin:
         wherever you would call Bokeh's ``show``.
 
         .. Important::
-            Bokeh chart is deprecated and will be removed in a future version.
-            Please use our custom component, |streamlit-bokeh|_ instead.
+            You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
+            command, which is deprecated and will be removed in a future
+            version.
+
+            For more current updates, use the |streamlit-bokeh|_ custom
+            component instead.
 
         .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
         .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh

@@ -49,13 +49,15 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const { widgetsDisabled, node, isStale, width, flex } = props
   const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
     useContext(LibContext)
+  const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
 
   let allTabLabels: string[] = []
-  const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
-  const [activeTabName, setActiveTabName] = useState<string>(
-    // @ts-expect-error
-    node.children[0].deltaBlock.tab.label || "0"
-  )
+  const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
+  const [activeTabName, setActiveTabName] = useState<string>(() => {
+    const tab = node.children[defaultTabIndex] as BlockNode
+
+    return tab?.deltaBlock?.tab?.label ?? "0"
+  })
 
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()
@@ -66,8 +68,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   useEffect(() => {
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey === -1) {
-      setActiveTabKey(0)
-      setActiveTabName(allTabLabels[0])
+      setActiveTabKey(defaultTabIndex)
+      setActiveTabName(allTabLabels[defaultTabIndex])
     }
     // TODO: Update to match React best practices
     // eslint-disable-next-line react-hooks/react-compiler
@@ -86,8 +88,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(newTabKey)
       setActiveTabName(allTabLabels[newTabKey])
     } else {
-      setActiveTabKey(0)
-      setActiveTabName(allTabLabels[0])
+      setActiveTabKey(defaultTabIndex)
+      setActiveTabName(allTabLabels[defaultTabIndex])
     }
 
     // TODO: Update to match React best practices
