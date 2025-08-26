@@ -860,7 +860,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        proto.border = border_mode
+        proto.border_mode = border_mode
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")

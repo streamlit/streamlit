@@ -27,7 +27,7 @@ import { render } from "~lib/test_util"
 import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
-  element: ArrowProto.create({ border: ArrowProto.BorderMode.ALL }),
+  element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
   data: new Quiver({ data }),
 })
 
@@ -58,7 +58,7 @@ describe("st._arrow_table", () => {
 
   it("renders with all borders when border=true", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ border: ArrowProto.BorderMode.ALL }),
+      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -77,7 +77,7 @@ describe("st._arrow_table", () => {
   it("renders without borders when border=false", () => {
     // Create a Quiver with border=false
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ border: ArrowProto.BorderMode.NONE }),
+      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.NONE }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -96,7 +96,9 @@ describe("st._arrow_table", () => {
 
   it("renders with horizontal borders only when border='horizontal'", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ border: ArrowProto.BorderMode.HORIZONTAL }),
+      element: ArrowProto.create({
+        borderMode: ArrowProto.BorderMode.HORIZONTAL,
+      }),
       data: new Quiver({ data: UNICODE }),
     }
 

@@ -135,17 +135,17 @@ class ArrowTest(DeltaGeneratorTestCase):
         # Test border=True
         st.table(df, border=True)
         proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border == ArrowProto.BorderMode.ALL
+        assert proto.border_mode == ArrowProto.BorderMode.ALL
 
         # Test border=False
         st.table(df, border=False)
         proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border == ArrowProto.BorderMode.NONE
+        assert proto.border_mode == ArrowProto.BorderMode.NONE
 
         # Test border="horizontal"
         st.table(df, border="horizontal")
         proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border == ArrowProto.BorderMode.HORIZONTAL
+        assert proto.border_mode == ArrowProto.BorderMode.HORIZONTAL
 
     def test_table_border_invalid_value(self):
         """Test that st.table raises ValueError for invalid border values."""

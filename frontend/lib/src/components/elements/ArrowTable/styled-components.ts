@@ -38,13 +38,13 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   display: "inline-block",
 }))
 
-export const StyledTableBorder = styled.div<{ $border: Arrow.BorderMode }>(
-  ({ theme, $border }) => ({
+export const StyledTableBorder = styled.div<{ borderMode: Arrow.BorderMode }>(
+  ({ theme, borderMode }) => ({
     // Add the enclosing border on an extra wrapper around the table. This ensures that
     // when the table scrolls horizontally on small windows, it still shows a border all
     // around the table and the table doesn't look cut off.
     border:
-      $border === Arrow.BorderMode.ALL
+      borderMode === Arrow.BorderMode.ALL
         ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
         : "none",
     borderRadius: theme.radii.default,
@@ -104,32 +104,32 @@ const styleCellFunction = (
   fontWeight: theme.fontWeights.normal,
 })
 
-export const StyledTableCell = styled.td<{ $border: Arrow.BorderMode }>(
-  ({ theme, $border }) => styleCellFunction(theme, $border)
+export const StyledTableCell = styled.td<{ borderMode: Arrow.BorderMode }>(
+  ({ theme, borderMode }) => styleCellFunction(theme, borderMode)
 )
-export const StyledTableCellHeader = styled.th<{ $border: Arrow.BorderMode }>(
-  ({ theme, $border }) => ({
-    ...styleCellFunction(theme, $border),
-    textAlign: "inherit",
-    color: theme.colors.fadedText60,
-    // Remove left padding from first cell when no borders, so that the table aligns
-    // with the rest of the page.
-    "&:first-child": {
-      paddingLeft: $border === Arrow.BorderMode.NONE ? "0" : theme.spacing.sm,
-    },
-    // Increase the space between columns when there are no vertical borders.
-    "&:not(:first-child)": {
-      paddingLeft:
-        $border === Arrow.BorderMode.NONE ||
-        $border === Arrow.BorderMode.HORIZONTAL
-          ? theme.spacing.lg
-          : theme.spacing.sm,
-    },
-  })
-)
+export const StyledTableCellHeader = styled.th<{
+  borderMode: Arrow.BorderMode
+}>(({ theme, borderMode }) => ({
+  ...styleCellFunction(theme, borderMode),
+  textAlign: "inherit",
+  color: theme.colors.fadedText60,
+  // Remove left padding from first cell when no borders, so that the table aligns
+  // with the rest of the page.
+  "&:first-child": {
+    paddingLeft: borderMode === Arrow.BorderMode.NONE ? "0" : theme.spacing.sm,
+  },
+  // Increase the space between columns when there are no vertical borders.
+  "&:not(:first-child)": {
+    paddingLeft:
+      borderMode === Arrow.BorderMode.NONE ||
+      borderMode === Arrow.BorderMode.HORIZONTAL
+        ? theme.spacing.lg
+        : theme.spacing.sm,
+  },
+}))
 
 export const StyledEmptyTableCell = styled(StyledTableCell)<{
-  $border: Arrow.BorderMode
+  borderMode: Arrow.BorderMode
 }>(({ theme }) => ({
   color: theme.colors.darkGray,
   fontStyle: "italic",

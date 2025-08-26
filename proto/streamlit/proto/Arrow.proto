@@ -46,9 +46,9 @@ message Arrow {
   repeated SelectionMode selection_mode = 12;
   // Row height in pixels
   optional uint32 row_height = 13;
-  // Whether to show borders around the table and between cells. Note that this property
+  // How to show borders around the table and between cells. Note that this property
   // is only used for `st.table` at the moment.
-  BorderMode border = 14;
+  BorderMode border_mode = 14;
 
   // Available editing modes:
   enum EditingMode {
