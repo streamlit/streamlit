@@ -116,13 +116,16 @@ class DataframeSelectionState(TypedDict, total=False):
         The selected columns, identified by their names.
     cells : list[tuple[int, str]]
         The selected cells, provided as a tuple of row integer position
-        and column name, e.g. ``(0, "col 1")``.
+        and column name. For example, the first cell in a column named "col 1"
+        is represented as ``(0, "col 1")``. Cells within index columns are not
+        returned.
 
     Example
     -------
     The following example has multi-row and multi-column selections enabled.
-    Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
-    selecting columns. Hold ``Shift`` to select a range of columns.
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
+    or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
+    range of columns.
 
     >>> import pandas as pd
     >>> import streamlit as st
@@ -136,7 +139,7 @@ class DataframeSelectionState(TypedDict, total=False):
     ...     df,
     ...     key="data",
     ...     on_select="rerun",
-    ...     selection_mode=["multi-row", "multi-column"],
+    ...     selection_mode=["multi-row", "multi-column", "multi-cell"],
     ... )
     >>>
     >>> event.selection
@@ -363,30 +366,30 @@ class ArrowMixin:
 
             If ``data`` is ``None``, Streamlit renders an empty table.
 
-        width : int, "stretch", or "content"
-            Desired width of the dataframe. If ``"stretch"`` (default),
-            Streamlit sets the width of the dataframe to match the width of
-            the parent container. If ``"content"``, Streamlit sets the width
-            of the dataframe to fit its contents up to the width of the parent
-            container. If an integer, Streamlit sets the width of the dataframe
-            to the specified number of pixels. If the specified width is greater
-            than the width of the parent container, Streamlit sets the dataframe
-            width to match the width of the parent container.
+        width : "stretch", "content", or int
+            The width of the dataframe element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         height : int or "auto"
-            Desired height of the dataframe. If ``"auto"`` (default),
-            Streamlit sets the height to show at most ten rows. Vertical
-            scrolling within the dataframe element is enabled when the height
-            does not accommodate all rows. If an
-            integer, Streamlit sets the height of the dataframe to the
-            specified number of pixels.
+            The height of the dataframe element. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - An integer specifying the height in pixels: The element has a
+              fixed height.
+
+            Vertical scrolling within the dataframe element is enabled when the
+            height does not accommodate all rows.
 
         use_container_width : bool
-            .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead.
-
             Whether to override ``width`` with the width of the parent
             container. If this is ``True`` (default), Streamlit sets the width
             of the dataframe to match the width of the parent container. If
@@ -470,10 +473,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
-            - "single-cell": Only one cell can be selected at a time.
             - "multi-cell": A rectangular range of cells can be selected.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
+              selection based on the modes specified. For example, to allow the
+              user to select multiple rows and multiple cells, use
+              ``["multi-row", "multi-cell"]``.
 
             When column selections are enabled, column sorting is disabled.
 
@@ -481,6 +486,11 @@ class ArrowMixin:
             The height of each row in the dataframe in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``.
 
         Returns
         -------

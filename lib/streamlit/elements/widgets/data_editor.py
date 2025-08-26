@@ -681,30 +681,30 @@ class DataEditorMixin:
                   default to uneditable, but this can be changed through column
                   configuration.
 
-        width : int, "stretch", or "content"
-            Desired width of the data editor. If ``"stretch"`` (default),
-            Streamlit sets the width of the data editor to match the width of
-            the parent container. If ``"content"``, Streamlit sets the width
-            of the data editor to fit its contents up to the width of the parent
-            container. If an integer, Streamlit sets the width of the data editor
-            to the specified number of pixels. If the specified width is greater
-            than the width of the parent container, Streamlit sets the data editor
-            width to match the width of the parent container.
+        width : "stretch", "content", or int
+            The width of the data editor. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the editor matches the
+              width of the parent container.
+            - ``"content"``: The width of the editor matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The editor has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the editor matches the width
+              of the parent container.
 
         height : int or "auto"
-            Desired height of the data editor. If ``"auto"`` (default),
-            Streamlit sets the height to show at most ten rows. Vertical
-            scrolling within the data editor is enabled when the height
-            does not accommodate all rows. If an
-            integer, Streamlit sets the height of the data editor to the
-            specified number of pixels.
+            The height of the data editor. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - An integer specifying the height in pixels: The editor has a
+              fixed height.
+
+            Vertical scrolling within the data editor is enabled when the
+            height does not accommodate all rows.
 
         use_container_width : bool
-            .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will be removed
-                in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead.
-
             Whether to override ``width`` with the width of the parent
             container. If this is ``True`` (default), Streamlit sets the width
             of the data editor to match the width of the parent container. If
@@ -792,6 +792,11 @@ class DataEditorMixin:
             The height of each row in the data editor in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``.
 
         Returns
         -------

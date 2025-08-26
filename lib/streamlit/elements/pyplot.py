@@ -78,13 +78,17 @@ class PyplotMixin:
               approach to matplotlib rendering.
 
         width : "stretch", "content", or int
-            The width of the figure. This can be one of the following:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): The figure width is set to the width of
-              the parent container.
-            - ``"content"``: The figure width is set to the figure's native
-              width, up to the width of the parent container.
-            - An integer specifying the width in pixels.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
@@ -95,14 +99,14 @@ class PyplotMixin:
             contents according to the plotting library, up to the width of the
             parent container.
 
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a future
-            release. Please use the ``width`` parameter instead.
-            For ``use_container_width=True``, use ``width="stretch"``.
-            For ``use_container_width=False``, use ``width="content"``.
-
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Example
         -------
