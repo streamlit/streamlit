@@ -123,8 +123,9 @@ class DataframeSelectionState(TypedDict, total=False):
     Example
     -------
     The following example has multi-row and multi-column selections enabled.
-    Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
-    selecting columns. Hold ``Shift`` to select a range of columns.
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (MacOS)
+    or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
+    range of columns.
 
     >>> import pandas as pd
     >>> import streamlit as st
