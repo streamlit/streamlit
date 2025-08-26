@@ -62,20 +62,27 @@ class PdfMixin:
 
         Parameters
         ----------
-        data : str, Path, bytes, or BytesIO
+        data : str, Path, BytesIO, or bytes
             The PDF file to show. This can be one of the following:
-            - A URL (string) for a hosted PDF file.
-            - A path to a local PDF file.
-            - A file-like object, e.g. a file opened with `open` or an `UploadedFile` returned by `st.file_uploader`.
-            - Raw bytes data.
-        height : int or "stretch"
-            Height of the PDF viewer. Can be "stretch" for full height or an integer for pixel height.
-            If "stretch", the PDF viewer will expand to match the height of its parent container.
 
-        Returns
-        -------
-        DeltaGenerator
-            A DeltaGenerator object for chaining.
+            - A URL (string) for a hosted PDF file.
+            - A path to a local PDF file. If you use a relative path, it must
+              be relative to the current working directory.
+            - A file-like object. For example, this can be an ``UploadedFile``
+              from ``st.file_uploader``, or this can be a local file opened
+              with ``open()``.
+            - Raw bytes data.
+
+        height : int or "stretch"
+            The height of the PDF viewer. This can be one of the following:
+
+            - An integer specifying the height in pixels: The viewer has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled. This is ``500`` by default.
+            - ``"stretch"``: The height of the viewer matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the viewer is not in a parent container, the height
+              of the viewer matches the height of its content.
 
         Example
         -------
