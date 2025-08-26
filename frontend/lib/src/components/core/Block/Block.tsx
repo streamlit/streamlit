@@ -24,6 +24,7 @@ import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { FlexContextProvider } from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
@@ -129,6 +130,46 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   )
 }
 
+/**
+ * Extract only layout-relevant fields from a block submessage to satisfy
+ * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
+ * types like TabContainer.
+ */
+const getLayoutSubElement = (
+  block: BlockProto
+): UseLayoutStylesArgs["subElement"] => {
+  const typeKey = block.type as keyof typeof block | undefined
+  const raw = typeKey
+    ? (block as unknown as Record<string, unknown>)[typeKey]
+    : undefined
+  if (!raw || typeof raw !== "object") return undefined
+
+  const candidate = raw as Record<string, unknown>
+  const subElement = {
+    useContainerWidth: candidate.useContainerWidth as
+      | boolean
+      | null
+      | undefined,
+    height: candidate.height as number | undefined,
+    width: candidate.width as number | undefined,
+    widthConfig: candidate.widthConfig as
+      | streamlit.IWidthConfig
+      | null
+      | undefined,
+  }
+
+  if (
+    subElement.useContainerWidth === undefined &&
+    subElement.height === undefined &&
+    subElement.width === undefined &&
+    subElement.widthConfig === undefined
+  ) {
+    return undefined
+  }
+
+  return subElement
+}
+
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
@@ -179,10 +220,7 @@ export const FlexBoxContainer = (
 
   const layout_styles = useLayoutStyles({
     element: props.node.deltaBlock,
-    subElement:
-      (props.node.deltaBlock.type &&
-        props.node.deltaBlock[props.node.deltaBlock.type]) ||
-      undefined,
+    subElement: getLayoutSubElement(props.node.deltaBlock),
   })
 
   const styles = {
@@ -263,9 +301,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
   const styles = useLayoutStyles({
     element: node.deltaBlock,
-    subElement:
-      (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
-      undefined,
+    subElement: getLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
 
