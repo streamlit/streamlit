@@ -123,7 +123,7 @@ class DataframeSelectionState(TypedDict, total=False):
     Example
     -------
     The following example has multi-row and multi-column selections enabled.
-    Try selecting some rows. To select multiple columns, hold ``CMD`` (MacOS)
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
     or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
     range of columns.
 
