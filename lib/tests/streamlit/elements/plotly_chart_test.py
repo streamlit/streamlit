@@ -289,6 +289,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         # Get the second to last element, which should be deprecation warning
         el = self.get_delta_from_queue(-2).new_element
         assert (
-            "has been deprecated and will be removed in a future release"
+            "have been deprecated and will be removed in a future release"
             in el.alert.body
         )
