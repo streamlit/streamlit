@@ -100,7 +100,7 @@ const LogoComponent = ({
     )
   }
 
-  return logo
+  return <div>{logo}</div>
 }
 
 export default LogoComponent
