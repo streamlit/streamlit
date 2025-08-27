@@ -67,4 +67,4 @@ def test_custom_theme_colors(app: Page, assert_snapshot: ImageCompareFunction):
     # creating flakiness:
     app.wait_for_timeout(10000)
 
-    assert_snapshot(app, name="custom_colors_app", image_threshold=0.0003)
+    assert_snapshot(app, name="custom_main_colors_app", image_threshold=0.0003)

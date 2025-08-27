@@ -1221,6 +1221,7 @@ describe("createEmotionTheme", () => {
   it.each([
     ["#ff0000", "#ff0000"],
     ["rgb(255, 0, 0)", "rgb(255, 0, 0)"],
+    ["rgba(196, 77, 86, 1)", "rgba(196, 77, 86, 1)"],
     ["red", "red"],
     ["ff0000", "#ff0000"], // Handles no leading #
   ])("uses configured main theme colors if set", (color, expectedColor) => {
@@ -1229,6 +1230,12 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
     expect(theme.colors.redColor).toBe(expectedColor)
+    expect(theme.colors.orangeColor).toBe(theme.colors.orange70)
+    expect(theme.colors.yellowColor).toBe(theme.colors.yellow80)
+    expect(theme.colors.blueColor).toBe(theme.colors.blue70)
+    expect(theme.colors.greenColor).toBe(theme.colors.green70)
+    expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+    expect(theme.colors.grayColor).toBe(theme.colors.gray60)
   })
 
   // Test invalid main color values
@@ -1248,7 +1255,15 @@ describe("createEmotionTheme", () => {
       expect(logWarningSpy).toHaveBeenCalledWith(
         `Invalid color passed for orangeColor in theme: "${color}"`
       )
+      // Falls back to default orange
       expect(theme.colors.orangeColor).toBe(theme.colors.orange70)
+      // All others use defaults
+      expect(theme.colors.redColor).toBe(theme.colors.red70)
+      expect(theme.colors.yellowColor).toBe(theme.colors.yellow80)
+      expect(theme.colors.blueColor).toBe(theme.colors.blue70)
+      expect(theme.colors.greenColor).toBe(theme.colors.green70)
+      expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+      expect(theme.colors.grayColor).toBe(theme.colors.gray60)
     }
   )
 
@@ -1263,7 +1278,7 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.blueColor).toBe(theme.colors.blue70)
     expect(theme.colors.greenColor).toBe(theme.colors.green70)
     expect(theme.colors.violetColor).toBe(theme.colors.purple70)
-    expect(theme.colors.grayColor).toBe(theme.colors.gray40)
+    expect(theme.colors.grayColor).toBe(theme.colors.gray60)
   })
 
   it("default main theme colors are set correctly for dark theme", () => {

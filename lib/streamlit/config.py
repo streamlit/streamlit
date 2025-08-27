@@ -1261,7 +1261,7 @@ _create_theme_options(
     description="""
         Color used as main gray color.
 
-        By default, this is #d5dae5 for light theme and #555867 for dark theme.
+        By default, this is #a3a8b8 for light theme and #555867 for dark theme.
     """,
 )
 
