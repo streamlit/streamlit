@@ -89,7 +89,7 @@ const styleCellFunction = (
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   // Increase the space between columns when there are no vertical borders.
-  "&:not(:first-child)": {
+  "&:not(:first-of-type)": {
     paddingLeft:
       border === Arrow.BorderMode.NONE ||
       border === Arrow.BorderMode.HORIZONTAL
@@ -98,7 +98,7 @@ const styleCellFunction = (
   },
   // Remove left padding from first column when no borders, so that the table aligns
   // with the rest of the page.
-  "&:first-child": {
+  "&:first-of-type": {
     paddingLeft: border === Arrow.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
@@ -115,11 +115,11 @@ export const StyledTableCellHeader = styled.th<{
   color: theme.colors.fadedText60,
   // Remove left padding from first cell when no borders, so that the table aligns
   // with the rest of the page.
-  "&:first-child": {
+  "&:first-of-type": {
     paddingLeft: borderMode === Arrow.BorderMode.NONE ? "0" : theme.spacing.sm,
   },
   // Increase the space between columns when there are no vertical borders.
-  "&:not(:first-child)": {
+  "&:not(:first-of-type)": {
     paddingLeft:
       borderMode === Arrow.BorderMode.NONE ||
       borderMode === Arrow.BorderMode.HORIZONTAL
