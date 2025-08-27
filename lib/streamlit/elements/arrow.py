@@ -43,7 +43,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -270,9 +270,7 @@ def parse_border_mode(
         return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
     if border == "horizontal":
         return ArrowProto.BorderMode.HORIZONTAL
-    raise ValueError(
-        f"Invalid border value: {border!r}. Must be True, False, or 'horizontal'."
-    )
+    raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
 
 
 class ArrowMixin:
@@ -786,7 +784,7 @@ class ArrowMixin:
             Whether to show borders around the table and between cells. This can be one
             of the following:
 
-            - ``True``: Show borders around the table and between cells (default)
+            - ``True`` (default): Show borders around the table and between cells
             - ``False``: Show no borders
             - ``"horizontal"``: Show only horizontal borders between rows
 
