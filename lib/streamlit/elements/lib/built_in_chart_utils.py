@@ -47,6 +47,10 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from streamlit.dataframe_util import Data
+    from streamlit.elements.lib.layout_utils import (
+        Height,
+        Width,
+    )
 
 VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
 ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
@@ -73,9 +77,9 @@ class AddRowsMetadata:
     columns: PrepDataColumns
     # Chart styling properties
     color: str | Color | list[Color] | None = None
-    width: int | None = None
-    height: int | None = None
-    use_container_width: bool = True
+    width: Width | None = None
+    height: Height | None = None
+    use_container_width: bool | None = None
     # Only applicable for bar & area charts
     stack: bool | ChartStackType | None = None
     # Only applicable for bar charts
@@ -151,9 +155,9 @@ def generate_chart(
     y_axis_label: str | None = None,
     color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
-    width: int | None = None,
-    height: int | None = None,
-    use_container_width: bool = True,
+    width: Width | None = None,
+    height: Height | None = None,
+    use_container_width: bool | None = None,
     # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
@@ -226,12 +230,15 @@ def generate_chart(
         stack,
     )
 
+    chart_width = width if isinstance(width, int) else None
+    chart_height = height if isinstance(height, int) else None
+
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
         mark=chart_type.value["mark_type"],
-        width=width or 0,
-        height=height or 0,
+        width=chart_width or 0,
+        height=chart_height or 0,
     ).encode(
         x=x_encoding,
         y=y_encoding,
@@ -281,7 +288,7 @@ def generate_chart(
         and is_altair_version_5_or_greater
     ):
         return _add_improved_hover_tooltips(
-            chart, x_column, width, height
+            chart, x_column, chart_width, chart_height
         ).interactive(), add_rows_metadata
 
     return chart.interactive(), add_rows_metadata

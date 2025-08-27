@@ -24,7 +24,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
@@ -58,7 +58,7 @@ function GraphVizChart({
 
   // Determine if we should use container width based on layout config or legacy prop
   const shouldUseContainerWidth =
-    shouldChildrenStretch(widthConfig) || element.useContainerWidth
+    shouldWidthStretch(widthConfig) || element.useContainerWidth
 
   useEffect(() => {
     try {

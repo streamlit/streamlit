@@ -25,13 +25,17 @@ NUM_CHARTS = 11
 def test_altair_chart_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(
-        themed_app.get_by_test_id("stVegaLiteChart").locator(
-            "[role='graphics-document']"
-        )
-    ).to_have_count(NUM_CHARTS)
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
+
+    # Also make sure that all Vega display objects are rendered:
+    expect(charts.locator("[role='graphics-document']")).to_have_count(NUM_CHARTS)
+
+    # Ensure all charts are visible before taking snapshots
+    for idx in range(NUM_CHARTS):
+        chart = charts.nth(idx)
+        vega_display = chart.locator("[role='graphics-document']").nth(0)
+        expect(vega_display).to_be_visible()
 
     assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
     assert_snapshot(charts.nth(1), name="st_altair_chart-scatter_chart_default_theme")

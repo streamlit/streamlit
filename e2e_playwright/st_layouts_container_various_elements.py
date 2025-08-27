@@ -37,7 +37,7 @@ with st.container(
                 "y": [i * i for i in range(5)],
             }
         )
-        st.line_chart(df.set_index("x"), width=300, use_container_width=False)
+        st.line_chart(df.set_index("x"), width=300)
 
         with st.container(
             border=False,
