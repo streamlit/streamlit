@@ -34,14 +34,17 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
+from streamlit.elements.lib.built_in_chart_utils import (
+    _PROTECTION_SUFFIX,
+    StreamlitColumnNotFoundError,
+)
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitColumnNotFoundError
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
