@@ -1184,5 +1184,34 @@ describe("NumberInput widget", () => {
         expect(input).toHaveDisplayValue("1")
       })
     })
+
+    describe("Typing behavior (FLOAT)", () => {
+      it("does not reformat while focused when typing digits", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({ default: 0.0, step: 0.01 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "123")
+
+        // Should show raw typed value without forcing decimal formatting yet
+        expect(input).toHaveDisplayValue("123")
+      })
+
+      it("supports backspace correctly when typing a decimal value", async () => {
+        const user = userEvent.setup()
+        const props = getFloatProps({ default: 0.0 })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "12.3")
+        expect(input).toHaveDisplayValue("12.3")
+
+        await user.keyboard("{backspace}")
+        expect(input).toHaveDisplayValue("12")
+      })
+    })
   })
 })
