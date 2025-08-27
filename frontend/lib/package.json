@@ -68,7 +68,7 @@
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
     "date-fns": "^4.1.0",
-    "decamelize": "^6.0.0",
+    "decamelize": "^6.0.1",
     "deck.gl": "^9.1.14",
     "dompurify": "^3.2.6",
     "hoist-non-react-statics": "^3.3.2",
