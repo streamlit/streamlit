@@ -221,9 +221,12 @@ with st.container(key="badge_elements"):
 
 "---"
 
-st.markdown(
-    "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
-)
+col1, _ = st.columns(2)
+with col1:
+    st.markdown(
+        "Images in markdown should stay inside the container width and not be distorted:\n\n"
+        "![image](./app/static/streamlit-logo.png)"
+    )
 
 "---"
 
