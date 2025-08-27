@@ -41,7 +41,7 @@ from streamlit.elements.vega_charts import (
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitColumnNotFoundError
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1559,6 +1559,107 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # Verify the horizontal orientation is preserved after adding rows
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
+
+    def test_bar_chart_preserves_initial_sort_param(self):
+        """Test that the sort parameter is preserved when adding rows to a bar chart."""
+        empty_df = pd.DataFrame({"A": [], "B": [], "C": []})
+        test_sort = "C"
+
+        chart = st.bar_chart(empty_df, x="A", y="B", sort=test_sort)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        initial_spec = json.loads(proto.spec)
+
+        # Verify sort is applied to the categorical (x) axis
+        assert initial_spec["encoding"]["x"]["sort"]["field"] == test_sort
+        assert initial_spec["encoding"]["x"]["sort"]["order"] == "ascending"
+
+        chart.add_rows(
+            pd.DataFrame(
+                {
+                    "A": ["foo", "bar", "baz"],
+                    "B": [10, 20, 30],
+                    "C": [1, 3, 2],
+                }
+            )
+        )
+
+        new_proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        updated_spec = json.loads(new_proto.spec)
+
+        # Verify the sort parameter is preserved after adding rows
+        assert updated_spec["encoding"]["x"]["sort"]["field"] == test_sort
+        assert updated_spec["encoding"]["x"]["sort"]["order"] == "ascending"
+
+    def test_bar_chart_sort_descending(self):
+        """Test that descending sort works correctly."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort="-C")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify descending sort is applied to the categorical (x) axis
+        assert chart_spec["encoding"]["x"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
+
+    def test_bar_chart_sort_horizontal(self):
+        """Test that sort works correctly on horizontal bar charts."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort="C", horizontal=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # In horizontal bar charts, sort should be applied to the categorical (y) axis
+        assert chart_spec["encoding"]["y"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["y"]["sort"]["order"] == "ascending"
+
+    def test_bar_chart_sort_none_disables_default_sorting(self):
+        """Test that sort=None disables default alphabetical sorting."""
+        df = pd.DataFrame(
+            {
+                "A": ["zebra", "apple", "banana"],  # Intentionally not alphabetical
+                "B": [10, 20, 30],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort=None)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify sort is set to None (disables default sorting)
+        assert chart_spec["encoding"]["x"]["sort"] is None
+
+    def test_bar_chart_sort_invalid_column_raises_error(self):
+        """Test that invalid column names in sort parameter raise an error."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+            }
+        )
+
+        with pytest.raises(StreamlitColumnNotFoundError):
+            st.bar_chart(df, x="A", y="B", sort="nonexistent_column")
+
+        with pytest.raises(StreamlitColumnNotFoundError):
+            st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
 
 
 class VegaUtilitiesTest(unittest.TestCase):
