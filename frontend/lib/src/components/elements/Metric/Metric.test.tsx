@@ -137,7 +137,7 @@ describe("Metric element", () => {
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgba(49, 51, 63, 0.6);"
+      "color: rgb(163, 168, 184);"
     )
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(128, 132, 149, 0.1);"

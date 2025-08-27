@@ -37,9 +37,9 @@ describe("getDividerColors", () => {
       // colors.purple70
       expect(result.violet).toBe("#803df5")
       // colors.gray40
-      expect(result.gray).toBe("#d5dae5")
+      expect(result.gray).toBe("#a3a8b8")
       // colors.gray40
-      expect(result.grey).toBe("#d5dae5")
+      expect(result.grey).toBe("#a3a8b8")
       expect(result.rainbow).toBe(
         "linear-gradient(to right, #ff4b4b, #ffa421, #faca2b, #21c354, #1c83e1, #803df5)"
       )

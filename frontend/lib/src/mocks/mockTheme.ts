@@ -71,7 +71,7 @@ const requiredThemeColors = {
   blueColor: colors.blue70,
   greenColor: colors.green70,
   violetColor: colors.purple70,
-  grayColor: colors.gray40,
+  grayColor: colors.gray60,
 }
 
 interface OptionalThemeColors {
