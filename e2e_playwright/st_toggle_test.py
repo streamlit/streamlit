@@ -21,9 +21,9 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
     expect_markdown,
-    get_checkbox,
     get_element_by_key,
     get_expander,
+    get_toggle,
 )
 
 TOGGLE_ELEMENTS = 15
@@ -34,24 +34,22 @@ def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFu
     toggle_elements = themed_app.get_by_test_id("stCheckbox")
     expect(toggle_elements).to_have_count(TOGGLE_ELEMENTS)
 
-    assert_snapshot(get_checkbox(themed_app, "toggle 1 (True)"), name="st_toggle-true")
+    assert_snapshot(get_toggle(themed_app, "toggle 1 (True)"), name="st_toggle-true")
+    assert_snapshot(get_toggle(themed_app, "toggle 2 (False)"), name="st_toggle-false")
     assert_snapshot(
-        get_checkbox(themed_app, "toggle 2 (False)"), name="st_toggle-false"
-    )
-    assert_snapshot(
-        get_checkbox(themed_app, re.compile(r"^toggle 3")),
+        get_toggle(themed_app, re.compile(r"^toggle 3")),
         name="st_toggle-long_label",
     )
     assert_snapshot(
-        get_checkbox(themed_app, "toggle 4 (with callback)"),
+        get_toggle(themed_app, "toggle 4 (with callback)"),
         name="st_toggle-callback",
     )
     assert_snapshot(
-        get_checkbox(themed_app, "toggle 5 (False, disabled)"),
+        get_toggle(themed_app, "toggle 5 (False, disabled)"),
         name="st_toggle-false_disabled",
     )
     assert_snapshot(
-        get_checkbox(themed_app, "toggle 6 (True, disabled)"),
+        get_toggle(themed_app, "toggle 6 (True, disabled)"),
         name="st_toggle-true_disabled",
     )
     assert_snapshot(
@@ -66,15 +64,15 @@ def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFu
 
     # Width examples
     assert_snapshot(
-        get_checkbox(themed_app, "toggle with content width"),
+        get_toggle(themed_app, "toggle with content width"),
         name="st_toggle-width_content",
     )
     assert_snapshot(
-        get_checkbox(themed_app, "toggle with stretch width"),
+        get_toggle(themed_app, "toggle with stretch width"),
         name="st_toggle-width_stretch",
     )
     assert_snapshot(
-        get_checkbox(themed_app, "toggle with 150px width"),
+        get_toggle(themed_app, "toggle with 150px width"),
         name="st_toggle-width_150px",
     )
 
@@ -124,7 +122,7 @@ def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction
     )
     expect(expander_details.get_by_test_id("stCheckbox")).to_have_count(3)
     assert_snapshot(expander_details, name="st_toggle-grouped_styling")
-    expect(get_checkbox(expander_details, "toggle group - 1")).to_have_css(
+    expect(get_toggle(expander_details, "toggle group - 1")).to_have_css(
         "height", "24px"
     )
 
