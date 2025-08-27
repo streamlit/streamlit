@@ -129,24 +129,20 @@ class ArrowTest(DeltaGeneratorTestCase):
             st.table(df)
             convert_anything_to_df.assert_called_once()
 
-    def test_table_border_parameter(self):
+    @pytest.mark.parametrize(
+        ("border", "expected"),
+        [
+            (True, ArrowProto.BorderMode.ALL),
+            (False, ArrowProto.BorderMode.NONE),
+            ("horizontal", ArrowProto.BorderMode.HORIZONTAL),
+        ],
+    )
+    def test_table_border_parameter(self, border, expected):
         """Test that st.table border parameter converts values correctly."""
         df = mock_data_frame()
-
-        # Test border=True
-        st.table(df, border=True)
+        st.table(df, border=border)
         proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border_mode == ArrowProto.BorderMode.ALL
-
-        # Test border=False
-        st.table(df, border=False)
-        proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border_mode == ArrowProto.BorderMode.NONE
-
-        # Test border="horizontal"
-        st.table(df, border="horizontal")
-        proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border_mode == ArrowProto.BorderMode.HORIZONTAL
+        assert proto.border_mode == expected
 
     def test_table_border_invalid_value(self):
         """Test that st.table raises StreamlitValueError for invalid border values."""
