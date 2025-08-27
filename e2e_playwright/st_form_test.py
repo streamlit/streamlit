@@ -379,4 +379,4 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     submit_button.click()
     wait_for_app_run(app)
 
-    expect_prefixed_markdown(app, "Clicked initial button:", "True")
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")
