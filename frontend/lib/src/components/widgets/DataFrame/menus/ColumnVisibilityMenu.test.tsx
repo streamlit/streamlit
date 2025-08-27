@@ -257,4 +257,46 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     // Indeterminate state should be reflected via aria-checked="mixed" if supported
     expect(selectAll).toHaveAttribute("aria-checked", "mixed")
   })
+
+  test("search bar filters correct element with one correct match", async () => {
+    render(<ColumnVisibilityMenu {...defaultProps} />)
+
+    await userEvent.type(
+      screen.getByTestId("stDataFrameColumnVisibilityMenuSearch"),
+      "1"
+    )
+
+    expect(screen.queryByText("Select all")).toBeInTheDocument()
+    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
+    expect(screen.queryByText("Column 1")).toBeInTheDocument()
+    expect(screen.queryByText("Column 2")).not.toBeInTheDocument()
+  })
+
+  test("search bar filters correct elements with multiple matches", async () => {
+    render(<ColumnVisibilityMenu {...defaultProps} />)
+
+    await userEvent.type(
+      screen.getByTestId("stDataFrameColumnVisibilityMenuSearch"),
+      "Column"
+    )
+
+    expect(screen.queryByText("Select all")).toBeInTheDocument()
+    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
+    expect(screen.queryByText("Column 1")).toBeInTheDocument()
+    expect(screen.queryByText("Column 2")).toBeInTheDocument()
+  })
+
+  test("search bar returns no elements on erroneous search term", async () => {
+    render(<ColumnVisibilityMenu {...defaultProps} />)
+
+    await userEvent.type(
+      screen.getByTestId("stDataFrameColumnVisibilityMenuSearch"),
+      "dataframes suck"
+    )
+
+    expect(screen.queryByText("Select all")).toBeInTheDocument()
+    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
+    expect(screen.queryByText("Column 1")).not.toBeInTheDocument()
+    expect(screen.queryByText("Column 2")).not.toBeInTheDocument()
+  })
 })

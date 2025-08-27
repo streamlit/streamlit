@@ -259,6 +259,9 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
                 },
               },
               Input: {
+                props: {
+                  "data-testid": "stDataFrameColumnVisibilityMenuSearch",
+                },
                 style: {
                   backgroundColor: theme.colors.none,
                   paddingLeft: theme.spacing.sm,
@@ -268,16 +271,6 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
                 style: {
                   paddingRight: theme.spacing.none,
                   paddingLeft: theme.spacing.none,
-                  backgroundColor: theme.colors.none,
-                },
-              },
-              ClearIconContainer: {
-                style: {
-                  backgroundColor: theme.colors.none,
-                },
-              },
-              ClearIcon: {
-                style: {
                   backgroundColor: theme.colors.none,
                 },
               },
