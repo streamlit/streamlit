@@ -22,11 +22,39 @@ import useTimeout from "./useTimeout"
 
 const LOG = getLogger("useCopyToClipboard")
 
+/**
+ * Result returned by `useCopyToClipboard`.
+ */
 export type UseCopyToClipboardResult = {
+  /**
+   * Whether the last copy action has recently succeeded. This
+   * flag automatically resets to false after the timeout elapses.
+   */
   isCopied: boolean
+  /**
+   * Copies the provided text to the user's clipboard.
+   *
+   * @param text The text content to write to the clipboard.
+   */
   copyToClipboard: (text: string) => void
+  /**
+   * Convenience label suitable for UI controls. Becomes "Copied" while
+   * `isCopied` is true; otherwise "Copy to clipboard".
+   */
+  label: string
 }
 
+/**
+ * React hook that exposes a copy-to-clipboard action and a transient "copied"
+ * state that resets after a configurable timeout.
+ *
+ * It writes the provided text to `navigator.clipboard` and toggles `isCopied`
+ * to true upon success, reverting to false after `timeout`.
+ *
+ * @param options Optional configuration.
+ * @param options.timeout Timeout in milliseconds before `isCopied` resets. Defaults to 2000ms.
+ * @returns An object containing `isCopied`, `copyToClipboard`, and `label`.
+ */
 export const useCopyToClipboard = ({
   timeout = 2_000,
 }: {
@@ -67,5 +95,7 @@ export const useCopyToClipboard = ({
     [restart]
   )
 
-  return { isCopied, copyToClipboard }
+  const label = isCopied ? "Copied" : "Copy to clipboard"
+
+  return { isCopied, copyToClipboard, label }
 }

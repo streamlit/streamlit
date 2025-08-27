@@ -245,11 +245,35 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   top: 0,
   right: 0,
 
-  [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {
+  // Show button on container hover
+  [`${StyledCodeBlock}:hover &`]: {
     opacity: 1,
     transform: "scale(1)",
     outline: "none",
     transition: "none",
+  },
+
+  // Show button on its own hover/focus states
+  "&:hover, &:focus, &:active, &:focus-visible": {
+    opacity: 1,
+    transform: "scale(1)",
+    outline: "none",
+    transition: "none",
+    borderRadius: theme.radii.md,
+  },
+
+  "&:hover": {
     color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+
+  "&:active": {
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+
+  // Accessible focus ring when keyboard focusing the button
+  "&:focus-visible": {
+    boxShadow: `0 0 0 0.2rem ${theme.colors.darkenedBgMix25}`,
   },
 }))

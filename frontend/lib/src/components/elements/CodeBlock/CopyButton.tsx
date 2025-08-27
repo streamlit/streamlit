@@ -32,7 +32,7 @@ const CopyButton: React.FC<Props> = ({ text }) => {
   const theme = useEmotionTheme()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const { isCopied, copyToClipboard } = useCopyToClipboard()
+  const { isCopied, copyToClipboard, label } = useCopyToClipboard()
 
   const handleCopy = useCallback(() => {
     copyToClipboard(text)
@@ -41,7 +41,9 @@ const CopyButton: React.FC<Props> = ({ text }) => {
   return (
     <StyledCopyButton
       data-testid="stCodeCopyButton"
-      title="Copy to clipboard"
+      title={label}
+      aria-label={label}
+      type="button"
       ref={buttonRef}
       onClick={handleCopy}
     >
