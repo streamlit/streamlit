@@ -48,6 +48,23 @@ export interface UseSelectCommonResult {
   ) => (options: readonly Option[], filterValue: string) => readonly Option[]
 }
 
+/**
+ * React hook that centralizes common logic for select-like widgets (e.g.,
+ * Selectbox and Multiselect).
+ *
+ * It memoizes UI-ready options, determines placeholder and disabled state,
+ * controls input read-only behavior on mobile, and provides helpers to map
+ * between backend values and BaseWeb Select `Option`s, including a fuzzy filter
+ * that excludes already selected options.
+ *
+ * @param {UseSelectCommonArgs} args - Configuration for the select behavior.
+ * @param {string[]} args.options - All available option labels/values.
+ * @param {boolean} args.isMulti - Whether multiple selections are allowed.
+ * @param {boolean} args.acceptNewOptions - Whether free-form user input is allowed.
+ * @param {string} args.placeholderInput - Placeholder text source from backend.
+ * @param {number} [args.maxSelections] - Optional cap on the number of selections.
+ * @returns {UseSelectCommonResult} Derived values and mapping/filter helpers for the UI.
+ */
 export function useSelectCommon(
   args: UseSelectCommonArgs
 ): UseSelectCommonResult {
