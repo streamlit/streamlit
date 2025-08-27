@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -50,6 +49,7 @@ def _parse_font_config(
 
     # Note: it is possible there are multiple colons in the string, so we need to split on the first colon.
     font_name, source_url = font_config.split(":", 1)
+
     # Strip whitespace from both font name and source
     font_name = font_name.strip()
     source_url = source_url.strip()
@@ -87,6 +87,51 @@ def _get_font_source_config_name(property_name: str, section: str) -> str:
     return f"{property_name}-sidebar"
 
 
+def _parse_metric_font_config(
+    metric_value_font_size: int | None,
+    metric_value_font_weight: int | None,
+) -> tuple[int | None, int | None]:
+    """Parse and validate metric font configuration values.
+    
+    This function validates the font size and weight values for metric components
+    to ensure they fall within acceptable ranges for CSS font properties.
+    
+    Args:
+        metric_value_font_size: Font size in pixels for metric value text
+        metric_value_font_weight: Font weight (100-900) for metric value text
+        
+    Returns:
+        A tuple of (validated_font_size, validated_font_weight). Values are None if
+        invalid or not provided.
+        
+    Note:
+        Font weights should be multiples of 100 between 100-900 (CSS standard).
+        Font sizes should be positive integers representing pixel values.
+    """
+    validated_size = None
+    validated_weight = None
+    
+    # Validate font size - should be positive integer
+    if metric_value_font_size is not None:
+        if isinstance(metric_value_font_size, int) and metric_value_font_size > 0:
+            validated_size = metric_value_font_size
+        else:
+            raise StreamlitAPIException(
+                "metric_value_font_size must be a positive integer representing pixel size."
+            )
+    
+    # Validate font weight - should be 100-900, preferably multiples of 100
+    if metric_value_font_weight is not None:
+        if isinstance(metric_value_font_weight, int) and 100 <= metric_value_font_weight <= 900:
+            validated_weight = metric_value_font_weight
+        else:
+            raise StreamlitAPIException(
+                "metric_value_font_weight must be an integer between 100 and 900 (CSS font-weight values)."
+            )
+    
+    return validated_size, validated_weight
+
+
 def parse_fonts_with_source(
     msg: CustomThemeConfig,
     body_font_config: str | None,
@@ -118,7 +163,6 @@ def parse_fonts_with_source(
         Updated CustomThemeConfig message with the font, codeFont, and headingFont fields set.
         Also sets sources in font_sources field to be added to the html (only when source URLs are provided).
     """
-
     # Parse body font config
     body_font_name, body_font_source = _parse_font_config(body_font_config, "font")
     if body_font_name:
@@ -145,4 +189,74 @@ def parse_fonts_with_source(
         config_name = _get_font_source_config_name("headingFont", section)
         msg.font_sources.add(config_name=config_name, source_url=heading_font_source)
 
+    return msg
+
+
+def parse_theme_config(
+    msg: CustomThemeConfig,
+    theme_config: dict,
+) -> CustomThemeConfig:
+    """Parse theme configuration from config.toml or Python theme dict.
+    
+    This function processes theme configuration parameters and populates the
+    CustomThemeConfig message with validated values. It handles both traditional
+    theme options and new metric styling parameters.
+    
+    Args:
+        msg: CustomThemeConfig message to be populated.
+        theme_config: Dictionary containing theme configuration from config.toml
+                     or Python theme configuration.
+                     
+    Returns:
+        Updated CustomThemeConfig message with validated theme configuration.
+        
+    Note:
+        This function specifically handles the new metric_value_font_size and
+        metric_value_font_weight parameters introduced for metric component styling.
+    """
+    # Parse metric font configuration if present
+    metric_font_size = theme_config.get("metric_value_font_size")
+    metric_font_weight = theme_config.get("metric_value_font_weight")
+    
+    if metric_font_size is not None or metric_font_weight is not None:
+        validated_size, validated_weight = _parse_metric_font_config(
+            metric_font_size, metric_font_weight
+        )
+        
+        # Set validated values in the message
+        if validated_size is not None:
+            msg.metric_value_font_size = validated_size
+        if validated_weight is not None:
+            msg.metric_value_font_weight = validated_weight
+    
+    return msg
+
+
+def apply_theme_config_from_toml(
+    msg: CustomThemeConfig,
+    toml_config: dict,
+) -> CustomThemeConfig:
+    """Apply theme configuration from config.toml file.
+    
+    This function extracts theme configuration from a parsed TOML configuration
+    and applies it to the CustomThemeConfig message. It handles nested theme
+    sections and validates all theme parameters.
+    
+    Args:
+        msg: CustomThemeConfig message to be populated.
+        toml_config: Parsed TOML configuration dictionary containing theme settings.
+        
+    Returns:
+        Updated CustomThemeConfig message with theme configuration from TOML.
+        
+    Example:
+        For a config.toml with:
+        [theme]
+        metric_value_font_size = 24
+        metric_value_font_weight = 600
+    """
+    theme_section = toml_config.get("theme", {})
+    if theme_section:
+        msg = parse_theme_config(msg, theme_section)
+    
     return msg
