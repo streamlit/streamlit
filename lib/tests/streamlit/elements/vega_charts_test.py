@@ -1324,7 +1324,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["type"] == "ordinal"
-        assert chart_spec["encoding"]["x"]["sort"] == ["c", "b", "a"]
+        assert chart_spec["encoding"]["x"]["sort"] is None
         assert chart_spec["encoding"]["y"]["type"] == "quantitative"
 
     def test_line_chart_with_named_index(self):
