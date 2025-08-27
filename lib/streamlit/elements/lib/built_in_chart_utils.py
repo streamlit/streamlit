@@ -201,8 +201,13 @@ def generate_chart(
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
 
+    # Ensure sort field is preserved even if not in x/y/color/size
+    sort_column: str | None = None
+    if sort_from_user:
+        sort_column = sort_from_user.removeprefix("-")
+
     df, x_column, y_column, color_column, size_column = _prep_data(
-        df, x_column, y_column_list, color_column, size_column
+        df, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
@@ -432,6 +437,7 @@ def _prep_data(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
+    sort_column: str | None = None,
 ) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
     """Prepares the data for charting. This is also used in add_rows.
 
@@ -445,7 +451,7 @@ def _prep_data(
 
     # Drop columns we're not using.
     selected_data = _drop_unused_columns(
-        df, x_column, color_column, size_column, *y_column_list
+        df, x_column, color_column, size_column, sort_column, *y_column_list
     )
 
     # Maybe convert color to Vega colors.
@@ -826,28 +832,34 @@ def _get_axis_encodings(
     sort_from_user: str | None,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
+    sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
         # Only apply sorting to the categorical (y) axis
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type, None
+            df, y_column, y_from_user, x_axis_label, chart_type
         )
         y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type, sort_from_user
+            df, x_column, x_from_user, y_axis_label, chart_type
         )
         stack_encoding = x_encoding
+        sort_encoding = y_encoding
     else:
         # Only apply sorting to the categorical (x) axis
         x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type, sort_from_user
+            df, x_column, x_from_user, x_axis_label, chart_type
         )
         y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type, None
+            df, y_column, y_from_user, y_axis_label, chart_type
         )
         stack_encoding = y_encoding
+        sort_encoding = x_encoding
 
     # Handle stacking - only relevant for bar & area charts
     _update_encoding_with_stack(stack, stack_encoding)
+
+    # Handle sorting - only relevant for bar charts
+    _update_encoding_with_sort(sort_from_user, sort_encoding, df)
 
     return x_encoding, y_encoding
 
@@ -858,7 +870,6 @@ def _get_x_encoding(
     x_from_user: str | Sequence[str] | None,
     x_axis_label: str | None,
     chart_type: ChartType,
-    sort_from_user: str | None,
 ) -> alt.X:
     import altair as alt
 
@@ -889,20 +900,10 @@ def _get_x_encoding(
     # grid lines on x axis for horizontal bar charts only
     grid = chart_type == ChartType.HORIZONTAL_BAR
 
-    # Resolve sorting for all axis types
-    sort: Any
-    if sort_from_user is None:
-        # Disable default sorting of bars (respect data order) for vertical bars
-        sort = None if chart_type == ChartType.VERTICAL_BAR else alt.Undefined
-    else:
-        # Pass through to Altair/Vega-Lite. Supports "col" and "-col"
-        sort = sort_from_user
-
     return alt.X(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
-        sort=sort,
         scale=alt.Scale(),
         axis=_get_axis_config(df, x_column, grid=grid),
     )
@@ -914,7 +915,6 @@ def _get_y_encoding(
     y_from_user: str | Sequence[str] | None,
     y_axis_label: str | None,
     chart_type: ChartType,
-    sort_from_user: str | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -945,20 +945,10 @@ def _get_y_encoding(
     # grid lines on y axis for all charts except horizontal bar charts
     grid = chart_type != ChartType.HORIZONTAL_BAR
 
-    # Resolve sorting for all axis types
-    sort: Any
-    if sort_from_user is None:
-        # Disable default sorting of bars (respect data order) for horizontal bars
-        sort = None if chart_type == ChartType.HORIZONTAL_BAR else alt.Undefined
-    else:
-        # Pass through to Altair/Vega-Lite. Supports "col" and "-col"
-        sort = sort_from_user
-
     return alt.Y(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, chart_type, y_column),
-        sort=sort,
         scale=alt.Scale(),
         axis=_get_axis_config(df, y_column, grid=grid),
     )
@@ -975,6 +965,36 @@ def _update_encoding_with_stack(
         stack = False
 
     encoding["stack"] = stack
+
+
+def _update_encoding_with_sort(
+    sort_from_user: str | None,
+    encoding: alt.X | alt.Y,
+    df: pd.DataFrame,
+) -> None:
+    """Apply sort to the given encoding in-place.
+
+    - If sort is None: disable default Vega-Lite sorting on the bar's categorical axis
+        (i.e., set to None).
+    - If sort is a column name (optionally starting with '-') ensure the column exists
+        and set a SortField with the correct order.
+    """
+    import altair as alt
+
+    if sort_from_user is None:
+        encoding["sort"] = None
+    else:
+        sort_order: Literal["ascending", "descending"]
+        if sort_from_user.startswith("-"):
+            sort_order = "descending"
+        else:
+            sort_order = "ascending"
+        sort_field = sort_from_user.removeprefix("-")
+
+        if sort_field not in df.columns:
+            raise StreamlitColumnNotFoundError(df, sort_field)
+
+        encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 
 
 def _get_color_encoding(
