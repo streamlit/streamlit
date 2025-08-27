@@ -38,16 +38,20 @@ import {
   StyledTertiaryButton,
   StyledTertiaryFormSubmitButton,
 } from "./styled-components"
-
-function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
+type HTMLBtnAttrs = React.ButtonHTMLAttributes<HTMLButtonElement>
+type MergedBaseButtonProps = BaseButtonPropsT & HTMLBtnAttrs
+function BaseButton(props: Readonly<MergedBaseButtonProps>): ReactElement {
   const {
     kind,
     size,
     disabled,
     onClick,
+    onKeyDown,
+    tabIndex,
     containerWidth,
     children,
     autoFocus,
+    ...rest
   } = props
 
   let ComponentType = StyledPrimaryButton
@@ -85,14 +89,43 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
   } else if (kind === BaseButtonKind.ELEMENT_TOOLBAR) {
     ComponentType = StyledElementToolbarButton
   }
+  const isActivationKey = (e: React.KeyboardEvent<HTMLButtonElement>) =>
+    e.key === "Enter" || e.key === " " || e.key === "Space" || e.key === "Spacebar"
+
+  const handleDisabledEvent = (
+    e: React.SyntheticEvent,
+    checkKey?: (e: React.KeyboardEvent<HTMLButtonElement>) => boolean
+  ): boolean => {
+    if (!disabled) return false
+    if (!checkKey || checkKey(e as React.KeyboardEvent<HTMLButtonElement>)) {
+      e.preventDefault()
+      e.stopPropagation()
+      return true
+    }
+    return false
+  }
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (handleDisabledEvent(e)) return
+    onClick?.(e)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (handleDisabledEvent(e, isActivationKey)) return
+    onKeyDown?.(e)
+  }
 
   return (
     <ComponentType
+      {...rest}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
       containerWidth={containerWidth || false}
       disabled={disabled || false}
-      onClick={onClick || (() => {})}
+      aria-disabled={disabled || false}
+      tabIndex={disabled ? -1 : (tabIndex ?? 0)}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       autoFocus={autoFocus || false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
       aria-label={props["aria-label"] ?? ""}
@@ -101,6 +134,6 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     </ComponentType>
   )
 }
-export type BaseButtonProps = BaseButtonPropsT
+export type BaseButtonProps = MergedBaseButtonProps
 export { BaseButtonKind, BaseButtonSize }
 export default BaseButton

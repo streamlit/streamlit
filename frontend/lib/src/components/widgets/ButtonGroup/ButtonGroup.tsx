@@ -245,7 +245,8 @@ function createOptionChild(
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
   style: ButtonGroupProto.Style,
-  containerWidth: boolean
+  containerWidth: boolean,
+  isDisabled: boolean
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -281,12 +282,50 @@ function createOptionChild(
       ),
       kind
     )
+
+    const onClickSafe = (e: React.MouseEvent<HTMLElement>) => {
+      if (isDisabled) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+      props?.onClick?.(e)
+    }
+
     return (
       <BaseButton
         {...props}
         size={size}
         kind={buttonKind}
         containerWidth={containerWidth}
+        disabled={isDisabled}
+        aria-disabled={isDisabled}
+        tabIndex={isDisabled ? -1 : (props?.tabIndex ?? 0)}
+        onClick={onClickSafe}
+        onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
+          if (isDisabled && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          props?.onKeyDown?.(e)
+        }}
+        onFocus={(e: React.FocusEvent<HTMLElement>) => {
+          if (isDisabled) {
+            ;(e.currentTarget as HTMLElement).blur()
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          props?.onFocus?.(e)
+        }}
+        onFocusCapture={(e: React.FocusEvent<HTMLElement>) => {
+          if (isDisabled) {
+            ;(e.currentTarget as HTMLElement).blur()
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          props?.onFocusCapture?.(e)
+        }}
+        style={isDisabled ? { pointerEvents: "none" } : undefined}
       >
         {element}
       </BaseButton>
@@ -356,24 +395,49 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     mode = MODE.checkbox
   }
 
-  const optionElements = useMemo(
-    () =>
-      options.map((option, index) => {
-        const Element = createOptionChild(
-          option,
-          index,
-          selectionVisualization,
-          clickMode,
-          value,
-          style,
-          containerWidth
-        )
-        // TODO: Update to match React best practices
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        return <Element key={`${option.content}-${index}`} />
-      }),
-    [clickMode, options, selectionVisualization, style, value, containerWidth]
-  )
+interface ButtonGroupElement {
+  disabled?: boolean;
+  disabledIndices?: number[];
+  options?: Array<{ disabled?: boolean }>;
+}
+
+const bg = (props.element as ButtonGroupElement | undefined) ?? undefined
+const overallDisabled = !!(props.disabled || bg?.disabled)
+const disabledIndices = Array.isArray(bg?.disabledIndices) ? bg!.disabledIndices! : []
+const disabledIndexSet = useMemo(() => new Set(disabledIndices), [disabledIndices])
+
+const optionElements = useMemo(
+  () =>
+    options.map((option, index) => {
+      const perOptionDisabled = !!bg?.options?.[index]?.disabled
+      const isDisabled =
+        overallDisabled || perOptionDisabled || disabledIndexSet.has(index)
+
+      const Element = createOptionChild(
+        option,
+        index,
+        selectionVisualization,
+        clickMode,
+        value,
+        style,
+        containerWidth,
+        isDisabled
+      )
+      return <Element key={`${option.content}-${index}`} />
+    }),
+  [
+    options,
+    selectionVisualization,
+    clickMode,
+    value,
+    style,
+    containerWidth,
+    overallDisabled,
+    bg?.options,
+    disabledIndexSet,
+  ]
+)
+
 
   return (
     <StyledButtonGroup

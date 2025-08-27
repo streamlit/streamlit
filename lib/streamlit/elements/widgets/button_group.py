@@ -14,21 +14,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Final,
-    Generic,
-    Literal,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import Any, Callable, Generic, Literal, cast
 
 from typing_extensions import TypeAlias
+from typing import (
+    TYPE_CHECKING,
+    Final,
+    TypeVar,
+    overload,
+)
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -92,6 +88,55 @@ _STAR_ICON: Final = ":material/star:"
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
 SelectionMode: TypeAlias = Literal["single", "multi"]
+
+
+def _normalize_disabled_mask(options: Sequence[Any], disabled: Any) -> list[bool]:
+    """
+    Normalize `disabled` into a per-option boolean mask.
+
+    Supported forms:
+      - True / False: all disabled / all enabled
+      - Iterable of bools with same length as options: positional mask
+      - Iterable of option values: disable by value (e.g., ("B","D"))
+      - Callable: lambda o -> bool
+      - None: all enabled
+    """
+
+    n = len(options)
+
+    if disabled is None or disabled is False:
+        return [False] * n
+
+    if disabled is True:
+        return [True] * n
+
+    if callable(disabled):
+        try:
+            return [bool(disabled(o)) for o in options]
+        except Exception as e:
+            raise StreamlitAPIException(
+                f"`disabled` callable raised an error: {e}"
+            ) from e
+
+    if isinstance(disabled, Iterable) and not isinstance(disabled, (str, bytes)):
+        seq = list(disabled)
+
+        # Case A: iterable of bools (positional mask)
+        if all(isinstance(x, bool) for x in seq):
+            if len(seq) != n:
+                raise StreamlitAPIException(
+                    f"`disabled` mask length {len(seq)} must match options length {n}."
+                )
+            return seq
+
+        # Case B: iterable of option values (disable-by-value)
+        disabled_set = set(seq)
+        return [o in disabled_set for o in options]
+
+    raise StreamlitAPIException(
+        "`disabled` should be a bool, an iterable of bools, "
+        "an iterable of option values, a callable, or None."
+    )
 
 
 @dataclass
@@ -214,12 +259,39 @@ def get_mapped_options(
 
     return options, options_indices
 
+# --- helpers for disabled state handling ---
+
+def _set_option_disabled_states(proto, mask):
+    """Set per-option disabled states if supported by proto.options[]."""
+    if len(proto.options) and hasattr(proto.options[0], "disabled"):
+        for opt, d in zip(proto.options, mask):
+            opt.disabled = bool(d)
+        return True
+    return False
+
+
+def _set_proto_disabled_indices(proto, disabled_indices):
+    """Set disabled_indices if supported by proto."""
+    if hasattr(proto, "disabled_indices"):
+        del proto.disabled_indices[:]      # keep existing list object
+        proto.disabled_indices.extend(disabled_indices)
+        return True
+    return False
+
+
+def _set_proto_disabled(proto, mask):
+    """Fallback: set proto.disabled if supported and mask is uniform."""
+    if all(mask) or not any(mask):
+        if hasattr(proto, "disabled"):
+            proto.disabled = all(mask)
+            return True
+    return False
 
 def _build_proto(
     widget_id: str,
     formatted_options: Sequence[ButtonGroupProto.Option],
     default_values: list[int],
-    disabled: bool,
+    disabled_mask: Sequence[bool] | bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
@@ -235,11 +307,34 @@ def _build_proto(
     proto.id = widget_id
     proto.default[:] = default_values
     proto.form_id = current_form_id
-    proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
 
-    # not passing the label looks the same as a collapsed label
+    n = len(formatted_options)
+    mask = (
+        [disabled_mask] * n if isinstance(disabled_mask, bool) else list(disabled_mask)
+    )
+    if len(mask) != n:
+        raise StreamlitAPIException(
+            f"`disabled` mask length {len(mask)} must match options length {n}."
+        )
+
+    for opt in formatted_options:
+        proto.options.append(opt)
+
+    disabled_indices = [i for i, d in enumerate(mask) if d]
+
+    if not (
+        _set_option_disabled_states(proto, mask)
+        or _set_proto_disabled_indices(proto, disabled_indices)
+        or _set_proto_disabled(proto, mask)
+    ):
+        raise StreamlitAPIException(
+            "Per-option disabled unsupported by ButtonGroupProto. "
+            "Add `Option.disabled` or `disabled_indices` to the proto."
+        )
+
+
     if label is not None:
         proto.label = label
         proto.label_visibility.value = get_label_visibility_proto_value(
@@ -248,8 +343,6 @@ def _build_proto(
         if help is not None:
             proto.help = help
 
-    for formatted_option in formatted_options:
-        proto.options.append(formatted_option)
     proto.selection_visualization = selection_visualization
     return proto
 
@@ -1056,13 +1149,16 @@ class ButtonGroupMixin:
             label=label,
             help=help,
         )
+        disabled_mask = _normalize_disabled_mask(indexable_options, disabled)
+
+        default_indices = check_and_convert_to_indices(indexable_options, default) or []
 
         proto = _build_proto(
-            element_id,
-            formatted_options,
-            default or [],
-            disabled,
-            form_id,
+            widget_id=element_id,
+            formatted_options=formatted_options,
+            default_values=default_indices,
+            disabled_mask=disabled_mask,
+            current_form_id=form_id,
             click_mode=parsed_selection_mode,
             selection_visualization=selection_visualization,
             style=style,
