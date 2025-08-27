@@ -16,7 +16,6 @@
 
 import React, { memo, ReactElement, useEffect } from "react"
 
-import { select } from "d3"
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
 
@@ -69,14 +68,6 @@ function GraphVizChart({
         .scale(1)
         .engine(element.engine as Engine)
         .renderDot(element.spec)
-
-      if (isFullScreen || shouldUseContainerWidth) {
-        const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
-        // We explicitly remove width and height to let CSS and the SVG viewBox
-        // define its dimensions
-        node.removeAttribute("width")
-        node.removeAttribute("height")
-      }
     } catch (error) {
       LOG.error(error)
     }
