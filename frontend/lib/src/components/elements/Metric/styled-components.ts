@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
-
 import { Metric as MetricProto } from "@streamlit/protobuf"
-
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
 import { EmotionTheme } from "~lib/theme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
@@ -67,11 +64,9 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: "normal",
   verticalAlign: "middle",
-
   // Styles to truncate the text inside the StyledStreamlitMarkdown div.
   "& > div": {
     overflow: "hidden",
-
     "& > p": {
       textOverflow: "ellipsis",
       overflow: "hidden",
@@ -91,7 +86,10 @@ export const StyledMetricLabelText = styled(
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.threeXL,
+  // Use theme-specific font size with fallback to threeXL
+  fontSize: theme.metricValueFontSize ?? theme.fontSizes.threeXL,
+  // Use theme-specific font weight with fallback to bold
+  fontWeight: theme.metricValueFontWeight ?? theme.fontWeights.bold,
   color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
@@ -123,7 +121,6 @@ const getMetricBackgroundColor = (
   color: MetricProto.MetricColor
 ): string => {
   const lightTheme = hasLightBackgroundColor(theme)
-
   switch (color) {
     case MetricProto.MetricColor.RED:
       return transparentize(
