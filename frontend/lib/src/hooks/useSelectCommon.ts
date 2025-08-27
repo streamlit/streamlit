@@ -18,7 +18,6 @@ import { useMemo } from "react"
 
 import { type Option } from "baseui/select"
 
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
@@ -47,7 +46,6 @@ export interface UseSelectCommonResult {
   createFilterOptions: (
     selectedValues?: string[]
   ) => (options: readonly Option[], filterValue: string) => readonly Option[]
-  maxHeight?: string
 }
 
 export function useSelectCommon(
@@ -55,13 +53,13 @@ export function useSelectCommon(
 ): UseSelectCommonResult {
   const { options, isMulti, acceptNewOptions, placeholderInput } = args
 
-  const theme = useEmotionTheme()
-
   const selectOptions: SelectOption[] = useMemo(
     () =>
       options.map((option: string, index: number) => ({
         label: option,
         value: option,
+        // We are using an id because if multiple options are equal,
+        // we have observed weird UI glitches
         id: `${option}_${index}`,
       })),
     [options]
@@ -122,16 +120,6 @@ export function useSelectCommon(
     []
   )
 
-  const maxHeight = useMemo(() => {
-    if (!isMulti) {
-      return undefined
-    }
-
-    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
-    const pxMaxHeight = Math.round(optionHeight * 4.25)
-    return `${pxMaxHeight}px`
-  }, [isMulti, theme.fontSizes.baseFontSize])
-
   return {
     selectOptions,
     placeholder,
@@ -140,6 +128,5 @@ export function useSelectCommon(
     valueToUiSingle,
     valuesToUiMulti,
     createFilterOptions,
-    maxHeight,
   }
 }
