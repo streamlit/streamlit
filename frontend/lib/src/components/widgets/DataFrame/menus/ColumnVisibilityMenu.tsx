@@ -255,7 +255,10 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
                   borderBottomColor: theme.colors.primary,
                   paddingLeft: theme.spacing.md,
                   paddingRight: theme.spacing.md,
-                  backgroundColor: theme.colors.none,
+                  backgroundColor: hasLightBackgroundColor(theme)
+                    ? theme.colors.bgColor
+                    : theme.colors.secondaryBg,
+                  width: theme.sizes.minMenuWidth,
                 },
               },
               Input: {
@@ -273,7 +276,9 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
                 style: {
                   paddingRight: theme.spacing.none,
                   paddingLeft: theme.spacing.none,
-                  backgroundColor: theme.colors.none,
+                  backgroundColor: hasLightBackgroundColor(theme)
+                    ? theme.colors.bgColor
+                    : theme.colors.secondaryBg,
                 },
               },
             }}
@@ -289,17 +294,13 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           <StyledMenuDivider />
           <div>
             {columns
-              .filter(column => {
-                if (columnVisibilitySearchTerm === "") {
-                  return column
-                } else if (
+              .filter(
+                column =>
+                  columnVisibilitySearchTerm === "" ||
                   column.id
                     .toLowerCase()
                     .includes(columnVisibilitySearchTerm.toLowerCase())
-                ) {
-                  return column
-                }
-              })
+              )
               .map(column => {
                 // A column can be hidden if configured in column config
                 // or if the user has configured a column order that doesn't

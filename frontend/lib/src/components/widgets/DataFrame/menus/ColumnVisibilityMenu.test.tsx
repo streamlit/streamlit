@@ -266,10 +266,10 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       "1"
     )
 
-    expect(screen.queryByText("Select all")).toBeInTheDocument()
-    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
-    expect(screen.queryByText("Column 1")).toBeInTheDocument()
-    expect(screen.queryByText("Column 2")).not.toBeInTheDocument()
+    expect(screen.queryByText("Select all")).toBeVisible()
+    expect(screen.queryByText("(index)")).toBeNull()
+    expect(screen.queryByText("Column 1")).toBeVisible()
+    expect(screen.queryByText("Column 2")).toBeNull()
   })
 
   test("search bar filters correct elements with multiple matches", async () => {
@@ -280,10 +280,10 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       "Column"
     )
 
-    expect(screen.queryByText("Select all")).toBeInTheDocument()
-    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
-    expect(screen.queryByText("Column 1")).toBeInTheDocument()
-    expect(screen.queryByText("Column 2")).toBeInTheDocument()
+    expect(screen.queryByText("Select all")).toBeVisible()
+    expect(screen.queryByText("(index)")).toBeNull()
+    expect(screen.queryByText("Column 1")).toBeVisible()
+    expect(screen.queryByText("Column 2")).toBeVisible()
   })
 
   test("search bar returns no elements on erroneous search term", async () => {
@@ -294,9 +294,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       "dataframes suck"
     )
 
-    expect(screen.queryByText("Select all")).toBeInTheDocument()
-    expect(screen.queryByText("(index)")).not.toBeInTheDocument()
-    expect(screen.queryByText("Column 1")).not.toBeInTheDocument()
-    expect(screen.queryByText("Column 2")).not.toBeInTheDocument()
+    expect(screen.queryByText("Select all")).toBeVisible()
+    expect(screen.queryByText("(index)")).toBeNull()
+    expect(screen.queryByText("Column 1")).toBeNull()
+    expect(screen.queryByText("Column 2")).toBeNull()
   })
 })
