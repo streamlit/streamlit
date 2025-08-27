@@ -51,6 +51,10 @@ runs:
       with:
         path: ~/.cache/ms-playwright
         key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.pw-version.outputs.version }}
+        # `playwright install` validates required browser revisions for the
+        # current Playwright package and downloads mismatches, so we won't run
+        # playwright with non-matching browsers in the case of a Playwright
+        # version upgrade.
         restore-keys: |
           ${{ runner.os }}-${{ runner.arch }}-playwright-
 

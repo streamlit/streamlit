@@ -5,6 +5,9 @@ inputs:
   use_cached_venv:
     description: "Use Cached Virtual Env"
     default: "true"
+  install_playwright_deps:
+    description: "Install Playwright browsers during python-init"
+    default: "false"
 
 # There is an altered copy of these steps inlined in the python_min_deps
 # workflow. If you make changes to this action, apply them there too if appropriate.
@@ -74,7 +77,7 @@ runs:
         source venv/bin/activate
         pip install --upgrade pip
         pip install uv
-        make python-init
+        INSTALL_PLAYWRIGHT=${{ inputs.install_playwright_deps }} make python-init
         # Run editable install again to ensure that the local
         # streamlit module takes precedence. This is
         # needed to fix an issue with nightly CI where
