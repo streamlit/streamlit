@@ -81,6 +81,11 @@ st.bar_chart(source, x="variety", y="yield", color="site", stack="normalize")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="center")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="layered")
 
+# Sort behavior tests
+st.bar_chart(df, x="a", y="b", sort="c")
+st.bar_chart(df, x="a", y="b", sort="-c")
+st.bar_chart(df, x="b", y="a", horizontal=True, sort="c")
+
 # Test that add_rows maintains original styling params:
 # color, width, height, use_container_width, horizontal, stack
 bar_data = pd.DataFrame({"Bar 1": [], "Bar 2": []})

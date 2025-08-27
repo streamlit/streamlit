@@ -21,7 +21,7 @@ from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_width,
 )
 
-TOTAL_BAR_CHARTS = 19
+TOTAL_BAR_CHARTS = 22
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -59,6 +59,11 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(bar_chart_elements.nth(15), name="st_bar_chart-stacked_normalize")
     assert_snapshot(bar_chart_elements.nth(16), name="st_bar_chart-stacked_center")
     assert_snapshot(bar_chart_elements.nth(17), name="st_bar_chart-stacked_layered")
+    assert_snapshot(bar_chart_elements.nth(19), name="st_bar_chart-sort_ascending")
+    assert_snapshot(bar_chart_elements.nth(20), name="st_bar_chart-sort_descending")
+    assert_snapshot(
+        bar_chart_elements.nth(21), name="st_bar_chart-horizontal_sort_ascending"
+    )
     # The add_rows chart (index 18) is tested separately in test_add_rows_preserves_styling
 
 
