@@ -13,11 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { lightThemePrimitives } from "baseui"
-
 import { CustomThemeConfig } from "@streamlit/protobuf"
-
 import { baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import {
@@ -60,7 +57,6 @@ export type DerivedColors = {
   fadedText20: string
   fadedText40: string
   fadedText60: string
-
   bgMix: string
   darkenedBgMix100: string
   darkenedBgMix25: string
@@ -74,21 +70,16 @@ export type DerivedColors = {
 export type SpecialEmotionColors = {
   codeTextColor: string
   codeBackgroundColor: string
-
   metricPositiveDeltaColor: string
   metricNegativeDeltaColor: string
   metricNeutralDeltaColor: string
-
   borderColor: string
   borderColorLight: string
-
   // Used for borders around dataframes and tables
   dataframeBorderColor: string
   // Used for dataframe header background
   dataframeHeaderBackgroundColor: string
-
   headingColor: string
-
   // Chart colors (these are arrays of colors)
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
@@ -99,6 +90,9 @@ export type SpecialEmotionColors = {
  */
 export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
   colors: EmotionThemeColors
+  // Metric font styling properties for customizable metric appearance
+  metricValueFontSize?: number  // Font size in pixels for metric value text
+  metricValueFontWeight?: number // Font weight (100-900) for metric value text
 }
 
 export type ThemeConfig = {
@@ -114,14 +108,12 @@ export type ThemeConfig = {
 
 export type CachedTheme = {
   name: string
-
   themeInput?: Partial<CustomThemeConfig>
 }
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
 export type ThemeSizings = typeof emotionBaseTheme.sizes
 export type ThemeSpacings = typeof emotionBaseTheme.spacing
-
 export type IconSize = keyof IconSizes
 export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
