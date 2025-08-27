@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 syntax = "proto3";
-
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "NewSessionProto";
-
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
-
 // NOTE: These proto types are used by some external services so need to
 // remain relatively stable. While they aren't entirely set in stone, changing
 // them may require a good amount of effort so should be avoided if possible.
-
 // This is the first message that is sent when a new session starts.
 message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
@@ -33,89 +28,65 @@ message NewSession {
   // client has already received it. The client is responsible for
   // performing initialization logic only once.
   Initialize initialize = 1;
-
   // The script run ID
   string script_run_id = 2;
-
   // The basename of the script that launched this app. Example: 'foo.py'
   string name = 3;
-
   // The full path of the script that launched this app. Example:
   // '/foo/bar/foo.py'
   string main_script_path = 4;
-
   // DEPRECATED.
   // DeployParams deploy_params = 5;
-
   reserved 5;
-
   // Config options that are (mostly) defined in the .streamlit/config.toml
   // file.
   Config config = 6;
-
   // Theme configuration options defined in the .streamlit/config.toml file.
   // See the "theme" config section.
   CustomThemeConfig custom_theme = 7;
-
   // A list of all of this app's pages, in order and including the main page.
   repeated AppPage app_pages = 8;
-
   // A hash of the script corresponding to the page currently being viewed.
   string page_script_hash = 9;
-
   // The fragment IDs being run in this session if it corresponds to a fragment
   // script run.
   repeated string fragment_ids_this_run = 10;
-
   // Hash of the main script running (ie streamlit run main_script.py)
   string main_script_hash = 11;
 }
-
 // Contains the session status that existed at the time the user connected.
 // The contents of this message don't change over the lifetime of the app by
 // definition.
 message Initialize {
   UserInfo user_info = 1;
-
   EnvironmentInfo environment_info = 3;
-
   // The session status at the time the connection was established
   SessionStatus session_status = 4;
-
   // DEPRECATED: We no longer send this to the frontend for security reasons.
   // The actual command line as a string
   string command_line = 5;
-
   // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;
-
   // True if the command used to start this app was `streamlit hello`.
   bool is_hello = 7;
 }
-
 // App configuration options, initialized mainly from the
 // .streamlit/config.toml file.
 message Config {
   // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
-
   // See config option "global.maxCachedMessageAge".
   int32 max_cached_message_age = 3;
-
   // DEPRECATED: the mapbox token was moved to the DeckGlJsonChart message.
   string mapbox_token = 4;
-
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
-
   // See config option "ui.hideTopBar".
   bool hide_top_bar = 6;
-
   // See config option "client.showSidebarNavigation".
   bool hide_sidebar_nav = 7;
-
   // See config option "client.toolbarMode".
   enum ToolbarMode {
     AUTO = 0;
@@ -124,10 +95,8 @@ message Config {
     MINIMAL = 3;
   }
   ToolbarMode toolbar_mode = 8;
-
   reserved 1;
 }
-
 // Custom theme configuration options. Like other config options, these are set
 // in .streamlit/config.toml.
 //
@@ -138,14 +107,12 @@ message CustomThemeConfig {
     LIGHT = 0;
     DARK = 1;
   }
-
   // DEPRECATED: Use body_font instead:
   enum FontFamily {
     SANS_SERIF = 0;
     SERIF = 1;
     MONOSPACE = 2;
   }
-
   string primary_color = 1;
   string secondary_background_color = 2;
   string background_color = 3;
@@ -187,10 +154,10 @@ message CustomThemeConfig {
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
-
-  // Next ID: 38
+  optional int32 metric_value_font_size = 38; // Font size for metric value text
+  optional int32 metric_value_font_weight = 39; // Font weight for metric value text
+  // Next ID: 40
 }
-
 message FontFace {
   string url = 1;
   // Equivalent to font-family @font-face CSS property.
@@ -204,21 +171,18 @@ message FontFace {
   // Equivalent to unicode-range @font-face CSS property.
   string unicode_range = 6;
 }
-
 message FontSource {
   // Supports passing links to font config options - these are the sources
   // used in the <link> tag (href) to embed the font in html
   string config_name = 1;
   string source_url = 2;
 }
-
 // DEPRECATED: Please use the base_radius theme config instead.
 message Radii {
   // In pixels.
   int32 base_widget_radius = 1;
   int32 checkbox_radius = 2;
 }
-
 // DEPRECATED: Please use the base_font_size theme config instead:
 message FontSizes {
   // In pixels.
@@ -226,21 +190,17 @@ message FontSizes {
   int32 small_font_size = 2;
   int32 base_font_size = 3;
 }
-
 // Data that identifies the Streamlit app creator.
 // Does not change over the app's lifetime.
 message UserInfo {
   string installation_id = 1;
   string installation_id_v3 = 5;
   string installation_id_v4 = 6;
-
   // DEPRECATED:
   // string email = 2;
   reserved 2;
-
   // Next 7
 }
-
 // Data that identifies the Streamlit app's environment.
 // Does not change over the app lifetime.
 //
@@ -252,12 +212,10 @@ message UserInfo {
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;
-
   // The name of the OS. Typically "windows", "mac", "linux",
   // but can take other values like "ios", "android", "freebsd8".
   // See https://docs.python.org/3/library/sys.html#sys.platform
   string server_os = 3;
-
   // True if Linux/BSD and DISPLAY or WAYLAND_DISPLAY environment variables are
   // set. This is used so we can tell when Streamlit is being executed in order
   // to develop the app (has_display = true) or to serve the app (has_display =
