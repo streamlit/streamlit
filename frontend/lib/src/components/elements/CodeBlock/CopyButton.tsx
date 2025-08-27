@@ -38,10 +38,14 @@ const CopyButton: React.FC<Props> = ({ text }) => {
     copyToClipboard(text)
   }, [copyToClipboard, text])
 
+  const label = isCopied ? "Copied" : "Copy to clipboard"
+
   return (
     <StyledCopyButton
       data-testid="stCodeCopyButton"
-      title="Copy to clipboard"
+      title={label}
+      aria-label={label}
+      type="button"
       ref={buttonRef}
       onClick={handleCopy}
     >
