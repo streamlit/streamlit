@@ -19,14 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from typing_extensions import TypeAlias
 
@@ -890,10 +883,14 @@ def _get_x_encoding(
     # grid lines on x axis for horizontal bar charts only
     grid = chart_type == ChartType.HORIZONTAL_BAR
 
+    # Disable default sorting of bars
+    sort = None if chart_type == ChartType.VERTICAL_BAR else alt.Undefined
+
     return alt.X(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
+        sort=sort,
         scale=alt.Scale(),
         axis=_get_axis_config(df, x_column, grid=grid),
     )
@@ -935,10 +932,14 @@ def _get_y_encoding(
     # grid lines on y axis for all charts except horizontal bar charts
     grid = chart_type != ChartType.HORIZONTAL_BAR
 
+    # Disable default sorting of bars
+    sort = None if chart_type == ChartType.HORIZONTAL_BAR else alt.Undefined
+
     return alt.Y(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, chart_type, y_column),
+        sort=sort,
         scale=alt.Scale(),
         axis=_get_axis_config(df, y_column, grid=grid),
     )
