@@ -18,6 +18,8 @@ import React, { memo, ReactElement } from "react"
 
 import range from "lodash/range"
 
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
+
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
@@ -41,36 +43,39 @@ import {
 } from "./styled-components"
 
 export interface TableProps {
-  element: Quiver
+  element: ArrowProto
+  data: Quiver
 }
 
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
-  const table = props.element
+  const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns } = table.dimensions
   const dataRowIndices = range(numDataRows)
+  const borderMode = props.element.borderMode
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
-      <StyledTableBorder>
+      <StyledTableBorder borderMode={borderMode}>
         <StyledTable id={cssId} data-testid="stTableStyledTable">
-          {numHeaderRows > 0 && generateTableHeader(table)}
+          {numHeaderRows > 0 && generateTableHeader(table, borderMode)}
           <tbody>
             {dataRowIndices.length === 0 ? (
               <tr>
                 <StyledEmptyTableCell
                   data-testid="stTableStyledEmptyTableCell"
                   colSpan={numColumns || 1}
+                  borderMode={borderMode}
                 >
                   empty
                 </StyledEmptyTableCell>
               </tr>
             ) : (
               dataRowIndices.map(rowIndex =>
-                generateTableRow(table, rowIndex, numColumns)
+                generateTableRow(table, rowIndex, numColumns, borderMode)
               )
             )}
           </tbody>
@@ -91,27 +96,46 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
 /**
  * Generate the table header rows from a Quiver object.
  */
-function generateTableHeader(table: Quiver): ReactElement {
+function generateTableHeader(
+  table: Quiver,
+  borderMode: ArrowProto.BorderMode
+): ReactElement {
+  // When there are no vertical borders, we want to align the header text with the data.
+  const shouldAlignWithData =
+    borderMode === ArrowProto.BorderMode.NONE ||
+    borderMode === ArrowProto.BorderMode.HORIZONTAL
+
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
         // TODO: Update to match React best practices
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
-          {headerRow.map((header, colIndex) => (
-            <StyledTableCellHeader
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              key={colIndex}
-              className={header.cssClass}
-              scope="col"
-            >
-              <StreamlitMarkdown
-                source={header.name || "\u00A0"}
-                allowHTML={false}
-              />
-            </StyledTableCellHeader>
-          ))}
+          {headerRow.map((header, colIndex) => {
+            // Determine alignment based on column data type when no vertical borders
+            let textAlign: React.CSSProperties["textAlign"] = "inherit"
+            if (shouldAlignWithData && table.dimensions.numDataRows > 0) {
+              const { contentType } = table.getCell(0, colIndex)
+              textAlign = isNumericType(contentType) ? "right" : "left"
+            }
+
+            return (
+              <StyledTableCellHeader
+                // TODO: Update to match React best practices
+                // eslint-disable-next-line @eslint-react/no-array-index-key
+                key={colIndex}
+                className={header.cssClass}
+                scope="col"
+                borderMode={borderMode}
+                style={{ textAlign }}
+              >
+                <StreamlitMarkdown
+                  source={header.name || "\u00A0"}
+                  allowHTML={false}
+                />
+              </StyledTableCellHeader>
+            )
+          })}
         </tr>
       ))}
     </thead>
@@ -124,12 +148,13 @@ function generateTableHeader(table: Quiver): ReactElement {
 function generateTableRow(
   table: Quiver,
   rowIndex: number,
-  columns: number
+  columns: number,
+  borderMode: ArrowProto.BorderMode
 ): ReactElement {
   return (
     <tr key={rowIndex}>
       {range(columns).map(columnIndex =>
-        generateTableCell(table, rowIndex, columnIndex)
+        generateTableCell(table, rowIndex, columnIndex, borderMode)
       )}
     </tr>
   )
@@ -141,7 +166,8 @@ function generateTableRow(
 function generateTableCell(
   table: Quiver,
   rowIndex: number,
-  columnIndex: number
+  columnIndex: number,
+  borderMode: ArrowProto.BorderMode
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
@@ -177,6 +203,7 @@ function generateTableCell(
           scope="row"
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
+          borderMode={borderMode}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
@@ -193,6 +220,7 @@ function generateTableCell(
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
           style={style}
+          borderMode={borderMode}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
