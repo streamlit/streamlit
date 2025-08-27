@@ -83,9 +83,11 @@ export const createEmotionColors = (
     codeTextColor: genericColors.green,
     codeBackgroundColor: derivedColors.bgMix,
 
-    metricPositiveDeltaColor: genericColors.green,
-    metricNegativeDeltaColor: genericColors.red,
-    metricNeutralDeltaColor: derivedColors.fadedText60,
+    // TODO (mgbarnes): These currently control both the metric delta text and chart
+    // line/bar/area top line color. Dislocate these with text color updates.
+    metricPositiveDeltaColor: genericColors.greenColor,
+    metricNegativeDeltaColor: genericColors.redColor,
+    metricNeutralDeltaColor: genericColors.grayColor,
 
     borderColor: derivedColors.fadedText10,
     borderColorLight: derivedColors.fadedText05,

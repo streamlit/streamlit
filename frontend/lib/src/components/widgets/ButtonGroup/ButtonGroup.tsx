@@ -31,7 +31,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -339,7 +339,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
-  const containerWidth = shouldChildrenStretch(widthConfig)
+  const containerWidth = shouldWidthStretch(widthConfig)
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,

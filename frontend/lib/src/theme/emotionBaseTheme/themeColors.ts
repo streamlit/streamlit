@@ -18,6 +18,8 @@ import { transparentize } from "color2k"
 
 import { colors } from "~lib/theme/primitives/colors"
 
+// NOTE: Updates to the color below MUST be reflected in the mockTheme.ts file
+// to ensure the mock theme used for tests is consistent with expected theme colors.
 const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
@@ -53,7 +55,7 @@ const requiredThemeColors = {
   blueColor: colors.blue70,
   greenColor: colors.green70,
   violetColor: colors.purple70,
-  grayColor: colors.gray40,
+  grayColor: colors.gray60,
 }
 
 export type RequiredThemeColors = Record<
