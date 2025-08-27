@@ -835,7 +835,6 @@ def _get_axis_encodings(
     sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
-        # Only apply sorting to the categorical (y) axis
         x_encoding = _get_x_encoding(
             df, y_column, y_from_user, x_axis_label, chart_type
         )
@@ -843,9 +842,9 @@ def _get_axis_encodings(
             df, x_column, x_from_user, y_axis_label, chart_type
         )
         stack_encoding = x_encoding
+        # Only apply sorting to the categorical (y) axis
         sort_encoding = y_encoding
     else:
-        # Only apply sorting to the categorical (x) axis
         x_encoding = _get_x_encoding(
             df, x_column, x_from_user, x_axis_label, chart_type
         )
@@ -853,6 +852,7 @@ def _get_axis_encodings(
             df, y_column, y_from_user, y_axis_label, chart_type
         )
         stack_encoding = y_encoding
+        # Only apply sorting to the categorical (x) axis
         sort_encoding = x_encoding
 
     # Handle stacking - only relevant for bar & area charts
