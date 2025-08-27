@@ -223,9 +223,6 @@ const Selectbox: FC<Props> = ({
           },
           Input: {
             props: {
-              // When on mobile, if there are less than 10 options and new
-              // options are not accepted, set the input to read-only to hide
-              // the mobile keyboard.
               readOnly: inputReadOnly,
             },
             style: () => ({
