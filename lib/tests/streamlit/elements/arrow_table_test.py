@@ -26,6 +26,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -148,11 +149,11 @@ class ArrowTest(DeltaGeneratorTestCase):
         assert proto.border_mode == ArrowProto.BorderMode.HORIZONTAL
 
     def test_table_border_invalid_value(self):
-        """Test that st.table raises ValueError for invalid border values."""
+        """Test that st.table raises StreamlitValueError for invalid border values."""
         df = mock_data_frame()
 
         with pytest.raises(
-            ValueError,
-            match="Invalid border value.*Must be True, False, or 'horizontal'",
+            StreamlitValueError,
+            match=r"Invalid `border` value.*True, False, 'horizontal'",
         ):
             st.table(df, border="invalid")
