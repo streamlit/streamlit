@@ -19,6 +19,12 @@ SHELL=/bin/bash
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
 INSTALL_PLAYWRIGHT ?= true
+# Flags:
+#  - INSTALL_DEV_REQS: install dev requirements (default: true)
+#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
+#    CI uses a dedicated action to install browsers and typically sets this to false.
+#    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 

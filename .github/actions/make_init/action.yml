@@ -1,13 +1,13 @@
 name: "Setup Virtual Env"
-description: Sets up virtualenv + React; compiles protobuf
+description: Sets up virtualenv + React; compiles protobuf.
+  This action intentionally does NOT install Playwright browsers.
+  For CI jobs that need Playwright, call `./.github/actions/playwright_install`
+  after this action.
 
 inputs:
   use_cached_venv:
     description: "Use Cached Virtual Env"
     default: "true"
-  install_playwright_deps:
-    description: "Install Playwright browsers during python-init"
-    default: "false"
 
 # There is an altered copy of these steps inlined in the python_min_deps
 # workflow. If you make changes to this action, apply them there too if appropriate.
@@ -77,7 +77,9 @@ runs:
         source venv/bin/activate
         pip install --upgrade pip
         pip install uv
-        INSTALL_PLAYWRIGHT=${{ inputs.install_playwright_deps }} make python-init
+        # Do not install Playwright browsers in CI here; use the
+        # shared action `./.github/actions/playwright_install` instead.
+        INSTALL_PLAYWRIGHT=false make python-init
         # Run editable install again to ensure that the local
         # streamlit module takes precedence. This is
         # needed to fix an issue with nightly CI where

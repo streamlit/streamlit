@@ -80,6 +80,10 @@ runs:
     - name: Install Playwright browsers
       shell: bash
       run: |
+        # Usage in CI:
+        #   - Run `./.github/actions/make_init` first
+        #   - Then run this action to install browsers
+        # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
         else
