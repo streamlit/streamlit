@@ -529,6 +529,7 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
@@ -911,6 +912,7 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             value=parsed,
