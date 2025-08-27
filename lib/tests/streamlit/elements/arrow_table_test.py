@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
@@ -129,13 +130,12 @@ class ArrowTest(DeltaGeneratorTestCase):
             st.table(df)
             convert_anything_to_df.assert_called_once()
 
-    @pytest.mark.parametrize(
-        ("border", "expected"),
+    @parameterized.expand(
         [
             (True, ArrowProto.BorderMode.ALL),
             (False, ArrowProto.BorderMode.NONE),
             ("horizontal", ArrowProto.BorderMode.HORIZONTAL),
-        ],
+        ]
     )
     def test_table_border_parameter(self, border, expected):
         """Test that st.table border parameter converts values correctly."""
