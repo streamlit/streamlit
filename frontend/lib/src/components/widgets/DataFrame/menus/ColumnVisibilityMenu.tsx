@@ -263,7 +263,9 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
                   "data-testid": "stDataFrameColumnVisibilityMenuSearch",
                 },
                 style: {
-                  backgroundColor: theme.colors.none,
+                  backgroundColor: hasLightBackgroundColor(theme)
+                    ? theme.colors.bgColor
+                    : theme.colors.secondaryBg,
                   paddingLeft: theme.spacing.sm,
                 },
               },
