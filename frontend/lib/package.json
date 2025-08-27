@@ -98,7 +98,7 @@
     "react-markdown": "^10.1.0",
     "react-plotly.js": "^2.6.0",
     "react-responsive-carousel": "^3.2.23",
-    "react-syntax-highlighter": "^15.6.1",
+    "react-syntax-highlighter": "^15.6.3",
     "react-webcam": "7.2.0",
     "react-window": "^1.8.11",
     "rehype-katex": "^7.0.1",
