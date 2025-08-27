@@ -80,7 +80,7 @@ st.button(
 )
 
 
-cols = st.columns(3)
+cols = st.container(key="buttons_in_columns").columns(3)
 
 # Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot
 conn_types = [

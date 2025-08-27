@@ -96,7 +96,7 @@ def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_buttons_in_columns(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the button widgets are correctly rendered in columns via screenshot matching."""
-    columns_container = themed_app.get_by_test_id("stHorizontalBlock")
+    columns_container = get_element_by_key(themed_app, "buttons_in_columns")
     expect(columns_container).to_have_count(1)
     expect(columns_container.get_by_test_id("stButton")).to_have_count(8)
 
