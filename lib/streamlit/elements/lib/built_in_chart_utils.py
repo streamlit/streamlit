@@ -151,6 +151,7 @@ def generate_chart(
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
     horizontal: bool = False,
+    sort_from_user: str | None = None,
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -217,6 +218,7 @@ def generate_chart(
         x_axis_label,
         y_axis_label,
         stack,
+        sort_from_user,
     )
 
     # Create a Chart with x and y encodings.
@@ -821,23 +823,26 @@ def _get_axis_encodings(
     x_axis_label: str | None,
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
+    sort_from_user: str | None,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
+        # Only apply sorting to the categorical (y) axis
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type
+            df, y_column, y_from_user, x_axis_label, chart_type, None
         )
         y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
+            df, x_column, x_from_user, y_axis_label, chart_type, sort_from_user
         )
         stack_encoding = x_encoding
     else:
+        # Only apply sorting to the categorical (x) axis
         x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
+            df, x_column, x_from_user, x_axis_label, chart_type, sort_from_user
         )
         y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df, y_column, y_from_user, y_axis_label, chart_type, None
         )
         stack_encoding = y_encoding
 
@@ -853,6 +858,7 @@ def _get_x_encoding(
     x_from_user: str | Sequence[str] | None,
     x_axis_label: str | None,
     chart_type: ChartType,
+    sort_from_user: str | None,
 ) -> alt.X:
     import altair as alt
 
@@ -883,8 +889,14 @@ def _get_x_encoding(
     # grid lines on x axis for horizontal bar charts only
     grid = chart_type == ChartType.HORIZONTAL_BAR
 
-    # Disable default sorting of bars
-    sort = None if chart_type == ChartType.VERTICAL_BAR else alt.Undefined
+    # Resolve sorting for all axis types
+    sort: Any
+    if sort_from_user is None:
+        # Disable default sorting of bars (respect data order) for vertical bars
+        sort = None if chart_type == ChartType.VERTICAL_BAR else alt.Undefined
+    else:
+        # Pass through to Altair/Vega-Lite. Supports "col" and "-col"
+        sort = sort_from_user
 
     return alt.X(
         x_field,
@@ -902,6 +914,7 @@ def _get_y_encoding(
     y_from_user: str | Sequence[str] | None,
     y_axis_label: str | None,
     chart_type: ChartType,
+    sort_from_user: str | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -932,8 +945,14 @@ def _get_y_encoding(
     # grid lines on y axis for all charts except horizontal bar charts
     grid = chart_type != ChartType.HORIZONTAL_BAR
 
-    # Disable default sorting of bars
-    sort = None if chart_type == ChartType.HORIZONTAL_BAR else alt.Undefined
+    # Resolve sorting for all axis types
+    sort: Any
+    if sort_from_user is None:
+        # Disable default sorting of bars (respect data order) for horizontal bars
+        sort = None if chart_type == ChartType.HORIZONTAL_BAR else alt.Undefined
+    else:
+        # Pass through to Altair/Vega-Lite. Supports "col" and "-col"
+        sort = sort_from_user
 
     return alt.Y(
         field=y_field,

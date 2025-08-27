@@ -1082,6 +1082,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
+        sort: str | None = None,
         stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -1172,6 +1173,13 @@ class VegaChartsMixin:
             (default), the bars display vertically. If this is ``True``,
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
+
+        sort : str or None
+            How to sort the bars. If ``None`` (default), bars are shown in data
+            order (no sorting). If this is the name of a column (e.g. ``"col1"``),
+            bars are sorted by that column in ascending order. If this is the
+            name of a column prefixed with a minus sign (e.g. ``"-col1"``), bars are
+            sorted by that column in descending order.
 
         stack : bool, "normalize", "center", "layered", or None
             Whether to stack the bars. If this is ``None`` (default),
@@ -1357,6 +1365,7 @@ class VegaChartsMixin:
             use_container_width=use_container_width,
             stack=stack,
             horizontal=horizontal,
+            sort_from_user=sort,
         )
         return cast(
             "DeltaGenerator",
