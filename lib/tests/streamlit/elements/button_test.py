@@ -157,6 +157,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                 help="Help 1",
                 type="secondary",
                 disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
             )
             c1 = self.get_delta_from_queue().new_element.button
             id1 = c1.id
@@ -167,6 +171,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                 help="Help 2",
                 type="primary",
                 disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
             )
             c2 = self.get_delta_from_queue().new_element.button
             id2 = c2.id
@@ -187,6 +195,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                 help="Help 1",
                 type="secondary",
                 disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
             )
             c1 = self.get_delta_from_queue().new_element.download_button
             id1 = c1.id
@@ -200,6 +212,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                 help="Help 2",
                 type="primary",
                 disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
             )
             c2 = self.get_delta_from_queue().new_element.download_button
             id2 = c2.id
