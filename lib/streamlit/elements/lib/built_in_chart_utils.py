@@ -52,6 +52,7 @@ class PrepDataColumns(TypedDict):
     y_column_list: list[str]
     color_column: str | None
     size_column: str | None
+    sort_column: str | None
 
 
 @dataclass
@@ -176,6 +177,8 @@ def generate_chart(
     # Get name of column to use for size, or constant value to use. Any/both could
     #  be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
+    # Get name of column to use for sort.
+    sort_column = _parse_sort_column(df, sort_from_user)
 
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
@@ -189,6 +192,7 @@ def generate_chart(
             "y_column_list": y_column_list,
             "color_column": color_column,
             "size_column": size_column,
+            "sort_column": sort_column,
         },
         # Chart styling properties
         color=color_from_user,
@@ -202,15 +206,6 @@ def generate_chart(
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
-
-    # Ensure sort field is preserved even if not in x/y/color/size
-    sort_column: str | None = None
-    if sort_from_user:
-        sort_column = sort_from_user.removeprefix("-")
-        # Validate that the sort column exists
-        if sort_column not in df.columns:
-            raise StreamlitColumnNotFoundError(df, sort_column)
-
     df, x_column, y_column, color_column, size_column = _prep_data(
         df, x_column, y_column_list, color_column, size_column, sort_column
     )
@@ -358,18 +353,13 @@ def prep_chart_data_for_add_rows(
         df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
         add_rows_metadata.last_index = stop - 1
 
-    # Extract sort column for preservation
-    sort_column: str | None = None
-    if add_rows_metadata.sort:
-        sort_column = add_rows_metadata.sort.removeprefix("-")
-
     out_data, *_ = _prep_data(
         df,
         x_column=add_rows_metadata.columns["x_column"],
         y_column_list=add_rows_metadata.columns["y_column_list"],
         color_column=add_rows_metadata.columns["color_column"],
         size_column=add_rows_metadata.columns["size_column"],
-        sort_column=sort_column,
+        sort_column=add_rows_metadata.columns["sort_column"],
     )
 
     return out_data, add_rows_metadata
@@ -713,6 +703,17 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
         f" dataframe's index. Value given: {x_from_user} "
         f"(type {type(x_from_user)})"
     )
+
+
+def _parse_sort_column(df: pd.DataFrame, sort_from_user: str | None) -> str | None:
+    if sort_from_user is None:
+        return None
+
+    sort_column = sort_from_user.removeprefix("-")
+    if sort_column not in df.columns:
+        raise StreamlitColumnNotFoundError(df, sort_column)
+
+    return sort_column
 
 
 def _parse_y_columns(
