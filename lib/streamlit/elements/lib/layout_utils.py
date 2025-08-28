@@ -119,8 +119,8 @@ def validate_height(
 
 def get_width_config(width: Width) -> WidthConfig:
     width_config = WidthConfig()
-    if isinstance(width, int):
-        width_config.pixel_width = width
+    if isinstance(width, (int, float)):
+        width_config.pixel_width = int(width)
     elif width == "content":
         width_config.use_content = True
     else:
@@ -130,8 +130,8 @@ def get_width_config(width: Width) -> WidthConfig:
 
 def get_height_config(height: Height) -> HeightConfig:
     height_config = HeightConfig()
-    if isinstance(height, int):
-        height_config.pixel_height = height
+    if isinstance(height, (int, float)):
+        height_config.pixel_height = int(height)
     elif height == "content":
         height_config.use_content = True
     else:
