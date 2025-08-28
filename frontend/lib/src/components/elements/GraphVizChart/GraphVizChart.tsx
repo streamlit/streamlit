@@ -16,7 +16,6 @@
 
 import React, { memo, ReactElement, useEffect } from "react"
 
-import { select } from "d3"
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
 
@@ -25,7 +24,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
@@ -59,7 +58,7 @@ function GraphVizChart({
 
   // Determine if we should use container width based on layout config or legacy prop
   const shouldUseContainerWidth =
-    shouldChildrenStretch(widthConfig) || element.useContainerWidth
+    shouldWidthStretch(widthConfig) || element.useContainerWidth
 
   useEffect(() => {
     try {
@@ -69,14 +68,6 @@ function GraphVizChart({
         .scale(1)
         .engine(element.engine as Engine)
         .renderDot(element.spec)
-
-      if (isFullScreen || shouldUseContainerWidth) {
-        const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
-        // We explicitly remove width and height to let CSS and the SVG viewBox
-        // define its dimensions
-        node.removeAttribute("width")
-        node.removeAttribute("height")
-      }
     } catch (error) {
       LOG.error(error)
     }

@@ -1217,6 +1217,84 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // Test valid main color values
+  it.each([
+    ["#ff0000", "#ff0000"],
+    ["rgb(255, 0, 0)", "rgb(255, 0, 0)"],
+    ["rgba(196, 77, 86, 1)", "rgba(196, 77, 86, 1)"],
+    ["red", "red"],
+    ["ff0000", "#ff0000"], // Handles no leading #
+  ])("uses configured main theme colors if set", (color, expectedColor) => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: color,
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+    expect(theme.colors.redColor).toBe(expectedColor)
+    expect(theme.colors.orangeColor).toBe(theme.colors.orange70)
+    expect(theme.colors.yellowColor).toBe(theme.colors.yellow80)
+    expect(theme.colors.blueColor).toBe(theme.colors.blue70)
+    expect(theme.colors.greenColor).toBe(theme.colors.green70)
+    expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+    expect(theme.colors.grayColor).toBe(theme.colors.gray60)
+  })
+
+  // Test invalid main color values
+  it.each([
+    ["invalid"],
+    ["rgb(255, 0, 0"], // Missing closing parenthesis
+    ["corgi"], // Invalid color name
+    ["#G00000"], // Invalid hex code
+  ])(
+    "logs a warning and falls back to default for invalid main theme colors '%s'",
+    color => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        orangeColor: color,
+      }
+      const theme = createEmotionTheme(themeInput, lightTheme)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for orangeColor in theme: "${color}"`
+      )
+      // Falls back to default orange
+      expect(theme.colors.orangeColor).toBe(theme.colors.orange70)
+      // All others use defaults
+      expect(theme.colors.redColor).toBe(theme.colors.red70)
+      expect(theme.colors.yellowColor).toBe(theme.colors.yellow80)
+      expect(theme.colors.blueColor).toBe(theme.colors.blue70)
+      expect(theme.colors.greenColor).toBe(theme.colors.green70)
+      expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+      expect(theme.colors.grayColor).toBe(theme.colors.gray60)
+    }
+  )
+
+  it("falls back to default main theme colors if not set", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+    expect(theme.colors.redColor).toBe(theme.colors.red70)
+    expect(theme.colors.orangeColor).toBe(theme.colors.orange70)
+    expect(theme.colors.yellowColor).toBe(theme.colors.yellow80)
+    expect(theme.colors.blueColor).toBe(theme.colors.blue70)
+    expect(theme.colors.greenColor).toBe(theme.colors.green70)
+    expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+    expect(theme.colors.grayColor).toBe(theme.colors.gray60)
+  })
+
+  it("default main theme colors are set correctly for dark theme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+    expect(theme.colors.redColor).toBe(theme.colors.red80)
+    expect(theme.colors.orangeColor).toBe(theme.colors.orange80)
+    expect(theme.colors.yellowColor).toBe(theme.colors.yellow70)
+    expect(theme.colors.blueColor).toBe(theme.colors.blue80)
+    expect(theme.colors.greenColor).toBe(theme.colors.green80)
+    expect(theme.colors.violetColor).toBe(theme.colors.purple70)
+    expect(theme.colors.grayColor).toBe(theme.colors.gray80)
+  })
+
   // Conditional Overrides - Radii Tests
 
   it("adapts the radii theme props if baseRadius is provided", () => {
