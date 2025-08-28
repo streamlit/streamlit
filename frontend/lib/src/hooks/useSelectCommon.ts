@@ -33,7 +33,6 @@ export interface UseSelectCommonArgs {
   isMulti: boolean
   acceptNewOptions: boolean
   placeholderInput: string
-  maxSelections?: number
 }
 
 export interface UseSelectCommonResult {
@@ -62,7 +61,6 @@ export interface UseSelectCommonResult {
  * @param {boolean} args.isMulti - Whether multiple selections are allowed.
  * @param {boolean} args.acceptNewOptions - Whether free-form user input is allowed.
  * @param {string} args.placeholderInput - Placeholder text source from backend.
- * @param {number} [args.maxSelections] - Optional cap on the number of selections.
  * @returns {UseSelectCommonResult} Derived values and mapping/filter helpers for the UI.
  */
 export function useSelectCommon(
