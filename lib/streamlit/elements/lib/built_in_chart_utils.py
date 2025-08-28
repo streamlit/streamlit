@@ -989,8 +989,9 @@ def _update_encoding_with_sort(
 ) -> None:
     """Apply sort to the given encoding in-place.
 
-    - If sort is None: disable default Vega-Lite sorting on the bar's categorical axis
+    - If sort is False: disable Altair's default sorting on the bar's categorical axis
         (i.e., set to None).
+    - If sort is True: use Altair's default sorting.
     - If sort is a column name (optionally starting with '-') set a SortField with the correct order.
 
     Note: Column validation should be done before calling this function.
