@@ -870,7 +870,7 @@ def _get_axis_encodings(
     _update_encoding_with_stack(stack, stack_encoding)
 
     # Handle sorting - only relevant for bar charts
-    _update_encoding_with_sort(sort_from_user, sort_encoding, df)
+    _update_encoding_with_sort(sort_from_user, sort_encoding)
 
     return x_encoding, y_encoding
 
