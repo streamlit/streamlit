@@ -860,7 +860,6 @@ def _get_axis_encodings(
             df, x_column, x_from_user, y_axis_label, chart_type
         )
         stack_encoding = x_encoding
-        # Only apply sorting to the categorical (y) axis
         sort_encoding = y_encoding
     else:
         x_encoding = _get_x_encoding(
@@ -870,7 +869,6 @@ def _get_axis_encodings(
             df, y_column, y_from_user, y_axis_label, chart_type
         )
         stack_encoding = y_encoding
-        # Only apply sorting to the categorical (x) axis
         sort_encoding = x_encoding
 
     # Handle stacking - only relevant for bar & area charts
