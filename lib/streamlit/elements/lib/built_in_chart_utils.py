@@ -471,7 +471,7 @@ def _prep_data(
 
     # Maybe melt data from wide format into long format.
     melted_data, y_column, color_column = _maybe_melt(
-        selected_data, x_column, y_column_list, color_column, size_column
+        selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # Return the data, but also the new names to use for x, y, and color.
@@ -806,6 +806,7 @@ def _maybe_melt(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
+    sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
     y_column: str | None
@@ -822,6 +823,8 @@ def _maybe_melt(
         columns_to_leave_alone = [x_column]
         if size_column:
             columns_to_leave_alone.append(size_column)
+        if sort_column:
+            columns_to_leave_alone.append(sort_column)
 
         df = _melt_data(
             df=df,
