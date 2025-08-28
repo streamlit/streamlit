@@ -50,10 +50,14 @@ st.write("checkbox 5 - value:", i5)
 i6 = st.checkbox("checkbox 6 (True, disabled)", value=True, disabled=True)
 st.write("checkbox 6 - value:", i6)
 
-i7 = st.checkbox("checkbox 7 (label hidden)", label_visibility="hidden")
+i7 = st.checkbox(
+    "checkbox 7 (label hidden)", label_visibility="hidden", key="checkbox_7"
+)
 st.write("checkbox 7 - value:", i7)
 
-i8 = st.checkbox("checkbox 8 (label collapsed)", label_visibility="collapsed")
+i8 = st.checkbox(
+    "checkbox 8 (label collapsed)", label_visibility="collapsed", key="checkbox_8"
+)
 st.write("checkbox 8 - value:", i8)
 
 with st.expander("Grouped checkboxes", expanded=True):
@@ -63,7 +67,8 @@ with st.expander("Grouped checkboxes", expanded=True):
     st.text("A non-checkbox element")
 
 st.checkbox(
-    "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="checkbox_9",
 )
 
 st.checkbox("checkbox with content width", width="content")
