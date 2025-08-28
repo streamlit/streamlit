@@ -42,10 +42,12 @@ st.write("toggle 5 - value:", i5)
 i6 = st.toggle("toggle 6 (True, disabled)", value=True, disabled=True)
 st.write("toggle 6 - value:", i6)
 
-i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden")
+i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden", key="toggle_7")
 st.write("toggle 7 - value:", i7)
 
-i8 = st.toggle("toggle 8 (label collapsed)", label_visibility="collapsed")
+i8 = st.toggle(
+    "toggle 8 (label collapsed)", label_visibility="collapsed", key="toggle_8"
+)
 st.write("toggle 8 - value:", i8)
 
 with st.expander("Grouped toggles", expanded=True):
@@ -55,7 +57,8 @@ with st.expander("Grouped toggles", expanded=True):
     st.text("A non-toggle element")
 
 st.toggle(
-    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="toggle_9",
 )
 
 st.toggle("toggle with content width", width="content")
