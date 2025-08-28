@@ -82,7 +82,8 @@ st.bar_chart(source, x="variety", y="yield", color="site", stack="center")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="layered")
 
 # Sort behavior tests
-st.bar_chart(df, x="a", y="b", sort=None)  # no sort
+st.bar_chart(df, x="a", y="b", sort=False)  # no sort
+st.bar_chart(df, x="a", y="b", sort=True)  # automatic sort
 st.bar_chart(df, x="a", y="b", sort="a")  # sort by categories, ascending
 st.bar_chart(df, x="a", y="b", sort="-a")  # sort by categories, descending
 st.bar_chart(df, x="a", y="b", sort="b")  # sort by values, ascending

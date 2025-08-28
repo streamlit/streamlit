@@ -1316,7 +1316,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             }
         )
 
-        chart_command(df, x="categorical", y="numbers")
+        if chart_command == st.bar_chart:
+            # Enable Altair's automatic sorting for bar charts. We disable this
+            # by default in `st.bar_chart`.
+            chart_command(df, x="categorical", y="numbers", sort=True)
+        else:
+            chart_command(df, x="categorical", y="numbers")
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
@@ -1327,7 +1332,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
         assert chart_spec["encoding"]["x"]["type"] == "ordinal"
-        assert chart_spec["encoding"]["x"]["sort"] is None
+        assert chart_spec["encoding"]["x"]["sort"] == ["c", "b", "a"]
         assert chart_spec["encoding"]["y"]["type"] == "quantitative"
 
     def test_line_chart_with_named_index(self):
@@ -1632,8 +1637,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["sort"]["field"] == "C"
         assert chart_spec["encoding"]["y"]["sort"]["order"] == "ascending"
 
-    def test_bar_chart_sort_none_disables_default_sorting(self):
-        """Test that sort=None disables default alphabetical sorting."""
+    def test_bar_chart_sort_false_disables_default_sorting(self):
+        """Test that sort=False disables default alphabetical sorting."""
         df = pd.DataFrame(
             {
                 "A": ["zebra", "apple", "banana"],  # Intentionally not alphabetical
@@ -1641,7 +1646,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.bar_chart(df, x="A", y="B", sort=None)
+        st.bar_chart(df, x="A", y="B", sort=False)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)

@@ -74,7 +74,7 @@ class AddRowsMetadata:
     stack: bool | ChartStackType | None = None
     # Only applicable for bar charts
     horizontal: bool = False
-    sort: str | None = None
+    sort: bool | str = False
 
 
 class ChartType(Enum):
@@ -153,7 +153,7 @@ def generate_chart(
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
     horizontal: bool = False,
-    sort_from_user: str | None = None,
+    sort_from_user: bool | str = False,
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -708,8 +708,8 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
     )
 
 
-def _parse_sort_column(df: pd.DataFrame, sort_from_user: str | None) -> str | None:
-    if sort_from_user is None:
+def _parse_sort_column(df: pd.DataFrame, sort_from_user: bool | str) -> str | None:
+    if sort_from_user is False or sort_from_user is True:
         return None
 
     sort_column = sort_from_user.removeprefix("-")
@@ -847,7 +847,7 @@ def _get_axis_encodings(
     x_axis_label: str | None,
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
-    sort_from_user: str | None,
+    sort_from_user: bool | str,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
     sort_encoding: alt.X | alt.Y
@@ -984,7 +984,7 @@ def _update_encoding_with_stack(
 
 
 def _update_encoding_with_sort(
-    sort_from_user: str | None,
+    sort_from_user: bool | str,
     encoding: alt.X | alt.Y,
 ) -> None:
     """Apply sort to the given encoding in-place.
@@ -997,16 +997,20 @@ def _update_encoding_with_sort(
     """
     import altair as alt
 
-    if sort_from_user is None:
+    if sort_from_user is False:
+        # Disable Altair's default sorting
         encoding["sort"] = None
+    elif sort_from_user is True:
+        # Use Altair's default sorting
+        pass
     else:
+        # String: sort by column name (optional '-' prefix for descending)
         sort_order: Literal["ascending", "descending"]
         if sort_from_user.startswith("-"):
             sort_order = "descending"
         else:
             sort_order = "ascending"
         sort_field = sort_from_user.removeprefix("-")
-
         encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 
 

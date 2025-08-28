@@ -1073,7 +1073,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
-        sort: str | None = None,
+        sort: bool | str = False,
         stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -1165,12 +1165,18 @@ class VegaChartsMixin:
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
 
-        sort : str or None
-            How to sort the bars. If ``None`` (default), bars are shown in data
-            order (no sorting). If this is the name of a column (e.g. ``"col1"``),
-            bars are sorted by that column in ascending order. If this is the
-            name of a column prefixed with a minus sign (e.g. ``"-col1"``), bars are
-            sorted by that column in descending order.
+        sort : bool or str
+            How to sort the bars. This can be:
+
+            - ``False`` (default): The bars are shown in data order without sorting.
+            - ``True``: The bars are sorted automatically with Altair's default. Usually
+              that means in ascending order by the ``x`` column for vertical bars and
+              by the ``y`` column for horizontal bars. This also correctly sorts ordered
+              categorical columns (``pd.Categorical``).
+            - The name of a column (e.g. ``"col1"``): The bars are sorted by that column
+              in ascending order.
+            - The name of a column prefixed with a minus sign (e.g. ``"-col1"``):
+              The bars are sorted by that column in descending order.
 
         stack : bool, "normalize", "center", "layered", or None
             Whether to stack the bars. If this is ``None`` (default),
