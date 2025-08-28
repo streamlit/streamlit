@@ -188,7 +188,16 @@ message CustomThemeConfig {
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
 
-  // Next ID: 38
+  // Main color configs:
+  optional string red_color = 38;
+  optional string orange_color = 39;
+  optional string yellow_color = 40;
+  optional string blue_color = 41;
+  optional string green_color = 42;
+  optional string violet_color = 43;
+  optional string gray_color = 44;
+
+  // Next ID: 45
 }
 
 message FontFace {

@@ -519,6 +519,13 @@ export const createEmotionTheme = (
     borderColor,
     linkColor,
     codeBackgroundColor,
+    redColor,
+    orangeColor,
+    yellowColor,
+    blueColor,
+    greenColor,
+    violetColor,
+    grayColor,
   } = parsedColors
 
   // Create a new generic colors object with configured colors, if they exist.
@@ -531,6 +538,14 @@ export const createEmotionTheme = (
     secondaryBg: secondaryBg ?? colors.secondaryBg,
     bgColor: bgColor ?? colors.bgColor,
     link: linkColor ?? colors.link,
+    // Main theme colors
+    redColor: redColor ?? colors.redColor,
+    orangeColor: orangeColor ?? colors.orangeColor,
+    yellowColor: yellowColor ?? colors.yellowColor,
+    blueColor: blueColor ?? colors.blueColor,
+    greenColor: greenColor ?? colors.greenColor,
+    violetColor: violetColor ?? colors.violetColor,
+    grayColor: grayColor ?? colors.grayColor,
     // Secondary color is not yet configurable. Set secondary color to primary color
     // by default for all custom themes.
     secondary: primary ?? colors.primary,

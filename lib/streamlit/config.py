@@ -1196,6 +1196,76 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "redColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main red color.
+
+        By default, this is #ff4b4b for light theme and #ff2b2b for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main orange color.
+
+        By default, this is #ffa421 for light theme and #ff8700 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main yellow color.
+
+        By default, this is #faca2b for light theme and #ffe312 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main blue color.
+
+        By default, this is #1c83e1 for light theme and #0068c9 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main green color.
+
+        By default, this is #21c354 for light theme and #09ab3b for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main violet color.
+
+        By default, this is #803df5 for both light and dark themes.
+    """,
+)
+
+_create_theme_options(
+    "grayColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Color used as main gray color.
+
+        By default, this is #a3a8b8 for light theme and #555867 for dark theme.
+    """,
+)
+
+_create_theme_options(
     "linkColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
