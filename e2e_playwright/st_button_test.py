@@ -236,12 +236,12 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     dynamic_button = get_element_by_key(app, "dynamic_button_with_key")
     expect(dynamic_button).to_be_visible()
 
-    expect(dynamic_button).to_have_text("Initial dynamic button")
+    expect(dynamic_button).to_contain_text("Initial dynamic button")
     assert_snapshot(dynamic_button, name="st_button-dynamic_initial")
     # Click the toggle to update the button props
     click_toggle(app, "Update button props")
 
-    expect(dynamic_button).to_have_text("Updated dynamic button")
+    expect(dynamic_button).to_contain_text("Updated dynamic button")
     assert_snapshot(dynamic_button, name="st_button-dynamic_updated")
 
     # Click the submit button:

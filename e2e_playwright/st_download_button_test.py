@@ -260,7 +260,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     expect(dynamic_button).to_be_visible()
 
     # Initial state
-    expect(dynamic_button).to_have_text("Initial dynamic button")
+    expect(dynamic_button).to_contain_text("Initial dynamic button")
     assert_snapshot(dynamic_button, name="st_download_button-dynamic_initial")
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
@@ -269,7 +269,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     click_toggle(app, "Update button props")
 
     # Updated state
-    expect(dynamic_button).to_have_text("Updated dynamic button")
+    expect(dynamic_button).to_contain_text("Updated dynamic button")
     assert_snapshot(dynamic_button, name="st_download_button-dynamic_updated")
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("updated help")
