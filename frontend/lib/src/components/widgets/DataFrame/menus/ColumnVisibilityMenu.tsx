@@ -182,13 +182,12 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
-  const [searchTerm, setSearchTerm] =
-    useState("")
+  const [columnSearchTerm, setColumnSearchTerm] = useState("")
 
   const onColumnSearch = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    setcolumnVisibilitySearchTerm(event.target.value)
+    setColumnSearchTerm(event.target.value)
   }
 
   // Determine column visibility based on hidden property and column order:
@@ -240,7 +239,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             }
             size={UIInputSize.mini}
             placeholder="Search"
-            value={columnVisibilitySearchTerm}
+            value={columnSearchTerm}
             onChange={onColumnSearch}
             overrides={{
               Root: {
@@ -296,10 +295,10 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             {columns
               .filter(
                 column =>
-                  columnVisibilitySearchTerm === "" ||
+                  columnSearchTerm === "" ||
                   column.id
                     .toLowerCase()
-                    .includes(columnVisibilitySearchTerm.toLowerCase())
+                    .includes(columnSearchTerm.toLowerCase())
               )
               .map(column => {
                 // A column can be hidden if configured in column config
