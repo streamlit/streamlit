@@ -79,6 +79,7 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         bar_chart_elements.nth(25), name="st_bar_chart-horizontal_sort_by_values_asc"
     )
+    # The add_rows chart (index 26) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_bar_chart_rendering(
