@@ -109,6 +109,16 @@ const NumberInput: React.FC<Props> = ({
     })
   }, [value, elementDataType, elementFormat, step])
 
+  // While the input is focused, avoid applying formatting that enforces
+  // fixed decimal places. This prevents keystrokes (including backspace)
+  // from being immediately overridden by formatted output.
+  const displayValue = useMemo(() => {
+    if (isFocused) {
+      return isNullOrUndefined(value) ? "" : value.toString()
+    }
+    return formattedValue ?? ""
+  }, [isFocused, value, formattedValue])
+
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
 
@@ -359,7 +369,7 @@ const NumberInput: React.FC<Props> = ({
         <UIInput
           type="number"
           inputRef={inputRef}
-          value={formattedValue ?? ""}
+          value={displayValue}
           placeholder={element.placeholder}
           onBlur={onBlur}
           onFocus={onFocus}
