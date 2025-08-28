@@ -464,8 +464,9 @@ def _prep_data(
         y_column_list,
         color_column,
         size_column,
+        sort_column,
     ) = _convert_col_names_to_str_in_place(
-        selected_data, x_column, y_column_list, color_column, size_column
+        selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # Maybe melt data from wide format into long format.
@@ -659,7 +660,8 @@ def _convert_col_names_to_str_in_place(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> tuple[str | None, list[str], str | None, str | None]:
+    sort_column: str | None,
+) -> tuple[str | None, list[str], str | None, str | None, str | None]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
     import pandas as pd
 
@@ -672,6 +674,7 @@ def _convert_col_names_to_str_in_place(
         [str(c) for c in y_column_list],
         None if color_column is None else str(color_column),
         None if size_column is None else str(size_column),
+        None if sort_column is None else str(sort_column),
     )
 
 
