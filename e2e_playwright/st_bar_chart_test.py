@@ -68,7 +68,7 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         bar_chart_elements.nth(21), name="st_bar_chart-sort_by_categories_desc"
     )
-    assert_snapshot(bar_chart_elements.nth(21), name="st_bar_chart-sort_by_values_asc")
+    assert_snapshot(bar_chart_elements.nth(22), name="st_bar_chart-sort_by_values_asc")
     assert_snapshot(bar_chart_elements.nth(23), name="st_bar_chart-sort_by_values_desc")
     assert_snapshot(
         bar_chart_elements.nth(24), name="st_bar_chart-sort_by_other_column_asc"
