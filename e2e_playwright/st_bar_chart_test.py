@@ -109,7 +109,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width, horizontal, stack).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(26)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(27)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart
