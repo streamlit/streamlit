@@ -270,6 +270,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
 
     # Updated state
     expect(dynamic_button).to_contain_text("Updated dynamic button")
+    dynamic_button.scroll_into_view_if_needed()
     assert_snapshot(dynamic_button, name="st_download_button-dynamic_updated")
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("updated help")

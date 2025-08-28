@@ -242,6 +242,7 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     click_toggle(app, "Update button props")
 
     expect(dynamic_button).to_contain_text("Updated dynamic button")
+    dynamic_button.scroll_into_view_if_needed()
     assert_snapshot(dynamic_button, name="st_button-dynamic_updated")
 
     # Click the submit button:

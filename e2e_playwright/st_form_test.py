@@ -373,7 +373,9 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(submit_button, name="st_form_submit_button-dynamic_initial")
     # Click the toggle to update the button props
     click_toggle(app, "Update button props")
+
     expect(submit_button).to_contain_text("Updated dynamic button")
+    submit_button.scroll_into_view_if_needed()
     assert_snapshot(submit_button, name="st_form_submit_button-dynamic_updated")
 
     # Click the submit button:
