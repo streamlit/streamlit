@@ -1,0 +1,32 @@
+import streamlit as st
+import os
+
+# Attendance Order
+attendance = ["Akshaya", "Priya", "Divya", "Meena", "Kavi"]
+
+st.title("📚 NPTEL Assignment Uploader")
+
+# Store files
+if "uploads" not in st.session_state:
+    st.session_state["uploads"] = {}
+
+assignment_no = len(st.session_state["uploads"]) + 1
+turn = attendance[(assignment_no - 1) % len(attendance)]
+
+st.subheader(f"Assignment {assignment_no} – {turn}'s Turn")
+
+# Upload
+uploaded = st.file_uploader("Upload your assignment", type=["pdf", "docx"])
+
+if uploaded:
+    save_path = f"assignments/Assignment_{assignment_no}_{turn}.pdf"
+    os.makedirs("assignments", exist_ok=True)
+    with open(save_path, "wb") as f:
+        f.write(uploaded.getbuffer())
+    st.session_state["uploads"][assignment_no] = save_path
+    st.success(f"✅ Saved as {save_path}")
+
+# Show all uploaded
+st.subheader("📂 Uploaded Assignments")
+for k, v in st.session_state["uploads"].items():
+    st.write(f"Assignment {k}: {v}")
