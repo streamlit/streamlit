@@ -598,9 +598,6 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
-        If ``st.line_chart`` does not guess the data specification
-        correctly, try specifying your desired chart using ``st.altair_chart``.
-
         Parameters
         ----------
         data : Anything supported by st.dataframe
@@ -813,9 +810,6 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
-
-        If ``st.area_chart`` does not guess the data specification
-        correctly, try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
@@ -1085,9 +1079,6 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
-
-        If ``st.bar_chart`` does not guess the data specification
-        correctly, try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
@@ -1395,9 +1386,6 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
-
-        If ``st.scatter_chart`` does not guess the data specification correctly,
-        try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
