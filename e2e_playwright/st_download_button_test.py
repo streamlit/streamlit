@@ -266,7 +266,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
 
     # Click the toggle to update the button props
-    click_toggle(app, "Update button props")s
+    click_toggle(app, "Update button props")
 
     # Updated state
     expect(dynamic_button).to_have_text("Updated dynamic button")
