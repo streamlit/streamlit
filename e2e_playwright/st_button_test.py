@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -19,6 +21,8 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    expect_markdown,
+    get_button,
     get_element_by_key,
     get_expander,
 )
@@ -30,34 +34,69 @@ def test_button_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the button widgets are correctly rendered via screenshot matching."""
-    button_elements = themed_app.get_by_test_id("stButton")
-    expect(button_elements).to_have_count(TOTAL_BUTTONS)
+    expect(themed_app.get_by_test_id("stButton")).to_have_count(TOTAL_BUTTONS)
 
-    assert_snapshot(button_elements.nth(0), name="st_button-default")
-    assert_snapshot(button_elements.nth(1), name="st_button-disabled")
-    assert_snapshot(button_elements.nth(2), name="st_button-primary")
-    assert_snapshot(button_elements.nth(3), name="st_button-disabled_primary")
-    assert_snapshot(button_elements.nth(4), name="st_button-styled_label")
-    assert_snapshot(button_elements.nth(5), name="st_button-just_help")
-    assert_snapshot(button_elements.nth(6), name="st_button-material_icon")
-    assert_snapshot(button_elements.nth(7), name="st_button-emoji_icon")
-    assert_snapshot(button_elements.nth(8), name="st_button-tertiary")
-    assert_snapshot(button_elements.nth(9), name="st_button-disabled_tertiary")
-    assert_snapshot(button_elements.nth(10), name="st_button-material_icon_1k_icon")
-    assert_snapshot(button_elements.nth(11), name="st_button-material_icon_1k_markdown")
+    assert_snapshot(
+        get_button(themed_app, "button 1"),
+        name="st_button-default",
+    )
+    assert_snapshot(
+        get_button(themed_app, "button 2 (disabled)"),
+        name="st_button-disabled",
+    )
+    assert_snapshot(
+        get_button(themed_app, "button 3 (primary)"),
+        name="st_button-primary",
+    )
+    assert_snapshot(
+        get_button(themed_app, "button 4 (primary + disabled)"),
+        name="st_button-disabled_primary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "styled_label_button"),
+        name="st_button-styled_label",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "help_button_key"),
+        name="st_button-just_help",
+    )
+    assert_snapshot(
+        get_button(themed_app, "Like Button"),
+        name="st_button-material_icon",
+    )
+    assert_snapshot(
+        get_button(themed_app, "Star Button"),
+        name="st_button-emoji_icon",
+    )
+    assert_snapshot(
+        get_button(themed_app, re.compile(r"^Tertiary Button$")),
+        name="st_button-tertiary",
+    )
+    assert_snapshot(
+        get_button(themed_app, "Disabled Tertiary Button"),
+        name="st_button-disabled_tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "material_icon_digit_button"),
+        name="st_button-material_icon_1k_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "material_icon_digit_in_label_button"),
+        name="st_button-material_icon_1k_markdown",
+    )
 
     # The rest is tested in one screenshot in the following test
 
 
 def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
-    material_icon_button = app.get_by_test_id("stButton").nth(6)
-    app.get_by_text("Like Button").hover()
-    assert_snapshot(material_icon_button, name="st_button-material_icon_hover")
+    like_btn_container = get_button(app, "Like Button")
+    like_btn_container.hover()
+    assert_snapshot(like_btn_container, name="st_button-material_icon_hover")
 
 
 def test_buttons_in_columns(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the button widgets are correctly rendered in columns via screenshot matching."""
-    columns_container = themed_app.get_by_test_id("stHorizontalBlock")
+    columns_container = get_element_by_key(themed_app, "buttons_in_columns")
     expect(columns_container).to_have_count(1)
     expect(columns_container.get_by_test_id("stButton")).to_have_count(8)
 
@@ -65,57 +104,43 @@ def test_buttons_in_columns(themed_app: Page, assert_snapshot: ImageCompareFunct
 
 
 def test_value_correct_on_click(app: Page):
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("value: True")
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "value from state: True"
-    )
+    click_button(app, "button 1")
+    expect_markdown(app, "value: True")
+    expect_markdown(app, "value from state: True")
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    button_element.click()
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
+    click_button(app, "button 1")
+    click_button(app, "button 1")
+    expect_markdown(app, "value: True")
 
 
 def test_click_calls_callback(app: Page):
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_contain_text(
-        "Button was clicked: False"
-    )
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text(
-        "Button was clicked: True"
-    )
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text("times clicked: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(4)).to_have_text("arg value: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text("kwarg value: 2")
+    expect_markdown(app, "Button was clicked: False")
+    click_button(app, "button 1")
+    expect_markdown(app, "Button was clicked: True")
+    expect_markdown(app, "times clicked: 1")
+    expect_markdown(app, "arg value: 1")
+    expect_markdown(app, "kwarg value: 2")
 
 
 def test_click_increment_count(app: Page):
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text("times clicked: 1")
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text("times clicked: 2")
-    button_element.click()
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text("times clicked: 3")
+    click_button(app, "button 1")
+    expect_markdown(app, "times clicked: 1")
+    click_button(app, "button 1")
+    expect_markdown(app, "times clicked: 2")
+    click_button(app, "button 1")
+    expect_markdown(app, "times clicked: 3")
 
 
 def test_reset_on_other_widget_change(app: Page):
     click_button(app, "button 1")
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("value: True")
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "value from state: True"
-    )
+    expect_markdown(app, "value: True")
+    expect_markdown(app, "value from state: True")
 
     click_checkbox(app, "reset button return value")
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("value: False")
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "value from state: False"
-    )
+    expect_markdown(app, "value: False")
+    expect_markdown(app, "value from state: False")
 
 
 def test_check_top_level_class(app: Page):
@@ -130,51 +155,50 @@ def test_custom_css_class_via_key(app: Page):
 
 def test_shows_cursor_pointer(app: Page):
     """Test that the button shows cursor pointer when hovered."""
-    button_element = app.get_by_test_id("stButton").first
-    expect(button_element.locator("button")).to_have_css("cursor", "pointer")
+    expect(get_button(app, "button 1")).to_have_css("cursor", "pointer")
 
 
 def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
-    primary_button_element = app.get_by_test_id("stButton").nth(20)
-    expect(primary_button_element.locator("span")).to_have_class(
+    primary_button_container = get_element_by_key(app, "colored_text_primary")
+    expect(primary_button_container.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
-    expect(primary_button_element.locator("span")).to_have_css(
+    expect(primary_button_container.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
-    primary_button_element.locator("button").hover()
+    primary_button_container.locator("button").hover()
     # For primary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(primary_button_element.locator("span")).to_have_css(
+    expect(primary_button_container.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in secondary button
-    secondary_button_element = app.get_by_test_id("stButton").nth(21)
-    expect(secondary_button_element.locator("span")).to_have_class(
+    secondary_button_container = get_element_by_key(app, "colored_text_secondary")
+    expect(secondary_button_container.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
-    expect(secondary_button_element.locator("span")).to_have_css(
+    expect(secondary_button_container.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
-    secondary_button_element.locator("button").hover()
+    secondary_button_container.locator("button").hover()
     # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(secondary_button_element.locator("span")).to_have_css(
+    expect(secondary_button_container.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in tertiary button
-    tertiary_button_element = app.get_by_test_id("stButton").nth(22)
-    expect(tertiary_button_element.locator("span")).to_have_class(
+    tertiary_button_container = get_element_by_key(app, "colored_text_tertiary")
+    expect(tertiary_button_container.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
-    expect(tertiary_button_element.locator("span")).to_have_css(
+    expect(tertiary_button_container.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
-    tertiary_button_element.locator("button").hover()
+    tertiary_button_container.locator("button").hover()
     # For tertiary buttons, the colored text should be red on hover to match the rest of the text
-    expect(tertiary_button_element.locator("span")).to_have_css(
+    expect(tertiary_button_container.locator("span")).to_have_css(
         "color", "rgb(255, 75, 75)"
     )
 
@@ -191,8 +215,15 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     """Test button width examples via screenshot matching."""
     # Button width examples
     button_expander = get_expander(app, "Button Width Examples")
-    button_elements = button_expander.get_by_test_id("stButton")
-
-    assert_snapshot(button_elements.nth(0), name="st_button-width_content")
-    assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
-    assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
+    assert_snapshot(
+        get_button(button_expander, "Content Width (Default)"),
+        name="st_button-width_content",
+    )
+    assert_snapshot(
+        get_button(button_expander, "Stretch Width"),
+        name="st_button-width_stretch",
+    )
+    assert_snapshot(
+        get_button(button_expander, "200px Width"),
+        name="st_button-width_200px",
+    )
