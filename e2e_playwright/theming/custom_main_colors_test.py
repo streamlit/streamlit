@@ -63,8 +63,5 @@ def test_custom_theme_colors(app: Page, assert_snapshot: ImageCompareFunction):
     app.set_viewport_size({"width": 1280, "height": 1000})
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
-    # Add some additional timeout to ensure that fonts can load without
-    # creating flakiness:
-    app.wait_for_timeout(10000)
 
     assert_snapshot(app, name="custom_main_colors_app", image_threshold=0.0003)
