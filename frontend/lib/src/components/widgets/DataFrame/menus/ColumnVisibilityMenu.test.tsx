@@ -291,7 +291,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
 
     await userEvent.type(
       screen.getByTestId("stDataFrameColumnVisibilityMenuSearch"),
-      "dataframes suck"
+      "nonexistent"
     )
 
     expect(screen.queryByText("Select all")).toBeVisible()

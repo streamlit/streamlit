@@ -182,7 +182,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
-  const [columnVisibilitySearchTerm, setcolumnVisibilitySearchTerm] =
+  const [searchTerm, setSearchTerm] =
     useState("")
 
   const onColumnSearch = (
