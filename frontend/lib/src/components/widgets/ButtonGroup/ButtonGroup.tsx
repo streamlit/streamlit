@@ -311,7 +311,7 @@ function createOptionChild(
         }}
         onFocus={(e: React.FocusEvent<HTMLElement>) => {
           if (isDisabled) {
-            ;(e.currentTarget as HTMLElement).blur()
+;(e.currentTarget as HTMLElement).blur()
             e.preventDefault()
             e.stopPropagation()
           }
