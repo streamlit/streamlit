@@ -190,6 +190,27 @@ def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
+def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a toggle widget with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCheckbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_radio_option(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a radio button widget with the given label.
 
