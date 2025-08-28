@@ -206,7 +206,7 @@ def generate_chart(
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
-    df, x_column, y_column, color_column, size_column = _prep_data(
+    df, x_column, y_column, color_column, size_column, sort_column = _prep_data(
         df, x_column, y_column_list, color_column, size_column, sort_column
     )
 
@@ -439,7 +439,7 @@ def _prep_data(
     color_column: str | None,
     size_column: str | None,
     sort_column: str | None = None,
-) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
+) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None, str | None]:
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index
@@ -475,7 +475,7 @@ def _prep_data(
     )
 
     # Return the data, but also the new names to use for x, y, and color.
-    return melted_data, x_column, y_column, color_column, size_column
+    return melted_data, x_column, y_column, color_column, size_column, sort_column
 
 
 def _last_index_for_melted_dataframes(
