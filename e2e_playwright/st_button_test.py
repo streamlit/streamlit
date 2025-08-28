@@ -217,11 +217,6 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     """Test button width examples via screenshot matching."""
     # Button width examples
     button_expander = get_expander(app, "Button Width Examples")
-    button_elements = button_expander.get_by_test_id("stButton")
-
-    assert_snapshot(button_elements.nth(0), name="st_button-width_content")
-    assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
-    assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
     assert_snapshot(
         get_button(button_expander, "Content Width (Default)"),
         name="st_button-width_content",
@@ -241,10 +236,12 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     dynamic_button = get_element_by_key(app, "dynamic_button_with_key")
     expect(dynamic_button).to_be_visible()
 
+    expect(dynamic_button).to_have_text("Initial dynamic button")
     assert_snapshot(dynamic_button, name="st_button-dynamic_initial")
     # Click the toggle to update the button props
     click_toggle(app, "Update button props")
 
+    expect(dynamic_button).to_have_text("Updated dynamic button")
     assert_snapshot(dynamic_button, name="st_button-dynamic_updated")
 
     # Click the submit button:
