@@ -182,6 +182,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   marginLeft: theme.spacing.none,
   zIndex: theme.zIndices.header,
   objectFit: "contain",
+  objectPosition: "left",
   verticalAlign: "middle",
   maxWidth: `100%`,
 }))
