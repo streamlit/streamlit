@@ -64,7 +64,7 @@ function ChatMessageAvatar(
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarUser"
-              background={theme.colors.red60}
+              background={theme.colors.redColor}
             >
               <Icon content={Face} size="lg" />
             </StyledAvatarIcon>
@@ -73,7 +73,7 @@ function ChatMessageAvatar(
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarAssistant"
-              background={theme.colors.orange60}
+              background={theme.colors.orangeColor}
             >
               <Icon content={SmartToy} size="lg" />
             </StyledAvatarIcon>
