@@ -1195,13 +1195,8 @@ function DataFrame({
               : isMultiRowSelectionActivated
                 ? "multi"
                 : "single",
-            rowSelectionBlending: "mixed",
-            // Deactivate the combination of row selections
-            // and cell selections. This will automatically clear
-            // selected cells when a row is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+            rowSelectionBlending: "additive",
+            rangeSelectionBlending: "additive",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
@@ -1210,19 +1205,17 @@ function DataFrame({
               : isMultiColumnSelectionActivated
                 ? "multi"
                 : "single",
-            columnSelectionBlending: "mixed",
-            // Deactivate the combination of column selections
-            // and cell selections. This will automatically clear
-            // selected cells when a column is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+            columnSelectionBlending: "additive",
+            columnSelectionMode: isMultiColumnSelectionActivated
+              ? "multi"
+              : "auto",
+            rangeSelectionBlending: "additive",
           })}
           // Activate features required for cell selection:
           {...(isCellSelectionActivated && {
             rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
             // Allow mixing cell selections with row and column selections:
-            rangeSelectionBlending: "mixed",
+            rangeSelectionBlending: "additive",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
