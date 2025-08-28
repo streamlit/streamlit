@@ -73,6 +73,7 @@ class AddRowsMetadata:
     stack: bool | ChartStackType | None = None
     # Only applicable for bar charts
     horizontal: bool = False
+    sort: str | None = None
 
 
 class ChartType(Enum):
@@ -196,6 +197,7 @@ def generate_chart(
         use_container_width=use_container_width,
         stack=stack,
         horizontal=horizontal,
+        sort=sort_from_user,
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
@@ -205,6 +207,9 @@ def generate_chart(
     sort_column: str | None = None
     if sort_from_user:
         sort_column = sort_from_user.removeprefix("-")
+        # Validate that the sort column exists
+        if sort_column not in df.columns:
+            raise StreamlitColumnNotFoundError(df, sort_column)
 
     df, x_column, y_column, color_column, size_column = _prep_data(
         df, x_column, y_column_list, color_column, size_column, sort_column
@@ -353,12 +358,18 @@ def prep_chart_data_for_add_rows(
         df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
         add_rows_metadata.last_index = stop - 1
 
+    # Extract sort column for preservation
+    sort_column: str | None = None
+    if add_rows_metadata.sort:
+        sort_column = add_rows_metadata.sort.removeprefix("-")
+
     out_data, *_ = _prep_data(
         df,
         x_column=add_rows_metadata.columns["x_column"],
         y_column_list=add_rows_metadata.columns["y_column_list"],
         color_column=add_rows_metadata.columns["color_column"],
         size_column=add_rows_metadata.columns["size_column"],
+        sort_column=sort_column,
     )
 
     return out_data, add_rows_metadata
@@ -970,14 +981,14 @@ def _update_encoding_with_stack(
 def _update_encoding_with_sort(
     sort_from_user: str | None,
     encoding: alt.X | alt.Y,
-    df: pd.DataFrame,
 ) -> None:
     """Apply sort to the given encoding in-place.
 
     - If sort is None: disable default Vega-Lite sorting on the bar's categorical axis
         (i.e., set to None).
-    - If sort is a column name (optionally starting with '-') ensure the column exists
-        and set a SortField with the correct order.
+    - If sort is a column name (optionally starting with '-') set a SortField with the correct order.
+
+    Note: Column validation should be done before calling this function.
     """
     import altair as alt
 
@@ -990,9 +1001,6 @@ def _update_encoding_with_sort(
         else:
             sort_order = "ascending"
         sort_field = sort_from_user.removeprefix("-")
-
-        if sort_field not in df.columns:
-            raise StreamlitColumnNotFoundError(df, sort_field)
 
         encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 

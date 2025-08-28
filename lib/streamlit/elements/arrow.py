@@ -16,15 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -1034,6 +1026,8 @@ def _arrow_add_rows(
 
         if metadata.chart_command == "bar_chart":
             kwargs["horizontal"] = metadata.horizontal
+            if metadata.sort is not None:
+                kwargs["sort"] = metadata.sort
 
         kwargs["use_container_width"] = metadata.use_container_width
 
