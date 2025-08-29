@@ -233,7 +233,12 @@ def compute_and_register_element_id(
     """
     ctx = get_script_run_ctx()
 
-    ignore_command_kwargs = bool(user_key) and bool(key_as_main_identity)
+    # When a user_key is present and key_as_main_identity is True OR a set (even empty),
+    # we should ignore general command kwargs and form/sidebar context. For the set case,
+    # only explicitly whitelisted kwargs will be included below.
+    ignore_command_kwargs = user_key is not None and (
+        (key_as_main_identity is True) or isinstance(key_as_main_identity, set)
+    )
 
     if isinstance(key_as_main_identity, set) and user_key:
         # Only include the explicitly whitelisted kwargs in the computation
