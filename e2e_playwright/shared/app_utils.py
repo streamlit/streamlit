@@ -589,8 +589,8 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    #  Click the checkbox label to be more reliable
-    checkbox_element.locator("label").click()
+    # Click the checkbox label to be more reliable:
+    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
     wait_for_app_run(page)
 
 
