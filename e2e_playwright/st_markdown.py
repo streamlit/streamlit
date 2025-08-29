@@ -332,3 +332,7 @@ with st.expander("Badge Width Examples", expanded=True):
         st.badge("Fixed 100px badge", width=100)
 
         st.badge("Stretch badge", width="stretch")
+
+
+with st.container(border=True, width=150, key="long_word"):
+    st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")

@@ -406,3 +406,10 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     )
     expect(markdown_element).to_be_visible()
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
+
+
+def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
+    container = get_element_by_key(app, "long_word")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_markdown-long_word_in_container")
