@@ -728,6 +728,7 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
                 data=proto.data,
                 width=width,

@@ -265,3 +265,30 @@ with st.container(key="width_tests"):
         st.form_submit_button("Content Width (Default)", width="content")
         st.form_submit_button("Stretch Width", width="stretch")
         st.form_submit_button("250px Width", width=250)
+
+
+update_button_props = st.toggle("Update button props")
+
+with st.form("form_with_dynamic_button"):
+    st.write("Form with dynamic button")
+
+    if update_button_props:
+        clicked = st.form_submit_button(
+            "Updated dynamic button",
+            type="secondary",
+            icon=":material/looks_two:",
+            width="stretch",
+            help="updated help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked updated button:", clicked)
+    else:
+        clicked = st.form_submit_button(
+            "Initial dynamic button",
+            type="primary",
+            icon=":material/looks_one:",
+            width="content",
+            help="initial help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked initial button:", clicked)

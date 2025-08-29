@@ -1028,6 +1028,7 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             data=arrow_bytes,
             width=width,

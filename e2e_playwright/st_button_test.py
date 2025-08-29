@@ -16,18 +16,20 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    click_toggle,
     expect_markdown,
+    expect_prefixed_markdown,
     get_button,
     get_element_by_key,
     get_expander,
 )
 
-TOTAL_BUTTONS = 26
+TOTAL_BUTTONS = 27
 
 
 def test_button_widget_rendering(
@@ -227,3 +229,24 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
         get_button(button_expander, "200px Width"),
         name="st_button-width_200px",
     )
+
+
+def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the button can be updated dynamically."""
+    dynamic_button = get_element_by_key(app, "dynamic_button_with_key")
+    expect(dynamic_button).to_be_visible()
+
+    expect(dynamic_button).to_contain_text("Initial dynamic button")
+    assert_snapshot(dynamic_button, name="st_button-dynamic_initial")
+    # Click the toggle to update the button props
+    click_toggle(app, "Update button props")
+
+    expect(dynamic_button).to_contain_text("Updated dynamic button")
+    dynamic_button.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_button, name="st_button-dynamic_updated")
+
+    # Click the submit button:
+    dynamic_button.click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")
