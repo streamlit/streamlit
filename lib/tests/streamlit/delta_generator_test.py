@@ -901,6 +901,46 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            ("set_empty_ignores_dg_context", set(), True),
+            ("set_with_label_ignores_dg_context", {"label"}, True),
+            ("bool_true_ignores_dg_context", True, True),
+            ("bool_false_includes_dg_context", False, False),
+        ]
+    )
+    def test_key_as_main_identity_dg_context_effect(
+        self, _name: str, key_as_main_identity, expect_same_id: bool
+    ) -> None:
+        """When user_key is provided, sets (even empty) and True should ignore
+        DG context (form/sidebar) in ID computation; False should include it.
+        """
+        sidebar_dg = get_dg_singleton_instance().sidebar_dg
+        main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+
+        base_kwargs: dict[str, object] = {
+            "element_type": "text_input",
+            "user_key": "dg_ctx_key",
+            "label": "Label #1",
+            "default": "Value #1",
+            "key_as_main_identity": key_as_main_identity,
+        }
+
+        # Compute with sidebar DG context
+        id1 = compute_and_register_element_id(dg=sidebar_dg, **base_kwargs)
+
+        # Clear registry, then compute with main DG context
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        id2 = compute_and_register_element_id(dg=main_dg, **base_kwargs)
+
+        if expect_same_id:
+            assert id1 == id2
+        else:
+            assert id1 != id2
+
+    @parameterized.expand(
+        [
             (
                 "whitelist_label_change_default",
                 {"label"},
