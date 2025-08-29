@@ -49,6 +49,48 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledThumb, StyledThumbValue } from "./styled-components"
 
+interface SliderTickBarProps {
+  minLabel: string
+  maxLabel: string
+  isHovered: boolean
+  // Pass through theme pieces we need to avoid hook usage
+  spacingMd: string
+  fontSizeSm: string
+  color: string
+}
+
+function SliderTickBar({
+  minLabel,
+  maxLabel,
+  isHovered,
+  spacingMd,
+  fontSizeSm,
+  color,
+}: SliderTickBarProps): ReactElement {
+  return (
+    <div
+      data-testid="stSliderTickBar"
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: "100%",
+        display: "flex",
+        justifyContent: "space-between",
+        pointerEvents: "none",
+        marginTop: `-${spacingMd}`,
+        fontSize: fontSizeSm,
+        color,
+        opacity: isHovered ? 1 : 0,
+        transition: "opacity 150ms ease-in-out",
+      }}
+    >
+      <span>{minLabel}</span>
+      <span>{maxLabel}</span>
+    </div>
+  )
+}
+
 export interface Props {
   disabled: boolean
   element: SliderProto
@@ -81,6 +123,7 @@ function Slider({
   // the UI to `value` then the UI would only update when the user is done
   // interacting. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
+  const [isHovered, setIsHovered] = useState(false)
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   const [thumbRefs] = useState<
@@ -94,6 +137,8 @@ function Slider({
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const thumbAriaLabel = element.label
+  const minFormatted = formatValue(element.min, element)
+  const maxFormatted = formatValue(element.max, element)
 
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
@@ -211,8 +256,17 @@ function Slider({
     [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
   )
 
+  // No nested component definitions per lint rules; use a top-level component via overrides props
+
   return (
-    <div ref={sliderRef} className="stSlider" data-testid="stSlider">
+    <div
+      ref={sliderRef}
+      className="stSlider"
+      data-testid="stSlider"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ position: "relative" }}
+    >
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -253,8 +307,18 @@ function Slider({
           InnerTrack: {
             style: innerTrackStyle,
           },
-          // Hide min and max tick values
-          TickBar: () => null,
+          // Hover-only min/max labels rendered below the slider
+          TickBar: {
+            component: SliderTickBar,
+            props: {
+              minLabel: minFormatted,
+              maxLabel: maxFormatted,
+              isHovered,
+              spacingMd: theme.spacing.md,
+              fontSizeSm: theme.fontSizes.sm,
+              color: theme.colors.fadedText60,
+            },
+          },
         }}
       />
     </div>
