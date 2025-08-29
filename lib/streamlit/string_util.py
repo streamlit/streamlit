@@ -246,7 +246,5 @@ def from_number(value: StringCastableNumber) -> str:
             pass
 
     raise TypeError(
-        f"'{value}' is of type {type(value)}, which is not an accepted type."
-        " value only accepts: int, float, str, numbers.Number, or None."
-        " Please convert the value to an accepted type."
+        f"'{value}' is of type {type(value)}, which is not a known numeric type."
     )
