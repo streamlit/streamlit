@@ -899,6 +899,161 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
             "IDs should be different for different element types even with same key"
         )
 
+    @parameterized.expand(
+        [
+            ("set_empty_ignores_dg_context", set(), True),
+            ("set_with_label_ignores_dg_context", {"label"}, True),
+            ("bool_true_ignores_dg_context", True, True),
+            ("bool_false_includes_dg_context", False, False),
+        ]
+    )
+    def test_key_as_main_identity_dg_context_effect(
+        self, _name: str, key_as_main_identity, expect_same_id: bool
+    ) -> None:
+        """When user_key is provided, sets (even empty) and True should ignore
+        DG context (form/sidebar) in ID computation; False should include it.
+        """
+        sidebar_dg = get_dg_singleton_instance().sidebar_dg
+        main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+
+        base_kwargs: dict[str, object] = {
+            "element_type": "text_input",
+            "user_key": "dg_ctx_key",
+            "label": "Label #1",
+            "default": "Value #1",
+            "key_as_main_identity": key_as_main_identity,
+        }
+
+        # Compute with sidebar DG context
+        id1 = compute_and_register_element_id(dg=sidebar_dg, **base_kwargs)
+
+        # Clear registry, then compute with main DG context
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        id2 = compute_and_register_element_id(dg=main_dg, **base_kwargs)
+
+        if expect_same_id:
+            assert id1 == id2
+        else:
+            assert id1 != id2
+
+    @parameterized.expand(
+        [
+            (
+                "whitelist_label_change_default",
+                {"label"},
+                "default",
+                True,
+                "With user_key and whitelist={'label'}, changing default should not affect ID",
+            ),
+            (
+                "whitelist_label_change_label",
+                {"label"},
+                "label",
+                False,
+                "With user_key and whitelist={'label'}, changing label should affect ID",
+            ),
+            (
+                "whitelist_label_default_change_default",
+                {"label", "default"},
+                "default",
+                False,
+                "With user_key and whitelist contains 'default', changing default should affect ID",
+            ),
+            (
+                "empty_whitelist_change_label",
+                set(),
+                "label",
+                True,
+                "With user_key and empty whitelist, changing label should not affect ID",
+            ),
+            (
+                "empty_whitelist_change_default",
+                set(),
+                "default",
+                True,
+                "With user_key and empty whitelist, changing default should not affect ID",
+            ),
+        ]
+    )
+    def test_key_as_main_identity_whitelist_with_user_key(
+        self,
+        _name: str,
+        whitelist: set[str],
+        changed_kwarg: str,
+        expect_same_id: bool,
+        _description: str,
+    ) -> None:
+        """When user_key is provided and a whitelist set is used, only whitelisted
+        kwargs should influence the element ID.
+        """
+        # Base kwargs
+        kwargs: dict[str, object] = {
+            "element_type": "text_input",
+            "user_key": "whitelist_key",
+            "label": "Label #1",
+            "default": "Value #1",
+            "dg": None,
+            "key_as_main_identity": whitelist,
+        }
+
+        id1 = compute_and_register_element_id(**kwargs)
+
+        # Clear the widget registry to allow reusing the same key/ids
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        # Change the selected kwarg
+        if changed_kwarg == "label":
+            kwargs["label"] = "Different Label"
+        else:
+            kwargs["default"] = "Different Value"
+
+        id2 = compute_and_register_element_id(**kwargs)
+
+        if expect_same_id:
+            assert id1 == id2
+        else:
+            assert id1 != id2
+
+    def test_key_as_main_identity_whitelist_without_user_key(self) -> None:
+        """When no user_key is provided, a set whitelist should have no effect;
+        all kwargs are included in the ID computation.
+        """
+        # Base with no user_key
+        base_kwargs: dict[str, object] = {
+            "element_type": "text_input",
+            "user_key": None,
+            "label": "Label #1",
+            "default": "Value #1",
+            "dg": None,
+            "key_as_main_identity": {"label"},
+        }
+
+        id1 = compute_and_register_element_id(**base_kwargs)
+
+        # Clear registry before next computation
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        # Changing a non-whitelisted kwarg should still change the ID when no user_key
+        kwargs_changed_default = dict(base_kwargs)
+        kwargs_changed_default["default"] = "Different Value"
+        id2 = compute_and_register_element_id(**kwargs_changed_default)
+        assert id1 != id2
+
+        # Clear again and change a whitelisted kwarg
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+        kwargs_changed_label = dict(base_kwargs)
+        kwargs_changed_label["label"] = "Different Label"
+        id3 = compute_and_register_element_id(**kwargs_changed_label)
+        assert id1 != id3
+
 
 class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Images"""
