@@ -151,12 +151,10 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     def click_step_up(label: str) -> None:
         el = get_number_input(app, label)
         btn = el.get_by_test_id("stNumberInputStepUp").first
-        if btn.count() == 0:
-            return
-        # Skip disabled buttons
-        if not btn.is_enabled():
-            return
-        btn.click()
+        expect(btn).to_be_visible()
+
+        # Force click if the button is disabled
+        btn.click(force=not btn.is_enabled())
         wait_for_app_run(app)
 
     click_step_up("number input 1 (default)")
@@ -164,17 +162,7 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     click_step_up("number input 3 (min & max)")
     click_step_up("number input 4 (step=2)")
     click_step_up("number input 5 (max=10)")
-    # Disabled should not change
-    if (
-        get_number_input(app, "number input 6 (disabled=True)")
-        .get_by_test_id("stNumberInputStepUp")
-        .count()
-        > 0
-    ):
-        get_number_input(app, "number input 6 (disabled=True)").get_by_test_id(
-            "stNumberInputStepUp"
-        ).first.click()
-        wait_for_app_run(app)
+    click_step_up("number input 6 (disabled=True)")
     click_step_up("number input 7 (label=hidden)")
     click_step_up("number input 8 (label=collapsed)")
     click_step_up("number input 9 (on_change)")
