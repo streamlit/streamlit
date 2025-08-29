@@ -233,7 +233,7 @@ def from_number(value: StringCastableNumber) -> str:
         If the value is not of an accepted numeric type (int, float,
         numbers.Number, or numpy numeric type).
     """
-    if isinstance(value, (int, float, numbers.Number)):
+    if isinstance(value, numbers.Number):
         return str(value)
     if hasattr(value, "item"):
         # Add support for numpy values (e.g. int16, float64, etc.)
