@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import decimal
 import unittest
 
 import pytest
@@ -149,3 +150,12 @@ class StringUtilTest(unittest.TestCase):
             string_util.validate_material_icon(icon_name)
 
         assert "not a valid Material icon." in str(e.value)
+
+    def test_from_number(self):
+        assert string_util.from_number(1) == "1"
+        assert string_util.from_number(1.0) == "1.0"
+        assert string_util.from_number(decimal.Decimal("1.0")) == "1.0"
+
+    def test_from_number_invalid_object_exception(self):
+        with pytest.raises(TypeError):
+            string_util.from_number(None)
