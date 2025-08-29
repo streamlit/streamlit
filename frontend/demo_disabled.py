@@ -18,7 +18,7 @@ st.title("Per-option disabled demo")
 
 st.pills(
     "Pick one",
-options=["A","B","C","D"],
+options=["A", "B", "C", "D"],
     disabled=("B","D"),
     key="p1",
 )
