@@ -1051,6 +1051,7 @@ def _arrow_add_rows(
 
         if metadata.chart_command == "bar_chart":
             kwargs["horizontal"] = metadata.horizontal
+            kwargs["sort"] = metadata.sort
 
         if metadata.use_container_width is not None:
             kwargs["use_container_width"] = metadata.use_container_width

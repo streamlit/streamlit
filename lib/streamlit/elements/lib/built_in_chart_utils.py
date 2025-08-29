@@ -19,14 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from typing_extensions import TypeAlias
 
@@ -63,6 +56,7 @@ class PrepDataColumns(TypedDict):
     y_column_list: list[str]
     color_column: str | None
     size_column: str | None
+    sort_column: str | None
 
 
 @dataclass
@@ -84,6 +78,7 @@ class AddRowsMetadata:
     stack: bool | ChartStackType | None = None
     # Only applicable for bar charts
     horizontal: bool = False
+    sort: bool | str = False
 
 
 class ChartType(Enum):
@@ -162,6 +157,7 @@ def generate_chart(
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
     horizontal: bool = False,
+    sort_from_user: bool | str = False,
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -185,6 +181,8 @@ def generate_chart(
     # Get name of column to use for size, or constant value to use. Any/both could
     #  be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
+    # Get name of column to use for sort.
+    sort_column = _parse_sort_column(df, sort_from_user)
 
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
@@ -198,6 +196,7 @@ def generate_chart(
             "y_column_list": y_column_list,
             "color_column": color_column,
             "size_column": size_column,
+            "sort_column": sort_column,
         },
         # Chart styling properties
         color=color_from_user,
@@ -206,13 +205,13 @@ def generate_chart(
         use_container_width=use_container_width,
         stack=stack,
         horizontal=horizontal,
+        sort=sort_from_user,
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
-
-    df, x_column, y_column, color_column, size_column = _prep_data(
-        df, x_column, y_column_list, color_column, size_column
+    df, x_column, y_column, color_column, size_column, sort_column = _prep_data(
+        df, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
@@ -228,6 +227,7 @@ def generate_chart(
         x_axis_label,
         y_axis_label,
         stack,
+        sort_from_user,
     )
 
     chart_width = width if isinstance(width, int) else None
@@ -366,6 +366,7 @@ def prep_chart_data_for_add_rows(
         y_column_list=add_rows_metadata.columns["y_column_list"],
         color_column=add_rows_metadata.columns["color_column"],
         size_column=add_rows_metadata.columns["size_column"],
+        sort_column=add_rows_metadata.columns["sort_column"],
     )
 
     return out_data, add_rows_metadata
@@ -444,7 +445,8 @@ def _prep_data(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
+    sort_column: str | None = None,
+) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None, str | None]:
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index
@@ -457,7 +459,7 @@ def _prep_data(
 
     # Drop columns we're not using.
     selected_data = _drop_unused_columns(
-        df, x_column, color_column, size_column, *y_column_list
+        df, x_column, color_column, size_column, sort_column, *y_column_list
     )
 
     # Maybe convert color to Vega colors.
@@ -469,17 +471,18 @@ def _prep_data(
         y_column_list,
         color_column,
         size_column,
+        sort_column,
     ) = _convert_col_names_to_str_in_place(
-        selected_data, x_column, y_column_list, color_column, size_column
+        selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # Maybe melt data from wide format into long format.
     melted_data, y_column, color_column = _maybe_melt(
-        selected_data, x_column, y_column_list, color_column, size_column
+        selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
     # Return the data, but also the new names to use for x, y, and color.
-    return melted_data, x_column, y_column, color_column, size_column
+    return melted_data, x_column, y_column, color_column, size_column, sort_column
 
 
 def _last_index_for_melted_dataframes(
@@ -664,7 +667,8 @@ def _convert_col_names_to_str_in_place(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> tuple[str | None, list[str], str | None, str | None]:
+    sort_column: str | None,
+) -> tuple[str | None, list[str], str | None, str | None, str | None]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
     import pandas as pd
 
@@ -677,6 +681,7 @@ def _convert_col_names_to_str_in_place(
         [str(c) for c in y_column_list],
         None if color_column is None else str(color_column),
         None if size_column is None else str(size_column),
+        None if sort_column is None else str(sort_column),
     )
 
 
@@ -708,6 +713,17 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
         f" dataframe's index. Value given: {x_from_user} "
         f"(type {type(x_from_user)})"
     )
+
+
+def _parse_sort_column(df: pd.DataFrame, sort_from_user: bool | str) -> str | None:
+    if sort_from_user is False or sort_from_user is True:
+        return None
+
+    sort_column = sort_from_user.removeprefix("-")
+    if sort_column not in df.columns:
+        raise StreamlitColumnNotFoundError(df, sort_column)
+
+    return sort_column
 
 
 def _parse_y_columns(
@@ -797,6 +813,7 @@ def _maybe_melt(
     y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
+    sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
     y_column: str | None
@@ -813,6 +830,8 @@ def _maybe_melt(
         columns_to_leave_alone = [x_column]
         if size_column:
             columns_to_leave_alone.append(size_column)
+        if sort_column:
+            columns_to_leave_alone.append(sort_column)
 
         df = _melt_data(
             df=df,
@@ -835,8 +854,10 @@ def _get_axis_encodings(
     x_axis_label: str | None,
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
+    sort_from_user: bool | str,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
+    sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
         x_encoding = _get_x_encoding(
@@ -846,6 +867,7 @@ def _get_axis_encodings(
             df, x_column, x_from_user, y_axis_label, chart_type
         )
         stack_encoding = x_encoding
+        sort_encoding = y_encoding
     else:
         x_encoding = _get_x_encoding(
             df, x_column, x_from_user, x_axis_label, chart_type
@@ -854,9 +876,14 @@ def _get_axis_encodings(
             df, y_column, y_from_user, y_axis_label, chart_type
         )
         stack_encoding = y_encoding
+        sort_encoding = x_encoding
 
     # Handle stacking - only relevant for bar & area charts
     _update_encoding_with_stack(stack, stack_encoding)
+
+    # Handle sorting - only relevant for bar charts
+    if chart_type in (ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR):
+        _update_encoding_with_sort(sort_from_user, sort_encoding)
 
     return x_encoding, y_encoding
 
@@ -962,6 +989,38 @@ def _update_encoding_with_stack(
         stack = False
 
     encoding["stack"] = stack
+
+
+def _update_encoding_with_sort(
+    sort_from_user: bool | str,
+    encoding: alt.X | alt.Y,
+) -> None:
+    """Apply sort to the given encoding in-place.
+
+    - If sort is False: disable Altair's default sorting on the bar's categorical axis
+        (i.e., set to None).
+    - If sort is True: use Altair's default sorting.
+    - If sort is a column name (optionally starting with '-') set a SortField with the correct order.
+
+    Note: Column validation should be done before calling this function.
+    """
+    import altair as alt
+
+    if sort_from_user is False:
+        # Disable Altair's default sorting
+        encoding["sort"] = None
+    elif sort_from_user is True:
+        # Use Altair's default sorting
+        pass
+    else:
+        # String: sort by column name (optional '-' prefix for descending)
+        sort_order: Literal["ascending", "descending"]
+        if sort_from_user.startswith("-"):
+            sort_order = "descending"
+        else:
+            sort_order = "ascending"
+        sort_field = sort_from_user.removeprefix("-")
+        encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 
 
 def _get_color_encoding(
