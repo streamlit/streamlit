@@ -17,17 +17,20 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    wait_for_app_run,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    click_toggle,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 16
+DOWNLOAD_BUTTON_ELEMENTS = 17
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -249,3 +252,36 @@ def test_download_button_width_examples(
     assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
     assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
     assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
+
+
+def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the download button can be updated dynamically."""
+    dynamic_button = get_element_by_key(app, "dynamic_download_button_with_key")
+    expect(dynamic_button).to_be_visible()
+
+    # Initial state
+    expect(dynamic_button).to_contain_text("Initial dynamic button")
+    assert_snapshot(dynamic_button, name="st_download_button-dynamic_initial")
+    dynamic_button.hover()
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
+
+    # Click the toggle to update the button props
+    click_toggle(app, "Update button props")
+
+    # Updated state
+    expect(dynamic_button).to_contain_text("Updated dynamic button")
+    dynamic_button.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_button, name="st_download_button-dynamic_updated")
+    dynamic_button.hover()
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("updated help")
+
+    # Click the download button and verify the download
+    with app.expect_download() as download_info:
+        dynamic_button.click()
+
+    download = download_info.value
+    assert download.suggested_filename == "updated.txt"
+    assert download.path().read_text() == "Updated data"
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")

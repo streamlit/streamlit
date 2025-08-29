@@ -104,3 +104,24 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Content Width (Default)", width="content")
     st.button("Stretch Width", width="stretch")
     st.button("200px Width", width=200)
+
+if st.toggle("Update button props"):
+    clicked = st.button(
+        "Updated dynamic button",
+        type="secondary",
+        icon=":material/looks_two:",
+        width="stretch",
+        help="updated help",
+        key="dynamic_button_with_key",
+    )
+    st.write("Clicked updated button:", clicked)
+else:
+    clicked = st.button(
+        "Initial dynamic button",
+        type="primary",
+        icon=":material/looks_one:",
+        width="content",
+        help="initial help",
+        key="dynamic_button_with_key",
+    )
+    st.write("Clicked initial button:", clicked)

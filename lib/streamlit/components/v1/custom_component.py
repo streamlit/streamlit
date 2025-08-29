@@ -194,6 +194,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
+                    key_as_main_identity=False,
                     dg=dg,
                     name=self.name,
                     url=self.url,
@@ -204,6 +205,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
+                    key_as_main_identity=False,
                     dg=dg,
                     name=self.name,
                     url=self.url,

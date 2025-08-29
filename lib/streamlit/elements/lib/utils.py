@@ -187,7 +187,7 @@ def compute_and_register_element_id(
     *,
     user_key: str | None,
     dg: DeltaGenerator | None,
-    key_as_main_identity: bool = False,
+    key_as_main_identity: bool,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.

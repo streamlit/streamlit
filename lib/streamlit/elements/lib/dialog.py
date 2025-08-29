@@ -112,6 +112,7 @@ class Dialog(DeltaGenerator):
             element_id = compute_and_register_element_id(
                 "dialog",
                 user_key=None,
+                key_as_main_identity=False,
                 dg=parent,
                 title=title,
                 dismissible=dismissible,

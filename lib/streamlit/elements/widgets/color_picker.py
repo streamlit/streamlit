@@ -219,6 +219,7 @@ class ColorPickerMixin:
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             value=str(value),

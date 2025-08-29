@@ -323,7 +323,7 @@ class LayoutsMixin:
             # in the future. This might require including more container
             # parameters in the ID calculation.
             block_proto.id = compute_and_register_element_id(
-                "container", user_key=key, dg=None
+                "container", user_key=key, dg=None, key_as_main_identity=False
             )
 
         return self.dg._block(block_proto)
