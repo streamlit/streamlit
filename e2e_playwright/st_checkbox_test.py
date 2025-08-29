@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-CHECKBOX_ELEMENTS = 15
+CHECKBOX_ELEMENTS = 17
 
 
 def test_checkbox_widget_display(
