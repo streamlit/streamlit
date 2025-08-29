@@ -264,7 +264,22 @@ class PyDeckTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
 
-    def test_show_deprecation_warning_for_sharing(self):
+    def test_plotly_config(self):
+        """Test st.plotly_chart config dict parameter."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        config = {"displayModeBar": False, "responsive": True}
+        st.plotly_chart(data, config=config)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.plotly_chart.config != ""
+        assert '"displayModeBar": false' in el.plotly_chart.config
+        assert '"responsive": true' in el.plotly_chart.config
+
+    def test_show_deprecation_warning_for_kwargs(self):
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
@@ -274,6 +289,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         # Get the second to last element, which should be deprecation warning
         el = self.get_delta_from_queue(-2).new_element
         assert (
-            "has been deprecated and will be removed in a future release"
+            "have been deprecated and will be removed in a future release"
             in el.alert.body
         )
