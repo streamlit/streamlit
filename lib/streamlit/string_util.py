@@ -214,7 +214,25 @@ StringCastableNumber: TypeAlias = Union[
 
 
 def from_number(value: StringCastableNumber) -> str:
-    """Render a numeric type as a string for display."""
+    """Render a numeric type as a string for display.
+
+    Parameters
+    ----------
+    value : StringCastableNumber
+        The numeric value to convert to a string. Can be an int, float,
+        numbers.Number, or a numpy numeric type with an item() method.
+
+    Returns
+    -------
+    str
+        String representation of the numeric value.
+
+    Raises
+    ------
+    TypeError
+        If the value is not of an accepted numeric type (int, float,
+        numbers.Number, or numpy numeric type).
+    """
     if isinstance(value, (int, float, numbers.Number)):
         return str(value)
     if hasattr(value, "item"):
