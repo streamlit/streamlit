@@ -254,7 +254,7 @@ class WriteMixin:
         return written_content
 
     @gather_metrics("write")
-    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs: Any) -> None:
+    def write(self, *args: Any, unsafe_allow_html: bool = False) -> None:
         """Displays arguments in the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -323,13 +323,6 @@ class WriteMixin:
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
 
-        **kwargs : any
-            Keyword arguments. Not used.
-
-        .. deprecated::
-            ``**kwargs`` is deprecated and will be removed in a later version.
-            Use other, more specific Streamlit commands to pass additional
-            keyword arguments.
 
         Returns
         -------
@@ -400,13 +393,6 @@ class WriteMixin:
             height: 300px
 
         """
-        if kwargs:
-            _LOGGER.warning(
-                'Invalid arguments were passed to "st.write" function. Support for '
-                "passing such unknown keywords arguments will be dropped in future. "
-                "Invalid arguments were: %s",
-                kwargs,
-            )
 
         if len(args) == 1 and isinstance(args[0], str):
             # Optimization: If there is only one arg, and it's a string,
