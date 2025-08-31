@@ -27,6 +27,7 @@ import { StreamlitEndpoints } from "./types"
 export const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
 export const LOG = getLogger("StaticConnection")
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (
   connectionState: ConnectionState,
@@ -138,6 +139,7 @@ export async function establishStaticConnection(
   const staticConfigUrl = await getStaticConfig()
   endpoints.setStaticConfigUrl(staticConfigUrl)
 
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
   dispatchAppForwardMessages(
     staticAppId,
     staticConfigUrl,

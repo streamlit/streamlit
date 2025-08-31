@@ -16,13 +16,15 @@
 
 from datetime import datetime, time, timedelta
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class TimeInputTest(DeltaGeneratorTestCase):
@@ -33,34 +35,32 @@ class TimeInputTest(DeltaGeneratorTestCase):
         st.time_input("the label")
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertLessEqual(
-            datetime.strptime(c.default, "%H:%M").time(), datetime.now().time()
-        )
-        self.assertEqual(c.HasField("default"), True)
-        self.assertEqual(c.disabled, False)
+        assert datetime.strptime(c.default, "%H:%M").time() <= datetime.now().time()
+        assert c.HasField("default")
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.time_input("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_none_value(self):
         """Test that it can be called with None as initial value."""
         st.time_input("the label", value=None)
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.HasField("default"), False)
+        assert c.default == ""
+        assert not c.HasField("default")
 
     @parameterized.expand(
         [
@@ -76,8 +76,8 @@ class TimeInputTest(DeltaGeneratorTestCase):
         st.time_input("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, proto_value)
+        assert c.label == "the label"
+        assert c.default == proto_value
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -89,10 +89,10 @@ class TimeInputTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        self.assertEqual(len(all_deltas), 4)
+        assert len(all_deltas) == 4
         time_input_proto = self.get_delta_from_queue().new_element.time_input
 
-        self.assertEqual(time_input_proto.label, "foo")
+        assert time_input_proto.label == "foo"
 
     @parameterized.expand(
         [
@@ -106,15 +106,14 @@ class TimeInputTest(DeltaGeneratorTestCase):
         st.time_input("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.time_input("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_st_time_input(self):
@@ -123,8 +122,8 @@ class TimeInputTest(DeltaGeneratorTestCase):
         st.time_input("Set an alarm for", value)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.time_input.default, "08:45")
-        self.assertEqual(el.time_input.step, timedelta(minutes=15).seconds)
+        assert el.time_input.default == "08:45"
+        assert el.time_input.step == timedelta(minutes=15).seconds
 
     def test_st_time_input_with_step(self):
         """Test st.time_input with step."""
@@ -132,23 +131,23 @@ class TimeInputTest(DeltaGeneratorTestCase):
         st.time_input("Set an alarm for", value, step=timedelta(minutes=5))
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.time_input.default, "09:00")
-        self.assertEqual(el.time_input.step, timedelta(minutes=5).seconds)
+        assert el.time_input.default == "09:00"
+        assert el.time_input.step == timedelta(minutes=5).seconds
 
     def test_st_time_input_exceptions(self):
         """Test st.time_input exceptions."""
         value = time(9, 00)
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=True)
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=(90, 0))
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=1)
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=59)
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=timedelta(hours=24))
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=timedelta(days=1))
 
     def test_shows_cached_widget_replay_warning(self):
@@ -157,8 +156,55 @@ class TimeInputTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
+
+    def test_width_config_default(self):
+        """Test that default width is 'stretch'."""
+        st.time_input("the label")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    def test_width_config_pixel(self):
+        """Test that pixel width works properly."""
+        st.time_input("the label", width=200)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 200
+
+    def test_width_config_stretch(self):
+        """Test that 'stretch' width works properly."""
+        st.time_input("the label", width="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_invalid_width(self, width):
+        """Test that invalid width values raise exceptions."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.time_input("the label", width=width)
 
 
 def test_time_input_interaction():

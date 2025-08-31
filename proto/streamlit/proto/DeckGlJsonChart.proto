@@ -31,7 +31,7 @@ message DeckGlJsonChart {
   // ID, required for selection events.
   string id = 5;
 
-  // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
+  // The Mapbox token, if any.
   string mapbox_token = 6;
 
   // Width in pixels
@@ -51,4 +51,6 @@ message DeckGlJsonChart {
     SINGLE_OBJECT = 0; // Only one object can be selected at a time.
     MULTI_OBJECT = 1; // Multiple objects can be selected at a time.
   }
+
+  // Next ID: 11
 }

@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { FC, PureComponent, ReactNode } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import * as UseFullscreen from "~lib/components/shared/ElementFullscreen/useFullscreen"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
 
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
@@ -33,7 +36,7 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  public render = (): ReactNode => (
+  public override render = (): ReactNode => (
     <>
       <div>{this.props.label}</div>
       <div>
@@ -52,13 +55,28 @@ const getProps = (props: Partial<TestProps> = {}): TestProps => ({
   ...props,
 })
 
+// Test component that consumes the ElementFullscreenContext
+const TestContextConsumer: FC = () => {
+  const { width, height, expanded } = useRequiredContext(
+    ElementFullscreenContext
+  )
+
+  return (
+    <div data-testid="context-consumer">
+      <div data-testid="context-width">{width}</div>
+      <div data-testid="context-height">{height ?? "undefined"}</div>
+      <div data-testid="context-expanded">{expanded.toString()}</div>
+    </div>
+  )
+}
+
 const WrappedTestComponent = withFullScreenWrapper(TestComponent)
+const WrappedContextConsumer = withFullScreenWrapper(TestContextConsumer)
 
 describe("withFullScreenWrapper HOC", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
-      forceRecalculate: vitest.fn(),
       values: [250],
     })
   })
@@ -76,16 +94,6 @@ describe("withFullScreenWrapper HOC", () => {
     expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(`width: 100%`)
   })
 
-  it("renders FullScreenWrapper with specified height", () => {
-    const props = getProps({ width: 123, label: "label", height: 455 })
-    render(<WrappedTestComponent {...props} />)
-
-    expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(`width: 100%`)
-    expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(
-      `height: ${props.height}`
-    )
-  })
-
   it("passes unrelated props to wrapped component", () => {
     const props = getProps()
     render(<WrappedTestComponent {...props} />)
@@ -98,5 +106,32 @@ describe("withFullScreenWrapper HOC", () => {
     expect(WrappedTestComponent.displayName).toEqual(
       "withFullScreenWrapper(TestComponent)"
     )
+  })
+
+  it("provides correct ElementFullscreenContext values in normal mode", () => {
+    render(<WrappedContextConsumer />)
+
+    // Width comes from ResizeObserver mock
+    expect(screen.getByTestId("context-width")).toHaveTextContent("250")
+    expect(screen.getByTestId("context-height")).toHaveTextContent("undefined")
+    // Not expanded in normal mode
+    expect(screen.getByTestId("context-expanded")).toHaveTextContent("false")
+  })
+
+  it("provides correct ElementFullscreenContext values in fullscreen mode", () => {
+    // Mock fullscreen state
+    vi.spyOn(UseFullscreen, "useFullscreen").mockReturnValue({
+      expanded: true,
+      fullHeight: 800,
+      fullWidth: 1200,
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+    })
+
+    render(<WrappedContextConsumer />)
+
+    expect(screen.getByTestId("context-width")).toHaveTextContent("1200")
+    expect(screen.getByTestId("context-height")).toHaveTextContent("800")
+    expect(screen.getByTestId("context-expanded")).toHaveTextContent("true")
   })
 })

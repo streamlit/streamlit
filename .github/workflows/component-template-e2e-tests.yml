@@ -12,21 +12,19 @@ jobs:
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
 
-      - name: Enable and Prepare Latest Yarn
-        run: |
-          corepack enable
-          corepack prepare yarn@4.5.3 --activate
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "19.x"
+          node-version-file: ".nvmrc"
           cache: "yarn"
           cache-dependency-path: "component-lib/yarn.lock"
 
@@ -40,11 +38,6 @@ jobs:
 
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
 
       - name: Build Package
         timeout-minutes: 120
@@ -78,7 +71,7 @@ jobs:
           echo "output_file=${component_lib_tar_gz}" >> $GITHUB_OUTPUT
 
       - name: Checkout streamlit/component-template
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           repository: streamlit/component-template

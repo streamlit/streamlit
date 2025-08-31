@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def test_clicking_a_lot_still_keeps_state(app: Page):
-    """Test the the widget state is correctly handled on very fast clicks.
+    """Test the widget state is correctly handled on very fast clicks.
 
     Related to: https://github.com/streamlit/streamlit/issues/4836
     """

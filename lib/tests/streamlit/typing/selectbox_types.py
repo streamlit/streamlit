@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING, Union
 
 from typing_extensions import assert_type
 
-# Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
+# Perform some "type checking testing"; mypy should flag any assignments that are
+# incorrect.
 if TYPE_CHECKING:
     from enum import Enum
 
@@ -30,6 +31,9 @@ if TYPE_CHECKING:
         HITCHCOCK = 1
         WALLACE = 2
         GREENE = 3
+
+    assert_type(selectbox("foo", []), None)
+    assert_type(selectbox("foo", [], accept_new_options=True), str)
 
     assert_type(selectbox("foo", [1, 2, 3]), int)
     assert_type(selectbox("foo", [1, 2, 3], index=None), Union[int, None])
@@ -43,3 +47,24 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(selectbox("foo", Alfred, index=None), Union[Alfred, None])
     assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=0, accept_new_options=True), Union[int, str]
+    )
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, accept_new_options=True),
+        Union[int, str, None],
+    )
+    assert_type(
+        selectbox("foo", ["foo", "bar"], index=None, accept_new_options=True),
+        Union[str, None],
+    )
+    accept_new_options = True
+    assert_type(
+        selectbox(
+            "foo",
+            [Alfred.HITCHCOCK, Alfred.GREENE],
+            index=None,
+            accept_new_options=accept_new_options,
+        ),
+        Union[Alfred, str, None],
+    )

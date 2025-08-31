@@ -206,7 +206,7 @@ describe("getTypeName", () => {
   it("returns the correct type name for PERIOD", () => {
     const arrowType: ArrowType = {
       type: DataFrameCellType.DATA,
-      arrowField: expect.any(Field),
+      arrowField: new Field("c1", new Utf8(), true),
       pandasType: {
         field_name: "c1",
         name: "c1",
@@ -222,7 +222,7 @@ describe("getTypeName", () => {
   it("returns the correct type name for DECIMAL", () => {
     const arrowType: ArrowType = {
       type: DataFrameCellType.DATA,
-      arrowField: expect.any(Field),
+      arrowField: new Field("c1", new Utf8(), true),
       pandasType: {
         field_name: "c1",
         name: "c1",

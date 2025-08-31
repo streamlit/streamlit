@@ -22,7 +22,7 @@ jobs:
 
             Your vote helps us identify which enhancements matter most to our users.
 
-            ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
+            ![Views](https://api.views-badge.org/badge/st-issue-${{ github.event.issue.number }})
       - name: Upvote issue
         uses: actions/github-script@v7
         with:
@@ -49,7 +49,7 @@ jobs:
 
             Your feedback helps us prioritize which bugs to investigate and address first.
 
-            ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
+            ![Views](https://api.views-badge.org/badge/st-issue-${{ github.event.issue.number }})
       - name: Upvote issue
         uses: actions/github-script@v7
         with:

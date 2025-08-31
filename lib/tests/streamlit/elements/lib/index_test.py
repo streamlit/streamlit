@@ -18,39 +18,52 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from streamlit.elements.lib.options_selector_utils import index_
 
 
 class Index_Test(unittest.TestCase):
     def test_index_list(self):
-        self.assertEqual(index_([1, 2, 3, 4], 1), 0)
-        self.assertEqual(index_([1, 2, 3, 4], 4), 3)
+        assert index_([1, 2, 3, 4], 1) == 0
+        assert index_([1, 2, 3, 4], 4) == 3
+
+    def test_index_list_success(self):
+        assert index_([1, 2, 3, 4], 2) == 1
 
     def test_index_list_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_([1, 2, 3, 4], 5)
 
     def test_index_tuple(self):
-        self.assertEqual(index_((1, 2, 3, 4), 1), 0)
-        self.assertEqual(index_((1, 2, 3, 4), 4), 3)
+        assert index_((1, 2, 3, 4), 1) == 0
+        assert index_((1, 2, 3, 4), 4) == 3
+
+    def test_index_tuple_success(self):
+        assert index_((1, 2, 3, 4), 2) == 1
 
     def test_index_tuple_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_((1, 2, 3, 4), 5)
 
     def test_index_numpy_array(self):
-        self.assertEqual(index_(np.array([1, 2, 3, 4]), 1), 0)
-        self.assertEqual(index_(np.array([1, 2, 3, 4]), 4), 3)
+        assert index_(np.array([1, 2, 3, 4]), 1) == 0
+        assert index_(np.array([1, 2, 3, 4]), 4) == 3
+
+    def test_index_numpy_array_success(self):
+        assert index_(np.array([1, 2, 3, 4]), 2) == 1
 
     def test_index_numpy_array_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_(np.array([1, 2, 3, 4]), 5)
 
     def test_index_pandas_series(self):
-        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 1), 0)
-        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 4), 3)
+        assert index_(pd.Series([1, 2, 3, 4]), 1) == 0
+        assert index_(pd.Series([1, 2, 3, 4]), 4) == 3
+
+    def test_index_pandas_series_success(self):
+        assert index_(pd.Series([1, 2, 3, 4]), 2) == 1
 
     def test_index_pandas_series_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_(pd.Series([1, 2, 3, 4]), 5)

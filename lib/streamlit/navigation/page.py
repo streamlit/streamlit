@@ -27,7 +27,7 @@ from streamlit.util import calc_md5
 
 
 @gather_metrics("Page")
-def Page(
+def Page(  # noqa: N802
     page: str | Path | Callable[[], None],
     *,
     title: str | None = None,
@@ -167,7 +167,7 @@ class StreamlitPage:
         icon: str | None = None,
         url_path: str | None = None,
         default: bool = False,
-    ):
+    ) -> None:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
         self._default: bool = default
@@ -205,6 +205,10 @@ class StreamlitPage:
 
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
+
+        if icon is not None:
+            # validate user provided icon.
+            validate_icon_or_emoji(icon)
         self._icon: str = icon or inferred_icon
 
         if self._title.strip() == "":
@@ -289,12 +293,11 @@ class StreamlitPage:
             if callable(self._page):
                 self._page()
                 return
-            else:
-                code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
-                module = types.ModuleType("__main__")
-                # We want __file__ to be the string path to the script
-                module.__dict__["__file__"] = str(self._page)
-                exec(code, module.__dict__)
+            code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
+            module = types.ModuleType("__main__")
+            # We want __file__ to be the string path to the script
+            module.__dict__["__file__"] = str(self._page)
+            exec(code, module.__dict__)  # noqa: S102
 
     @property
     def _script_hash(self) -> str:

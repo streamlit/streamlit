@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     NoReturn,
     Union,
@@ -28,6 +29,10 @@ from streamlit.auth_util import (
     get_secrets_auth_section,
     is_authlib_installed,
     validate_auth_credentials,
+)
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
 )
 from streamlit.errors import StreamlitAPIException, StreamlitAuthError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -55,14 +60,14 @@ def login(provider: str | None = None) -> None:
     the user authenticates their identity, they are redirected back to the
     home page of your app. Streamlit stores a cookie with the user's identity
     information in the user's browser . You can access the identity information
-    through |st.experimental_user|_. Call ``st.logout()`` to remove the cookie
+    through |st.user|_. Call ``st.logout()`` to remove the cookie
     and start a new session.
 
     You can use any OIDC provider, including Google, Microsoft, Okta, and more.
     You must configure the provider through secrets management. Although OIDC
     is an extension of OAuth 2.0, you can't use generic OAuth providers.
     Streamlit parses the user's identity token and surfaces its attributes in
-    ``st.experimental_user``. If the provider returns an access token, that
+    ``st.user``. If the provider returns an access token, that
     token is ignored. Therefore, this command will not allow your app to act on
     behalf of a user in a secure system.
 
@@ -92,7 +97,13 @@ def login(provider: str | None = None) -> None:
     more information, see Example 4.
 
     .. Important::
-        - You must install ``Authlib>=1.3.2`` to use this command.
+        - You must install ``Authlib>=1.3.2`` to use this command. You can
+          install it as an extra with Streamlit:
+
+          .. code-block:: shell
+
+             pip install streamlit[auth]
+
         - Your authentication configuration is dependent on your host location.
           When you deploy your app, remember to update your ``redirect_uri``
           within your app and your provider.
@@ -109,8 +120,8 @@ def login(provider: str | None = None) -> None:
         - For security reasons, authentication is not supported for embedded
           apps.
 
-    .. |st.experimental_user| replace:: ``st.experimental_user``
-    .. _st.experimental_user: https://docs.streamlit.io/develop/api-reference/utilities/st.experimental_user
+    .. |st.user| replace:: ``st.user``
+    .. _st.user: https://docs.streamlit.io/develop/api-reference/user/st.user
 
     Parameters
     ----------
@@ -151,13 +162,13 @@ def login(provider: str | None = None) -> None:
 
     >>> import streamlit as st
     >>>
-    >>> if not st.experimental_user.is_logged_in:
+    >>> if not st.user.is_logged_in:
     >>>     if st.button("Log in"):
     >>>         st.login()
     >>> else:
     >>>     if st.button("Log out"):
     >>>         st.logout()
-    >>>     st.write(f"Hello, {st.experimental_user.name}!")
+    >>>     st.write(f"Hello, {st.user.name}!")
 
     **Example 2: Use a named identity provider**
 
@@ -189,10 +200,10 @@ def login(provider: str | None = None) -> None:
 
     >>> import streamlit as st
     >>>
-    >>> if not st.experimental_user.is_logged_in:
+    >>> if not st.user.is_logged_in:
     >>>     st.login("microsoft")
     >>> else:
-    >>>     st.write(f"Hello, {st.experimental_user.name}!")
+    >>>     st.write(f"Hello, {st.user.name}!")
 
     **Example 3: Use multiple, named providers**
 
@@ -222,7 +233,7 @@ def login(provider: str | None = None) -> None:
 
     >>> import streamlit as st
     >>>
-    >>> if not st.experimental_user.is_logged_in:
+    >>> if not st.user.is_logged_in:
     >>>     st.header("Log in:")
     >>>     if st.button("Microsoft"):
     >>>         st.login("microsoft")
@@ -231,7 +242,7 @@ def login(provider: str | None = None) -> None:
     >>> else:
     >>>     if st.button("Log out"):
     >>>         st.logout()
-    >>>     st.write(f"Hello, {st.experimental_user.name}!")
+    >>>     st.write(f"Hello, {st.user.name}!")
 
     **Example 4: Change the default connection settings**
 
@@ -261,12 +272,13 @@ def login(provider: str | None = None) -> None:
     Your app code:
 
     >>> import streamlit as st
+    >>>
     >>> if st.button("Log in"):
     >>>     st.login("auth0")
-    >>> if st.experimental_user.is_logged_in:
+    >>> if st.user.is_logged_in:
     >>>     if st.button("Log out"):
     >>>         st.logout()
-    >>>     st.write(f"Hello, {st.experimental_user.name}!)
+    >>>     st.write(f"Hello, {st.user.name}!)
 
     """
     if provider is None:
@@ -289,15 +301,15 @@ def login(provider: str | None = None) -> None:
 def logout() -> None:
     """Logout the current user.
 
-    This command removes the user's information from ``st.experimental_user``,
+    This command removes the user's information from ``st.user``,
     deletes their identity cookie, and redirects them back to your app's home
     page. This creates a new session.
 
     If the user has multiple sessions open in the same browser,
-    ``st.experimental_user`` will not be cleared in any other session.
-    ``st.experimental_user`` only reads from the identity cookie at the start
+    ``st.user`` will not be cleared in any other session.
+    ``st.user`` only reads from the identity cookie at the start
     of a session. After a session is running, you must call ``st.login()`` or
-    ``st.logout()`` within that session to update ``st.experimental_user``.
+    ``st.logout()`` within that session to update ``st.user``.
 
     .. Note::
         This does not log the user out of their underlying account from the
@@ -318,13 +330,13 @@ def logout() -> None:
 
     >>> import streamlit as st
     >>>
-    >>> if not st.experimental_user.is_logged_in:
+    >>> if not st.user.is_logged_in:
     >>>     if st.button("Log in"):
     >>>         st.login()
     >>> else:
     >>>     if st.button("Log out"):
     >>>         st.logout()
-    >>>     st.write(f"Hello, {st.experimental_user.name}!")
+    >>>     st.write(f"Hello, {st.user.name}!")
     """
     context = _get_script_run_ctx()
     if context is not None:
@@ -354,7 +366,7 @@ def _get_user_info() -> UserInfo:
     ctx = _get_script_run_ctx()
     if ctx is None:
         _LOGGER.warning(
-            "No script run context available. st.experimental_user will return an empty dictionary."
+            "No script run context available. st.user will return an empty dictionary."
         )
         return {}
 
@@ -372,20 +384,20 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
     A read-only, dict-like object for accessing information about the current\
     user.
 
-    ``st.experimental_user`` is dependent on the host platform running your
-    Streamlit app. If the host platform has not configured the function, it
-    will behave as in a locally running app.
+    ``st.user`` is dependent on the host platform running your
+    Streamlit app. If your host platform has not configured the object,
+    ``st.user`` will behave as it does in a locally running app.
 
     When authentication is configured in ``secrets.toml``, Streamlit will parse
     the OpenID Connect (OIDC) identity token and copy the attributes to
-    ``st.experimental_user``. Check your provider's documentation for their
+    ``st.user``. Check your provider's documentation for their
     available attributes (known as claims).
 
-    When authentication is not configured, ``st.experimental_user`` has no
+    When authentication is not configured, ``st.user`` has no
     attributes.
 
     You can access values via key or attribute notation. For example, use
-    ``st.experimental_user["email"]`` or ``st.experimental_user.email`` to
+    ``st.user["email"]`` or ``st.user.email`` to
     access the ``email`` attribute.
 
     .. Important::
@@ -407,7 +419,7 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
 
     If you configure a basic Google OIDC connection as shown in Example 1 of
     ``st.login()``, the following data is available in
-    ``st.experimental_user``. Streamlit adds the ``is_logged_in`` attribute.
+    ``st.user``. Streamlit adds the ``is_logged_in`` attribute.
     Additional attributes may be available depending on the configuration of
     the user's Google account. For more information about Google's identity
     tokens, see `Obtain user information from the ID token
@@ -418,8 +430,8 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
 
     >>> import streamlit as st
     >>>
-    >>> if st.experimental_user.is_logged_in:
-    >>>     st.write(st.experimental_user)
+    >>> if st.user.is_logged_in:
+    >>>     st.write(st.user)
 
     Displayed data when a user is logged in:
 
@@ -445,7 +457,7 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
 
     If you configure a basic Microsoft OIDC connection as shown in Example 2 of
     ``st.login()``, the following data is available in
-    ``st.experimental_user``. For more information about Microsoft's identity
+    ``st.user``. For more information about Microsoft's identity
     tokens, see `ID token claims reference
     <https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference>`_
     in Microsoft's docs.
@@ -454,8 +466,8 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
 
     >>> import streamlit as st
     >>>
-    >>> if st.experimental_user.is_logged_in:
-    >>>     st.write(st.experimental_user)
+    >>> if st.user.is_logged_in:
+    >>>     st.write(st.user)
 
     Displayed data when a user is logged in:
 
@@ -482,19 +494,19 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
         try:
             return _get_user_info()[key]
         except KeyError:
-            raise KeyError(f'st.experimental_user has no key "{key}".')
+            raise KeyError(f'st.user has no key "{key}".')
 
     def __getattr__(self, key: str) -> str | bool | None:
         try:
             return _get_user_info()[key]
         except KeyError:
-            raise AttributeError(f'st.experimental_user has no attribute "{key}".')
+            raise AttributeError(f'st.user has no attribute "{key}".')
 
     def __setattr__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.experimental_user cannot be modified")
+        raise StreamlitAPIException("st.user cannot be modified")
 
     def __setitem__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.experimental_user cannot be modified")
+        raise StreamlitAPIException("st.user cannot be modified")
 
     def __iter__(self) -> Iterator[str]:
         return iter(_get_user_info())
@@ -507,7 +519,7 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
         Get user info as a dictionary.
 
         This method primarily exists for internal use and is not needed for
-        most cases. ``st.experimental_user`` returns an object that inherits from
+        most cases. ``st.user`` returns an object that inherits from
         ``dict`` by default.
 
         Returns
@@ -516,3 +528,38 @@ class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
             A dictionary of the current user's information.
         """
         return _get_user_info()
+
+
+has_shown_experimental_user_warning = False
+
+
+def maybe_show_deprecated_user_warning() -> None:
+    """Show a deprecation warning for the experimental_user alias."""
+    global has_shown_experimental_user_warning  # noqa: PLW0603
+
+    if not has_shown_experimental_user_warning:
+        has_shown_experimental_user_warning = True
+        show_deprecation_warning(
+            make_deprecated_name_warning(
+                "experimental_user",
+                "user",
+                "2025-11-06",
+            )
+        )
+
+
+class DeprecatedUserInfoProxy(UserInfoProxy):
+    """
+    A deprecated alias for UserInfoProxy.
+
+    This class is deprecated and will be removed in a future version of
+    Streamlit.
+    """
+
+    def __getattribute__(self, name: str) -> Any:
+        maybe_show_deprecated_user_warning()
+        return super().__getattribute__(name)
+
+    def __getitem__(self, key: str) -> Any:
+        maybe_show_deprecated_user_warning()
+        return super().__getitem__(key)

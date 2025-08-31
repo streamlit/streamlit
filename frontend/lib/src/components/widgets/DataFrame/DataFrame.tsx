@@ -14,9 +14,25 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useEffect } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { createPortal } from "react-dom"
+import {
+  Add,
+  Close,
+  Delete,
+  FileDownload,
+  Search,
+  Visibility,
+} from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
   DataEditorRef,
@@ -29,30 +45,25 @@ import {
   Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
-import {
-  Add,
-  Close,
-  Delete,
-  FileDownload,
-  Search,
-  Visibility,
-} from "@emotion-icons/material-outlined"
+import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import { Quiver } from "~lib/dataframes/Quiver"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
-import { isNullOrUndefined } from "~lib/util/utils"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibContext } from "~lib/components/core/LibContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { convertRemToPx } from "~lib/theme/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ColumnMenu from "./menus/ColumnMenu"
-import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
 import EditingState, { getColumnName } from "./EditingState"
 import {
   useColumnFormatting,
@@ -73,9 +84,10 @@ import {
   useTableSizer,
   useTooltips,
 } from "./hooks"
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import Tooltip from "./Tooltip"
+import ColumnMenu from "./menus/ColumnMenu"
+import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
+import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
@@ -86,12 +98,18 @@ const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
-// The size in px of the customized webkit scrollbar (defined in globalStyles)
-const WEBKIT_SCROLLBAR_SIZE = 6
+// Fallback size for the scrollbar gutter size in rem.
+// If the scrollbar gutter size is 0, it means that we the system is using
+// overlay scrollbars that don't take any space. In this case, we assume
+// a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
+// in the data grid.
+const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code.
+export type CellPosition = readonly [row: number, column: string]
+
 export interface DataframeState {
   selection: {
     rows: number[]
@@ -99,6 +117,7 @@ export interface DataframeState {
     // it easier to use and unify with how data editor edits
     // are stored.
     columns: string[]
+    cells: CellPosition[]
   }
 }
 
@@ -106,10 +125,13 @@ export interface DataFrameProps {
   element: ArrowProto
   data: Quiver
   disabled: boolean
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
   fragmentId?: string
-  height?: number
+  // Custom toolbar actions (as React nodes) to display in the grid toolbar.
+  customToolbarActions?: React.ReactNode[]
+  widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
 /**
@@ -127,18 +149,24 @@ function DataFrame({
   widgetMgr,
   disableFullscreenMode,
   fragmentId,
+  customToolbarActions,
+  widthConfig,
+  heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
   const {
     expanded: isFullScreen,
     expand,
     collapse,
     width: containerWidth,
-    height: containerHeight,
+    height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const resizableRef = React.useRef<Resizable>(null)
-  const dataEditorRef = React.useRef<DataEditorRef>(null)
-  const resizableContainerRef = React.useRef<HTMLDivElement>(null)
+  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+
+  const resizableRef = useRef<Resizable>(null)
+  const dataEditorRef = useRef<DataEditorRef>(null)
+  const resizableContainerRef = useRef<HTMLDivElement>(null)
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   const gridTheme = useCustomTheme()
 
@@ -147,36 +175,35 @@ function DataFrame({
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = React.useContext(LibContext)
+  } = useContext(LibContext)
 
-  const [isFocused, setIsFocused] = React.useState<boolean>(true)
-  const [showSearch, setShowSearch] = React.useState(false)
-  const [hasVerticalScroll, setHasVerticalScroll] =
-    React.useState<boolean>(false)
+  const [isFocused, setIsFocused] = useState<boolean>(true)
+  const [showSearch, setShowSearch] = useState(false)
+  const [hasVerticalScroll, setHasVerticalScroll] = useState<boolean>(false)
   const [hasHorizontalScroll, setHasHorizontalScroll] =
-    React.useState<boolean>(false)
-  const [showMenu, setShowMenu] = React.useState<{
+    useState<boolean>(false)
+  const [showMenu, setShowMenu] = useState<{
     // The index number of the column that the menu is shown for:
     columnIdx: number
     // The bounds of the column header:
     headerBounds: Rectangle
   }>()
   const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
-    React.useState(false)
+    useState(false)
 
-  // Determine if the device is primary using touch as input:
-  const isTouchDevice = React.useMemo<boolean>(
-    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+  const handleToggleColumnVisibilityMenu = useCallback(
+    (): void => setShowColumnVisibilityMenu(show => !show),
     []
   )
 
-  // Determine if it uses customized scrollbars (webkit browsers):
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
-  const hasCustomizedScrollbars = React.useMemo<boolean>(
-    () =>
-      (window.navigator.userAgent.includes("Mac OS") &&
-        window.navigator.userAgent.includes("Safari")) ||
-      window.navigator.userAgent.includes("Chrome"),
+  const handleCloseColumnVisibilityMenu = useCallback(
+    () => setShowColumnVisibilityMenu(false),
+    []
+  )
+
+  // Determine if the device is primary using touch as input:
+  const isTouchDevice = useMemo<boolean>(
+    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
   )
 
@@ -210,32 +237,28 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
-  const editingState = React.useRef<EditingState>(
-    new EditingState(originalNumRows)
-  )
+  const editingState = useRef<EditingState>(new EditingState(originalNumRows))
 
-  const [numRows, setNumRows] = React.useState(
-    editingState.current.getNumRows()
-  )
+  const [numRows, setNumRows] = useState(editingState.current.getNumRows())
 
-  React.useEffect(() => {
+  useEffect(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const resetEditingState = React.useCallback(() => {
+  const resetEditingState = useCallback(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const [columnOrder, setColumnOrder] = React.useState(element.columnOrder)
+  const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
   // Update the column order if the element.columnOrder value changes
   // e.g. if the user has applied changes to the column order in the code.
-  React.useEffect(() => {
+  useEffect(() => {
     setColumnOrder(element.columnOrder)
 
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.columnOrder.join(",")])
 
@@ -243,7 +266,7 @@ function DataFrame({
     columns: originalColumns,
     allColumns,
     setColumnConfigMapping,
-  } = useColumnLoader(element, data, disabled, columnOrder)
+  } = useColumnLoader(element, data, disabled, columnOrder, widthConfig)
 
   /**
    * On the first rendering, try to load initial widget state if
@@ -253,9 +276,9 @@ function DataFrame({
    * its state. Once the same element is rendered again, we try to
    * reconstruct the state from the widget manager values.
    */
-  React.useEffect(
+  useEffect(
     () => {
-      if (element.editingMode === READ_ONLY) {
+      if (element.editingMode === READ_ONLY || !widgetMgr) {
         // We don't need to load the initial widget state
         // for read-only dataframes.
         return
@@ -278,7 +301,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -301,18 +324,25 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    *
    * @param newSelection - The new selection state
+   * @param syncCellSelections - Whether to sync cell selections. We don't want to sync selected
+   *   cells when cell selections are not activated.
    */
-  const innerSyncSelectionState = React.useCallback(
-    (newSelection: GridSelection) => {
+  const innerSyncSelectionState = useCallback(
+    (newSelection: GridSelection, syncCellSelections: boolean) => {
       // If we want to support selections also with the editable mode,
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
 
+      if (!widgetMgr) {
+        return
+      }
+
       const selectionState: DataframeState = {
         selection: {
           rows: [] as number[],
           columns: [] as string[],
+          cells: [] as CellPosition[],
         },
       }
 
@@ -324,6 +354,34 @@ function DataFrame({
         .map(columnIdx => {
           return getColumnName(columns[columnIdx])
         })
+
+      // Parse cell selections into our widget state structure:
+      if (syncCellSelections && newSelection.current) {
+        const { cell, range } = newSelection.current
+        if (range) {
+          // Multi-cell selection (rectangular structure)
+          for (let r = range.y; r < range.y + range.height; r++) {
+            for (let c = range.x; c < range.x + range.width; c++) {
+              if (!columns[c].isIndex) {
+                selectionState.selection.cells.push([
+                  getOriginalIndex(r),
+                  getColumnName(columns[c]),
+                ])
+              }
+            }
+          }
+        } else if (cell) {
+          // Single-cell selection
+          const [col, row] = cell
+          if (!columns[col].isIndex) {
+            selectionState.selection.cells.push([
+              getOriginalIndex(row),
+              getColumnName(columns[col]),
+            ])
+          }
+        }
+      }
+
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue({
         id: element.id,
@@ -370,6 +428,8 @@ function DataFrame({
     isMultiRowSelectionActivated,
     isColumnSelectionActivated,
     isMultiColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
     isRowSelected,
     isColumnSelected,
     isCellSelected,
@@ -383,7 +443,11 @@ function DataFrame({
     syncSelectionState
   )
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (isCellSelectionActivated) {
+      // We don't clear anything if cell selection is activated.
+      return
+    }
     // Clear cell selections if fullscreen mode changes
     // but keep row & column selections.
     // In the past we saw some weird side-effects, so we decided to clean
@@ -392,12 +456,12 @@ function DataFrame({
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
 
   // This callback is used to refresh the rendering of specified cells
-  const refreshCells = React.useCallback(
+  const refreshCells = useCallback(
     (
       cells: {
         cell: GridCellPosition
@@ -416,9 +480,14 @@ function DataFrame({
    * This effect needs to run after the fullscreen effect that
    * clears cell selections, since both modify the same state object.
    */
-  React.useEffect(
+  useEffect(
     () => {
-      if (!isRowSelectionActivated && !isColumnSelectionActivated) {
+      if (
+        (!isRowSelectionActivated &&
+          !isColumnSelectionActivated &&
+          !isCellSelectionActivated) ||
+        !widgetMgr
+      ) {
         // Only run this if selections are activated.
         return
       }
@@ -437,6 +506,7 @@ function DataFrame({
 
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
+        let cellSelection: GridCellPosition | undefined = undefined
 
         selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
@@ -446,12 +516,42 @@ function DataFrame({
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
-        if (rowSelection.length > 0 || columnSelection.length > 0) {
+        // Reconstruct for single cell selection:
+        if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
+          // If cell selection is activated but multi-cell selection is not,
+          // we need to set the current cell selection to the first cell in the selection.
+          const [rowIdx, columnName] =
+            selectionState.selection?.cells?.[0] ?? []
+          if (rowIdx !== undefined && columnName !== undefined) {
+            const columnIdx = columnNames.indexOf(columnName)
+
+            cellSelection = [columnIdx, rowIdx]
+          }
+        }
+
+        if (
+          rowSelection.length > 0 ||
+          columnSelection.length > 0 ||
+          cellSelection !== undefined
+        ) {
           // Update the initial selection state if something was selected
           const initialSelection: GridSelection = {
             rows: rowSelection,
             columns: columnSelection,
-            current: undefined,
+            current: cellSelection
+              ? {
+                  cell: cellSelection,
+                  range: {
+                    x: cellSelection[0],
+                    y: cellSelection[1],
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    width: 1,
+                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                    height: 1,
+                  },
+                  rangeStack: [],
+                }
+              : undefined,
           }
           processSelectionChange(initialSelection)
         }
@@ -460,7 +560,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -470,7 +570,7 @@ function DataFrame({
    * on the latest editing state. This is required to keep the
    * component state in sync with the editing state.
    */
-  const updateNumRows = React.useCallback(() => {
+  const updateNumRows = useCallback(() => {
     if (numRows !== editingState.current.getNumRows()) {
       // Reset the number of rows if it has been changed in the editing state
       setNumRows(editingState.current.getNumRows())
@@ -485,7 +585,11 @@ function DataFrame({
    * This is the inner version to be used by the debounce callback below.
    * Its split out to allow better dependency inspection.
    */
-  const innerSyncEditState = React.useCallback(() => {
+  const innerSyncEditState = useCallback(() => {
+    if (!widgetMgr) {
+      return
+    }
+
     const currentEditingState = editingState.current.toJson(columns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
@@ -539,19 +643,26 @@ function DataFrame({
       clearSelection
     )
 
-  const {
-    tooltip,
-    clearTooltip,
-    onItemHovered: handleTooltips,
-  } = useTooltips(
-    columns,
-    getCellContent,
+  const ignoredRowIndices = useMemo(() => {
+    // If empty table, ignore row index 0 which is just a visual gimmick
     // If dynamic editing is enabled, we need to ignore the last row (trailing row)
     // because it would result in some undesired errors in the tooltips.
     // The index are 0-based -> therefore, numRows will point to the trailing row
     // (which is not part of the actual data).
-    isDynamicAndEditable ? [numRows] : []
-  )
+    if (isEmptyTable) {
+      return [0]
+    }
+    if (isDynamicAndEditable) {
+      return [numRows]
+    }
+    return []
+  }, [isEmptyTable, isDynamicAndEditable, numRows])
+
+  const {
+    tooltip,
+    clearTooltip,
+    onItemHovered: handleTooltips,
+  } = useTooltips(columns, getCellContent, ignoredRowIndices)
 
   const { drawCell, customRenderers } = useCustomRenderer(columns)
   const { provideEditor } = useCustomEditors()
@@ -567,7 +678,7 @@ function DataFrame({
   )
 
   // Convert columns from our structure into the glide-data-grid compatible structure
-  const transformedColumns = React.useMemo(
+  const transformedColumns = useMemo(
     () => columns.map(column => configureColumnMenu(toGlideColumn(column))),
     [columns, configureColumnMenu]
   )
@@ -591,13 +702,14 @@ function DataFrame({
     numRows,
     usesGroupRow,
     containerWidth || 0,
-    containerHeight,
-    isFullScreen
+    fullScreenHeight,
+    isFullScreen,
+    widthConfig,
+    heightConfig
   )
-
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
-  const getEmptyStateContent = React.useCallback(
+  const getEmptyStateContent = useCallback(
     ([_col, _row]: readonly [number, number]): GridCell => {
       return {
         ...getTextCell(true, false),
@@ -613,7 +725,7 @@ function DataFrame({
     [columns, gridTheme.glideTheme.textLight]
   )
 
-  const onFormCleared = React.useCallback(() => {
+  const onFormCleared = useCallback(() => {
     // Clear the editing state and the selection state
     resetEditingState()
     clearSelection()
@@ -643,33 +755,50 @@ function DataFrame({
   )
 
   // Determine if the table requires horizontal or vertical scrolling:
-  React.useEffect(() => {
-    // The setTimeout is a workaround to get the scroll area bounding box
-    // after the grid has been rendered. Otherwise, the scroll area div
-    // (dvn-stack) might not have been created yet.
-    setTimeout(() => {
-      if (resizableContainerRef.current && dataEditorRef.current) {
-        // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-        const scrollAreaBounds = resizableContainerRef.current
-          ?.querySelector(".dvn-stack")
-          ?.getBoundingClientRect()
+  useEffect(() => {
+    // Use requestAnimationFrame + setTimeout to ensure the DOM is fully rendered
+    // before measuring. This is more reliable than setTimeout alone.
+    // requestAnimationFrame ensures the browser has calculated layout,
+    // and setTimeout pushes the callback to the next event loop tick.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
 
-        // We might also be able to use the following as an alternative,
-        // but it seems to cause "Maximum update depth exceeded" when scrollbars
-        // are activated or deactivated.
-        // const scrollAreaBounds = dataEditorRef.current?.getBounds()
-        // Also see: https://github.com/glideapps/glide-data-grid/issues/784
-        if (scrollAreaBounds) {
-          setHasVerticalScroll(
-            scrollAreaBounds.height >
-              resizableContainerRef.current.clientHeight
-          )
-          setHasHorizontalScroll(
-            scrollAreaBounds.width > resizableContainerRef.current.clientWidth
-          )
+    const rafId = requestAnimationFrame(() => {
+      timeoutId = setTimeout(() => {
+        if (resizableContainerRef.current && dataEditorRef.current) {
+          // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+          const scrollAreaBounds = resizableContainerRef.current
+            ?.querySelector(".dvn-stack")
+            ?.getBoundingClientRect()
+
+          // We might also be able to use the following as an alternative,
+          // but it seems to cause "Maximum update depth exceeded" when scrollbars
+          // are activated or deactivated.
+          // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+          // Also see: https://github.com/glideapps/glide-data-grid/issues/784
+          if (scrollAreaBounds) {
+            setHasVerticalScroll(
+              scrollAreaBounds.height >
+                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+                resizableContainerRef.current.clientHeight
+            )
+            setHasHorizontalScroll(
+              scrollAreaBounds.width >
+                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+                resizableContainerRef.current.clientWidth
+            )
+          }
         }
+      }, 0)
+    })
+
+    // Cleanup on unmount
+    return () => {
+      cancelAnimationFrame(rafId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
-    }, 1)
+    }
   }, [resizableSize, numRows, glideColumns])
 
   // Hide the column visibility menu if all columns are visible:
@@ -683,27 +812,32 @@ function DataFrame({
     <StyledResizableContainer
       className="stDataFrame"
       data-testid="stDataFrame"
-      hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
-      onMouseDown={e => {
-        if (resizableContainerRef.current && hasCustomizedScrollbars) {
+      isInHorizontalLayout={isInHorizontalLayout}
+      onPointerDown={e => {
+        if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
+          // For whatever reason, we are still able to use the scrollbars even
+          // if the mouse is one pixel outside of the scrollbar. Therefore, we add
+          // an additional pixel.
+          const scrollbarSize =
+            (scrollbarGutterSize ||
+              Math.round(convertRemToPx(SCROLLBAR_FALLBACK_SIZE_REM))) + 1
+
           if (
-            // For whatever reason, we are still able to use the scrollbars even
-            // if the mouse is one pixel outside of the scrollbar. Therefore, we add
-            // an additional pixel.
             hasHorizontalScroll &&
-            boundingClient.height - (WEBKIT_SCROLLBAR_SIZE + 1) <
+            boundingClient.height - scrollbarSize <
               e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
           }
           if (
             hasVerticalScroll &&
-            boundingClient.width - (WEBKIT_SCROLLBAR_SIZE + 1) <
+            boundingClient.width - scrollbarSize <
               e.clientX - boundingClient.left
           ) {
             e.stopPropagation()
@@ -722,7 +856,8 @@ function DataFrame({
           !isTouchDevice &&
           !event.currentTarget.contains(
             event.relatedTarget as HTMLElement | null
-          )
+          ) &&
+          !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.
           clearSelection(true, true)
@@ -743,8 +878,10 @@ function DataFrame({
         onCollapse={collapse}
         target={StyledResizableContainer}
       >
+        {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated && isRowSelected) ||
-          (isColumnSelectionActivated && isColumnSelected)) && (
+          (isColumnSelectionActivated && isColumnSelected) ||
+          (isCellSelectionActivated && isCellSelected)) && (
           // Add clear selection action if selections are active
           // and a valid selections currently exists. Cell selections
           // are not relevant since they are not synced to the backend
@@ -777,6 +914,7 @@ function DataFrame({
             onClick={() => {
               if (onRowAppended) {
                 setIsFocused(true)
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
                 onRowAppended()
                 clearTooltip()
                 // Automatically scroll to the new row on the vertical axis:
@@ -793,12 +931,12 @@ function DataFrame({
             hideColumn={hideColumn}
             showColumn={showColumn}
             isOpen={showColumnVisibilityMenu}
-            onClose={() => setShowColumnVisibilityMenu(false)}
+            onClose={handleCloseColumnVisibilityMenu}
           >
             <ToolbarAction
               label="Show/hide columns"
               icon={Visibility}
-              onClick={() => setShowColumnVisibilityMenu(true)}
+              onClick={handleToggleColumnVisibilityMenu}
             />
           </ColumnVisibilityMenu>
         )}
@@ -806,7 +944,7 @@ function DataFrame({
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
-            onClick={() => exportToCsv()}
+            onClick={exportToCsv}
           />
         )}
         {!isEmptyTable && (
@@ -836,7 +974,11 @@ function DataFrame({
         minHeight={minHeight}
         maxHeight={maxHeight}
         minWidth={minWidth}
-        maxWidth={maxWidth}
+        // The maxWidth is not calculated correctly for content width
+        // dataframes in horizontal layouts, so it is disabled. The
+        // resize handles are also disabled so that the dataframe cannot be
+        // stretched beyond the container width.
+        maxWidth={isInHorizontalLayout ? undefined : maxWidth}
         size={resizableSize}
         enable={{
           top: false,
@@ -844,7 +986,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: true,
+          bottomRight: isInHorizontalLayout ? false : true,
           bottomLeft: false,
           topLeft: false,
         }}
@@ -907,7 +1049,16 @@ function DataFrame({
             handleTooltips?.(args)
           }}
           // Activate keybindings:
-          keybindings={{ downFill: true }}
+          keybindings={{
+            downFill: true,
+            ...(isCellSelectionActivated || isLargeTable
+              ? {
+                  // Deactivate select all to prevent potential performance issues
+                  // with too many selected cells being processed for cell selection:
+                  selectAll: false,
+                }
+              : {}),
+          }}
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
@@ -918,6 +1069,7 @@ function DataFrame({
             }
           }}
           showSearch={showSearch}
+          searchResults={!showSearch ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -928,6 +1080,11 @@ function DataFrame({
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
+            }
+
+            // Hide search before sorting to clear search results
+            if (showSearch) {
+              setShowSearch(false)
             }
 
             if (isRowSelectionActivated && isRowSelected) {
@@ -942,6 +1099,7 @@ function DataFrame({
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
+
             sortColumn(columnIdx, "auto")
           }}
           gridSelection={gridSelection}
@@ -961,6 +1119,9 @@ function DataFrame({
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
               }
+              // Close menus:
+              setShowMenu(undefined)
+              setShowColumnVisibilityMenu(false)
             }
           }}
           theme={gridTheme.glideTheme}
@@ -977,19 +1138,15 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // We use overflow scrollbars, so we need to deactivate the native
-            // scrollbar override:
+            // Deactivate the native scrollbar override to optimize our
+            // scrollbars to always behave like overlay scrollbars.
             scrollbarWidthOverride: 0,
-            ...(hasCustomizedScrollbars && {
-              // Add negative padding to the right and bottom to allow the scrollbars in
-              // webkit to overlay the table:
-              paddingBottom: hasHorizontalScroll
-                ? -WEBKIT_SCROLLBAR_SIZE
-                : undefined,
-              paddingRight: hasVerticalScroll
-                ? -WEBKIT_SCROLLBAR_SIZE
-                : undefined,
-            }),
+            // Add negative padding to the right and bottom to allow the scrollbars
+            // to overlay the table:
+            paddingBottom: hasHorizontalScroll
+              ? -scrollbarGutterSize
+              : undefined,
+            paddingRight: hasVerticalScroll ? -scrollbarGutterSize : undefined,
           }}
           provideEditor={provideEditor}
           // Apply custom rendering (e.g. for missing or required cells):
@@ -1004,10 +1161,17 @@ function DataFrame({
           validateCell={validateCell}
           // Open column context menu:
           onHeaderMenuClick={(columnIdx, screenPosition) => {
-            setShowMenu({
-              columnIdx,
-              headerBounds: screenPosition,
-            })
+            // There is an issue that clicking on the column visibility menu
+            // can trigger a menu click event on the column header.
+            // To prevent another menu from opening, we check if column
+            // visibility menu open state.
+            // https://github.com/streamlit/streamlit/pull/12233
+            if (!showColumnVisibilityMenu) {
+              setShowMenu({
+                columnIdx,
+                headerBounds: screenPosition,
+              })
+            }
           }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
@@ -1015,41 +1179,43 @@ function DataFrame({
           {...(isRowSelectionActivated && {
             rowMarkers: {
               // Apply style settings for the row markers column:
-              kind: "checkbox",
+              kind: "checkbox-visible",
               checkboxStyle: "square",
               theme: {
                 bgCell: gridTheme.glideTheme.bgHeader,
                 bgCellMedium: gridTheme.glideTheme.bgHeader,
+                // Use a lighter color for the checkboxes in the row markers column,
+                // otherwise its a bit too prominent:
+                textMedium: gridTheme.glideTheme.textLight,
               },
             },
             rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
             rowSelect: disabled
               ? "none"
               : isMultiRowSelectionActivated
-              ? "multi"
-              : "single",
-            rowSelectionBlending: "mixed",
-            // Deactivate the combination of row selections
-            // and cell selections. This will automatically clear
-            // selected cells when a row is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+                ? "multi"
+                : "single",
+            rowSelectionBlending: "additive",
+            rangeSelectionBlending: "additive",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
             columnSelect: disabled
               ? "none"
               : isMultiColumnSelectionActivated
+                ? "multi"
+                : "single",
+            columnSelectionBlending: "additive",
+            columnSelectionMode: isMultiColumnSelectionActivated
               ? "multi"
-              : "single",
-            columnSelectionBlending: "mixed",
-            // Deactivate the combination of column selections
-            // and cell selections. This will automatically clear
-            // selected cells when a column is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+              : "auto",
+            rangeSelectionBlending: "additive",
+          })}
+          // Activate features required for cell selection:
+          {...(isCellSelectionActivated && {
+            rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
+            // Allow mixing cell selections with row and column selections:
+            rangeSelectionBlending: "additive",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
@@ -1104,14 +1270,27 @@ function DataFrame({
           <ColumnMenu
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
-            columnKind={originalColumns[showMenu.columnIdx].kind}
+            column={originalColumns[showMenu.columnIdx]}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               isSortingEnabled
                 ? (direction: "asc" | "desc" | undefined) => {
-                    // Cell selection are kept on the old position,
-                    // which can be confusing. So we clear all cell selections before sorting.
-                    clearSelection(true, true)
+                    // Hide search before sorting to clear search results
+                    if (showSearch) {
+                      setShowSearch(false)
+                    }
+
+                    if (isRowSelectionActivated && isRowSelected) {
+                      // Keeping row selections when sorting columns is not supported at the moment.
+                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
+                      // Maintain column selections as these are not impacted.
+                      clearSelection(false, true)
+                    } else {
+                      // Cell selection are kept on the old position,
+                      // which can be confusing. So we clear all cell selections before sorting.
+                      clearSelection(true, true)
+                    }
+
                     sortColumn(showMenu.columnIdx, direction, true)
                   }
                 : undefined

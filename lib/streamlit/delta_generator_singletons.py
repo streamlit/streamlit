@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class DeltaGeneratorSingleton:
     """Used to initialize the DeltaGenerator classes and store them as singletons.
     This module allows us to avoid circular imports between DeltaGenerator and elements,
-    because elemens can import this singleton module instead of DeltaGenerator directly.
+    because elements can import this singleton module instead of DeltaGenerator directly.
     """
 
     _instance: DeltaGeneratorSingleton | None = None
@@ -52,7 +52,7 @@ class DeltaGeneratorSingleton:
         delta_generator_cls: type[DeltaGenerator],
         status_container_cls: type[StatusContainer],
         dialog_container_cls: type[Dialog],
-    ):
+    ) -> None:
         """Registers and initializes all delta-generator classes.
 
         Parameters
@@ -138,7 +138,7 @@ class ContextVarWithLazyDefault(Generic[_T]):
     the default dg (main_dg) might not exist yet when this module is imported.
     """
 
-    def __init__(self, name: str, *, default: Callable[[], _T]):
+    def __init__(self, name: str, *, default: Callable[[], _T]) -> None:
         self._name = name
         self._default = default
         self._context_var: ContextVar[_T] | None = None

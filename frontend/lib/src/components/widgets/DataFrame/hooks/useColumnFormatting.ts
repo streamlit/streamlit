@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
 
@@ -33,10 +33,11 @@ type ColumnFormattingReturn = {
  */
 function useColumnFormatting(
   setColumnConfigMapping: React.Dispatch<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     React.SetStateAction<Map<string, any>>
   >
 ): ColumnFormattingReturn {
-  const changeColumnFormat = React.useCallback(
+  const changeColumnFormat = useCallback(
     (columnId: string, format: string) => {
       // Update the format parameter in the column config mapping:
       setColumnConfigMapping(prevColumnConfigMapping => {

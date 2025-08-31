@@ -14,27 +14,44 @@
  * limitations under the License.
  */
 
-/* eslint-disable import/no-extraneous-dependencies */
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-import { Vector } from "apache-arrow"
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
+import { Vector } from "apache-arrow"
 
-/* eslint-enable */
-import ThemeProvider from "./components/core/ThemeProvider"
-import { baseTheme } from "./theme"
-import { mockTheme } from "./mocks/mockTheme"
+import {
+  FormsContext,
+  FormsContextProps,
+} from "./components/core/FormsContext"
+import { FlexContext } from "./components/core/Layout/FlexContext"
+import { Direction } from "./components/core/Layout/utils"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
+import ThemeProvider from "./components/core/ThemeProvider"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
+import { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
+import { mockEndpoints } from "./mocks/mocks"
+import { mockTheme } from "./mocks/mockTheme"
+import { ScriptRunState } from "./ScriptRunState"
+import { baseTheme } from "./theme"
+import { createFormsData } from "./WidgetStateManager"
+
+const flexContextValue = {
+  direction: Direction.VERTICAL,
+  isInHorizontalLayout: false,
+}
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (
     <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
+      <WindowDimensionsProvider>
+        <FlexContext.Provider value={flexContextValue}>
+          {children}
+        </FlexContext.Provider>
+      </WindowDimensionsProvider>
     </ThemeProvider>
   )
 }
@@ -68,11 +85,12 @@ export function mockWindowLocation(hostname: string): void {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContext.Provider.
+ * wrapped in our LibContext.Provider and FormsContext.Provider.
  */
-export const customRenderLibContext = (
+export const renderWithContexts = (
   component: ReactElement,
-  overrideLibContextProps: Partial<LibContextProps>
+  overrideLibContextProps: Partial<LibContextProps>,
+  overrideFormsContextProps?: Partial<FormsContextProps>
 ): RenderResult => {
   const defaultLibContextProps = {
     isFullScreen: false,
@@ -88,23 +106,40 @@ export const customRenderLibContext = (
     libConfig: {},
     fragmentIdsThisRun: [],
     locale: "en-US",
+    scriptRunState: ScriptRunState.NOT_RUNNING,
+    scriptRunId: "script run 123",
+    componentRegistry: new ComponentRegistry(mockEndpoints()),
+  }
+
+  const defaultFormsContextProps = {
+    formsData: createFormsData(),
   }
 
   return reactTestingLibraryRender(component, {
     wrapper: ({ children }) => (
       <ThemeProvider theme={baseTheme.emotion}>
         <WindowDimensionsProvider>
-          <LibContext.Provider
-            value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
-          >
-            {children}
-          </LibContext.Provider>
+          <FlexContext.Provider value={flexContextValue}>
+            <LibContext.Provider
+              value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
+            >
+              <FormsContext.Provider
+                value={{
+                  ...defaultFormsContextProps,
+                  ...overrideFormsContextProps,
+                }}
+              >
+                {children}
+              </FormsContext.Provider>
+            </LibContext.Provider>
+          </FlexContext.Provider>
         </WindowDimensionsProvider>
       </ThemeProvider>
     ),
   })
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function arrayFromVector(vector: any): any {
   if (Array.isArray(vector)) {
     return vector.map(arrayFromVector)
@@ -115,4 +150,64 @@ export function arrayFromVector(vector: any): any {
   }
 
   return vector
+}
+
+/**
+ * Helper function to create a simple test File object.
+ */
+export function createTestFile(
+  fileName: string,
+  content: string | ArrayBuffer = "content",
+  mimeType?: string
+): File {
+  // Auto-detect mime type from extension if not provided
+  if (!mimeType) {
+    const ext = fileName.split(".").pop()?.toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      txt: "text/plain",
+      pdf: "application/pdf",
+      exe: "application/exe",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      html: "text/html",
+      js: "application/javascript",
+      json: "application/json",
+    }
+    mimeType = mimeTypes[ext || ""] || "application/octet-stream"
+  }
+
+  return new File([content], fileName, { type: mimeType })
+}
+
+/**
+ * Helper function to create a File object with webkitRelativePath for testing directory uploads.
+ * This simulates how browsers provide files when a directory is selected.
+ */
+export function createFileWithPath(
+  content: string | ArrayBuffer,
+  fileName: string,
+  relativePath: string,
+  mimeType: string = "text/plain"
+): File {
+  const file = new File([content], fileName, { type: mimeType })
+  Object.assign(file, { webkitRelativePath: relativePath })
+  return file
+}
+
+/**
+ * Helper function to create multiple files representing a directory structure.
+ * Each file will have the appropriate webkitRelativePath set.
+ */
+export function createDirectoryFiles(
+  files: Array<{
+    content: string | ArrayBuffer
+    path: string
+    mimeType?: string
+  }>
+): File[] {
+  return files.map(({ content, path, mimeType = "text/plain" }) => {
+    const fileName = path.split("/").pop() || "file"
+    return createFileWithPath(content, fileName, path, mimeType)
+  })
 }

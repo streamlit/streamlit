@@ -19,12 +19,14 @@ import json
 import os
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from e2e_playwright.shared.git_utils import get_git_root
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page
+    from collections.abc import Generator
+
+    from playwright.sync_api import CDPSession, Page, WebSocket
 
 
 # Observe long tasks, measure, marks, and paints with PerformanceObserver
@@ -70,14 +72,14 @@ def is_supported_browser(page: Page) -> bool:
     return browser_name == "chromium"
 
 
-def start_capture_traces(page: Page):
+def start_capture_traces(page: Page) -> None:
     """Start capturing traces using the PerformanceObserver API."""
     if is_supported_browser(page):
         page.evaluate(CAPTURE_TRACES_SCRIPT)
 
 
 @contextmanager
-def with_cdp_session(page: Page):
+def with_cdp_session(page: Page) -> Generator[CDPSession, None, None]:
     """
     Create a new Chrome DevTools Protocol session.
     Detach the session when the context manager exits.
@@ -95,7 +97,7 @@ def with_cdp_session(page: Page):
 @contextmanager
 def measure_performance(
     page: Page, *, test_name: str, cpu_throttling_rate: int | None = None
-):
+) -> Generator[None, None, None]:
     """Measure the performance of the page using the native performance API from
     Chrome DevTools Protocol.
 
@@ -114,6 +116,50 @@ def measure_performance(
             client.send("Emulation.setCPUThrottlingRate", {"rate": cpu_throttling_rate})
 
         client.send("Performance.enable")
+        client.send("Network.enable")
+
+        # Track network requests
+        total_network_encoded_bytes = 0  # Compressed bytes on the wire
+        total_network_decoded_bytes = 0  # Uncompressed data bytes
+
+        def on_data_received(params: dict[str, Any]) -> None:
+            nonlocal total_network_encoded_bytes, total_network_decoded_bytes
+            # Each chunk of data:
+            chunk_decoded = params.get("dataLength", 0)
+            chunk_encoded = params.get("encodedDataLength", 0)
+
+            total_network_decoded_bytes += chunk_decoded
+            total_network_encoded_bytes += chunk_encoded
+
+        client.on("Network.dataReceived", on_data_received)
+
+        total_websocket_received_size_bytes = 0
+        total_websocket_sent_size_bytes = 0
+        total_websocket_messages_sent = 0
+        total_websocket_messages_received = 0
+
+        def on_web_socket(ws: WebSocket) -> None:
+            def on_frame_sent(payload: str | bytes) -> None:
+                nonlocal total_websocket_sent_size_bytes
+                nonlocal total_websocket_messages_sent
+                if isinstance(payload, str):
+                    payload = payload.encode("utf-8")
+                total_websocket_sent_size_bytes += len(payload)
+                total_websocket_messages_sent += 1
+
+            def on_frame_received(payload: str | bytes) -> None:
+                nonlocal total_websocket_received_size_bytes
+                nonlocal total_websocket_messages_received
+                if isinstance(payload, str):
+                    payload = payload.encode("utf-8")
+                total_websocket_received_size_bytes += len(payload)
+                total_websocket_messages_received += 1
+
+            ws.on("framesent", on_frame_sent)
+            ws.on("framereceived", on_frame_received)
+
+        # Register websocket handler
+        page.on("websocket", on_web_socket)
 
         # Start timing
         start_time = time.time()
@@ -124,9 +170,36 @@ def measure_performance(
         # Calculate execution time
         execution_time = time.time() - start_time
 
-        # Add custom metric for test execution time
-        custom_metrics = [{"name": "TestExecutionTime", "value": execution_time}]
-
+        # Add custom metrics
+        custom_metrics = [
+            {"name": "TestExecutionTime", "value": execution_time},
+            {
+                # Uncompressed data bytes that were transferred over the network
+                "name": "TotalNetworkDecodedBytes",
+                "value": total_network_decoded_bytes,
+            },
+            {
+                # Compressed bytes that were transferred over the network
+                "name": "TotalNetworkEncodedBytes",
+                "value": total_network_encoded_bytes,
+            },
+            {
+                "name": "TotalWebsocketSentBytes",
+                "value": total_websocket_sent_size_bytes,
+            },
+            {
+                "name": "TotalWebsocketReceivedBytes",
+                "value": total_websocket_received_size_bytes,
+            },
+            {
+                "name": "NumWebsocketMessagesSent",
+                "value": total_websocket_messages_sent,
+            },
+            {
+                "name": "NumWebsocketMessagesReceived",
+                "value": total_websocket_messages_received,
+            },
+        ]
         # Get metrics from Chrome DevTools Protocol
         metrics_response = client.send("Performance.getMetrics")
         captured_traces_result = client.send(

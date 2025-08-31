@@ -17,7 +17,12 @@
 const { RuleTester } = require("eslint")
 const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
-const ruleTester = new RuleTester({})
+const ruleTester = new RuleTester({
+  languageOptions: {
+    ecmaVersion: 2018,
+    sourceType: "module",
+  },
+})
 
 // Throws error if the tests do not pass
 ruleTester.run(
@@ -57,4 +62,4 @@ ruleTester.run(
   }
 )
 
-console.log("All tests passed!")
+console.log("All 'use-strict-null-equality-checks' tests passed!")

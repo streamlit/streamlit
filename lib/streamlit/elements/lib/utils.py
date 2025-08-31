@@ -28,6 +28,7 @@ from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
 from streamlit import config
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -44,6 +45,8 @@ from streamlit.runtime.state.common import (
 if TYPE_CHECKING:
     from builtins import ellipsis
     from collections.abc import Iterable
+
+    from streamlit.delta_generator import DeltaGenerator
 
 
 Key: TypeAlias = Union[str, int]
@@ -70,25 +73,27 @@ def get_label_visibility_proto_value(
 
     if label_visibility_string == "visible":
         return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
-    elif label_visibility_string == "hidden":
+    if label_visibility_string == "hidden":
         return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
-    elif label_visibility_string == "collapsed":
+    if label_visibility_string == "collapsed":
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
 
 
 def get_chat_input_accept_file_proto_value(
-    accept_file_value: bool | Literal["multiple"],
+    accept_file_value: Literal["multiple", "directory"] | bool,
 ) -> ChatInput.AcceptFile.ValueType:
     """Returns one of ChatInput.AcceptFile enum value based on string value."""
 
     if accept_file_value is False:
         return ChatInput.AcceptFile.NONE
-    elif accept_file_value is True:
+    if accept_file_value is True:
         return ChatInput.AcceptFile.SINGLE
-    elif accept_file_value == "multiple":
+    if accept_file_value == "multiple":
         return ChatInput.AcceptFile.MULTIPLE
+    if accept_file_value == "directory":
+        return ChatInput.AcceptFile.DIRECTORY
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
 
@@ -181,7 +186,8 @@ def compute_and_register_element_id(
     element_type: str,
     *,
     user_key: str | None,
-    form_id: str | None,
+    dg: DeltaGenerator | None,
+    key_as_main_identity: bool | set[str],
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -208,9 +214,8 @@ def compute_and_register_element_id(
         The user-specified key for the element. `None` if no key is provided
         or if the element doesn't support a specifying a key.
 
-    form_id : str | None
-        The ID of the form that the element belongs to. `None` or empty string
-        if the element doesn't belong to a form or doesn't support forms.
+    dg : DeltaGenerator | None
+        The DeltaGenerator of each element. `None` if the element is not a widget.
 
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
@@ -218,29 +223,50 @@ def compute_and_register_element_id(
         Some common parameters like key, disabled,
         format_func, label_visibility, args, kwargs, on_change, and
         the active_script_hash are not supposed to be added here
+
+    key_as_main_identity : bool | set[str]
+        If True and a key is provided by the user, we don't include
+        command kwargs in the element ID computation.
+        If a set of kwarg names is provided and a key is provided,
+        only the kwargs with names in this set will be included
+        in the element ID computation.
     """
     ctx = get_script_run_ctx()
 
-    # If form_id is provided, add it to the kwargs.
-    kwargs_to_use = {"form_id": form_id, **kwargs} if form_id else kwargs
+    # When a user_key is present and key_as_main_identity is True OR a set (even empty),
+    # we should ignore general command kwargs and form/sidebar context. For the set case,
+    # only explicitly whitelisted kwargs will be included below.
+    ignore_command_kwargs = user_key is not None and (
+        (key_as_main_identity is True) or isinstance(key_as_main_identity, set)
+    )
+
+    if isinstance(key_as_main_identity, set) and user_key:
+        # Only include the explicitly whitelisted kwargs in the computation
+        kwargs_to_use = {k: v for k, v in kwargs.items() if k in key_as_main_identity}
+    else:
+        kwargs_to_use = {} if ignore_command_kwargs else {**kwargs}
 
     if ctx:
         # Add the active script hash to give elements on different
-        # pages unique IDs.
+        # pages unique IDs. This is added even if
+        # key_as_main_identity is specified.
         kwargs_to_use["active_script_hash"] = ctx.active_script_hash
 
-    element_id = _compute_element_id(
-        element_type,
-        user_key,
-        **kwargs_to_use,
-    )
+    if dg and not ignore_command_kwargs:
+        kwargs_to_use["form_id"] = current_form_id(dg)
+        # If no key is provided and the widget element is inside the sidebar area
+        # add it to the kwargs
+        # allowing the same widget to be both in main area and sidebar.
+        kwargs_to_use["active_dg_root_container"] = dg._active_dg._root_container
+
+    element_id = _compute_element_id(element_type, user_key, **kwargs_to_use)
 
     if ctx:
         _register_element_id(ctx, element_type, element_id)
     return element_id
 
 
-def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any) -> None:
     if config.get_option("global.appTest"):
         try:
             ctx.session_state[TESTING_KEY][k] = v

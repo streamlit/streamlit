@@ -61,7 +61,7 @@ def ensure_waveform_rendered(audio_input: Locator):
 def test_audio_input_renders(app: Page):
     """Test that the audio input component is rendered the correct number of times."""
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    count = 7  # Expected number of audio input elements
+    count = 9  # Expected number of audio input elements
 
     # Verify that the expected number of elements is rendered
     expect(audio_input_elements).to_have_count(count)
@@ -95,6 +95,36 @@ def test_audio_input_disabled_snapshot(
     """Take a snapshot of the disabled audio input element for visual regression."""
     disabled_audio_input_element = themed_app.get_by_test_id("stAudioInput").nth(3)
     assert_snapshot(disabled_audio_input_element, name="st_audio_input-disabled")
+
+
+# Webkit CI audio permission issue
+@pytest.mark.skip_browser("webkit")
+def test_audio_input_action_buttons_styling(app: Page):
+    """Test that the audio input action buttons are styled correctly."""
+    # Enabled audio input
+    audio_input_element = app.get_by_test_id("stAudioInput").first
+
+    # Check record button default & hover styling
+    record_button = audio_input_element.get_by_role("button", name="Record")
+    expect(record_button).to_have_css("color", "rgba(49, 51, 63, 0.6)")
+    record_button.hover()
+    expect(record_button).to_have_css("color", "rgb(49, 51, 63)")
+
+    # Click the record button to get to the play button
+    record_button.click()
+    app.wait_for_timeout(1000)
+    stop_recording(audio_input_element, app)
+
+    # Check play button default & hover styling consistent with record button
+    play_button = audio_input_element.get_by_role("button", name="Play")
+    expect(play_button).to_have_css("color", "rgba(49, 51, 63, 0.6)")
+    play_button.hover()
+    expect(play_button).to_have_css("color", "rgb(49, 51, 63)")
+
+    # Disabled audio input
+    disabled_audio_input_element = app.get_by_test_id("stAudioInput").nth(3)
+    record_button = disabled_audio_input_element.get_by_role("button", name="Record")
+    expect(record_button).to_have_css("color", "rgba(49, 51, 63, 0.2)")
 
 
 @pytest.mark.only_browser("webkit")
@@ -370,3 +400,15 @@ def test_audio_input_error_state(
     expect(
         audio_input.get_by_text("An error has occurred, please try again.")
     ).not_to_be_visible()
+
+
+def test_audio_input_widths(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test audio_input with different width configurations."""
+    stretch_width_input = app.get_by_test_id("stAudioInput").nth(7)
+    pixel_width_input = app.get_by_test_id("stAudioInput").nth(8)
+
+    expect(stretch_width_input).to_be_visible()
+    expect(pixel_width_input).to_be_visible()
+
+    assert_snapshot(stretch_width_input, name="st_audio_input-width_stretch")
+    assert_snapshot(pixel_width_input, name="st_audio_input-width_300px")

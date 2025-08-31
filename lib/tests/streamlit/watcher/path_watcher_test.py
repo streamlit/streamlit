@@ -45,15 +45,14 @@ class FileWatcherTest(unittest.TestCase):
         msg = "\n  $ xcode-select --install"
         calls = [
             call(
-                "  %s" % "For better performance, install the Watchdog module:",
+                "  For better performance, install the Watchdog module:",
                 fg="blue",
                 bold=True,
             ),
             call(
-                """%s
+                f"""{msg}
   $ pip install watchdog
             """
-                % msg
             ),
         ]
         mock_echo.assert_has_calls(calls)
@@ -98,15 +97,14 @@ class FileWatcherTest(unittest.TestCase):
         msg = ""
         calls = [
             call(
-                "  %s" % "For better performance, install the Watchdog module:",
+                "  For better performance, install the Watchdog module:",
                 fg="blue",
                 bold=True,
             ),
             call(
-                """%s
+                f"""{msg}
   $ pip install watchdog
             """
-                % msg
             ),
         ]
         mock_echo.assert_has_calls(calls)
@@ -130,35 +128,33 @@ class FileWatcherTest(unittest.TestCase):
         ]
         for watcher_config, watchdog_available, path_watcher_class in subtest_params:
             test_name = f"config.fileWatcherType={watcher_config}, watcher_available={watchdog_available}"
-            with self.subTest(test_name):
-                with (
-                    patch_config_options({"server.fileWatcherType": watcher_config}),
-                    patch(
-                        "streamlit.watcher.path_watcher._is_watchdog_available",
-                        return_value=watchdog_available,
-                    ),
-                ):
-                    # Test get_default_path_watcher_class() result
-                    self.assertEqual(
-                        path_watcher_class, get_default_path_watcher_class()
-                    )
+            with (
+                self.subTest(test_name),
+                patch_config_options({"server.fileWatcherType": watcher_config}),
+                patch(
+                    "streamlit.watcher.path_watcher._is_watchdog_available",
+                    return_value=watchdog_available,
+                ),
+            ):
+                # Test get_default_path_watcher_class() result
+                assert path_watcher_class == get_default_path_watcher_class()
 
-                    # Test watch_file(). If path_watcher_class is
-                    # NoOpPathWatcher, nothing should happen. Otherwise,
-                    # path_watcher_class should be called with the watch_file
-                    # params.
-                    on_file_changed = Mock()
-                    watching_file = watch_file("some/file/path", on_file_changed)
-                    if path_watcher_class is not NoOpPathWatcher:
-                        path_watcher_class.assert_called_with(
-                            "some/file/path",
-                            on_file_changed,
-                            glob_pattern=None,
-                            allow_nonexistent=False,
-                        )
-                        self.assertTrue(watching_file)
-                    else:
-                        self.assertFalse(watching_file)
+                # Test watch_file(). If path_watcher_class is
+                # NoOpPathWatcher, nothing should happen. Otherwise,
+                # path_watcher_class should be called with the watch_file
+                # params.
+                on_file_changed = Mock()
+                watching_file = watch_file("some/file/path", on_file_changed)
+                if path_watcher_class is not NoOpPathWatcher:
+                    path_watcher_class.assert_called_with(
+                        "some/file/path",
+                        on_file_changed,
+                        glob_pattern=None,
+                        allow_nonexistent=False,
+                    )
+                    assert watching_file
+                else:
+                    assert not watching_file
 
     @patch(
         "streamlit.watcher.path_watcher._is_watchdog_available", Mock(return_value=True)
@@ -178,7 +174,7 @@ class FileWatcherTest(unittest.TestCase):
             allow_nonexistent=True,
         )
 
-        self.assertTrue(watching_dir)
+        assert watching_dir
         mock_event_watcher.assert_called_with(
             "some/dir/path/",
             on_file_changed,

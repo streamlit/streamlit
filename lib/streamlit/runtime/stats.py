@@ -63,7 +63,7 @@ class CacheStat(NamedTuple):
 def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
     """Group a list of CacheStats by category_name and cache_name and sum byte_length."""
 
-    def key_function(individual_stat):
+    def key_function(individual_stat: CacheStat) -> tuple[str, str]:
         return individual_stat.category_name, individual_stat.cache_name
 
     result: list[CacheStat] = []
@@ -90,7 +90,7 @@ class CacheStatsProvider(Protocol):
 
 
 class StatsManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache_stats_providers: list[CacheStatsProvider] = []
 
     def register_provider(self, provider: CacheStatsProvider) -> None:

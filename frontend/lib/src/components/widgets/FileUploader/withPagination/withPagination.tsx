@@ -23,16 +23,20 @@ import { usePrevious } from "~lib/util/Hooks"
 import Pagination from "./Pagination"
 
 export interface Props {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   items: any[]
   pageSize: number
   resetOnAdd: boolean
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const calculateNumPages = (items: any[], pageSize: number): number =>
   Math.ceil(items.length / pageSize)
 
 const withPagination = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   WrappedComponent: ComponentType<React.PropsWithChildren<any>>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): ComponentType<React.PropsWithChildren<any>> => {
   const WithPagination = ({
     pageSize,
@@ -45,6 +49,7 @@ const withPagination = (
       calculateNumPages(items, pageSize)
     )
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const prevItems: any[] = usePrevious(items)
 
     useEffect(() => {

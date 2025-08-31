@@ -46,6 +46,7 @@ class ScreenCastRecorder {
         notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // In the event of an error, assume it won't support screencasts
       return false
@@ -112,10 +113,12 @@ class ScreenCastRecorder {
       return false
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const logRecorderError = (e: any): void => {
       LOG.warn(`mediaRecorder.start threw an error: ${e}`)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     this.mediaRecorder.onerror = (e: any): void => {
       logRecorderError(e)
       this.onErrorOrStopCallback()

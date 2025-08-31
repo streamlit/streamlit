@@ -32,6 +32,7 @@ from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
+    from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
 
 
@@ -41,16 +42,27 @@ def save_element_message(
     invoked_dg_id: str,
     used_dg_id: str,
     returned_dg_id: str,
+    layout_config: LayoutConfig | None = None,
 ) -> None:
     """Save the message for an element to a thread-local callstack, so it can
     be used later to replay the element when a cache-decorated function's
     execution is skipped.
     """
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_element_message(
-        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        delta_type,
+        element_proto,
+        invoked_dg_id,
+        used_dg_id,
+        returned_dg_id,
+        layout_config,
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
-        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        delta_type,
+        element_proto,
+        invoked_dg_id,
+        used_dg_id,
+        returned_dg_id,
+        layout_config,
     )
 
 
@@ -72,9 +84,9 @@ def save_block_message(
     )
 
 
-def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> None:
-    CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
+def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> None:
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
 
 
 # Create and export public API singletons.
@@ -86,13 +98,13 @@ cache = _cache
 
 
 __all__ = [
-    "cache",
     "CACHE_DOCS_URL",
-    "save_element_message",
-    "save_block_message",
-    "save_media_data",
-    "get_data_cache_stats_provider",
-    "get_resource_cache_stats_provider",
+    "cache",
     "cache_data",
     "cache_resource",
+    "get_data_cache_stats_provider",
+    "get_resource_cache_stats_provider",
+    "save_block_message",
+    "save_element_message",
+    "save_media_data",
 ]

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
 
@@ -38,10 +38,11 @@ type ColumnVisibilityReturn = {
 function useColumnVisibility(
   clearSelection: (keepRows?: boolean, keepColumns?: boolean) => void,
   setColumnConfigMapping: React.Dispatch<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     React.SetStateAction<Map<string, any>>
   >
 ): ColumnVisibilityReturn {
-  const hideColumn = React.useCallback(
+  const hideColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
         return updateColumnConfigTypeProps({
@@ -57,7 +58,7 @@ function useColumnVisibility(
     [clearSelection, setColumnConfigMapping]
   )
 
-  const showColumn = React.useCallback(
+  const showColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
         return updateColumnConfigTypeProps({

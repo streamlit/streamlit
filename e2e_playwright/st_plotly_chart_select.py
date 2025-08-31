@@ -82,7 +82,7 @@ fig_bar = px.bar(data_canada, x="year", y="pop")
 event_data = st.plotly_chart(
     fig_bar, on_select="rerun", key="bar_chart", selection_mode=["points"]
 )
-if len(event_data.selection["points"]) > 0:
+if len(event_data["selection"].get("points", [])) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bar_chart.selection["points"]
     # Extract x and y values directly into lists
@@ -106,7 +106,7 @@ fig = px.bar(
 event_data = st.plotly_chart(
     fig, on_select="rerun", key="StackedBar_chart", selection_mode=["box", "lasso"]
 )
-if len(event_data.selection["points"]) > 0:
+if len(event_data.selection["points"]) > 0:  # type: ignore
     st.write("Countries and their medal data that were selected:")
     points = st.session_state.StackedBar_chart.selection["points"]
     # Extract x and y values directly into lists
@@ -147,15 +147,15 @@ event_data = st.plotly_chart(
     fig, on_select="rerun", key="bubble_chart_2", selection_mode=("box", "lasso")
 )
 
-if len(event_data.selection["points"]) > 0:
-    st.dataframe(event_data.selection["points"])
+if len(event_data["selection"]["points"]) > 0:
+    st.dataframe(event_data["selection"]["points"])
 
 st.header("Bubble Chart with Points & Box Select")
 event_data = st.plotly_chart(
     fig_bubble, on_select="rerun", selection_mode=("points", "box")
 )
-if len(event_data.selection.points) > 0:
-    points = event_data.selection.points
+if len(event_data["selection"]["points"]) > 0:
+    points = event_data.selection.points  # type: ignore
     # Extract x and y values directly into lists
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]

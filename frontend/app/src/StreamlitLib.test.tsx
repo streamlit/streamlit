@@ -27,7 +27,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
-  ComponentRegistry,
+  ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
   FormsData,
@@ -36,7 +36,6 @@ import {
   render,
   ScriptRunState,
   SessionInfo,
-  VerticalBlock,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -54,11 +53,32 @@ class Endpoints implements StreamlitEndpoints {
     throw new Error("Unimplemented")
   }
 
-  public buildComponentURL(): string {
+  public sendClientErrorToHost(
+    component: string,
+    error: string | number,
+    message: string,
+    source: string,
+    customComponentName?: string
+  ): void {
     throw new Error("Unimplemented")
   }
 
+  public checkSourceUrlResponse(
+    sourceUrl: string,
+    componentName?: string
+  ): Promise<void> {
+    return Promise.reject(new Error("Unimplemented"))
+  }
+
+  public buildComponentURL(componentName: string, path: string): string {
+    return path
+  }
+
   public buildMediaURL(url: string): string {
+    return url
+  }
+
+  public buildDownloadUrl(url: string): string {
     return url
   }
 
@@ -77,12 +97,9 @@ class Endpoints implements StreamlitEndpoints {
   public deleteFileAtURL(): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
-
-  public fetchCachedForwardMsg(): Promise<Uint8Array> {
-    return Promise.reject(new Error("Unimplemented"))
-  }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Props {}
 
 interface State {
@@ -107,8 +124,6 @@ class StreamlitLibExample extends PureComponent<Props, State> {
   private readonly sessionInfo = new SessionInfo()
 
   private readonly endpoints = new Endpoints()
-
-  private readonly componentRegistry = new ComponentRegistry(this.endpoints)
 
   private readonly widgetMgr: WidgetStateManager
 
@@ -147,10 +162,14 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       appId: "",
       streamlitVersion: "",
       pythonVersion: "",
+      serverOS: "",
+      hasDisplay: true,
       installationId: "",
       installationIdV3: "",
+      installationIdV4: "",
       commandLine: "",
       isHello: false,
+      isConnected: true,
     })
 
     // Initialize React state
@@ -203,22 +222,19 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     }))
   }
 
-  public render = (): ReactElement => {
+  public override render = (): ReactElement => {
     // This example doesn't involve a sidebar, so our only root blockNode
     // is `elements.main`.
     const blockNode = this.state.elements.main
 
     return (
-      <VerticalBlock
+      <ContainerContentsWrapper
         node={blockNode}
         endpoints={this.endpoints}
-        scriptRunId={this.state.scriptRunId}
-        scriptRunState={this.state.scriptRunState}
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
-        componentRegistry={this.componentRegistry}
-        formsData={this.state.formsData}
+        height="auto"
       />
     )
   }
@@ -239,6 +255,7 @@ describe("StreamlitLibExample", () => {
 
   it("handles Delta messages", async () => {
     // there's nothing within the app ui to cycle through script run messages so we need a reference
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     let streamlitLibInstance: any
     render(
       <StreamlitLibExample

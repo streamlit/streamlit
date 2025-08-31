@@ -19,6 +19,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Final, cast
 
+from streamlit.deprecation_util import (
+    show_deprecation_warning,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -50,10 +53,11 @@ class BokehMixin:
 
         .. Important::
             You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
-            command.
+            command, which is deprecated and will be removed in a future
+            version.
 
-            If you need a newer version of Bokeh, use our |streamlit-bokeh|_
-            custom component instead.
+            For more current updates, use the |streamlit-bokeh|_ custom
+            component instead.
 
         .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
         .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
@@ -101,6 +105,12 @@ class BokehMixin:
                 f"[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh)."
             )
 
+        show_deprecation_warning(
+            "st.bokeh_chart is deprecated and will be removed in a future version. "
+            "Please use our custom component, "
+            "[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh), "
+            "instead."
+        )
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
 

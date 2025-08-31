@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { MockedFunction } from "vitest"
 import { renderHook } from "@testing-library/react"
+import { MockedFunction } from "vitest"
 
 import { useScrollToBottom } from "./useScrollToBottom"
 import useStateRef from "./useStateRef"
@@ -35,7 +35,7 @@ describe("useScrollToBottom", () => {
       vi.fn(),
       { current: initialValue },
     ])
-    const { result } = renderHook(() => useScrollToBottom())
+    const { result } = renderHook(() => useScrollToBottom(true))
 
     expect(result.current).not.toBeNull()
     expect(result.current.current).toBeNull()

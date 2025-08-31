@@ -27,7 +27,7 @@ def test_select_slider_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     st_select_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_select_sliders).to_have_count(12)
+    expect(st_select_sliders).to_have_count(14)
 
     assert_snapshot(
         st_select_sliders.nth(0),
@@ -37,6 +37,8 @@ def test_select_slider_rendering(
     assert_snapshot(st_select_sliders.nth(5), name="st_select_slider-hidden_label")
     assert_snapshot(st_select_sliders.nth(6), name="st_select_slider-label_collapsed")
     assert_snapshot(st_select_sliders.nth(11), name="st_select_slider-markdown_label")
+    assert_snapshot(st_select_sliders.nth(12), name="st_select_slider-width_300px")
+    assert_snapshot(st_select_sliders.nth(13), name="st_select_slider-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -84,10 +86,8 @@ def test_select_slider_calls_callback(app: Page):
     expect(app.get_by_text("Value 8: 1")).to_be_visible()
     expect(app.get_by_text("Select slider changed: False")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(7)
-    slider.hover()
     # click in middle
-    app.mouse.down()
-
+    slider.click()
     wait_for_app_run(app)
     expect(app.get_by_text("Hello world")).to_be_visible()
     expect(app.get_by_text("Value 8: 3")).to_be_visible()
@@ -105,9 +105,8 @@ def test_select_slider_label_realigns_when_expander_opens(app: Page):
 def test_select_slider_works_in_forms(app: Page):
     expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(9)
-    slider.hover()
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
@@ -123,13 +122,27 @@ def test_select_slider_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("select_slider-in-fragment selection: 1")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(10)
-    slider.hover()
     # click in middle
-    app.mouse.down()
-
+    slider.click()
     wait_for_app_run(app)
     expect(app.get_by_text("select_slider-in-fragment selection: 3")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_no_rerun_on_drag(app: Page):
+    """Test that moving the slider does not trigger a rerun."""
+    runs_text = app.get_by_text("Runs: 1")
+    expect(runs_text).to_be_visible()
+
+    slider = app.get_by_test_id("stSlider").nth(7)
+    slider.hover()
+    # click in middle and drag
+    app.mouse.down()
+    app.mouse.move(0, 0)
+    wait_for_app_run(app)
+
+    # The number of runs should not have changed
+    expect(runs_text).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):

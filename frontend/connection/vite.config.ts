@@ -63,10 +63,5 @@ export default defineConfig({
         },
       },
     },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
-    },
   },
 })

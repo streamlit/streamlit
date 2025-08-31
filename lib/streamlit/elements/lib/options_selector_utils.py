@@ -15,14 +15,13 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
@@ -33,6 +32,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 _FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 _Value = TypeVar("_Value")
+T = TypeVar("T")
 
 
 def index_(iterable: Iterable[_Value], x: _Value) -> int:
@@ -54,10 +54,13 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
     for i, value in enumerate(iterable):
         if x == value:
             return i
-        elif isinstance(value, float) and isinstance(x, float):
-            if abs(x - value) < _FLOAT_EQUALITY_EPSILON:
-                return i
-    raise ValueError(f"{str(x)} is not in iterable")
+        if (
+            isinstance(value, float)
+            and isinstance(x, float)
+            and abs(x - value) < _FLOAT_EQUALITY_EPSILON
+        ):
+            return i
+    raise ValueError(f"{x} is not in iterable")
 
 
 def check_and_convert_to_indices(
@@ -89,8 +92,7 @@ def get_default_indices(
     indexable_options: Sequence[T], default: Sequence[Any] | Any | None = None
 ) -> list[int]:
     default_indices = check_and_convert_to_indices(indexable_options, default)
-    default_indices = default_indices if default_indices is not None else []
-    return default_indices
+    return default_indices if default_indices is not None else []
 
 
 E1 = TypeVar("E1", bound=Enum)
@@ -102,16 +104,16 @@ _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
 def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     """Attempt to coerce an Enum value to another EnumMeta.
 
-    An Enum value of EnumMeta E1 is considered coercable to EnumType E2
+    An Enum value of EnumMeta E1 is considered coercible to EnumType E2
     if the EnumMeta __qualname__ match and the names of their members
     match as well. (This is configurable in streamlist configs)
     """
     if not isinstance(from_enum_value, Enum):
-        raise ValueError(
+        raise ValueError(  # noqa: TRY004
             f"Expected an Enum in the first argument. Got {type(from_enum_value)}"
         )
     if not isinstance(to_enum_class, EnumMeta):
-        raise ValueError(
+        raise ValueError(  # noqa: TRY004
             f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
         )
     if isinstance(from_enum_value, to_enum_class):
@@ -146,7 +148,7 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
         _LOGGER.debug("Failed to coerce %s to class %s", from_enum_value, to_enum_class)
         return from_enum_value  # do not attempt to coerce
 
-    # At this point we think the Enum is coercable, and we know
+    # At this point we think the Enum is coercible, and we know
     # E1 and E2 have the same member names. We convert from E1 to E2 using _name_
     # (since user Enum subclasses can override the .name property in 3.11)
     _LOGGER.debug("Coerced %s to class %s", from_enum_value, to_enum_class)
@@ -183,7 +185,11 @@ def maybe_coerce_enum(
 ) -> RegisterWidgetResult[T]: ...
 
 
-def maybe_coerce_enum(register_widget_result, options, opt_sequence):
+def maybe_coerce_enum(
+    register_widget_result: RegisterWidgetResult[Any],
+    options: OptionSequence[Any],
+    opt_sequence: Sequence[Any],
+) -> RegisterWidgetResult[Any]:
     """Maybe Coerce a RegisterWidgetResult with an Enum member value to
     RegisterWidgetResult[option] if option is an EnumType, otherwise just return
     the original RegisterWidgetResult.
@@ -211,10 +217,10 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
 # (https://github.com/python/typing/issues/548)
 @overload
 def maybe_coerce_enum_sequence(
-    register_widget_result: RegisterWidgetResult[list[T]],
+    register_widget_result: RegisterWidgetResult[list[T] | list[T | str]],
     options: OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[list[T]]: ...
+) -> RegisterWidgetResult[list[T] | list[T | str]]: ...
 
 
 @overload
@@ -225,10 +231,14 @@ def maybe_coerce_enum_sequence(
 ) -> RegisterWidgetResult[tuple[T, T]]: ...
 
 
-def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
+def maybe_coerce_enum_sequence(
+    register_widget_result: RegisterWidgetResult[list[Any] | tuple[Any, ...]],
+    options: OptionSequence[Any],
+    opt_sequence: Sequence[Any],
+) -> RegisterWidgetResult[list[Any] | tuple[Any, ...]]:
     """Maybe Coerce a RegisterWidgetResult with a sequence of Enum members as value
-    to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just return
-    the original RegisterWidgetResult.
+    to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just
+    return the original RegisterWidgetResult.
     """
 
     # If not all widget values are Enums, return early
@@ -250,4 +260,25 @@ def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
             _coerce_enum(val, coerce_class) for val in register_widget_result.value
         ),
         register_widget_result.value_changed,
+    )
+
+
+def create_mappings(
+    options: Sequence[T], format_func: Callable[[T], str] = str
+) -> tuple[list[str], dict[str, int]]:
+    """Iterates through the options and formats them using the format_func.
+
+    Returns a tuple of the formatted options and a mapping of the formatted options to
+    the original options.
+    """
+    formatted_option_to_option_mapping: dict[str, int] = {}
+    formatted_options: list[str] = []
+    for index, option in enumerate(options):
+        formatted_option = format_func(option)
+        formatted_options.append(formatted_option)
+        formatted_option_to_option_mapping[formatted_option] = index
+
+    return (
+        formatted_options,
+        formatted_option_to_option_mapping,
     )

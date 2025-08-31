@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TYPE_CHECKING, cast
+
 import numpy as np
 import requests
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 @st.cache_data
@@ -41,13 +46,7 @@ def nested_cached_function():
 
 if st.button("Run nested cached function with widget warning"):
     # When running nested_cached_function(), we get two warnings, one from
-    # nested_cached_function() and one from inner_cache_function. inner_cache_function()
-    # on its own would allow the widget usage, but since it is nested in the other
-    # function that does not allow it, we don't allow it.
-    # The outer experimental_allow_widgets=False will always take priority.
-    # Otherwise, we would need to recompute the outer cached function whenever
-    # the widget in the inner function is used. Which we don't want to do when
-    # experimental_allow_widgets is set to False.
+    # nested_cached_function() and one from inner_cache_function.
     nested_cached_function()
 
 
@@ -56,10 +55,10 @@ if "run_counter" not in st.session_state:
 
 
 @st.cache_data
-def replay_element():
+def replay_element() -> int:
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")
-    return st.session_state.run_counter
+    return cast("int", st.session_state.run_counter)
 
 
 if st.button("Cached function with element replay"):
@@ -80,13 +79,21 @@ def video():
     st.video(file)
 
 
+@st.cache_data
+def code():
+    st.code("print('Hello, world!')", width=300, height=200)
+
+
 audio()
 video()
+
+if st.checkbox("Show code", True):
+    code()
 
 
 @st.cache_data
 def image():
-    img = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img, caption="A black square", width=200)
 
 

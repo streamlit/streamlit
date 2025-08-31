@@ -14,4 +14,10 @@
  * limitations under the License.
  */
 export { StreamlitDialog } from "./StreamlitDialog"
-export type { DialogProps, PlainEventHandler } from "./StreamlitDialog"
+export type {
+  ConnectionErrorProps,
+  DialogProps,
+  PlainEventHandler,
+  ScriptCompileErrorProps,
+  WarningProps,
+} from "./StreamlitDialog"

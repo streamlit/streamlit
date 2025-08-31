@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # isort: skip_file
+# ruff: noqa: E402, A001
 
 """Streamlit.
 
@@ -92,10 +93,7 @@ _event = _dg_singleton._event_dg
 _bottom = _dg_singleton._bottom_dg
 
 
-from streamlit.elements.dialog_decorator import (
-    dialog_decorator as _dialog_decorator,
-    experimental_dialog_decorator as _experimental_dialog_decorator,
-)
+from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -104,10 +102,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
-from streamlit.runtime.fragment import (
-    experimental_fragment as _experimental_fragment,
-    fragment as _fragment,
-)
+from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.context import ContextProxy as _ContextProxy
@@ -117,6 +112,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.user_info import (
     UserInfoProxy as _UserInfoProxy,
+    DeprecatedUserInfoProxy as _DeprecatedUserInfoProxy,
     login as _login,
     logout as _logout,
 )
@@ -210,6 +206,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pdf = _main.pdf
 pills = _main.pills
 plotly_chart = _main.plotly_chart
 popover = _main.popover
@@ -277,13 +274,16 @@ fragment = _fragment
 login = _login
 logout = _logout
 
-# Experimental APIs
-experimental_audio_input = _main.experimental_audio_input
-experimental_dialog = _experimental_dialog_decorator
-experimental_fragment = _experimental_fragment
-experimental_user = _UserInfoProxy()
+# User
+user = _UserInfoProxy()
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
+# Experimental APIs
+experimental_user = _DeprecatedUserInfoProxy()
+
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
+    "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) "
+    "for more information."
+)
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,

@@ -135,8 +135,10 @@ describe("ChartColumn", () => {
   it("supports configuring min/max scale", () => {
     const mockColumn = getLineChartColumn()
     const mockCell = mockColumn.getCell([-100, 0, 100])
-    // Default min/max scale is 0/1 so the values should be normalized:
-    expect((mockCell as SparklineCellType).data?.values).toEqual([0, 0.5, 1])
+    // Default min/max scale is the min and max of each cell, so nothing happens:
+    expect((mockCell as SparklineCellType).data?.values).toEqual([
+      -100, 0, 100,
+    ])
 
     // Use a different scale
     const mockColumn1 = getLineChartColumn({
@@ -194,8 +196,41 @@ describe("ChartColumn", () => {
       y_max: -100,
     })
     const mockCell6 = mockColumn6.getCell([-100, 0, 100])
-    // min and max need to be defined, so this should be an error cell:
+    // min and max can't be the same number, so this should be an error cell:
     expect(isErrorCell(mockCell6)).toEqual(true)
+  })
+
+  it("supports negative numbers", () => {
+    const mockColumn = getLineChartColumn()
+
+    const mockCell = mockColumn.getCell([-50, 50, 150])
+    // The default values for y_min and y_max are -50 and 150, so don't do anything
+    expect((mockCell as SparklineCellType).data?.values).toEqual([
+      -50, 50, 150,
+    ])
+
+    const mockColumn1 = getLineChartColumn()
+
+    const mockCell1 = mockColumn1.getCell([-50, -40, -30])
+    // The default values for y_min and y_max are -50 and -30, so don't do anything
+    expect((mockCell1 as SparklineCellType).data?.values).toEqual([
+      -50, -40, -30,
+    ])
+
+    const mockColumn2 = getLineChartColumn({
+      y_min: undefined,
+      y_max: -60,
+    })
+
+    const mockCell2 = mockColumn2.getCell([-50, -40, -30])
+    // y_max is -60 and the default for y_min is -50,  so this should be an error cell:
+    expect(isErrorCell(mockCell2)).toEqual(true)
+
+    const mockColumn3 = getLineChartColumn()
+
+    const mockCell3 = mockColumn3.getCell([-50])
+    // The min/max scale is -50/0 for this case, so don't do anything:
+    expect((mockCell3 as SparklineCellType).data?.values).toEqual([-50])
   })
 
   it("works with single values or only same values without running into division by zero", () => {
@@ -238,6 +273,7 @@ describe("ChartColumn", () => {
     [false, [0]],
   ])(
     "supports numerical array-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any[] | null) => {
       const mockColumn = getBarChartColumn()
       const cell = mockColumn.getCell(input)
@@ -253,6 +289,7 @@ describe("ChartColumn", () => {
     [["foo", "bar"]],
     [[0.1, 0.4, "foo"]],
     [[0.1, 0.4, null]],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   ])("%p results in error cell", (input: any) => {
     const mockColumn = getLineChartColumn()
     const cell = mockColumn.getCell(input)

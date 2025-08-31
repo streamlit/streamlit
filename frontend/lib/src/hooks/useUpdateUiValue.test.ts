@@ -25,13 +25,13 @@ describe("useUpdateUiValue", () => {
     await waitFor(() => expect(callback).toHaveBeenCalledWith(4))
   })
 
-  it("shoud not update ui value if values are different and ui value is dirty", async () => {
+  it("should not update ui value if values are different and ui value is dirty", async () => {
     const callback = vi.fn()
     renderHook(() => useUpdateUiValue(4, 2, callback, true))
     await waitFor(() => expect(callback).not.toHaveBeenCalled())
   })
 
-  it("shoud not update ui value if values are same", async () => {
+  it("should not update ui value if values are same", async () => {
     const callback = vi.fn()
     renderHook(() => useUpdateUiValue(4, 4, callback, false))
     await waitFor(() => expect(callback).not.toHaveBeenCalled())

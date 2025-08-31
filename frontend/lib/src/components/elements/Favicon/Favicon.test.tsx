@@ -16,7 +16,7 @@
 
 import { mockEndpoints } from "~lib/mocks/mocks"
 
-import { handleFavicon } from "./Favicon"
+import { extractEmoji, handleFavicon } from "./Favicon"
 
 function getFaviconHref(): string {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
@@ -53,14 +53,14 @@ describe("Favicon element", () => {
   })
 
   it("accepts emojis directly", () => {
-    handleFavicon("🍕", vi.fn(), endpoints)
+    handleFavicon("emoji:🍕", vi.fn(), endpoints)
     // Check that its an svg that contains the pizza emoji bytecode:
     expect(getFaviconHref()).toContain("svg")
     expect(getFaviconHref()).toContain("%F0%9F%8D%95")
   })
 
   it("handles emoji variants correctly", () => {
-    handleFavicon("🛰", vi.fn(), endpoints)
+    handleFavicon("emoji:🛰", vi.fn(), endpoints)
     // Check that its an svg that contains the satellite emoji bytecode:
     expect(getFaviconHref()).toContain("svg")
     expect(getFaviconHref()).toContain("%F0%9F%9B%B0")
@@ -109,6 +109,79 @@ describe("Favicon element", () => {
     expect(sendMessageToHost).toHaveBeenCalledWith({
       favicon: "https://mock.media.url",
       type: "SET_PAGE_FAVICON",
+    })
+  })
+
+  describe("extractEmoji", () => {
+    it("handles basic emojis", () => {
+      expect(extractEmoji("emoji:😀")).toBe("😀")
+      expect(extractEmoji("emoji:🚀")).toBe("🚀")
+      expect(extractEmoji("emoji:🍕")).toBe("🍕")
+      expect(extractEmoji("emoji:⭐")).toBe("⭐")
+      expect(extractEmoji("emoji:🎮")).toBe("🎮")
+      expect(extractEmoji("emoji:🛰️")).toBe("🛰️")
+    })
+
+    it("handles emoji shortcodes", () => {
+      expect(extractEmoji(":smile:")).toBe("😄")
+      expect(extractEmoji(":rocket:")).toBe("🚀")
+      expect(extractEmoji(":pizza:")).toBe("🍕")
+      expect(extractEmoji(":star:")).toBe("⭐")
+      expect(extractEmoji(":video_game:")).toBe("🎮")
+    })
+
+    it("handles shortcodes with dashes", () => {
+      expect(extractEmoji(":crescent-moon:")).toBe("🌙")
+      expect(extractEmoji(":lying-face:")).toBe("🤥")
+    })
+
+    it("handles skin tone modifiers", () => {
+      expect(extractEmoji("emoji:👍🏻")).toBe("👍🏻") // light skin tone
+      expect(extractEmoji("emoji:👍🏽")).toBe("👍🏽") // medium skin tone
+      expect(extractEmoji("emoji:👍🏿")).toBe("👍🏿") // dark skin tone
+    })
+
+    it("handles newer emojis", () => {
+      expect(extractEmoji("emoji:🪣")).toBe("🪣") // bucket (added in 2020)
+      expect(extractEmoji("emoji:🥹")).toBe("🥹") // face holding back tears (added in 2022)
+      expect(extractEmoji("emoji:🫠")).toBe("🫠") // melting face (added in 2022)
+      expect(extractEmoji("emoji:🫥")).toBe("🫥") // dotted line face (added in 2022)
+      expect(extractEmoji("emoji:🐦‍🔥")).toBe("🐦‍🔥") // Phoenix (added in 2023)
+      expect(extractEmoji("emoji:🍋‍🟩")).toBe("🍋‍🟩") // lime (added in 2023)
+    })
+
+    it("handles older emojis", () => {
+      expect(extractEmoji("emoji:😀")).toBe("😀") // grinning face (2015)
+      expect(extractEmoji("emoji:👨‍👩‍👦")).toBe("👨‍👩‍👦") // family (2016)
+      expect(extractEmoji("emoji:💩")).toBe("💩") // pile of poo (2010)
+      expect(extractEmoji("emoji:♥️")).toBe("♥️") // heart symbol (very early emoji)
+    })
+
+    it("handles compound emojis", () => {
+      expect(extractEmoji("emoji:👨‍💻")).toBe("👨‍💻") // man technologist
+      expect(extractEmoji("emoji:👩‍🚒")).toBe("👩‍🚒") // woman firefighter
+      expect(extractEmoji("emoji:👨‍👨‍👧‍👧")).toBe("👨‍👨‍👧‍👧") // family with two men and two girls
+      expect(extractEmoji(":woman_technologist:")).toBe("👩‍💻")
+    })
+
+    it("handles flags", () => {
+      expect(extractEmoji("emoji:🇺🇸")).toBe("🇺🇸")
+      expect(extractEmoji("emoji:🇯🇵")).toBe("🇯🇵")
+      expect(extractEmoji("emoji:🇪🇸")).toBe("🇪🇸")
+      expect(extractEmoji(":brazil:")).toBe("🇧🇷")
+    })
+
+    it("handles material icons correctly", () => {
+      expect(extractEmoji(":material/flag:")).toBe("")
+      expect(extractEmoji(":material/smart_display:")).toBe("")
+    })
+
+    it("handles edge cases", () => {
+      expect(extractEmoji(":invalid_emoji_code:")).toBe("")
+      expect(extractEmoji("hello")).toBe("")
+      expect(extractEmoji("12345")).toBe("")
+      expect(extractEmoji("::")).toBe("")
+      expect(extractEmoji(":")).toBe("")
     })
   })
 })

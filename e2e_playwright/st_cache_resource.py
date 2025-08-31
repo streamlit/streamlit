@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import streamlit as st
 
 
@@ -38,13 +40,7 @@ def nested_cached_function():
 
 if st.button("Run nested cached function with widget warning"):
     # When running nested_cached_function(), we get two warnings, one from
-    # nested_cached_function() and one from inner_cache_function. inner_cache_function()
-    # on its own would allow the widget usage, but since it is nested in the other
-    # function that does not allow it, we don't allow it.
-    # The outer experimental_allow_widgets=False will always take priority.
-    # Otherwise, we would need to recompute the outer cached function whenever
-    # the widget in the inner function is used. Which we don't want to do when
-    # experimental_allow_widgets is set to False.
+    # nested_cached_function() and one from inner_cache_function.
     nested_cached_function()
 
 if "run_counter" not in st.session_state:
@@ -52,10 +48,10 @@ if "run_counter" not in st.session_state:
 
 
 @st.cache_resource
-def replay_element():
+def replay_element() -> int:
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")
-    return st.session_state.run_counter
+    return cast("int", st.session_state.run_counter)
 
 
 if st.button("Cached function with element replay"):

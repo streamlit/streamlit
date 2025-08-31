@@ -25,15 +25,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit.runtime.app_session as app_session
 from streamlit import config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace
-from streamlit.runtime import Runtime
+from streamlit.proto.NewSession_pb2 import FontFace, FontSource
+from streamlit.runtime import Runtime, app_session
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -132,13 +132,13 @@ class AppSessionTest(unittest.TestCase):
         session._uploaded_file_mgr = mock_file_mgr
 
         session.shutdown()
-        assert AppSessionState.SHUTDOWN_REQUESTED == session._state
+        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
         mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
         patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
         # A 2nd shutdown call should have no effect.
         session.shutdown()
-        assert AppSessionState.SHUTDOWN_REQUESTED == session._state
+        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
         mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
 
@@ -316,7 +316,7 @@ class AppSessionTest(unittest.TestCase):
 
         # leaving the following code line in to show that the fragment id
         # is not set in the fragment storage!
-        # session._fragment_storage.set(fragment_id, lambda: None)
+        # session._fragment_storage.set(fragment_id, lambda: None)  # noqa: ERA001
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner
@@ -354,7 +354,7 @@ class AppSessionTest(unittest.TestCase):
         assert session._scriptrunner is not None
 
         # And that the ScriptRunner was initialized and started.
-        scriptrunner: MagicMock = cast(MagicMock, session._scriptrunner)
+        scriptrunner: MagicMock = cast("MagicMock", session._scriptrunner)
         scriptrunner.on_event.connect.assert_called_once_with(
             session._on_scriptrunner_event
         )
@@ -626,18 +626,134 @@ class AppSessionTest(unittest.TestCase):
 
         mock_enqueue.assert_called_once_with(expected_msg)
 
+    def test_manual_rerun_preserves_context_info(self):
+        """Test that manual reruns preserve context info."""
+        session = _create_test_session()
 
-def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
+        # Create a client state with context info (simulating a manual rerun from frontend)
+        client_state = ClientState()
+        client_state.context_info.timezone = "Europe/Berlin"
+        client_state.context_info.locale = "de-DE"
+        client_state.query_string = "test_query"
+        client_state.page_script_hash = "test_hash"
+        client_state.is_auto_rerun = False
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        # Verify that _create_scriptrunner was called
+        session._create_scriptrunner.assert_called_once()
+
+        # Get the RerunData that was passed to _create_scriptrunner
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+
+        # Verify that context_info was preserved
+        assert rerun_data.context_info is not None
+        assert rerun_data.context_info.timezone == "Europe/Berlin"
+        assert rerun_data.context_info.locale == "de-DE"
+        assert rerun_data.query_string == "test_query"
+        assert rerun_data.page_script_hash == "test_hash"
+        assert rerun_data.is_auto_rerun is False
+
+    def test_context_info_preserved_in_client_state_on_shutdown(self):
+        """Test that context_info is preserved in client_state during SHUTDOWN event."""
+        session = _create_test_session()
+
+        # Set up initial context info in client state
+        session._client_state.context_info.timezone = "America/New_York"
+        session._client_state.context_info.locale = "en-US"
+        session._client_state.query_string = "initial_query"
+        session._client_state.page_script_hash = "initial_hash"
+
+        # Create a mock ScriptRunner and simulate SHUTDOWN event
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        # Create client state with context info (as would be sent in SHUTDOWN event)
+        shutdown_client_state = ClientState()
+        shutdown_client_state.context_info.timezone = "Europe/London"
+        shutdown_client_state.context_info.locale = "en-GB"
+        shutdown_client_state.query_string = "shutdown_query"
+        shutdown_client_state.page_script_hash = "shutdown_hash"
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=shutdown_client_state,
+            )
+
+        # Verify that the client state was updated with the shutdown data
+        assert session._client_state.context_info.timezone == "Europe/London"
+        assert session._client_state.context_info.locale == "en-GB"
+        assert session._client_state.query_string == "shutdown_query"
+        assert session._client_state.page_script_hash == "shutdown_hash"
+
+
+def _mock_get_options_for_section(
+    overrides: dict[str, Any] | None = None,
+) -> Callable[..., Any]:
     if not overrides:
         overrides = {}
+
+    sidebar_theme_opts = {
+        "backgroundColor": "white",
+        "baseRadius": "1.2rem",
+        "buttonRadius": "medium",
+        "borderColor": "#ff0000",
+        "dataframeBorderColor": "#280f63",
+        "codeFont": "Monaspace Argon",
+        "codeFontSize": "12px",
+        "codeFontWeight": 500,
+        "font": "Inter",
+        "headingFont": "Inter Bold",
+        "headingFontSizes": ["2.125rem", "2rem", "1.875rem"],
+        "headingFontWeights": [700, 700, 600],
+        "linkColor": "#2EC163",
+        "linkUnderline": False,
+        "primaryColor": "red",
+        "secondaryBackgroundColor": "blue",
+        "showWidgetBorder": True,
+        "textColor": "black",
+        "codeBackgroundColor": "blue",
+        "dataframeHeaderBackgroundColor": "purple",
+        "redColor": "red",
+        "orangeColor": "orange",
+        "yellowColor": "yellow",
+        "blueColor": "blue",
+        "greenColor": "green",
+        "violetColor": "violet",
+        "grayColor": "gray",
+    }
+
+    if overrides.get("sidebar") is not None:
+        for k, v in overrides.get("sidebar").items():
+            sidebar_theme_opts[k] = v
 
     theme_opts = {
         "backgroundColor": "white",
         "base": "dark",
         "baseFontSize": 14,
+        "baseFontWeight": 300,
         "baseRadius": "1.2rem",
+        "buttonRadius": "medium",
         "borderColor": "#ff0000",
+        "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
+        "codeFontSize": "12px",
+        "codeFontWeight": 300,
+        "headingFontSizes": [
+            "2.875rem",
+            "2.75rem",
+            "2rem",
+            "1.75rem",
+            "1.5rem",
+            "1.25rem",
+        ],
+        "headingFontWeights": [700, 700, 600, 600],
         "font": "Inter",
         "fontFaces": [
             {
@@ -657,19 +773,54 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
         ],
         "headingFont": "Inter Bold",
         "linkColor": "#2EC163",
+        "linkUnderline": False,
         "primaryColor": "coral",
         "secondaryBackgroundColor": "blue",
-        "showBorderAroundInputs": True,
-        "showSidebarSeparator": True,
+        "showWidgetBorder": True,
+        "showSidebarBorder": True,
         "textColor": "black",
+        "codeBackgroundColor": "blue",
+        "dataframeHeaderBackgroundColor": "purple",
+        "chartCategoricalColors": [
+            "#7fc97f",
+            "#beaed4",
+            "#fdc086",
+            "#ffff99",
+            "#386cb0",
+            "#f0027f",
+            "#bf5b17",
+            "#666666",
+        ],
+        "chartSequentialColors": [
+            "#dffde9",
+            "#c0fcd3",
+            "#9ef6bb",
+            "#7defa1",
+            "#5ce488",
+            "#3dd56d",
+            "#21c354",
+            "#09ab3b",
+            "#158237",
+            "#177233",
+        ],
+        "redColor": "#7d353b",
+        "orangeColor": "#d95a00",
+        "yellowColor": "#916e10",
+        "blueColor": "#004280",
+        "greenColor": "#177233",
+        "violetColor": "#3f3163",
+        "grayColor": "#0e1117",
     }
 
     for k, v in overrides.items():
-        theme_opts[k] = v
+        if k != "sidebar":
+            theme_opts[k] = v
 
     def get_options_for_section(section):
         if section == "theme":
             return theme_opts
+        if section == "theme.sidebar":
+            return sidebar_theme_opts
         return config.get_options_for_section(section)
 
     return get_options_for_section
@@ -873,14 +1024,20 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session = _create_test_session(event_loop)
 
         # Pretend we're calling this function from a thread with another event_loop.
-        with patch(
-            "streamlit.runtime.app_session.asyncio.get_running_loop",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=MagicMock(),
+            ),
+            pytest.raises(
+                RuntimeError,
+                match="This function must only be called on the eventloop thread "
+                "the AppSession was created on. This should never happen.",
+            ),
         ):
-            with pytest.raises(AssertionError):
-                session._handle_scriptrunner_event_on_event_loop(
-                    sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
-                )
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+            )
 
     @patch(
         "streamlit.runtime.app_session.config.get_options_for_section",
@@ -1004,6 +1161,86 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             handle_backmsg_exception.assert_not_called()
             patched_logger.warning.assert_not_called()
 
+    async def test_event_handler_raises_error_if_page_hash_none_on_script_started(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if page_script_hash is None when event is SCRIPT_STARTED.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        with pytest.raises(
+            RuntimeError,
+            match="page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STARTED,
+                page_script_hash=None,  # This is the condition we're testing
+            )
+
+    async def test_event_handler_raises_error_if_exception_none_on_compile_error(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if exception is None when event is SCRIPT_STOPPED_WITH_COMPILE_ERROR.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        with pytest.raises(
+            RuntimeError,
+            match="exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                exception=None,  # This is the condition we're testing
+            )
+
+    async def test_event_handler_raises_error_if_client_state_none_on_shutdown(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if client_state is None when event is SHUTDOWN.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        with pytest.raises(
+            RuntimeError,
+            match="client_state must be set for the SHUTDOWN event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=None,  # This is the condition we're testing
+            )
+
+    async def test_event_handler_raises_error_if_forward_msg_none_on_enqueue(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if forward_msg is None when event is ENQUEUE_FORWARD_MSG.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        with pytest.raises(
+            RuntimeError,
+            match="null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                forward_msg=None,  # This is the condition we're testing
+            )
+
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
@@ -1014,18 +1251,38 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "base": None,
                     "baseFontSize": None,
+                    "baseFontWeight": None,
                     "baseRadius": None,
+                    "buttonRadius": None,
                     "borderColor": None,
+                    "dataframeBorderColor": None,
                     "codeFont": None,
+                    "codeFontSize": None,
+                    "codeFontWeight": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "headingFontSizes": None,
+                    "headingFontWeights": None,
                     "linkColor": None,
+                    "linkUnderline": None,
                     "primaryColor": None,
                     "secondaryBackgroundColor": None,
-                    "showBorderAroundInputs": None,
-                    "showSidebarSeparator": None,
+                    "showWidgetBorder": None,
+                    "showSidebarBorder": None,
                     "textColor": None,
+                    "sidebar": None,
+                    "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
                 }
             )
         )
@@ -1037,6 +1294,57 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.HasField("custom_theme")
 
     @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_false_options(self, patched_config):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "backgroundColor": None,
+                    "base": None,
+                    "baseFontSize": None,
+                    "baseFontWeight": None,
+                    "baseRadius": None,
+                    "buttonRadius": None,
+                    "borderColor": None,
+                    "dataframeBorderColor": None,
+                    "codeFont": None,
+                    "codeFontSize": None,
+                    "codeFontWeight": None,
+                    "font": None,
+                    "fontFaces": None,
+                    "headingFont": None,
+                    "headingFontSizes": None,
+                    "headingFontWeights": None,
+                    "linkColor": None,
+                    "linkUnderline": None,
+                    "primaryColor": None,
+                    "secondaryBackgroundColor": None,
+                    "showWidgetBorder": False,
+                    "showSidebarBorder": None,
+                    "textColor": None,
+                    "sidebar": None,
+                    "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        assert new_session_msg.HasField("custom_theme")
+        assert new_session_msg.custom_theme.show_widget_border is False
+
+    @patch("streamlit.runtime.app_session.config")
     def test_can_specify_some_options(self, patched_config):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
@@ -1045,17 +1353,65 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     # test here if we can set only a few selected options.
                     "backgroundColor": None,
                     "baseRadius": None,
+                    "buttonRadius": None,
                     "baseFontSize": None,
+                    "baseFontWeight": None,
                     "borderColor": None,
+                    "dataframeBorderColor": None,
                     "codeFont": None,
+                    "codeFontSize": None,
+                    "codeFontWeight": None,
+                    "headingFontSizes": None,
+                    "headingFontWeights": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
                     "linkColor": None,
+                    "linkUnderline": None,
                     "secondaryBackgroundColor": None,
-                    "showBorderAroundInputs": None,
-                    "showSidebarSeparator": None,
+                    "showWidgetBorder": None,
+                    "showSidebarBorder": None,
                     "textColor": None,
+                    "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "sidebar": {
+                        # primaryColor not set to None
+                        "backgroundColor": None,
+                        "baseRadius": None,
+                        "buttonRadius": None,
+                        "borderColor": None,
+                        "dataframeBorderColor": None,
+                        "codeFont": None,
+                        "codeFontSize": None,
+                        "codeFontWeight": None,
+                        "font": None,
+                        "headingFont": None,
+                        "headingFontSizes": None,
+                        "headingFontWeights": None,
+                        "linkColor": None,
+                        "linkUnderline": None,
+                        "secondaryBackgroundColor": None,
+                        "showWidgetBorder": None,
+                        "textColor": None,
+                        "codeBackgroundColor": None,
+                        "dataframeHeaderBackgroundColor": None,
+                        "redColor": None,
+                        "orangeColor": None,
+                        "yellowColor": None,
+                        "blueColor": None,
+                        "greenColor": None,
+                        "violetColor": None,
+                        "grayColor": None,
+                    },
                 }
             )
         )
@@ -1078,11 +1434,81 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
+        assert not new_session_msg.custom_theme.HasField("button_radius")
         assert not new_session_msg.custom_theme.HasField("border_color")
-        assert not new_session_msg.custom_theme.HasField("show_border_around_inputs")
+        assert not new_session_msg.custom_theme.HasField("dataframe_border_color")
+        assert not new_session_msg.custom_theme.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.HasField("link_color")
+        assert not new_session_msg.custom_theme.HasField("link_underline")
         assert not new_session_msg.custom_theme.HasField("base_font_size")
-        assert not new_session_msg.custom_theme.HasField("show_sidebar_separator")
+        assert not new_session_msg.custom_theme.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.HasField("code_font_size")
+        assert not new_session_msg.custom_theme.HasField("code_font_weight")
+        assert not new_session_msg.custom_theme.HasField("show_sidebar_border")
+        assert not new_session_msg.custom_theme.HasField("code_background_color")
+        assert not new_session_msg.custom_theme.HasField(
+            "dataframe_header_background_color"
+        )
+        assert not new_session_msg.custom_theme.HasField("red_color")
+        assert not new_session_msg.custom_theme.HasField("orange_color")
+        assert not new_session_msg.custom_theme.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.HasField("blue_color")
+        assert not new_session_msg.custom_theme.HasField("green_color")
+        assert not new_session_msg.custom_theme.HasField("violet_color")
+        assert not new_session_msg.custom_theme.HasField("gray_color")
+
+        # Fields that are marked as repeated in proto:
+        assert not new_session_msg.custom_theme.heading_font_sizes
+        assert not new_session_msg.custom_theme.heading_font_weights
+        assert not new_session_msg.custom_theme.chart_categorical_colors
+        assert not new_session_msg.custom_theme.chart_sequential_colors
+
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.sidebar,
+            "theme.sidebar",
+        )
+
+        assert new_session_msg.custom_theme.HasField("sidebar")
+        assert new_session_msg.custom_theme.sidebar.primary_color == "red"
+        assert new_session_msg.custom_theme.sidebar.background_color == ""
+        assert new_session_msg.custom_theme.sidebar.heading_font == ""
+        assert new_session_msg.custom_theme.sidebar.code_font == ""
+        assert new_session_msg.custom_theme.sidebar.body_font == ""
+
+        # Fields that are marked as optional in proto:
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("button_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_border_color"
+        )
+        assert not new_session_msg.custom_theme.sidebar.HasField("show_widget_border")
+        assert not new_session_msg.custom_theme.sidebar.HasField("link_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("link_underline")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("code_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("code_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "code_background_color"
+        )
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_header_background_color"
+        )
+        assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("blue_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("green_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("violet_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("gray_color")
+
+        # Fields that are marked as repeated in proto:
+        assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
+        assert not new_session_msg.custom_theme.sidebar.heading_font_weights
+        assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -1101,16 +1527,74 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.text_color == "black"
         assert new_session_msg.custom_theme.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.base_radius == "1.2rem"
+        assert new_session_msg.custom_theme.button_radius == "medium"
         assert new_session_msg.custom_theme.border_color == "#ff0000"
-        assert new_session_msg.custom_theme.show_border_around_inputs is True
+        assert new_session_msg.custom_theme.dataframe_border_color == "#280f63"
+        assert new_session_msg.custom_theme.show_widget_border is True
         assert new_session_msg.custom_theme.link_color == "#2EC163"
+        assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
-        assert new_session_msg.custom_theme.show_sidebar_separator is True
+        assert new_session_msg.custom_theme.base_font_weight == 300
+        assert new_session_msg.custom_theme.code_font_size == "12px"
+        assert new_session_msg.custom_theme.code_font_weight == 300
+        assert new_session_msg.custom_theme.show_sidebar_border is True
+        assert new_session_msg.custom_theme.code_background_color == "blue"
+        assert (
+            new_session_msg.custom_theme.dataframe_header_background_color == "purple"
+        )
+        assert new_session_msg.custom_theme.red_color == "#7d353b"
+        assert new_session_msg.custom_theme.orange_color == "#d95a00"
+        assert new_session_msg.custom_theme.yellow_color == "#916e10"
+        assert new_session_msg.custom_theme.blue_color == "#004280"
+        assert new_session_msg.custom_theme.green_color == "#177233"
+        assert new_session_msg.custom_theme.violet_color == "#3f3163"
+        assert new_session_msg.custom_theme.gray_color == "#0e1117"
+        assert new_session_msg.custom_theme.heading_font_sizes == [
+            "2.875rem",
+            "2.75rem",
+            "2rem",
+            "1.75rem",
+            "1.5rem",
+            "1.25rem",
+        ]
+        # app_session sets the default value (600) for the missing values, so even with only
+        # 4 values set in the config, we should have 6 values
+        assert new_session_msg.custom_theme.heading_font_weights == [
+            700,
+            700,
+            600,
+            600,
+            600,
+            600,
+        ]
+
         # The value from `theme.font` will be placed in body_font since
         # font uses a deprecated enum:
         assert new_session_msg.custom_theme.heading_font == "Inter Bold"
         assert new_session_msg.custom_theme.body_font == "Inter"
         assert new_session_msg.custom_theme.code_font == "Monaspace Argon"
+        assert list(new_session_msg.custom_theme.chart_categorical_colors) == [
+            "#7fc97f",
+            "#beaed4",
+            "#fdc086",
+            "#ffff99",
+            "#386cb0",
+            "#f0027f",
+            "#bf5b17",
+            "#666666",
+        ]
+        assert list(new_session_msg.custom_theme.chart_sequential_colors) == [
+            "#dffde9",
+            "#c0fcd3",
+            "#9ef6bb",
+            "#7defa1",
+            "#5ce488",
+            "#3dd56d",
+            "#21c354",
+            "#09ab3b",
+            "#158237",
+            "#177233",
+        ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(
                 family="Inter Bold",
@@ -1119,14 +1603,68 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             FontFace(
                 family="Inter",
                 url="https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                weight=400,
+                weight_range="400",
             ),
             FontFace(
                 family="Monaspace Argon",
                 url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                weight=400,
+                weight_range="400",
             ),
         ]
+
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.sidebar,
+            "theme.sidebar",
+        )
+        assert new_session_msg.custom_theme.HasField("sidebar")
+        assert new_session_msg.custom_theme.sidebar.primary_color == "red"
+        assert new_session_msg.custom_theme.sidebar.background_color == "white"
+        assert new_session_msg.custom_theme.sidebar.text_color == "black"
+        assert new_session_msg.custom_theme.sidebar.secondary_background_color == "blue"
+        assert new_session_msg.custom_theme.sidebar.base_radius == "1.2rem"
+        assert new_session_msg.custom_theme.sidebar.button_radius == "medium"
+        assert new_session_msg.custom_theme.sidebar.border_color == "#ff0000"
+        assert new_session_msg.custom_theme.sidebar.dataframe_border_color == "#280f63"
+        assert new_session_msg.custom_theme.sidebar.show_widget_border is True
+        assert new_session_msg.custom_theme.sidebar.link_color == "#2EC163"
+        assert new_session_msg.custom_theme.sidebar.link_underline is False
+        assert new_session_msg.custom_theme.sidebar.code_font_size == "12px"
+        assert new_session_msg.custom_theme.sidebar.code_font_weight == 500
+        assert new_session_msg.custom_theme.sidebar.heading_font == "Inter Bold"
+        assert new_session_msg.custom_theme.sidebar.heading_font_sizes == [
+            "2.125rem",
+            "2rem",
+            "1.875rem",
+        ]
+        assert new_session_msg.custom_theme.sidebar.heading_font_weights == [
+            700,
+            700,
+            600,
+            600,  # default value
+            600,  # default value
+            600,  # default value
+        ]
+        assert new_session_msg.custom_theme.sidebar.body_font == "Inter"
+        assert new_session_msg.custom_theme.sidebar.code_font == "Monaspace Argon"
+        assert new_session_msg.custom_theme.sidebar.code_background_color == "blue"
+        assert (
+            new_session_msg.custom_theme.sidebar.dataframe_header_background_color
+            == "purple"
+        )
+        assert new_session_msg.custom_theme.sidebar.red_color == "red"
+        assert new_session_msg.custom_theme.sidebar.orange_color == "orange"
+        assert new_session_msg.custom_theme.sidebar.yellow_color == "yellow"
+        assert new_session_msg.custom_theme.sidebar.blue_color == "blue"
+        assert new_session_msg.custom_theme.sidebar.green_color == "green"
+        assert new_session_msg.custom_theme.sidebar.violet_color == "violet"
+        assert new_session_msg.custom_theme.sidebar.gray_color == "gray"
+
+        # Default values for unsupported fields in sidebar
+        assert new_session_msg.custom_theme.sidebar.base == 0
+        assert not new_session_msg.custom_theme.sidebar.font_faces
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
 
     @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
@@ -1139,9 +1677,95 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         new_session_msg = msg.new_session
         app_session._populate_theme_msg(new_session_msg.custom_theme)
 
-        patched_logger.warning.assert_called_once_with(
-            '"blah" is an invalid value for theme.base.'
-            " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
+        patched_logger.warning.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the body_font field
+        assert new_session_msg.custom_theme.body_font == "Inter"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="font",
+                source_url="https://fonts.googleapis.com/css2?family=Inter&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_code_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "codeFont": "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the code_font field
+        assert new_session_msg.custom_theme.code_font == "Tagesschrift"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="codeFont",
+                source_url="https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_heading_font_config(
+        self, patched_config
+    ):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {"headingFont": "playwrite-cc-za:https://use.typekit.net/eor5wum.css"}
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the heading_font field
+        assert new_session_msg.custom_theme.heading_font == "playwrite-cc-za"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="headingFont",
+                source_url="https://use.typekit.net/eor5wum.css",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_raises_exception_if_source_contains_multiple_fonts(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&family=Inter+Bold&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        with pytest.raises(StreamlitAPIException) as ctx:
+            app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        assert (
+            "The source URL specified in the font property of config.toml contains multiple fonts."
+            in str(ctx.value)
         )
 
 

@@ -32,10 +32,10 @@ import {
  * A column type for read-only cells that contain JSON strings or JSON-compatible objects.
  */
 function JsonColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: JsonCell = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
-    contentAlignment: props.contentAlignment,
+    contentAlign: props.contentAlignment,
     readonly: true,
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
@@ -44,13 +44,15 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       kind: "json-cell",
       value: "",
     },
-  } as JsonCell
+  }
 
   return {
     ...props,
     kind: "json",
+    typeIcon: ":material/code_blocks:",
     sortMode: "default",
     isEditable: false, // Json columns are read-only.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       try {
         const displayValue = notNullOrUndefined(data)
@@ -70,6 +72,7 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       } catch (error) {
         return getErrorCell(
           toSafeString(data),
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `The value cannot be interpreted as a JSON string. Error: ${error}`
         )
       }

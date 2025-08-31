@@ -11,13 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Literal
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 import pydeck as pdk
 from playwright.sync_api import Locator, Page, Position, expect
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from streamlit.elements.deck_gl_json_chart import PydeckState
+    from streamlit.runtime.state.common import WidgetCallback
 
 H3_HEX_DATA = [
     {"hex": "88283082b9fffff", "count": 10},
@@ -30,8 +37,8 @@ df = pd.DataFrame(H3_HEX_DATA)
 def get_pydeck_chart(
     key: str,
     selection_mode: Literal["single-object", "multi-object"],
-    on_select="rerun",
-):
+    on_select: WidgetCallback | None = None,
+) -> PydeckState:
     return st.pydeck_chart(
         pdk.Deck(
             map_style="mapbox://styles/mapbox/outdoors-v12",
@@ -57,12 +64,12 @@ def get_pydeck_chart(
         ),
         use_container_width=True,
         key=key,
-        on_select=on_select,
+        on_select=on_select or "rerun",
         selection_mode=selection_mode,
     )
 
 
-def wait_for_chart(app: Page):
+def wait_for_chart(app: Page) -> None:
     # The pydeck chart takes a while to load so check that
     # it gets attached with an increased timeout.
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
@@ -74,7 +81,7 @@ def wait_for_chart(app: Page):
     app.wait_for_timeout(10000)
 
 
-def get_click_handling_div(app: Page, nth: int):
+def get_click_handling_div(app: Page, nth: int) -> Locator:
     # Find canvas with class name "mapboxgl-canvas"
     expect(app.locator(".mapboxgl-canvas").nth(nth)).to_be_visible()
     click_handling_div = app.locator("#view-default-view").nth(nth)
@@ -82,7 +89,7 @@ def get_click_handling_div(app: Page, nth: int):
     return click_handling_div
 
 
-def click_point(click_handling_div: Locator, coords: Position):
+def click_point(click_handling_div: Locator, coords: Position) -> None:
     """Helper function to click on a point."""
     # Use force=True since it seems like another div sometimes intercepts events
     # in CI, causing the click to fail

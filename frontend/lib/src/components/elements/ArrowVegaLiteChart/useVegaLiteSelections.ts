@@ -16,12 +16,12 @@
 
 import { useCallback } from "react"
 
-import { SignalValue, View as VegaView } from "vega"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
+import { SignalValue, View as VegaView } from "vega"
 
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { debounce, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 
@@ -36,6 +36,7 @@ const DEBOUNCE_TIME_MS = 150
  * in the Python code.
  */
 export interface VegaLiteState {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   selection: Record<string, any>
 }
 
@@ -77,11 +78,11 @@ export const useVegaLiteSelections = (
             const viewState = vegaView.getState({
               // There are also `signals` data, but I believe its
               // not relevant for restoring the selection state.
-              data: (name?: string, _operator?: any) => {
+              data: (nameArg?: string, _operator?: unknown) => {
                 // Vega lite stores the selection state in a <param name>_store parameter
                 // under `data` that can be retrieved via the getState method.
                 // https://vega.github.io/vega/docs/api/view/#view_getState
-                return selectionMode.some(mode => `${mode}_store` === name)
+                return selectionMode.some(mode => `${mode}_store` === nameArg)
               },
               // Don't include subcontext data since it will lead to exceptions
               // when loading the state.

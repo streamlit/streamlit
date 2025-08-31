@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_sliders).to_have_count(22)
+    expect(st_sliders).to_have_count(24)
 
     assert_snapshot(st_sliders.nth(4), name="st_slider-regular_with_format")
     assert_snapshot(st_sliders.nth(7), name="st_slider-disabled")
@@ -43,6 +43,8 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(19), name="st_slider-overlap_near_right")
     assert_snapshot(st_sliders.nth(20), name="st_slider-overlap_near_center")
     assert_snapshot(st_sliders.nth(21), name="st_slider-markdown_label")
+    assert_snapshot(st_sliders.nth(22), name="st_slider-width_300px")
+    assert_snapshot(st_sliders.nth(23), name="st_slider-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -59,10 +61,14 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     first_slider_in_expander.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
+    wait_for_app_run(app)
 
     second_slider_in_expander.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
+    wait_for_app_run(app)
 
     expect(app.get_by_text("Value B: 17500")).to_have_count(1)
     expect(app.get_by_text("Range Value B: (17500, 25000)")).to_have_count(1)
@@ -131,9 +137,8 @@ def test_slider_calls_callback(app: Page):
     expect(app.get_by_text("Value 8: 25")).to_be_visible()
     expect(app.get_by_text("Slider changed: False")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(11)
-    slider.hover()
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     wait_for_app_run(app)
     expect(app.get_by_text("Value 8: 50")).to_be_visible()
@@ -143,9 +148,8 @@ def test_slider_calls_callback(app: Page):
 def test_slider_works_in_forms(app: Page):
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(12)
-    slider.hover()
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
@@ -161,9 +165,8 @@ def test_slider_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("slider-in-fragment selection: 25")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(13)
-    slider.hover()
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     wait_for_app_run(app)
     expect(app.get_by_text("slider-in-fragment selection: 50")).to_be_visible()
@@ -186,6 +189,22 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stSlider")
+
+
+def test_no_rerun_on_drag(app: Page):
+    """Test that moving the slider does not trigger a rerun."""
+    runs_text = app.get_by_text("Runs: 1")
+    expect(runs_text).to_be_visible()
+
+    slider = app.get_by_test_id("stSlider").nth(11)
+    slider.hover()
+    # click in middle and drag
+    app.mouse.down()
+    app.mouse.move(0, 0)
+    wait_for_app_run(app)
+
+    # The number of runs should not have changed
+    expect(runs_text).to_be_visible()
 
 
 def test_custom_css_class_via_key(app: Page):

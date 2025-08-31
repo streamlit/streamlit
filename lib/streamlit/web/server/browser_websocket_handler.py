@@ -113,6 +113,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             del cookie_value["is_logged_in"]
             user_info.update(cookie_value)
 
+        else:
+            _LOGGER.error(
+                "Origin mismatch, the origin of websocket request is not the "
+                "same origin of redirect_uri in secrets.toml",
+            )
+
         return user_info
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
@@ -148,7 +154,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Awaitable[None] | None:
+    def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
         user_info: dict[str, str | bool | None] = {}
 
         existing_session_id = None
@@ -173,6 +179,21 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             # Just let existing_session_id=None if we run into any error while trying to
             # extract it from the Sec-Websocket-Protocol header.
             pass
+
+        # Map in any user-configured headers. Note that these override anything coming
+        # from the auth cookie.
+        mapping_config = config.get_option("server.trustedUserHeaders")
+        for header_name, user_info_key in mapping_config.items():
+            header_values = self.request.headers.get_list(header_name)
+            if header_values:
+                # If there's at least one value, use the first value.
+                # NOTE: Tornado doesn't document the order of these values, so it's
+                # possible this won't be the first value that was received by the
+                # server.
+                user_info[user_info_key] = header_values[0]
+            else:
+                # Default to explicit None.
+                user_info[user_info_key] = None
 
         self._session_id = self._runtime.connect_session(
             client=self,
@@ -207,7 +228,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if isinstance(payload, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
+                raise TypeError(  # noqa: TRY301
                     "WebSocket received an unexpected `str` message. "
                     "(We expect `bytes` only.)"
                 )

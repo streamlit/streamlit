@@ -23,8 +23,8 @@ import {
   SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { EmotionTheme, toExportedTheme } from "~lib/theme"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -42,6 +42,7 @@ type ReadyMessage = {
 }
 type ComponentValueMessage = {
   /* the value sent from the custom component can be anything */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
   dataType: ValueType
 }
@@ -64,10 +65,12 @@ export interface IframeMessageHandlerProps {
 }
 
 export interface Args {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [name: string]: any
 }
 export interface DataframeArg {
   key: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
 }
 
@@ -112,6 +115,7 @@ export function createIframeMessageHandler(
     const isReady = readyCheck()
 
     switch (type) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
@@ -132,6 +136,7 @@ export function createIframeMessageHandler(
         break
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!isReady) {
           LOG.warn(
@@ -149,6 +154,7 @@ export function createIframeMessageHandler(
         }
         break
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_FRAME_HEIGHT:
         if (!isReady) {
           LOG.warn(
@@ -283,6 +289,7 @@ export function sendRenderMessage(
  * @returns undefined
  */
 function handleSetComponentValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any, // we do not know what data the custom component is sending us, so we use 'any' here
   dataType: ValueType,
   source: Source,
@@ -309,9 +316,12 @@ function handleSetComponentValue(
 
 /** Return the property with the given name, if it exists. */
 function tryGetValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   obj: any,
   name: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   defaultValue: any = undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
-  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
+  return Object.hasOwn(obj, name) ? obj[name] : defaultValue
 }

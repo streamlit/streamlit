@@ -21,14 +21,12 @@ import {
   convertRemToPx,
   EmotionTheme,
   getBlue80,
-  getCategoricalColorsArray,
   getDecreasingRed,
   getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
   getIncreasingGreen,
-  getSequentialColorsArray,
 } from "~lib/theme"
 import { ensureError } from "~lib/util/ErrorHandling"
 
@@ -37,9 +35,10 @@ const LOG = getLogger("PlotlyChart:CustomTheme")
  * This applies general layout changes to things such as x axis,
  * y axis, legends, titles, grid changes, background, etc.
  * @param layout - spec.layout.template.layout
- * @param theme - Theme from useTheme()
+ * @param theme - Theme from useEmotionTheme()
  */
 export function applyStreamlitThemeTemplateLayout(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   layout: any,
   theme: EmotionTheme
 ): void {
@@ -50,6 +49,7 @@ export function applyStreamlitThemeTemplateLayout(
       color: getGray70(theme),
       family: genericFonts.bodyFont,
       size: convertRemToPx(fontSizes.twoSm),
+      weight: theme.fontWeights.normal,
     },
     title: {
       color: colors.headingColor,
@@ -236,7 +236,7 @@ function replaceCategoricalColors(
   const CATEGORY_9 = "#000010"
 
   if (elementTheme === "streamlit") {
-    const categoryColors = getCategoricalColorsArray(theme)
+    const categoryColors = theme.colors.chartCategoricalColors
     spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
     spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
     spec = spec.replaceAll(CATEGORY_2, categoryColors[2])
@@ -281,7 +281,7 @@ function replaceSequentialColors(
   const SEQUENTIAL_9 = "#000020"
 
   if (elementTheme === "streamlit") {
-    const sequentialColors = getSequentialColorsArray(theme)
+    const sequentialColors = theme.colors.chartSequentialColors
     spec = spec.replaceAll(SEQUENTIAL_0, sequentialColors[0])
     spec = spec.replaceAll(SEQUENTIAL_1, sequentialColors[1])
     spec = spec.replaceAll(SEQUENTIAL_2, sequentialColors[2])
@@ -404,6 +404,7 @@ export function replaceTemporaryColors(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
@@ -421,12 +422,14 @@ export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
 /**
  * Apply minimum changes to graph to fit streamlit
  * @param layout - spec.layout
- * @param theme - theme from useTheme()
+ * @param theme - theme from useEmotionTheme()
  * @returns modified spec.layout
  */
 export function layoutWithThemeDefaults(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   layout: any,
   theme: EmotionTheme
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
   const { colors, genericFonts } = theme
 

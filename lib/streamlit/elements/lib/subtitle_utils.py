@@ -104,9 +104,7 @@ def _srt_to_vtt(srt_data: str | bytes) -> bytes:
     # Add WebVTT file header
     vtt_content = "WEBVTT\n\n" + vtt_data
     # Convert the vtt content to bytes
-    vtt_content = vtt_content.strip().encode("utf-8")
-
-    return vtt_content
+    return vtt_content.strip().encode("utf-8")
 
 
 def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
@@ -123,14 +121,14 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
         with open(data_or_path, "rb") as file:
             content = file.read()
         return _srt_to_vtt(content) if file_extension == ".srt" else content
-    elif isinstance(data_or_path, Path):
-        raise ValueError(f"File {data_or_path} does not exist.")
+    if isinstance(data_or_path, Path):
+        raise ValueError(f"File {data_or_path} does not exist.")  # noqa: TRY004
 
     content_string = data_or_path.strip()
 
     if content_string.startswith("WEBVTT") or content_string == "":
         return content_string.encode("utf-8")
-    elif _is_srt(content_string):
+    if _is_srt(content_string):
         return _srt_to_vtt(content_string)
     raise ValueError("The provided string neither matches valid VTT nor SRT format.")
 
@@ -173,6 +171,5 @@ def process_subtitle_data(
         )
         caching.save_media_data(subtitle_data, "text/vtt", coordinates)
         return file_url
-    else:
-        # When running in "raw mode", we can't access the MediaFileManager.
-        return ""
+    # When running in "raw mode", we can't access the MediaFileManager.
+    return ""

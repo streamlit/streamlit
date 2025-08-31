@@ -10,6 +10,11 @@ updates:
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
 
+    # Use cooldown to avoid updating dependencies too frequently
+    # and minimize risk of supply chain attacks.
+    cooldown:
+      default-days: 5
+
     labels:
       - "change:chore"
       - "impact:internal"
@@ -38,84 +43,86 @@ updates:
       - dependency-name: "react-dom"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]
-      - dependency-name: "remark-gfm"
-        # Breaks our current markdown rendering logic.
-        versions: [">=4.0.0"]
-      - dependency-name: "remark-math"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=6.0.0"]
-      - dependency-name: "remark-emoji"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=3.1.2"]
-      - dependency-name: "rehype-raw"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=7.0.0"]
-      - dependency-name: "rehype-katex"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=7.0.0"]
-      - dependency-name: "react-markdown"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=9.0.0"]
-      - dependency-name: "@vitejs/plugin-react-swc"
-        # Breaks our build pipeline, needs more investigation
-        versions: [">=3.8.0"]
-      - dependency-name: "eslint"
-        # It will take a bit more work to get this updated
-        versions: [">=9.0.0"]
-      - dependency-name: "eslint-plugin-react-hooks"
-        # Requires eslint update
-        versions: [">=5.0.0"]
-      - dependency-name: "@typescript-eslint/parser"
-        # Requires eslint update
-        versions: [">=8.0.0"]
-      - dependency-name: "@typescript-eslint/eslint-plugin"
-        # It will take a bit more work to get this updated
-        # since it requires updates for other eslint dependencies as well
-        versions: [">=8.0.0"]
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "prettier"
-        # Breaks our build process, needs more investigation
-        versions: [">=3.0.0"]
-      - dependency-name: "eslint-plugin-prettier"
-        # Breaks our build process, needs more investigation
-        versions: [">=5.0.0"]
-      - dependency-name: "@vitejs/plugin-react-swc"
-        # Breaks our build process, needs more investigation
-        versions: [">=3.7.1"]
-      - dependency-name: "@swc/plugin-emotion"
-        # Breaks our build process, needs more investigation
-        versions: [">=4.0.0"]
-      - dependency-name: "immer"
-        # Breaks our build process, needs more investigation
-        versions: [">=10.0.0"]
-      - dependency-name: "eslint-plugin-react-compiler"
-        # Still in beta and gets very frequent updates.
       - dependency-name: "sass"
         # Breaks our build process, needs more investigation
         versions: [">=1.80.0"]
-      - dependency-name: "@testing-library/react"
-        # Breaks our build process, needs more investigation
-        versions: [">=15.0.0"]
-      - dependency-name: "typescript"
-        # Requires bigger updates to our types used in tests.
-        versions: [">=5.8.0"]
 
-  # Keep Pipfile up to date
+    groups:
+      deck-gl:
+        patterns:
+          - "@deck.gl/*"
+          - "deck.gl"
+          - "@loaders.gl/*"
+          - "mapbox-gl"
+      vega:
+        patterns:
+          - "vega"
+          - "vega-*"
+      glide-data-grid:
+        patterns:
+          - "@glideapps/glide-data-grid*"
+      markdown-processing:
+        patterns:
+          - "remark-*"
+          - "rehype-*"
+          - "react-markdown"
+          - "unified"
+      eslint:
+        patterns:
+          - "*eslint*"
+      emotion:
+        patterns:
+          - "*emotion*"
+      vitest:
+        patterns:
+          - "*vitest*"
+      vite:
+        patterns:
+          - "vite"
+          - "vite-*"
+          - "@vitejs/*"
+          # Due to the coupling between vite plugins and underlying swc
+          # versions, it makes sense to keep these grouped together
+          - "@swc/*"
+
+  # Keep python dependencies up to date
   - package-ecosystem: "pip"
     directory: "/lib"
     schedule:
       interval: "daily"
-    # Pause Dependabot updates. Security updates are unaffected
-    open-pull-requests-limit: 0
+    # Allow a limited number of update PRs at a time
+    # to keep the number of parallel dependency updates manageable.
+    open-pull-requests-limit: 3
+
+    # Use cooldown to avoid updating dependencies too frequently
+    # and minimize risk of supply chain attacks.
+    cooldown:
+      default-days: 5
 
     labels:
       - "change:chore"
       - "impact:internal"
+
+    ignore:
+      - dependency-name: "bokeh"
+        # We only support bokeh 2.4.3
+        versions: [">=2.4.3"]
+      - dependency-name: "langchain"
+        # Newer langchain version conflict with our test setup
+        # see: https://github.com/streamlit/streamlit/pull/10227
+        versions: [">=0.3.21"]
+      - dependency-name: "langchain-community"
+        versions: [">=0.3.14"]
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+
+    labels:
+      - "change:chore"
+      - "impact:internal"

@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback } from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
-import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import {
   BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 // Delimiter between cells
@@ -42,6 +42,7 @@ const CSV_SPECIAL_CHARS_REGEX = new RegExp(
 )
 const LOG = getLogger("useDataExporter")
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function toCsvRow(rowValues: any[]): string {
   return (
     rowValues.map(cell => escapeValue(cell)).join(CSV_DELIMITER) +
@@ -54,6 +55,7 @@ export function toCsvRow(rowValues: any[]): string {
  *
  * Makes sure that the value is a string, and special characters are escaped correctly.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function escapeValue(value: any): string {
   if (isNullOrUndefined(value)) {
     return ""
@@ -107,6 +109,7 @@ async function writeCsv(
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const rowData: any[] = []
     columns.forEach((column: BaseColumn, col: number, _map) => {
       rowData.push(column.getCellValue(getCellContent([col, row])))
@@ -132,7 +135,7 @@ function useDataExporter(
   numRows: number,
   enforceDownloadInNewTab: boolean
 ): DataExporterReturn {
-  const exportToCsv = React.useCallback(async () => {
+  const exportToCsv = useCallback(async () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
     const suggestedName = `${timestamp}_export.csv`
     try {
@@ -168,7 +171,7 @@ function useDataExporter(
         let csvContent = ""
 
         const inMemoryWriter = new WritableStream({
-          write: async chunk => {
+          write: chunk => {
             csvContent += new TextDecoder("utf-8").decode(chunk)
           },
           close: async () => {},
@@ -199,13 +202,14 @@ function useDataExporter(
         link.click()
         document.body.removeChild(link) // Clean up
         URL.revokeObjectURL(url) // Free up memory
-      } catch (error) {
-        LOG.error("Failed to export data as CSV", error)
+      } catch (e) {
+        LOG.error("Failed to export data as CSV", e)
       }
     }
   }, [columns, numRows, getCellContent, enforceDownloadInNewTab])
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     exportToCsv,
   }
 }

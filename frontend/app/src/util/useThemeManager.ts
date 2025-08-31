@@ -31,6 +31,7 @@ import {
 } from "@streamlit/lib"
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
+export type FontSources = Record<string, string>
 export interface ThemeManager {
   activeTheme: ThemeConfig
   availableThemes: ThemeConfig[]
@@ -39,10 +40,17 @@ export interface ThemeManager {
   setImportedTheme: (themeInfo: ICustomThemeConfig) => void
 }
 
-export function useThemeManager(): [ThemeManager, object[]] {
+export function useThemeManager(): [
+  ThemeManager,
+  object[],
+  FontSources | null,
+] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<object[]>([])
+  const [fontFaces, setFontFaces] = useState<object[]>(
+    defaultTheme.themeInput?.fontFaces ?? []
+  )
+  const [fontSources, setFontSources] = useState<FontSources | null>(null)
   const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>(() => [
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -74,7 +82,7 @@ export function useThemeManager(): [ThemeManager, object[]] {
       updateTheme(getHostSpecifiedTheme())
     }
     const constantThemes = availableThemes.filter(
-      theme => theme.name !== AUTO_THEME_NAME
+      currTheme => currTheme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }, [theme.name, availableThemes, updateTheme])
@@ -86,6 +94,25 @@ export function useThemeManager(): [ThemeManager, object[]] {
       if (themeInfo.fontFaces) {
         setFontFaces(themeInfo.fontFaces as object[])
       }
+
+      // Collect and process font sources from both main theme and sidebar theme
+      const allFontSources = [
+        ...(themeInfo.fontSources || []),
+        ...(themeInfo.sidebar?.fontSources || []),
+      ]
+
+      const newFontSources: FontSources = {}
+      allFontSources.forEach(fontSource => {
+        // Should never be the case that configName or sourceUrl is undefined
+        if (fontSource.sourceUrl && fontSource.configName) {
+          newFontSources[fontSource.configName] = fontSource.sourceUrl
+        }
+      })
+
+      // Set valid font sources if there are any
+      setFontSources(
+        Object.keys(newFontSources).length > 0 ? newFontSources : null
+      )
 
       const themeConfigProto = new CustomThemeConfig(themeInfo)
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
@@ -115,5 +142,6 @@ export function useThemeManager(): [ThemeManager, object[]] {
       setImportedTheme,
     },
     fontFaces,
+    fontSources,
   ]
 }

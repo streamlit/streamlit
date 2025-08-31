@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { BlockPropsWithoutWidth as BlockPropsWithoutWidthT } from "./Block"
+import {
+  BlockPropsWithoutWidth as BlockPropsWithoutWidthT,
+  ContainerContentsWrapper,
+  VerticalBlock,
+} from "./Block"
 
 export type BlockPropsWithoutWidth = BlockPropsWithoutWidthT
-export { default } from "./Block"
+export { ContainerContentsWrapper, VerticalBlock }

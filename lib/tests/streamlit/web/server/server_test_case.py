@@ -57,6 +57,8 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             is_hello=False,
         )
         app = self.server._create_app()
+        # Store app settings for tests.
+        self.app_settings = app.settings
         return app
 
     def get_ws_url(self, path):

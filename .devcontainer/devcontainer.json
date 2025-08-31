@@ -1,0 +1,135 @@
+{
+  "name": "streamlit-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-python.mypy-type-checker",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "EditorConfig.EditorConfig",
+        "vitest.explorer",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          },
+          "editor.formatOnSave": true,
+          "editor.formatOnPaste": true,
+          "editor.formatOnType": true
+        },
+        "[html]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[yml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[toml]": {
+          "editor.defaultFormatter": "tamasfe.even-better-toml",
+          "editor.formatOnSave": true
+        },
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+        "search.exclude": {
+          "lib/build/**": true
+        },
+        "makefile.configureOnOpen": false,
+        "eslint.workingDirectories": [
+          {
+            "mode": "auto"
+          }
+        ],
+        "eslint.lintTask.enable": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "always"
+        },
+        "vitest.maximumConfigs": 5,
+        "mypy-type-checker.importStrategy": "fromEnvironment",
+        "mypy-type-checker.preferDaemon": false,
+        "mypy-type-checker.args": ["--config-file=mypy.ini"],
+        "ruff.nativeServer": true,
+        "ruff.organizeImports": true,
+        "ruff.fixAll": true,
+        "python.analysis.exclude": ["lib/build"],
+        "python.analysis.include": [
+          "lib/**/*",
+          "scripts/**/*",
+          "e2e_playwright/**/*"
+        ],
+        "python.analysis.extraPaths": ["./lib"],
+        "python.analysis.typeCheckingMode": "off",
+        "python.terminal.activateEnvInCurrentTerminal": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+        "cursorpyright.analysis.exclude": ["lib/build"],
+        "cursorpyright.analysis.include": [
+          "lib/**/*",
+          "scripts/**/*",
+          "e2e_playwright/**/*"
+        ],
+        "cursorpyright.analysis.extraPaths": ["./lib"],
+        "cursorpyright.analysis.typeCheckingMode": "off",
+        "cursorpyright.analysis.useTypingExtensions": true,
+        "cursorpyright.shouldImportPylanceSettings": "always",
+        "cursorpyright.analysis.logLevel": "Information",
+        "terminal.integrated.profiles.linux": {
+          "frontend-dev": {
+            "path": "bash",
+            "args": ["-c", "make frontend-dev"]
+          }
+        },
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "git.branchProtection": ["develop"]
+      }
+    }
+  },
+  "updateContentCommand": "make all-dev",
+  "postStartCommand": "make frontend-dev"
+}

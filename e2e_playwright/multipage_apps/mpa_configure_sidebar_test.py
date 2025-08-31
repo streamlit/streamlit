@@ -57,8 +57,9 @@ def test_page_links_in_main(themed_app: Page, assert_snapshot: ImageCompareFunct
     assert_snapshot(page_links.nth(2), name="page-link-disabled")
 
 
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
 def test_page_links_use_correct_margin(
-    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that page links use the correct margin."""
     page_link_container = get_element_by_key(app, "page_link_container")
@@ -110,9 +111,15 @@ def test_page_link_href(app: Page):
 def test_logo_no_sidebar(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logo renders properly with no sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
-    expect(
-        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
-    ).to_have_attribute("href", "https://www.example.com")
-    assert_snapshot(
-        app.get_by_test_id("stSidebarCollapsedControl"), name="logo-no-sidebar"
-    )
+    # Even with no sidebar, the logo should appear in the header area.
+    # The stExpandSidebarButton should NOT be visible as there's no sidebar to expand.
+    expect(app.get_by_test_id("stExpandSidebarButton")).not_to_be_visible()
+
+    header_element = app.get_by_test_id("stHeader")
+    logo_link_element = header_element.get_by_test_id("stLogoLink")
+    expect(logo_link_element).to_be_visible()
+    expect(logo_link_element).to_have_attribute("href", "https://www.example.com")
+
+    header_logo_image = logo_link_element.get_by_test_id("stHeaderLogo")
+    expect(header_logo_image).to_be_visible()
+    assert_snapshot(header_logo_image, name="header-logo-no-sidebar")

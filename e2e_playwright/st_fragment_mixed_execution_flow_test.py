@@ -17,11 +17,14 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import wait_for_app_run
 
 
-def get_uuids(app: Page):
+def get_uuids(app: Page) -> tuple[str, str]:
     expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
 
     fragment_1_text = app.get_by_test_id("stMarkdown").first.text_content()
     fragment_2_text = app.get_by_test_id("stMarkdown").last.text_content()
+
+    assert fragment_1_text is not None
+    assert fragment_2_text is not None
 
     return fragment_1_text, fragment_2_text
 

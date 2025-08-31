@@ -18,6 +18,8 @@ import { transparentize } from "color2k"
 
 import { colors } from "~lib/theme/primitives/colors"
 
+// NOTE: Updates to the color below MUST be reflected in the mockTheme.ts file
+// to ensure the mock theme used for tests is consistent with expected theme colors.
 const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
@@ -33,19 +35,34 @@ const requiredThemeColors = {
   link: colors.blue80,
 
   primary: colors.red70,
-  secondary: colors.blue70, // Used progressbar and spinners
+  secondary: colors.blue70, // Used in progress bar and spinners
   disabled: colors.gray40,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,
   gray: colors.gray60,
   darkGray: colors.gray70,
+
+  // TODO (mgbarnes): Reduce/remove these colors to avoid
+  // confusion with the default main/text/bg theme colors
   red: colors.red80,
   blue: colors.blue80,
-  green: colors.green80,
-  yellow: colors.yellow80,
+  green: colors.green90,
+
+  // Default main theme colors (light theme)
+  redColor: colors.red70,
+  orangeColor: colors.orange70,
+  yellowColor: colors.yellow80,
+  blueColor: colors.blue70,
+  greenColor: colors.green70,
+  violetColor: colors.purple70,
+  grayColor: colors.gray60,
 }
 
-interface OptionalThemeColors {
+export type RequiredThemeColors = Record<
+  keyof typeof requiredThemeColors,
+  string
+>
+export interface OptionalThemeColors {
   widgetBorderColor?: string
 }
 

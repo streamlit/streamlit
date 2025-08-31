@@ -17,19 +17,51 @@ from playwright.sync_api import FilePayload, Locator, Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     rerun_app,
-    wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    expect_markdown,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    upload_button.scroll_into_view_if_needed()
+
     with app.expect_file_chooser() as fc_info:
-        chat_input.get_by_role("button").nth(0).click()
+        upload_button.click()
         file_chooser = fc_info.value
         file_chooser.set_files(files=files)
 
     # take away hover focus of button
+    app.keyboard.press("Escape")
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+
+    wait_for_app_run(app, 500)
+
+
+def directory_upload_helper(app: Page, chat_input: Locator):
+    """Helper function for directory upload tests."""
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    upload_button.scroll_into_view_if_needed()
+
+    # For directory upload, we simulate the interaction without actual files
+    # since we don't want to snapshot test with real directory uploads
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click()
+        file_chooser = fc_info.value
+        # Set directory flag (this would be a directory selection in real usage)
+        file_chooser.set_files(files=[])  # Empty for simulation
+
+    # Take away hover focus of button
     app.keyboard.press("Escape")
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
@@ -42,14 +74,19 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(6)
+    expect(chat_input_widgets).to_have_count(10)
 
     assert_snapshot(chat_input_widgets.nth(0), name="st_chat_input-inline")
     assert_snapshot(chat_input_widgets.nth(1), name="st_chat_input-in_column_disabled")
     assert_snapshot(chat_input_widgets.nth(2), name="st_chat_input-callback")
     assert_snapshot(chat_input_widgets.nth(3), name="st_chat_input-single-file")
     assert_snapshot(chat_input_widgets.nth(4), name="st_chat_input-multiple-files")
-    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-width_300px")
+    assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_stretch")
+    # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
+    assert_snapshot(chat_input_widgets.nth(9), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-directory")
+    assert_snapshot(chat_input_widgets.nth(8), name="st_chat_input-directory_disabled")
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
@@ -61,7 +98,7 @@ def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunctio
         "tincidunt pul vinar. Nam pulvinar neque sapien, eu pellentesque metus pellentesque "
         "at. Ut et dui molestie, iaculis magna sed. This text should not appear in the input."
     )
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
 
     chat_input_area.type(long_text)
@@ -81,8 +118,7 @@ def test_embedded_app_with_bottom_chat_input(
     """Test that an embedded app with bottom chat input renders correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    app.goto(f"http://localhost:{app_port}/?embed=true")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/?embed=true")
 
     app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
@@ -132,7 +168,7 @@ def test_submit_hover_state_with_input_value(
     """Test the submit button's hover state when input value is present."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.type("Corgi")
 
@@ -143,26 +179,23 @@ def test_submit_hover_state_with_input_value(
 
 def test_enter_submits_clears_input(app: Page):
     """Test that pressing Enter submits and clears the input."""
-    markdown_output = app.get_by_test_id("stMarkdown").nth(5)
-    expect(markdown_output).to_have_text(
-        "Chat input 6 (bottom, max_chars) - value: None"
-    )
+    expect_markdown(app, "Chat input 8 (bottom, max_chars) - value: None")
 
-    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(5)
+    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(9)
     chat_input_area.type("Corgi")
     chat_input_area.press("Enter")
+    wait_for_app_run(app)
+
     expect(chat_input_area).to_have_value("")
 
-    expect(markdown_output).to_have_text(
-        "Chat input 6 (bottom, max_chars) - value: Corgi"
-    )
+    expect_markdown(app, "Chat input 8 (bottom, max_chars) - value: Corgi")
 
 
 def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that Shift+Enter creates a new line."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
@@ -188,15 +221,14 @@ def test_click_button_to_submit_clears_input(app: Page):
 
     expect(chat_input_area).to_have_value("")
 
-    markdown_output = app.get_by_test_id("stMarkdown").nth(0)
-    expect(markdown_output).to_have_text("Chat input 1 (inline) - value: Corgi")
+    expect_markdown(app, "Chat input 1 (inline) - value: Corgi")
 
 
 def test_chat_input_focus_state(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.chat_input renders the focus state correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.click()
     expect(chat_input_area).to_be_focused()
@@ -207,7 +239,7 @@ def test_grows_shrinks_input_text(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that input grows with long text and shrinks when text is deleted."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.type(
         "Lorem ipsum dolor amet, consectetur adipiscing elit. "
@@ -226,26 +258,20 @@ def test_calls_callback_on_submit(app: Page):
 
     chat_input_area.type("hello world")
     chat_input_area.press("Enter")
+    wait_for_app_run(app)
 
-    markdown_output = app.get_by_test_id("stMarkdown").nth(2)
-    expect(app.get_by_test_id("stText").nth(0)).to_have_text(
-        "chat input submitted",
-        use_inner_text=True,
-    )
-    expect(markdown_output).to_have_text(
-        "Chat input 3 (callback) - value: hello world",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "chat input submitted")
+    expect_markdown(app, "Chat input 3 (callback) - session state value: hello world")
+    expect_markdown(app, "Chat input 3 (callback) - return value: hello world")
 
     rerun_app(app)
 
     # Expect the callback to not be triggered:
-    expect(app.get_by_test_id("stText")).not_to_be_attached()
+    expect(app.get_by_text("chat input submitted")).not_to_be_attached()
     # And the session state value to be reset
-    expect(markdown_output).to_have_text(
-        "Chat input 3 (callback) - value: None",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "Chat input 3 (callback) - session state value: None")
+    # Also expect the return value to be None
+    expect_markdown(app, "Chat input 3 (callback) - return value: None")
 
 
 def test_uploads_and_deletes_single_file(
@@ -363,22 +389,115 @@ def test_file_upload_error_message_file_too_large(app: Page):
     expect(app.get_by_text("File must be 1.0MB or smaller.")).to_be_visible()
 
 
-def test_single_file_upload_button_tooltip(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
-    chat_input = app.get_by_test_id("stChatInput").nth(3)
-    chat_input.get_by_role("button").nth(0).hover()
-    expect(app.get_by_text("Upload or drag and drop a file")).to_be_visible()
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput")
+        .nth(3)
+        .get_by_test_id("stChatInputFileUploadButton")
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop a file"
+    )
 
 
-def test_multi_file_upload_button_tooltip(
+def test_multi_file_upload_button_tooltip(app: Page):
+    """Test that the multi file upload button tooltip renders correctly."""
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput")
+        .nth(4)
+        .get_by_test_id("stChatInputFileUploadButton")
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop files"
+    )
+
+
+def test_directory_upload_button_tooltip(app: Page):
+    """Test that the directory upload button tooltip renders correctly."""
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput")
+        .nth(7)
+        .get_by_test_id("stChatInputFileUploadButton")
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+
+    # Hover on the tooltip hover target
+    hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # The tooltip has a 500ms delay, so we need to wait for it to appear
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text(
+        "Upload or drag and drop a directory"
+    )
+
+
+def test_directory_upload_disabled_state(app: Page):
+    """Test that disabled directory upload input cannot be interacted with."""
+    disabled_chat_input = app.get_by_test_id("stChatInput").nth(8)
+    disabled_upload_button = disabled_chat_input.get_by_test_id(
+        "stChatInputFileUploadButton"
+    )
+
+    # Check that the upload button has disabled attribute (div elements don't use standard disabled behavior)
+    expect(disabled_upload_button).to_have_attribute("disabled", "")
+
+    # Check that the text area is also disabled
+    disabled_text_area = disabled_chat_input.locator("textarea")
+    expect(disabled_text_area).to_be_disabled()
+
+
+def test_directory_upload_button_interaction(app: Page):
+    """Test directory upload button can be clicked when enabled."""
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    expect(upload_button).to_be_enabled()
+
+    # Just verify that the button is clickable without interacting with file chooser
+    # Directory uploads require actual directory paths which we can't simulate
+    expect(upload_button).to_have_attribute("tabindex", "0")
+
+
+def test_chat_input_adjusts_for_long_placeholder(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the single file upload button tooltip renders correctly."""
-    chat_input = app.get_by_test_id("stChatInput").nth(4)
-    chat_input.get_by_role("button").nth(0).hover()
-    expect(app.get_by_text("Upload or drag and drop files")).to_be_visible()
+    """Test that chat input properly adjusts its height for long placeholder text."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
+    expect(chat_input).to_be_visible()
+
+    # Take a snapshot of the initial state with the long placeholder
+    assert_snapshot(chat_input, name="st_chat_input-long_placeholder")
+
+    # Type some text to verify the input maintains proper height
+    chat_input_area = chat_input.locator("textarea")
+    expect(chat_input_area).to_be_visible()
+    chat_input_area.type("Some input text")
+    assert_snapshot(chat_input, name="st_chat_input-long_placeholder_with_text")
+
+    # Clear the text and verify it returns to placeholder height
+    chat_input_area.fill("")
+    assert_snapshot(chat_input, name="st_chat_input-long_placeholder_after_clear")
 
 
 def test_check_top_level_class(app: Page):
@@ -389,3 +508,58 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "chat_input_3")).to_be_visible()
+
+
+def test_programmatically_set_value_in_session_state(app: Page):
+    """Test that the value is correctly set in session state."""
+    chat_input = get_element_by_key(app, "chat_input_3")
+
+    click_button(app, "Set Value")
+    expect(chat_input.locator("textarea")).to_have_value("Hello, world!")
+
+    # And the session state value should be reset to None after widget execution:
+    expect_markdown(
+        app, "Chat input 3 - session state value before execution: Hello, world!"
+    )
+    expect_markdown(app, "Chat input 3 (callback) - session state value: None")
+    # Also expect the return value to be None
+    expect_markdown(app, "Chat input 3 (callback) - return value: None")
+
+    # Submit value
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    expect(submit_button).to_be_visible()
+    submit_button.click()
+
+    wait_for_app_run(app)
+
+    expect_markdown(app, "chat input submitted")
+
+    expect_markdown(
+        app, "Chat input 3 - session state value before execution: Hello, world!"
+    )
+    expect_markdown(app, "Chat input 3 (callback) - session state value: Hello, world!")
+    expect_markdown(app, "Chat input 3 (callback) - return value: Hello, world!")
+
+
+def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that chat input height resets to compact state after submission."""
+    chat_input = app.get_by_test_id("stChatInput").nth(0)
+    chat_input_area = chat_input.locator("textarea")
+
+    assert_snapshot(chat_input, name="st_chat_input-initial_compact_state")
+
+    multiline_text = (
+        "This is line one\n"
+        "This is line two\n"
+        "This is line three\n"
+        "This is line four with some longer text to ensure expansion"
+    )
+    chat_input_area.fill(multiline_text)
+
+    assert_snapshot(chat_input, name="st_chat_input-expanded_multiline_state")
+
+    chat_input_area.press("Enter")
+    wait_for_app_run(app)
+
+    expect(chat_input_area).to_have_value("")
+    assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")

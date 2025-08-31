@@ -22,7 +22,8 @@ i2 = st.toggle("toggle 2 (False)", False)
 st.write("toggle 2 - value:", i2)
 
 i3 = st.toggle(
-    "toggle 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it "
+    "toggle 3: This is a really really really really long label that should wrap "
+    "eventually if we keep adding more text to it"
 )
 st.write("toggle 3 - value:", i3)
 
@@ -41,10 +42,12 @@ st.write("toggle 5 - value:", i5)
 i6 = st.toggle("toggle 6 (True, disabled)", value=True, disabled=True)
 st.write("toggle 6 - value:", i6)
 
-i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden")
+i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden", key="toggle_7")
 st.write("toggle 7 - value:", i7)
 
-i8 = st.toggle("toggle 8 (label collapsed)", label_visibility="collapsed")
+i8 = st.toggle(
+    "toggle 8 (label collapsed)", label_visibility="collapsed", key="toggle_8"
+)
 st.write("toggle 8 - value:", i8)
 
 with st.expander("Grouped toggles", expanded=True):
@@ -54,5 +57,10 @@ with st.expander("Grouped toggles", expanded=True):
     st.text("A non-toggle element")
 
 st.toggle(
-    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="toggle_9",
 )
+
+st.toggle("toggle with content width", width="content")
+st.toggle("toggle with stretch width", width="stretch")
+st.toggle("toggle with 150px width", width=150)

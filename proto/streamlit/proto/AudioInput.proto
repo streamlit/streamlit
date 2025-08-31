@@ -21,7 +21,6 @@ option java_outer_classname = "AudioInputProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
 
-
 message AudioInput {
   string id = 1;
   string label = 2;
@@ -30,4 +29,3 @@ message AudioInput {
   bool disabled = 5;
   LabelVisibilityMessage label_visibility = 6;
 }
-

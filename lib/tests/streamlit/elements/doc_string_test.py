@@ -15,8 +15,13 @@
 import os
 from unittest import mock
 
+import pytest
+from parameterized import parameterized
+
 import streamlit as st
+from streamlit.errors import StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 def patch_varname_getter():
@@ -41,8 +46,7 @@ class ConditionalHello:
     def __getattribute__(self, name):
         if name == "say_hello" and not self.available:
             raise self.ExceptionType(f"{name} is not accessible when x is even")
-        else:
-            return object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
 
     def say_hello(self):
         pass
@@ -57,21 +61,19 @@ class StHelpAPITest(DeltaGeneratorTestCase):
             st.help(os.chdir)
 
         el = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("os.chdir", el.name)
-        self.assertEqual("builtin_function_or_method", el.type)
-        self.assertTrue(
-            el.doc_string.startswith("Change the current working directory")
-        )
-        self.assertIn(el.value, ["posix.chdir(path)", "nt.chdir(path)"])
+        assert el.name == "os.chdir"
+        assert el.type == "builtin_function_or_method"
+        assert el.doc_string.startswith("Change the current working directory")
+        assert el.value in ["posix.chdir(path)", "nt.chdir(path)"]
 
     def test_st_help_with_available_conditional_members(self):
         """Test st.help with conditional members available"""
 
         st.help(ConditionalHello(True))
         el = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("ConditionalHello", el.type)
+        assert el.type == "ConditionalHello"
         member_names = [member.name for member in el.members]
-        self.assertIn("say_hello", member_names)
+        assert "say_hello" in member_names
 
     def test_st_help_with_unavailable_conditional_members(self):
         """Test st.help with conditional members not available
@@ -79,13 +81,50 @@ class StHelpAPITest(DeltaGeneratorTestCase):
 
         st.help(ConditionalHello(False))
         el = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("ConditionalHello", el.type)
+        assert el.type == "ConditionalHello"
         member_names = [member.name for member in el.members]
-        self.assertNotIn("say_hello", member_names)
+        assert "say_hello" not in member_names
 
     def test_st_help_with_erroneous_members(self):
         """Test st.help with conditional members not available
         via some non-AttributeError exception"""
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(
+            ValueError, match="say_hello is not accessible when x is even"
+        ):
             st.help(ConditionalHello(False, ValueError))
+
+    def test_help_width(self):
+        """Test that help() correctly handles width parameter."""
+        st.help(st, width="stretch")
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+        st.help(st, width=500)
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 500
+
+        st.help(st)
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        ["invalid", -100, 0, 100.5, None],
+    )
+    def test_help_invalid_width(self, width):
+        """Test that help() raises an error for invalid width values."""
+        with pytest.raises(StreamlitInvalidWidthError) as exc_info:
+            st.help(st, width=width)
+        assert "Invalid width" in str(exc_info.value)

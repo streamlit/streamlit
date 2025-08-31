@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-import axios from "axios"
+import axios, { AxiosHeaders } from "axios"
 import MockAdapter from "axios-mock-adapter"
 
-import { ForwardMsg } from "@streamlit/protobuf"
 import { buildHttpUri } from "@streamlit/utils"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
+  protocol: "http:",
   hostname: "streamlit.mock",
   port: "80",
   pathname: "/mock/base/path",
 } as URL
-
-function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
-  return ForwardMsg.fromObject({
-    hash,
-    metadata: { cacheable, deltaId: 0 },
-  })
-}
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -44,12 +37,18 @@ describe("DefaultStreamlitEndpoints", () => {
   beforeEach(() => {
     // Replace window.location with a mutable object that otherwise has
     // the same contents so that we can change port below.
-    // @ts-expect-error
-    delete window.location
-    window.location = { ...originalLocation }
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation },
+      writable: true,
+      configurable: true,
+    })
   })
   afterEach(() => {
-    window.location = originalLocation
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    })
   })
 
   describe("buildComponentURL()", () => {
@@ -59,6 +58,7 @@ describe("DefaultStreamlitEndpoints", () => {
       const endpoint = new DefaultStreamlitEndpoints({
         getServerUri: () => serverURI,
         csrfEnabled: true,
+        sendClientError: vi.fn(),
       })
       expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
     })
@@ -68,6 +68,7 @@ describe("DefaultStreamlitEndpoints", () => {
       const endpoint = new DefaultStreamlitEndpoints({
         getServerUri: () => serverURI,
         csrfEnabled: true,
+        sendClientError: vi.fn(),
       })
 
       // "Connect" to the server. `buildComponentURL` will succeed.
@@ -89,6 +90,7 @@ describe("DefaultStreamlitEndpoints", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
       csrfEnabled: false,
+      sendClientError: vi.fn(),
     })
 
     afterEach(() => {
@@ -117,10 +119,46 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
+  describe("buildDownloadUrl", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+      sendClientError: vi.fn(),
+    })
+
+    beforeEach(() => {
+      // Reset window.__streamlit before each test
+      window.__streamlit = undefined
+    })
+
+    it("builds URL correctly for streamlit-served media when DOWNLOAD_ASSETS_BASE_URL is not set", () => {
+      const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/media/1234567890.pdf"
+      )
+    })
+
+    it("builds URL correctly when DOWNLOAD_ASSETS_BASE_URL is set", () => {
+      window.__streamlit = {
+        DOWNLOAD_ASSETS_BASE_URL: "https://downloads.example.com/assets",
+      }
+      const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
+      expect(url).toBe(
+        "https://downloads.example.com/assets/media/1234567890.pdf"
+      )
+    })
+
+    it("passes through non-media URLs unchanged", () => {
+      const url = endpoints.buildDownloadUrl("https://example.com/file.pdf")
+      expect(url).toBe("https://example.com/file.pdf")
+    })
+  })
+
   describe("buildFileUploadURL", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
       csrfEnabled: false,
+      sendClientError: vi.fn(),
     })
 
     it("builds URL correctly for files being uploaded to the tornado server", () => {
@@ -152,6 +190,7 @@ describe("DefaultStreamlitEndpoints", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
       csrfEnabled: false,
+      sendClientError: vi.fn(),
     })
 
     const appPages = [
@@ -194,7 +233,6 @@ describe("DefaultStreamlitEndpoints", () => {
     const MOCK_FILE = new File(["file1"], "file1.txt")
 
     let axiosMock: MockAdapter
-    const spyRequest = vi.spyOn(axios, "request")
     let endpoints: DefaultStreamlitEndpoints
 
     beforeEach(() => {
@@ -202,6 +240,7 @@ describe("DefaultStreamlitEndpoints", () => {
       endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: false,
+        sendClientError: vi.fn(),
       })
     })
 
@@ -216,8 +255,8 @@ describe("DefaultStreamlitEndpoints", () => {
         )
         .reply(() => [200, 1])
 
-      const mockOnUploadProgress = (_: any): void => {}
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockOnUploadProgress = vi.fn()
+      const mockAbortController = new AbortController()
 
       await expect(
         endpoints.uploadFileUploaderFile(
@@ -225,22 +264,25 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
+
+      expect(axiosMock.history.put.length).toBe(1)
+      const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
-        method: "PUT",
-        responseType: "text",
-        data: expectedData,
-        headers: {},
-        cancelToken: mockCancelToken,
-        onUploadProgress: mockOnUploadProgress,
-      })
+      expect(actualRequestConfig.url).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+      )
+      // method is implied by history.put, but can be checked if present in config
+      // expect(actualRequestConfig.method?.toUpperCase()).toBe("PUT");
+      expect(actualRequestConfig.responseType).toBe("text")
+      expect(actualRequestConfig.data).toEqual(expectedData)
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
+      expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
     it("Uses the endpoint unchanged when given an absolute url", async () => {
@@ -248,8 +290,8 @@ describe("DefaultStreamlitEndpoints", () => {
         .onPut("http://example.com/upload_file/file_2")
         .reply(() => [200, 1])
 
-      const mockOnUploadProgress = (_: any): void => {}
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockOnUploadProgress = vi.fn()
+      const mockAbortController = new AbortController()
 
       await expect(
         endpoints.uploadFileUploaderFile(
@@ -257,22 +299,23 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
+
+      expect(axiosMock.history.put.length).toBe(1)
+      const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://example.com/upload_file/file_2",
-        method: "PUT",
-        responseType: "text",
-        data: expectedData,
-        headers: {},
-        cancelToken: mockCancelToken,
-        onUploadProgress: mockOnUploadProgress,
-      })
+      expect(actualRequestConfig.url).toBe(
+        "http://example.com/upload_file/file_2"
+      )
+      expect(actualRequestConfig.responseType).toBe("text")
+      expect(actualRequestConfig.data).toEqual(expectedData)
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
+      expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
     it("respects fileUploadClientConfig", async () => {
@@ -280,8 +323,8 @@ describe("DefaultStreamlitEndpoints", () => {
         .onPut("http://example.com/someprefix/upload_file/file_2")
         .reply(() => [200, 1])
 
-      const mockOnUploadProgress = (_: any): void => {}
-      const mockCancelToken = axios.CancelToken.source().token
+      const mockOnUploadProgress = vi.fn()
+      const mockAbortController = new AbortController()
 
       endpoints.setFileUploadClientConfig({
         prefix: "http://example.com/someprefix/",
@@ -297,31 +340,42 @@ describe("DefaultStreamlitEndpoints", () => {
           MOCK_FILE,
           "mockSessionId",
           mockOnUploadProgress,
-          mockCancelToken
+          mockAbortController.signal
         )
       ).resolves.toBeUndefined()
+
+      expect(axiosMock.history.put.length).toBe(1)
+      const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://example.com/someprefix/upload_file/file_2",
-        method: "PUT",
-        responseType: "text",
-        data: expectedData,
-        headers: {
+      expect(actualRequestConfig.url).toBe(
+        "http://example.com/someprefix/upload_file/file_2"
+      )
+      expect(actualRequestConfig.responseType).toBe("text")
+      expect(actualRequestConfig.data).toEqual(expectedData)
+      expect(actualRequestConfig.headers).toEqual(
+        new AxiosHeaders({
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/x-www-form-urlencoded",
           header1: "header1value",
           header2: "header2value",
-        },
-        cancelToken: mockCancelToken,
-        onUploadProgress: mockOnUploadProgress,
-      })
+        })
+      )
+      expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
+      expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
     it("errors on bad status", async () => {
       axiosMock
         .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [400])
+
+      const sendClientErrorToHostSpy = vi.spyOn(
+        endpoints,
+        "sendClientErrorToHost"
+      )
 
       await expect(
         endpoints.uploadFileUploaderFile(
@@ -330,12 +384,18 @@ describe("DefaultStreamlitEndpoints", () => {
           "mockSessionId"
         )
       ).rejects.toThrow("Request failed with status code 400")
+
+      expect(sendClientErrorToHostSpy).toHaveBeenCalledWith(
+        "File Uploader",
+        "Error uploading file",
+        "Request failed with status code 400",
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file"
+      )
     })
   })
 
   describe("deleteFileAtURL()", () => {
     let axiosMock: MockAdapter
-    const spyRequest = vi.spyOn(axios, "request")
     let endpoints: DefaultStreamlitEndpoints
 
     beforeEach(() => {
@@ -343,6 +403,7 @@ describe("DefaultStreamlitEndpoints", () => {
       endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: false,
+        sendClientError: vi.fn(),
       })
     })
 
@@ -364,12 +425,15 @@ describe("DefaultStreamlitEndpoints", () => {
         )
       ).resolves.toBeUndefined()
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
-        method: "DELETE",
-        headers: {},
-        data: { sessionId: "mockSessionId" },
-      })
+      expect(axiosMock.history.delete.length).toBe(1)
+      const actualRequestConfig = axiosMock.history.delete[0]
+
+      expect(actualRequestConfig.url).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+      )
+      expect(actualRequestConfig.data).toEqual(
+        JSON.stringify({ sessionId: "mockSessionId" })
+      ) // Axios stringifies DELETE body by default
     })
 
     it("respects fileUploadClientConfig", async () => {
@@ -379,72 +443,60 @@ describe("DefaultStreamlitEndpoints", () => {
 
       endpoints.setFileUploadClientConfig({
         prefix: "http://example.com/someprefix/",
-        headers: {
+        headers: new AxiosHeaders({
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/x-www-form-urlencoded",
           header1: "header1value",
           header2: "header2value",
-        },
+        }),
       })
 
       await expect(
         endpoints.deleteFileAtURL("upload_file/file_1", "mockSessionId")
       ).resolves.toBeUndefined()
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://example.com/someprefix/upload_file/file_1",
-        method: "DELETE",
-        headers: {
+      expect(axiosMock.history.delete.length).toBe(1)
+      const actualRequestConfig = axiosMock.history.delete[0]
+
+      expect(actualRequestConfig.url).toBe(
+        "http://example.com/someprefix/upload_file/file_1"
+      )
+      expect(actualRequestConfig.headers).toEqual(
+        new AxiosHeaders({
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/x-www-form-urlencoded",
           header1: "header1value",
           header2: "header2value",
-        },
-        data: { sessionId: "mockSessionId" },
-      })
-    })
-  })
-
-  describe("fetchCachedForwardMsg()", () => {
-    let axiosMock: MockAdapter
-    let endpoints: DefaultStreamlitEndpoints
-
-    beforeEach(() => {
-      axiosMock = new MockAdapter(axios)
-      endpoints = new DefaultStreamlitEndpoints({
-        getServerUri: () => MOCK_SERVER_URI,
-        csrfEnabled: false,
-      })
-    })
-
-    afterEach(() => {
-      axiosMock.restore()
-    })
-
-    it("calls the appropriate endpoint", async () => {
-      const mockForwardMsgBytes = ForwardMsg.encode(
-        createMockForwardMsg("mockHash")
-      ).finish()
-
-      axiosMock
-        .onGet(
-          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
-        )
-        .reply(() => {
-          return [200, mockForwardMsgBytes]
         })
-
-      await expect(
-        endpoints.fetchCachedForwardMsg("mockHash")
-      ).resolves.toEqual(new Uint8Array(mockForwardMsgBytes))
+      )
+      expect(actualRequestConfig.data).toEqual("sessionId=mockSessionId") // Axios stringifies DELETE body by default
     })
 
     it("errors on bad status", async () => {
       axiosMock
-        .onGet(
-          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+        .onDelete(
+          "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
         )
         .reply(() => [400])
 
+      const sendClientErrorToHostSpy = vi.spyOn(
+        endpoints,
+        "sendClientErrorToHost"
+      )
+
       await expect(
-        endpoints.fetchCachedForwardMsg("mockHash")
+        endpoints.deleteFileAtURL(
+          "/_stcore/upload_file/file_1",
+          "mockSessionId"
+        )
       ).rejects.toThrow("Request failed with status code 400")
+
+      expect(sendClientErrorToHostSpy).toHaveBeenCalledWith(
+        "File Uploader",
+        "Error deleting file",
+        "Request failed with status code 400",
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+      )
     })
   })
 
@@ -467,11 +519,12 @@ describe("DefaultStreamlitEndpoints", () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: true,
+        sendClientError: vi.fn(),
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+      void endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         headers: { "X-Xsrftoken": "mockXsrfCookie" },
@@ -484,15 +537,87 @@ describe("DefaultStreamlitEndpoints", () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: false,
+        sendClientError: vi.fn(),
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+      void endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         url,
       })
+    })
+  })
+
+  describe("checkSourceUrlResponse", () => {
+    it("sends error to host if error on response", async () => {
+      // Mock fetch for checkSourceUrlResponse - response is not ok
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+        } as Response)
+      )
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      const sendClientErrorToHostSpy = vi.spyOn(
+        endpoints,
+        "sendClientErrorToHost"
+      )
+      await endpoints.checkSourceUrlResponse(
+        url,
+        "Custom Component",
+        "mockComponent"
+      )
+
+      expect(fetch).toHaveBeenCalledWith(url)
+
+      expect(sendClientErrorToHostSpy).toHaveBeenCalledWith(
+        "Custom Component",
+        404,
+        "Not Found",
+        url,
+        "mockComponent"
+      )
+    })
+
+    it("sends error to host if fetch fails", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+
+      // Mock fetch for checkSourceUrlResponse - fetch fails
+      global.fetch = vi.fn(() => Promise.reject(new Error("mockError")))
+
+      const sendClientErrorToHostSpy = vi.spyOn(
+        endpoints,
+        "sendClientErrorToHost"
+      )
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      await endpoints.checkSourceUrlResponse(
+        url,
+        "Custom Component",
+        "mockComponent"
+      )
+
+      expect(fetch).toHaveBeenCalledWith(url)
+
+      expect(sendClientErrorToHostSpy).toHaveBeenCalledWith(
+        "Custom Component",
+        "Error fetching source",
+        "mockError",
+        url,
+        "mockComponent"
+      )
     })
   })
 })

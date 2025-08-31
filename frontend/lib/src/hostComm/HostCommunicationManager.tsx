@@ -16,8 +16,8 @@
 
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
-import { isValidOrigin } from "~lib/util/UriUtil"
 import { PresetThemeName } from "~lib/theme/types"
+import { isValidOrigin } from "~lib/util/UriUtil"
 
 import {
   AppConfig,
@@ -174,6 +174,7 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
     // Messages coming from the parent frame of a deployed Streamlit app

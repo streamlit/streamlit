@@ -47,6 +47,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1], // [col, row]
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -70,6 +71,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -78,6 +80,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: undefined,
         kind: "out-of-bounds",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -94,6 +97,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -102,6 +106,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 2],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
-import axios from "axios"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
 
@@ -29,6 +28,7 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -36,28 +36,27 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import {
-  isNullOrUndefined,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
 } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { FormClearHelper } from "~lib/components/widgets/Form"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import CameraInputButton from "./CameraInputButton"
-import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
   StyledImg,
   StyledSpan,
 } from "./styled-components"
+import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
 export interface Props {
@@ -107,7 +106,7 @@ export interface State {
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
 const LOG = getLogger("CameraInput")
 
-class CameraInput extends React.PureComponent<Props, State> {
+class CameraInput extends PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
@@ -241,7 +240,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentWillUnmount(): void {
+  public override componentWillUnmount(): void {
     this.formClearHelper.disconnect()
   }
 
@@ -262,7 +261,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (): void => {
+  public override componentDidUpdate = (): void => {
     // If our status is not "ready", then we have uploads in progress.
     // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
@@ -289,7 +288,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentDidMount(): void {
+  public override componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
     const { element, widgetMgr, fragmentId } = this.props
 
@@ -351,7 +350,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public render(): React.ReactNode {
+  public override render(): React.ReactNode {
     const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.
@@ -412,6 +411,7 @@ class CameraInput extends React.PureComponent<Props, State> {
           </>
         ) : (
           <WebcamComponent
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
@@ -447,10 +447,11 @@ class CameraInput extends React.PureComponent<Props, State> {
       // The file hasn't been uploaded. Let's cancel the request.
       // However, it may have been received by the server so we'll still
       // send out a request to delete.
-      file.status.cancelToken.cancel()
+      file.status.abortController.abort()
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
     this.removeFile(fileId)
@@ -535,7 +536,7 @@ class CameraInput extends React.PureComponent<Props, State> {
       fileId,
       file.setStatus({
         type: "uploading",
-        cancelToken: file.status.cancelToken,
+        abortController: file.status.abortController,
         progress: newProgress,
       })
     )
@@ -550,14 +551,14 @@ class CameraInput extends React.PureComponent<Props, State> {
 
   public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    const cancelToken = axios.CancelToken.source()
+    const abortController = new AbortController()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,
       file.size,
       this.nextLocalFileId(),
       {
         type: "uploading",
-        cancelToken,
+        abortController,
         progress: 1,
       }
     )
@@ -569,13 +570,13 @@ class CameraInput extends React.PureComponent<Props, State> {
         fileURLs.uploadUrl as string,
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
-        cancelToken.token
+        abortController.signal
       )
       .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
-        // If this was a cancel error, we don't show the user an error -
+        // If this was an abort error, we don't show the user an error -
         // the cancellation was in response to an action they took.
-        if (!axios.isCancel(err)) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
           this.updateFile(
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({

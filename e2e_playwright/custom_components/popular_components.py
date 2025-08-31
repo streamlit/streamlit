@@ -69,7 +69,7 @@ def use_components_declare_component():
 
 # Different custom components:
 def use_streamlit_ace():
-    from streamlit_ace import st_ace
+    from streamlit_ace import st_ace  # type: ignore
 
     ## Spawn a new Ace editor
     content = st_ace()
@@ -79,7 +79,7 @@ def use_streamlit_ace():
 def use_aggrid():
     import numpy as np
     import pandas as pd
-    from st_aggrid import AgGrid
+    from st_aggrid import AgGrid  # type: ignore
 
     np.random.seed(0)
     df = pd.DataFrame(
@@ -89,7 +89,7 @@ def use_aggrid():
 
 
 def use_antd():
-    import streamlit_antd_components as sac
+    import streamlit_antd_components as sac  # type: ignore
 
     btn = sac.buttons(
         items=["button1", "button2", "button3"],
@@ -104,7 +104,7 @@ def use_antd():
 
 
 def use_autorefresh():
-    from streamlit_autorefresh import st_autorefresh
+    from streamlit_autorefresh import st_autorefresh  # type: ignore
 
     ## Run the autorefresh about every 2000 milliseconds (2 seconds) and stop
     ## after it's been refreshed 100 times.
@@ -124,14 +124,14 @@ def use_autorefresh():
 
 
 def use_chat():
-    from streamlit_chat import message
+    from streamlit_chat import message  # type: ignore
 
     message("My message")
     message("Hello bot!", is_user=True)  # align's the message to the right
 
 
 def use_echarts():
-    from streamlit_echarts import st_echarts
+    from streamlit_echarts import st_echarts  # type: ignore
 
     options = {
         "xAxis": {
@@ -145,14 +145,14 @@ def use_echarts():
 
 
 def use_extra_streamlit_components():
-    from extra_streamlit_components import CookieManager
+    from extra_streamlit_components import CookieManager  # type: ignore
 
     CookieManager()
 
 
 def use_folium():
-    import folium
-    from streamlit_folium import st_folium
+    import folium  # type: ignore
+    from streamlit_folium import st_folium  # type: ignore
 
     ## center on Liberty Bell, add marker
     m = folium.Map(location=[39.949610, -75.150282], zoom_start=16)
@@ -165,11 +165,11 @@ def use_folium():
 
 
 def use_option_menu():
-    from streamlit_option_menu import option_menu
+    from streamlit_option_menu import option_menu  # type: ignore
 
     key = "my_option_menu"
 
-    def on_change(key: str):
+    def on_change(key: str) -> None:
         selection = st.session_state[key]
         st.write(f"Selection changed to {selection}")
 
@@ -187,7 +187,7 @@ def use_option_menu():
 
 
 def use_url_fragment():
-    from streamlit_url_fragment import get_fragment
+    from streamlit_url_fragment import get_fragment  # type: ignore
 
     current_value = get_fragment()
     st.write(f"Current value: {current_value!r}")
@@ -195,21 +195,21 @@ def use_url_fragment():
 
 def use_bokeh():
     from bokeh.plotting import figure
-    from streamlit_bokeh import streamlit_bokeh
+    from streamlit_bokeh import streamlit_bokeh  # type: ignore
 
     # Data
     x = [1, 2, 3, 4, 5]
     y = [6, 7, 2, 4, 5]
 
     # Create Bokeh figure
-    YOUR_BOKEH_FIGURE = figure(
+    bokeh_figure = figure(
         title="Simple Line Example", x_axis_label="x", y_axis_label="y"
     )
-    YOUR_BOKEH_FIGURE.line(x, y, legend_label="Trend", line_width=2)
+    bokeh_figure.line(x, y, legend_label="Trend", line_width=2)
 
     # Render in Streamlit
     streamlit_bokeh(
-        YOUR_BOKEH_FIGURE,
+        bokeh_figure,
         use_container_width=True,
         theme="streamlit",
         key="my_unique_key",

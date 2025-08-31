@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import { AttachFile } from "@emotion-icons/material-outlined"
 
-import { EmotionTheme } from "~lib/theme"
-import Icon from "~lib/components/shared/Icon"
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { AcceptFileValue } from "~lib/util/utils"
+import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { EmotionTheme } from "~lib/theme"
+import { AcceptFileValue } from "~lib/util/utils"
 
+import {
+  configureFileInputProps,
+  getUploadDescription,
+} from "./fileUploadUtils"
 import {
   StyledFileUploadButton,
   StyledFileUploadButtonContainer,
@@ -32,7 +36,9 @@ import {
 } from "./styled-components"
 
 export interface Props {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getRootProps: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
   acceptFile: AcceptFileValue
   disabled: boolean
@@ -45,34 +51,36 @@ const ChatFileUploadButton = ({
   acceptFile,
   disabled,
   theme,
-}: Props): React.ReactElement => (
-  <StyledFileUploadButtonContainer disabled={disabled}>
-    <StyledFileUploadButton
-      data-testid="stChatInputFileUploadButton"
-      disabled={disabled}
-      {...getRootProps()}
-    >
-      <input {...getInputProps()} />
-      <TooltipIcon
-        content={`Upload or drag and drop ${
-          acceptFile === AcceptFileValue.Multiple ? "files" : "a file"
-        }`}
-        placement={Placement.TOP}
-        onMouseEnterDelay={500}
-      >
-        <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
-          <Icon
-            content={AttachFile}
-            size="lg"
-            color={
-              disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
-            }
-          />
-        </BaseButton>
-      </TooltipIcon>
-    </StyledFileUploadButton>
-    <StyledVerticalDivider />
-  </StyledFileUploadButtonContainer>
-)
+}: Props): React.ReactElement => {
+  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
-export default ChatFileUploadButton
+  return (
+    <StyledFileUploadButtonContainer disabled={disabled}>
+      <StyledFileUploadButton
+        data-testid="stChatInputFileUploadButton"
+        disabled={disabled}
+        {...getRootProps()}
+      >
+        <input {...inputProps} />
+        <TooltipIcon
+          content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+          placement={Placement.TOP}
+          onMouseEnterDelay={500}
+        >
+          <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
+            <Icon
+              content={AttachFile}
+              size="lg"
+              color={
+                disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
+              }
+            />
+          </BaseButton>
+        </TooltipIcon>
+      </StyledFileUploadButton>
+      <StyledVerticalDivider />
+    </StyledFileUploadButtonContainer>
+  )
+}
+
+export default memo(ChatFileUploadButton)

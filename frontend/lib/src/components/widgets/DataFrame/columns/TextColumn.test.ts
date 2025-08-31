@@ -81,6 +81,7 @@ describe("TextColumn", () => {
     [undefined, null],
   ])(
     "supports string-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: string | null) => {
       const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)

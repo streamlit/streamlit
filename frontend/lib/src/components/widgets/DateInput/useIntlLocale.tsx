@@ -43,7 +43,9 @@ type IntlWeekInfo = {
 const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
   return (
     // Casting is necessary here since the types are not yet up-to-date
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (intlLocale as any)?.getWeekInfo?.() ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (intlLocale as any)?.weekInfo ??
     null
   )
@@ -64,6 +66,7 @@ export const useIntlLocale = (locale: string): Locale => {
   const weekInfo = useMemo(() => {
     try {
       return getWeekInfo(new Intl.Locale(locale))
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return getWeekInfo(new Intl.Locale("en-US"))
     }

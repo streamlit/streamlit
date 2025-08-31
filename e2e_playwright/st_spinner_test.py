@@ -14,6 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_button
 
 
@@ -39,3 +40,55 @@ def test_spinner_time(app: Page):
     app.wait_for_timeout(200)
     updated_text = app.get_by_test_id("stSpinner").text_content()
     assert initial_text != updated_text
+
+
+def test_spinner_width_content(app: Page):
+    """Test spinner with content width."""
+    get_button(app, "Run spinner with content width (default)").click()
+    expect(app.get_by_test_id("stSpinner")).to_contain_text(
+        "Loading with content width..."
+    )
+
+
+def test_spinner_width_stretch(app: Page):
+    """Test spinner with stretch width."""
+    get_button(app, "Run spinner with stretch width").click()
+    expect(app.get_by_test_id("stSpinner")).to_contain_text(
+        "Loading with stretch width..."
+    )
+
+
+def test_spinner_width_300px(app: Page):
+    """Test spinner with 300px width."""
+    get_button(app, "Run spinner with 300px width").click()
+    expect(app.get_by_test_id("stSpinner")).to_contain_text(
+        "Loading with 300px width..."
+    )
+
+
+def test_spinner_width_content_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test spinner with content width snapshot."""
+    get_button(app, "Run spinner with content width (default)").click()
+    spinner_element = app.get_by_test_id("stSpinner")
+    expect(spinner_element).to_be_visible()
+    assert_snapshot(spinner_element, name="st_spinner-width_content")
+
+
+def test_spinner_width_stretch_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test spinner with stretch width snapshot."""
+    get_button(app, "Run spinner with stretch width").click()
+    spinner_element = app.get_by_test_id("stSpinner")
+    expect(spinner_element).to_be_visible()
+    assert_snapshot(spinner_element, name="st_spinner-width_stretch")
+
+
+def test_spinner_width_300px_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test spinner with 300px width snapshot."""
+    get_button(app, "Run spinner with 300px width").click()
+    spinner_element = app.get_by_test_id("stSpinner")
+    expect(spinner_element).to_be_visible()
+    assert_snapshot(spinner_element, name="st_spinner-width_300px")

@@ -40,7 +40,7 @@ st.write(np.float64(1.0))
 
 
 class SomeObject1:
-    def __str__(self):
+    def __str__(self) -> str:
         return "1 * 2 - 3 = 4 `ok` !"
 
 
@@ -48,7 +48,7 @@ st.write(SomeObject1())  # escaped single line string
 
 
 class SomeObject2:
-    def __str__(self):
+    def __str__(self) -> str:
         return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
 
 

@@ -36,7 +36,7 @@ from tests.streamlit.element_mocks import (
 )
 
 
-def get_version():
+def get_version() -> str | None:
     """Get version by parsing out setup.py."""
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
@@ -45,6 +45,7 @@ def get_version():
         m = pattern.match(line)
         if m:
             return m.group("version")
+    return None
 
 
 # Commands that don't result in rendered elements in the frontend
@@ -55,7 +56,6 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "cache_resource",
     "connection",
     "context",
-    "experimental_fragment",
     "experimental_get_query_params",
     "experimental_set_query_params",
     "experimental_user",
@@ -73,6 +73,7 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "sidebar",
     "stop",
     "switch_page",
+    "user",
 }
 
 # Element commands that are exposed on the DeltaGenerator
@@ -88,12 +89,12 @@ class StreamlitTest(unittest.TestCase):
 
     def test_streamlit_version(self):
         """Test streamlit.__version__."""
-        self.assertEqual(__version__, get_version())
+        assert __version__ == get_version()
 
     def test_get_option(self):
         """Test streamlit.get_option."""
         # This is set in lib/tests/conftest.py to False
-        self.assertFalse(st.get_option("browser.gatherUsageStats"))
+        assert not st.get_option("browser.gatherUsageStats")
 
     def test_matplotlib_uses_agg(self):
         """Test that Streamlit uses the 'Agg' backend for matplotlib."""
@@ -102,16 +103,16 @@ class StreamlitTest(unittest.TestCase):
         for platform in ["darwin", "linux2"]:
             sys.platform = platform
 
-            self.assertEqual(mpl.get_backend().lower(), "agg")
-            self.assertEqual(os.environ.get("MPLBACKEND").lower(), "agg")
+            assert mpl.get_backend().lower() == "agg"
+            assert os.environ.get("MPLBACKEND").lower() == "agg"
 
             # Force matplotlib to use a different backend
             mpl.use("pdf", force=True)
-            self.assertEqual(mpl.get_backend().lower(), "pdf")
+            assert mpl.get_backend().lower() == "pdf"
 
             # Reset the backend to 'Agg'
             mpl.use("agg", force=True)
-            self.assertEqual(mpl.get_backend().lower(), "agg")
+            assert mpl.get_backend().lower() == "agg"
         sys.platform = ORIG_PLATFORM
 
     def test_ensure_completeness_element_mocks(self):
@@ -149,7 +150,7 @@ class StreamlitTest(unittest.TestCase):
             for k, v in st.__dict__.items()
             if not k.startswith("_") and not isinstance(v, type(st))
         }
-        self.assertEqual(api, ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS))
+        assert api == ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS)
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""
@@ -161,7 +162,7 @@ class StreamlitTest(unittest.TestCase):
             output = subprocess.check_output(
                 [sys.executable, "-m", "pydoc", "streamlit"]
             ).decode()
-            self.assertIn("Help on package streamlit:", output)
+            assert "Help on package streamlit:" in output
         finally:
             os.chdir(cwd)
 
@@ -191,7 +192,7 @@ def test_importtime_median_under_threshold():
     and check if it's under a static threshold.
     """
     # Define an acceptable threshold for import time (in microseconds).
-    # This value is also depenend a bit on the machine it's run on,
+    # This value is also dependent a bit on the machine it's run on,
     # so needs to be mainly adjusted to our CI runners.
     # While its important to keep the import time low, you can
     # modify this threshold if it's really needed to add some new features.
@@ -206,8 +207,8 @@ def test_importtime_median_under_threshold():
         cmd = [sys.executable, "-X", "importtime", "-c", "import streamlit"]
         p = subprocess.run(cmd, stderr=subprocess.PIPE, check=True)
 
-        # The last line of stderr has the total import time, e.g.:
-        # "import time: self [us] | cumulative [us] | streamlit"
+        # The last line of stderr has the total import time:
+        # import time: self [us] | cumulative [us] | streamlit
         line = p.stderr.splitlines()[-1]
         field = line.split(b"|")[-2].strip()  # e.g. b"123456"
         total_us = int(field)  # convert to integer microseconds

@@ -16,21 +16,22 @@
 
 import React, { ReactElement } from "react"
 
-import ReactMarkdown from "react-markdown"
-// eslint-disable-next-line testing-library/no-manual-cleanup
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"
+import ReactMarkdown from "react-markdown"
 
-import { render } from "~lib/test_util"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { colors } from "~lib/theme/primitives/colors"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { LibContext } from "~lib/components/core/LibContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
+import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  CustomMediaTag,
   CustomPreTag,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
@@ -44,16 +45,41 @@ const getMarkdownElement = (body: string): ReactElement => {
 }
 
 describe("createAnchorFromText", () => {
-  it("generates slugs correctly", () => {
-    const cases = [
-      ["some header", "some-header"],
-      ["some -24$35-9824  header", "some-24-35-9824-header"],
-      ["blah___blah___blah", "blah-blah-blah"],
-    ]
+  it.each([
+    // Basic cases
+    ["UPPERCASE", "uppercase"],
+    ["some header", "some-header"],
+    ["some -24$35-9824  header", "some-24-35-9824-header"],
+    ["blah___blah___blah", "blah-blah-blah"],
 
-    cases.forEach(([s, want]) => {
-      expect(createAnchorFromText(s)).toEqual(want)
-    })
+    // Special characters and symbols
+    ["header!@#$%^&*()", "header-and"],
+    ["  spaces  everywhere  ", "spaces-everywhere"],
+    ["multiple---dashes", "multiple-dashes"],
+    ["dots...and,commas", "dots-and-commas"],
+    ["emoji 👋 test", "emoji-test"],
+    ["mixed_case_UPPER", "mixed-case-upper"],
+
+    // Non-English languages and special characters that we can transliterate and slugify
+    ["Présentation", "presentation"],
+    ["Привет мир", "privet-mir"],
+    ["مرحبا بالعالم", "mrhba-balealm"],
+    ["Γεια σας κόσμος", "geia-sas-kosmos"],
+
+    // Languages we are not able to slugify - fallback to hash
+    ["안녕하세요", "c40769b7"],
+    ["こんにちは世界", "f73d32df"],
+
+    // Empty string
+    ["", ""],
+
+    // Edge cases that fallback to hash
+    [" ", "aa76e70b"],
+    ["###", "3ec1ca7"],
+    ["---", "6110bfd"],
+    ["___", "647ce586"],
+  ])("converts '%s' to '%s'", (input, expected) => {
+    expect(createAnchorFromText(input)).toEqual(expected)
   })
 })
 
@@ -223,6 +249,23 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
+  it("renders streamlit logo with allowHTML=true", () => {
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveStyle("display: inline-block")
+    expect(image).toHaveStyle("user-select: none")
+  })
+
+  it("renders material icons with allowHTML=true", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+  })
+
   // Typographical symbol replacements
   const symbolReplacementCases = [
     { input: "a -> b", tag: "p", expected: "a → b" },
@@ -370,10 +413,11 @@ describe("StreamlitMarkdown", () => {
   it("colours text properly", () => {
     const colorMapping = new Map([
       ["red", colors.red80],
+      ["orange", colors.orange100],
+      ["yellow", colors.yellow80],
       ["blue", colors.blue80],
       ["green", colors.green90],
       ["violet", colors.purple80],
-      ["orange", colors.orange100],
       ["gray", colors.gray80],
       ["grey", colors.gray80],
       ["rainbow", "rgba(0, 0, 0, 0)"],
@@ -386,6 +430,7 @@ describe("StreamlitMarkdown", () => {
       const tagName = markdown.nodeName.toLowerCase()
       expect(tagName).toBe("span")
       expect(markdown).toHaveStyle(`color: ${style}`)
+      expect(markdown).toHaveClass("stMarkdownColoredText")
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -414,6 +459,7 @@ describe("StreamlitMarkdown", () => {
   it("properly adds background colors", () => {
     const redbg = transparentize(colors.red80, 0.9)
     const orangebg = transparentize(colors.yellow70, 0.9)
+    const yellowbg = transparentize(colors.yellow80, 0.9)
     const greenbg = transparentize(colors.green70, 0.9)
     const bluebg = transparentize(colors.blue70, 0.9)
     const violetbg = transparentize(colors.purple70, 0.9)
@@ -421,10 +467,11 @@ describe("StreamlitMarkdown", () => {
 
     const colorMapping = new Map([
       ["red", redbg],
+      ["orange", orangebg],
+      ["yellow", yellowbg],
       ["blue", bluebg],
       ["green", greenbg],
       ["violet", violetbg],
-      ["orange", orangebg],
       ["gray", graybg],
       ["grey", graybg],
     ])
@@ -486,13 +533,10 @@ describe("StreamlitMarkdown", () => {
 const getCustomCodeTagProps = (
   props: Partial<CustomCodeTagProps> = {}
 ): CustomCodeTagProps => ({
-  children: [
-    `import streamlit as st
+  children: `import streamlit as st
 
 st.write("Hello")
 `,
-  ],
-  node: { type: "element", tagName: "tagName", children: [] },
   ...props,
 })
 
@@ -515,7 +559,7 @@ describe("CustomCodeTag Element", () => {
 
   it("should render copy button when code block has content", () => {
     const props = getCustomCodeTagProps({
-      children: ["i am not empty"],
+      children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
     const copyButton = screen.getByTitle("Copy to clipboard")
@@ -525,11 +569,11 @@ describe("CustomCodeTag Element", () => {
 
   it("should not render copy button when code block is empty", () => {
     const props = getCustomCodeTagProps({
-      children: [""],
+      children: "",
     })
     render(<CustomCodeTag {...props} />)
     // queryBy returns null vs. error
-    const copyButton = screen.queryByRole("button") // eslint-disable-line testing-library/prefer-presence-queries
+    const copyButton = screen.queryByRole("button")
 
     expect(copyButton).toBeNull()
   })
@@ -563,6 +607,172 @@ describe("CustomPreTag", () => {
     expect(tagName).toBe("div")
     expect(preTag).toHaveTextContent(
       'import streamlit as st st.write("Hello")'
+    )
+  })
+})
+
+describe("CustomMediaTag", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mockNode = { tagName: "img" } as any
+  const mockProps = {
+    src: "test-image.jpg",
+    alt: "Test image",
+  }
+
+  // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
+  const createMockLibContextValue = (
+    resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): any => {
+    return {
+      libConfig: { resourceCrossOriginMode },
+    }
+  }
+
+  it.each([
+    { resourceCrossOriginMode: "anonymous" },
+    { resourceCrossOriginMode: "use-credentials" },
+    { resourceCrossOriginMode: undefined },
+  ] as const)(
+    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    ({ resourceCrossOriginMode }) => {
+      const mockContextValue = createMockLibContextValue(
+        resourceCrossOriginMode
+      )
+      render(
+        <LibContext.Provider value={mockContextValue}>
+          <CustomMediaTag node={mockNode} {...mockProps} />
+        </LibContext.Provider>
+      )
+
+      const imgElement = screen.getByRole("img")
+
+      expect(imgElement).not.toHaveAttribute("crossOrigin")
+      expect(imgElement).toHaveAttribute("src", "test-image.jpg")
+      expect(imgElement).toHaveAttribute("alt", "Test image")
+    }
+  )
+
+  describe("with BACKEND_BASE_URL set", () => {
+    const originalStreamlit = window.__streamlit
+
+    beforeEach(() => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+      }
+    })
+
+    afterEach(() => {
+      window.__streamlit = originalStreamlit
+    })
+
+    it.each([
+      {
+        tagName: "img",
+        expected: "anonymous",
+        resourceCrossOriginMode: "anonymous",
+        src: "/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with relative URL and anonymous mode",
+      },
+      {
+        tagName: "video",
+        expected: "use-credentials",
+        resourceCrossOriginMode: "use-credentials",
+        src: "/media/video.mp4",
+        extraProps: { controls: true },
+        scenario: "video with relative URL and use-credentials mode",
+      },
+      {
+        tagName: "audio",
+        expected: undefined,
+        resourceCrossOriginMode: undefined,
+        src: "/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario: "audio with relative URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        expected: "anonymous",
+        resourceCrossOriginMode: "anonymous",
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and anonymous mode",
+      },
+      {
+        tagName: "img",
+        expected: undefined,
+        resourceCrossOriginMode: undefined,
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "https://external.example.com/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with different hostname than BACKEND_BASE_URL",
+      },
+      {
+        tagName: "video",
+        expected: "use-credentials",
+        resourceCrossOriginMode: "use-credentials",
+        src: "https://backend.example.com:8080/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and use-credentials mode",
+      },
+      {
+        tagName: "video",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "https://backend.example.com:9000/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and different port",
+      },
+      {
+        tagName: "audio",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "http://backend.example.com:8080/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario:
+          "audio with same origin as BACKEND_BASE_URL and different protocol",
+      },
+    ] as const)(
+      "should render $tagName element with crossOrigin='$expected' when $scenario",
+      ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const node = { tagName } as any
+        const props = { src, ...extraProps }
+
+        const mockContextValue = createMockLibContextValue(
+          resourceCrossOriginMode
+        )
+        const { container } = render(
+          <LibContext.Provider value={mockContextValue}>
+            <CustomMediaTag node={node} {...props} />
+          </LibContext.Provider>
+        )
+
+        const element =
+          tagName === "img"
+            ? screen.getByRole("img")
+            : container.querySelector(tagName)
+
+        expect(element).toBeTruthy()
+        if (expected) {
+          expect(element).toHaveAttribute("crossOrigin", expected)
+        } else {
+          expect(element).not.toHaveAttribute("crossOrigin")
+        }
+        expect(element).toHaveAttribute("src", src)
+      }
     )
   })
 })

@@ -37,13 +37,15 @@ describe("FileUploadClient Upload", () => {
       sessionInfo: mockSessionInfo(),
       endpoints: {
         setStaticConfigUrl: vi.fn(),
+        sendClientErrorToHost: vi.fn(),
+        checkSourceUrlResponse: vi.fn(),
         buildComponentURL: vi.fn(),
         buildMediaURL: vi.fn(),
+        buildDownloadUrl: vi.fn(),
         buildFileUploadURL: vi.fn(),
         buildAppPageURL: vi.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
         deleteFileAtURL: vi.fn(),
-        fetchCachedForwardMsg: vi.fn(),
       },
       formsWithPendingRequestsChanged,
       requestFileURLs,
@@ -144,7 +146,7 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("onFileURLsResponse rejects promise on errorMsg", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
@@ -160,7 +162,7 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("onFileURLsResponse resolves promise on success", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests

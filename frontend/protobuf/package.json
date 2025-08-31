@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/protobuf",
-  "version": "1.43.2",
+  "version": "1.49.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -13,7 +13,9 @@
   ],
   "scripts": {
     "build": "node ./scripts/generate-proto.js",
-    "generate-protobuf": "node ./scripts/generate-proto.js"
+    "generate-protobuf": "node ./scripts/generate-proto.js",
+    "typesync": "typesync",
+    "typesync:ci": "typesync --dry=fail"
   },
   "browserslist": [
     ">0.2%",
@@ -22,6 +24,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "protobufjs-cli": "^1.1.0"
+    "protobufjs-cli": "^1.2.0",
+    "typesync": "^0.14.3"
   }
 }

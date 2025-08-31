@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Final, NamedTuple
 
-from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -33,14 +33,8 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import (
-    ForwardMsgCache,
-    create_reference_msg,
-    populate_hash_if_needed,
-)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
-from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -68,6 +62,10 @@ if TYPE_CHECKING:
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
+
+# On Windows, periodically check for signals when blocked in asyncio.wait()
+# This ensures Ctrl+C can be processed even when no sessions are connected
+_SIGNAL_CHECK_INTERVAL: Final = 0.5 if sys.platform == "win32" else None
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -174,7 +172,7 @@ class Runtime:
         """
         return cls._instance is not None
 
-    def __init__(self, config: RuntimeConfig):
+    def __init__(self, config: RuntimeConfig) -> None:
         """Create a Runtime instance. It won't be started yet.
 
         Runtime is *not* thread-safe. Its public methods are generally
@@ -203,7 +201,6 @@ class Runtime:
 
         # Initialize managers
         self._component_registry = config.component_registry
-        self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
@@ -219,7 +216,6 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
 
@@ -230,10 +226,6 @@ class Runtime:
     @property
     def component_registry(self) -> BaseComponentRegistry:
         return self._component_registry
-
-    @property
-    def message_cache(self) -> ForwardMsgCache:
-        return self._message_cache
 
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
@@ -326,7 +318,7 @@ class Runtime:
 
         async_objs = self._get_async_objs()
 
-        def stop_on_eventloop():
+        def stop_on_eventloop() -> None:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
@@ -387,9 +379,11 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be set!"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be set. "
+                "This should never happen."
+            )
 
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
@@ -449,7 +443,6 @@ class Runtime:
         """
         session_info = self._session_mgr.get_session_info(session_id)
         if session_info:
-            self._message_cache.remove_refs_for_session(session_info.session)
             self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
@@ -474,14 +467,6 @@ class Runtime:
         """
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info:
-            # NOTE: Ideally, we'd like to keep ForwardMsgCache refs for a session around
-            # when a session is disconnected (and defer their cleanup until the session
-            # is garbage collected), but this would be difficult to do as the
-            # ForwardMsgCache is not thread safe, and we have no guarantee that the
-            # garbage collector will only run on the eventloop thread. Because of this,
-            # we clean up refs now and accept the risk that we're deleting cache entries
-            # that will be useful once the browser tab reconnects.
-            self._message_cache.remove_refs_for_session(session_info.session)
             self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
@@ -618,7 +603,7 @@ class Runtime:
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
-                raise RuntimeError(f"Bad Runtime state at start: {self._state}")
+                raise RuntimeError(f"Bad Runtime state at start: {self._state}")  # noqa: TRY301
 
             # Signal that we're started and ready to accept sessions
             async_objs.started.set_result(None)
@@ -629,16 +614,22 @@ class Runtime:
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
 
                     # Wait for new websocket connections (new sessions):
-                    _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
+                    done_tasks, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
+                        # On Windows, use a timeout to ensure signal handlers can be processed
+                        timeout=_SIGNAL_CHECK_INTERVAL,
                     )
                     # Clean up pending tasks to avoid memory leaks
                     for task in pending_tasks:
                         task.cancel()
+
+                    # If we timed out (Windows only), continue the loop to check must_stop
+                    if not done_tasks and _SIGNAL_CHECK_INTERVAL is not None:
+                        continue
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
@@ -663,12 +654,14 @@ class Runtime:
                     break
 
                 # Wait for new proto messages that need to be sent out:
-                _, pending_tasks = await asyncio.wait(
+                done_tasks, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
+                    # On Windows, use a timeout to ensure signal handlers can be processed
+                    timeout=_SIGNAL_CHECK_INTERVAL,
                 )
                 # We need to cancel the pending tasks (the `must_stop` one in most situations).
                 # Otherwise, this would stack up one waiting task per loop
@@ -676,6 +669,10 @@ class Runtime:
                 # causing an increase in memory (-> memory leak).
                 for task in pending_tasks:
                     task.cancel()
+
+                # If we timed out (Windows only), continue to check must_stop
+                if not done_tasks and _SIGNAL_CHECK_INTERVAL is not None:
+                    continue
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
@@ -698,7 +695,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
     def _send_message(self, session_info: ActiveSessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
-
         If the client is likely to have already cached the message, we may
         instead send a "reference" message that contains only the hash of the
         message.
@@ -714,51 +710,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        msg.metadata.cacheable = is_cacheable_msg(msg)
-        msg_to_send = msg
-        if msg.metadata.cacheable:
-            populate_hash_if_needed(msg)
-
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
-            # Cache the message so it can be referenced in the future.
-            # If the message is already cached, this will reset its
-            # age.
-            _LOGGER.debug("Caching message (hash=%s)", msg.hash)
-            self._message_cache.add_message(
-                msg, session_info.session, session_info.script_run_count
-            )
 
         # If this was a `script_finished` message, we increment the
-        # script_run_count for this session, and update the cache
+        # script_run_count for this session
         if msg.WhichOneof("type") == "script_finished" and (
             msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-            or (
-                config.get_option(
-                    "global.includeFragmentRunsInForwardMessageCacheCount"
-                )
-                and msg.script_finished == ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-            )
         ):
-            _LOGGER.debug(
-                "Script run finished successfully; "
-                "removing expired entries from MessageCache "
-                "(max_age=%s)",
-                config.get_option("global.maxCachedMessageAge"),
-            )
             session_info.script_run_count += 1
-            self._message_cache.remove_expired_entries_for_session(
-                session_info.session, session_info.script_run_count
-            )
 
         # Ship it off!
-        session_info.client.write_forward_msg(msg_to_send)
+        session_info.client.write_forward_msg(msg)
 
     def _enqueued_some_message(self) -> None:
         """Callback called by AppSession after the AppSession has enqueued a

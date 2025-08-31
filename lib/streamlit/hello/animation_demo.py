@@ -42,22 +42,22 @@ def animation_demo() -> None:
     for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
         # Here were setting value for these two elements.
         progress_bar.progress(frame_num)
-        frame_text.text("Frame %i/100" % (frame_num + 1))
+        frame_text.text(f"Frame {frame_num + 1}/100")
 
         # Performing some fractal wizardry.
         c = separation * np.exp(1j * a)
-        Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
-        C = np.full((n, m), c)
-        M: Any = np.full((n, m), True, dtype=bool)
-        N = np.zeros((n, m))
+        z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
+        c_matrix = np.full((n, m), c)
+        m_matrix: Any = np.full((n, m), True, dtype=bool)
+        n_matrix = np.zeros((n, m))
 
         for i in range(iterations):
-            Z[M] = Z[M] * Z[M] + C[M]
-            M[np.abs(Z) > 2] = False
-            N[M] = i
+            z[m_matrix] = z[m_matrix] * z[m_matrix] + c_matrix[m_matrix]
+            m_matrix[np.abs(z) > 2] = False
+            n_matrix[m_matrix] = i
 
         # Update the image placeholder by calling the image() function on it.
-        image.image(1.0 - (N / N.max()), use_container_width=True)
+        image.image(1.0 - (n_matrix / n_matrix.max()), use_container_width=True)
 
     # We clear elements by calling empty on them.
     progress_bar.empty()

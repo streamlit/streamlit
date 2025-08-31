@@ -14,23 +14,20 @@
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image, ImageDraw
 
 import streamlit as st
-
-if TYPE_CHECKING:
-    import numpy.typing as npt
-
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
-img = np.repeat(0, 10000).reshape(100, 100)
-img800 = np.repeat(0, 640000).reshape(800, 800)
+img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+img800: npt.NDArray[np.int_] = np.repeat(0, 640000).reshape(800, 800)
 
 
 st.header("Images from numpy arrays")
@@ -54,7 +51,7 @@ st.image(transparent_img, caption="Transparent Black Square.", width=100)
 st.header("GIF images")
 
 
-def create_gif(size, frames=1):
+def create_gif(size: int, frames: int = 1) -> bytes:
     # Create grayscale image.
     im = Image.new("L", (size, size), "white")
 
@@ -165,6 +162,22 @@ st.image(
     caption="Yellow Green Rectangle with x 100 and width 300.",
 )
 
+st.header("SVG with viewBox only")
+
+SVG_GREEN_SQUARE_VIEWBOX_ONLY = """
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="100" height="100" fill="green" />
+  Sorry, your browser does not support inline SVG.
+</svg>
+"""
+
+# Width specified, so it should render at the specified width
+st.image(SVG_GREEN_SQUARE_VIEWBOX_ONLY, width=100)
+
+# No width specified, so it should render at the default width
+st.image(SVG_GREEN_SQUARE_VIEWBOX_ONLY)
+
+
 st.header("Image from file (str and Path)")
 
 CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
@@ -180,15 +193,16 @@ st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
 
 st.header("use_column_width parameter (deprecated)")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.image(img)  # 100 px
-col1.image(img, use_column_width="auto")  # 100 px
-col1.image(img, use_column_width="never")  # 100 px
-col1.image(img, use_column_width=False)  # 100 px
+with st.container(key="use_column_width"):
+    col1, col2, col3, col4 = st.columns(4)
+    col1.image(img)  # 100 px
+    col1.image(img, use_column_width="auto")  # 100 px
+    col1.image(img, use_column_width="never")  # 100 px
+    col1.image(img, use_column_width=False)  # 100 px
 
-col2.image(img, use_column_width="always")  # column width
-col2.image(img, use_column_width=True)  # column width
-col2.image(img800, use_column_width="auto")  # column width
+    col2.image(img, use_column_width="always")  # column width
+    col2.image(img, use_column_width=True)  # column width
+    col2.image(img800, use_column_width="auto")  # column width
 
 st.header("List of images")
 
@@ -242,37 +256,76 @@ st.image(
 )
 
 
-st.header("use_container_width parameter")
-
-
-col5, col6, col7, col8 = st.columns(4)
-
-
-# Full container width, since use_container_width is explicitly set to True
-col5.image(img, use_container_width=True, width=50)
-# Full container width
-col5.image(img, use_container_width=True)
-# Full container width, since 1000 would overflow the container
-col5.image(
-    img800,
-    width=1000,
+# Full link
+st.image(
+    [
+        Image.new("RGB", (64, 64), color="red"),
+        Image.new("RGB", (64, 64), color="blue"),
+        Image.new("RGB", (64, 64), color="green"),
+    ],
+    caption=[f"Image list {i} with URLs" for i in range(3)],
+    link=["https://streamlit.io/"] * 3,
 )
 
-# Full container width, since 800 would overflow the container
-col6.image(img800)
-# Full container width, since 800 would overflow the container
-col6.image(img800, use_container_width=True)
-# Full container width, since 800 would overflow the container
-col6.image(img800, use_container_width=False)
+# Partial link
+st.image(
+    [
+        Image.new("RGB", (64, 64), color="red"),
+        Image.new("RGB", (64, 64), color="blue"),
+        Image.new("RGB", (64, 64), color="green"),
+    ],
+    caption=[f"Partial click URLs {i}" for i in range(3)],
+    link=[
+        "https://streamlit.io/",
+        None,
+        "https://docs.streamlit.io/",
+    ],
+)
+
+# None URL example
+st.image(
+    Image.new("RGB", (64, 64), color="red"),
+    caption="Image with None click URL",
+    link=None,
+)
+
+# Empty URLs example
+st.image(
+    Image.new("RGB", (64, 64), color="red"),
+    caption="Image with empty click URL",
+    link=[],
+)
 
 
-col7.image(img)  # 100 px
-# 100 px since that is the width of the image, and it does not exceed the container width
-col7.image(img, use_container_width=False)
-# 50 px since the width parameter is given
-col7.image(img, width=50)
-# 50 px since the width parameter is given, and use_container_width is not True
-col7.image(img, use_container_width=False, width=50)
+st.header("use_container_width parameter (deprecated)")
+
+with st.container(key="use_container_width"):
+    col5, col6, col7, col8 = st.columns(4)
+
+    # Full container width, since use_container_width is explicitly set to True
+    col5.image(img, use_container_width=True, width=50)
+    # Full container width
+    col5.image(img, use_container_width=True)
+    # Full container width, since 1000 would overflow the container
+    col5.image(
+        img800,
+        width=1000,
+    )
+
+    # Full container width, since 800 would overflow the container
+    col6.image(img800)
+    # Full container width, since 800 would overflow the container
+    col6.image(img800, use_container_width=True)
+    # Full container width, since 800 would overflow the container
+    col6.image(img800, use_container_width=False)
+
+    col7.image(img)  # 100 px
+    # 100 px since that is the width of the image, and it does not exceed the container width
+    col7.image(img, use_container_width=False)
+    # 50 px since the width parameter is given
+    col7.image(img, width=50)
+    # 50 px since the width parameter is given, and use_container_width is not True
+    col7.image(img, use_container_width=False, width=50)
 
 
 st.image(
@@ -284,3 +337,13 @@ st.image(
 st.container(key="image_with_markdown_caption").image(
     img, caption="-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.header("width parameter")
+
+# Content width (default) - image's native width, up to container width
+st.image(img, width="content", caption="Small image with width='content' (default)")
+st.image(img800, width="content", caption="Large image with width='content'")
+
+# Stretch width - full container width
+st.image(img, width="stretch", caption="Small image with width='stretch'")
+st.image(img800, width="stretch", caption="Large image with width='stretch'")

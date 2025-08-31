@@ -19,8 +19,8 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import JsonColumn from "./JsonColumn"
 import { JsonCell } from "./cells/JsonCell"
+import JsonColumn from "./JsonColumn"
 import { isMissingValueCell } from "./utils"
 
 const MOCK_JSON_COLUMN_PROPS = {
@@ -92,6 +92,7 @@ describe("JsonColumn", () => {
     [undefined, null, ""],
   ])(
     "handles different JSON-compatible values (%p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, expected: any, displayValue: string) => {
       const mockColumn = JsonColumn(MOCK_JSON_COLUMN_PROPS)
       const cell = mockColumn.getCell(input) as JsonCell

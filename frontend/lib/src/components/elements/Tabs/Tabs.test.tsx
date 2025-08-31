@@ -20,8 +20,8 @@ import { screen, within } from "@testing-library/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import { BlockNode } from "~lib/AppNode"
+import { render } from "~lib/test_util"
 
 import Tabs, { TabProps } from "./Tabs"
 
@@ -76,7 +76,31 @@ describe("st.tabs", () => {
     })
   })
 
-  it("can be disabled", () => {
+  it("sets the correct default tab index", () => {
+    const node = makeTabsNode(3)
+    node.deltaBlock.tabContainer = { defaultTabIndex: 2 }
+
+    render(<Tabs {...getProps({ node })} />)
+
+    const tabs = screen.getAllByRole("tab")
+    expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("selects the first occurrence when default points to a duplicate label", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTab("Unique"), makeTab("Dupe"), makeTab("Dupe")],
+      new BlockProto({ allowEmpty: true })
+    )
+    node.deltaBlock.tabContainer = { defaultTabIndex: 1 }
+
+    render(<Tabs {...getProps({ node })} />)
+
+    const tabs = screen.getAllByRole("tab")
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("doesn't disable tabs when widgets are disabled", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
 
@@ -85,7 +109,7 @@ describe("st.tabs", () => {
       if (index == 0) {
         return
       }
-      expect(tabs[index]).toBeDisabled()
+      expect(tabs[index]).not.toBeDisabled()
     })
   })
 })

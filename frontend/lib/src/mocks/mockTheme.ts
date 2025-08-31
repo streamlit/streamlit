@@ -58,10 +58,20 @@ const requiredThemeColors = {
   lightGray: colors.gray30,
   gray: colors.gray60,
   darkGray: colors.gray70,
+
+  // TODO (mgbarnes): Reduce/remove these colors when removed from base/dark theme
   red: colors.red80,
   blue: colors.blue80,
-  green: colors.green80,
-  yellow: colors.yellow80,
+  green: colors.green90,
+
+  // Default main theme colors (light theme)
+  redColor: colors.red70,
+  orangeColor: colors.orange70,
+  yellowColor: colors.yellow80,
+  blueColor: colors.blue70,
+  greenColor: colors.green70,
+  violetColor: colors.purple70,
+  grayColor: colors.gray60,
 }
 
 interface OptionalThemeColors {
@@ -78,7 +88,8 @@ const genericColors = {
 
 const emotionMockTheme = {
   inSidebar: false,
-  showSidebarSeparator: false,
+  showSidebarBorder: false,
+  linkUnderline: true,
   breakpoints,
   colors: createEmotionColors(genericColors),
   fonts,

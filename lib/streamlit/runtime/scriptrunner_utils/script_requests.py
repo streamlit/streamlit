@@ -57,6 +57,8 @@ class RerunData:
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
+    # Hashes of messages that are cached in the client browser:
+    cached_message_hashes: set[str] = field(default_factory=set)
     # context_info is used to store information from the user browser (e.g. timezone)
     context_info: ContextInfo | None = None
 
@@ -75,7 +77,7 @@ class ScriptRequest:
     def rerun_data(self) -> RerunData:
         if self.type is not ScriptRequestType.RERUN:
             raise RuntimeError("RerunData is only set for RERUN requests.")
-        return cast(RerunData, self._rerun_data)
+        return cast("RerunData", self._rerun_data)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -109,9 +111,9 @@ def _coalesce_widget_states(
     """
     if not old_states and not new_states:
         return None
-    elif not old_states:
+    if not old_states:
         return new_states
-    elif not new_states:
+    if not new_states:
         return old_states
 
     states_by_id: dict[str, WidgetState] = {
@@ -159,7 +161,7 @@ class ScriptRequests:
     ScriptRunner handles those requests.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
@@ -234,6 +236,7 @@ class ScriptRequests:
                     page_script_hash=new_data.page_script_hash,
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
+                    cached_message_hashes=new_data.cached_message_hashes,
                     is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
                     context_info=new_data.context_info,
@@ -281,7 +284,10 @@ class ScriptRequests:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            assert self._state == ScriptRequestType.STOP
+            if self._state != ScriptRequestType.STOP:
+                raise RuntimeError(
+                    f"Unrecognized ScriptRunnerState: {self._state}. This should never happen."
+                )
             return ScriptRequest(ScriptRequestType.STOP)
 
     def on_scriptrunner_ready(self) -> ScriptRequest:

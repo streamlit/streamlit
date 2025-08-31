@@ -17,10 +17,11 @@
 // Timestamp when the Streamlit execution started for GUEST_READY message
 const streamlitExecutionStartedAt = Date.now()
 
-import React from "react"
+import React, { StrictMode } from "react"
 
 import log from "loglevel"
 import { createRoot } from "react-dom/client"
+import { HelmetProvider } from "react-helmet-async"
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 
@@ -41,7 +42,11 @@ if (!rootDomNode) {
 const reactRoot = createRoot(rootDomNode)
 
 reactRoot.render(
-  <StyletronProvider value={engine}>
-    <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
-  </StyletronProvider>
+  <StrictMode>
+    <HelmetProvider>
+      <StyletronProvider value={engine}>
+        <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
+      </StyletronProvider>
+    </HelmetProvider>
+  </StrictMode>
 )

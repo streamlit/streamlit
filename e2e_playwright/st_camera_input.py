@@ -20,3 +20,7 @@ if x is not None:
     st.image(x)
 
 y = st.camera_input("Label2", help="help2", disabled=True)
+
+# Add camera inputs with different widths
+st.camera_input("Width Stretch", width="stretch", key="camera_stretch", disabled=True)
+st.camera_input("Width 300px", width=300, key="camera_300px", disabled=True)

@@ -16,19 +16,23 @@
 
 import React, { CSSProperties, memo, ReactElement } from "react"
 
+import { getLogger } from "loglevel"
+
 import {
   ImageList as ImageListProto,
   Image as ImageProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledCaption,
@@ -36,17 +40,13 @@ import {
   StyledImageList,
 } from "./styled-components"
 
-export interface ImageListProps {
-  endpoints: StreamlitEndpoints
-  element: ImageListProto
-  disableFullscreenMode?: boolean
-}
+const LOG = getLogger("ImageList")
 
 /**
- * @see WidthBehavior on the Backend
- * @see the Image.proto file
+ * @deprecated This is deprecated, but we want to support old versions of the
+ * proto messages due to requirements of our integrations.
  */
-enum WidthBehavior {
+export enum WidthBehavior {
   OriginalWidth = -1,
   /** @deprecated */
   ColumnWidth = -2,
@@ -56,67 +56,186 @@ enum WidthBehavior {
   MaxImageOrContainer = -5,
 }
 
+export interface ImageListProps {
+  endpoints: StreamlitEndpoints
+  element: ImageListProto
+  widthConfig?: streamlit.IWidthConfig | null
+  disableFullscreenMode?: boolean
+}
+
+/**
+ * Get the image width based on width configuration (new) or WidthBehavior (legacy).
+ * Prioritizes the new widthConfig if both are present.
+ *
+ * @param widthConfig - The new width configuration from the element
+ * @param legacyWidth - The legacy WidthBehavior width from element.width
+ * @param containerWidth - The width of the container element
+ * @returns The width to use for images, or undefined for original size
+ */
+function getImageWidth(
+  widthConfig: streamlit.IWidthConfig | null | undefined,
+  legacyWidth: WidthBehavior | null | undefined,
+  containerWidth: number
+): number | undefined {
+  if (widthConfig) {
+    if (widthConfig.useStretch) {
+      return containerWidth
+    }
+
+    if (widthConfig.useContent) {
+      // Use original image size (content width)
+      return undefined
+    }
+
+    if (widthConfig.pixelWidth) {
+      return widthConfig.pixelWidth
+    }
+  }
+
+  // Fall back to legacy WidthBehavior if no new config
+  if (legacyWidth !== null && legacyWidth !== undefined) {
+    switch (legacyWidth) {
+      case WidthBehavior.OriginalWidth:
+      case WidthBehavior.AutoWidth:
+      case WidthBehavior.MinImageOrContainer:
+        // Use original image size
+        return undefined
+
+      case WidthBehavior.ColumnWidth:
+      case WidthBehavior.MaxImageOrContainer:
+        return containerWidth
+
+      default:
+        // Positive integers are exact pixel widths
+        if (legacyWidth > 0) {
+          return legacyWidth
+        }
+        // Unknown negative values default to original size
+        return undefined
+    }
+  }
+
+  // Default fallback: use original image size
+  return undefined
+}
+
+const Image = ({
+  itemKey,
+  image,
+  imgStyle,
+  buildMediaURL,
+  handleImageError,
+  shouldStretch,
+}: {
+  itemKey: string
+  image: ImageProto
+  imgStyle: CSSProperties
+  buildMediaURL: (url: string) => string
+  handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
+  shouldStretch?: boolean
+}): ReactElement => {
+  const crossOrigin = useCrossOriginAttribute(image.url)
+  const imgProps = {
+    style: imgStyle,
+    src: buildMediaURL(image.url),
+    alt: itemKey,
+    onError: handleImageError,
+    crossOrigin: crossOrigin,
+  }
+
+  return (
+    <StyledImageContainer
+      data-testid="stImageContainer"
+      shouldStretch={shouldStretch}
+    >
+      {/* This div ensures consistent layout for images regardless of
+        whether they have links. Without it, images with and without anchor
+        tags may have different heights and/or styles. */}
+      <div>
+        {image.link ? (
+          <a href={image.link} target="_blank" rel="noopener noreferrer">
+            <img {...imgProps} />
+          </a>
+        ) : (
+          <img {...imgProps} />
+        )}
+      </div>
+      {image.caption && (
+        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+          <StreamlitMarkdown
+            source={image.caption}
+            allowHTML={false}
+            isCaption
+            // This is technically not a label but we want the same restrictions
+            // as for labels (e.g. no Markdown tables or horizontal rule).
+            isLabel
+          />
+        </StyledCaption>
+      )}
+    </StyledImageContainer>
+  )
+}
+
 /**
  * Functional element for a horizontal list of images.
  */
 function ImageList({
   element,
   endpoints,
+  widthConfig,
   disableFullscreenMode,
 }: Readonly<ImageListProps>): ReactElement {
   const {
     expanded: isFullScreen,
     width,
-    height,
+    height: fullScreenHeight,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+  // The width of the container element, not necessarily the image.
+  const containerWidth = width || 0
 
-  // The width of the element is the width of the container, not necessarily the image.
-  const elementWidth = width || 0
-  // The width field in the proto sets the image width, but has special
-  // cases the values in the WidthBehavior enum.
-  let imageWidth: number | undefined
-  const protoWidth = element.width
+  const imageWidth = getImageWidth(widthConfig, element.width, containerWidth)
 
-  if (
-    [
-      WidthBehavior.OriginalWidth,
-      WidthBehavior.AutoWidth,
-      WidthBehavior.MinImageOrContainer,
-    ].includes(protoWidth)
-  ) {
-    // Use the original image width.
-    imageWidth = undefined
-  } else if (
-    [WidthBehavior.ColumnWidth, WidthBehavior.MaxImageOrContainer].includes(
-      protoWidth
-    )
-  ) {
-    // Use the full element width (which handles the full screen case)
-    imageWidth = elementWidth
-  } else if (protoWidth > 0) {
-    // Set the image width explicitly.
-    imageWidth = protoWidth
-  } else {
-    throw Error(`Invalid image width: ${protoWidth}`)
-  }
+  const shouldStretch =
+    widthConfig?.useStretch ||
+    (element.width as WidthBehavior) === WidthBehavior.MaxImageOrContainer
 
   const imgStyle: CSSProperties = {}
 
-  if (height && isFullScreen) {
-    imgStyle.maxHeight = height
+  if (fullScreenHeight && isFullScreen) {
+    imgStyle.maxHeight = fullScreenHeight
     imgStyle.objectFit = "contain"
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Ensure the image tries to fill the width to prevent sizeless SVGs from
+    // not rendering. Let object-fit handle aspect ratio.
+    imgStyle.width = "100%"
   } else {
-    imgStyle.width = imageWidth
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Use imageWidth if defined, otherwise fallback to 100% to prevent sizeless
+    // SVGs from not rendering.
+    imgStyle.width = imageWidth ?? "100%"
     // Cap the image width, so it doesn't exceed its parent container width
     imgStyle.maxWidth = "100%"
   }
 
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>
+  ): void => {
+    const imageUrl = e.currentTarget.src
+    LOG.error(`Client Error: Image source error - ${imageUrl}`)
+    endpoints.sendClientErrorToHost(
+      "Image",
+      "Image source failed to load",
+      "onerror triggered",
+      imageUrl
+    )
+  }
+
   return (
     <StyledToolbarElementContainer
-      width={elementWidth}
-      height={height}
+      width={containerWidth}
+      height={fullScreenHeight}
       useContainerWidth={isFullScreen}
       topCentered
     >
@@ -127,49 +246,26 @@ function ImageList({
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
       ></Toolbar>
-      <StyledImageList className="stImage" data-testid="stImage">
-        {element.imgs.map((iimage, idx): ReactElement => {
-          const image = iimage as ImageProto
-          const imgProps = {
-            style: imgStyle,
-            src: endpoints.buildMediaURL(image.url),
-            alt: idx.toString(),
-          }
-          return (
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            <StyledImageContainer data-testid="stImageContainer" key={idx}>
-              {/* This div ensures consistent layout for images regardless of
-                whether they have links. Without it, images with and without anchor
-                tags may have different heights and/or styles. */}
-              <div>
-                {image.link ? (
-                  <a
-                    href={image.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <img {...imgProps} />
-                  </a>
-                ) : (
-                  <img {...imgProps} />
-                )}
-              </div>
-              {image.caption && (
-                <StyledCaption data-testid="stImageCaption" style={imgStyle}>
-                  <StreamlitMarkdown
-                    source={image.caption}
-                    allowHTML={false}
-                    isCaption
-                    // This is technically not a label but we want the same restrictions
-                    // as for labels (e.g. no Markdown tables or horizontal rule).
-                    isLabel
-                  />
-                </StyledCaption>
-              )}
-            </StyledImageContainer>
+      <StyledImageList
+        className="stImage"
+        data-testid="stImage"
+        shouldStretch={shouldStretch}
+      >
+        {element.imgs.map(
+          (iimage, idx): ReactElement => (
+            <Image
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-array-index-key
+              key={idx}
+              itemKey={idx.toString()}
+              image={iimage as ImageProto}
+              imgStyle={imgStyle}
+              buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
+              handleImageError={handleImageError}
+              shouldStretch={shouldStretch}
+            />
           )
-        })}
+        )}
       </StyledImageList>
     </StyledToolbarElementContainer>
   )

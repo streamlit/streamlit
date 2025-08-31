@@ -86,9 +86,9 @@ class PagesManagerTest(unittest.TestCase):
     def test_get_initial_active_script(self):
         """Test that the initial active script is correctly retrieved with the
         main script path provided."""
-        page_info = self.pages_manager.get_initial_active_script("page_hash", "")
+        page_info = self.pages_manager.get_initial_active_script("page_hash")
 
-        self.assertDictEqual(
-            page_info,
-            {"script_path": "main_script_path", "page_script_hash": "page_hash"},
-        )
+        assert page_info == {
+            "script_path": "main_script_path",
+            "page_script_hash": "page_hash",
+        }

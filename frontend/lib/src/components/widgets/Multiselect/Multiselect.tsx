@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useMemo } from "react"
+import { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
-  OnChangeParams,
-  Option,
+  type OnChangeParams,
+  type Option,
   TYPE,
   Select as UISelect,
 } from "baseui/select"
 import without from "lodash/without"
-import { isMobile } from "react-device-detect"
-import { useTheme } from "@emotion/react"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
-import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -38,13 +36,14 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
-import { EmotionTheme } from "~lib/theme"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -53,30 +52,25 @@ export interface Props {
   fragmentId?: string
 }
 
-type MultiselectValue = number[]
-
-interface MultiselectOption {
-  label: string
-  value: string
-}
+type MultiselectValue = string[]
 
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: MultiSelectProto
 ): MultiselectValue | undefined => {
-  return widgetMgr.getIntArrayValue(element)
+  return widgetMgr.getStringArrayValue(element)
 }
 
 const getDefaultStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.default ?? null
+  return element.default.map(i => element.options[i]) ?? null
 }
 
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.value ?? null
+  return element.rawValues ?? null
 }
 
 const updateWidgetMgrState = (
@@ -85,7 +79,7 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId?: string
 ): void => {
-  widgetMgr.setIntArrayValue(
+  widgetMgr.setStringArrayValue(
     element,
     valueWithSource.value,
     { fromUi: valueWithSource.fromUi },
@@ -96,7 +90,8 @@ const updateWidgetMgrState = (
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -123,31 +118,20 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  const valueFromState = useMemo(() => {
-    return value.map(i => {
-      const label = element.options[i]
-      return { value: i.toString(), label }
-    })
-  }, [element.options, value])
-
   const generateNewState = useCallback(
     (data: OnChangeParams): MultiselectValue => {
-      const getIndex = (): number => {
-        const valueId = data.option?.value
-        return parseInt(valueId, 10)
-      }
-
       switch (data.type) {
         case "remove": {
-          return without(value, getIndex())
+          return without(value, data.option?.value)
         }
         case "clear": {
           return []
         }
         case "select": {
-          return value.concat([getIndex()])
+          return value.concat([data.option?.value])
         }
         default: {
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`State transition is unknown: ${data.type}`)
         }
       }
@@ -155,6 +139,19 @@ const Multiselect: FC<Props> = props => {
     [value]
   )
 
+  /**
+   * This is the onChange handler for the baseweb Select component.
+   * It is called whenever the user selects an option or removes an option.
+   * When the user starts to modify an option by typing in the input field and
+   * pressing backspace, a single `type="remove"` event is fired with the value set
+   * to the option that is being removed. The same type of event is fired when the
+   * user removes an option by clicking the X icon.
+   *
+   * If we wanted to prevent an immediate rerun when starting to delete characters,
+   * we would need to introduce two new states, e.g. `localValue` and `aboutToDelete`,
+   * and commit that state to the backend upon an onBlur event.
+   * To keep it simple, we just accept the rerun happening for now.
+   */
   const onChange = useCallback(
     (params: OnChangeParams) => {
       if (
@@ -172,40 +169,49 @@ const Multiselect: FC<Props> = props => {
     [element.maxSelections, generateNewState, setValueWithSource, value.length]
   )
 
+  const { options } = element
+
+  const {
+    placeholder,
+    disabled: shouldDisable,
+    selectOptions,
+    inputReadOnly,
+    valuesToUiMulti,
+    createFilterOptions,
+  } = useSelectCommon({
+    options,
+    isMulti: true,
+    acceptNewOptions: element.acceptNewOptions ?? false,
+    placeholderInput: element.placeholder,
+  })
+
   const filterOptions = useCallback(
     (options: readonly Option[], filterValue: string): readonly Option[] => {
       if (overMaxSelections) {
         return []
       }
-      // We need to manually filter for previously selected options here
-      const unselectedOptions = options.filter(
-        option => !value.includes(Number(option.value))
-      )
-
-      return fuzzyFilterSelectOptions(
-        unselectedOptions as MultiselectOption[],
-        filterValue
-      )
+      return createFilterOptions(value)(options, filterValue)
     },
-    [overMaxSelections, value]
+    [createFilterOptions, overMaxSelections, value]
   )
 
-  const { options } = element
-  const disabled = options.length === 0 ? true : props.disabled
-  const placeholder =
-    options.length === 0 ? "No options to select." : element.placeholder
-  const selectOptions: MultiselectOption[] = options.map(
-    (option: string, idx: number) => {
-      return {
-        label: option,
-        value: idx.toString(),
-      }
-    }
+  const disabled = props.disabled || shouldDisable
+  const valueFromState = useMemo(
+    () => valuesToUiMulti(value),
+    [valuesToUiMulti, value]
   )
 
-  // Check if we have more than 10 options in the selectbox.
-  // If that's true, we show the keyboard on mobile. If not, we hide it.
-  const showKeyboardOnMobile = options.length > 10
+  // Calculate the max height of the selectbox based on the baseFontSize
+  // to better support advanced theming
+  const maxHeight = useMemo(() => {
+    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
+    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
+    // Allow up to 4 options tall before scrolling + show small portion
+    // of the next row so its clear the user can scroll
+    const pxMaxHeight = Math.round(optionHeight * 4.25)
+    // Return value in px
+    return `${pxMaxHeight}px`
+  }, [theme.fontSizes.baseFontSize])
 
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
@@ -227,6 +233,7 @@ const Multiselect: FC<Props> = props => {
       </WidgetLabel>
       <StyledUISelect>
         <UISelect
+          creatable={element.acceptNewOptions ?? false}
           options={selectOptions}
           labelKey="label"
           valueKey="value"
@@ -241,9 +248,11 @@ const Multiselect: FC<Props> = props => {
           noResultsMsg={getNoResultsMsg}
           filterOptions={filterOptions}
           closeOnSelect={false}
+          ignoreCase={false}
           overrides={{
             Popover: {
               props: {
+                ignoreBoundary: isInSidebar,
                 overrides: {
                   Body: {
                     style: () => ({
@@ -256,6 +265,9 @@ const Multiselect: FC<Props> = props => {
             SelectArrow: {
               component: ChevronDown,
               props: {
+                style: {
+                  cursor: "pointer",
+                },
                 overrides: {
                   Svg: {
                     style: () => ({
@@ -274,6 +286,7 @@ const Multiselect: FC<Props> = props => {
             },
             ControlContainer: {
               style: {
+                maxHeight: maxHeight,
                 minHeight: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: theme.sizes.borderWidth,
@@ -285,11 +298,14 @@ const Multiselect: FC<Props> = props => {
             Placeholder: {
               style: () => ({
                 flex: "inherit",
-                opacity: "0.7",
+                color: disabled
+                  ? theme.colors.fadedText40
+                  : theme.colors.fadedText60,
               }),
             },
             ValueContainer: {
               style: () => ({
+                overflowY: "auto",
                 paddingLeft: theme.spacing.sm,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
@@ -325,6 +341,7 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Root: {
                     style: {
+                      fontWeight: theme.fontWeights.normal,
                       borderTopLeftRadius: theme.radii.md,
                       borderTopRightRadius: theme.radii.md,
                       borderBottomRightRadius: theme.radii.md,
@@ -341,7 +358,7 @@ const Multiselect: FC<Props> = props => {
                       // Using !important because the alternative would be
                       // uglier: we'd have to put it under a selector like
                       // "&[role="button"]:not(:disabled)" in order to win in
-                      // the order of the precendence.
+                      // the order of the precedence.
                       cursor: "default !important",
                     },
                   },
@@ -377,15 +394,7 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: {
-              props: {
-                // Change the 'readonly' prop to hide the mobile keyboard if options < 10
-                readOnly:
-                  isMobile && showKeyboardOnMobile === false
-                    ? "readonly"
-                    : null,
-              },
-            },
+            Input: { props: { readOnly: inputReadOnly } },
             Dropdown: { component: VirtualDropdown },
           }}
         />

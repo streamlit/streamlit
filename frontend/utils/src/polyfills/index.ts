@@ -22,6 +22,7 @@ if (typeof Promise.withResolvers === "undefined") {
       promiseResolve = resolve
       promiseReject = reject
     })
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return { resolve: promiseResolve!, reject: promiseReject!, promise }
   }
 }
@@ -30,6 +31,7 @@ declare global {
   interface PromiseWithResolvers<T> {
     promise: Promise<T>
     resolve: (value: T | PromiseLike<T>) => void
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     reject: (reason?: any) => void
   }
 

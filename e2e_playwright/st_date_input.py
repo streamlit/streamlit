@@ -48,12 +48,18 @@ v6 = st.date_input("Disabled, no date", [], disabled=True)
 st.write("Value 6:", v6)
 
 v7 = st.date_input(
-    "Label hidden", datetime(2019, 7, 6, 21, 15), label_visibility="hidden"
+    "Label hidden",
+    datetime(2019, 7, 6, 21, 15),
+    label_visibility="hidden",
+    key="date_input_7",
 )
 st.write("Value 7:", v7)
 
 v8 = st.date_input(
-    "Label collapsed", datetime(2019, 7, 6, 21, 15), label_visibility="collapsed"
+    "Label collapsed",
+    datetime(2019, 7, 6, 21, 15),
+    label_visibility="collapsed",
+    key="date_input_8",
 )
 st.write("Value 8:", v8)
 
@@ -105,4 +111,11 @@ st.write("Value 14:", v14)
 st.date_input(
     "date input 15 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     date(1970, 1, 1),
+    key="date_input_15",
 )
+
+st.date_input("Date input 16 (width=200px)", date(1970, 1, 1), width=200)
+st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretch")
+
+st.write("""This is a block of text. We can click on it to
+         trigger a click outside of the element to submit the value.""")

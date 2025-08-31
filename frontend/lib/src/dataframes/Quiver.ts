@@ -15,7 +15,6 @@
  */
 
 // Private members use _.
-/* eslint-disable no-underscore-dangle */
 
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
@@ -125,6 +124,14 @@ export class Quiver {
   /** Column type information for the data columns. */
   private _dataColumnTypes: ArrowType[]
 
+  /** Column type information for all columns.
+   *
+   * This is a concatenation of the index and data column types
+   * and needs to be updated whenever the index or data columns
+   * change.
+   */
+  private _columnTypes: ArrowType[]
+
   /** Cell values of the (Pandas) index columns.
    *
    *  Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
@@ -163,6 +170,9 @@ export class Quiver {
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
     this._num_bytes = element.data?.length ?? 0
+    this._columnTypes = this._pandasIndexColumnTypes.concat(
+      this._dataColumnTypes
+    )
   }
 
   /** Matrix of column names of the index- & data-columns.
@@ -176,7 +186,7 @@ export class Quiver {
 
   /** List of column types for every index- & data-column. */
   public get columnTypes(): ArrowType[] {
-    return this._pandasIndexColumnTypes.concat(this._dataColumnTypes)
+    return this._columnTypes
   }
 
   /** Pandas Styler data. This will only be defined if the user styled the dataframe
@@ -275,6 +285,7 @@ export class Quiver {
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   private getIndexValue(rowIndex: number, columnIndex: number): any {
     const index = this._pandasIndexData[columnIndex]
     const value =
@@ -283,6 +294,7 @@ export class Quiver {
   }
 
   /** Get the raw value of a data cell. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   private getDataValue(rowIndex: number, columnIndex: number): any {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
@@ -339,6 +351,7 @@ st.add_rows(my_styler.data)
       draft._data = newData
       draft._pandasIndexColumnTypes = newIndexTypes
       draft._dataColumnTypes = newDataTypes
+      draft._columnTypes = newIndexTypes.concat(newDataTypes)
     })
   }
 }

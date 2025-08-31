@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement, ReactNode } from "react"
+import React, { memo, MouseEvent, ReactElement, ReactNode } from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,
@@ -26,6 +26,7 @@ import {
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
   progress?: number | null
@@ -78,4 +79,4 @@ function CameraInputButton({
   )
 }
 
-export default CameraInputButton
+export default memo(CameraInputButton)

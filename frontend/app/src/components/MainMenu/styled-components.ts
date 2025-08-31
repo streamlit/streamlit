@@ -110,15 +110,14 @@ export const StyledCoreItem = styled.li<ItemStyleProps>(
   ({ isHighlighted, styleProps, theme }) => {
     const highlightedStyles = isHighlighted && {
       "&:hover": {
-        backgroundColor: theme.colors.secondaryBg,
+        backgroundColor: theme.colors.darkenedBgMix15,
       },
     }
 
     const margin = styleProps?.margin || 0
     const padding =
       styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor =
-      styleProps?.backgroundColor || theme.colors.primaryBg
+    const backgroundColor = styleProps?.backgroundColor || theme.colors.bgColor
     const fontSize = styleProps?.fontSize || theme.fontSizes.md
 
     return {
@@ -138,7 +137,7 @@ export const StyledDevItem = styled.li<ItemStyleProps>(
       "&:hover": {
         // Whatever color we use here as the hover state, we want to transparentize it
         // to its full extend, so you can see the underlying color of the menu.
-        backgroundColor: transparentize(theme.colors.secondaryBg, 1),
+        backgroundColor: transparentize(theme.colors.darkenedBgMix15, 1),
       },
     }
     const margin = styleProps?.margin || 0

@@ -23,6 +23,7 @@ export interface StyledFullScreenFrameProps {
 export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
   ({ theme, isExpanded }) => ({
     width: "100%",
+    height: "100%",
     ...(isExpanded
       ? {
           position: "fixed",
@@ -34,7 +35,7 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           zIndex: theme.zIndices.fullscreenWrapper,
           padding: theme.spacing.md,
           paddingTop: theme.sizes.fullScreenHeaderHeight,
-          overflow: ["auto", "overlay"],
+          overflow: "auto",
           display: "flex", // To avoid extra spaces that lead to scrollbars.
           alignItems: "center",
           justifyContent: "center",

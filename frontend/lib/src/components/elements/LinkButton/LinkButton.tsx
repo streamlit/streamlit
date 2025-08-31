@@ -18,23 +18,22 @@ import React, { memo, MouseEvent, ReactElement } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
+import { Box } from "~lib/components/shared/Base/styled-components"
 import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { Box } from "~lib/components/shared/Base/styled-components"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
-  disabled: boolean
   element: LinkButtonProto
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { disabled, element } = props
+  const { element } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -45,7 +44,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
     // Prevent the link from being followed if the button is disabled.
-    if (props.disabled) {
+    if (element.disabled) {
       e.preventDefault()
     }
   }
@@ -54,20 +53,20 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     <Box className="stLinkButton" data-testid="stLinkButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        // TODO(lawilby): Probably remove this once width is implemented on Popover.
+        containerWidth={true}
       >
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
         <BaseLinkButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={disabled}
+          disabled={element.disabled}
           onClick={handleClick}
-          containerWidth={element.useContainerWidth}
           href={element.url}
           target="_blank"
           rel="noreferrer"
-          aria-disabled={disabled}
+          aria-disabled={element.disabled}
         >
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseLinkButton>

@@ -17,7 +17,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
-from playwright.sync_api import FrameLocator, Locator, Route, expect
+import pytest
+from playwright.sync_api import FilePayload, FrameLocator, Locator, Route, expect
 
 from e2e_playwright.conftest import (
     IframedPage,
@@ -27,12 +28,17 @@ from e2e_playwright.conftest import (
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
     get_observed_connection_statuses,
     register_connection_status_observer,
 )
 
 TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
 HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text()
+
+EXPANDER_HEADER_IDENTIFIER = "summary"
+
+HOSTFRAME_TOOLBAR_BUTTON_COUNT = 15
 
 
 def _load_html_and_get_locators(
@@ -56,9 +62,76 @@ def _load_html_and_get_locators(
     toolbar = page.get_by_test_id("toolbar")
     expect(toolbar).to_have_count(1)
     toolbar_buttons = toolbar.get_by_role("button")
-    expect(toolbar_buttons).to_have_count(13)
+    expect(toolbar_buttons).to_have_count(HOSTFRAME_TOOLBAR_BUTTON_COUNT)
     wait_for_app_run(frame_locator)
     return frame_locator, toolbar_buttons
+
+
+def _open_embed(iframed_app: IframedPage) -> FrameLocator:
+    """Open the iframe with embed=True and return the frame locator."""
+    frame_locator: FrameLocator = iframed_app.open_app(
+        IframedPageAttrs(
+            src_query_params={"embed": "true"},
+        )
+    )
+    wait_for_app_run(frame_locator)
+    return frame_locator
+
+
+def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
+    # Verify that the app's widgets & sidebar nav links are disabled
+    # Note: checking via .to_be_disabled() only works on native control elements
+    # (HTML button, input, select, textarea, option, optgroup)
+    # Other elements (like <label> tags) need to check for a "disabled" attribute instead.
+    # See https://playwright.dev/python/docs/api/class-locatorassertions#locator-assertions-to-be-disabled
+
+    # Slider
+    slider = frame_locator.get_by_test_id("stSlider")
+    expect(slider.get_by_test_id("stWidgetLabel")).to_have_attribute("disabled", "")
+    # Baseweb uses a div with role="slider"
+    expect(slider.get_by_role("slider")).to_have_attribute("disabled", "")
+
+    # Checkbox - widget label disabled if input is disabled
+    checkbox = frame_locator.get_by_test_id("stCheckbox")
+    expect(checkbox.get_by_role("checkbox")).to_be_disabled()
+
+    # Radio
+    radio = frame_locator.get_by_test_id("stRadio")
+    expect(radio.get_by_test_id("stWidgetLabel")).to_have_attribute("disabled", "")
+    expect(radio.get_by_role("radio").first).to_be_disabled()
+
+    # File uploader
+    file_uploader = frame_locator.get_by_test_id("stFileUploader")
+    expect(file_uploader.get_by_test_id("stWidgetLabel")).to_have_attribute(
+        "disabled", ""
+    )
+    expect(
+        file_uploader.get_by_role("button").get_by_text("Browse files")
+    ).to_be_disabled()
+
+    # Color picker
+    color_picker = frame_locator.get_by_test_id("stColorPicker")
+    expect(color_picker.get_by_test_id("stWidgetLabel")).to_have_attribute(
+        "disabled", ""
+    )
+    # also a div
+    expect(color_picker.get_by_test_id("stColorPickerBlock")).to_have_attribute(
+        "disabled", ""
+    )
+
+    # Verify the expander is still active
+    expander = frame_locator.get_by_test_id("stExpander")
+    expect(expander).not_to_be_disabled()
+    expander.click()
+    expect(expander.get_by_test_id("stExpanderDetails")).to_be_visible()
+
+    ## Verify that sidebar page nav links are disabled too
+    sidebar_nav_links = frame_locator.get_by_test_id("stSidebarNavItems").get_by_role(
+        "link"
+    )
+    expect(sidebar_nav_links).to_have_count(2)
+    expect(sidebar_nav_links.nth(0)).to_have_attribute("disabled", "")
+    expect(sidebar_nav_links.nth(1)).to_have_attribute("disabled", "")
 
 
 def test_handles_host_theme_message(
@@ -84,7 +157,7 @@ def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage)
     file_name2 = "file2.txt"
     file_content2 = b"file2content"
 
-    files = [
+    files: list[FilePayload] = [
         {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
         {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
     ]
@@ -104,9 +177,11 @@ def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage)
 
     url = r.value.url
     headers = r.value.all_headers()
-
-    assert r.value.response().status == 204  # Upload successful
-    assert url.startswith("http://localhost") and "_stcore/upload_file" in url
+    response = r.value.response()
+    assert response is not None
+    assert response.status == 204  # Upload successful
+    assert url.startswith("http://localhost")
+    assert "_stcore/upload_file" in url
     assert "header1" not in headers
 
     wait_for_app_run(frame_locator, wait_delay=500)
@@ -136,12 +211,48 @@ def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage)
     assert headers["header2"] == "header2value"
 
 
+def test_set_is_embedded_context_field_embed_true(iframed_app: IframedPage):
+    frame_locator = _open_embed(iframed_app)
+
+    # Check that the context option is set correctly to True
+    expect_prefixed_markdown(frame_locator, "Is app embedded:", "True")
+
+
+def test_set_is_embedded_context_field_embed_false(iframed_app: IframedPage):
+    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+
+    # Check that the context option is set correctly to False
+    expect_prefixed_markdown(frame_locator, "Is app embedded:", "False")
+
+
 def test_handles_host_rerun_script_message(iframed_app: IframedPage):
     frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
     toolbar_buttons.get_by_text("Rerun Script").click()
     expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
         "data-test-script-state", "running"
     )
+
+
+def test_context_url_is_correct_when_hosted_in_iframe(
+    iframed_app: IframedPage, app_port: int
+):
+    frame_locator, _ = _load_html_and_get_locators(iframed_app)
+
+    frame_locator.get_by_test_id("stExpander").locator(
+        EXPANDER_HEADER_IDENTIFIER
+    ).click()
+    expect_prefixed_markdown(frame_locator, "Full url:", f"http://localhost:{app_port}")
+
+
+@pytest.mark.skip(
+    reason="Skipping this test since we broke this to fix an MPA regression. The plan is to get this running again"
+    "after we have refactored the dark / light mode support."
+)
+def test_st_context_theme_respects_dark_theme_message(iframed_app: IframedPage):
+    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+    expect_prefixed_markdown(frame_locator, "Theme type:", "light")
+    toolbar_buttons.get_by_text("Send Dark Theme").click()
+    expect_prefixed_markdown(frame_locator, "Theme type:", "dark")
 
 
 def test_handles_host_stop_script_message(iframed_app: IframedPage):
@@ -213,10 +324,6 @@ def test_handles_sidebar_downshift_message(iframed_app: IframedPage):
     frame_locator.get_by_test_id("stSidebarContent").hover()
     # Close the sidebar
     frame_locator.get_by_test_id("stSidebar").locator("button").click()
-    # Check chevron positioning
-    expect(frame_locator.get_by_test_id("stSidebarCollapsedControl")).to_have_css(
-        "top", "50px"
-    )
 
 
 def test_handles_host_terminate_and_restart_websocket_connection_messages(
@@ -270,3 +377,43 @@ def test_color_picker_closes_without_security_error(iframed_app: IframedPage):
     # Wait a bit, then verify no error message is shown in the app.
     iframed_app.page.wait_for_timeout(1000)
     expect(frame_locator.get_by_test_id("stException")).not_to_be_attached()
+
+
+def test_handles_set_inputs_disabled_message(iframed_app: IframedPage):
+    """
+    Test verifies that the app handles the set_inputs_disabled message
+    correctly, by disabling all widgets as well as the sidebar page nav
+    links.
+    """
+    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+
+    # Trigger the set_inputs_disabled message
+    toolbar_buttons.get_by_text("Disable Inputs").click()
+
+    # Verify that all app's widgets & sidebar page nav links are now disabled
+    _check_widgets_and_sidebar_nav_links_disabled(frame_locator)
+
+
+def test_disables_widgets_and_sidebar_page_nav_when_connection_is_lost(
+    iframed_app: IframedPage,
+):
+    """
+    Test verifies that the widgets and the sidebar page nav links are disabled
+    when the app enters the disconnected state (triggered by terminate websocket).
+    """
+    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+
+    frame = frame_locator.owner.page.frame("guest")
+    assert frame is not None
+    # start observing our connection statuses before we click on restart websocket
+    register_connection_status_observer(frame)
+
+    # Kill the websocket connection and verify that the app moves into an
+    # error state.
+    toolbar_buttons.get_by_text("Terminate Websocket").click()
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-connection-state", "DISCONNECTED_FOREVER"
+    )
+
+    # Verify that all app's widgets & sidebar page nav links are now disabled
+    _check_widgets_and_sidebar_nav_links_disabled(frame_locator)

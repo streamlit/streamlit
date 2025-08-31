@@ -45,6 +45,7 @@ export interface PlotlySelection extends SelectionRange {
 // Python naming conventions.
 export interface PlotlyWidgetState {
   selection: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     points: Array<any>
     point_indices: number[]
     box: PlotlySelection[]
@@ -116,6 +117,7 @@ export function parseLassoPath(pathData: string): SelectionRange {
  * @param {Object} selection - The box selection object to be parsed.
  * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function parseBoxSelection(selection: any): SelectionRange {
   const hasRequiredFields =
     "x0" in selection &&
@@ -131,8 +133,6 @@ export function parseBoxSelection(selection: any): SelectionRange {
   const y: number[] = [selection.y0, selection.y1]
   return { x, y }
 }
-
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 /**
  * Apply theming to the Plotly figure.
@@ -190,6 +190,7 @@ export function handleSelection(
   const selectedPointIndices = new Set<number>()
   const selectedBoxes: PlotlySelection[] = []
   const selectedLassos: PlotlySelection[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const selectedPoints: Array<any> = []
 
   // event.selections doesn't show up in the PlotSelectionEvent
@@ -197,6 +198,7 @@ export function handleSelection(
   const { selections, points } = event
 
   if (points) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
@@ -223,6 +225,7 @@ export function handleSelection(
   }
 
   if (selections) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     selections.forEach((selection: any) => {
       // box selection
       if (selection.type === "rect") {
@@ -250,6 +253,7 @@ export function handleSelection(
   }
 
   selectionState.selection.point_indices = Array.from(selectedPointIndices)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   selectionState.selection.points = selectedPoints.map((point: any) =>
     keysToSnakeCase(point)
   )

@@ -14,24 +14,28 @@
 
 """Arrow DataFrame tests."""
 
+import enum
 import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
+    is_pandas_version_less_than,
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 def mock_data_frame():
@@ -50,25 +54,30 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"a": [1, 2, 3]})
         st.dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        el = self.get_delta_from_queue().new_element
+        proto = el.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
         # Since dataframe and data editor share the same proto, we also test for
         # properties only relevant for an editable dataframe.
-        self.assertEqual(proto.use_container_width, True)
-        self.assertEqual(proto.width, 0)
-        self.assertEqual(proto.height, 0)
-        self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.READ_ONLY)
-        self.assertEqual(proto.selection_mode, [])
-        self.assertEqual(proto.disabled, False)
-        self.assertEqual(proto.column_order, [])
-        self.assertEqual(proto.form_id, "")
-        self.assertEqual(proto.columns, "{}")
+        assert proto.height == 0
+        assert proto.editing_mode == ArrowProto.EditingMode.READ_ONLY
+        assert proto.selection_mode == []
+        assert not proto.disabled
+        assert proto.column_order == []
+        assert proto.form_id == ""
+        assert proto.columns == "{}"
         # ID should not be set:
-        self.assertEqual(proto.id, "")
+        assert proto.id == ""
         # Row height is marked optional should not be set if not specified
-        self.assertEqual(proto.HasField("row_height"), False)
-        self.assertEqual(proto.row_height, 0)
+        assert not proto.HasField("row_height")
+        assert proto.row_height == 0
 
     def test_dataframe_only_data(self):
         df = mock_data_frame()
@@ -77,28 +86,19 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
 
-    def test_dataframe_width_parameter(self):
-        """Test that it can be called with width and uses use_container_width=False
-        as default."""
-        st.dataframe(pd.DataFrame(), width=100)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.width, 100)
-        self.assertEqual(proto.use_container_width, False)
-
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.dataframe(pd.DataFrame(), column_order=["a", "b"])
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.column_order, ["a", "b"])
+        assert proto.column_order == ["a", "b"]
 
     def test_empty_column_order_parameter(self):
         """Test that an empty column_order is correctly added."""
         st.dataframe(pd.DataFrame(), column_order=[])
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.column_order, [])
+        assert proto.column_order == []
 
     @parameterized.expand(SHARED_TEST_CASES)
     def test_with_compatible_data(
@@ -112,8 +112,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
-        self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
-        self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
+        assert reconstructed_df.shape[0] == metadata.expected_rows
+        assert reconstructed_df.shape[1] == metadata.expected_cols
 
     def test_hide_index_true(self):
         """Test that it can be called with hide_index=True param."""
@@ -127,10 +127,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(data_df, hide_index=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(
-            proto.columns,
-            json.dumps({INDEX_IDENTIFIER: {"hidden": True}}),
-        )
+        assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_hide_index_false(self):
         """Test that it can be called with hide_index=False param."""
@@ -144,17 +141,14 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(data_df, hide_index=False)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(
-            proto.columns,
-            json.dumps({INDEX_IDENTIFIER: {"hidden": False}}),
-        )
+        assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
 
     def test_row_height_parameter(self):
         """Test that it can be called with row_height."""
         st.dataframe(pd.DataFrame(), row_height=100)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.row_height, 100)
+        assert proto.row_height == 100
 
     def test_uuid(self):
         df = mock_data_frame()
@@ -163,7 +157,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.styler.uuid, "FAKE_UUID")
+        assert proto.styler.uuid == "FAKE_UUID"
 
     def test_caption(self):
         df = mock_data_frame()
@@ -172,7 +166,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
+        assert proto.styler.caption == "FAKE_CAPTION"
 
     def test_cell_styles(self):
         df = mock_data_frame()
@@ -183,8 +177,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(
-            proto.styler.styles, "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
+        assert (
+            proto.styler.styles == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
         )
 
     def test_display_values(self):
@@ -208,7 +202,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         pd.set_option("styler.render.max_elements", 5000)
         # big example with default styler.render.max_elements
         df = pd.DataFrame(list(range(5001)))
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.dataframe(df.style.format("{:03d}"))
         pd.reset_option("styler.render.max_elements")
 
@@ -239,17 +233,19 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
         selection = st.dataframe(df, on_select="rerun", key="selectable_df")
 
-        self.assertEqual(selection.selection.rows, [])
-        self.assertEqual(selection.selection.columns, [])
+        assert selection.selection.rows == []
+        assert selection.selection.columns == []
+        assert selection.selection.cells == []
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.selectable_df.selection.rows, [])
-        self.assertEqual(st.session_state.selectable_df.selection.columns, [])
+        assert st.session_state.selectable_df.selection.rows == []
+        assert st.session_state.selectable_df.selection.columns == []
+        assert st.session_state.selectable_df.selection.cells == []
 
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.dataframe(df, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -262,11 +258,11 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(df, on_select="rerun")
 
         # 2 elements will be created: form block, dataframe
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
-        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+        arrow_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        assert arrow_proto.form_id == form_proto.form.form_id
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_selectable_df_disallows_callbacks_inside_form(self):
@@ -275,9 +271,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with self.assertRaises(StreamlitAPIException):
-            with st.form("form"):
-                st.dataframe(df, on_select=lambda: None)
+        with pytest.raises(StreamlitAPIException), st.form("form"):
+            st.dataframe(df, on_select=lambda: None)
 
     def test_selectable_df_throws_exception_with_modified_sessions_state(self):
         """Test that an exception is thrown if the session state is modified."""
@@ -285,7 +280,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.session_state.selectable_df = {
             "selection": {"rows": [1], "columns": ["col1"]},
         }
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.dataframe(df, on_select="rerun", key="selectable_df")
 
     def test_shows_cached_widget_replay_warning(self):
@@ -296,8 +291,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     @parameterized.expand(
         [
@@ -313,16 +308,43 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select=on_select)
 
         el = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(el.selection_mode, proto_value)
+        assert el.selection_mode == proto_value
 
     @parameterized.expand(
         [
-            (("multi-row", "multi-column"), [1, 3]),
-            ({"single-row", "single-column"}, [0, 2]),
-            ({"single-row", "multi-column"}, [0, 3]),
-            (("multi-row", "single-column"), [1, 2]),
-            ("single-row", [0]),
-            ("multi-column", [3]),
+            (
+                ("multi-row", "multi-column"),
+                [
+                    ArrowProto.SelectionMode.MULTI_ROW,
+                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
+            (
+                {"single-row", "single-column"},
+                [
+                    ArrowProto.SelectionMode.SINGLE_ROW,
+                    ArrowProto.SelectionMode.SINGLE_COLUMN,
+                ],
+            ),
+            (
+                {"single-row", "multi-column"},
+                [
+                    ArrowProto.SelectionMode.SINGLE_ROW,
+                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
+            (
+                ("multi-row", "single-column", "single-cell"),
+                [
+                    ArrowProto.SelectionMode.MULTI_ROW,
+                    ArrowProto.SelectionMode.SINGLE_COLUMN,
+                    ArrowProto.SelectionMode.SINGLE_CELL,
+                ],
+            ),
+            ("single-row", [ArrowProto.SelectionMode.SINGLE_ROW]),
+            ("multi-column", [ArrowProto.SelectionMode.MULTI_COLUMN]),
+            ("single-cell", [ArrowProto.SelectionMode.SINGLE_CELL]),
+            ("multi-cell", [ArrowProto.SelectionMode.MULTI_CELL]),
         ]
     )
     def test_selection_mode_parsing(self, input_modes, expected_modes):
@@ -332,44 +354,111 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select="rerun", selection_mode=input_modes)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.arrow_data_frame.selection_mode, expected_modes)
+        assert el.arrow_data_frame.selection_mode == expected_modes
 
-    def test_selection_mode_parsing_invalid(self):
+    @parameterized.expand(
+        [
+            (["invalid", "single-row"],),
+            (["single-row", "multi-row"],),
+            (["single-column", "multi-column"],),
+            (["single-cell", "multi-cell"],),
+        ]
+    )
+    def test_selection_mode_parsing_invalid(self, invalid_modes):
         """Test that an exception is thrown if the selection_mode parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        # Should throw an exception of the selection mode is parsed wrongly
-        with self.assertRaises(
-            StreamlitAPIException,
-            msg="Should show exception if an unknown selection mode is selected",
-        ):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["invalid", "single-row"]
-            )
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df, on_select="rerun", selection_mode=invalid_modes)
 
-        with self.assertRaises(
-            StreamlitAPIException,
-            msg="Should show exception if single & multi row mode is selected",
-        ):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["single-row", "multi-row"]
-            )
+    def test_selection_mode_deactivated(self):
+        """Test that selection modes are ignored when selections are deactivated."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with self.assertRaises(
-            StreamlitAPIException,
-            msg="Should show exception if single & multi column mode is selected",
-        ):
-            st.dataframe(
-                df, on_select="rerun", selection_mode=["single-column", "multi-column"]
-            )
-
-        # If selections are deactivated, the selection mode list should be empty
-        # even if the selection_mode parameter is set.
         st.dataframe(
             df, on_select="ignore", selection_mode=["single-row", "multi-column"]
         )
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [])
+        assert len(el.arrow_data_frame.selection_mode) == 0
+
+    def test_use_right_display_values(self):
+        """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
+
+        class Status(str, enum.Enum):
+            success = "Success status"
+
+        df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})
+
+        def apply_color(v: Status) -> str:
+            return "color: red" if v == Status.success else ""
+
+        if is_pandas_version_less_than("2.2.0"):
+            styler = df.style.applymap(apply_color, subset=["status"])
+        else:
+            styler = df.style.map(apply_color, subset=["status"])
+
+        st.dataframe(styler)
+
+        expected = pd.DataFrame(
+            {"pipeline": ["Success"], "status": ["Success status"]},
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
+        )
+
+    def test_use_container_width_true_shows_deprecation_warning(self):
+        """Test that use_container_width=True shows deprecation warning and sets width='stretch'."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=True)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=True, it should set width='stretch'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_use_container_width_false_shows_deprecation_warning(self):
+        """Test that use_container_width=False shows deprecation warning and sets width='content'."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=False)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False, it should set width='content'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_use_container_width_false_with_integer_width(self):
+        """Test use_container_width=False with integer width preserves the integer."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(
+                pd.DataFrame({"a": [1, 2, 3]}), width=400, use_container_width=False
+            )
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False and width is integer, preserve integer width
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 400
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):

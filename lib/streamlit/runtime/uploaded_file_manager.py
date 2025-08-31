@@ -65,7 +65,7 @@ class UploadedFile(io.BytesIO):
     initialized with `bytes`.
     """
 
-    def __init__(self, record: UploadedFileRec, file_urls: FileURLsProto):
+    def __init__(self, record: UploadedFileRec, file_urls: FileURLsProto) -> None:
         # BytesIO's copy-on-write semantics doesn't seem to be mentioned in
         # the Python docs - possibly because it's a CPython-only optimization
         # and not guaranteed to be in other Python runtimes. But it's detailed
@@ -81,6 +81,9 @@ class UploadedFile(io.BytesIO):
         if not isinstance(other, UploadedFile):
             return NotImplemented
         return self.file_id == other.file_id
+
+    def __hash__(self) -> int:
+        return hash(self.file_id)
 
     def __repr__(self) -> str:
         return util.repr_(self)

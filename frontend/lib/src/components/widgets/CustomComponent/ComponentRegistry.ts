@@ -15,13 +15,14 @@
  */
 import { getLogger } from "loglevel"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
   type: ComponentMessageType,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   data: any
 ) => void
 
@@ -64,6 +65,34 @@ export class ComponentRegistry {
     }
   }
 
+  /**
+   * Check the source of a custom component for successful response
+   * If the response is not ok, or fetch otherwise fails, send an error to the host.
+   */
+  public checkSourceUrlResponse = (
+    sourceUrl: string,
+    customComponentName: string
+  ): Promise<void> => {
+    return this.endpoints.checkSourceUrlResponse(
+      sourceUrl,
+      "Custom Component",
+      customComponentName
+    )
+  }
+
+  public sendTimeoutError = (
+    source: string,
+    customComponentName: string
+  ): void => {
+    this.endpoints.sendClientErrorToHost(
+      "Custom Component",
+      "Request Timeout",
+      "Your app is having trouble loading the component.",
+      source,
+      customComponentName
+    )
+  }
+
   /** Return a URL for fetching a resource for the given component. */
   public getComponentURL = (componentName: string, path: string): string => {
     return this.endpoints.buildComponentURL(componentName, path)
@@ -72,7 +101,7 @@ export class ComponentRegistry {
   private onMessageEvent = (event: MessageEvent): void => {
     if (
       isNullOrUndefined(event.data) ||
-      !event.data.hasOwnProperty("isStreamlitMessage")
+      !Object.hasOwn(event.data, "isStreamlitMessage")
     ) {
       // Disregard messages that don't come from components.
       return

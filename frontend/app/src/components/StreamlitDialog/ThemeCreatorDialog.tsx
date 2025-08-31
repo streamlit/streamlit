@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback } from "react"
+import React, { ReactElement, useCallback, useContext } from "react"
 
 import { Check } from "@emotion-icons/material-outlined"
 
+import {
+  themeBuilder,
+  toMinimalToml,
+} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
@@ -32,12 +37,8 @@ import {
   StreamlitMarkdown,
   ThemeConfig,
   toThemeInput,
+  useCopyToClipboard,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  themeBuilder,
-  toMinimalToml,
-} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
 
 import {
   StyledBackButton,
@@ -90,8 +91,7 @@ export interface Props {
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
-  const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(LibContext)
+  const { activeTheme, addThemes, setTheme } = useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 
@@ -106,17 +106,17 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
       [key]: newVal,
     })
     updateTheme(customTheme)
-    updateCopied(false)
   }
 
   const config = toMinimalToml(themeInput)
+
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   const copyConfig = (): void => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    navigator.clipboard.writeText(config)
-    updateCopied(true)
+    copyToClipboard(config)
   }
 
   const onClickedBack = (): void => {
@@ -199,13 +199,13 @@ To save your changes, copy your custom theme into the clipboard and paste it int
           <StyledFullRow>
             <div>
               <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
-                {copied ? (
+                {isCopied ? (
                   <React.Fragment>
                     {"Copied to clipboard "}
                     <Icon
                       content={Check}
                       size="lg"
-                      color={activeTheme.emotion.colors.success}
+                      color={activeTheme.emotion.colors.green}
                     />
                   </React.Fragment>
                 ) : (

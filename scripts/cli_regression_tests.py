@@ -18,8 +18,12 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 CONFIG_FILE_PATH: str
 CREDENTIALS_FILE_PATH: str
@@ -40,9 +44,8 @@ class TestCLIRegressions:
         - The STREAMLIT_RELEASE_VERSION environment variable must be set, such as:
                 export STREAMLIT_RELEASE_VERSION=1.5.1
 
-    You can then run the tests from the root of the Streamlit repository using one of the following:
+    You can then run the tests from the root of the Streamlit repository using:
             pytest scripts/cli_regression_tests.py
-            make cli-regression-tests
 
     This test suite makes use of Python's built-in assert statement. Note that assertions in the
     form of `assert <expression>` use Pytest's assertion introspection. In some cases, a more clear
@@ -51,18 +54,18 @@ class TestCLIRegressions:
     """
 
     @pytest.fixture(scope="module", autouse=True)
-    def setup(self):
+    def setup(self) -> Generator[None, None, None]:
         # ---- Initialization
-        global CONFIG_FILE_PATH
+        global CONFIG_FILE_PATH  # noqa: PLW0603
         CONFIG_FILE_PATH = os.path.expanduser("~/.streamlit/config.toml")
 
-        global CREDENTIALS_FILE_PATH
+        global CREDENTIALS_FILE_PATH  # noqa: PLW0603
         CREDENTIALS_FILE_PATH = os.path.expanduser("~/.streamlit/credentials.toml")
 
-        global REPO_ROOT
+        global REPO_ROOT  # noqa: PLW0603
         REPO_ROOT = os.getcwd()
 
-        global STREAMLIT_RELEASE_VERSION
+        global STREAMLIT_RELEASE_VERSION  # noqa: PLW0603
         STREAMLIT_RELEASE_VERSION = os.environ.get("STREAMLIT_RELEASE_VERSION", None)
 
         # Ensure that there aren't any previously stored credentials
@@ -81,29 +84,32 @@ class TestCLIRegressions:
 
         self.run_command("streamlit cache clear")
 
-    def parameterize(self, params):
+    def parameterize(self, params: str) -> list[str]:
         return params.split(" ")
 
-    def read_process_output(self, proc, num_lines_to_read):
+    def read_process_output(
+        self, proc: subprocess.Popen[bytes], num_lines_to_read: int
+    ) -> str:
         num_lines_read = 0
         output = ""
 
         while num_lines_read < num_lines_to_read:
+            assert proc.stdout is not None
             output += proc.stdout.readline().decode("UTF-8")
             num_lines_read += 1
 
         return output
 
-    def run_command(self, command):
+    def run_command(self, command: str) -> str:
         return subprocess.check_output(self.parameterize(command)).decode("UTF-8")
 
-    def run_single_proc(self, command, num_lines_to_read=4):
+    def run_single_proc(self, command: str, num_lines_to_read: int = 4) -> str:
         proc = subprocess.Popen(
             command,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         output = self.read_process_output(proc, num_lines_to_read)
@@ -117,14 +123,14 @@ class TestCLIRegressions:
         return output
 
     def run_double_proc(
-        self, command_one, command_two, wait_in_seconds=2, num_lines_to_read=4
-    ):
+        self, command_one: str, command_two: str, num_lines_to_read: int = 4
+    ) -> tuple[str, str]:
         proc_one = subprocess.Popen(
             command_one,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         # Getting the output from process one ensures the process started first
@@ -135,7 +141,7 @@ class TestCLIRegressions:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         output_two = self.read_process_output(proc_two, num_lines_to_read)
@@ -150,18 +156,19 @@ class TestCLIRegressions:
         return output_one, output_two
 
     @pytest.mark.skipif(
-        bool(os.environ.get("SKIP_VERSION_CHECK", False)) is True,
+        os.environ.get("SKIP_VERSION_CHECK", "false").lower() == "true",
         reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
     )
-    def test_streamlit_version(self):
-        assert (
-            STREAMLIT_RELEASE_VERSION is not None and STREAMLIT_RELEASE_VERSION != ""
-        ), "You must set the $STREAMLIT_RELEASE_VERSION env variable"
+    def test_streamlit_version(self) -> None:
+        assert STREAMLIT_RELEASE_VERSION is not None
+        assert STREAMLIT_RELEASE_VERSION != "", (
+            "You must set the $STREAMLIT_RELEASE_VERSION env variable"
+        )
         assert STREAMLIT_RELEASE_VERSION in self.run_command("streamlit version"), (
             f"Package version does not match the desired version of {STREAMLIT_RELEASE_VERSION}"
         )
 
-    def test_streamlit_activate(self):
+    def test_streamlit_activate(self) -> None:
         process = subprocess.Popen(
             "streamlit activate", stdin=subprocess.PIPE, shell=True
         )
@@ -174,7 +181,7 @@ class TestCLIRegressions:
                 "Email address was not found in the credentials file"
             )
 
-    def test_port_reassigned(self):
+    def test_port_reassigned(self) -> None:
         """When starting a new Streamlit session, it will run on port 8501 by default. If 8501 is
         not available, it will use the next available port.
         """
@@ -187,7 +194,7 @@ class TestCLIRegressions:
         assert ":8501" in out_one, f"Incorrect port. See output:\n{out_one}"
         assert ":8502" in out_two, f"Incorrect port. See output:\n{out_two}"
 
-    def test_conflicting_port(self):
+    def test_conflicting_port(self) -> None:
         out_one, out_two = self.run_double_proc(
             f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
             f"streamlit run --server.headless=true --server.port=8501 {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
@@ -198,14 +205,14 @@ class TestCLIRegressions:
             f"Incorrect conflict. See output:\n{out_one}"
         )
 
-    def test_cli_defined_port(self):
+    def test_cli_defined_port(self) -> None:
         out = self.run_single_proc(
             f"streamlit run --server.headless=true --server.port=9999 {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
         )
 
         assert ":9999" in out, f"Incorrect port. See output:\n{out}"
 
-    def test_config_toml_defined_port(self):
+    def test_config_toml_defined_port(self) -> None:
         with open(CONFIG_FILE_PATH, "w") as file:
             file.write("[server]\n  port=8888")
 

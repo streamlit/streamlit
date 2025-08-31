@@ -19,6 +19,7 @@ def test_query_params_exception_msg(app: Page):
     expect(app.get_by_test_id("stException")).to_be_visible()
     expect(
         app.get_by_text(
-            "Using st.query_params together with either st.experimental_get_query_params or st.experimental_set_query_params is not supported. Please convert your app to only use st.query_params"
+            "Using st.query_params together with either st.experimental_get_query_params or "
+            "st.experimental_set_query_params is not supported. Please convert your app to only use st.query_params"
         )
     ).to_be_visible()

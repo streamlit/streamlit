@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import re
 import textwrap
 import unittest
 from pathlib import Path
@@ -59,8 +60,8 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials constructor."""
         c = Credentials()
 
-        self.assertEqual(c._conf_file, MOCK_PATH)
-        self.assertEqual(c.activation, None)
+        assert c._conf_file == MOCK_PATH
+        assert c.activation is None
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -71,7 +72,7 @@ class CredentialsClassTest(unittest.TestCase):
         Credentials._singleton = None
         c = Credentials.get_current()
 
-        self.assertEqual(Credentials._singleton, c)
+        assert Credentials._singleton == c
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -82,8 +83,9 @@ class CredentialsClassTest(unittest.TestCase):
         Credentials()
         with pytest.raises(RuntimeError) as e:
             Credentials()
-        self.assertEqual(
-            str(e.value), "Credentials already initialized. Use .get_current() instead"
+        assert (
+            str(e.value)
+            == "Credentials already initialized. Use .get_current() instead"
         )
 
     @patch(
@@ -101,7 +103,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual("user@domain.com", c.activation.email)
+            assert c.activation.email == "user@domain.com"
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -118,7 +120,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual("", c.activation.email)
+            assert c.activation.email == ""
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -144,8 +146,9 @@ class CredentialsClassTest(unittest.TestCase):
             c.activation = None
             with pytest.raises(RuntimeError) as e:
                 c.load()
-            self.assertEqual(
-                str(e.value), 'Credentials not found. Please run "streamlit activate".'
+            assert (
+                str(e.value)
+                == 'Credentials not found. Please run "streamlit activate".'
             )
 
     @patch(
@@ -159,14 +162,12 @@ class CredentialsClassTest(unittest.TestCase):
             )
             c = Credentials.get_current()
             c.activation = None
-            with pytest.raises(Exception) as e:
-                c.load()
-            self.assertEqual(
-                str(e.value).split(":")[0],
-                "\nUnable to load credentials from "
-                f"{MOCK_PATH}.\n"
-                'Run "streamlit reset" and try again.\n',
+            expected_msg = (
+                f"\nUnable to load credentials from {MOCK_PATH}.\n"
+                'Run "streamlit reset" and try again.\n'
             )
+            with pytest.raises(RuntimeError, match=re.escape(expected_msg)):
+                c.load()
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -226,13 +227,13 @@ class CredentialsClassTest(unittest.TestCase):
         with (
             patch(
                 "streamlit.runtime.credentials.open", mock_open(), create=True
-            ) as open,
+            ) as file_open,
             patch("streamlit.runtime.credentials.os.makedirs") as make_dirs,
         ):
             c.save()
 
             make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
-            open.return_value.write.assert_called_once_with(truth)
+            file_open.return_value.write.assert_called_once_with(truth)
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -244,8 +245,8 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
-            self.assertEqual(p.error.call_count, 2)
-            self.assertEqual(p.error.call_args_list[1], call("Already activated"))
+            assert p.error.call_count == 2
+            assert p.error.call_args_list[1] == call("Already activated")
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -257,10 +258,8 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
-            self.assertEqual(p.error.call_count, 2)
-            self.assertEqual(
-                str(p.error.call_args_list[1])[0:27], "call('Activation not valid."
-            )
+            assert p.error.call_count == 2
+            assert str(p.error.call_args_list[1])[0:27] == "call('Activation not valid."
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -279,8 +278,8 @@ class CredentialsClassTest(unittest.TestCase):
             c.activate()
             patched_save.assert_called_once()
 
-            self.assertEqual(c.activation.email, "user@domain.com")
-            self.assertEqual(c.activation.is_valid, True)
+            assert c.activation.email == "user@domain.com"
+            assert c.activation.is_valid
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -293,7 +292,7 @@ class CredentialsClassTest(unittest.TestCase):
             Credentials.reset()
             p.assert_called_once_with(MOCK_PATH)
 
-        self.assertEqual(c, Credentials.get_current())
+        assert c == Credentials.get_current()
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -400,13 +399,13 @@ class CredentialsModulesTest(unittest.TestCase):
 
     def test_verify_email(self):
         """Test _verify_email."""
-        self.assertTrue(_verify_email("user@domain.com").is_valid)
-        self.assertTrue(_verify_email("").is_valid)
-        self.assertFalse(_verify_email("missing_at_sign").is_valid)
+        assert _verify_email("user@domain.com").is_valid
+        assert _verify_email("").is_valid
+        assert not _verify_email("missing_at_sign").is_valid
 
     def test_show_emojis(self):
-        self.assertIn("👋", email_prompt())
+        assert "👋" in email_prompt()
 
     @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
     def test_show_emojis_windows(self):
-        self.assertNotIn("👋", email_prompt())
+        assert "👋" not in email_prompt()

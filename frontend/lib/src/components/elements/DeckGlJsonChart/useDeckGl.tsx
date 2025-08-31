@@ -16,23 +16,26 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import JSON5 from "json5"
-import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
-import { TooltipContent } from "@deck.gl/core/dist/lib/tooltip"
-import isEqual from "lodash/isEqual"
+import {
+  type DeckProps,
+  PickingInfo,
+  ViewStateChangeParameters,
+} from "@deck.gl/core"
 import { parseToRgba } from "color2k"
+import JSON5 from "json5"
+import isEqual from "lodash/isEqual"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
-import { EmotionTheme } from "~lib/theme"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
+import { EmotionTheme } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
   DeckGlElementState,
@@ -40,12 +43,20 @@ import type {
   DeckObject,
   ParsedDeckGlConfig,
 } from "./types"
-import { jsonConverter } from "./utils/jsonConverter"
 import {
   FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
+import { jsonConverter } from "./utils/jsonConverter"
+
+/**
+ * Extracted type from the DeckGL library since it is not exported correctly.
+ */
+type TooltipContent =
+  NonNullable<DeckProps["getTooltip"]> extends (info: PickingInfo) => infer R
+    ? R
+    : never
 
 type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
@@ -63,7 +74,7 @@ type UseDeckGlShape = {
   width: number | string
 }
 
-export type UseDeckGlProps = Omit<DeckGLProps, "mapboxToken"> & {
+export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
   theme: EmotionTheme
 }
@@ -93,11 +104,11 @@ const interpolate = (info: PickingInfo, body: string): string => {
     matchedVariables.forEach((match: string) => {
       const variable = match.substring(1, match.length - 1)
 
-      if (info.object.hasOwnProperty(variable)) {
+      if (Object.hasOwn(info.object, variable)) {
         body = body.replace(match, info.object[variable])
       } else if (
-        info.object.hasOwnProperty("properties") &&
-        info.object.properties.hasOwnProperty(variable)
+        Object.hasOwn(info.object, "properties") &&
+        Object.hasOwn(info.object.properties, variable)
       ) {
         body = body.replace(match, info.object.properties[variable])
       }
@@ -155,7 +166,7 @@ function updateWidgetMgrState(
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
-    height: propsHeight,
+    height: fullScreenHeight,
     width: propsWidth,
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
@@ -188,7 +199,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     element,
     isFullScreen,
     shouldUseContainerWidth,
-    container: { height: propsHeight, width: propsWidth },
+    container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
         ?.height || theme.sizes.defaultMapHeight,
@@ -217,31 +228,42 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     return Object.freeze(JSON5.parse<ParsedDeckGlConfig>(element.json))
     // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen, isLightTheme, element.json])
 
   const deck = useMemo<DeckObject>(() => {
-    const copy = { ...parsedPydeckJson }
+    const jsonCopy = { ...parsedPydeckJson }
 
-    // If unset, use either the Mapbox light or dark style based on Streamlit's theme
-    // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (!copy.mapStyle) {
-      copy.mapStyle = `mapbox://styles/mapbox/${
-        isLightTheme ? "light" : "dark"
-      }-v9`
+    // If unset, use either the light or dark style based on Streamlit's theme.
+    if (!jsonCopy.mapStyle) {
+      jsonCopy.mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
     }
 
-    if (copy.layers) {
+    const isUsingCarto =
+      jsonCopy?.mapProvider == "carto" ||
+      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+
+    if (isUsingCarto && !jsonCopy.cartoKey) {
+      // This key was manually created by Carto just for Streamlit. It is NOT
+      // connected to any paid accounts, or secure API access, or anything of
+      // the sort. It's is just used for Carto to be able to separate Streamlit
+      // usage from other types in their own internal stats.
+      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+    }
+
+    if (jsonCopy.layers) {
       const anyLayersHaveSelection = Object.values(
         data.selection.indices
       ).some(layer => layer?.length)
 
-      const anyLayersHavePickableDefined = copy.layers.some(layer =>
+      const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
         Object.hasOwn(layer, "pickable")
       )
 
-      copy.layers = copy.layers.map(layer => {
+      jsonCopy.layers = jsonCopy.layers.map(layer => {
         if (
           !layer ||
           Array.isArray(layer) ||
@@ -330,9 +352,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    delete copy?.views // We are not using views. This avoids a console warning.
+    delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
-    return jsonConverter.convert(copy)
+    return jsonConverter.convert(jsonCopy)
   }, [
     data.selection.indices,
     isLightTheme,
@@ -346,14 +368,15 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, initialViewState)) {
       const diff = Object.keys(deck.initialViewState).reduce(
-        (diff, key): any => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        (diffArg, key): any => {
           // @ts-expect-error
           if (deck.initialViewState[key] === initialViewState?.[key]) {
-            return diff
+            return diffArg
           }
 
           return {
-            ...diff,
+            ...diffArg,
             // @ts-expect-error
             [key]: deck.initialViewState[key],
           }
@@ -386,8 +409,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const onViewStateChange = useCallback(
-    ({ viewState }: ViewStateChangeParameters) => {
-      setViewState(viewState)
+    ({ viewState: viewStateArg }: ViewStateChangeParameters) => {
+      setViewState(viewStateArg)
     },
     [setViewState]
   )

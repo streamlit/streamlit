@@ -16,8 +16,8 @@
 
 import React, { FC } from "react"
 
-import { describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 
 import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 
@@ -40,7 +40,6 @@ describe("withCalculatedWidth", () => {
     vi.mocked(useResizeObserver).mockReturnValue({
       values: [mockWidth],
       elementRef: mockElementRef,
-      forceRecalculate: vi.fn(),
     })
 
     const EnhancedComponent = withCalculatedWidth(TestComponent)
@@ -55,7 +54,6 @@ describe("withCalculatedWidth", () => {
     vi.mocked(useResizeObserver).mockReturnValue({
       values: [0],
       elementRef: mockElementRef,
-      forceRecalculate: vi.fn(),
     })
 
     const EnhancedComponent = withCalculatedWidth(TestComponent)
@@ -68,7 +66,6 @@ describe("withCalculatedWidth", () => {
     vi.mocked(useResizeObserver).mockReturnValue({
       values: [300],
       elementRef: mockElementRef,
-      forceRecalculate: vi.fn(),
     })
 
     // Create a component that accepts additional props
@@ -93,7 +90,6 @@ describe("withCalculatedWidth", () => {
     vi.mocked(useResizeObserver).mockReturnValue({
       values: [300],
       elementRef: mockElementRef,
-      forceRecalculate: vi.fn(),
     })
 
     const EnhancedComponent = withCalculatedWidth(TestComponent)

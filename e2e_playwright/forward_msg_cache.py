@@ -31,23 +31,41 @@ kb_message_size = st.number_input(
 )
 
 
-# This string is ~1kb in size if rendered via markdown/write:
+# This string is ~1kb in size if rendered via markdown:
 message_1kb = "\n\n".join(
     2
     * [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus quis neque eu orci faucibus pellentesque. Vivamus dapibus pellentesque sem, vitae ultricies sem pharetra at. Curabitur eu congue magna, eu tempor libero. Donec vitae condimentum odio. Sed neque elit, porttitor eget laoreet volutpat, imperdiet et leo. Phasellus vel velit sit amet nulla hendrerit pharetra et non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. In malesuada sem sit amet felis vestibulum, maximus."
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus quis neque "
+        "eu orci faucibus pellentesque. Vivamus dapibus pellentesque sem, vitae "
+        "ultricies sem pharetra at. Curabitur eu congue magna, eu tempor libero. "
+        "Donec vitae condimentum odio. Sed neque elit, porttitor eget laoreet "
+        "volutpat, imperdiet et leo. Phasellus vel velit sit amet nulla hendrerit "
+        "pharetra et non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing "
+        "elit. In malesuada sem sit amet felis vestibulum, maximus."
     ]
 )
 
 with st.container(height=300):
     for i in range(num_small_messages):
-        st.write(
-            f"**Message {i + 1}:** \n\n",
-            "\n\n".join(kb_message_size * [message_1kb]),
+        st.markdown(
+            f"**Message {i + 1}:** \n\n" + "\n\n".join(kb_message_size * [message_1kb]),
         )
 
+
+@st.fragment
+def my_fragment():
+    st.button("Rerun fragment")
+    with st.expander("Message in Fragment", expanded=False):
+        st.markdown(
+            "**Message in Fragment:** \n\n"
+            + "\n\n".join(kb_message_size * [message_1kb]),
+        )
+
+
+my_fragment()
+
 st.button("Re-run")
-st.write(f"Rerun count: {st.session_state['rerun_count']}")
+st.markdown(f"Rerun count: {st.session_state['rerun_count']}")
 
 if st.toggle("Show dataframes"):
     # With the default settings, the dataframe is ~50MB in size.
@@ -58,7 +76,7 @@ if st.toggle("Show dataframes"):
 
     # Create a large dataframe
     @st.cache_data
-    def create_large_dataframe(num_cols, num_rows):
+    def create_large_dataframe(num_cols: int, num_rows: int) -> pd.DataFrame:
         df = pd.DataFrame({f"col {i}": range(num_rows) for i in range(num_cols)})
         # Make 50% of the columns string columns
         for i in range(num_cols):

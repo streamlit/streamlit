@@ -17,7 +17,7 @@
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
   BaseColumn,
@@ -140,6 +140,7 @@ describe("applyColumnConfig", () => {
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
     expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect((column1.columnTypeOptions as any).type).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
@@ -437,7 +438,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     const { columns } = result.current
@@ -462,7 +463,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     const { columns } = result.current
@@ -487,7 +488,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     const { columns } = result.current
@@ -501,7 +502,7 @@ describe("useColumnLoader hook", () => {
     expect(columns[1].isIndex).toBe(false)
   })
 
-  it("activates colum stretch if configured by user", () => {
+  it("activates column stretch if configured by user", () => {
     const element = ArrowProto.create({
       data: UNICODE,
       useContainerWidth: true,
@@ -510,7 +511,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     for (const column of result.current.columns) {
@@ -528,7 +529,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     for (const column of result.current.columns) {
@@ -551,7 +552,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     expect(result.current.columns[1].isRequired).toBe(true)
@@ -573,7 +574,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     // Test that the column is hidden (not part of columns).
@@ -591,7 +592,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     for (const column of result.current.columns) {
@@ -616,7 +617,7 @@ describe("useColumnLoader hook", () => {
     const data = new Quiver(element)
 
     const { result } = renderHook(() => {
-      return useColumnLoader(element, data, false, element.columnOrder)
+      return useColumnLoader(element, data, false, element.columnOrder, null)
     })
 
     // Range index:
@@ -628,5 +629,111 @@ describe("useColumnLoader hook", () => {
     expect(result.current.columns[1].isPinned).toBe(true)
     expect(result.current.columns[2].name).toBe("c1")
     expect(result.current.columns[2].isPinned).toBe(true)
+  })
+
+  it("activates column stretch with widthConfig.useStretch", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: false, // Should be overridden by widthConfig
+    })
+
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(
+        element,
+        data,
+        false,
+        element.columnOrder,
+        widthConfig
+      )
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.isStretched).toBe(true)
+    }
+  })
+
+  it("does not activate column stretch with widthConfig.useContent", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: true, // Should be overridden by widthConfig
+    })
+
+    const widthConfig = new streamlit.WidthConfig({ useContent: true })
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(
+        element,
+        data,
+        false,
+        element.columnOrder,
+        widthConfig
+      )
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.isStretched).toBe(false)
+    }
+  })
+
+  it("activates column stretch with widthConfig.pixelWidth", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: false,
+    })
+
+    const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(
+        element,
+        data,
+        false,
+        element.columnOrder,
+        widthConfig
+      )
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.isStretched).toBe(true)
+    }
+  })
+
+  it("falls back to container width with widthConfig undefined and useContainerWidth is false", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: false,
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false, element.columnOrder, null)
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.isStretched).toBe(false)
+    }
+  })
+
+  it("falls back to container width with widthConfig undefined and useContainerWidth is true", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: true,
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false, element.columnOrder, null)
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.isStretched).toBe(true)
+    }
   })
 })

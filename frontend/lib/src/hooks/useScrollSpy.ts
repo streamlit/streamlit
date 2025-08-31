@@ -47,8 +47,10 @@ import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
  * @returns A debounced version of the `fn` function.
  */
 export function debounce(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   fn: (...args: any[]) => void,
   ms: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): (...args: any[]) => void {
   if (!ms) {
     return fn
@@ -68,10 +70,13 @@ export function debounce(
         clearTimeout(timeout)
       }
 
-      timeout = setTimeout(() => {
-        fn(...args)
-        last = Date.now()
-      }, Math.max(0, ms - now + last))
+      timeout = setTimeout(
+        () => {
+          fn(...args)
+          last = Date.now()
+        },
+        Math.max(0, ms - now + last)
+      )
     }
   }
 }
@@ -96,14 +101,14 @@ const DEFAULT_DEBOUNCE_MS = 100
  */
 export default function useScrollSpy(
   target: HTMLElement | null,
-  eventHandler: ({ timeStampLow }: any) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  eventHandler: ({ timeStampLow }: any) => void,
+  active: boolean
 ): void {
   const onEventRef = useRef(eventHandler)
 
   const debouncer = useMemo(
     () =>
-      // TODO: Update to match React best practices
-      // eslint-disable-next-line react-compiler/react-compiler
       debounce(event => {
         onEventRef.current(event)
       }, DEFAULT_DEBOUNCE_MS),
@@ -111,6 +116,7 @@ export default function useScrollSpy(
   )
 
   const handleEvent = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (event: any) => {
       event.timeStampLow = Date.now()
 
@@ -120,7 +126,7 @@ export default function useScrollSpy(
   )
 
   useLayoutEffect(() => {
-    if (!target) {
+    if (!target || !active) {
       return () => {}
     }
 
@@ -128,5 +134,5 @@ export default function useScrollSpy(
     handleEvent({ target })
 
     return () => target.removeEventListener("scroll", handleEvent)
-  }, [handleEvent, target])
+  }, [handleEvent, target, active])
 }

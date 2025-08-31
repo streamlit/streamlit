@@ -30,12 +30,12 @@ st.subheader("Page Navigation:")
 st.logo(logo, link="https://www.example.com", icon_image=small_logo)
 
 
-colA, colB = st.container(key="page_link_container").columns(2)
+col_a, col_b = st.container(key="page_link_container").columns(2)
 
-with colA:
+with col_a:
     st.page_link("mpa_configure_sidebar.py", label="Home", icon="🏠")
     st.page_link(Path("pages/02_page2.py"), label="Page 2", icon=":material/article:")
     st.page_link("pages/03_page3.py", label="Page 3", icon="📈", disabled=True)
 
-with colB:
+with col_b:
     st.page_link("pages/04_page_with_duplicate_name.py", label="Page 4", icon="🧪")

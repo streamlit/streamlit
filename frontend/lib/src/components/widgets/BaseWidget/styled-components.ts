@@ -53,8 +53,8 @@ export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   margin: theme.spacing.none,
   textAlign: "right",
   position: "absolute",
-  bottom: 0,
-  right: `calc(${theme.fontSizes.sm} * 0.5)`,
+  bottom: theme.spacing.threeXS,
+  right: `calc(${theme.fontSizes.mdLg} * 0.5)`,
 }))
 
 export const StyledWidgetLabelHelpInline = styled.label(({ theme }) => ({

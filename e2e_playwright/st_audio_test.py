@@ -16,18 +16,41 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
 )
+
+AUDIO_ELEMENTS_WITH_PATH = 3
+AUDIO_ELEMENTS_WITH_URL = 3
+
+
+def check_audio_source_error_count(messages: list[str], expected_count: int):
+    """Check that the expected number of audio source error messages are logged."""
+    assert (
+        len(
+            [
+                message
+                for message in messages
+                if "Client Error: Audio source error" in message
+            ]
+        )
+        # when test run on webkit, it will sometimes log extra instances of the error
+        # for the same source - so we use >= expected_count to avoid flakiness
+        >= expected_count
+    )
 
 
 def test_audio_has_correct_properties(app: Page):
     """Test that `st.audio` renders correct properties."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(6)
+    expect(audio_elements).to_have_count(8)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
@@ -50,7 +73,7 @@ def test_audio_end_time_loop(app: Page):
     audio_element = app.get_by_test_id("stAudio").nth(2)
     audio_element.evaluate("el => el.play()")
     # The corresponding element definition looks like this:
-    # st.audio(url2, start_time=15, end_time=19, loop=True)
+    # > st.audio(url2, start_time=15, end_time=19, loop=True)
     # We wait for 6 seconds, which mean the current time should be
     # approximately 17 (4 seconds until end_time and 2 seconds starting from start time)
     app.wait_for_timeout(6000)
@@ -73,6 +96,35 @@ def test_audio_autoplay(app: Page):
 
     expect(audio_element).to_have_js_property("autoplay", True)
     expect(audio_element).to_have_js_property("paused", False)
+
+
+@pytest.mark.skip_browser("firefox")
+def test_audio_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.audio` width configurations are applied correctly."""
+    audio_pixel_width = app.get_by_test_id("stAudio").nth(6)
+    wait_until(
+        app,
+        lambda: audio_pixel_width.evaluate("el => el.readyState") == 4,
+        timeout=15000,
+    )
+    # Hide the timeline to prevent flakiness in screenshots
+    hide_timeline_style = """
+    audio::-webkit-media-controls-timeline { display: none; }
+    """
+    assert_snapshot(
+        audio_pixel_width, name="st_audio-width_300px", style=hide_timeline_style
+    )
+
+    audio_stretch_width = app.get_by_test_id("stAudio").nth(7)
+    wait_until(
+        app,
+        lambda: audio_stretch_width.evaluate("el => el.readyState") == 4,
+        timeout=15000,
+    )
+
+    assert_snapshot(
+        audio_stretch_width, name="st_audio-width_stretch", style=hide_timeline_style
+    )
 
 
 def test_audio_remount_no_autoplay(app: Page):
@@ -123,3 +175,55 @@ def test_audio_uses_unified_height(
     themed_app.wait_for_timeout(1000)
 
     assert_snapshot(audio_element, name="st_audio-unified_height")
+
+
+# TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
+@pytest.mark.only_browser("chromium")
+def test_audio_source_error_with_url(app: Page, app_port: int):
+    """Test `st.audio` source error when data is a url."""
+    # Ensure audio source request return a 404 status
+    app.route(
+        "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    # Should be 3 instances of the error, one for each audio element with url
+    wait_until(
+        app, lambda: check_audio_source_error_count(messages, AUDIO_ELEMENTS_WITH_URL)
+    )
+
+
+# TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
+@pytest.mark.only_browser("chromium")
+def test_audio_source_error_with_path(app: Page, app_port: int):
+    """Test `st.audio` source error when data is path (media endpoint)."""
+    # Ensure audio source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/media/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
+    # Should be 3 instances of the error, one for each audio element with path
+    wait_until(
+        app, lambda: check_audio_source_error_count(messages, AUDIO_ELEMENTS_WITH_PATH)
+    )

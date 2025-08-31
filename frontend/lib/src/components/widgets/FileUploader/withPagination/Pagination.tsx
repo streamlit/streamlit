@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 
@@ -53,4 +53,4 @@ const Pagination = ({
   )
 }
 
-export default Pagination
+export default memo(Pagination)

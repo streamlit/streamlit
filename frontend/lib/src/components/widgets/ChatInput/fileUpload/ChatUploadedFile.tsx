@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import React, { FC, memo } from "react"
 
 import {
   Clear,
   ErrorOutline,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import { useTheme } from "@emotion/react"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
-import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
-import {
-  ErrorStatus,
-  UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { assertNever } from "~lib/util/assertNever"
+import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
+import { ChatUploadedFileIconTooltip } from "./ChatUploadedFileIconTooltip"
 import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
@@ -39,7 +37,6 @@ import {
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
 } from "./styled-components"
-import { ChatUploadedFileIconTooltip } from "./ChatUploadedFileIconTooltip"
 
 export interface Props {
   fileInfo: UploadFileInfo
@@ -53,14 +50,13 @@ export interface ChatUploadedFileIconProps {
 export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   fileInfo,
 }) => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const { type } = fileInfo.status
 
   switch (type) {
     case "uploading":
       return (
         <StyledSpinnerIcon
-          usingCustomTheme={false}
           data-testid="stChatInputFileIconSpinner"
           size="lg"
           margin="0"
@@ -69,9 +65,7 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
       )
     case "error":
       return (
-        <ChatUploadedFileIconTooltip
-          content={(fileInfo.status as ErrorStatus).errorMessage}
-        >
+        <ChatUploadedFileIconTooltip content={fileInfo.status.errorMessage}>
           <Icon color={theme.colors.red} content={ErrorOutline} size="lg" />
         </ChatUploadedFileIconTooltip>
       )
@@ -116,4 +110,4 @@ const ChatUploadedFile = ({
   </StyledChatUploadedFile>
 )
 
-export default ChatUploadedFile
+export default memo(ChatUploadedFile)

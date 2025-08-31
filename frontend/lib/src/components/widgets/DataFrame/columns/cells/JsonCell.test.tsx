@@ -29,6 +29,7 @@ describe("JsonCell renderer", () => {
       data: { kind: "json-cell", value: { test: "value" } },
       allowOverlay: true,
       copyData: "",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     } as any
 
     expect(renderer.isMatch(jsonCell)).toBe(true)
@@ -41,8 +42,10 @@ describe("JsonCell renderer", () => {
 
     const cell = {
       data: { kind: "json-cell", value: { test: "value" } },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     } as any
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- TODO: Replace 'any' with a more specific type.
     const width = renderer.measure!(ctx, cell, mockTheme as any)
     expect(width).toBeGreaterThan(0)
   })

@@ -14,66 +14,47 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useEffect, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
-import { OnChangeParams, Option, Select as UISelect } from "baseui/select"
-import { useTheme } from "@emotion/react"
-import { hasMatch, score } from "fzy.js"
-import sortBy from "lodash/sortBy"
+import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { EmotionTheme } from "~lib/theme"
-
-const NO_OPTIONS_MSG = "No options to select."
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
+  value: string | null
+  onChange: (value: string | null) => void
   disabled: boolean
-  value: number | null
-  onChange: (value: number | null) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   options: any[]
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
-  placeholder?: string
+  placeholder: string
   clearable?: boolean
+  acceptNewOptions: boolean
 }
 
-interface SelectOption {
-  label: string
-  value: string
-}
-
-// Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indices
-// More details: https://github.com/streamlit/streamlit/issues/1010
-// Also filters using fuzzy search powered by fzy.js. Automatically handles
-// upper/lowercase.
-export function fuzzyFilterSelectOptions(
-  options: SelectOption[],
-  pattern: string
-): readonly SelectOption[] {
-  if (!pattern) {
-    return options
-  }
-
-  const filteredOptions = options.filter((opt: SelectOption) =>
-    hasMatch(pattern, opt.label)
-  )
-  return sortBy(filteredOptions, (opt: SelectOption) =>
-    score(pattern, opt.label)
-  ).reverse()
-}
-
-const Selectbox: React.FC<Props> = ({
+const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
   onChange,
@@ -83,9 +64,15 @@ const Selectbox: React.FC<Props> = ({
   help,
   placeholder,
   clearable,
+  acceptNewOptions,
 }) => {
-  const theme: EmotionTheme = useTheme()
-  const [value, setValue] = useState<number | null>(propValue)
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
+
+  const [value, setValue] = useState<string | null>(propValue)
+  // This ref is used to store the value before the user starts removing characters so that we can restore
+  // the value in case the user dismisses the changes by clicking away.
+  const valueBeforeRemoval = useRef<string | null>(value)
 
   // Update the value whenever the value provided by the props changes
   // TODO: Find a better way to handle this to prevent unneeded re-renders
@@ -95,55 +82,59 @@ const Selectbox: React.FC<Props> = ({
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {
-      if (params.value.length === 0) {
+      if (params.type === "remove") {
+        valueBeforeRemoval.current = params.option?.value
+        // We set the value so that BaseWeb updates the element's value while typing.
+        // We don't want to commit the change yet, so we don't call onChange.
+        setValue(null)
+        return
+      }
+
+      valueBeforeRemoval.current = null
+
+      if (params.type === "clear") {
         setValue(null)
         onChange(null)
         return
       }
 
       const [selected] = params.value
-      const newValue = parseInt(selected.value, 10)
-      setValue(newValue)
-      onChange(newValue)
+      setValue(selected.value)
+      onChange(selected.value)
     },
     [onChange]
   )
 
-  const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] =>
-      fuzzyFilterSelectOptions(options as SelectOption[], filterValue),
-    []
+  const handleBlur = useCallback(() => {
+    if (valueBeforeRemoval.current !== null) {
+      setValue(valueBeforeRemoval.current)
+    }
+  }, [])
+
+  const opts = propOptions
+
+  const {
+    placeholder: selectboxPlaceholder,
+    disabled: shouldDisable,
+    selectOptions,
+    inputReadOnly,
+    valueToUiSingle,
+    createFilterOptions,
+  } = useSelectCommon({
+    options: opts as string[],
+    isMulti: false,
+    acceptNewOptions,
+    placeholderInput: placeholder,
+  })
+
+  const selectDisabled = disabled || shouldDisable
+
+  const filterOptions = useMemo(
+    () => createFilterOptions(),
+    [createFilterOptions]
   )
 
-  let selectDisabled = disabled
-  let options = propOptions
-
-  let selectValue: Option[] = []
-
-  if (!isNullOrUndefined(value)) {
-    selectValue = [
-      {
-        label: options.length > 0 ? options[value] : NO_OPTIONS_MSG,
-        value: value.toString(),
-      },
-    ]
-  }
-
-  if (options.length === 0) {
-    options = [NO_OPTIONS_MSG]
-    selectDisabled = true
-  }
-
-  const selectOptions: SelectOption[] = options.map(
-    (option: string, index: number) => ({
-      label: option,
-      value: index.toString(),
-    })
-  )
-
-  // Check if we have more than 10 options in the selectbox.
-  // If that's true, we show the keyboard on mobile. If not, we hide it.
-  const showKeyboardOnMobile = options.length > 10
+  const selectValue = valueToUiSingle(value)
 
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
@@ -159,21 +150,25 @@ const Selectbox: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <UISelect
+        creatable={acceptNewOptions}
         disabled={selectDisabled}
         labelKey="label"
         aria-label={label || ""}
         onChange={handleChange}
+        onBlur={handleBlur}
         options={selectOptions}
         filterOptions={filterOptions}
         clearable={clearable || false}
         escapeClearsValue={clearable || false}
         value={selectValue}
         valueKey="value"
-        placeholder={placeholder}
+        placeholder={selectboxPlaceholder}
+        ignoreCase={false}
         overrides={{
           Root: {
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              fontWeight: theme.fontWeights.normal,
             }),
           },
           Dropdown: { component: VirtualDropdown },
@@ -210,19 +205,25 @@ const Selectbox: React.FC<Props> = ({
               paddingRight: theme.spacing.sm,
             }),
           },
+          Placeholder: {
+            style: () => ({
+              color: selectDisabled
+                ? theme.colors.fadedText40
+                : theme.colors.fadedText60,
+            }),
+          },
           ValueContainer: {
             style: () => ({
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
+              paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
             }),
           },
           Input: {
             props: {
-              // Change the 'readonly' prop to hide the mobile keyboard if options < 10
-              readOnly: isMobile && !showKeyboardOnMobile ? "readonly" : null,
+              readOnly: inputReadOnly,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
@@ -231,6 +232,7 @@ const Selectbox: React.FC<Props> = ({
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
                   style: () => ({
@@ -240,9 +242,18 @@ const Selectbox: React.FC<Props> = ({
               },
             },
           },
+          SingleValue: {
+            style: () => ({
+              // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.
+              marginLeft: theme.spacing.none,
+            }),
+          },
           SelectArrow: {
             component: ChevronDown,
             props: {
+              style: {
+                cursor: "pointer",
+              },
               overrides: {
                 Svg: {
                   style: () => ({

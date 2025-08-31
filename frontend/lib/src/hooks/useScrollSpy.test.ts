@@ -70,6 +70,7 @@ describe("debounce function", () => {
 
 describe("useScrollSpy hook", () => {
   let target: HTMLElement
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let eventHandler: ({ timeStampLow }: any) => void
 
   beforeEach(() => {
@@ -88,7 +89,9 @@ describe("useScrollSpy hook", () => {
   })
 
   it("should set up and clean up event listeners", () => {
-    const { unmount } = renderHook(() => useScrollSpy(target, eventHandler))
+    const { unmount } = renderHook(() =>
+      useScrollSpy(target, eventHandler, true)
+    )
 
     expect(target.addEventListener).toHaveBeenCalledWith(
       "scroll",
@@ -109,14 +112,21 @@ describe("useScrollSpy hook", () => {
   })
 
   it("should not set up event listeners if no target is provided", () => {
-    renderHook(() => useScrollSpy(null, eventHandler))
+    renderHook(() => useScrollSpy(null, eventHandler, true))
+
+    expect(target.addEventListener).not.toHaveBeenCalled()
+    expect(eventHandler).not.toHaveBeenCalled()
+  })
+
+  it("should not set up event listeners if active is false", () => {
+    renderHook(() => useScrollSpy(target, eventHandler, false))
 
     expect(target.addEventListener).not.toHaveBeenCalled()
     expect(eventHandler).not.toHaveBeenCalled()
   })
 
   it("should debounce events", () => {
-    renderHook(() => useScrollSpy(target, eventHandler))
+    renderHook(() => useScrollSpy(target, eventHandler, true))
 
     const scrollEvent = new Event("scroll")
     act(() => {

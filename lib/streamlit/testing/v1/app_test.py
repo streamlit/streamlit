@@ -52,7 +52,7 @@ from streamlit.testing.v1.element_tree import (
     ElementList,
     ElementTree,
     Error,
-    Exception,
+    Exception,  # noqa: A004
     Expander,
     Header,
     Info,
@@ -79,7 +79,7 @@ from streamlit.testing.v1.element_tree import (
     Title,
     Toast,
     Toggle,
-    Warning,
+    Warning,  # noqa: A004
     WidgetList,
     repr_,
 )
@@ -88,7 +88,7 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
@@ -157,9 +157,9 @@ class AppTest:
         script_path: str | Path,
         *,
         default_timeout: float,
-        args=None,
-        kwargs=None,
-    ):
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> None:
         self._script_path = str(script_path)
         self.default_timeout = default_timeout
         session_state = SessionState()
@@ -206,7 +206,12 @@ class AppTest:
 
     @classmethod
     def _from_string(
-        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
+        cls,
+        script: str,
+        *,
+        default_timeout: float = 3,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
         script_name = calc_md5(bytes(script, "utf-8"))
 
@@ -223,8 +228,8 @@ class AppTest:
         script: Callable[..., Any],
         *,
         default_timeout: float = 3,
-        args=None,
-        kwargs=None,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -259,7 +264,10 @@ class AppTest:
         """
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
-        module = source + f"\n{script.__name__}(*__args, **__kwargs)"
+        module = (
+            source
+            + f"\n{script.__name__ if hasattr(script, '__name__') else 'script'}(*__args, **__kwargs)"
+        )
         return cls._from_string(
             module, default_timeout=default_timeout, args=args, kwargs=kwargs
         )
@@ -1015,7 +1023,7 @@ class AppTest:
     def __len__(self) -> int:
         return len(self._tree)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         yield from self._tree
 
     def __getitem__(self, idx: int) -> Node:

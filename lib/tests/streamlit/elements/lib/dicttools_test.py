@@ -36,8 +36,6 @@ class DictToolsTest(unittest.TestCase):
     def test_remove_none_values(self, input: dict[str, Any], expected: dict[str, Any]):
         """Test remove_none_values."""
 
-        self.assertEqual(
-            remove_none_values(input),
-            expected,
-            f"Expected {input} to be transformed into {expected}.",
+        assert remove_none_values(input) == expected, (
+            f"Expected {input} to be transformed into {expected}."
         )

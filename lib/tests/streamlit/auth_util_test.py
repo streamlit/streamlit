@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from streamlit.auth_util import AuthCache, get_signing_secret
 
-CONFIG_MOCK = {}
+CONFIG_MOCK: dict[str, Any] = {}
 
 SECRETS_MOCK = {
     "redirect_uri": "http://localhost:8501/oauth2callback",
@@ -49,9 +50,9 @@ class AuthUtilTest(unittest.TestCase):
         """Test AuthCache basic functionality."""
         cache = AuthCache()
         cache.set("key1", "value1", 3600)
-        self.assertEqual(cache.get("key1"), "value1")
+        assert cache.get("key1") == "value1"
         cache.delete("key1")
-        self.assertIsNone(cache.get("key1"))
+        assert cache.get("key1") is None
 
     @patch(
         "streamlit.auth_util.secrets_singleton",
