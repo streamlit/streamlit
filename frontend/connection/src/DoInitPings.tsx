@@ -67,7 +67,7 @@ export function doInitPings(
   let timeout: NodeJS.Timeout | number | undefined
 
   // Hoist the connect() declaration.
-  let connect = (): void => {}
+  let connect = (): void => { }
 
   const retryImmediately = (): void => {
     uriNumber++
@@ -107,8 +107,8 @@ export function doInitPings(
     const uri = new URL(buildHttpUri(uriParts, ""))
 
     if (uri.hostname === "localhost") {
-      const markdownMessage = `
-Is Streamlit still running? If you accidentally stopped Streamlit, just restart it in your terminal:
+      const markdownMessage =
+    `Is Streamlit still running? If you accidentally stopped Streamlit, restart it in your terminal with \`streamlit run yourscript.py\` and this page will automatically reconnect.
 
 \`\`\`bash
 streamlit run yourscript.py
@@ -116,10 +116,7 @@ streamlit run yourscript.py
       `
       retry(markdownMessage)
     } else {
-      retry(
-        "Streamlit server is not responding. " +
-          "Are you connected to the internet?"
-      )
+      retry("Streamlit server is not responding. Please check your internet connection and try refreshing the page. The app will continue attempting to reconnect automatically.")
     }
   }
 
@@ -202,7 +199,7 @@ If you are trying to access a Streamlit app running on another server, this coul
               source
             )
           }
-          return retry("Connection timed out.")
+          return retry("Connection timed out. Please try reloading the app to re-establish the connection. If the problem persists, please contact the app builder.")
         }
 
         if (error.response) {
@@ -245,7 +242,7 @@ If you are trying to access a Streamlit app running on another server, this coul
           }
           return retry(
             `Connection failed with status ${status}, ` +
-              `and response "${data}".`
+            `and response "${data}".`
           )
         }
 
