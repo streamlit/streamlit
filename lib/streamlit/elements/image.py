@@ -145,7 +145,16 @@ class ImageMixin:
 
         link : str or list of str
             URL to be associated with the image. If displaying multiple images,
-            link should be a list of URLs (one for each image).
+            link can be:
+
+            - A single string URL that will be applied to all images
+            - A list of URLs (one for each image), use ``None`` for non-clickable images
+
+            For example, with 3 images:
+
+            - ``link="https://example.com"`` makes all 3 images clickable with the same URL
+            - ``link=["url1", "url2", "url3"]`` gives each image its own URL
+            - ``link=["url1", None, "url3"]`` makes only the 1st and 3rd images clickable
 
         .. deprecated::
             ``use_container_width`` is deprecated and will be removed in a
