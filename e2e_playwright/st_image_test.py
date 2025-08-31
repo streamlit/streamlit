@@ -217,8 +217,8 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stImage")
 
 
-def test_image_click_url_single(app: Page):
-    """Test single image with click_url parameter."""
+def test_image_link_single(app: Page):
+    """Test single image with link parameter."""
     image_with_url = get_image(app, "Black Square as clickable PNG").locator("a")
     expect(image_with_url).to_have_attribute("href", "https://streamlit.io/")
     expect(image_with_url).to_have_attribute("target", "_blank")
@@ -229,8 +229,8 @@ def test_image_click_url_single(app: Page):
     expect(popup_page).to_have_url("https://streamlit.io/")
 
 
-def test_image_click_url_list(app: Page):
-    """Test image list with click_urls parameter."""
+def test_image_link_list(app: Page):
+    """Test image list with links parameter."""
     image_container = app.locator("data-testid=stImage").filter(
         has=app.locator("data-testid=stImageCaption")
         .filter(has_text="Image list 0 with URLs")
@@ -246,8 +246,8 @@ def test_image_click_url_list(app: Page):
         expect(link).to_have_attribute("target", "_blank")
 
 
-def test_image_click_url_partial_list(app: Page):
-    """Test image list with some images having click_urls and others not."""
+def test_image_link_partial_list(app: Page):
+    """Test image list with some images having links and others not."""
     image_container = app.locator("data-testid=stImage").filter(
         has=app.locator("data-testid=stImageCaption")
         .filter(has_text="Partial click URLs 0")
@@ -266,15 +266,15 @@ def test_image_click_url_partial_list(app: Page):
     expect(links.last).to_have_attribute("href", "https://docs.streamlit.io/")
 
 
-def test_image_click_url_none(app: Page):
-    """Test image with click_url=None behaves correctly."""
+def test_image_link_none(app: Page):
+    """Test image with link=None behaves correctly."""
     image_container = get_image(app, "Image with None click URL")
     expect(image_container.locator("a")).to_have_count(0)
     expect(image_container.locator("img")).to_have_count(1)
 
 
-def test_image_click_url_empty_list(app: Page):
-    """Test image with click_url=[] behaves correctly."""
+def test_image_link_empty_list(app: Page):
+    """Test image with link=[] behaves correctly."""
     image_container = get_image(app, "Image with empty click URL")
     expect(image_container.locator("a")).to_have_count(0)
     expect(image_container.locator("img")).to_have_count(1)

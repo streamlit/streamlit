@@ -140,12 +140,12 @@ function ImageList({
             // eslint-disable-next-line @eslint-react/no-array-index-key
             <StyledImageContainer data-testid="stImageContainer" key={idx}>
               {/* This div ensures consistent layout for images regardless of
-                whether they have click_url. Without it, images with and without anchor
+                whether they have links. Without it, images with and without anchor
                 tags may have different heights and/or styles. */}
               <div>
-                {image.clickUrl ? (
+                {image.link ? (
                   <a
-                    href={image.clickUrl}
+                    href={image.link}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

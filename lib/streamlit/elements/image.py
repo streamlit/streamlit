@@ -58,7 +58,7 @@ class ImageMixin:
         output_format: ImageFormatOrAuto = "auto",
         *,
         use_container_width: bool = False,
-        click_url: str | list[str | None] | None = None,
+        link: str | list[str | None] | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -134,9 +134,9 @@ class ImageMixin:
             ``use_column_width`` is deprecated and will be removed in a future
             release. Please use the ``use_container_width`` parameter instead.
 
-        click_url : str or list of str
+        link : str or list of str
             URL to be associated with the image. If displaying multiple images,
-            click_url should be a list of URLs (one for each image).
+            link should be a list of URLs (one for each image).
 
         Example
         -------
@@ -192,7 +192,7 @@ class ImageMixin:
             clamp,
             channels,
             output_format,
-            click_url,
+            link,
         )
         return self.dg._enqueue("imgs", image_list_proto)
 

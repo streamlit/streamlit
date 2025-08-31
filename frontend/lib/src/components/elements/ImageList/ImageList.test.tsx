@@ -103,18 +103,18 @@ describe("ImageList Element", () => {
     })
   })
 
-  it("renders clickable images when clickUrl is provided", () => {
+  it("renders clickable images when link is provided", () => {
     const props = getProps({
       imgs: [
         {
           caption: "home",
           url: "/media/mockImage1.jpeg",
-          clickUrl: "https://streamlit.io/",
+          link: "https://streamlit.io/",
         },
         {
           caption: "docs",
           url: "/media/mockImage2.jpeg",
-          clickUrl: "https://docs.streamlit.io/",
+          link: "https://docs.streamlit.io/",
         },
       ],
     })

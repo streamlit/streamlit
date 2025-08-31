@@ -23,7 +23,7 @@ option java_outer_classname = "ImageProto";
 message Image {
   string url = 3;
   string caption = 2;
-  string click_url = 5;
+  string link = 5;
 
   // DEPRECATED: markup is not used anymore.
   // SVGs are added as data uris in the url field.

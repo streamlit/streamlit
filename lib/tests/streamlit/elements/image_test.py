@@ -541,80 +541,76 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             in str(e.exception)
         )
 
-    def test_image_with_click_url_single(self):
-        """Test st.image with a single URL and click_url."""
+    def test_image_with_link_single(self):
+        """Test st.image with a single URL and link."""
         img_url = "http://server/fake0.jpg"
-        click_url = "https://streamlit.io/"
+        link = "https://streamlit.io/"
 
-        st.image(img_url, click_url=click_url)
+        st.image(img_url, link=link)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(len(el.imgs.imgs), 1)
         self.assertEqual(el.imgs.imgs[0].url, img_url)
-        self.assertEqual(el.imgs.imgs[0].click_url, click_url)
+        self.assertEqual(el.imgs.imgs[0].link, link)
 
-    def test_image_with_click_url_multiple(self):
-        """Test st.image with multiple images and click_urls."""
+    def test_image_with_link_multiple(self):
+        """Test st.image with multiple images and links."""
         img_urls = [
             "http://server/fake0.jpg",
             "http://server/fake1.jpg",
         ]
-        click_urls = ["https://streamlit.io/", "https://streamlit.io/"]
+        links = ["https://streamlit.io/", "https://streamlit.io/"]
 
-        st.image(img_urls, click_url=click_urls)
+        st.image(img_urls, link=links)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(len(el.imgs.imgs), 2)
-        for idx, (url, click_url) in enumerate(zip(img_urls, click_urls)):
+        for idx, (url, link) in enumerate(zip(img_urls, links)):
             self.assertEqual(el.imgs.imgs[idx].url, url)
-            self.assertEqual(el.imgs.imgs[idx].click_url, click_url)
+            self.assertEqual(el.imgs.imgs[idx].link, link)
 
-    def test_image_with_click_url_mismatch(self):
-        """Test st.image with mismatched number of images and click_urls."""
+    def test_image_with_link_mismatch(self):
+        """Test st.image with mismatched number of images and links."""
         img_urls = [
             "http://server/fake0.jpg",
             "http://server/fake1.jpg",
         ]
-        click_urls = ["https://streamlit.io/"]
+        links = ["https://streamlit.io/"]
 
         with self.assertRaises(AssertionError) as e:
-            st.image(img_urls, click_url=click_urls)
+            st.image(img_urls, link=links)
 
         self.assertTrue("Cannot pair 1 click URLs with 2 images" in str(e.exception))
 
-    def test_image_with_click_url_none(self):
-        """Test st.image with click_url=None."""
+    def test_image_with_link_none(self):
+        """Test st.image with link=None."""
         img_url = "http://server/fake0.jpg"
 
-        st.image(img_url, click_url=None)
+        st.image(img_url, link=None)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(len(el.imgs.imgs), 1)
         self.assertEqual(el.imgs.imgs[0].url, img_url)
 
-    def test_image_with_invalid_click_url(self):
-        """Test st.image with an invalid click_url."""
+    def test_image_with_invalid_link(self):
+        """Test st.image with an invalid link."""
         img_url = "http://server/fake0.jpg"
-        click_url = "not_a_valid_url"
+        link = "not_a_valid_url"
 
         with self.assertRaises(StreamlitAPIException) as e:
-            st.image(img_url, click_url=click_url)
+            st.image(img_url, link=link)
 
-        self.assertTrue(
-            "The click_url parameter must be a valid URL" in str(e.exception)
-        )
+        self.assertTrue("The link parameter must be a valid URL" in str(e.exception))
 
-    def test_image_with_atleast_one_invalid_click_url(self):
-        """Test st.image with at least one invalid click_url."""
+    def test_image_with_atleast_one_invalid_link(self):
+        """Test st.image with at least one invalid link."""
         img_urls = [
             "http://server/fake0.jpg",
             "http://server/fake1.jpg",
         ]
-        click_urls = ["https://streamlit.io/", "not_a_valid_url"]
+        links = ["https://streamlit.io/", "not_a_valid_url"]
 
         with self.assertRaises(StreamlitAPIException) as e:
-            st.image(img_urls, click_url=click_urls)
+            st.image(img_urls, link=links)
 
-        self.assertTrue(
-            "The click_url parameter must be a valid URL" in str(e.exception)
-        )
+        self.assertTrue("The link parameter must be a valid URL" in str(e.exception))

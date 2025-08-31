@@ -45,7 +45,7 @@ st.image(
     img,
     caption="Black Square as clickable PNG",
     output_format="PNG",
-    click_url="https://streamlit.io/",
+    link="https://streamlit.io/",
 )
 
 transparent_img: "npt.NDArray[Any]" = np.zeros((100, 100, 4), dtype=np.uint8)
@@ -201,7 +201,7 @@ st.image(
     caption=[f"Image list {i}" for i in range(3)],
 )
 
-# Full click_url
+# Full link
 st.image(
     [
         Image.new("RGB", (64, 64), color="red"),
@@ -209,10 +209,10 @@ st.image(
         Image.new("RGB", (64, 64), color="green"),
     ],
     caption=[f"Image list {i} with URLs" for i in range(3)],
-    click_url=["https://streamlit.io/"] * 3,
+    link=["https://streamlit.io/"] * 3,
 )
 
-# Partial click_url
+# Partial link
 st.image(
     [
         Image.new("RGB", (64, 64), color="red"),
@@ -220,7 +220,7 @@ st.image(
         Image.new("RGB", (64, 64), color="green"),
     ],
     caption=[f"Partial click URLs {i}" for i in range(3)],
-    click_url=[
+    link=[
         "https://streamlit.io/",
         None,
         "https://docs.streamlit.io/",
@@ -231,14 +231,14 @@ st.image(
 st.image(
     Image.new("RGB", (64, 64), color="red"),
     caption="Image with None click URL",
-    click_url=None,
+    link=None,
 )
 
 # Empty URLs example
 st.image(
     Image.new("RGB", (64, 64), color="red"),
     caption="Image with empty click URL",
-    click_url=[],
+    link=[],
 )
 
 
