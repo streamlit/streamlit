@@ -54,7 +54,7 @@ describe("Video Element", () => {
     vi.clearAllMocks()
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [250],
     })

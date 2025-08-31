@@ -485,6 +485,7 @@ class TextWidgetsMixin:
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget alligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
         Returns
         -------
         str or None

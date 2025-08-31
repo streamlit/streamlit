@@ -287,7 +287,8 @@ def _marshall_chart_data(
     data: Data = None,
 ) -> None:
     """Adds the data to the proto and removes it from the spec dict.
-    These operations will happen in-place."""
+    These operations will happen in-place.
+    """
 
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}

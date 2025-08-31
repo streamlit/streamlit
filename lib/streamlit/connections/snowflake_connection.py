@@ -81,7 +81,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     Examples
     --------
-
     **Example 1: Configuration with Streamlit secrets**
 
     You can configure your Snowflake connection using Streamlit's

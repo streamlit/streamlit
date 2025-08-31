@@ -101,7 +101,14 @@ export class AppNavigation {
     // We do not know the page name, so use an empty string version
     document.title = getTitle("")
 
-    return [{ hideSidebarNav: this.hideSidebarNav ?? false }, () => {}]
+    return [
+      {
+        // Set current page script hash to handle SPA case
+        currentPageScriptHash: newSession.pageScriptHash,
+        hideSidebarNav: this.hideSidebarNav ?? false,
+      },
+      () => {},
+    ]
   }
 
   handleNavigation(navigationMsg: Navigation): MaybeStateUpdate {

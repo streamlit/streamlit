@@ -257,9 +257,7 @@ def is_canary_build() -> bool:
 
 
 def get_output_variables() -> dict[str, str]:
-    """
-    Compute build variables.
-    """
+    """Compute build variables."""
     canary_build = is_canary_build()
     python_versions = (
         ALL_PYTHON_VERSIONS
@@ -282,9 +280,7 @@ def get_output_variables() -> dict[str, str]:
 
 
 def save_output_variables(variables: dict[str, str]) -> None:
-    """
-    Saves build variables
-    """
+    """Saves build variables."""
     print("Saving output variables")
     with (
         open(os.environ.get(GITHUB_ENV_ENV_VAR, "/dev/null"), "w+") as github_env_file,

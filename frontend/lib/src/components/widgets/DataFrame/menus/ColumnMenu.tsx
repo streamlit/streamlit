@@ -87,16 +87,12 @@ function ColumnMenu({
       e.preventDefault()
     }
 
-    const cleanup = (): void => {
-      document.removeEventListener("wheel", preventScroll)
-      document.removeEventListener("touchmove", preventScroll)
-    }
-
     document.addEventListener("wheel", preventScroll, { passive: false })
     document.addEventListener("touchmove", preventScroll, { passive: false })
 
     return () => {
-      cleanup()
+      document.removeEventListener("wheel", preventScroll)
+      document.removeEventListener("touchmove", preventScroll)
     }
   }, [])
 

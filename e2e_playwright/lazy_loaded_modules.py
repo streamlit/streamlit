@@ -19,7 +19,6 @@ import streamlit as st
 
 lazy_loaded_modules = [
     "altair",
-    "bokeh",
     "graphviz",
     "matplotlib",
     "numpy",

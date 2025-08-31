@@ -386,7 +386,8 @@ def is_list_like(obj: object) -> TypeGuard[Sequence[Any]]:
 def check_python_comparable(seq: Sequence[Any]) -> None:
     """Check if the sequence elements support "python comparison".
     That means that the equality operator (==) returns a boolean value.
-    Which is not True for e.g. numpy arrays and pandas series."""
+    Which is not True for e.g. numpy arrays and pandas series.
+    """
     try:
         bool(seq[0] == seq[0])
     except LookupError:

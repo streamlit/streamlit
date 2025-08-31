@@ -64,6 +64,7 @@ def test_data_editor_toolbar_on_hover(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the toolbar is shown when hovering over a data editor component."""
+
     data_editor_element = themed_app.get_by_test_id("stDataFrame").nth(1)
     data_editor_toolbar = data_editor_element.get_by_test_id("stElementToolbar")
 
@@ -92,6 +93,7 @@ def test_data_editor_delete_row_via_toolbar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that a row can be deleted via the toolbar."""
+
     data_editor_element = themed_app.get_by_test_id("stDataFrame").nth(1)
     data_editor_toolbar = data_editor_element.get_by_test_id("stElementToolbar")
 
@@ -152,6 +154,8 @@ def test_data_editor_delete_row_via_hotkey(app: Page):
     expect(data_editor_element).to_have_css("height", "212px")
 
 
+# The snapshots are flaky on Firefox in CI.
+@pytest.mark.skip_browser("firefox")
 def test_data_editor_add_row_via_toolbar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -280,11 +284,14 @@ def test_open_search_via_hotkey(app: Page):
     expect(app.locator(".gdg-search-bar-inner")).to_be_visible()
 
 
+# The snapshots are flaky on Firefox in CI.
+@pytest.mark.skip_browser("firefox")
 def test_clicking_on_fullscreen_toolbar_button(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that clicking on fullscreen toolbar button expands the dataframe into
-    fullscreen."""
+    fullscreen.
+    """
 
     assert_fullscreen_toolbar_button_interactions(
         app,
@@ -648,7 +655,8 @@ def test_autosize_column_via_ui(app: Page, assert_snapshot: ImageCompareFunction
 
 def test_sorting_column_via_ui(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a column can be sorted via the UI by clicking on the column
-    header and via the column menu."""
+    header and via the column menu.
+    """
     df = app.get_by_test_id("stDataFrame").nth(0)
     expect_canvas_to_be_stable(df)
 

@@ -681,7 +681,7 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     if transformed_data.size == 0:
         return transformed_data.astype(np.int16).tobytes(), nchan
 
-    max_abs_value = np.max(np.abs(transformed_data))
+    max_abs_value: npt.NDArray[Any] = np.max(np.abs(transformed_data))
     # 16-bit samples are stored as 2's-complement signed integers,
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
@@ -693,7 +693,8 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
 def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
     """
-    Transform a numpy array to a PCM bytestring
+    Transform a numpy array to a PCM bytestring.
+
     We use code from IPython display module to convert numpy array to wave bytes
     https://github.com/ipython/ipython/blob/1015c392f3d50cf4ff3e9f29beede8c1abfdcb2a/IPython/lib/display.py#L146
     """

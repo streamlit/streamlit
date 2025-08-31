@@ -40,7 +40,8 @@ class ForwardMsgQueue:
         before_enqueue_msg: Callable[[ForwardMsg], None] | None,
     ) -> None:
         """Set a callback to be called before a message is enqueued.
-        Used in static streamlit app generation."""
+        Used in static streamlit app generation.
+        """
         ForwardMsgQueue._before_enqueue_msg = before_enqueue_msg
 
     def __init__(self):

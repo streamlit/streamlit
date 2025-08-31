@@ -96,7 +96,8 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
 
 def test_feedback_buttons_are_disabled(app: Page):
     """Test that feedback buttons are disabled when `disabled=True` and that
-    they cannot be interacted with."""
+    they cannot be interacted with.
+    """
 
     container = get_element_by_key(app, "stars_container")
     expect(container).to_be_attached()

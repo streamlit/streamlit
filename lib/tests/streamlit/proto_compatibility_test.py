@@ -101,6 +101,7 @@ FD = FieldDescriptor
                 ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("widget_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("radii", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+                ("heading_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("body_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),

@@ -15,17 +15,19 @@
 
 """Update e2e snapshots."""
 
-import os
-import sys
-import subprocess
-import requests
-import tempfile
-import shutil
-import zipfile
-import argparse
-from typing import Any, Dict, List
-import time
+from __future__ import annotations
 
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import zipfile
+from typing import Any
+
+import requests
 
 SNAPSHOT_UPDATE_FOLDER = "snapshot-updates"
 GITHUB_OWNER = "streamlit"
@@ -43,9 +45,7 @@ def get_token_from_credential_manager() -> str:
     """
     cmd = ["git", "credential", "fill"]
     input_data = "protocol=https\nhost=github.com\n\n"
-    result = subprocess.run(
-        cmd, input=input_data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
+    result = subprocess.run(cmd, input=input_data, capture_output=True, text=True)
     if result.returncode != 0:
         print(
             f"Error getting credentials from git credential manager: {result.stderr.strip()}"
@@ -62,9 +62,7 @@ def get_token_from_credential_manager() -> str:
 def get_last_commit_sha() -> str:
     """Get the last commit SHA of the local branch."""
     cmd = ["git", "rev-parse", "HEAD"]
-    result = subprocess.run(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Error getting last commit SHA: {result.stderr.strip()}")
     return result.stdout.strip()
@@ -72,7 +70,7 @@ def get_last_commit_sha() -> str:
 
 def get_latest_workflow_run(
     owner: str, repo: str, workflow_file_name: str, commit_sha: str, token: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get the latest workflow run for a given workflow file name and commit SHA."""
     url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file_name}/runs"
     params = {"head_sha": commit_sha}
@@ -98,7 +96,7 @@ def get_latest_workflow_run(
 
 def wait_for_workflow_completion(
     owner: str, repo: str, workflow_file_name: str, commit_sha: str, token: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Wait for the workflow to complete, checking every few seconds."""
     while True:
         workflow_run = get_latest_workflow_run(
@@ -125,7 +123,7 @@ def wait_for_workflow_completion(
 
 def get_artifacts(
     owner: str, repo: str, run_id: int, token: str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Get the artifacts for a given workflow run ID."""
     url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts"
     headers = {

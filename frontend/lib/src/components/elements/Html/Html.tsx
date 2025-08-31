@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import dompurify from "dompurify"
 
@@ -61,17 +61,9 @@ const sanitizeString = (html: string): string => {
  */
 function Html({ element }: Readonly<HtmlProps>): ReactElement {
   const { body } = element
-  const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
   const htmlRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    if (sanitizeString(body) !== sanitizedHtml) {
-      setSanitizedHtml(sanitizeString(body))
-    }
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body])
+  const sanitizedHtml = useMemo(() => sanitizeString(body), [body])
 
   useEffect(() => {
     if (
@@ -90,6 +82,8 @@ function Html({ element }: Readonly<HtmlProps>): ReactElement {
           className="stHtml"
           data-testid="stHtml"
           ref={htmlRef}
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
       )}

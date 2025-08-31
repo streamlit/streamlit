@@ -47,7 +47,8 @@ def test_themed_line_chart_rendering(
 
 def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that hovering on a st.line_chart shows chart markers on all lines and
-    a tooltip."""
+    a tooltip.
+    """
 
     multi_line_chart = app.get_by_test_id("stVegaLiteChart").nth(1)
     expect(multi_line_chart).to_be_visible()

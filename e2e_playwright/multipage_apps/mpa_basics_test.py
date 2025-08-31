@@ -178,7 +178,7 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
 
 
 def test_switch_page_removes_query_params(page: Page, app_port: int):
-    """Test that query params are removed when navigating via st.switch_page"""
+    """Test that query params are removed when navigating via st.switch_page."""
 
     # Start at main page with query params
     page.goto(f"http://localhost:{app_port}/?foo=bar")
@@ -243,7 +243,7 @@ def test_widget_state_reset_on_page_switch(app: Page):
 
 
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
-    """Test that query params are removed when swapping pages"""
+    """Test that query params are removed when swapping pages."""
 
     page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
     wait_for_app_loaded(page)
@@ -254,7 +254,7 @@ def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
 
 
 def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
-    """Test that query params are removed when swapping pages"""
+    """Test that query params are removed when swapping pages."""
 
     page.goto(
         f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
@@ -270,7 +270,7 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that logos display properly in sidebar and main sections"""
+    """Test that logos display properly in sidebar and main sections."""
 
     # Go to logo page & wait short moment for logo to appear
     app.get_by_test_id("stSidebarNav").locator("a").nth(8).click()
@@ -299,7 +299,7 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that small logos display properly in sidebar and main sections"""
+    """Test that small logos display properly in sidebar and main sections."""
 
     # Go to small logo page & wait short moment for logo to appear
     app.get_by_test_id("stSidebarNav").locator("a").nth(9).click()
@@ -328,7 +328,7 @@ def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that large logos display properly in sidebar and main sections"""
+    """Test that large logos display properly in sidebar and main sections."""
 
     # Go to large logo page & wait short moment for logo to appear
     app.get_by_test_id("stSidebarNav").locator("a").nth(10).click()

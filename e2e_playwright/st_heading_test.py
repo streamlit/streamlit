@@ -22,17 +22,17 @@ from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_t
 
 
 def _get_title_elements(app: Page) -> Locator:
-    """Title elements are rendered as h1 elements"""
+    """Title elements are rendered as h1 elements."""
     return app.get_by_test_id("stHeading").locator("h1")
 
 
 def _get_header_elements(app: Page) -> Locator:
-    """Header elements are rendered as h2 elements"""
+    """Header elements are rendered as h2 elements."""
     return app.get_by_test_id("stHeading").locator("h2")
 
 
 def _get_subheader_elements(app: Page) -> Locator:
-    """Subheader elements are rendered as h3 elements"""
+    """Subheader elements are rendered as h3 elements."""
     return app.get_by_test_id("stHeading").locator("h3")
 
 
@@ -41,7 +41,7 @@ _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 
 
 def test_correct_number_and_content_of_title_elements(app: Page):
-    """Test that correct number of st.title (=> h1) exist with the right content"""
+    """Test that correct number of st.title (=> h1) exist with the right content."""
     titles = _get_title_elements(app)
     expect(titles).to_have_count(6)
 
@@ -54,7 +54,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
 
 
 def test_correct_number_and_content_of_header_elements(app: Page):
-    """Test that correct number of st.header (=> h2) exist with the right content"""
+    """Test that correct number of st.header (=> h2) exist with the right content."""
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
     expect(headers).to_have_count(5)
 
@@ -66,7 +66,7 @@ def test_correct_number_and_content_of_header_elements(app: Page):
 
 
 def test_correct_number_and_content_of_subheader_elements(app: Page):
-    """Test that correct number of st.subheader (=> h3) exist with the right content"""
+    """Test that correct number of st.subheader (=> h3) exist with the right content."""
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
@@ -273,7 +273,8 @@ def test_help_tooltip_works(app: Page):
 
 def test_not_scrolled_on_empty_anchor_tag(app: Page):
     """Test that the page is not scrolled when the page contains an empty
-    header/anchor tag and no window hash."""
+    header/anchor tag and no window hash.
+    """
 
     # Check if the page is still scrolled to the top
     # after one second timeout.

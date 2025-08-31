@@ -170,7 +170,7 @@ class LLMThought:
 
     @property
     def last_tool(self) -> ToolRecord | None:
-        """The last tool executed by this thought"""
+        """The last tool executed by this thought."""
         return self._last_tool
 
     def _reset_llm_token_stream(self) -> None:
@@ -286,7 +286,6 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
 
         Parameters
         ----------
-
         parent_container
             The `st.container` that will contain all the Streamlit elements that the
             Handler creates.

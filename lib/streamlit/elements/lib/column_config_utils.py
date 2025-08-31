@@ -142,7 +142,6 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
     Parameters
     ----------
-
     field : pa.Field
         The arrow field from the arrow table schema.
 
@@ -375,7 +374,6 @@ def determine_dataframe_schema(
 
     Returns
     -------
-
     DataframeSchema
         A mapping that contains the detected data type for the index and columns.
         The key is the column name in the underlying dataframe or ``_index`` for index columns.
@@ -448,7 +446,6 @@ def update_column_config(
 
     Parameters
     ----------
-
     column_config_mapping : ColumnConfigMapping
         The column config mapping to update.
 

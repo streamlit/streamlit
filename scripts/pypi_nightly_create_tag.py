@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Create a tag for the PYPI nightly version
+"""Create a tag for the PYPI nightly version.
 
-Increment the version number, add a dev suffix and add todays date
+Increment the version number, add a dev suffix and add todays date.
 """
+
+from __future__ import annotations
 
 from datetime import datetime
 

@@ -281,7 +281,7 @@ class ForwardMsgCache(CacheStatsProvider):
                     del self._entries[msg_hash]
 
     def clear(self) -> None:
-        """Remove all entries from the cache"""
+        """Remove all entries from the cache."""
         self._entries.clear()
 
     def get_stats(self) -> list[CacheStat]:

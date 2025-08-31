@@ -95,9 +95,13 @@ function generateTableHeader(table: Quiver): ReactElement {
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
+        // TODO: Update to match React best practices
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
           {headerRow.map((header, colIndex) => (
             <StyledTableCellHeader
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-array-index-key
               key={colIndex}
               className={header.cssClass}
               scope="col"

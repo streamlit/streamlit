@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This test checks that the dataframe component renders without crashing
+"""Checks that the dataframe component renders without crashing
 when used in different containers.
 
 This mainly addresses this issue: https://github.com/streamlit/streamlit/issues/7949

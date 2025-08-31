@@ -252,6 +252,7 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
     ----------
     suppress_warning : bool
         If True, don't log a warning if there's no ScriptRunContext.
+
     Returns
     -------
     ScriptRunContext | None

@@ -19,15 +19,17 @@ out and exit with an error code. If all dependencies have acceptable licenses,
 exit normally.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import NoReturn, Set, Tuple, cast
+from typing import NoReturn, cast
 
 from typing_extensions import TypeAlias
 
-PackageInfo: TypeAlias = Tuple[str, str]
+PackageInfo: TypeAlias = tuple[str, str]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR_LIB = SCRIPT_DIR.parent / "frontend/lib"
@@ -70,7 +72,7 @@ ACCEPTABLE_LICENSES = {
 # Some of our dependencies have licenses that yarn fails to parse, but that
 # are still acceptable. This set contains all those exceptions. Each entry
 # should include a comment about why it's an exception.
-PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
+PACKAGE_EXCEPTIONS: set[PackageInfo] = {
     (
         # MIT license: https://github.com/mapbox/jsonlint
         "@mapbox/jsonlint-lines-primitives@npm:2.0.2",
@@ -129,7 +131,7 @@ def check_licenses(licenses) -> NoReturn:
     # jettisoned, and print them out with a warning.
     unused_exceptions = PACKAGE_EXCEPTIONS.difference(set(packages))
     if len(unused_exceptions) > 0:
-        for exception in sorted(list(unused_exceptions)):
+        for exception in sorted(unused_exceptions):
             print(f"Unused package exception, please remove: {exception}")
 
     # Discover packages that don't have an acceptable license, and that don't

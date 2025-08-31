@@ -24,7 +24,7 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
   backgroundColor: theme.colors.transparent,
   overflowX: "auto",
-  margin: `0 0 ${theme.spacing.lg} 0`,
+  margin: 0,
   borderRadius: theme.radii.default,
   padding: theme.spacing.lg,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,

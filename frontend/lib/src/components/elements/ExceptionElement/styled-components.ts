@@ -28,8 +28,6 @@ export const StyledMessageType = styled.span(({ theme }) => ({
 }))
 
 export const StyledStackTraceTitle = styled.div(({ theme }) => ({
-  // Need to add xl to top margin because markdown has negative xl margin bottom.
-  marginTop: `calc(${theme.spacing.sm} + ${theme.spacing.xl})`,
   marginBottom: theme.spacing.sm,
 }))
 
@@ -43,3 +41,16 @@ export const StyledStackTraceContent = styled.div({
 export const StyledExceptionMessage = styled.div({
   wordWrap: "break-word",
 })
+
+export const StyledExceptionLinks = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  display: "flex",
+  gap: theme.spacing.md,
+  justifyContent: "flex-end",
+}))
+
+export const StyledExceptionWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.lg,
+}))

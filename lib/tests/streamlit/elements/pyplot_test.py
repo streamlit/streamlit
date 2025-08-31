@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from parameterized import parameterized
@@ -32,7 +32,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class PyplotTest(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
-        if matplotlib.get_backend().lower() != "agg":
+        if mpl.get_backend().lower() != "agg":
             plt.switch_backend("agg")
 
     def tearDown(self):

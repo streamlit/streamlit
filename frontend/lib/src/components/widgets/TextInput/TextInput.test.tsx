@@ -52,7 +52,7 @@ const getProps = (
 describe("TextInput widget", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [190],
     })
@@ -456,7 +456,7 @@ describe("TextInput widget", () => {
 
   it("hides Please enter to apply text when width is smaller than 180px", async () => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [100],
     })

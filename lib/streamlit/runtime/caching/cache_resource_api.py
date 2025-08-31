@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.cache_resource implementation"""
+"""@st.cache_resource implementation."""
 
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
 
 
 class ResourceCaches(CacheStatsProvider):
-    """Manages all ResourceCache instances"""
+    """Manages all ResourceCache instances."""
 
     def __init__(self):
         self._caches_lock = threading.Lock()
@@ -141,7 +141,7 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
 
 
 class CachedResourceFuncInfo(CachedFuncInfo):
-    """Implements the CachedFuncInfo interface for @st.cache_resource"""
+    """Implements the CachedFuncInfo interface for @st.cache_resource."""
 
     def __init__(
         self,
@@ -171,7 +171,7 @@ class CachedResourceFuncInfo(CachedFuncInfo):
 
     @property
     def display_name(self) -> str:
-        """A human-readable name for the cached function"""
+        """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:

@@ -35,7 +35,7 @@ FloatOrInt: TypeAlias = Union[int, float]
 def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:
     """
     Checks given value is 'between' the bounds of [low, high],
-    considering close values around bounds are acceptable input
+    considering close values around bounds are acceptable input.
 
     Notes
     -----

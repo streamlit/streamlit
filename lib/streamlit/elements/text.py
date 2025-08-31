@@ -33,7 +33,7 @@ class TextMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
     ) -> DeltaGenerator:
-        """Write text without Markdown or HTML parsing.
+        r"""Write text without Markdown or HTML parsing.
 
         For monospace text, use |st.code|_.
 
@@ -57,7 +57,7 @@ class TextMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.text("This is text\\n[and more text](that's not a Markdown link).")
+        >>> st.text("This is text\n[and more text](that's not a Markdown link).")
 
         .. output ::
             https://doc-text.streamlit.app/

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { createRef } from "react"
-
 import { act, renderHook } from "@testing-library/react"
 import { View as VegaView } from "vega"
 import embed from "vega-embed"
@@ -123,7 +121,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("creates a new Vega view via embed, finalizes existing view, inserts data, and returns a VegaView", async () => {
-    const containerRef = createRef<HTMLDivElement>()
+    const containerRef = { current: null }
     const chartElement = {
       id: "chartId",
       data: null,
@@ -182,7 +180,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("finalizes old view if one exists before creating a new one", async () => {
-    const containerRef = createRef<HTMLDivElement>()
+    const containerRef = { current: null }
     const chartElement = {
       id: "chartId",
       data: null,
@@ -249,7 +247,7 @@ describe("useVegaEmbed hook", () => {
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
 
-    const containerRef = createRef<HTMLDivElement>()
+    const containerRef = { current: null }
     // @ts-expect-error We want the ref to be set correctly
     containerRef.current = document.createElement("div")
 
@@ -301,7 +299,7 @@ describe("useVegaEmbed hook", () => {
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
 
-    const containerRef = createRef<HTMLDivElement>()
+    const containerRef = { current: null }
     // @ts-expect-error We want the ref to be set correctly
     containerRef.current = document.createElement("div")
 

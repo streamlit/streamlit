@@ -336,6 +336,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           value,
           style
         )
+        // TODO: Update to match React best practices
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
     [clickMode, options, selectionVisualization, style, value]

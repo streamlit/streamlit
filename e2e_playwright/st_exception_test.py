@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_st_exception_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(themed_app.get_by_test_id("stException").nth(0)).to_have_text(
+    expect(themed_app.get_by_test_id("stException").nth(0)).to_contain_text(
         "RuntimeError: This exception message is awesome!"
     )
 

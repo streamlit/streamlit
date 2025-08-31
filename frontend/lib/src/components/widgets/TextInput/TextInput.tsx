@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useMemo,
-  useState,
-} from "react"
+import React, { memo, ReactElement, useCallback, useState } from "react"
 
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
@@ -44,7 +38,7 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { StyledTextInput } from "./styled-components"
 
@@ -66,13 +60,10 @@ function TextInput({
    * widget's UI, the default value is used.
    */
   const [uiValue, setUiValue] = useState<string | null>(
-    getStateFromWidgetMgr(widgetMgr, element) ?? null
+    () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
 
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.

@@ -32,7 +32,7 @@ def handle_route_hostconfig_disable_fullscreen(route: Route) -> None:
 def test_disable_fullscreen(
     page: Page, app_port: int, assert_snapshot: ImageCompareFunction
 ):
-    """Test that fullscreen mode is disabled for elements when set via host-config"""
+    """Test that fullscreen mode is disabled for elements when set via host-config."""
     page.route("**/_stcore/host-config", handle_route_hostconfig_disable_fullscreen)
     page.goto(f"http://localhost:{app_port}")
     wait_for_app_loaded(page)

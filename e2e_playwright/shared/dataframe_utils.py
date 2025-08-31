@@ -53,7 +53,6 @@ def calc_middle_cell_position(
 
     Parameters
     ----------
-
     row_pos : int
         The row number to use for the calculation. Starts at 0 with the header row.
 
@@ -240,7 +239,6 @@ def select_row(
 
     Parameters
     ----------
-
     dataframe_element : Locator
         The dataframe element to select the row in.
 
@@ -264,7 +262,6 @@ def sort_column(
 
     Parameters
     ----------
-
     dataframe_element : Locator
         The dataframe element to select the column in.
 
@@ -301,7 +298,6 @@ def select_column(
 
     Parameters
     ----------
-
     dataframe_element : Locator
         The dataframe element to select the column in.
 
@@ -331,7 +327,6 @@ def get_open_cell_overlay(page: Page | Locator) -> Locator:
 
     Parameters
     ----------
-
     app : Locator
         The app.
 
@@ -412,7 +407,6 @@ def expect_canvas_to_be_visible(locator: Locator):
 
     Parameters
     ----------
-
     locator : Locator
     """
     expect(locator.locator("canvas").first).to_be_visible()

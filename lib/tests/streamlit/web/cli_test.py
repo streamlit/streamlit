@@ -476,6 +476,48 @@ class CliTest(unittest.TestCase):
             self.runner.invoke(cli, ["activate", "reset"])
             mock_credential.reset.assert_called()
 
+    def test_init_command(self):
+        """Test creating a new project in current directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_dir = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                result = self.runner.invoke(cli, ["init"], input="n\n")
+
+                # Check command output
+                assert result.exit_code == 0
+
+                # Check created files
+                assert Path(tmpdir, "requirements.txt").exists()
+                assert Path(tmpdir, "streamlit_app.py").exists()
+
+                # Check file contents
+                assert "streamlit" in Path(tmpdir, "requirements.txt").read_text()
+                assert (
+                    "import streamlit as st"
+                    in Path(tmpdir, "streamlit_app.py").read_text()
+                )
+            finally:
+                os.chdir(orig_dir)
+
+    def test_init_command_with_directory(self):
+        """Test creating a new project in specified directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_dir = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                result = self.runner.invoke(cli, ["init", "new-project"], input="n\n")
+
+                # Check command output
+                assert result.exit_code == 0
+
+                # Check created files
+                project_dir = Path(tmpdir) / "new-project"
+                assert (project_dir / "requirements.txt").exists()
+                assert (project_dir / "streamlit_app.py").exists()
+            finally:
+                os.chdir(orig_dir)
+
 
 class HTTPServerIntegrationTest(unittest.TestCase):
     def get_http_session(self) -> requests.Session:

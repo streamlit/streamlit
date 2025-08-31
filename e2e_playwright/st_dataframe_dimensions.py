@@ -19,7 +19,6 @@ import streamlit as st
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
-
 data = np.random.randn(100, 100)
 
 df = pd.DataFrame(data)

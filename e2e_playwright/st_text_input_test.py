@@ -250,7 +250,7 @@ def test_calls_callback_on_change(app: Page):
 
 
 def test_text_input_in_form_with_submit_by_enter(app: Page):
-    """Test that text area in form can be submitted by pressing Command+Enter"""
+    """Test that text area in form can be submitted by pressing Command+Enter."""
     text_area_field = app.get_by_test_id("stTextInput").nth(12).locator("input").first
     text_area_field.fill("hello world")
     text_area_field.press("Enter")

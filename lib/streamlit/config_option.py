@@ -299,9 +299,7 @@ class ConfigOption:
 
     @property
     def env_var(self):
-        """
-        Get the name of the environment variable that can be used to set the option.
-        """
+        """Get the name of the environment variable that can be used to set the option."""
         name = self.key.replace(".", "_")
         return f"STREAMLIT_{to_snake_case(name).upper()}"
 

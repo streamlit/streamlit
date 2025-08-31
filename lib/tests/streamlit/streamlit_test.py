@@ -24,7 +24,7 @@ import sys
 import tempfile
 import unittest
 
-import matplotlib
+import matplotlib as mpl
 import pytest
 
 import streamlit as st
@@ -102,16 +102,16 @@ class StreamlitTest(unittest.TestCase):
         for platform in ["darwin", "linux2"]:
             sys.platform = platform
 
-            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+            self.assertEqual(mpl.get_backend().lower(), "agg")
             self.assertEqual(os.environ.get("MPLBACKEND").lower(), "agg")
 
             # Force matplotlib to use a different backend
-            matplotlib.use("pdf", force=True)
-            self.assertEqual(matplotlib.get_backend().lower(), "pdf")
+            mpl.use("pdf", force=True)
+            self.assertEqual(mpl.get_backend().lower(), "pdf")
 
             # Reset the backend to 'Agg'
-            matplotlib.use("agg", force=True)
-            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+            mpl.use("agg", force=True)
+            self.assertEqual(mpl.get_backend().lower(), "agg")
         sys.platform = ORIG_PLATFORM
 
     def test_ensure_completeness_element_mocks(self):

@@ -241,7 +241,7 @@ def image_to_url(
     If `image` is already a URL, return it unmodified.
     Otherwise, add the image to the MediaFileManager and return the URL.
     (When running in "raw" mode, we won't actually load data into the
-    MediaFileManager, and we'll return an empty URL.)
+    MediaFileManager, and we'll return an empty URL).
     """
     import numpy as np
     from PIL import Image, ImageFile
@@ -367,6 +367,7 @@ def marshall_images(
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
     The images will be resized and reformatted as necessary.
+
     Parameters
     ----------
     coordinates
@@ -415,7 +416,7 @@ def marshall_images(
     elif isinstance(image, np.ndarray) and len(cast(NumpyShape, image.shape)) == 4:
         images = _4d_to_list_3d(image)
     else:
-        images = [image]  # type: ignore
+        images = cast(Sequence[AtomicImage], [image])
 
     if isinstance(caption, list):
         captions: Sequence[str | None] = caption

@@ -101,7 +101,7 @@ class CustomComponent(BaseCustomComponent):
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         try:
-            import pyarrow  # noqa: F401
+            import pyarrow  # noqa: F401, ICN001
 
             from streamlit.components.v1 import component_arrow
         except ImportError:

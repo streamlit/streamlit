@@ -25,7 +25,8 @@ def patch_config_options(config_overrides: dict[str, Any]):
     """A context manager that overrides config options. It can
     also be used as a function decorator.
 
-    Examples:
+    Examples
+    --------
     >>> with patch_config_options({"server.headless": True}):
     ...     assert config.get_option("server.headless") is True
     ...     # Other test code that relies on these options

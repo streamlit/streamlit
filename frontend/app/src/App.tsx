@@ -676,11 +676,13 @@ export class App extends PureComponent<Props, State> {
       // The setState will be applied in the expected render cycle in this case.
       this.setState({ connectionState: newState })
     } else {
-      // We are using `flushSync` here because there is code that expects every
-      // state to be observed. With React batched updates, it is possible that
-      // multiple `connectionState` changes are applied in 1 render cycle, leading
-      // to the last state change being the only one observed. Utilizing
-      // `flushSync` ensures that we apply every state change.
+      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+       * We are using `flushSync` here because there is code that expects every
+       * state to be observed. With React batched updates, it is possible that
+       * multiple `connectionState` changes are applied in 1 render cycle, leading
+       * to the last state change being the only one observed. Utilizing
+       * `flushSync` ensures that we apply every state change.
+       */
       flushSync(() => {
         this.setState({ connectionState: newState })
       })
@@ -1192,7 +1194,7 @@ export class App extends PureComponent<Props, State> {
       }
     }
 
-    if (themeInput?.fontFaces) {
+    if (themeInput?.fontFaces && themeInput.fontFaces.length > 0) {
       // If font faces are provided, we need to set the imported theme with the theme
       // manager to make the font faces available.
       this.props.theme.setImportedTheme(themeInput)
@@ -1242,6 +1244,8 @@ export class App extends PureComponent<Props, State> {
             // Tell the WidgetManager which widgets still exist. It will remove
             // widget state for widgets that have been removed.
             const activeWidgetIds = new Set(
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
               Array.from(this.state.elements.getElements())
                 .map(element => getElementId(element))
                 .filter(notUndefined)
@@ -1294,6 +1298,8 @@ export class App extends PureComponent<Props, State> {
       },
       () => {
         const activeWidgetIds = new Set(
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
           Array.from(this.state.elements.getElements())
             .map(element => getElementId(element))
             .filter(notUndefined)

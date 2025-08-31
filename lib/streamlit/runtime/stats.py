@@ -61,7 +61,7 @@ class CacheStat(NamedTuple):
 
 
 def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
-    """Group a list of CacheStats by category_name and cache_name and sum byte_length"""
+    """Group a list of CacheStats by category_name and cache_name and sum byte_length."""
 
     def key_function(individual_stat):
         return individual_stat.category_name, individual_stat.cache_name

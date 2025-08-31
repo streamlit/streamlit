@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { ComponentType, useMemo } from "react"
+import React, { ComponentType } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { ReactElement } from "react-markdown/lib/react-markdown"
 
 import { Box } from "~lib/components/shared/Base/styled-components"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 /**
  * HOC that wraps a component and passes its width as a prop. Should only be
@@ -29,14 +29,11 @@ export const withCalculatedWidth = <P extends { width?: number }>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>
 ): ComponentType<Omit<P, "width">> => {
   const EnhancedComponent = (props: Omit<P, "width">): ReactElement => {
-    const {
-      values: [width],
-      elementRef,
-    } = useResizeObserver(useMemo(() => ["width"], []))
+    const [width, elementRef] = useCalculatedWidth()
 
     return (
       <Box ref={elementRef}>
-        <WrappedComponent {...(props as P)} width={width || -1} />
+        <WrappedComponent {...(props as P)} width={width} />
       </Box>
     )
   }

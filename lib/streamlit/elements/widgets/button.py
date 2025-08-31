@@ -193,7 +193,6 @@ class ButtonMixin:
 
         Examples
         --------
-
         **Example 1: Customize your button type**
 
         >>> import streamlit as st

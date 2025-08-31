@@ -278,7 +278,6 @@ def connection_factory(
 
     Examples
     --------
-
     **Example 1: Inferred connection type**
 
     The easiest way to create a first-party (SQL, Snowflake, or Snowpark) connection is

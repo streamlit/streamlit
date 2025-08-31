@@ -27,7 +27,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(8)
+    expect(popover_elements).to_have_count(9)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -56,6 +56,10 @@ def test_popover_button_rendering(
     assert_snapshot(
         get_popover(themed_app, "popover 8 (material icon)"),
         name="st_popover-material_icon",
+    )
+    assert_snapshot(
+        get_popover(themed_app, "popover 9 (use_container_width) with help"),
+        name="st_popover-use_container_width_with_help",
     )
 
 
@@ -87,9 +91,22 @@ def test_popover_container_rendering(
 
 def test_popover_with_use_container_width(app: Page):
     """Test that the popover container is correctly stretched to the button width
-    if `use_container_width=True`."""
+    if `use_container_width=True`.
+    """
     # Get the stretched popover container:
     popover_container = open_popover(app, "popover 2 (use_container_width)")
+
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello")
+    # Check that the min width is stretched to the full container width:
+    expect(popover_container).to_have_css("min-width", "704px")
+
+
+def test_popover_with_use_container_width_and_help(app: Page):
+    """Test that the popover container is correctly stretched to the button width
+    if `use_container_width=True` and `help` is provided.
+    """
+    # Get the stretched popover container:
+    popover_container = open_popover(app, "popover 9 (use_container_width) with help")
 
     expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello")
     # Check that the min width is stretched to the full container width:

@@ -22,7 +22,8 @@ def test_data_editor_input_format_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.data_editor renders various data formats correctly via snapshot
-    testing."""
+    testing.
+    """
     dataframe_elements = app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(len(SHARED_TEST_CASES) + 1)
 

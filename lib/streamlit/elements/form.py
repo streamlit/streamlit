@@ -202,7 +202,7 @@ class FormMixin:
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
-        """Display a form submit button.
+        r"""Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
@@ -225,7 +225,7 @@ class FormMixin:
             Unsupported Markdown elements are unwrapped so only their children
             (text contents) render. Display unsupported elements as literal
             characters by backslash-escaping them. E.g.,
-            ``"1\\. Not an ordered list"``.
+            ``"1\. Not an ordered list"``.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -269,7 +269,7 @@ class FormMixin:
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
-              Thumb Up icon. Find additional icons in the `Material Symbols \
+              Thumb Up icon. Find additional icons in the `Material Symbols
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
         disabled : bool

@@ -26,7 +26,6 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
-  StringTriggerValue,
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
@@ -302,22 +301,6 @@ export class WidgetStateManager {
         resolve()
       }, 0)
     })
-  }
-
-  /**
-   * Sets the string trigger value for the given widget ID to a string value,
-   * sends a rerunScript message to the server, and then immediately unsets the
-   * string trigger value to None/null.
-   */
-  public setStringTriggerValue(
-    widget: WidgetInfo,
-    value: string,
-    source: Source,
-    fragmentId: string | undefined
-  ): Promise<void> {
-    this.createWidgetState(widget, source).stringTriggerValue =
-      new StringTriggerValue({ data: value })
-    return this.setTriggerValueAtEndOfEventLoop(widget, source, fragmentId)
   }
 
   public setChatInputValue(

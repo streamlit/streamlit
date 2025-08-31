@@ -54,8 +54,8 @@ import {
 } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import {
   StyledChatInput,
@@ -109,13 +109,8 @@ function ChatInput({
   const counterRef = useRef(0)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
 
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
-  // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
-  const [dirty, setDirty] = useState(false)
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
   const [value, setValue] = useState(element.default)
   // The value of the height of the textarea. It depends on a variety of factors including the default height, and autogrowing
@@ -124,6 +119,18 @@ function ChatInput({
   const [files, setFiles] = useState<UploadFileInfo[]>([])
 
   const [fileDragged, setFileDragged] = useState(false)
+
+  /**
+   * @returns True if the user-specified state.value has not yet been synced to
+   * the WidgetStateManager.
+   */
+  const dirty = useMemo(() => {
+    if (files.some(f => f.status.type === "uploading")) {
+      return false
+    }
+
+    return value !== "" || files.length > 0
+  }, [files, value])
 
   const acceptFile = chatInputAcceptFileProtoValueToEnum(element.acceptFile)
   const maxFileSize = sizeConverter(
@@ -300,7 +307,6 @@ function ChatInput({
       { fromUi: true },
       fragmentId
     )
-    setDirty(false)
     setFiles([])
     setValue("")
     setScrollHeight(0)
@@ -329,15 +335,6 @@ function ChatInput({
     setValue(value)
     setScrollHeight(getScrollHeight())
   }
-
-  useEffect(
-    () =>
-      // Disable send button if there are files still being uploaded
-      files.some(f => f.status.type === "uploading")
-        ? setDirty(false)
-        : setDirty(value !== "" || files.length > 0),
-    [files, value]
-  )
 
   useEffect(() => {
     if (element.setValue) {

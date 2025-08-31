@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Retrieve the branch name from the release PR"""
+"""Retrieve the branch name from the release PR."""
+
+from __future__ import annotations
 
 import requests
 
@@ -27,7 +29,7 @@ def check_for_release_pr(pull):
 
 
 def get_release_branch():
-    """Retrieve the release branch from the release PR"""
+    """Retrieve the release branch from the release PR."""
 
     url = "https://api.github.com/repos/streamlit/streamlit/pulls"
     response = requests.get(url).json()
@@ -35,7 +37,7 @@ def get_release_branch():
     # Response is in an array, must map over each pull (dict)
     for pull in response:
         ref = check_for_release_pr(pull)
-        if ref != None:
+        if ref is not None:
             return ref
 
 

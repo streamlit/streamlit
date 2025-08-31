@@ -120,6 +120,7 @@ def run_theme_tester_app():
 
     with st.sidebar:
         st.markdown(
+            "## Welcome\n"
             ":rainbow-background[:rainbow[Hello World]] :material/waving_hand: **This** "
             "`is` [Streamlit](https://streamlit.io).",
             help="Tooltip",

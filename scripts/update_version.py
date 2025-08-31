@@ -43,6 +43,8 @@ Then we can go to alpha, rc1, rc2, etc. but eventually its
 0.15.3
 """
 
+from __future__ import annotations
+
 import fileinput
 import os
 import re

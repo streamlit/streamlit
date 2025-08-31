@@ -395,6 +395,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.baseFontSize",
                 "theme.baseRadius",
                 "theme.font",
+                "theme.headingFont",
                 "theme.codeFont",
                 "theme.fontFaces",
                 "theme.borderColor",
@@ -562,6 +563,7 @@ class ConfigTest(unittest.TestCase):
             "showBorderAroundInputs": None,
             "linkColor": None,
             "font": None,
+            "headingFont": None,
             "codeFont": None,
             "fontFaces": None,
             "baseFontSize": None,
@@ -583,6 +585,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.showBorderAroundInputs", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
         config._set_option("theme.font", "Inter", "test")
+        config._set_option("theme.headingFont", "Inter", "test")
         config._set_option(
             "theme.fontFaces",
             [
@@ -609,6 +612,7 @@ class ConfigTest(unittest.TestCase):
             "showBorderAroundInputs": True,
             "linkColor": "#2EC163",
             "font": "Inter",
+            "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "fontFaces": [
                 {

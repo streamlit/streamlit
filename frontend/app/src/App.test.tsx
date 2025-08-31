@@ -1717,6 +1717,45 @@ describe("App", () => {
     })
   })
 
+  describe("App.processThemeInput", () => {
+    it("calls setImportedTheme when fontFaces are provided", () => {
+      const fontFaces = [{ url: "test-url" }]
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontFaces,
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should have called setImportedTheme
+      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+    })
+
+    it("doesn't call setImportedTheme when fontFaces is empty", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontFaces: [],
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should not have called setImportedTheme
+      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+    })
+  })
+
   describe("App.handleScriptFinished", () => {
     it("will not increment cache count if session info is not set", () => {
       renderApp(getProps())

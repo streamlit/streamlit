@@ -24,6 +24,9 @@ module.exports = {
     es6: true,
   },
   extends: [
+    // Activate recommended eslint rules: https://eslint.org/docs/latest/rules
+    "eslint:recommended",
+    // Uses the recommended rules from airbnb-typescript/base
     "airbnb-typescript/base",
     // Uses the recommended rules from @eslint-plugin-react
     "plugin:react/recommended",
@@ -41,6 +44,10 @@ module.exports = {
     "plugin:testing-library/react",
     // Uses the recommended rules from lodash
     "plugin:lodash/recommended",
+    // This uses the `-legacy` nomenclature since we're on an older version of
+    // eslint that doesn't support flat config
+    // @see https://eslint-react.xyz/docs/presets
+    "plugin:@eslint-react/recommended-type-checked-legacy",
   ],
   // Specifies the ESLint parser
   parser: "@typescript-eslint/parser",
@@ -68,6 +75,7 @@ module.exports = {
     "streamlit-custom",
     "vitest",
     "react-compiler",
+    "@eslint-react",
   ],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
@@ -84,6 +92,17 @@ module.exports = {
     "react/prop-types": "off",
     // We don't escape entities
     "react/no-unescaped-entities": "off",
+    // We do want to discourage the usage of flushSync
+    "@eslint-react/dom/no-flush-sync": "error",
+    // This was giving false positives
+    "@eslint-react/no-unused-class-component-members": "off",
+    // This was giving false positives
+    "@eslint-react/naming-convention/use-state": "off",
+    // Helps us catch functions written as if they are hooks, but are not.
+    "@eslint-react/hooks-extra/no-useless-custom-hooks": "error",
+    // Turning off for now until we have clearer guidance on how to fix existing
+    // usages
+    "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
     // Some of these are being caught erroneously
     "@typescript-eslint/camelcase": "off",
     // Empty interfaces are ok

@@ -29,7 +29,8 @@ def test_different_markdown_elements_in_one_block_displayed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the block containing a mixture of different markdown elements is
-    displayed correctly."""
+    displayed correctly.
+    """
 
     mixed_markdown_element = (
         get_element_by_key(themed_app, "mixed_markdown")
@@ -96,7 +97,7 @@ def test_displays_individual_markdowns(app: Page):
 def test_markdown_displays_long_headers_above_other_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Displays long headers above other elements in the markdown block"""
+    """Displays long headers above other elements in the markdown block."""
 
     long_header = (
         app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(0)
@@ -148,7 +149,8 @@ def test_match_snapshot_for_headers_in_single_markdown_command(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that snapshot of headers joined in a single string and written in a single
-    st.markdown command is correct."""
+    st.markdown command is correct.
+    """
     container = _get_container_of_text(app, "Headers in single st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_joined_in_single_command")
 
@@ -156,7 +158,7 @@ def test_match_snapshot_for_headers_in_single_markdown_command(
 def test_match_snapshot_for_headers_in_multiple_markdown_commands(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that snapshot of headers written in multiple st.markdown commands is correct"""
+    """Test that snapshot of headers written in multiple st.markdown commands is correct."""
     container = _get_container_of_text(app, "Headers in multiple st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_via_multiple_commands")
 
@@ -230,6 +232,23 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     expect(latex_elements.nth(2)).to_contain_text("a + b")
     assert_snapshot(latex_elements.nth(2), name="st_latex-sympy")
+
+
+def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements are displayed correctly."""
+    badge_container = get_element_by_key(themed_app, "badge_elements")
+
+    # Check that the badge texts are displayed correctly
+    expect(badge_container).to_contain_text("Simple badge")
+    expect(badge_container).to_contain_text("Green badge with emoji")
+    expect(badge_container).to_contain_text("Red badge with material icon")
+    expect(badge_container).to_contain_text("🚀")
+    expect(badge_container).to_contain_text("This is a very long badge")
+    expect(badge_container).to_contain_text("Blue markdown badge")
+    expect(badge_container).to_contain_text("🌱 Green markdown badge")
+
+    # Take a snapshot of all badges together
+    assert_snapshot(badge_container, name="st_badge-examples")
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):

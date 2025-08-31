@@ -60,7 +60,6 @@ class LayoutsMixin:
 
         Parameters
         ----------
-
         height : int or None
             Desired height of the container expressed in pixels. If ``None`` (default)
             the container grows to fit its content. If a fixed height, scrolling is
@@ -230,7 +229,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         **Example 1: Use context management**
 
         You can use the ``with`` statement to insert any element into a column:
@@ -768,7 +766,6 @@ class LayoutsMixin:
 
         Parameters
         ----------
-
         label : str
             The initial label of the status container. The label can optionally
             contain GitHub-flavored Markdown of the following types: Bold, Italics,
@@ -802,14 +799,12 @@ class LayoutsMixin:
 
         Returns
         -------
-
         StatusContainer
             A mutable status container that can hold multiple elements. The label, state,
             and expanded state can be updated after creation via ``.update()``.
 
         Examples
         --------
-
         You can use the ``with`` notation to insert any element into an status container:
 
         >>> import time

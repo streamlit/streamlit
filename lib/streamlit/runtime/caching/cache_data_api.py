@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.cache_data: pickle-based caching"""
+"""@st.cache_data: pickle-based caching."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
 class CachedDataFuncInfo(CachedFuncInfo):
-    """Implements the CachedFuncInfo interface for @st.cache_data"""
+    """Implements the CachedFuncInfo interface for @st.cache_data."""
 
     def __init__(
         self,
@@ -113,7 +113,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     @property
     def display_name(self) -> str:
-        """A human-readable name for the cached function"""
+        """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -127,7 +127,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     def validate_params(self) -> None:
         """
-        Validate the params passed to @st.cache_data are compatible with cache storage
+        Validate the params passed to @st.cache_data are compatible with cache storage.
 
         When called, this method could log warnings if cache params are invalid
         for current storage.
@@ -141,7 +141,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
 
 class DataCaches(CacheStatsProvider):
-    """Manages all DataCache instances"""
+    """Manages all DataCache instances."""
 
     def __init__(self):
         self._caches_lock = threading.Lock()

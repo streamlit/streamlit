@@ -15,16 +15,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any
 
-from streamlit.logger import get_logger
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
-
-_LOGGER: Final = get_logger(__name__)
 
 
 class PagesManager:

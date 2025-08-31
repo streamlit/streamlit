@@ -392,13 +392,11 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 
     Parameters
     ----------
-
     df_index : pd.Index
         The index to check.
 
     Returns
     -------
-
     bool
         True if the index is supported, False otherwise.
     """
@@ -426,7 +424,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
     """Fix the column headers of the provided dataframe inplace to work
-    correctly for data editing."""
+    correctly for data editing.
+    """
     import pandas as pd
 
     if isinstance(data_df.columns, pd.MultiIndex):

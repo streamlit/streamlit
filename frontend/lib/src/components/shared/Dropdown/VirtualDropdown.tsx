@@ -55,6 +55,8 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
 
 const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
   const theme = useTheme()
+  // TODO: Update to match React best practices
+  // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = React.Children.toArray(props.children) as ReactElement[]
 
   if (!children[0] || !children[0].props.item) {

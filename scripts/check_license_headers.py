@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import re
 import subprocess
@@ -96,7 +97,7 @@ def main():
             if LICENSE_TEXT not in file_content:
                 print("Found file without license header", fileloc)
                 invalid_files_count += 1
-        except:
+        except Exception:
             print(
                 f"Failed to open the file: {fileloc}. Is it binary file?",
             )

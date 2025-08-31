@@ -130,7 +130,6 @@ def login(provider: str | None = None) -> None:
 
     Examples
     --------
-
     **Example 1: Use an unnamed default identity provider**
 
     If you do not specify a name for your provider, specify all settings within

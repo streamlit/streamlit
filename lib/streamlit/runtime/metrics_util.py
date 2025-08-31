@@ -160,7 +160,7 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
 
 def _get_machine_id_v3() -> str:
-    """Get the machine ID
+    """Get the machine ID.
 
     This is a unique identifier for a user for tracking metrics,
     that is broken in different ways in some Linux distros and Docker images.
@@ -186,7 +186,7 @@ class Installation:
 
     @classmethod
     def instance(cls) -> Installation:
-        """Returns the singleton Installation"""
+        """Returns the singleton Installation."""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
         # https://en.wikipedia.org/wiki/Double-checked_locking

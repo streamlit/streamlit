@@ -23,7 +23,8 @@ def test_dataframe_input_format_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.dataframe renders various data formats correctly via snapshot
-    testing."""
+    testing.
+    """
 
     for index, test_case in enumerate(SHARED_TEST_CASES):
         number_input = app.get_by_test_id("stNumberInput").locator("input")

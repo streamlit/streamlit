@@ -205,7 +205,7 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
           packages-dir: lib/dist/
       - if: ${{ failure() }}

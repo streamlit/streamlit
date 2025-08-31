@@ -241,9 +241,27 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.has-background-color": {
+          borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
+        },
+
+        "span.is-badge": {
           borderRadius: theme.radii.md,
+          // Since we're using inline-block below, we're not using vertical padding here,
+          // because inline-block already makes the element look a bit taller.
+          padding: `0 ${theme.spacing.twoXS}`,
+          // Add a small margin to separate it a bit from other text.
+          margin: `0 ${theme.spacing.px}`,
+
+          // Make badges not wrap and ellipsize them if they are too long for the
+          // parent container.
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          display: "inline-block",
+          verticalAlign: "middle",
         },
 
         "p, ol, ul, dl, li": {

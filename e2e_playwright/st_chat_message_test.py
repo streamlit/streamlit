@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_renders_chat_messages_correctly_1(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test if the chat messages render correctly"""
+    """Test if the chat messages render correctly."""
     # Wait a bit more to allow all images to load:
     chat_message_elements = themed_app.get_by_test_id("stChatMessage")
     expect(chat_message_elements).to_have_count(16)

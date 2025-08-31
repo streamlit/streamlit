@@ -96,13 +96,13 @@ export const StyledChatUploadedFiles = styled.div(({ theme }) => ({
   overflowX: "auto",
 }))
 
-export const StyledUploadedChatFileList = styled.div(({}) => ({
+export const StyledUploadedChatFileList = styled.div({
   display: "flex",
-}))
+})
 
-export const StyledUploadedChatFileListItem = styled.div(({}) => ({
+export const StyledUploadedChatFileListItem = styled.div({
   flex: "0 0 auto",
-}))
+})
 
 export const StyledChatUploadedFile = styled.div(({ theme }) => ({
   display: "flex",

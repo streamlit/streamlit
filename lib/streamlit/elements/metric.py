@@ -124,7 +124,6 @@ class MetricMixin:
 
         Examples
         --------
-
         **Example 1: Show a metric**
 
         >>> import streamlit as st

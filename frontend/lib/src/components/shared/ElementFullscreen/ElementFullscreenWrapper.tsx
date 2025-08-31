@@ -21,7 +21,7 @@ import { useTheme } from "@emotion/react"
 import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { EmotionTheme } from "~lib/theme"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { useFullscreen } from "./useFullscreen"
 
@@ -36,10 +36,7 @@ const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
 }) => {
   const theme: EmotionTheme = useTheme()
   const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
   const fullscreenContextValue = useMemo(() => {
     return {

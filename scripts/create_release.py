@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Create a release using Github API"""
+"""Create a release using Github API."""
+
+from __future__ import annotations
 
 import os
 
@@ -21,7 +23,7 @@ import requests
 
 
 def create_release():
-    """Create a release from the Git Tag"""
+    """Create a release from the Git Tag."""
 
     tag = os.getenv("GIT_TAG")
     access_token = os.getenv("GH_TOKEN")

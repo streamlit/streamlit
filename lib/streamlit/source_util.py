@@ -15,17 +15,14 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Final, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from typing_extensions import NotRequired, TypeAlias
 
-from streamlit.logger import get_logger
 from streamlit.string_util import extract_leading_emoji
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-_LOGGER: Final = get_logger(__name__)
 
 PageHash: TypeAlias = str
 PageName: TypeAlias = str

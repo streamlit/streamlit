@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Server related utility functions"""
+"""Server related utility functions."""
 
 from __future__ import annotations
 
@@ -153,9 +153,7 @@ def _get_browser_address_bar_port() -> int:
 
 
 def emit_endpoint_deprecation_notice(handler: RequestHandler, new_path: str) -> None:
-    """
-    Emits the warning about deprecation of HTTP endpoint in the HTTP header.
-    """
+    """Emits the warning about deprecation of HTTP endpoint in the HTTP header."""
     handler.set_header("Deprecation", True)
     new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
     handler.set_header("Link", f'<{new_url}>; rel="alternate"')

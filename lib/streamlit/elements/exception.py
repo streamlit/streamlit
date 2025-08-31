@@ -180,7 +180,9 @@ Traceback:
 
 def _format_syntax_error_message(exception: SyntaxError) -> str:
     """Returns a nicely formatted SyntaxError message that emulates
-    what the Python interpreter outputs, e.g.:
+    what the Python interpreter outputs.
+
+    For example:
 
     > File "raven.py", line 3
     >   st.write('Hello world!!'))

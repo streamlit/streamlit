@@ -319,7 +319,7 @@ def is_dataframe_like(obj: object) -> bool:
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
-    """True if the object is one of the supported unevaluated data objects:
+    """True if the object is one of the supported unevaluated data objects.
 
     Currently supported objects are:
     - Snowpark DataFrame / Table
@@ -372,7 +372,7 @@ def is_snowpark_row_list(obj: object) -> bool:
 
 
 def is_pyspark_data_object(obj: object) -> bool:
-    """True if obj is a PySpark or PySpark Connect dataframe"""
+    """True if obj is a PySpark or PySpark Connect dataframe."""
     return (
         is_type(obj, _PYSPARK_DF_TYPE_STR) or is_type(obj, _PYSPARK_CONNECT_DF_TYPE_STR)
     ) and has_callable_attr(obj, "toPandas")
@@ -391,7 +391,7 @@ def is_dask_object(obj: object) -> bool:
 
 
 def is_modin_data_object(obj: object) -> bool:
-    """True if obj is of Modin Dataframe or Series"""
+    """True if obj is of Modin Dataframe or Series."""
     return is_type(obj, _MODIN_DF_TYPE_STR) or is_type(obj, _MODIN_SERIES_TYPE_STR)
 
 
@@ -857,7 +857,8 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
 
 def _show_data_information(msg: str) -> None:
     """Show a message to the user with important information
-    about the processed dataset."""
+    about the processed dataset.
+    """
     from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
     get_dg_singleton_instance().main_dg.caption(msg)
@@ -910,7 +911,6 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
     Parameters
     ----------
-
     obj : dataframe-, array-, or collections-like object
         The object to convert to a list.
 
@@ -1035,7 +1035,8 @@ def _maybe_truncate_table(
 
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     """Return True if the column type is known to cause issues during
-    Arrow conversion."""
+    Arrow conversion.
+    """
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind in [

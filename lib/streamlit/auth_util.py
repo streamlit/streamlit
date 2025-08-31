@@ -146,7 +146,8 @@ def generate_default_provider_section(auth_section) -> dict[str, Any]:
 
 def validate_auth_credentials(provider: str) -> None:
     """Validate the general auth credentials and auth credentials for the given
-    provider."""
+    provider.
+    """
     if not secrets_singleton.load_if_toml_exists():
         raise StreamlitAuthError(
             """To use authentication features you need to configure credentials for at

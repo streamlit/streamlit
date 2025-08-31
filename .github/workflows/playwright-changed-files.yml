@@ -27,13 +27,41 @@ jobs:
           fetch-depth: 2
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v45
-        with:
-          path: e2e_playwright
-          # Exclude all files in custom_components folder as they require external dependencies
-          files: |
-            **/*_test.py
-            !custom_components/**
+        run: |
+          # Get all changed files using git diff-tree
+          git_output=$(git diff-tree --no-commit-id --name-only -r HEAD^ HEAD)
+
+          # Filter files in e2e_playwright directory that match the pattern **/*_test.py
+          # and exclude files in custom_components directory and deleted files
+          changed_files=()
+          changed_files_count=0
+
+          while IFS= read -r file; do
+            # Check if file is in e2e_playwright directory (including subdirectories)
+            if [[ $file == e2e_playwright/* ]]; then
+              # Check if file matches the pattern **/*_test.py
+              if [[ $file == *_test.py ]]; then
+                # Check if file is not in custom_components directory
+                if [[ $file != *custom_components* ]]; then
+                  # Check if the file still exists (not deleted)
+                  if [[ -f "$file" ]]; then
+                    # Remove the e2e_playwright/ prefix from the file path
+                    relative_file="${file#e2e_playwright/}"
+                    changed_files+=("$relative_file")
+                    changed_files_count=$((changed_files_count + 1))
+                  fi
+                fi
+              fi
+            fi
+          done <<< "$git_output"
+
+          # Join the array with spaces, properly handling filenames with spaces
+          joined_files=$(printf "%s " "${changed_files[@]}")
+          joined_files="${joined_files% }" # Remove trailing space
+
+          # Set outputs similar to the original action
+          echo "all_changed_files=${joined_files}" >> $GITHUB_OUTPUT
+          echo "all_changed_files_count=${changed_files_count}" >> $GITHUB_OUTPUT
       - name: Check changed files
         id: check_changed_files
         env:

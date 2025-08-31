@@ -123,7 +123,8 @@ def docstrings():
 
     def nested():
         """Multiline docstring.
-        Should not be printed."""
+        Should not be printed.
+        """
         pass
 
     class Foo:
@@ -149,7 +150,7 @@ class MyClass:
     """MyClass: this help block should be printed."""
 
     def __init__(self):
-        """This should not be printed."""
+        """Should not be printed."""
 
 
 MyClass

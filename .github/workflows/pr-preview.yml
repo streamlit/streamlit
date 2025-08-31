@@ -13,6 +13,89 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  initial-pr-comment:
+    runs-on: ubuntu-latest
+    # Only run on PRs that are not from forks
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Only create a comment if the AWS_ACCESS_KEY_ID is set
+      # The API key is not set if this is from a fork PR or from dependabot.
+      - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
+        name: Create or update comment (Building)
+        id: initial-comment
+        uses: actions/github-script@v7
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
+        with:
+          script: |
+            // Define the building template
+            const buildingTemplate = "### 🚧 PR preview is building...\n\n" +
+                                    "| Name | Link |\n" +
+                                    "| :----: | ---- |\n" +
+                                    "| 📦 Wheel file | *Building...* |\n" +
+                                    "| 🕹️ Preview app | *Building...* |";
+
+            // Find an existing comment; if it exists, we will update it
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const botComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              (comment.body.includes('PR preview is building') ||
+               comment.body.includes('PR preview is ready'))
+            );
+
+            let commentBody;
+
+            if (botComment) {
+              // Get the current comment content to check if it has links
+              const { data: currentComment } = await github.rest.issues.getComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id
+              });
+
+              // Check if the comment already has links (not just "Building...")
+              if (currentComment.body.includes("https://core-previews.s3-us-west-2.amazonaws.com/")) {
+                // If links exist, just update the status header
+                commentBody = currentComment.body.replace("### ✅ PR preview is ready!", "### 🚧 PR preview is building...");
+              } else {
+                // If no links, use the building template
+                commentBody = buildingTemplate;
+              }
+
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing comment with ID:', botComment.id);
+            } else {
+              // Create new comment with building template
+              commentBody = buildingTemplate;
+
+              const { data: newComment } = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log('Created new comment with ID:', newComment.id);
+            }
+
   upload-whl:
     runs-on: ubuntu-latest
 
@@ -96,7 +179,7 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "preview-branch=$PREVIEW_BRANCH" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
-      - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
+      - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
         uses: actions/github-script@v7
         env:
@@ -115,6 +198,178 @@ jobs:
               context: 'Wheel ready!'
             })
 
+  check-size:
+    runs-on: ubuntu-latest
+    needs: upload-whl
+    if: github.event_name == 'pull_request' && github.repository == 'streamlit/streamlit'
+    continue-on-error: true # Ensure the job doesn't fail the workflow
+
+    permissions:
+      contents: read
+      pull-requests: write # Required to add comments to PR
+      actions: read # Required to access workflow runs
+
+    env:
+      SIZE_CHANGE_THRESHOLD: 0.25 # Percentage threshold for significant size changes
+      WHEEL_ARTIFACT_NAME: whl_file # Name of the wheel artifact
+
+    steps:
+      - name: Compare wheel sizes
+        id: compare-sizes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
+            const wheelArtifactName = process.env.WHEEL_ARTIFACT_NAME;
+            console.log(`Threshold for significant change: ${threshold}%`);
+            console.log(`Looking for wheel artifact with name: ${wheelArtifactName}`);
+
+            try {
+              // Get the current workflow run ID and artifacts
+              const currentRunId = context.runId;
+              console.log(`Current run ID: ${currentRunId}`);
+
+              const { data: currentArtifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: currentRunId
+              });
+
+              const currentWhlArtifact = currentArtifacts.artifacts.find(artifact => artifact.name === wheelArtifactName);
+              if (!currentWhlArtifact) {
+                throw new Error(`No ${wheelArtifactName} artifact found in the current workflow run`);
+              }
+
+              const currentSize = currentWhlArtifact.size_in_bytes;
+              console.log(`Current wheel size: ${currentSize} bytes (${(currentSize / 1024).toFixed(2)} KB)`);
+
+              // Get the latest successful workflow run on develop branch
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'pr-preview.yml',
+                branch: 'develop',
+                status: 'success',
+                per_page: 1
+              });
+
+              if (runs.workflow_runs.length === 0) {
+                throw new Error('No successful workflow runs found on develop branch');
+              }
+
+              const latestRun = runs.workflow_runs[0];
+              console.log(`Latest successful run on develop: ${latestRun.id}`);
+
+              // Get artifacts for the develop run
+              const { data: developArtifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: latestRun.id
+              });
+
+              const developWhlArtifact = developArtifacts.artifacts.find(artifact => artifact.name === wheelArtifactName);
+              if (!developWhlArtifact) {
+                throw new Error(`No ${wheelArtifactName} artifact found in the develop workflow run`);
+              }
+
+              const developSize = developWhlArtifact.size_in_bytes;
+              console.log(`Develop wheel size: ${developSize} bytes (${(developSize / 1024).toFixed(2)} KB)`);
+
+              // Calculate percentage difference
+              const diffPercent = ((currentSize - developSize) / developSize) * 100;
+              const absDiffPercent = Math.abs(diffPercent);
+
+              console.log(`Size difference: ${diffPercent.toFixed(2)}% (absolute: ${absDiffPercent.toFixed(2)}%)`);
+
+              // Check if difference is significant (>= threshold%)
+              const isSignificant = absDiffPercent >= threshold;
+
+              // Format sizes for human readability
+              const currentSizeKB = (currentSize / 1024).toFixed(2);
+              const developSizeKB = (developSize / 1024).toFixed(2);
+
+              return {
+                success: true,
+                is_significant: isSignificant,
+                diff_percent: diffPercent,
+                current_size_kb: currentSizeKB,
+                develop_size_kb: developSizeKB,
+                threshold: threshold
+              };
+            } catch (error) {
+              console.error(`Error comparing wheel sizes: ${error.message}`);
+              // Let the step fail naturally
+              throw error;
+            }
+        env:
+          SIZE_CHANGE_THRESHOLD: ${{ env.SIZE_CHANGE_THRESHOLD }}
+          WHEEL_ARTIFACT_NAME: ${{ env.WHEEL_ARTIFACT_NAME }}
+
+      - name: Add PR comment for significant size change
+        if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = JSON.parse(process.env.COMPARE_RESULT);
+
+            const diffPercent = result.diff_percent;
+            const currentSizeKB = result.current_size_kb;
+            const developSizeKB = result.develop_size_kb;
+            const threshold = result.threshold;
+
+            const changeType = diffPercent > 0 ? 'increased' : 'decreased';
+            const emoji = diffPercent > 0 ? '📈' : '📉';
+
+            const commentBody = `### ${emoji} Significant wheel size change detected
+
+            The wheel file size has **${changeType} by ${Math.abs(diffPercent).toFixed(2)}%** (threshold: ${threshold}%)
+
+            - Current PR: ${currentSizeKB} KB
+            - Latest develop: ${developSizeKB} KB
+
+            Please verify this change is expected.`;
+
+            // Unique identifier for our comment
+            const commentIdentifier = '<!-- STREAMLIT-WHEEL-SIZE-CHECK -->';
+            const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
+
+            try {
+              // Get all comments on the PR
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+
+              // Look for our previous wheel size comment
+              const sizeComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+              if (sizeComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: sizeComment.id,
+                  body: fullCommentBody
+                });
+                console.log('Updated existing wheel size comment');
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: fullCommentBody
+                });
+                console.log('Created new wheel size comment');
+              }
+            } catch (error) {
+              console.error(`Error adding PR comment: ${error.message}`);
+              throw error; // Let the step fail naturally
+            }
+        env:
+          COMPARE_RESULT: ${{ steps.compare-sizes.outputs.result }}
+
   setup-preview:
     runs-on: ubuntu-latest
 
@@ -124,6 +379,9 @@ jobs:
     defaults:
       run:
         shell: bash
+
+    outputs:
+      deploy-url: ${{ steps.deploy-url.outputs.deploy-url }}
 
     steps:
       - name: Checkout Core Previews Repo
@@ -152,7 +410,70 @@ jobs:
           git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
           git push -f origin ${PREVIEW_BRANCH}
       - name: Ready to deploy!
+        id: deploy-url
         env:
           PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
         run: |
-          echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=E2E_Tester_🧪.py"
+          DEPLOY_URL="https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=E2E_Tester_🧪.py&subdomain=${PREVIEW_BRANCH}"
+          echo -e "${DEPLOY_URL}"
+          echo "deploy-url=${DEPLOY_URL}" >> $GITHUB_OUTPUT
+
+  update-pr-comment:
+    runs-on: ubuntu-latest
+    needs: [initial-pr-comment, upload-whl, setup-preview]
+    # Only run on PRs that are not from forks
+    if: needs.upload-whl.outputs.enable-setup == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Update comment (Ready)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find the existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              (comment.body.includes('PR preview is building') ||
+               comment.body.includes('PR preview is ready'))
+            );
+
+            if (!botComment) {
+              throw new Error('No PR preview comment found. The initial comment job may have failed.');
+            }
+
+            const commentId = botComment.id;
+            console.log('Found comment with ID:', commentId);
+
+            const s3Url = '${{ needs.upload-whl.outputs.s3-url }}';
+            const deployUrl = '${{ needs.setup-preview.outputs.deploy-url }}';
+
+            const previewBranch = '${{ needs.upload-whl.outputs.preview-branch }}';
+            const viewUrl = `${previewBranch}.streamlit.app`;
+
+            // Define the ready template once
+            const readyTemplate = "### ✅ PR preview is ready!\n\n" +
+                                 "| Name | Link |\n" +
+                                 "| :----: | ---- |\n" +
+                                 "| 📦 Wheel file | " + s3Url + " |\n" +
+                                 "| 🕹️ Preview app | [" + viewUrl + "](https://" + viewUrl + ") (☁️ Deploy [here](" + deployUrl + ") if not accessible)| ";
+
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: readyTemplate
+            });
+            console.log('Successfully updated comment with ID:', commentId);

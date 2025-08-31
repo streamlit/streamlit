@@ -88,7 +88,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
         placement={Placement.TOP_RIGHT}
         containerWidth={useContainerWidth}
       >
-        <StyledNavLinkContainer>
+        <StyledNavLinkContainer containerWidth={useContainerWidth}>
           <StyledNavLink
             data-testid="stPageLink-NavLink"
             disabled={disabled}

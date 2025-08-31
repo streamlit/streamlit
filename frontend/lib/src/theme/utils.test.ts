@@ -42,6 +42,7 @@ import {
   getSystemTheme,
   isColor,
   isPresetTheme,
+  parseFont,
   removeCachedTheme,
   setCachedTheme,
   toThemeInput,
@@ -573,6 +574,7 @@ describe("isColor", () => {
 describe("createEmotionTheme", () => {
   it("sets to light when matchMedia does not match dark", () => {
     const themeInput: Partial<CustomThemeConfig> = {
+      headingFont: "serif",
       bodyFont: "monospace",
       codeFont: "monospace",
       primaryColor: "red",
@@ -587,8 +589,8 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.bgColor).toBe("pink")
     expect(theme.colors.secondaryBg).toBe("blue")
     expect(theme.colors.bodyText).toBe("orange")
+    expect(theme.genericFonts.headingFont).toBe(theme.fonts.serif)
     expect(theme.genericFonts.bodyFont).toBe(theme.fonts.monospace)
-    expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
     expect(theme.genericFonts.codeFont).toBe(theme.fonts.monospace)
   })
 
@@ -603,15 +605,27 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
     expect(theme.colors.secondaryBg).toBe(baseTheme.emotion.colors.secondaryBg)
     expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
-    expect(theme.genericFonts.bodyFont).toBe(
-      baseTheme.emotion.genericFonts.bodyFont
-    )
     expect(theme.genericFonts.headingFont).toBe(
       baseTheme.emotion.genericFonts.headingFont
+    )
+    expect(theme.genericFonts.bodyFont).toBe(
+      baseTheme.emotion.genericFonts.bodyFont
     )
     expect(theme.genericFonts.codeFont).toBe(
       baseTheme.emotion.genericFonts.codeFont
     )
+  })
+
+  it("uses bodyFont for headingFont when headingFont is not configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      bodyFont: "monospace",
+      // headingFont is intentionally not set
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.genericFonts.bodyFont).toBe(theme.fonts.monospace)
+    expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
   })
 
   it("adapts the radii theme props if baseRadius is provided", () => {
@@ -792,5 +806,26 @@ describe("theme overrides", () => {
     const module = await import("./utils")
     expect(module.getMergedLightTheme()).toEqual(lightTheme)
     expect(module.getMergedDarkTheme()).toEqual(darkTheme)
+  })
+})
+
+describe("parseFont", () => {
+  it.each([
+    // Test standard font mappings
+    ["sans-serif", '"Source Sans Pro", sans-serif'],
+    ["Sans-Serif", '"Source Sans Pro", sans-serif'], // Case insensitive
+    ["SANS-SERIF", '"Source Sans Pro", sans-serif'], // All caps
+    ["sans serif", '"Source Sans Pro", sans-serif'], // With space
+    ["serif", '"Source Serif Pro", serif'],
+    ["monospace", '"Source Code Pro", monospace'],
+
+    // Test fonts that aren't in the map (should return as-is)
+    ["Arial", "Arial"],
+    ["Helvetica", "Helvetica"],
+    ["Times New Roman", "Times New Roman"],
+    ["Comic Sans MS", "Comic Sans MS"],
+    ["", ""],
+  ])("correctly maps '%s' to '%s'", (input, expected) => {
+    expect(parseFont(input)).toBe(expected)
   })
 })

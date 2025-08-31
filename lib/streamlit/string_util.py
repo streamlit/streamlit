@@ -78,7 +78,8 @@ def validate_emoji(maybe_emoji: str | None) -> str:
 
 def validate_material_icon(maybe_material_icon: str | None) -> str:
     """Validate a Material icon shortcode and return the icon in
-    normalized format if valid."""
+    normalized format if valid.
+    """
 
     supported_icon_packs = [
         "material",
@@ -165,7 +166,7 @@ def is_binary_string(inp: bytes) -> bool:
 
 
 def simplify_number(num: int) -> str:
-    """Simplifies number into Human readable format, returns str"""
+    """Simplifies number into Human readable format, returns str."""
     num_converted = float(f"{num:.2g}")
     magnitude = 0
     while abs(num_converted) >= 1000:

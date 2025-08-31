@@ -141,7 +141,7 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 class HealthHandler(_SpecialRequestHandler):
     def initialize(self, callback):
-        """Initialize the handler
+        """Initialize the handler.
 
         Parameters
         ----------
@@ -242,7 +242,7 @@ class HostConfigHandler(_SpecialRequestHandler):
 
 
 class MessageCacheHandler(tornado.web.RequestHandler):
-    """Returns ForwardMsgs from our MessageCache"""
+    """Returns ForwardMsgs from our MessageCache."""
 
     def initialize(self, cache):
         """Initializes the handler.

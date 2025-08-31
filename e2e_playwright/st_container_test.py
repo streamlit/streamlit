@@ -92,7 +92,8 @@ def test_correctly_handles_first_chat_message(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.container(height=<pixels>) correctly handles the scroll
-    behaviour change when adding the first chat message ."""
+    behaviour change when adding the first chat message.
+    """
 
     # Click button to add a chat message to the empty container:
     click_button(app, "Add message")

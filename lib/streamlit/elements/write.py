@@ -336,7 +336,6 @@ class WriteMixin:
 
         Examples
         --------
-
         Its basic use case is to draw Markdown-formatted text, whenever the
         input is a string:
 

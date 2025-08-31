@@ -155,6 +155,7 @@ function Slider({
       const { $thumbIndex } = props
       const thumbIndex = $thumbIndex || 0
       thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
+      // eslint-disable-next-line @eslint-react/no-create-ref
       thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
 
       const passThrough = pick(props, [

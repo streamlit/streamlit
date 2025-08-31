@@ -166,6 +166,7 @@ altair_chart = _main.altair_chart
 area_chart = _main.area_chart
 audio = _main.audio
 audio_input = _main.audio_input
+badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart

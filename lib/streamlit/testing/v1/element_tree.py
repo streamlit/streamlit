@@ -86,7 +86,7 @@ T = TypeVar("T")
 
 @dataclass
 class InitialValue:
-    """This class is used to represent the initial value of a widget."""
+    """Used to represent the initial value of a widget."""
 
     pass
 
@@ -136,7 +136,7 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto"""
+        """Fallback attempt to get an attribute from the proto."""
         return getattr(self.proto, name)
 
     def run(self, *, timeout: float | None = None) -> AppTest:
@@ -323,7 +323,7 @@ class Button(Widget):
 
     @property
     def value(self) -> bool:
-        """The value of the button. (bool)"""
+        """The value of the button. (bool)"""  # noqa: D400
         if self._value:
             return self._value
         else:
@@ -368,7 +368,7 @@ class ChatInput(Widget):
 
     @property
     def value(self) -> str | None:
-        """The value of the widget. (str)"""
+        """The value of the widget. (str)"""  # noqa: D400
         if self._value:
             return self._value
         else:
@@ -401,7 +401,7 @@ class Checkbox(Widget):
 
     @property
     def value(self) -> bool:
-        """The value of the widget. (bool)"""
+        """The value of the widget. (bool)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -441,7 +441,7 @@ class Code(Element):
 
     @property
     def value(self) -> str:
-        """The value of the element. (str)"""
+        """The value of the element. (str)"""  # noqa: D400
         return self.proto.code_text
 
 
@@ -462,7 +462,7 @@ class ColorPicker(Widget):
 
     @property
     def value(self) -> str:
-        """The currently selected value as a hex string. (str)"""
+        """The currently selected value as a hex string. (str)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -548,7 +548,7 @@ class DateInput(Widget):
 
     @property
     def value(self) -> DateWidgetReturn:
-        """The value of the widget. (date or Tuple of date)"""
+        """The value of the widget. (date or Tuple of date)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed) if parsed is not None else None  # type: ignore
@@ -721,7 +721,7 @@ class ButtonGroup(Widget, Generic[T]):
 
     @property
     def value(self) -> list[T]:
-        """The currently selected values from the options. (list)"""
+        """The currently selected values from the options. (list)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -731,17 +731,17 @@ class ButtonGroup(Widget, Generic[T]):
 
     @property
     def indices(self) -> Sequence[int]:
-        """The indices of the currently selected values from the options. (list)"""
+        """The indices of the currently selected values from the options. (list)"""  # noqa: D400
         return [self.options.index(self.format_func(v)) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> ButtonGroup[T]:
-        """Set the value of the multiselect widget. (list)"""
+        """Set the value of the multiselect widget. (list)"""  # noqa: D400
 
         self._value = v
         return self
@@ -809,7 +809,7 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def value(self) -> list[T]:
-        """The currently selected values from the options. (list)"""
+        """The currently selected values from the options. (list)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -819,17 +819,17 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def indices(self) -> Sequence[int]:
-        """The indices of the currently selected values from the options. (list)"""
+        """The indices of the currently selected values from the options. (list)"""  # noqa: D400
         return [self.options.index(self.format_func(v)) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
-        """Set the value of the multiselect widget. (list)"""
+        """Set the value of the multiselect widget. (list)"""  # noqa: D400
 
         self._value = v
         return self
@@ -952,14 +952,14 @@ class Radio(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
-        """The index of the current selection. (int)"""
+        """The index of the current selection. (int)"""  # noqa: D400
         if self.value is None:
             return None
         return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options. (Any)"""
+        """The currently selected value from the options. (Any)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -969,7 +969,7 @@ class Radio(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -1011,7 +1011,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
-        """The index of the current selection. (int)"""
+        """The index of the current selection. (int)"""  # noqa: D400
         if self.value is None:
             return None
 
@@ -1021,7 +1021,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options. (Any)"""
+        """The currently selected value from the options. (Any)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -1031,7 +1031,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -1104,7 +1104,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def value(self) -> T | Sequence[T]:
-        """The currently selected value or range. (Any or Sequence of Any)"""
+        """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -1115,7 +1115,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -1163,7 +1163,7 @@ class Slider(Widget, Generic[SliderValueT]):
 
     @property
     def value(self) -> SliderValueT | Sequence[SliderValueT]:
-        """The currently selected value or range. (Any or Sequence of Any)"""
+        """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:
@@ -1207,7 +1207,7 @@ class Text(Element):
 
     @property
     def value(self) -> str:
-        """The value of the element. (str)"""
+        """The value of the element. (str)"""  # noqa: D400
         return self.proto.body
 
 
@@ -1244,7 +1244,7 @@ class TextArea(Widget):
 
     @property
     def value(self) -> str | None:
-        """The current value of the widget. (str)"""
+        """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -1297,7 +1297,7 @@ class TextInput(Widget):
 
     @property
     def value(self) -> str | None:
-        """The current value of the widget. (str)"""
+        """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -1354,7 +1354,7 @@ class TimeInput(Widget):
 
     @property
     def value(self) -> time | None:
-        """The current value of the widget. (time)"""
+        """The current value of the widget. (time)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             v = self._value
             v = v.time() if isinstance(v, datetime) else v
@@ -1420,7 +1420,7 @@ class Toggle(Widget):
 
     @property
     def value(self) -> bool:
-        """The current value of the widget. (bool)"""
+        """The current value of the widget. (bool)"""  # noqa: D400
         if self._value is not None:
             return self._value
         else:

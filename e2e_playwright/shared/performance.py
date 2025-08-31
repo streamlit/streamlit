@@ -71,9 +71,7 @@ def is_supported_browser(page: Page) -> bool:
 
 
 def start_capture_traces(page: Page):
-    """
-    Start capturing traces using the PerformanceObserver API.
-    """
+    """Start capturing traces using the PerformanceObserver API."""
     if is_supported_browser(page):
         page.evaluate(CAPTURE_TRACES_SCRIPT)
 
@@ -98,15 +96,18 @@ def with_cdp_session(page: Page):
 def measure_performance(
     page: Page, *, test_name: str, cpu_throttling_rate: int | None = None
 ):
-    """
-    Measure the performance of the page using the native performance API from
+    """Measure the performance of the page using the native performance API from
     Chrome DevTools Protocol.
+
     @see https://github.com/puppeteer/puppeteer/blob/main/docs/api/puppeteer.page.metrics.md
 
-    Args:
-        page (Page): The page to measure performance on.
-        cpu_throttling_rate (int | None, optional): Throttling rate as a slowdown factor
-            (1 is no throttle, 2 is 2x slowdown, etc). Defaults to None.
+    Parameters
+    ----------
+        page : Page
+            The page to measure performance on.
+        cpu_throttling_rate : int | None, optional
+            Throttling rate as a slowdown factor (1 is no throttle, 2 is 2x slowdown, etc).
+            Defaults to None.
     """
     with with_cdp_session(page) as client:
         if cpu_throttling_rate is not None:

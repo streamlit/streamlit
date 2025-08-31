@@ -66,7 +66,7 @@ def _get_abs_folder_path(path: str) -> str:
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog"""
+    """Watches a single path on disk using watchdog."""
 
     @staticmethod
     def close_all() -> None:

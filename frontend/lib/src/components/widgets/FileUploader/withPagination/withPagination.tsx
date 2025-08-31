@@ -41,7 +41,7 @@ const withPagination = (
     ...props
   }: Props): ReactElement => {
     const [currentPage, updateCurrentPage] = useState<number>(0)
-    const [totalPages, updateTotalPages] = useState<number>(
+    const [totalPages, updateTotalPages] = useState<number>(() =>
       calculateNumPages(items, pageSize)
     )
 

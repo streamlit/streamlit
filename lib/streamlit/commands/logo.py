@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Handle App logos"""
+"""Handle App logos."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def logo(
     link: str | None = None,
     icon_image: AtomicImage | None = None,
 ) -> None:
-    """
+    r"""
     Renders a logo in the upper-left corner of your app and its sidebar.
 
     If ``st.logo`` is called multiple times within a page, Streamlit will
@@ -75,7 +75,7 @@ def logo(
 
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
-        start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
+        start with "\http://" or "\https://". If ``link`` is ``None`` (default),
         the logo will not include a hyperlink.
     icon_image: Anything supported by st.image (except list) or None
         An optional, typically smaller image to replace ``image`` in the

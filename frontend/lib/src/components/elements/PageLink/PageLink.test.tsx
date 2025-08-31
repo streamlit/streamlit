@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { customRenderLibContext, render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme"
 
 import PageLink, { Props } from "./PageLink"
 
@@ -120,5 +121,86 @@ describe("PageLink", () => {
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
     expect(mockOnPageChange).not.toHaveBeenCalled()
+  })
+
+  it("renders an icon when provided", () => {
+    const props = getProps({ icon: ":material/home:" })
+    render(<PageLink {...props} />)
+
+    const pageLinkIcon = screen.getByTestId("stIconMaterial")
+    expect(pageLinkIcon).toHaveTextContent("home")
+  })
+
+  it("renders with container width properly", () => {
+    const props = getProps({ useContainerWidth: true })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveStyle("width: 100%")
+  })
+
+  it("renders a current page link properly", () => {
+    const props = getProps({ pageScriptHash: "main_page_hash" })
+    customRenderLibContext(<PageLink {...props} />, {
+      currentPageScriptHash: "main_page_hash",
+    })
+
+    const currentPageBgColor = lightTheme.emotion.colors.darkenedBgMix15
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveStyle(`background-color: ${currentPageBgColor}`)
+    const pageLinkText = screen.getByText(props.element.label)
+    expect(pageLinkText).toHaveStyle(`font-weight: 600`)
+  })
+
+  it("renders an external page link properly", () => {
+    const props = getProps({ page: "http://example.com", external: true })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("target", "_blank")
+    expect(pageLink).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+    const pageLinkText = screen.getByText(props.element.label)
+    expect(pageLinkText).not.toHaveStyle(`font-weight: 600`)
+  })
+
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    render(<PageLink {...getProps({ help: "mockHelpText" })} />)
+
+    // When the help param is used, page link renders twice (once for normal
+    // tooltip and once for mobile tooltip) so we need to get the first one
+    const pageLink = screen.getAllByTestId("stPageLink-NavLink")[0]
+    // Ensure both the page link and tooltip target have correct width
+    expect(pageLink).toHaveStyle("width: fit-content")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: auto")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
+  it("renders with container width & help properly", async () => {
+    const user = userEvent.setup()
+    render(
+      <PageLink
+        {...getProps({ help: "mockHelpText", useContainerWidth: true })}
+      />
+    )
+
+    // See note above re: rendering twice
+    const pageLink = screen.getAllByTestId("stPageLink-NavLink")[0]
+    // Ensure both the page link and tooltip target have correct width
+    expect(pageLink).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 })

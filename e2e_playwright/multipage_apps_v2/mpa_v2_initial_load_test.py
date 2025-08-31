@@ -23,7 +23,7 @@ from e2e_playwright.conftest import wait_for_app_run
 # run of the app. Adding more tests to this file will break this assumption.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 def test_widget_does_not_trigger_callbacks(app: Page):
-    """Tests the widget state does not trigger callbacks"""
+    """Tests the widget state does not trigger callbacks."""
     expect(app.get_by_text("test_value: False")).to_be_attached()
 
     app.get_by_text("Checkbox 2").click()

@@ -32,14 +32,14 @@ def configure_show_sidebar_nav():
     del os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"]
 
 
-def test_hides_sidebar_nav(app: Page, configure_show_sidebar_nav):
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
+def test_hides_sidebar_nav(app: Page):
     """Test that client.showSidebarNavigation=False hides the sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
 
 
-def test_page_links_in_main(
-    themed_app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
-):
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
+def test_page_links_in_main(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that page link appears as expected in main."""
     expect(themed_app.get_by_test_id("stSidebar")).not_to_be_attached()
     page_links = themed_app.get_by_test_id("stPageLink-NavLink")
@@ -68,9 +68,8 @@ def test_page_links_use_correct_margin(
 # Firefox seems to be a bit flaky here, it seems that sometimes the
 # sidebar with the nav items is still shown.
 @pytest.mark.skip_browser("firefox")
-def test_page_links_in_sidebar(
-    themed_app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
-):
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
+def test_page_links_in_sidebar(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that page link appears as expected in sidebar."""
     page_links = themed_app.get_by_test_id("stPageLink-NavLink")
 
@@ -93,10 +92,8 @@ def test_page_links_in_sidebar(
     assert_snapshot(page_links.nth(2), name="page-link-sidebar-disabled")
 
 
-def test_page_link_href(
-    app: Page,
-    configure_show_sidebar_nav,
-):
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
+def test_page_link_href(app: Page):
     """Test that page link href set properly."""
     page_links = app.get_by_test_id("stPageLink-NavLink")
 
@@ -109,9 +106,8 @@ def test_page_link_href(
 # Firefox seems to be a bit flaky here, it seems that sometimes the
 # sidebar with the nav items is still shown.
 @pytest.mark.skip_browser("firefox")
-def test_logo_no_sidebar(
-    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
-):
+@pytest.mark.usefixtures("configure_show_sidebar_nav")
+def test_logo_no_sidebar(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logo renders properly with no sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
     expect(

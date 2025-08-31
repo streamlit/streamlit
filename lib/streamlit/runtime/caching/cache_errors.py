@@ -137,6 +137,6 @@ class UnserializableReturnValueError(MarkdownFormattedException):
 
 
 class UnevaluatedDataFrameError(StreamlitAPIException):
-    """Used to display a message about uncollected dataframe being used"""
+    """Used to display a message about uncollected dataframe being used."""
 
     pass

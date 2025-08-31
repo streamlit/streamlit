@@ -61,7 +61,8 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def clear(self, new_fragment_ids: set[str] | None = None) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
-        new_fragment_ids."""
+        new_fragment_ids.
+        """
         raise NotImplementedError
 
     @abstractmethod

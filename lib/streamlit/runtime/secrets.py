@@ -30,6 +30,7 @@ from blinker import Signal
 import streamlit as st
 import streamlit.watcher.path_watcher
 from streamlit import runtime
+from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -140,7 +141,7 @@ def _missing_key_error_message(key: str) -> str:
 
 class AttrDict(Mapping[str, Any]):
     """We use AttrDict to wrap up dictionary values from secrets
-    to provide dot access to nested secrets
+    to provide dot access to nested secrets.
     """
 
     def __init__(self, value):
@@ -198,7 +199,6 @@ class Secrets(Mapping[str, Any]):
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
         self._file_watchers_installed = False
-        self._suppress_print_error_on_exception = False
 
         self.file_change_listener = Signal(
             doc="Emitted when a `secrets.toml` file has been changed."
@@ -207,40 +207,27 @@ class Secrets(Mapping[str, Any]):
     def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exists. If none exist,
         no exception will be raised. (If a file exists but is malformed,
-        an exception *will* be raised.)
+        an exception *will* be raised.).
 
         Returns True if a secrets.toml file was successfully parsed, False otherwise.
 
         Thread-safe.
         """
-        prev_suppress_print_error_on_exception = self._suppress_print_error_on_exception
         try:
-            # temporarily suppress printing errors on exceptions, we don't want to print errors
-            # in this method since it only loads secrets if they exist
-
-            self._suppress_print_error_on_exception = True
             self._parse()
 
             return True
-        except FileNotFoundError:
+        except StreamlitSecretNotFoundError:
             # No secrets.toml files exist. That's fine.
             return False
-        finally:
-            self._suppress_print_error_on_exception = (
-                prev_suppress_print_error_on_exception
-            )
 
     def set_suppress_print_error_on_exception(
         self, suppress_print_error_on_exception: bool
     ) -> None:
-        """Set whether exceptions should be printed when accessing secrets.
-        For internal use, may change in future releases without notice."""
-        self._suppress_print_error_on_exception = suppress_print_error_on_exception
-
-    def _print_exception_if_not_suppressed(self, error_msg: str) -> None:
-        """Print the given error message if exceptions are not suppressed."""
-        if not self._suppress_print_error_on_exception:
-            st.error(str(error_msg))
+        """Left in place for compatibility with integrations until integration
+        code can be updated.
+        """
+        pass
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -275,13 +262,12 @@ class Secrets(Mapping[str, Any]):
 
             secrets.update(toml.loads(secrets_file_str))
         except (TypeError, toml.TomlDecodeError) as ex:
-            error_msg = (
+            msg = (
                 secret_error_messages_singleton.get_error_parsing_file_at_path_message(
                     path, ex
                 )
             )
-            self._print_exception_if_not_suppressed(error_msg)
-            raise
+            raise StreamlitSecretNotFoundError(msg) from ex
 
         return secrets, found_secrets_file
 
@@ -308,8 +294,7 @@ class Secrets(Mapping[str, Any]):
                 error_msg = secret_error_messages_singleton.get_subfolder_path_is_not_a_folder_message(
                     sub_folder_path
                 )
-                self._print_exception_if_not_suppressed(error_msg)
-                raise ValueError(error_msg)
+                raise StreamlitSecretNotFoundError(error_msg)
             sub_secrets = {}
 
             for filename in os.listdir(sub_folder_path):
@@ -341,8 +326,7 @@ class Secrets(Mapping[str, Any]):
         error_msg = secret_error_messages_singleton.get_invalid_secret_path_message(
             path
         )
-        self._print_exception_if_not_suppressed(error_msg)
-        raise ValueError(error_msg)
+        raise StreamlitSecretNotFoundError(error_msg)
 
     def _parse(self) -> Mapping[str, Any]:
         """Parse our secrets.toml files if they're not already parsed.
@@ -356,7 +340,7 @@ class Secrets(Mapping[str, Any]):
 
         Raises
         ------
-        FileNotFoundError
+            StreamlitSecretNotFoundError
             Raised if secrets.toml doesn't exist.
 
         """
@@ -385,8 +369,7 @@ class Secrets(Mapping[str, Any]):
                         file_paths
                     )
                 )
-                self._print_exception_if_not_suppressed(error_msg)
-                raise FileNotFoundError(error_msg)
+                raise StreamlitSecretNotFoundError(error_msg)
 
             for k, v in secrets.items():
                 self._maybe_set_environment_variable(k, v)
@@ -491,6 +474,20 @@ class Secrets(Mapping[str, Any]):
                 return AttrDict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        # Allow internal attributes to be set
+        if key in {
+            "_secrets",
+            "_lock",
+            "_file_watchers_installed",
+            "_suppress_print_error_on_exception",
+            "file_change_listener",
+            "load_if_toml_exists",
+        }:
+            super().__setattr__(key, value)
+        else:
+            raise TypeError("Secrets does not support attribute assignment.")
 
     def __repr__(self) -> str:
         # If the runtime is NOT initialized, it is a method call outside

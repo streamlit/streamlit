@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useCallback } from "react"
 
 import { Check } from "@emotion-icons/material-outlined"
 
@@ -44,6 +44,44 @@ import {
   StyledDialogBody,
   StyledFullRow,
 } from "./styled-components"
+
+const ThemeOption = ({
+  name,
+  value,
+  onThemeOptionChange,
+}: {
+  name: string
+  value: string
+  onThemeOptionChange: (name: string, value: string) => void
+}): ReactElement | null => {
+  const themeOptionConfig = themeBuilder[name]
+  const isColor = themeOptionConfig.component === BaseColorPicker
+  // Props that vary based on component type
+  const variableProps = {
+    options: themeOptionConfig.options || undefined,
+    showValue: isColor,
+    value: themeOptionConfig.getValue(value, themeOptionConfig),
+  }
+
+  const handleChange = useCallback(
+    (newVal: string) => {
+      onThemeOptionChange(name, newVal)
+    },
+    [name, onThemeOptionChange]
+  )
+
+  return (
+    <React.Fragment key={name}>
+      <themeOptionConfig.component
+        disabled={false}
+        label={themeOptionConfig.title}
+        help={themeOptionConfig.help}
+        onChange={handleChange}
+        {...variableProps}
+      />
+    </React.Fragment>
+  )
+}
 
 export interface Props {
   backToSettings: (animateModal: boolean) => void
@@ -79,36 +117,6 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
     })
     navigator.clipboard.writeText(config)
     updateCopied(true)
-  }
-
-  const ThemeOption = ({
-    name,
-    value,
-  }: {
-    name: string
-    value: string
-  }): ReactElement | null => {
-    const themeOptionConfig = themeBuilder[name]
-    const isColor = themeOptionConfig.component === BaseColorPicker
-    // Props that vary based on component type
-    const variableProps = {
-      options: themeOptionConfig.options || undefined,
-      showValue: isColor,
-      value: themeOptionConfig.getValue(value, themeOptionConfig),
-    }
-    return (
-      <React.Fragment key={name}>
-        <themeOptionConfig.component
-          disabled={false}
-          label={themeOptionConfig.title}
-          help={themeOptionConfig.help}
-          onChange={(newVal: string) => {
-            onThemeOptionChange(name, newVal)
-          }}
-          {...variableProps}
-        />
-      </React.Fragment>
-    )
   }
 
   const onClickedBack = (): void => {
@@ -154,12 +162,25 @@ refresh the page.`}
             />
           </StyledFullRow>
 
-          <ThemeOption name="primaryColor" value={primaryColor} />
-          <ThemeOption name="backgroundColor" value={backgroundColor} />
-          <ThemeOption name="textColor" value={textColor} />
+          <ThemeOption
+            name="primaryColor"
+            value={primaryColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
+          <ThemeOption
+            name="backgroundColor"
+            value={backgroundColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
+          <ThemeOption
+            name="textColor"
+            value={textColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
           <ThemeOption
             name="secondaryBackgroundColor"
             value={secondaryBackgroundColor}
+            onThemeOptionChange={onThemeOptionChange}
           />
 
           <StyledFullRow>

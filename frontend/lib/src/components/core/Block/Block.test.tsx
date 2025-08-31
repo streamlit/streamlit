@@ -136,7 +136,7 @@ describe("Vertical Block Component", () => {
     describe("when observed width is 0", () => {
       beforeEach(() => {
         vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-          elementRef: React.createRef(),
+          elementRef: { current: null },
           forceRecalculate: vitest.fn(),
           values: [0],
         })
@@ -155,7 +155,7 @@ describe("Vertical Block Component", () => {
     describe("when observed width is a positive value", () => {
       beforeEach(() => {
         vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-          elementRef: React.createRef(),
+          elementRef: { current: null },
           forceRecalculate: vitest.fn(),
           values: [100],
         })

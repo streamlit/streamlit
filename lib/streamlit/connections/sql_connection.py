@@ -101,7 +101,6 @@ class SQLConnection(BaseConnection["Engine"]):
 
     Examples
     --------
-
     **Example 1: Configuration with URL**
 
     You can configure your SQL connection using Streamlit's

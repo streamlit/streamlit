@@ -109,7 +109,7 @@ def set_query_params(**query_params: Any) -> None:
 def _exclude_keys_in_dict(
     d: dict[str, Any], keys_to_exclude: list[str]
 ) -> dict[str, Any]:
-    """Returns new object but without keys defined in keys_to_exclude"""
+    """Returns new object but without keys defined in keys_to_exclude."""
     return {
         key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }

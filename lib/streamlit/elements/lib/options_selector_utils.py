@@ -155,7 +155,8 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
 
 def _extract_common_class_from_iter(iterable: Iterable[Any]) -> Any:
     """Return the common class of all elements in a iterable if they share one.
-    Otherwise, return None."""
+    Otherwise, return None.
+    """
     try:
         inner_iter = iter(iterable)
         first_class = type(next(inner_iter))
@@ -185,7 +186,8 @@ def maybe_coerce_enum(
 def maybe_coerce_enum(register_widget_result, options, opt_sequence):
     """Maybe Coerce a RegisterWidgetResult with an Enum member value to
     RegisterWidgetResult[option] if option is an EnumType, otherwise just return
-    the original RegisterWidgetResult."""
+    the original RegisterWidgetResult.
+    """
 
     # If the value is not a Enum, return early
     if not isinstance(register_widget_result.value, Enum):
@@ -226,7 +228,8 @@ def maybe_coerce_enum_sequence(
 def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
     """Maybe Coerce a RegisterWidgetResult with a sequence of Enum members as value
     to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just return
-    the original RegisterWidgetResult."""
+    the original RegisterWidgetResult.
+    """
 
     # If not all widget values are Enums, return early
     if not all(isinstance(val, Enum) for val in register_widget_result.value):

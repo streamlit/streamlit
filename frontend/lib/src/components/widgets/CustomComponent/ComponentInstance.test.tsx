@@ -82,7 +82,7 @@ describe("ComponentInstance", () => {
       .mockImplementation(() => {})
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [250],
     })
@@ -396,7 +396,7 @@ describe("ComponentInstance", () => {
     it("send render message when viewport changes", () => {
       let width = 100
       vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-        elementRef: React.createRef(),
+        elementRef: { current: null },
         forceRecalculate: vitest.fn(),
         values: [width],
       })
@@ -436,7 +436,7 @@ describe("ComponentInstance", () => {
 
       // Update the spy to return the new width
       vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-        elementRef: React.createRef(),
+        elementRef: { current: null },
         forceRecalculate: vitest.fn(),
         values: [width],
       })

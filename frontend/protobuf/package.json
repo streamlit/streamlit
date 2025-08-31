@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/protobuf",
-  "version": "1.43.0",
+  "version": "1.43.2",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",

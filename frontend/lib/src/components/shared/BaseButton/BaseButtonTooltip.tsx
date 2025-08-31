@@ -23,9 +23,9 @@ import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 interface Props {
   children: ReactElement
+  containerWidth: boolean
   help?: string
   placement?: Placement
-  containerWidth?: boolean
 }
 
 export function BaseButtonTooltip({

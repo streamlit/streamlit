@@ -451,7 +451,6 @@ class NumberInputMixin:
         if min_value is not None and value is not None and min_value > value:
             raise StreamlitValueBelowMinError(value=value, min_value=min_value)
 
-
         if max_value is not None and value is not None and max_value < value:
             raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
@@ -461,8 +460,15 @@ class NumberInputMixin:
             if all_ints:
                 if min_value is not None:
                     JSNumber.validate_int_bounds(int(min_value), "`min_value`")
+                else:
+                    # Issue 6740: If min_value not provided, set default to minimum safe integer
+                    # to avoid JS issues from smaller numbers entered via UI
+                    min_value = JSNumber.MIN_SAFE_INTEGER
                 if max_value is not None:
                     JSNumber.validate_int_bounds(int(max_value), "`max_value`")
+                else:
+                    # See note above - set default to max safe integer
+                    max_value = JSNumber.MAX_SAFE_INTEGER
                 if step is not None:
                     JSNumber.validate_int_bounds(int(step), "`step`")
                 if value is not None:
@@ -470,8 +476,14 @@ class NumberInputMixin:
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")
+                else:
+                    # See note above
+                    min_value = JSNumber.MIN_NEGATIVE_VALUE
                 if max_value is not None:
                     JSNumber.validate_float_bounds(max_value, "`max_value`")
+                else:
+                    # See note above
+                    max_value = JSNumber.MAX_VALUE
                 if step is not None:
                     JSNumber.validate_float_bounds(step, "`step`")
                 if value is not None:

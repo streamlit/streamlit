@@ -17,7 +17,6 @@ import textwrap
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from matplotlib import pyplot
 
 import streamlit as st
 
@@ -84,9 +83,9 @@ kwargs = {
 st.pyplot(fig, clear_figure=True, **kwargs)
 
 st.write("Figure using deprecated global object:")
-plot = pyplot.plot(data)
+plot = plt.plot(data)
 st.pyplot()
-pyplot.clf()
+plt.clf()
 
 fig, ax = plt.subplots()
 st.pyplot(fig)

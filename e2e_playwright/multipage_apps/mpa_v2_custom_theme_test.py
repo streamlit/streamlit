@@ -33,9 +33,8 @@ def configure_custom_text_color():
     del os.environ["STREAMLIT_THEME_PRIMARY_COLOR"]
 
 
-def test_custom_text_color(
-    app: Page, configure_custom_text_color, assert_snapshot: ImageCompareFunction
-):
+@pytest.mark.usefixtures("configure_custom_text_color")
+def test_custom_text_color(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that custom text color is applied correctly to SidebarNav."""
     app.get_by_text("Logo Page").click()
     wait_for_app_loaded(app)

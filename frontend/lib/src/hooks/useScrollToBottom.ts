@@ -234,7 +234,9 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
         passive: true,
       })
 
-      return () => target.removeEventListener("focus", handleFocus)
+      return () => {
+        target.removeEventListener("focus", handleFocus, { capture: true })
+      }
     }
   }, [scrollableRef])
 

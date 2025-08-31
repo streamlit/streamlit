@@ -22,13 +22,14 @@ If any script exits with a non-zero status, this will also exit
 with a non-zero status.
 """
 
+from __future__ import annotations
+
 import multiprocessing
 import os
 import subprocess
 import sys
 from multiprocessing import Lock
 from multiprocessing.pool import ThreadPool
-from typing import Set
 
 import click
 
@@ -41,7 +42,7 @@ E2E_DIRS = [
 
 # the hostframe_app.py script does not work because without a script_context
 # the navigation function will raise an exception when trying some non-existing page properties.
-EXCLUDED_FILENAMES: Set[str] = set(["compilation_error_dialog.py", "hostframe_app.py"])
+EXCLUDED_FILENAMES: set[str] = {"compilation_error_dialog.py", "hostframe_app.py"}
 
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something

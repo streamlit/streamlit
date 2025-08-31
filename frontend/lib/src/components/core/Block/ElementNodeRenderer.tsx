@@ -448,7 +448,7 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowVegaLiteChart":
+    case "arrowVegaLiteChart": {
       const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
       return (
         <ArrowVegaLiteChart
@@ -461,6 +461,7 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+    }
 
     case "audioInput": {
       const audioInputProto = node.element.audioInput as AudioInputProto

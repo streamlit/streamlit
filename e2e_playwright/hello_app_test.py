@@ -147,7 +147,8 @@ def test_app_print_mode_portrait_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the dataframe demo page looks correctly in print-mode with
-    sidebar open."""
+    sidebar open.
+    """
     app = themed_app
 
     _load_dataframe_demo_page(app)
@@ -165,7 +166,8 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the dataframe demo page looks correctly in print-mode with
-    sidebar closed."""
+    sidebar closed.
+    """
     app = themed_app
 
     _load_dataframe_demo_page(app)
@@ -187,7 +189,8 @@ def test_app_print_mode_landscape_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the dataframe demo page looks correctly in print-mode
-    (orientation: landscape) with sidebar open."""
+    (orientation: landscape) with sidebar open.
+    """
     app = themed_app
 
     _load_dataframe_demo_page(app)
@@ -204,7 +207,8 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the dataframe demo page looks correctly in print-mode
-    (orientation: landscape) with sidebar closed."""
+    (orientation: landscape) with sidebar closed.
+    """
     app = themed_app
 
     _load_dataframe_demo_page(app)

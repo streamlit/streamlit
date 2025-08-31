@@ -90,7 +90,7 @@ class MemoryFile(NamedTuple):
 
 class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def __init__(self, media_endpoint: str):
-        """Create a new MemoryMediaFileStorage instance
+        """Create a new MemoryMediaFileStorage instance.
 
         Parameters
         ----------
@@ -130,7 +130,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def get_file(self, filename: str) -> MemoryFile:
         """Return the MemoryFile with the given filename. Filenames are of the
         form "file_id.extension". (Note that this is *not* the optional
-        user-specified filename for download files.)
+        user-specified filename for download files.).
 
         Raises a MediaFileStorageError if no such file exists.
         """

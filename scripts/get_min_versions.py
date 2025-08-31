@@ -15,6 +15,7 @@
 # This script should be invoked using `make gen-min-dep-constraints`.
 # It has the precondition that you must have installed streamlit locally since
 # you last updated its dependencies, which the make command takes care of.
+from __future__ import annotations
 
 # based on https://stackoverflow.com/a/59711270
 import pkg_resources

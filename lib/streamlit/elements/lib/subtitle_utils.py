@@ -73,10 +73,12 @@ def _srt_to_vtt(srt_data: str | bytes) -> bytes:
     Convert subtitles from SubRip (.srt) format to WebVTT (.vtt) format.
     This function accepts the content of the .srt file either as a string
     or as a BytesIO stream.
+
     Parameters
     ----------
     srt_data : str or bytes
         The content of the .srt file as a string or a bytes stream.
+
     Returns
     -------
     bytes

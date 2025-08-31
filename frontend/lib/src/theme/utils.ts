@@ -129,7 +129,7 @@ export const isColor = (strColor: string): boolean => {
   return s.color !== ""
 }
 
-const parseFont = (font: string): string => {
+export const parseFont = (font: string): string => {
   // Try to map a short font family to our default
   // font families
   const fontMap: Record<string, string> = {
@@ -137,9 +137,12 @@ const parseFont = (font: string): string => {
     serif: fonts.serif,
     monospace: fonts.monospace,
   }
+  // The old font config supported "sans serif" as a font family, but this
+  // isn't a valid font family, so we need to support it by converting it to
+  // "sans-serif".
   const fontKey = font.toLowerCase().replaceAll(" ", "-")
   if (fontKey in fontMap) {
-    return fontMap[font]
+    return fontMap[fontKey]
   }
 
   // If the font is not in the map, return the font as is:
@@ -155,6 +158,7 @@ export const createEmotionTheme = (
     baseFontSize,
     baseRadius,
     showBorderAroundInputs,
+    headingFont,
     bodyFont,
     codeFont,
     showSidebarSeparator,
@@ -282,20 +286,25 @@ export const createEmotionTheme = (
     conditionalOverrides.showSidebarSeparator = showSidebarSeparator
   }
 
+  const fontOverrides: any = {}
+  if (headingFont) {
+    fontOverrides.headingFont = parseFont(headingFont)
+  } else if (bodyFont) {
+    fontOverrides.headingFont = parseFont(bodyFont)
+  }
+
   return {
     ...baseThemeConfig.emotion,
     colors: createEmotionColors(newGenericColors),
     genericFonts: {
       ...genericFonts,
       ...(bodyFont && {
-        // We currently do not allow to set different fonts for body and heading
-        // so we use the same font for both.
         bodyFont: parseFont(bodyFont),
-        headingFont: parseFont(bodyFont),
       }),
       ...(codeFont && {
         codeFont: parseFont(codeFont),
       }),
+      ...fontOverrides,
     },
     ...conditionalOverrides,
   }

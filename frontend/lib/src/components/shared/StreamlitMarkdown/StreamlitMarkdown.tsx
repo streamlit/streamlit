@@ -122,6 +122,7 @@ export interface Props {
 export function createAnchorFromText(text: string | null): string {
   let newAnchor = ""
   // Check if the text is valid ASCII characters - necessary for fully functional anchors (issue #5291)
+  // eslint-disable-next-line no-control-regex
   const isASCII = text && /^[\x00-\x7F]*$/.test(text)
 
   if (isASCII) {
@@ -407,7 +408,7 @@ export function RenderedMarkdown({
       visit(tree, "textDirective", (node, _index, _parent) => {
         const nodeName = String(node.name)
 
-        // Handle small text directive
+        // Handle small text directive (:small[])
         if (nodeName === "small") {
           const data = node.data || (node.data = {})
           data.hName = "span"
@@ -416,7 +417,36 @@ export function RenderedMarkdown({
           return
         }
 
-        // Handle color directives
+        // Handle badge directives (:color-badge[])
+        const badgeMatch = nodeName.match(/^(.+)-badge$/)
+        if (badgeMatch && colorMapping.has(badgeMatch[1])) {
+          const color = badgeMatch[1]
+
+          // rainbow-badge is not supported because the rainbow text effect uses
+          // background-clip: text with a transparent color, which conflicts with
+          // having a background color for the badge.
+          // We *could* support it by using a nested span structure, but that breaks
+          // the material icon handling below.
+          // We can support that in the future if we want to, but I think a
+          // rainbow-colored badge shouldn't be a common use case anyway.
+          if (color === "rainbow") {
+            return
+          }
+
+          const textColor = colorMapping.get(color)
+          const bgColor = colorMapping.get(`${color}-background`)
+
+          if (textColor && bgColor) {
+            const data = node.data || (node.data = {})
+            data.hName = "span"
+            data.hProperties = data.hProperties || {}
+            data.hProperties.className = "is-badge"
+            data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
+            return
+          }
+        }
+
+        // Handle color directives (:color[] or :color-background[])
         if (colorMapping.has(nodeName)) {
           const data = node.data || (node.data = {})
           const style = colorMapping.get(nodeName)
@@ -428,8 +458,7 @@ export function RenderedMarkdown({
             style &&
             (/background-color:/.test(style) || /background:/.test(style))
           ) {
-            data.hProperties.className =
-              (data.hProperties.className || "") + " has-background-color"
+            data.hProperties.className = "has-background-color"
           }
           return
         }

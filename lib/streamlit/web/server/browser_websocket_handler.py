@@ -47,7 +47,7 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
-    """Handles a WebSocket connection from the browser"""
+    """Handles a WebSocket connection from the browser."""
 
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
@@ -69,6 +69,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     ) -> bytes | None:
         """Get a signed cookie from the request. Added for compatibility with
         Tornado < 6.3.0.
+
         See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
         """
         try:

@@ -97,3 +97,27 @@ class StLatexAPITest(DeltaGeneratorTestCase):
         )
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.help, "help text")
+
+
+class StBadgeAPITest(DeltaGeneratorTestCase):
+    """Test st.badge API."""
+
+    def test_st_badge(self):
+        """Test st.badge with all parameters."""
+        # Test with all parameters
+        st.badge(
+            "Badge with all params",
+            icon=":material/warning:",
+            color="red",
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(
+            el.markdown.body, ":red-badge[:material/warning: Badge with all params]"
+        )
+        self.assertFalse(el.markdown.allow_html)
+
+        # Test with default parameters
+        st.badge("Simple badge")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.body, ":blue-badge[Simple badge]")

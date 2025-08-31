@@ -40,7 +40,7 @@ class TornadoIntegration(FrameworkIntegration):  # type: ignore[misc]
         oauth: TornadoOAuth, name: str, params: Sequence[str]
     ) -> dict[str, Any]:
         """Configure Authlib integration with provider parameters
-        specified in secrets.toml
+        specified in secrets.toml.
         """
 
         # oauth.config here is an auth section from secrets.toml

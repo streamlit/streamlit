@@ -52,7 +52,7 @@ const SidebarNavLink = ({
         href={pageUrl}
         onClick={onClick}
       >
-        {icon && icon.length && (
+        {icon?.length ? (
           <StyledSidebarNavIcon isActive={isActive}>
             <DynamicIcon
               size="md"
@@ -66,7 +66,7 @@ const SidebarNavLink = ({
               }
             />
           </StyledSidebarNavIcon>
-        )}
+        ) : null}
         <StyledSidebarLinkText isActive={isActive}>
           {children}
         </StyledSidebarLinkText>

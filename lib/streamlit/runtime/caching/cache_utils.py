@@ -103,7 +103,8 @@ class Cache:
     def clear(self, key: str | None = None):
         """Clear values from this cache.
         If no argument is passed, all items are cleared from the cache.
-        A key can be passed to clear that key from the cache only."""
+        A key can be passed to clear that key from the cache only.
+        """
         with self._value_locks_lock:
             if not key:
                 self._value_locks.clear()
@@ -163,7 +164,8 @@ def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
 
 class BoundCachedFunc:
     """A wrapper around a CachedFunc that binds it to a specific instance in case of
-    decorated function is a class method."""
+    decorated function is a class method.
+    """
 
     def __init__(self, cached_func: CachedFunc, instance: Any):
         self._cached_func = cached_func
@@ -260,7 +262,8 @@ class CachedFunc:
 
     def _handle_cache_hit(self, result: CachedResult) -> Any:
         """Handle a cache hit: replay the result's cached messages, and return its
-        value."""
+        value.
+        """
         replay_cached_messages(
             result,
             self._info.cache_type,
@@ -352,7 +355,6 @@ class CachedFunc:
 
         Parameters
         ----------
-
         *args: Any
             Arguments of the cached functions.
 

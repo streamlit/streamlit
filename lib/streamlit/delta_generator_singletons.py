@@ -57,7 +57,6 @@ class DeltaGeneratorSingleton:
 
         Parameters
         ----------
-
         delta_generator_cls : type[DeltaGenerator]
             The main DeltaGenerator class.
         status_container_cls : type[StatusContainer]
@@ -179,7 +178,8 @@ context_dg_stack: ContextVarWithLazyDefault[tuple[DeltaGenerator, ...]] = (
 
 def get_default_dg_stack_value() -> tuple[DeltaGenerator, ...]:
     """Get the default dg_stack value with which the dg_stack should
-    be initialized and reset if needed."""
+    be initialized and reset if needed.
+    """
     instance = get_dg_singleton_instance()
     if instance._main_dg is None:
         raise RuntimeError("main_dg is not set")

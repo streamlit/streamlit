@@ -51,7 +51,8 @@ def test_wide_layout(app: Page):
 
 def test_wide_layout_with_small_viewport(app: Page):
     """Test that the wide layout is using the same width as the centered layout
-    when the viewport is narrow."""
+    when the viewport is narrow.
+    """
 
     app.set_viewport_size({"width": 640, "height": 800})
 
@@ -97,7 +98,8 @@ def test_allows_preceding_command_in_callback(app: Page):
 
 def test_double_set_page_config(app: Page):
     """Should display an error when st.set_page_config is called
-    multiple times in a callback."""
+    multiple times in a callback.
+    """
     click_button(app, "Double Set Page Config")
     expect_exception(app, "set_page_config() can only be called once per app page")
     expect(app).to_have_title("Page Config 1")

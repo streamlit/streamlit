@@ -159,6 +159,7 @@ message CustomThemeConfig {
   string widget_border_color = 8;
   // DEPRECATED: Please use the base_radius theme config instead:
   Radii radii = 9;
+  string heading_font = 12;
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;

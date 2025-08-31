@@ -159,7 +159,6 @@ class ColumnConfig(TypedDict, total=False):
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -264,7 +263,6 @@ def Column(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -309,7 +307,6 @@ def Column(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -370,7 +367,6 @@ def NumberColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -459,7 +455,6 @@ def NumberColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -528,7 +523,6 @@ def TextColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -586,7 +580,6 @@ def TextColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -643,7 +636,7 @@ def LinkColumn(
     validate: str | None = None,
     display_text: str | None = None,
 ) -> ColumnConfig:
-    """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
+    r"""Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
     The cell values need to be string and will be shown as clickable links.
     This command needs to be used in the column_config parameter of ``st.dataframe``
@@ -652,7 +645,6 @@ def LinkColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -716,12 +708,12 @@ def LinkColumn(
         - A string that is displayed in every cell, e.g. ``"Open link"``.
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
-          ``"https://(.*?)\\.example\\.com"`` to extract the display text
-          "foo" from the URL "\\https://foo.example.com".
+          ``"https://(.*?)\.example\.com"`` to extract the display text
+          "foo" from the URL "\https://foo.example.com".
 
         .. Comment: The backslash in front of foo.example.com prevents a hyperlink in docs.
 
-        For more complex cases, you may use `Pandas Styler's format \
+        For more complex cases, you may use `Pandas Styler's format
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
@@ -730,7 +722,6 @@ def LinkColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -757,9 +748,9 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate=r"^https://[a-z]+\\.streamlit\\.app$",
+    >>>             validate=r"^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
-    >>>             display_text=r"https://(.*?)\\.streamlit\\.app"
+    >>>             display_text=r"https://(.*?)\.streamlit\.app"
     >>>         ),
     >>>         "creator": st.column_config.LinkColumn(
     >>>             "App Creator", display_text="Open profile"
@@ -809,7 +800,6 @@ def CheckboxColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -858,7 +848,6 @@ def CheckboxColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -919,7 +908,6 @@ def SelectboxColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -974,7 +962,6 @@ def SelectboxColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1044,7 +1031,6 @@ def BarChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1082,7 +1068,6 @@ def BarChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1142,7 +1127,6 @@ def LineChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1180,7 +1164,6 @@ def LineChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1241,7 +1224,6 @@ def AreaChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1279,7 +1261,6 @@ def AreaChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1346,7 +1327,6 @@ def ImageColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1376,7 +1356,6 @@ def ImageColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1430,7 +1409,6 @@ def ListColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1460,7 +1438,6 @@ def ListColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1525,7 +1502,6 @@ def DatetimeColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1612,7 +1588,6 @@ def DatetimeColumn(
 
     Examples
     --------
-
     >>> from datetime import datetime
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1689,7 +1664,6 @@ def TimeColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1768,7 +1742,6 @@ def TimeColumn(
 
     Examples
     --------
-
     >>> from datetime import time
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1844,7 +1817,6 @@ def DateColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -1925,7 +1897,6 @@ def DateColumn(
 
     Examples
     --------
-
     >>> from datetime import date
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1996,7 +1967,6 @@ def ProgressColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -2059,7 +2029,6 @@ def ProgressColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -2118,7 +2087,6 @@ def JsonColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
@@ -2148,7 +2116,6 @@ def JsonColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>

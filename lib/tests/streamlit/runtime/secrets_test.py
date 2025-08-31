@@ -18,21 +18,26 @@ from __future__ import annotations
 
 import os
 import tempfile
+import threading
 import unittest
 from collections.abc import Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
 from unittest.mock import MagicMock, mock_open, patch
 
+from blinker import Signal
 from parameterized import parameterized
-from toml import TomlDecodeError
 
+import streamlit as st
+from streamlit import config
+from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.runtime.secrets import (
     AttrDict,
     SecretErrorMessages,
     Secrets,
 )
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 
 MOCK_TOML = """
@@ -139,52 +144,21 @@ class SecretsTest(unittest.TestCase):
     def test_load_if_toml_exists_returns_false_if_parse_fails(self):
         self.assertFalse(self.secrets.load_if_toml_exists())
 
-    @patch("streamlit.error")
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
-    def test_missing_toml_error(self, _, mock_st_error):
-        """Secrets access raises an error, and calls st.error, if
-        secrets.toml is missing.
-        """
+    def test_missing_toml_error(self, _):
+        """Secrets access raises an error if secrets.toml is missing."""
         with patch("builtins.open", mock_open()) as mock_file:
             mock_file.side_effect = FileNotFoundError()
 
-            with self.assertRaises(FileNotFoundError):
+            with self.assertRaises(StreamlitSecretNotFoundError):
                 self.secrets.get("no_such_secret", None)
-
-        mock_st_error.assert_called_once_with(
-            f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {MOCK_SECRETS_FILE_LOC}"
-        )
-
-    @patch("streamlit.error")
-    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
-    def test_missing_toml_error_with_suppressed_error(self, _, mock_st_error):
-        """Secrets access raises an error, and does not calls st.error, if
-        secrets.toml is missing because printing errors have been suppressed.
-        """
-
-        self.secrets.set_suppress_print_error_on_exception(True)
-
-        with patch("builtins.open", mock_open()) as mock_file:
-            mock_file.side_effect = FileNotFoundError()
-
-            with self.assertRaises(FileNotFoundError):
-                self.secrets.get("no_such_secret", None)
-
-        mock_st_error.assert_not_called()
 
     @patch("builtins.open", new_callable=mock_open, read_data="invalid_toml")
-    @patch("streamlit.error")
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
-    def test_malformed_toml_error(self, mock_get_option, mock_st_error, _):
-        """Secrets access raises an error, and calls st.error, if
-        secrets.toml is malformed.
-        """
-        with self.assertRaises(TomlDecodeError):
+    def test_malformed_toml_error(self, mock_get_option, _):
+        """Secrets access raises an error if secrets.toml is malformed."""
+        with self.assertRaises(StreamlitSecretNotFoundError):
             self.secrets.get("no_such_secret", None)
-
-        mock_st_error.assert_called_once_with(
-            "Error parsing secrets file at /mock/secrets.toml: Key name found without value. Reached end of file. (line 1 column 13 char 12)"
-        )
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
@@ -255,6 +229,46 @@ class SecretsTest(unittest.TestCase):
             self.assertEqual("Joan", os.environ["db_username"])
             self.assertIsNone(os.environ.get("db_password"))
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_internal_attribute_assignment_allowed(self, *mocks):
+        """Verify that internal attribute assignment is allowed."""
+        # Test setting each allowed internal attribute
+        self.secrets._secrets = {}
+        self.assertEqual(self.secrets._secrets, {})
+
+        # Create and test RLock
+        lock = threading.RLock()
+        self.secrets._lock = lock
+        self.assertEqual(self.secrets._lock, lock)
+        # Verify it's actually a lock by trying to acquire it
+        self.assertTrue(self.secrets._lock.acquire(blocking=False))
+        self.secrets._lock.release()
+
+        self.secrets._file_watchers_installed = True
+        self.assertTrue(self.secrets._file_watchers_installed)
+
+        self.secrets._suppress_print_error_on_exception = True
+        self.assertTrue(self.secrets._suppress_print_error_on_exception)
+
+        self.secrets.file_change_listener = Signal()
+        self.assertIsInstance(self.secrets.file_change_listener, Signal)
+
+        # Test that load_if_toml_exists can be assigned
+        original_method = self.secrets.load_if_toml_exists
+        self.secrets.load_if_toml_exists = lambda: True
+        self.assertNotEqual(self.secrets.load_if_toml_exists, original_method)
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_attribute_assignment_raises_type_error(self, *mocks):
+        """Verify that attribute assignment raises TypeError."""
+        with self.assertRaises(TypeError) as cm:
+            self.secrets.new_secret = "123"
+        self.assertEqual(
+            str(cm.exception), "Secrets does not support attribute assignment."
+        )
+
 
 class MultipleSecretsFilesTest(unittest.TestCase):
     """Tests for st.secrets with multiple secrets.toml files."""
@@ -281,8 +295,7 @@ class MultipleSecretsFilesTest(unittest.TestCase):
         os.remove(self._path1)
         os.remove(self._path2)
 
-    @patch("streamlit.error")
-    def test_no_secrets_files_explodes(self, mock_st_error):
+    def test_no_secrets_files_explodes(self):
         """Validate that an error is thrown if none of the given secrets.toml files exist."""
 
         secrets_file_locations = [
@@ -296,12 +309,8 @@ class MultipleSecretsFilesTest(unittest.TestCase):
         with patch("streamlit.config.get_option", new=mock_get_option):
             secrets = Secrets()
 
-            with self.assertRaises(FileNotFoundError):
+            with self.assertRaises(StreamlitSecretNotFoundError):
                 secrets.get("no_such_secret", None)
-
-            mock_st_error.assert_called_once_with(
-                "No secrets found. Valid paths for a secrets.toml file or secret directories are: /mock1/secrets.toml, /mock2/secrets.toml"
-            )
 
     @patch("streamlit.runtime.secrets._LOGGER")
     def test_only_one_secrets_file_fine(self, patched_logger):
@@ -493,3 +502,113 @@ class AttrDictTest(unittest.TestCase):
         attr_dict.to_dict()["x"]["y"] = "zed"
         assert attr_dict.x.y == "z"
         assert d["x"]["y"] == "z"
+
+
+class SecretsFallbackTest(DeltaGeneratorTestCase):
+    """Test that secrets falls back gracefully in various error scenarios."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._orig_environ = dict(os.environ)
+        st.secrets._reset()
+
+        # Keep track of the original config
+        self._orig_secrets_files = config.get_option("secrets.files")
+
+        # Define mock paths we'll use
+        self.mock_path = "/mock/path/secrets.toml"
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        os.environ.clear()
+        os.environ.update(self._orig_environ)
+        st.secrets._reset()
+
+        # Restore the original config
+        config._set_option("secrets.files", self._orig_secrets_files, "test")
+
+    def test_nonexistent_file_fallback_no_error(self):
+        """Test fallback when no secrets file exists."""
+        # Point to a non-existent path
+        config._set_option(
+            "secrets.files", ["/definitely/not/a/real/path/secrets.toml"], "test"
+        )
+
+        # Test the fallback pattern
+        self._run_token_fallback_test()
+
+    @patch("os.path.exists", return_value=True)  # Make it think the file exists
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+        # This TOML file has secrets but not the one we're looking for
+        db_username = "Jane"
+        db_password = "12345qwerty"
+
+        [subsection]
+        email = "eng@streamlit.io"
+        """,
+    )
+    def test_missing_key_fallback_no_error(self, mock_open, mock_exists):
+        """Test fallback when the secrets file exists but doesn't have the target key."""
+        # Point to our mock path
+        config._set_option("secrets.files", [self.mock_path], "test")
+
+        # Test the fallback pattern
+        self._run_token_fallback_test()
+
+    @patch("os.path.exists", return_value=True)  # Make it think the file exists
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="This is not valid TOML syntax",
+    )
+    def test_invalid_toml_fallback_no_error(self, mock_open, mock_exists):
+        """Test fallback when the secrets file has invalid TOML syntax."""
+        # Point to our mock path
+        config._set_option("secrets.files", [self.mock_path], "test")
+
+        # Test the fallback pattern
+        self._run_token_fallback_test()
+
+    def _run_token_fallback_test(self):
+        """Helper that runs the token fallback pattern and verifies UI behavior."""
+        # The key we'll try to access that doesn't exist
+        TARGET_KEY = "TOKEN"
+
+        # Run the pattern from the example
+        token = None
+
+        try:
+            if TARGET_KEY in st.secrets:
+                token = st.secrets[TARGET_KEY]
+        except StreamlitSecretNotFoundError:
+            pass
+
+        if not token:
+            token = st.text_input("Pass in your token!", type="password")
+
+        # Check that a text_input was created (this confirms the fallback worked)
+        text_input_proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(text_input_proto.label, "Pass in your token!")
+
+        # In the protocol buffer, password type is represented by enum value 1
+        self.assertEqual(text_input_proto.type, 1)  # 1 corresponds to "password" type
+
+        # Verify no error messages were sent to the UI
+        deltas = self.get_all_deltas_from_queue()
+
+        # Check for error messages in a way that's compatible with the Delta structure
+        for delta in deltas:
+            # Check if this is an error message delta
+            if delta.HasField("new_element"):
+                element = delta.new_element
+                # Check if the element has an exception field
+                self.assertFalse(element.HasField("exception"))
+                # Also check for markdown elements that might contain error messages
+                if element.HasField("markdown"):
+                    markdown_text = element.markdown.body
+                    self.assertFalse(
+                        "Error" in markdown_text or "error" in markdown_text
+                    )

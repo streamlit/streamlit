@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useMemo, useRef, useState } from "react"
+import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useTheme } from "@emotion/react"
@@ -39,7 +39,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 export interface Props {
   disabled: boolean
@@ -84,10 +84,7 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
   // eslint-disable-next-line react-compiler/react-compiler
   const id = useRef(uniqueId("text_area_")).current
 
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -104,7 +101,7 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
    * widget's UI, the default value is used.
    */
   const [uiValue, setUiValue] = useState<string | null>(
-    getStateFromWidgetMgr(widgetMgr, element) ?? null
+    () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
 
   const onFormCleared = useCallback(() => {

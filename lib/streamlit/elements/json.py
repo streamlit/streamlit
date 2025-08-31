@@ -34,7 +34,8 @@ if TYPE_CHECKING:
 
 def _ensure_serialization(o: object) -> str | list[Any]:
     """A repr function for json.dumps default arg, which tries to serialize sets
-    as lists."""
+    as lists.
+    """
     return list(o) if isinstance(o, set) else repr(o)
 
 
@@ -50,7 +51,6 @@ class JsonMixin:
 
         Parameters
         ----------
-
         body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it

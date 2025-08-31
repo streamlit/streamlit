@@ -331,7 +331,7 @@ def _infer_vegalite_type(
 ) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
-    ('ordinal', 'nominal', 'quantitative', or 'temporal')
+    ('ordinal', 'nominal', 'quantitative', or 'temporal').
 
     Parameters
     ----------
@@ -503,7 +503,6 @@ def _melt_data(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> df = pd.DataFrame(
     ...     {

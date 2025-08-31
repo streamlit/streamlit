@@ -19,11 +19,12 @@
 The streamlit-nightly CI job uses this to set the project name to "streamlit-nightly".
 """
 
+from __future__ import annotations
+
 import fileinput
 import os
 import re
 import sys
-from typing import Dict
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -39,7 +40,7 @@ FILES_AND_REGEXES = {
 }
 
 
-def update_files(project_name: str, files: Dict[str, str]) -> None:
+def update_files(project_name: str, files: dict[str, str]) -> None:
     """Update files with new project name."""
     for filename, regex in files.items():
         filename = os.path.join(BASE_DIR, filename)

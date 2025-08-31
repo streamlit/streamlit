@@ -108,7 +108,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     setColumnOrder: vi.fn(),
     hideColumn: vi.fn(),
     showColumn: vi.fn(),
-    children: <button>Toggle Visibility</button>,
+    children: <button type="button">Toggle Visibility</button>,
     isOpen: true,
     onClose: vi.fn(),
   }

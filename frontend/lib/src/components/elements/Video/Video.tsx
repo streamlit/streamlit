@@ -222,6 +222,8 @@ function Video({
       {subtitles &&
         subtitles.map((subtitle: ISubtitleTrack, idx: number) => (
           <track
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             key={idx}
             kind="captions"
             src={endpoints.buildMediaURL(`${subtitle.url}`)}

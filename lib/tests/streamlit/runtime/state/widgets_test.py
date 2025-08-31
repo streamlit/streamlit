@@ -28,7 +28,7 @@ from streamlit.elements.lib.utils import (
     _compute_element_id,
     compute_and_register_element_id,
 )
-from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
+from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -197,30 +197,30 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertFalse(session_state["trigger"])
         self.assertEqual(123, session_state["int"])
 
-    def test_reset_string_triggers(self):
+    def test_reset_chat_input_triggers(self):
         states = WidgetStates()
         session_state = SessionState()
 
-        _create_widget("string_trigger", states).string_trigger_value.CopyFrom(
-            StringTriggerValueProto(data="Some Value")
+        _create_widget("chat_input", states).chat_input_value.CopyFrom(
+            ChatInputValueProto(
+                data="Some Value",
+            )
         )
         _create_widget("int", states).int_value = 123
         session_state.set_widgets_from_proto(states)
         session_state._set_widget_metadata(
-            WidgetMetadata(
-                "string_trigger", lambda x, s: x, None, "string_trigger_value"
-            )
+            WidgetMetadata("chat_input", lambda x, s: x, None, "chat_input_value")
         )
         session_state._set_widget_metadata(
             WidgetMetadata("int", lambda x, s: x, None, "int_value")
         )
 
-        self.assertEqual("Some Value", session_state["string_trigger"].data)
+        self.assertEqual("Some Value", session_state["chat_input"].data)
         self.assertEqual(123, session_state["int"])
 
         session_state._reset_triggers()
 
-        self.assertIsNone(session_state["string_trigger"])
+        self.assertIsNone(session_state["chat_input"])
         self.assertEqual(123, session_state["int"])
 
     def test_coalesce_widget_states(self):
@@ -230,20 +230,20 @@ class WidgetManagerTests(unittest.TestCase):
 
         _create_widget("old_set_trigger", old_states).trigger_value = True
         _create_widget("old_unset_trigger", old_states).trigger_value = False
+        _create_widget("old_set_chat_input", old_states).chat_input_value.CopyFrom(
+            ChatInputValueProto(data="Some String")
+        )
         _create_widget(
-            "old_set_string_trigger", old_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data="Some String"))
-        _create_widget(
-            "old_set_empty_string_trigger", old_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=""))
-        _create_widget(
-            "old_unset_string_trigger", old_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
+            "old_set_empty_chat_input", old_states
+        ).chat_input_value.CopyFrom(ChatInputValueProto(data=""))
+        _create_widget("old_unset_chat_input", old_states).chat_input_value.CopyFrom(
+            ChatInputValueProto(data=None)
+        )
         _create_widget("missing_in_new", old_states).int_value = 123
         _create_widget("shape_changing_trigger", old_states).trigger_value = True
-        _create_widget(
-            "overwritten_string_trigger", old_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data="old string"))
+        _create_widget("overwritten_chat_input", old_states).chat_input_value.CopyFrom(
+            ChatInputValueProto(data="old string")
+        )
 
         session_state._set_widget_metadata(
             create_metadata("old_set_trigger", "trigger_value")
@@ -252,22 +252,10 @@ class WidgetManagerTests(unittest.TestCase):
             create_metadata("old_unset_trigger", "trigger_value")
         )
         session_state._set_widget_metadata(
-            create_metadata("old_set_string_trigger", "string_trigger_value")
-        )
-        session_state._set_widget_metadata(
-            create_metadata("old_set_empty_string_trigger", "string_trigger_value")
-        )
-        session_state._set_widget_metadata(
-            create_metadata("old_unset_string_trigger", "string_trigger_value")
-        )
-        session_state._set_widget_metadata(
             create_metadata("missing_in_new", "int_value")
         )
         session_state._set_widget_metadata(
             create_metadata("shape changing trigger", "trigger_value")
-        )
-        session_state._set_widget_metadata(
-            create_metadata("overwritten_string_trigger", "string_trigger_value")
         )
 
         new_states = WidgetStates()
@@ -275,29 +263,19 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("old_set_trigger", new_states).trigger_value = False
         _create_widget("new_set_trigger", new_states).trigger_value = True
         _create_widget(
-            "old_set_string_trigger", new_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
-        _create_widget(
-            "old_set_empty_string_trigger", new_states
-        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
-        _create_widget(
-            "new_set_string_trigger", new_states
-        ).string_trigger_value.CopyFrom(
-            StringTriggerValueProto(data="Some other string")
+            "old_set_empty_chat_input", new_states
+        ).chat_input_value.CopyFrom(ChatInputValueProto(data=None))
+        _create_widget("new_set_chat_input", new_states).chat_input_value.CopyFrom(
+            ChatInputValueProto(data="Some other string")
         )
         _create_widget("added_in_new", new_states).int_value = 456
         _create_widget("shape_changing_trigger", new_states).int_value = 3
-        _create_widget(
-            "overwritten_string_trigger", new_states
-        ).string_trigger_value.CopyFrom(
-            StringTriggerValueProto(data="Overwritten string")
+        _create_widget("overwritten_chat_input", new_states).chat_input_value.CopyFrom(
+            ChatInputValueProto(data="Overwritten string")
         )
 
         session_state._set_widget_metadata(
             create_metadata("new_set_trigger", "trigger_value")
-        )
-        session_state._set_widget_metadata(
-            create_metadata("new_set_string_trigger", "string_trigger_value")
         )
         session_state._set_widget_metadata(create_metadata("added_in_new", "int_value"))
         session_state._set_widget_metadata(
@@ -315,14 +293,6 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertEqual(True, session_state["old_set_trigger"])
         self.assertEqual(True, session_state["new_set_trigger"])
         self.assertEqual(456, session_state["added_in_new"])
-        self.assertEqual("Some String", session_state["old_set_string_trigger"].data)
-        self.assertEqual("", session_state["old_set_empty_string_trigger"].data)
-        self.assertEqual(
-            "Some other string", session_state["new_set_string_trigger"].data
-        )
-        self.assertEqual(
-            "Overwritten string", session_state["overwritten_string_trigger"].data
-        )
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced

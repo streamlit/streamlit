@@ -62,7 +62,7 @@ def test_shows_disabled_widget_correctly(
 
     # The width is debounced in this component, so we need to wait until the
     # webcam view has a non-zero width/height
-    def check_dimensions():
+    def check_dimensions() -> bool:
         bbox = disabled_camera_input.get_by_test_id(
             "stCameraInputWebcamStyledBox"
         ).bounding_box()

@@ -179,15 +179,29 @@ with st.container(key="latex_elements"):
 
     st.latex(out)
 
+"---"
+
+with st.container(key="badge_elements"):
+    st.badge("Simple badge")
+    st.badge("Green badge with emoji", icon="🚀", color="green")
+    st.badge("Red badge with material icon", icon=":material/warning:", color="red")
+    st.badge(
+        "This is a very long badge that should be ellipsized when it exceeds the container width. It contains enough text to demonstrate how badges handle overflow and text wrapping in the Streamlit interface.",
+    )
+    st.markdown(
+        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge]"
+    )
+
+"---"
 
 st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )
 
+"---"
+
 st.container(key="mixed_markdown").markdown(
     r"""
-Many different `markdown formats` in one block:
-
 Inline math with $\KaTeX$
 
 $$
@@ -204,13 +218,13 @@ $$
 
 - :small[small], :small[:red[small red]], :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
-- :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
-- :streamlit: Markdown can contain the Streamlit logo
+- :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange], :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
+- Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay] and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
 
-
-:blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
-:rainbow-background[[Link](http://example.com) within rainbow background], :green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
+:blue-background[**Bold and blue**], :red-background[*Italic and red*],
+:rainbow-background[[Link](http://example.com) and rainbow],
+:green-background[LaTeX and green: $ax^2 + bx + c = 0$]
 
 :violet-background[This is a repeating multiline string that wraps within purple background. This is a repeating multiline string that wraps within purple background.]
 """

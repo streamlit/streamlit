@@ -180,8 +180,10 @@ export function useVegaEmbed(
         try {
           view.remove(name, truthy)
         } finally {
-          return
+          // The finally block ensures execution flow continues even if view.remove() fails
+          // This allows us to safely exit the function while still propagating any errors
         }
+        return
       }
 
       if (!prevData || prevData.dimensions.numDataRows === 0) {

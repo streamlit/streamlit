@@ -127,6 +127,8 @@ function Radio({
       >
         {cleanedOptions.map((option: string, index: number) => (
           <UIRadio
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             key={index}
             value={index.toString()}
             overrides={{

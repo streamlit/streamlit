@@ -31,7 +31,7 @@ def _get_basic_column_container(
 def test_show_columns_horizontally_when_viewport_allows(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """shows columns horizontally when viewport > 640"""
+    """Shows columns horizontally when viewport > 640."""
     app.set_viewport_size({"width": 641, "height": 800})
     column_container = _get_basic_column_container(app)
     assert_snapshot(
@@ -42,20 +42,20 @@ def test_show_columns_horizontally_when_viewport_allows(
 def test_show_columns_vertically_when_viewport_requires(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """stacks columns vertically when viewport <= 640"""
+    """Stacks columns vertically when viewport <= 640."""
     app.set_viewport_size({"width": 640, "height": 800})
     column_container = _get_basic_column_container(app)
     assert_snapshot(column_container, name="st_columns-responsive_layout_vertical")
 
 
 def test_columns_always_take_up_space(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that columns still takes up space with no elements present"""
+    """Test that columns still takes up space with no elements present."""
     column_element = app.get_by_test_id("stHorizontalBlock").nth(1)
     assert_snapshot(column_element, name="st_columns-with_empty_columns")
 
 
 def test_columns_with_border(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that columns with border are correctly displayed"""
+    """Test that columns with border are correctly displayed."""
     column_element = app.get_by_test_id("stHorizontalBlock").nth(2)
     assert_snapshot(column_element, name="st_columns-with_border")
 

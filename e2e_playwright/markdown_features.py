@@ -62,6 +62,7 @@ MARKDOWN_FEATURES = {
     "Image": "![Image Text](app/static/cat.jpg)",
     "Colored Text": ":red[Colored] :rainbow[Text]",
     "Colored Background": ":blue-background[Colored] :red-background[Background]",
+    "Badge": ":blue-badge[Badge] :red-badge[Badge]",
     "Latex": "$ax^2 + bx + c = 0$",
     "Link": "[Link](https://streamlit.io)",
     "Blockquote": "> Testing Blockquote",

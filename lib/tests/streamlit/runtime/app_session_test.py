@@ -634,10 +634,16 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     theme_opts = {
         "backgroundColor": "white",
         "base": "dark",
+        "baseFontSize": 14,
+        "baseRadius": "1.2rem",
         "borderColor": "#ff0000",
         "codeFont": "Monaspace Argon",
         "font": "Inter",
         "fontFaces": [
+            {
+                "family": "Inter Bold",
+                "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Bold.woff2",
+            },
             {
                 "family": "Inter",
                 "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
@@ -649,14 +655,13 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
                 "weight": 400,
             },
         ],
+        "headingFont": "Inter Bold",
         "linkColor": "#2EC163",
         "primaryColor": "coral",
-        "baseRadius": "1.2rem",
         "secondaryBackgroundColor": "blue",
         "showBorderAroundInputs": True,
-        "textColor": "black",
-        "baseFontSize": 14,
         "showSidebarSeparator": True,
+        "textColor": "black",
     }
 
     for k, v in overrides.items():
@@ -1008,18 +1013,19 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                 {
                     "backgroundColor": None,
                     "base": None,
+                    "baseFontSize": None,
+                    "baseRadius": None,
                     "borderColor": None,
                     "codeFont": None,
                     "font": None,
                     "fontFaces": None,
+                    "headingFont": None,
                     "linkColor": None,
                     "primaryColor": None,
-                    "baseRadius": None,
                     "secondaryBackgroundColor": None,
                     "showBorderAroundInputs": None,
-                    "textColor": None,
-                    "baseFontSize": None,
                     "showSidebarSeparator": None,
+                    "textColor": None,
                 }
             )
         )
@@ -1038,17 +1044,18 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     # base and primaryColor are not set to None, since we want to
                     # test here if we can set only a few selected options.
                     "backgroundColor": None,
+                    "baseRadius": None,
+                    "baseFontSize": None,
                     "borderColor": None,
                     "codeFont": None,
                     "font": None,
                     "fontFaces": None,
+                    "headingFont": None,
                     "linkColor": None,
-                    "baseRadius": None,
                     "secondaryBackgroundColor": None,
                     "showBorderAroundInputs": None,
-                    "textColor": None,
-                    "baseFontSize": None,
                     "showSidebarSeparator": None,
+                    "textColor": None,
                 }
             )
         )
@@ -1062,6 +1069,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # In proto3, primitive fields are technically always required and are
         # set to the type's zero value when undefined.
         assert new_session_msg.custom_theme.background_color == ""
+        assert new_session_msg.custom_theme.heading_font == ""
         assert new_session_msg.custom_theme.code_font == ""
         # The value from `theme.font` will be placed in body_font since
         # font field uses a deprecated enum:
@@ -1100,9 +1108,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.show_sidebar_separator is True
         # The value from `theme.font` will be placed in body_font since
         # font uses a deprecated enum:
+        assert new_session_msg.custom_theme.heading_font == "Inter Bold"
         assert new_session_msg.custom_theme.body_font == "Inter"
         assert new_session_msg.custom_theme.code_font == "Monaspace Argon"
         assert list(new_session_msg.custom_theme.font_faces) == [
+            FontFace(
+                family="Inter Bold",
+                url="https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Bold.woff2",
+            ),
             FontFace(
                 family="Inter",
                 url="https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",

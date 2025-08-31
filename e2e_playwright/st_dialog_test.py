@@ -212,7 +212,7 @@ def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Pa
 
 
 def test_dialog_is_scrollable(app: Page):
-    """Test that the dialog is scrollable"""
+    """Test that the dialog is scrollable."""
     open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
@@ -287,7 +287,8 @@ def test_largewidth_dialog_displays_correctly(
 @pytest.mark.only_browser("chromium")
 def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunction):
     """Additional check to the unittests we have to ensure errors thrown during the main
-    script execution (not a fragment-only rerun) are rendered within the dialog."""
+    script execution (not a fragment-only rerun) are rendered within the dialog.
+    """
     open_dialog_with_internal_error(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
@@ -413,7 +414,8 @@ def test_dialog_with_dataframe_shows_toolbar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Check that the dataframe toolbar is fully visible when hovering over
-    the dataframe."""
+    the dataframe.
+    """
     click_button(app, "Open Dialog with dataframe")
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()

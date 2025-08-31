@@ -136,6 +136,8 @@ function ImageList({
             alt: idx.toString(),
           }
           return (
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             <StyledImageContainer data-testid="stImageContainer" key={idx}>
               {/* This div ensures consistent layout for images regardless of
                 whether they have click_url. Without it, images with and without anchor

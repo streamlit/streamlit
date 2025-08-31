@@ -83,7 +83,7 @@ class FooWithMixedDocs:
         self.my_var_1 = 123
 
     def my_func_1(self, a, b=False):
-        "Func with doc."
+        """Func with doc."""
 
     def my_func_2(self):
         # Func without doc.

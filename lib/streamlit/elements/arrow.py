@@ -436,7 +436,6 @@ class ArrowMixin:
 
         Examples
         --------
-
         **Example 1: Display a dataframe**
 
         >>> import streamlit as st

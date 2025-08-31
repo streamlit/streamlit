@@ -49,7 +49,7 @@ from streamlit.runtime.state import WidgetCallback, register_widget
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import matplotlib
+    import matplotlib as mpl
     import plotly.graph_objs as go
     from plotly.basedatatypes import BaseFigure
 
@@ -70,7 +70,7 @@ FigureOrData: TypeAlias = Union[
     # align with the docstring.
     dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "matplotlib.figure.Figure",
+    "mpl.figure.Figure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]

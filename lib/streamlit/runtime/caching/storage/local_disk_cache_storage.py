@@ -91,7 +91,7 @@ _CACHED_FILE_EXTENSION: Final = "memo"
 
 class LocalDiskCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
-        """Creates a new cache storage instance wrapped with in-memory cache layer"""
+        """Creates a new cache storage instance wrapped with in-memory cache layer."""
         persist_storage = LocalDiskCacheStorage(context)
         return InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -117,7 +117,7 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
 
 class LocalDiskCacheStorage(CacheStorage):
     """Cache storage that persists data to disk
-    This is the default cache persistence layer for `@st.cache_data`
+    This is the default cache persistence layer for `@st.cache_data`.
     """
 
     def __init__(self, context: CacheStorageContext):
@@ -138,7 +138,7 @@ class LocalDiskCacheStorage(CacheStorage):
         """
         Returns the stored value for the key if persisted,
         raise CacheStorageKeyNotFoundError if not found, or not configured
-        with persist="disk"
+        with persist="disk".
         """
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
@@ -158,7 +158,7 @@ class LocalDiskCacheStorage(CacheStorage):
             )
 
     def set(self, key: str, value: bytes) -> None:
-        """Sets the value for a given key"""
+        """Sets the value for a given key."""
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
             try:
@@ -191,7 +191,7 @@ class LocalDiskCacheStorage(CacheStorage):
                 )
 
     def clear(self) -> None:
-        """Delete all keys for the current storage"""
+        """Delete all keys for the current storage."""
         cache_dir = get_cache_folder_path()
 
         if os.path.isdir(cache_dir):
@@ -203,7 +203,7 @@ class LocalDiskCacheStorage(CacheStorage):
                     os.remove(os.path.join(cache_dir, file_name))
 
     def close(self) -> None:
-        """Dummy implementation of close, we don't need to actually "close" anything"""
+        """Dummy implementation of close, we don't need to actually "close" anything."""
 
     def _get_cache_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""

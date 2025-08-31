@@ -380,7 +380,7 @@ class ScriptRunner:
         )
 
     def _is_in_script_thread(self) -> bool:
-        """True if the calling function is running in the script thread"""
+        """True if the calling function is running in the script thread."""
         return self._script_thread == threading.current_thread()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:

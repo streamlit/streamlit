@@ -67,13 +67,14 @@ class StaticPage(Page):
 
 
 def pytest_configure(config: pytest.Config):
+    """Register custom markers."""
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
     )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc):
-    """Put fixtures with `pytest.mark.early` first during execution
+    """Put fixtures with `pytest.mark.early` first during execution.
 
     This allows patch of configurations before the application is initialized
 
@@ -307,7 +308,7 @@ def static_app(page: Page, app_port: int, request) -> Page:
 @pytest.fixture(scope="function")
 def app_with_query_params(
     page: Page, app_port: int, request: FixtureRequest
-) -> tuple[Page, dict]:
+) -> tuple[Page, dict[str, Any]]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'param' key of the request.
     """
@@ -457,7 +458,8 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             response: Response,
         ) -> bool:
             """Ensure that the routing-interception worked and that Streamlit app is
-            indeed loaded with the CSP header we expect"""
+            indeed loaded with the CSP header we expect.
+            """
 
             return (
                 response.url == src
@@ -479,7 +481,9 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: dict, browser_name: str):
+def browser_type_launch_args(
+    browser_type_launch_args: dict[str, Any], browser_name: str
+):
     """Fixture that adds the fake device and ui args to the browser type launch args."""
     # The browser context fixture in pytest-playwright is defined in session scope, and
     # depends on the browser_type_launch_args fixture. This means that we can't
@@ -578,12 +582,14 @@ def delete_output_dir(pytestconfig: Any) -> None:
             try:
                 shutil.rmtree(output_dir)
             except FileNotFoundError:
-                # When running in parallel, another thread may have already deleted the files
+                # When running in parallel, another thread may have already deleted the
+                # files
                 pass
             except OSError as error:
                 if error.errno != 16:
                     raise
-                # We failed to remove folder, might be due to the whole folder being mounted inside a container:
+                # We failed to remove folder, might be due to the whole folder being
+                # mounted inside a container:
                 #   https://github.com/microsoft/playwright/issues/12106
                 #   https://github.com/microsoft/playwright-python/issues/1781
                 # Do a best-effort to remove all files inside of it instead.
@@ -610,10 +616,19 @@ def output_folder(pytestconfig: Any) -> Path:
 
 @pytest.fixture(scope="function")
 def assert_snapshot(
-    request: FixtureRequest, output_folder: Path
+    request: FixtureRequest, output_folder: Path, pytestconfig: Any
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
+
+    # Check if reruns are enabled for this test run
+    configured_reruns = pytestconfig.getoption("reruns", 0)
+    # Get the current execution count:
+    execution_count = getattr(request.node, "execution_count", 1)
+    # True if this is the last rerun (or the only test run)
+    is_last_rerun = execution_count - 1 == configured_reruns
+
     root_path = get_git_root()
+
     platform = str(sys.platform)
     module_name = request.module.__name__.split(".")[-1]
     test_function_name = request.node.originalname
@@ -718,6 +733,8 @@ def assert_snapshot(
         img_a = Image.open(BytesIO(img_bytes))
         img_b = Image.open(snapshot_file_path)
         img_diff = Image.new("RGBA", img_a.size)
+        error_msg: str = "Unknown error"
+
         try:
             mismatch = pixelmatch(
                 img_a,
@@ -727,38 +744,66 @@ def assert_snapshot(
                 fail_fast=fail_fast,
                 alpha=0,
             )
-        except ValueError as ex:
-            # ValueError is thrown when the images have different sizes
-            # Update this in updates folder:
-            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-            snapshot_updates_file_path.write_bytes(img_bytes)
 
-            test_failure_messages.append(
-                f"Snapshot matching for {snapshot_file_name} failed. "
-                f"Expected size: {img_b.size}, actual size: {img_a.size}. "
+            total_pixels = img_a.size[0] * img_a.size[1]
+            max_diff_pixels = int(image_threshold * total_pixels)
+
+            if mismatch < max_diff_pixels:
+                return
+
+            error_msg = (
+                f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
+                f" {mismatch / total_pixels * 100:.2f}%)"
+            )
+
+            # Create new failures folder for this test:
+            test_failures_dir.mkdir(parents=True, exist_ok=True)
+            img_diff.save(
+                f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}"
+            )
+            img_a.save(
+                f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}"
+            )
+            img_b.save(
+                f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}"
+            )
+        except ValueError as ex:
+            # Create new failures folder for this test:
+            test_failures_dir.mkdir(parents=True, exist_ok=True)
+            img_a.save(
+                f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}"
+            )
+            img_b.save(
+                f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}"
+            )
+            # ValueError is thrown when the images have different sizes
+            # Calculate the relative difference in total pixels
+            expected_pixels = img_b.size[0] * img_b.size[1]
+            actual_pixels = img_a.size[0] * img_a.size[1]
+            pixel_diff = abs(expected_pixels - actual_pixels)
+
+            error_msg = (
+                f"Snapshot mismatch for {snapshot_file_name}. "
+                f"Wrong size: expected={img_b.size}, actual={img_a.size} "
+                f"({pixel_diff} pixels difference; "
+                f"{pixel_diff / expected_pixels * 100:.2f}%). "
                 f"Error: {ex}"
             )
-            return
-        total_pixels = img_a.size[0] * img_a.size[1]
-        max_diff_pixels = int(image_threshold * total_pixels)
 
-        if mismatch < max_diff_pixels:
-            return
-
-        # Update this in updates folder:
-        snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-        snapshot_updates_file_path.write_bytes(img_bytes)
-
-        # Create new failures folder for this test:
-        test_failures_dir.mkdir(parents=True, exist_ok=True)
-        img_diff.save(f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}")
-        img_a.save(f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}")
-        img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
-
-        test_failure_messages.append(
-            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
-            f" {mismatch / total_pixels * 100:.2f}%)"
-        )
+        if is_last_rerun:
+            # If its the last rerun (or the only test run), update snapshots
+            # and fail after all the other snapshots have been updated in the given
+            # test.
+            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
+            snapshot_updates_file_path.write_bytes(img_bytes)
+            # Add error to the list of test failures:
+            test_failure_messages.append(error_msg)
+        else:
+            # If there are other test reruns that will follow, fail immediately
+            # and avoid updating the snapshot. Failing here will correctly show a
+            # test error in the Github UI, which enables our flaky test tracking
+            # tool to work correctly.
+            pytest.fail(error_msg)
 
     yield compare
 
@@ -853,7 +898,9 @@ def rerun_app(page: Page):
     wait_for_app_run(page)
 
 
-def wait_until(page: Page, fn: Callable, timeout: int = 5000, interval: int = 100):
+def wait_until(
+    page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
+):
     """Run a test function in a loop until it evaluates to True
     or times out.
 

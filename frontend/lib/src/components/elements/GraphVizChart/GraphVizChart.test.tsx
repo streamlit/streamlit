@@ -60,7 +60,7 @@ describe("GraphVizChart Element", () => {
     logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [250],
     })

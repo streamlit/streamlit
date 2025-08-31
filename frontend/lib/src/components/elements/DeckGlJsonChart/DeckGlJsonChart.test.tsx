@@ -288,7 +288,11 @@ describe("#useDeckGl", () => {
         useDeckGl(props)
         const { expand } = useRequiredContext(ElementFullscreenContext)
 
-        return <button onClick={expand}>Expand</button>
+        return (
+          <button type="button" onClick={expand}>
+            Expand
+          </button>
+        )
       }
 
       render(<MyComponent {...getUseDeckGlProps()} />)

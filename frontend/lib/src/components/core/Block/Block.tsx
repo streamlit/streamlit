@@ -257,6 +257,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               node: node as BlockNode,
             }
 
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             return <BlockNodeRenderer key={index} {...childProps} />
           }
 

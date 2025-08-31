@@ -130,7 +130,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   const shouldMinimize = useCallback((): boolean => {
     return window.scrollY > 32
   }, [])
-  const [statusMinimized, setStatusMinimized] = useState(shouldMinimize())
+  const [statusMinimized, setStatusMinimized] = useState(shouldMinimize)
   const [scriptChangedOnDisk, setScriptChangedOnDisk] = useState(false)
   const [promptMinimized, setPromptMinimized] = useState(false)
   const [promptHovered, setPromptHovered] = useState(false)
@@ -264,6 +264,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   useEffect(() => {
     if (scriptRunState === ScriptRunState.RUNNING) {
       setScriptChangedOnDisk(false)
+
       setPromptHovered(false)
     }
   }, [scriptRunState])

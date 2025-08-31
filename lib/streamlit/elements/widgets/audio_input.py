@@ -218,7 +218,8 @@ class AudioInputMixin:
         label_visibility: LabelVisibility = "visible",
     ) -> UploadedFile | None:
         """Deprecated alias for st.audio_input.
-        See the docstring for the widget's new name."""
+        See the docstring for the widget's new name.
+        """
 
         show_deprecation_warning(
             make_deprecated_name_warning(

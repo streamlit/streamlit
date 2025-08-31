@@ -66,7 +66,7 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
 
 
 def _send_email(email: str) -> None:
-    """Send the user's email for metrics, if submitted"""
+    """Send the user's email for metrics, if submitted."""
     import requests
 
     if email is None or "@" not in email:

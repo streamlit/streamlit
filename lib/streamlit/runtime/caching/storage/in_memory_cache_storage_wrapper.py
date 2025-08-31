@@ -81,7 +81,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def get(self, key: str) -> bytes:
         """
         Returns the stored value for the key or raise CacheStorageKeyNotFoundError if
-        the key is not found
+        the key is not found.
         """
         try:
             entry_bytes = self._read_from_mem_cache(key)
@@ -91,23 +91,23 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         return entry_bytes
 
     def set(self, key: str, value: bytes) -> None:
-        """Sets the value for a given key"""
+        """Sets the value for a given key."""
         self._write_to_mem_cache(key, value)
         self._persist_storage.set(key, value)
 
     def delete(self, key: str) -> None:
-        """Delete a given key"""
+        """Delete a given key."""
         self._remove_from_mem_cache(key)
         self._persist_storage.delete(key)
 
     def clear(self) -> None:
-        """Delete all keys for the in memory cache, and also the persistent storage"""
+        """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._mem_cache_lock:
             self._mem_cache.clear()
         self._persist_storage.clear()
 
     def get_stats(self) -> list[CacheStat]:
-        """Returns a list of stats in bytes for the cache memory storage per item"""
+        """Returns a list of stats in bytes for the cache memory storage per item."""
         stats = []
 
         with self._mem_cache_lock:
@@ -122,7 +122,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         return stats
 
     def close(self) -> None:
-        """Closes the cache storage"""
+        """Closes the cache storage."""
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:

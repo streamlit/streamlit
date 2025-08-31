@@ -57,7 +57,7 @@ const WrappedTestComponent = withFullScreenWrapper(TestComponent)
 describe("withFullScreenWrapper HOC", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
+      elementRef: { current: null },
       forceRecalculate: vitest.fn(),
       values: [250],
     })

@@ -19,7 +19,6 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
@@ -48,7 +47,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { EmotionTheme } from "~lib/theme"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import {
   canDecrement,
@@ -85,20 +84,17 @@ const NumberInput: React.FC<Props> = ({
     formId: elementFormId,
     default: elementDefault,
     format: elementFormat,
+    min,
+    max,
   } = element
-  const min = element.hasMin ? element.min : -Infinity
-  const max = element.hasMax ? element.max : +Infinity
 
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
-  const [step, setStep] = useState<number>(getStep(element))
+  const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
-  const [formattedValue, setFormattedValue] = useState<string | null>(
+  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
     formatValue({ value: initialValue, ...element, step })
   )
   const [isFocused, setIsFocused] = useState(false)
@@ -206,12 +202,16 @@ const NumberInput: React.FC<Props> = ({
 
     const numberInput = inputRef.current
     if (numberInput) {
+      const preventScroll: EventListener = (e): void => {
+        e.preventDefault()
+      }
+
       // Issue #8867: Disable wheel events on the input to avoid accidental changes
       // caused by scrolling.
-      numberInput.addEventListener("wheel", e => e.preventDefault())
+      numberInput.addEventListener("wheel", preventScroll)
 
       return () => {
-        numberInput.removeEventListener("wheel", e => e.preventDefault())
+        numberInput.removeEventListener("wheel", preventScroll)
       }
     }
 
