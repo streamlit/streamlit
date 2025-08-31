@@ -494,7 +494,7 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
           resourceCrossOriginMode:
             (resourceCrossOriginMode ??
-              setAnonymousCrossOriginPropertyOnMediaElements)
+            setAnonymousCrossOriginPropertyOnMediaElements)
               ? "anonymous"
               : undefined,
         }
@@ -668,7 +668,7 @@ export class App extends PureComponent<Props, State> {
       title,
       msg: errorNode,
       onContinue,
-      onClose: () => { },
+      onClose: () => {},
       onTryAgain: this.sendLoadGitInfoBackMsg,
     }
     this.openDialog(newDialog)
@@ -856,7 +856,7 @@ export class App extends PureComponent<Props, State> {
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
         // Deprecated protobuf option as navigation will always inform us of pages
-        pagesChanged: (_pagesChangedMsg: PagesChanged) => { },
+        pagesChanged: (_pagesChangedMsg: PagesChanged) => {},
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -1091,7 +1091,7 @@ export class App extends PureComponent<Props, State> {
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_COMPILE_ERROR,
         exception: sessionEvent.scriptCompilationException,
-        onClose: () => { },
+        onClose: () => {},
       }
       this.maybeShowErrorDialog(
         newDialog,
@@ -1365,7 +1365,7 @@ export class App extends PureComponent<Props, State> {
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
       status ===
-      ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       Promise.resolve().then(() => {
@@ -1377,7 +1377,7 @@ export class App extends PureComponent<Props, State> {
       if (
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
         status ===
-        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       ) {
         // Clear any stale elements left over from the previous run.
         // We only do that for completed runs, not for runs that were finished early
@@ -1785,7 +1785,7 @@ export class App extends PureComponent<Props, State> {
         type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
         defaultAction: this.clearCache,
-        onClose: () => { },
+        onClose: () => {},
       }
       // This will be called if enter is pressed.
       this.openDialog(newDialog)
@@ -1897,7 +1897,7 @@ export class App extends PureComponent<Props, State> {
       settings: this.state.userSettings,
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
-      onClose: () => { },
+      onClose: () => {},
       developerMode: showDevelopmentOptions(
         this.state.isOwner,
         this.state.toolbarMode
@@ -2090,8 +2090,8 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
-      (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
-      (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
     )
   }
 
@@ -2172,9 +2172,9 @@ export class App extends PureComponent<Props, State> {
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
-        ...dialog,
-        onClose: this.closeDialog,
-      })
+          ...dialog,
+          onClose: this.closeDialog,
+        })
       : null
 
     // Determine toolbar visibility using helper method
