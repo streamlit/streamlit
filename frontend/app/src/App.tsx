@@ -1874,7 +1874,7 @@ export class App extends PureComponent<Props, State> {
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
     this.showError(
-      "Connection error",
+      "Connection Error",
       errMarkdown,
       DialogType.CONNECTION_ERROR
     )
