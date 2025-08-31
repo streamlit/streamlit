@@ -653,7 +653,7 @@ export class App extends PureComponent<Props, State> {
       type: dialogType,
       title,
       msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
-      onClose: () => { },
+      onClose: () => {},
     }
     this.maybeShowErrorDialog(newDialog, errorMarkdown)
   }
