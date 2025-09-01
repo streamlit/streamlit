@@ -75,6 +75,8 @@ st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
 
+st.markdown("Dynamic checkbox:")
+
 if st.toggle("Update checkbox props"):
     state = st.checkbox(
         "Updated dynamic checkbox",

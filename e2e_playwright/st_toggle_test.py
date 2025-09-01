@@ -167,11 +167,12 @@ def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
 
     # new toggle is visible:
     expect(dynamic_toggle).to_contain_text("Updated dynamic toggle")
-    dynamic_toggle.scroll_into_view_if_needed()
-    assert_snapshot(dynamic_toggle, name="st_toggle-dynamic_updated")
 
     # Check the the updated toggle state is still True
     expect_prefixed_markdown(app, "Updated toggle state:", "True")
+
+    dynamic_toggle.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_toggle, name="st_toggle-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_toggle, "updated help")

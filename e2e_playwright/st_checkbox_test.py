@@ -193,11 +193,12 @@ def test_dynamic_checkbox_props(app: Page, assert_snapshot: ImageCompareFunction
 
     # new checkbox is visible:
     expect(dynamic_checkbox).to_contain_text("Updated dynamic checkbox")
-    dynamic_checkbox.scroll_into_view_if_needed()
-    assert_snapshot(dynamic_checkbox, name="st_checkbox-dynamic_updated")
 
     # Check the the updated checkbox state is still True
     expect_prefixed_markdown(app, "Updated checkbox state:", "True")
+
+    dynamic_checkbox.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_checkbox, name="st_checkbox-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_checkbox, "updated help")
