@@ -14,35 +14,40 @@
 
 from __future__ import annotations
 
-import re
 import unittest
 from unittest.mock import patch
 
+import pytest
 from git.exc import InvalidGitRepositoryError
 
-from streamlit.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
+from streamlit.git_util import GitRepo, _extract_github_repo_from_url
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://github.com/username/repo.git", "username/repo"),
+        ("https://github.com/username/repo", "username/repo"),
+        ("https://www.github.com/username/repo.git", "username/repo"),
+        ("https://www.github.com/username/repo", "username/repo"),
+        ("https://user@github.com/username/repo.git", "username/repo"),
+        ("https://user@github.com/username/repo", "username/repo"),
+        ("https://github.com:443/username/repo.git/", "username/repo"),
+        ("https://github.com:443/username/repo/", "username/repo"),
+        ("http://www.github.com/username/repo.git", "username/repo"),
+        ("git@github.com:username/repo.git", "username/repo"),
+        ("git@github.com:username/repo", "username/repo"),
+        ("ssh://git@github.com/username/repo.git", "username/repo"),
+        ("ssh://git@github.com/username/repo/", "username/repo"),
+        ("ssh://git@github.com:22/username/repo.git", "username/repo"),
+    ],
+)
+def test_extract_github_repo_from_url(url: str, expected: str) -> None:
+    """Parameterize URL forms and ensure extractor returns owner/repo."""
+    assert _extract_github_repo_from_url(url) == expected
 
 
 class GitUtilTest(unittest.TestCase):
-    def test_https_url_check(self):
-        # standard https url with and without .git
-        assert re.search(GITHUB_HTTP_URL, "https://github.com/username/repo.git")
-        assert re.search(GITHUB_HTTP_URL, "https://github.com/username/repo")
-
-        # with www with and without .git
-        assert re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo.git")
-        assert re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo")
-
-        # not http
-        assert not re.search(GITHUB_HTTP_URL, "http://www.github.com/username/repo.git")
-
-    def test_ssh_url_check(self):
-        # standard ssh url
-        assert re.search(GITHUB_SSH_URL, "git@github.com:username/repo.git")
-
-        # no .git
-        assert re.search(GITHUB_SSH_URL, "git@github.com:username/repo")
-
     def test_git_repo_invalid(self):
         with patch("git.Repo") as mock:
             mock.side_effect = InvalidGitRepositoryError("Not a git repo")
@@ -77,3 +82,102 @@ class GitUtilTest(unittest.TestCase):
         with patch.dict("sys.modules", {"git": None}):
             repo = GitRepo(".")
             assert not repo.is_valid()
+
+    def test_get_repo_info_https_userinfo(self) -> None:
+        """Ensure get_repo_info extracts owner/repo from https with userinfo."""
+        with patch("git.Repo") as repo_ctor:
+            mock_repo = repo_ctor.return_value
+            mock_repo.git.version_info = (2, 20, 3)
+            mock_repo.git.rev_parse.return_value = "/repo"
+
+            # Ensure HEAD is not detached
+            mock_repo.head = unittest.mock.Mock()
+            mock_repo.head.is_detached = False
+
+            tracking = unittest.mock.Mock()
+            tracking.name = "origin/main"
+            mock_repo.active_branch = unittest.mock.Mock()
+            mock_repo.active_branch.tracking_branch.return_value = tracking
+
+            remote = unittest.mock.Mock()
+            remote.urls = ["https://user@github.com/owner/repo.git"]
+            mock_repo.remote.return_value = remote
+
+            gr = GitRepo("/repo/sub/module")
+            info = gr.get_repo_info()
+            assert info == ("owner/repo", "main", "sub/module")
+
+    def test_get_repo_info_ssh_scp(self) -> None:
+        """Ensure get_repo_info extracts owner/repo from scp-like ssh url."""
+        with patch("git.Repo") as repo_ctor:
+            mock_repo = repo_ctor.return_value
+            mock_repo.git.version_info = (2, 20, 3)
+            mock_repo.git.rev_parse.return_value = "/repo"
+
+            # Ensure HEAD is not detached
+            mock_repo.head = unittest.mock.Mock()
+            mock_repo.head.is_detached = False
+
+            tracking = unittest.mock.Mock()
+            tracking.name = "origin/main"
+            mock_repo.active_branch = unittest.mock.Mock()
+            mock_repo.active_branch.tracking_branch.return_value = tracking
+
+            remote = unittest.mock.Mock()
+            remote.urls = ["git@github.com:owner/repo.git"]
+            mock_repo.remote.return_value = remote
+
+            gr = GitRepo("/repo/sub/module")
+            info = gr.get_repo_info()
+            assert info == ("owner/repo", "main", "sub/module")
+
+    def test_get_repo_info_no_tracking_branch(self) -> None:
+        """Return None when there is no tracking branch configured."""
+        with patch("git.Repo") as repo_ctor:
+            mock_repo = repo_ctor.return_value
+            mock_repo.git.version_info = (2, 20, 3)
+            mock_repo.git.rev_parse.return_value = "/repo"
+
+            mock_repo.active_branch = unittest.mock.Mock()
+            mock_repo.active_branch.tracking_branch.return_value = None
+
+            gr = GitRepo("/repo/sub/module")
+            assert gr.get_repo_info() is None
+
+    def test_get_repo_info_no_matching_remote_url(self) -> None:
+        """Return None when remote URLs don't match GitHub."""
+        with patch("git.Repo") as repo_ctor:
+            mock_repo = repo_ctor.return_value
+            mock_repo.git.version_info = (2, 20, 3)
+            mock_repo.git.rev_parse.return_value = "/repo"
+
+            tracking = unittest.mock.Mock()
+            tracking.name = "origin/main"
+            mock_repo.active_branch = unittest.mock.Mock()
+            mock_repo.active_branch.tracking_branch.return_value = tracking
+
+            remote = unittest.mock.Mock()
+            remote.urls = ["git@example.com:owner/repo.git"]
+            mock_repo.remote.return_value = remote
+
+            gr = GitRepo("/repo/sub/module")
+            assert gr.get_repo_info() is None
+
+    def test_get_repo_info_head_detached(self) -> None:
+        """Return None when HEAD is detached (no active branch)."""
+        with patch("git.Repo") as repo_ctor:
+            mock_repo = repo_ctor.return_value
+            mock_repo.git.version_info = (2, 20, 3)
+            mock_repo.git.rev_parse.return_value = "/repo"
+
+            # HEAD detached
+            mock_head = unittest.mock.Mock()
+            mock_head.is_detached = True
+            mock_repo.head = mock_head
+
+            # active_branch.tracking_branch should not be called when detached, but set defensively
+            mock_repo.active_branch = unittest.mock.Mock()
+            mock_repo.active_branch.tracking_branch.return_value = None
+
+            gr = GitRepo("/repo/sub/module")
+            assert gr.get_repo_info() is None

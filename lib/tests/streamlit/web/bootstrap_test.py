@@ -290,15 +290,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         assert "Unix Socket: unix://mysocket.sock" in out
 
-    @patch("streamlit.web.bootstrap.GitRepo")
-    def test_print_old_git_warning(self, mock_git_repo):
-        mock_git_repo.return_value.is_valid.return_value = False
-        mock_git_repo.return_value.git_version = (1, 2, 3)
-
-        bootstrap._maybe_print_old_git_warning("main_script_path")
-        out = sys.stdout.getvalue()
-        assert "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
-
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
