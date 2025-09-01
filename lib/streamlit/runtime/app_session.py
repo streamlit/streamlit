@@ -791,6 +791,7 @@ class AppSession:
 
             repo_info = repo.get_repo_info()
             if repo_info is None:
+                _LOGGER.debug("No valid Git information found")
                 return
 
             repository_name, branch, module = repo_info

@@ -16,12 +16,15 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit import util
+from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
     from git import Commit, Remote, RemoteReference, Repo
+
+_LOGGER: Final = get_logger(__name__)
 
 # Github has two URLs, one that is https and one that is ssh
 GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+)(?:.git)?$"
@@ -51,11 +54,14 @@ class GitRepo:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
                 self.module = os.path.relpath(path, git_root)
         except Exception:
-            # The git repo must be invalid for the following reasons:
-            #  * git binary or GitPython not installed
-            #  * No .git folder
-            #  * Corrupted .git folder
-            #  * Path is invalid
+            _LOGGER.debug(
+                "The git repo is invalid for the following reasons: "
+                "1) git binary or GitPython not installed "
+                "2) No .git folder "
+                "3) Corrupted .git folder "
+                "4) Path is invalid",
+                exc_info=True,
+            )
             self.repo = None
 
     def __repr__(self) -> str:
@@ -152,14 +158,16 @@ class GitRepo:
 
     def get_repo_info(self) -> tuple[str, str, str] | None:
         if not self.is_valid():
+            _LOGGER.debug("No valid Git information found")
             return None
 
         remote_info = self.get_tracking_branch_remote()
         if remote_info is None:
+            _LOGGER.debug("Not tracking remote branch found for the git repo.")
             return None
 
         remote, branch = remote_info
-
+        _LOGGER.debug("Git info: Remote: %s, Branch: %s", remote, branch)
         repo = None
         for url in remote.urls:
             https_matches = re.match(GITHUB_HTTP_URL, url)
@@ -173,6 +181,11 @@ class GitRepo:
                 break
 
         if repo is None:
+            _LOGGER.debug("Unable to determine repo name from the remote URL.")
             return None
+
+        _LOGGER.debug(
+            "Git info: Repo: %s, Branch: %s, Module: %s", repo, branch, self.module
+        )
 
         return repo, branch, self.module
