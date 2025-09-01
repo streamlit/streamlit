@@ -253,7 +253,7 @@ def test_channels_parameter(app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_image_list(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.image can display a list of images."""
-    image_list = get_image(app, "Image list")
+    image_list = get_image(app, "Image list no links")
     assert_snapshot(image_list, name="st_image-image_list")
 
 
@@ -368,7 +368,7 @@ def test_image_link_partial_list(app: Page):
     """Test image list with some images having links and others not."""
     image_container = app.locator("data-testid=stImage").filter(
         has=app.locator("data-testid=stImageCaption")
-        .filter(has_text="Partial click URLs 0")
+        .filter(has_text="Partial links 0")
         .first
     )
 
@@ -386,13 +386,13 @@ def test_image_link_partial_list(app: Page):
 
 def test_image_link_none(app: Page):
     """Test image with link=None behaves correctly."""
-    image_container = get_image(app, "Image with None click URL")
+    image_container = get_image(app, "Image with None link")
     expect(image_container.locator("a")).to_have_count(0)
     expect(image_container.locator("img")).to_have_count(1)
 
 
 def test_image_link_empty_list(app: Page):
     """Test image with link=[] behaves correctly."""
-    image_container = get_image(app, "Image with empty click URL")
+    image_container = get_image(app, "Image with empty link")
     expect(image_container.locator("a")).to_have_count(0)
     expect(image_container.locator("img")).to_have_count(1)

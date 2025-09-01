@@ -222,7 +222,7 @@ st.image(
         Image.new("RGB", (64, 64), color="blue"),
         Image.new("RGB", (64, 64), color="green"),
     ],
-    caption=[f"Image list {i} with URLs" for i in range(3)],
+    caption=[f"Image list {i} with links" for i in range(3)],
     link=["https://streamlit.io/"] * 3,
 )
 
@@ -233,7 +233,7 @@ st.image(
         Image.new("RGB", (64, 64), color="blue"),
         Image.new("RGB", (64, 64), color="green"),
     ],
-    caption=[f"Partial click URLs {i}" for i in range(3)],
+    caption=[f"Partial links {i}" for i in range(3)],
     link=[
         "https://streamlit.io/",
         None,
@@ -241,17 +241,17 @@ st.image(
     ],
 )
 
-# None URL example
+# None link example
 st.image(
     Image.new("RGB", (64, 64), color="red"),
-    caption="Image with None click URL",
+    caption="Image with None link",
     link=None,
 )
 
-# Empty URLs example
+# Empty links example
 st.image(
     Image.new("RGB", (64, 64), color="red"),
-    caption="Image with empty click URL",
+    caption="Image with empty link",
     link=[],
 )
 
