@@ -27,8 +27,10 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 # Github repo extractor: match owner/repo for https/ssh/scp forms, with optional
-# userinfo/port/trailing slash. We don't validate the scheme here; we just extract.
-_GITHUB_URL: Final = r"github\.com(?::\d+)?[/:]([^/]+)/([^/]+?)(?:\.git)?/?$"
+# userinfo/port/trailing slash. This is just to extract the repo name, not validate the URL.
+_GITHUB_URL_PATTERN: Final = re.compile(
+    r"github\.com(?::\d+)?[/:]([^/]+)/([^/]+?)(?:\.git)?/?$"
+)
 
 # We don't support git < 2.7, because we can't get repo info without
 # talking to the remote server, which results in the user being prompted
@@ -54,7 +56,7 @@ def _extract_github_repo_from_url(url: str) -> str | None:
     str | None
         The extracted ``owner/repo`` if found; otherwise ``None``.
     """
-    match = re.search(_GITHUB_URL, url.strip())
+    match = _GITHUB_URL_PATTERN.search(url.strip())
     if match is None:
         return None
     return f"{match.group(1)}/{match.group(2)}"
