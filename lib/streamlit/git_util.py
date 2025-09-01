@@ -181,7 +181,10 @@ class GitRepo:
                 break
 
         if repo is None:
-            _LOGGER.debug("Unable to determine repo name from the remote URL.")
+            _LOGGER.debug(
+                "Unable to determine repo name from the remote URLs. URLs: %s",
+                remote.urls,
+            )
             return None
 
         _LOGGER.debug(
