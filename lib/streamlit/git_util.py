@@ -183,7 +183,7 @@ class GitRepo:
         if repo is None:
             _LOGGER.debug(
                 "Unable to determine repo name from the remote URLs. URLs: %s",
-                remote.urls,
+                list(remote.urls),
             )
             return None
 
