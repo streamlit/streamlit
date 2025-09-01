@@ -304,8 +304,7 @@ def test_dynamic_text_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     expect(dynamic_text_input).to_contain_text("Initial dynamic text input")
 
-    expect_markdown(app, "Initial text input value: initial")
-
+    expect_prefixed_markdown(app, "Initial text input value:", "initial")
     assert_snapshot(dynamic_text_input, name="st_text_input-dynamic_initial")
 
     # Check that the help tooltip is correct:

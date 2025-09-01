@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_text_area,
 )
@@ -297,7 +298,7 @@ def test_dynamic_text_area_props(app: Page, assert_snapshot: ImageCompareFunctio
 
     expect(dynamic_text_area).to_contain_text("Initial dynamic text area")
 
-    expect_markdown(app, "Initial text area value: initial")
+    expect_prefixed_markdown(app, "Initial text area value:", "initial")
 
     assert_snapshot(dynamic_text_area, name="st_text_area-dynamic_initial")
 
@@ -310,7 +311,7 @@ def test_dynamic_text_area_props(app: Page, assert_snapshot: ImageCompareFunctio
     ta_field.press("Control+Enter")
     wait_for_app_run(app)
 
-    expect_markdown(app, "Initial text area value: foo")
+    expect_prefixed_markdown(app, "Initial text area value:", "foo")
 
     # Click the toggle to update the text area props
     click_toggle(app, "Update text area props")
@@ -319,7 +320,7 @@ def test_dynamic_text_area_props(app: Page, assert_snapshot: ImageCompareFunctio
     expect(dynamic_text_area).to_contain_text("Updated dynamic text area")
 
     # Ensure the previously entered value remains visible
-    expect_markdown(app, "Updated text area value: foo")
+    expect_prefixed_markdown(app, "Updated text area value:", "foo")
 
     dynamic_text_area.scroll_into_view_if_needed()
     assert_snapshot(dynamic_text_area, name="st_text_area-dynamic_updated")
@@ -332,7 +333,7 @@ def test_dynamic_text_area_props(app: Page, assert_snapshot: ImageCompareFunctio
     ta_field.press("Control+Enter")
     wait_for_app_run(app)
 
-    expect_markdown(app, "Updated text area value: bar")
+    expect_prefixed_markdown(app, "Updated text area value:", "bar")
 
 
 def test_text_area_content_height_expansion(
