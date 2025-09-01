@@ -135,31 +135,31 @@ const Image = ({
   shouldStretch?: boolean
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
-  const imgProps = {
-    style: imgStyle,
-    src: buildMediaURL(image.url),
-    alt: itemKey,
-    onError: handleImageError,
-    crossOrigin: crossOrigin,
-  }
 
   return (
     <StyledImageContainer
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {/* This div ensures consistent layout for images regardless of
-        whether they have links. Without it, images with and without anchor
-        tags may have different heights and/or styles. */}
-      <div>
-        {image.link ? (
-          <a href={image.link} target="_blank" rel="noopener noreferrer">
-            <img {...imgProps} />
-          </a>
-        ) : (
-          <img {...imgProps} />
-        )}
-      </div>
+      {image.link ? (
+        <a href={image.link} target="_blank" rel="noopener noreferrer">
+          <img
+            style={imgStyle}
+            src={buildMediaURL(image.url)}
+            alt={itemKey}
+            onError={handleImageError}
+            crossOrigin={crossOrigin}
+          />
+        </a>
+      ) : (
+        <img
+          style={imgStyle}
+          src={buildMediaURL(image.url)}
+          alt={itemKey}
+          onError={handleImageError}
+          crossOrigin={crossOrigin}
+        />
+      )}
       {image.caption && (
         <StyledCaption data-testid="stImageCaption" style={imgStyle}>
           <StreamlitMarkdown
