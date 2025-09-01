@@ -322,6 +322,36 @@ class TextAreaTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
+    @parameterized.expand(
+        [
+            ("max_chars", 100, 200),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_area(
+                label="Label 1",
+                key="text_area_key",
+                **{kwarg_name: value1},
+            )
+            c1 = self.get_delta_from_queue().new_element.text_area
+            id1 = c1.id
+
+            st.text_area(
+                label="Label 2",
+                key="text_area_key",
+                **{kwarg_name: value2},
+            )
+            c2 = self.get_delta_from_queue().new_element.text_area
+            id2 = c2.id
+            assert id1 != id2
+
 
 class SomeObj:
     pass
