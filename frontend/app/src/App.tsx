@@ -1874,7 +1874,7 @@ export class App extends PureComponent<Props, State> {
 
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
-    const enhancedMessage = `Connection timed out. Please try reloading the app to re-establish the connection. If the problem persists, please contact the app builder. Details: ${errMarkdown}`
+    const enhancedMessage = `Connection timed out. Please try reloading the app to re-establish the connection. If the problem persists, please contact the app builder. Details: ${errMarkdown}.`
     this.showError(
       "Connection error",
       enhancedMessage,
