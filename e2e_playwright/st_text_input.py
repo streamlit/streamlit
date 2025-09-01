@@ -119,6 +119,8 @@ if st.toggle("Update text input props"):
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
         # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        max_chars=100,
     )
     st.write("Updated text input value:", txt_value)
 else:
@@ -134,5 +136,6 @@ else:
         args=("Initial text arg",),
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
+        max_chars=100,
     )
     st.write("Initial text input value:", txt_value)

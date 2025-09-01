@@ -158,6 +158,8 @@ if st.toggle("Update text area props"):
         args=("Updated text area arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
+        # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
         max_chars=100,
     )
     st.write("Updated text area value:", ta_value)
