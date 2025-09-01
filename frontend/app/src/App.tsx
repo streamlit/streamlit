@@ -649,10 +649,11 @@ export class App extends PureComponent<Props, State> {
       | DialogType.CONNECTION_ERROR = DialogType.WARNING
   ): void {
     LOG.error(errorMarkdown)
+    const enhancedMessage = `${errorMarkdown} Please try reloading the page. If the issue persists, contact support.`;
     const newDialog: WarningProps | ConnectionErrorProps = {
       type: dialogType,
       title,
-      msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
+      msg: <StreamlitMarkdown source={enhancedMessage} allowHTML={false} />,
       onClose: () => {},
     }
     this.maybeShowErrorDialog(newDialog, errorMarkdown)
@@ -1873,9 +1874,10 @@ export class App extends PureComponent<Props, State> {
 
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
+    const enhancedMessage = `Connection timed out. Please try reloading the app to re-establish the connection. If the problem persists, please contact the app builder. Details: ${errMarkdown}.`
     this.showError(
       "Connection error",
-      errMarkdown,
+      enhancedMessage,
       DialogType.CONNECTION_ERROR
     )
   }
