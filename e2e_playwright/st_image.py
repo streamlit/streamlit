@@ -212,49 +212,8 @@ st.image(
         Image.new("RGB", (64, 64), color="blue"),
         Image.new("RGB", (64, 64), color="green"),
     ],
-    caption=[f"Image list {i}" for i in range(3)],
+    caption=[f"Image list no links {i}" for i in range(3)],
 )
-
-# Full link
-st.image(
-    [
-        Image.new("RGB", (64, 64), color="red"),
-        Image.new("RGB", (64, 64), color="blue"),
-        Image.new("RGB", (64, 64), color="green"),
-    ],
-    caption=[f"Image list {i} with URLs" for i in range(3)],
-    link=["https://streamlit.io/"] * 3,
-)
-
-# Partial link
-st.image(
-    [
-        Image.new("RGB", (64, 64), color="red"),
-        Image.new("RGB", (64, 64), color="blue"),
-        Image.new("RGB", (64, 64), color="green"),
-    ],
-    caption=[f"Partial click URLs {i}" for i in range(3)],
-    link=[
-        "https://streamlit.io/",
-        None,
-        "https://docs.streamlit.io/",
-    ],
-)
-
-# None URL example
-st.image(
-    Image.new("RGB", (64, 64), color="red"),
-    caption="Image with None click URL",
-    link=None,
-)
-
-# Empty URLs example
-st.image(
-    Image.new("RGB", (64, 64), color="red"),
-    caption="Image with empty click URL",
-    link=[],
-)
-
 
 # Full link
 st.image(
