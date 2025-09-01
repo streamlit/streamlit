@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 50
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -351,7 +351,7 @@ def test_image_link_list(app: Page):
     """Test image list with links parameter."""
     image_container = app.locator("data-testid=stImage").filter(
         has=app.locator("data-testid=stImageCaption")
-        .filter(has_text="Image list 0 with URLs")
+        .filter(has_text="Image list 0 with links")
         .first
     )
 
