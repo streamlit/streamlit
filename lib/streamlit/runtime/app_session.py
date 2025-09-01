@@ -791,7 +791,6 @@ class AppSession:
 
             repo_info = repo.get_repo_info()
             if repo_info is None:
-                _LOGGER.debug("No valid Git information found")
                 return
 
             repository_name, branch, module = repo_info
@@ -812,6 +811,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
