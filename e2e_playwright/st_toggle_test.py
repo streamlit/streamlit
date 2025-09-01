@@ -168,7 +168,7 @@ def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
     # new toggle is visible:
     expect(dynamic_toggle).to_contain_text("Updated dynamic toggle")
 
-    # Check the the updated toggle state is still True
+    # Check that the updated toggle state is still True.
     expect_prefixed_markdown(app, "Updated toggle state:", "True")
 
     dynamic_toggle.scroll_into_view_if_needed()
