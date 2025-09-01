@@ -649,7 +649,7 @@ export class App extends PureComponent<Props, State> {
       | DialogType.CONNECTION_ERROR = DialogType.WARNING
   ): void {
     LOG.error(errorMarkdown)
-    const enhancedMessage = `We have encountered some error states that will require manual page reloads. In its current state, it's not very obvious for the user what to do, e.g.: ${errorMarkdown}. Please try reloading the page or contact support if the issue persists.`;
+    const enhancedMessage = `${errorMarkdown} Please try reloading the page. If the issue persists, contact support.`;
     const newDialog: WarningProps | ConnectionErrorProps = {
       type: dialogType,
       title,
