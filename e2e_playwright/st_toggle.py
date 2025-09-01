@@ -65,7 +65,8 @@ st.toggle("toggle with content width", width="content")
 st.toggle("toggle with stretch width", width="stretch")
 st.toggle("toggle with 150px width", width=150)
 
-c
+st.markdown("Dynamic toggle props:")
+
 if st.toggle("Update toggle props"):
     state = st.toggle(
         "Updated dynamic toggle",
