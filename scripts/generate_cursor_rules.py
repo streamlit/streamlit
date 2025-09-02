@@ -144,6 +144,8 @@ def generate_agent_rules() -> None:
             agents_md_content=agents_md_content.strip(),
             always_apply="true" if always_apply else "false",
         )
+        # Removes unnecessary whitespace to fix linting issue:
+        content = content.replace("globs: \n", "globs:\n")
 
         with open(output_path, "w") as f:
             f.write(content)
