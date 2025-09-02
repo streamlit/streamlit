@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     # Avoid duplicate workflows on same branch
     concurrency:
@@ -53,11 +54,31 @@ jobs:
           git status --porcelain
           echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
 
-      - name: Commit changes
+      - name: Commit changes to new branch
         if: steps.git-check.outputs.changes == 'true'
         run: |
           git config --global user.email "core+streamlitbot-github@streamlit.io"
           git config --global user.name "Streamlit Bot"
+          fix_branch="autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}"
+          git checkout -b "$fix_branch"
           git add -A
           git commit -m "Apply automatic fixes"
-          git push
+          git push --set-upstream origin "$fix_branch"
+
+      - name: Create PR with autofix changes
+        if: steps.git-check.outputs.changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
+            --base "${{ github.head_ref }}" \
+            --title "Autofix for #${{ github.event.pull_request.number }}" \
+            --body "Automated fixes from workflow for PR #${{ github.event.pull_request.number }}."
+
+      - name: Remove 'autofix' label from source PR
+        if: steps.git-check.outputs.changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
