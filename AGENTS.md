@@ -1,9 +1,3 @@
----
-description:
-globs:
-alwaysApply: true
----
-
 # Streamlit Repo Overview
 
 ## Folder Structure
