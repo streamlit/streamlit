@@ -287,7 +287,7 @@ const AudioInput: React.FC<Props> = ({
 
     // Initialize the Record plugin with sample rate if specified
     const recordOptions: Record<string, unknown> = {
-      renderRecordedAudio: true, // Show real-time waveform during recording
+      renderRecordedAudio: false, // Don't pre-render waveform to avoid layout shift
       scrollingWaveform: false,
       mimeType: "audio/webm", // Use WebM for better browser support
     }
@@ -373,6 +373,13 @@ const AudioInput: React.FC<Props> = ({
 
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
+  // Initialize record plugin when wavesurfer is ready
+  useEffect(() => {
+    if (wavesurfer && !recordPluginRef.current) {
+      initializeRecordPlugin()
+    }
+  }, [wavesurfer, initializeRecordPlugin])
+
   // Load recording when URL changes
   useEffect(() => {
     if (wavesurfer && recordingUrl) {
@@ -425,13 +432,6 @@ const AudioInput: React.FC<Props> = ({
       handleClear({ updateWidgetManager: false, deleteFile: true })
     }
 
-    // Initialize record plugin on first use (after permission granted)
-    if (!recordPluginRef.current && !hasNoMicPermissions) {
-      initializeRecordPlugin()
-      // Wait a bit for plugin initialization
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-
     try {
       // Use WaveSurfer's record plugin for visualization
       if (recordPluginRef.current) {
@@ -455,7 +455,6 @@ const AudioInput: React.FC<Props> = ({
     hasRequestedMicPermissions,
     setRecordingTime,
     hasNoMicPermissions,
-    initializeRecordPlugin,
   ])
 
   const stopRecording = useCallback(async () => {
