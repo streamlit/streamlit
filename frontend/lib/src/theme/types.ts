@@ -75,16 +75,6 @@ export type SpecialEmotionColors = {
   codeTextColor: string
   codeBackgroundColor: string
 
-  metricPositiveDeltaColor: string
-  metricNegativeDeltaColor: string
-  metricNeutralDeltaColor: string
-
-  // Status element colors
-  infoBg: string
-  dangerBg: string
-  successBg: string
-  warningBg: string
-
   borderColor: string
   borderColorLight: string
 
