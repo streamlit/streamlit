@@ -1,4 +1,4 @@
-# TypeScript Guide
+# TypeScript Development Guide
 
 - TypeScript: v5
 - Linter: eslint v9

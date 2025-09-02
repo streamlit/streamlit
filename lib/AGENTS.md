@@ -1,4 +1,4 @@
-# Python Guide
+# Python Development Guide
 
 - Supported Python versions: 3.9 - 3.13
 - Linter: Ruff 0.x
