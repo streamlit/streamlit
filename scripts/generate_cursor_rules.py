@@ -36,6 +36,7 @@ description:
 globs: {globs}
 alwaysApply: false
 ---
+
 {agents_md_content}
 """
 
