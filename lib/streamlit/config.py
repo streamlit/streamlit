@@ -1203,8 +1203,8 @@ _create_theme_options(
 
         By default, this is #ff4b4b for light theme and #ff2b2b for dark theme.
 
-        If a redColor config if provided, and a redBackgroundColor config is not,
-        the redBackgroundColor will be derived from the redColor using 10% opacity for
+        If a redColor config is provided, and redBackgroundColor is not, the
+        redBackgroundColor will be derived from the redColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1217,8 +1217,8 @@ _create_theme_options(
 
         By default, this is #ffa421 for light theme and #ff8700 for dark theme.
 
-        If an orangeColor config if provided, and a orangeBackgroundColor config is not,
-        the orangeBackgroundColor will be derived from the orangeColor using 10% opacity for
+        If an orangeColor config is provided, and orangeBackgroundColor is not, the
+        orangeBackgroundColor will be derived from the orangeColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1231,8 +1231,8 @@ _create_theme_options(
 
         By default, this is #faca2b for light theme and #ffe312 for dark theme.
 
-        If a yellowColor config if provided, and a yellowBackgroundColor config is not,
-        the yellowBackgroundColor will be derived from the yellowColor using 10% opacity for
+        If a yellowColor config is provided, and yellowBackgroundColor is not, the
+        yellowBackgroundColor will be derived from the yellowColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1245,8 +1245,8 @@ _create_theme_options(
 
         By default, this is #1c83e1 for light theme and #0068c9 for dark theme.
 
-        If a blueColor config if provided, and a blueBackgroundColor config is not,
-        the blueBackgroundColor will be derived from the blueColor using 10% opacity for
+        If a blueColor config is provided, and blueBackgroundColor is not, the
+        blueBackgroundColor will be derived from the blueColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1259,8 +1259,8 @@ _create_theme_options(
 
         By default, this is #21c354 for light theme and #09ab3b for dark theme.
 
-        If a greenColor config if provided, and a greenBackgroundColor config is not,
-        the greenBackgroundColor will be derived from the greenColor using 10% opacity for
+        If a greenColor config is provided, and greenBackgroundColor is not, the
+        greenBackgroundColor will be derived from the greenColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1273,8 +1273,8 @@ _create_theme_options(
 
         By default, this is #803df5 for both light and dark themes.
 
-        If a violetColor config if provided, and a violetBackgroundColor config is not,
-        the violetBackgroundColor will be derived from the violetColor using 10% opacity for
+        If a violetColor config is provided, and violetBackgroundColor is not, the
+        violetBackgroundColor will be derived from the violetColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1287,8 +1287,8 @@ _create_theme_options(
 
         By default, this is #a3a8b8 for light theme and #555867 for dark theme.
 
-        If a grayColor config if provided, and a grayBackgroundColor config is not,
-        the grayBackgroundColor will be derived from the grayColor using 10% opacity for
+        If a grayColor config is provided, and grayBackgroundColor is not, the
+        grayBackgroundColor will be derived from the grayColor using 10% opacity for
         light theme and 20% opacity for dark theme.
     """,
 )
@@ -1298,6 +1298,11 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Background color used for red-themed elements.
+
+        If this config is not provided, it will be derived from the redColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
 
         By default, this is #ff2b2b with 10% opacity for light theme and
         #ff6c6c with 20% opacity for dark theme.
@@ -1310,6 +1315,11 @@ _create_theme_options(
     description="""
         Background color used for orange-themed elements.
 
+        If this config is not provided, it will be derived from the orangeColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
         By default, this is #ffa421 with 10% opacity for light theme and
         #ff8700 with 20% opacity for dark theme.
     """,
@@ -1320,6 +1330,11 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Background color used for yellow-themed elements.
+
+        If this config is not provided, it will be derived from the yellowColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
 
         By default, this is #ffff12 with 10% opacity for light theme and
         #ffff12 with 20% opacity for dark theme.
@@ -1332,6 +1347,11 @@ _create_theme_options(
     description="""
         Background color used for blue-themed elements.
 
+        If this config is not provided, it will be derived from the blueColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
         By default, this is #1c83ff with 10% opacity for light theme and
         #3d9df3 with 20% opacity for dark theme.
     """,
@@ -1342,6 +1362,11 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Background color used for green-themed elements.
+
+        If this config is not provided, it will be derived from the greenColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
 
         By default, this is #21c354 with 10% opacity for light theme and
         #3dd56d with 20% opacity for dark theme.
@@ -1354,6 +1379,11 @@ _create_theme_options(
     description="""
         Background color used for violet-themed elements.
 
+        If this config is not provided, it will be derived from the violetColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
         By default, this is #9a5dff with 10% opacity for light theme and
         #9a5dff with 20% opacity for dark theme.
     """,
@@ -1364,6 +1394,11 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Background color used for gray-themed elements.
+
+        If this config is not provided, it will be derived from the grayColor config
+        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+
+        If neither is provided, it will fallback to the default value.
 
         By default, this is #31333F with 10% opacity for light theme and
         #808495 with 20% opacity for dark theme.
