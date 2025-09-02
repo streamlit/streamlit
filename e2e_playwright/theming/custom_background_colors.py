@@ -40,7 +40,7 @@ st.html("""
     </style>
 """)
 
-st.header("Custom BackgroundColors :rainbow[App]")
+st.header("Custom Background Colors :rainbow[App]")
 
 
 def page1():
@@ -84,18 +84,17 @@ with col1:
     st.success("Success")
 
     st.write("Badges:")
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     with c1:
         st.badge("Blue", color="blue")
         st.badge("Green", color="green")
+        st.badge("Gray", color="gray")
     with c2:
         st.badge("Yellow", color="yellow")
         st.badge("Red", color="red")
     with c3:
         st.badge("Violet", color="violet")
         st.badge("Orange", color="orange")
-    with c4:
-        st.badge("Gray", color="gray")
 
 with col2:
     with st.expander("Expander", expanded=True):

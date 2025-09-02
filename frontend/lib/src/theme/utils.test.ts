@@ -1489,6 +1489,64 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.redBackgroundColor).toBe("#ffcccc")
   })
 
+  it("handles mixed explicit and derived background colors correctly", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      // Explicit background colors
+      redBackgroundColor: "#ffe6e6",
+      blueBackgroundColor: "#e6f3ff",
+
+      // Main colors that should derive backgrounds
+      greenColor: "#00ff00",
+      violetColor: "#8b00ff",
+
+      // No yellow/orange/gray configs - should use defaults
+
+      backgroundColor: "#ffffff", // Light theme
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    // Should use explicit backgrounds
+    expect(theme.colors.redBackgroundColor).toBe("#ffe6e6")
+    expect(theme.colors.blueBackgroundColor).toBe("#e6f3ff")
+
+    // Should derive from main colors
+    expect(theme.colors.greenBackgroundColor).toBe("rgba(0, 255, 0, 0.1)")
+    expect(theme.colors.violetBackgroundColor).toBe("rgba(139, 0, 255, 0.1)")
+
+    // Should use defaults
+    expect(theme.colors.orangeBackgroundColor).toBe(
+      lightTheme.emotion.colors.orangeBackgroundColor
+    )
+    expect(theme.colors.yellowBackgroundColor).toBe(
+      lightTheme.emotion.colors.yellowBackgroundColor
+    )
+    expect(theme.colors.grayBackgroundColor).toBe(
+      lightTheme.emotion.colors.grayBackgroundColor
+    )
+  })
+
+  it("falls back to default when main color is invalid and no explicit background provided", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: "invalid-color", // Invalid main color
+      blueColor: "#0000ff", // Valid main color
+      backgroundColor: "#ffffff",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      'Invalid color passed for redColor in theme: "invalid-color"'
+    )
+
+    // Should use default for red (main color invalid)
+    expect(theme.colors.redBackgroundColor).toBe(
+      lightTheme.emotion.colors.redBackgroundColor
+    )
+
+    // Should derive for blue (main color valid)
+    expect(theme.colors.blueBackgroundColor).toBe("rgba(0, 0, 255, 0.1)")
+  })
+
   // Conditional Overrides - Radii Tests
 
   it("adapts the radii theme props if baseRadius is provided", () => {

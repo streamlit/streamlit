@@ -26,21 +26,30 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons
 @pytest.mark.early
 def configure_custom_theme_background_colors():
     """Configure custom theme background colors."""
+    # Also set some main colors for better contrast with background colors
+    os.environ["STREAMLIT_THEME_RED_COLOR"] = "#750000"
+    os.environ["STREAMLIT_THEME_GREEN_COLOR"] = "#008000"
+    os.environ["STREAMLIT_THEME_GRAY_COLOR"] = "#525252"
+
+    # Background colors
     os.environ["STREAMLIT_THEME_RED_BACKGROUND_COLOR"] = "#ffc7c7"
-    os.environ["STREAMLIT_THEME_ORANGE_BACKGROUND_COLOR"] = "#ffd16a"
-    os.environ["STREAMLIT_THEME_YELLOW_BACKGROUND_COLOR"] = "#ffffa0"
-    os.environ["STREAMLIT_THEME_BLUE_BACKGROUND_COLOR"] = "#a6dcff"
-    os.environ["STREAMLIT_THEME_GREEN_BACKGROUND_COLOR"] = "#9ef6bb"
-    os.environ["STREAMLIT_THEME_VIOLET_BACKGROUND_COLOR"] = "#dbbbff"
-    os.environ["STREAMLIT_THEME_GRAY_BACKGROUND_COLOR"] = "#e6eaf1"
-    os.environ["STREAMLIT_THEME_SIDEBAR_RED_BACKGROUND_COLOR"] = "#7d353b"
-    os.environ["STREAMLIT_THEME_SIDEBAR_ORANGE_BACKGROUND_COLOR"] = "#d95a00"
-    os.environ["STREAMLIT_THEME_SIDEBAR_YELLOW_BACKGROUND_COLOR"] = "#916e10"
-    os.environ["STREAMLIT_THEME_SIDEBAR_BLUE_BACKGROUND_COLOR"] = "#004280"
-    os.environ["STREAMLIT_THEME_SIDEBAR_GREEN_BACKGROUND_COLOR"] = "#177233"
-    os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_BACKGROUND_COLOR"] = "#583f84"
-    os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_BACKGROUND_COLOR"] = "#0e1117"
+    os.environ["STREAMLIT_THEME_ORANGE_BACKGROUND_COLOR"] = "#fdae44"
+    os.environ["STREAMLIT_THEME_YELLOW_BACKGROUND_COLOR"] = "#fde992"
+    os.environ["STREAMLIT_THEME_BLUE_BACKGROUND_COLOR"] = "#6495ED"
+    os.environ["STREAMLIT_THEME_GREEN_BACKGROUND_COLOR"] = "#9dc183"
+    os.environ["STREAMLIT_THEME_VIOLET_BACKGROUND_COLOR"] = "#9E7BB5"
+    os.environ["STREAMLIT_THEME_GRAY_BACKGROUND_COLOR"] = "#A7A6BA"
+    os.environ["STREAMLIT_THEME_SIDEBAR_RED_BACKGROUND_COLOR"] = "#9d2933"
+    os.environ["STREAMLIT_THEME_SIDEBAR_ORANGE_BACKGROUND_COLOR"] = "#fed8b1"
+    os.environ["STREAMLIT_THEME_SIDEBAR_YELLOW_BACKGROUND_COLOR"] = "#ffffe0"
+    os.environ["STREAMLIT_THEME_SIDEBAR_BLUE_BACKGROUND_COLOR"] = "#87afc7"
+    os.environ["STREAMLIT_THEME_SIDEBAR_GREEN_BACKGROUND_COLOR"] = "#d8e4bc"
+    os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_BACKGROUND_COLOR"] = "#D8BFD8"
+    os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_BACKGROUND_COLOR"] = "#DCDCDC"
     yield
+    del os.environ["STREAMLIT_THEME_RED_COLOR"]
+    del os.environ["STREAMLIT_THEME_GREEN_COLOR"]
+    del os.environ["STREAMLIT_THEME_GRAY_COLOR"]
     del os.environ["STREAMLIT_THEME_RED_BACKGROUND_COLOR"]
     del os.environ["STREAMLIT_THEME_ORANGE_BACKGROUND_COLOR"]
     del os.environ["STREAMLIT_THEME_YELLOW_BACKGROUND_COLOR"]
