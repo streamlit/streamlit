@@ -74,3 +74,34 @@ st.checkbox(
 st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
+
+st.markdown("Dynamic checkbox:")
+
+if st.toggle("Update checkbox props"):
+    state = st.checkbox(
+        "Updated dynamic checkbox",
+        value=False,
+        width="stretch",
+        help="updated help",
+        key="dynamic_checkbox_with_key",
+        on_change=lambda a, param: print(
+            f"Updated checkbox - callback triggered: {a} {param}"
+        ),
+        args=("Updated checkbox arg",),
+        kwargs={"param": "updated kwarg param"},
+    )
+    st.write("Updated checkbox state:", state)
+else:
+    state = st.checkbox(
+        "Initial dynamic checkbox",
+        value=True,
+        width="content",
+        help="initial help",
+        key="dynamic_checkbox_with_key",
+        on_change=lambda a, param: print(
+            f"Initial checkbox - callback triggered: {a} {param}"
+        ),
+        args=("Initial checkbox arg",),
+        kwargs={"param": "initial kwarg param"},
+    )
+    st.write("Initial checkbox state:", state)
