@@ -34,7 +34,7 @@ List of all `make` commands that are available for execution from the repository
 AGENT_RULE_TEMPLATE: Final[str] = """---
 description:
 globs: {globs}
-alwaysApply: false
+alwaysApply: {always_apply}
 ---
 
 {agents_md_content}
@@ -45,6 +45,7 @@ class AgentRuleFile(TypedDict):
     cursor_mdc: str
     agents_md: str
     globs: str
+    always_apply: bool
 
 
 AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
@@ -52,31 +53,43 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "cursor_mdc": ".cursor/rules/e2e_playwright.mdc",
         "agents_md": "e2e_playwright/AGENTS.md",
         "globs": "e2e_playwright/**/*.py",
+        "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python.mdc",
         "agents_md": "lib/AGENTS.md",
         "globs": "*.py",
+        "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python_lib.mdc",
         "agents_md": "lib/streamlit/AGENTS.md",
         "globs": "lib/streamlit/**/*.py",
+        "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python_tests.mdc",
         "agents_md": "lib/tests/AGENTS.md",
         "globs": "lib/tests/**/*.py",
+        "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/protobuf.mdc",
         "agents_md": "proto/streamlit/proto/AGENTS.md",
         "globs": "*.proto",
+        "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/frontend.mdc",
         "agents_md": "frontend/AGENTS.md",
         "globs": "*.ts, *.tsx",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/overview.mdc",
+        "agents_md": "AGENTS.md",
+        "globs": "",
+        "always_apply": True,
     },
 ]
 
@@ -111,6 +124,7 @@ def generate_agent_rules() -> None:
         cursor_mdc_rel = rule["cursor_mdc"]
         agents_md_rel = rule["agents_md"]
         globs = rule["globs"]
+        always_apply = rule["always_apply"]
 
         output_path = os.path.join(workspace_root, cursor_mdc_rel)
         output_dir = os.path.dirname(output_path)
@@ -128,6 +142,7 @@ def generate_agent_rules() -> None:
         content = AGENT_RULE_TEMPLATE.format(
             globs=globs,
             agents_md_content=agents_md_content.strip(),
+            always_apply="true" if always_apply else "false",
         )
 
         with open(output_path, "w") as f:
