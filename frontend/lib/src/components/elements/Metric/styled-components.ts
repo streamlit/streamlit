@@ -15,13 +15,12 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
 import { EmotionTheme } from "~lib/theme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { getMetricBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface StyledMetricContainerProps {
@@ -112,35 +111,6 @@ export const getMetricColor = (
     // this must be grey
     default:
       return theme.colors.metricNeutralDeltaColor
-  }
-}
-
-// Delta uses the same background colors as background colored Markdown text.
-// TODO: We should refactor this and probably move it somewhere else (e.g. getColors.ts)
-// when we work on text/background colors for advanced theming.
-const getMetricBackgroundColor = (
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string => {
-  const lightTheme = hasLightBackgroundColor(theme)
-
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return transparentize(
-        theme.colors[lightTheme ? "red80" : "red60"],
-        lightTheme ? 0.9 : 0.7
-      )
-    case MetricProto.MetricColor.GREEN:
-      return transparentize(
-        theme.colors[lightTheme ? "green70" : "green60"],
-        lightTheme ? 0.9 : 0.7
-      )
-    // this must be grey
-    default:
-      return transparentize(
-        theme.colors[lightTheme ? "gray70" : "gray50"],
-        lightTheme ? 0.9 : 0.7
-      )
   }
 }
 

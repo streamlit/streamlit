@@ -36,6 +36,7 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { getMetricBackgroundColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
@@ -100,9 +101,11 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
-            opacity: 0.2,
+            color: getMetricBackgroundColor(theme, metricColor),
+            opacity: 1,
             line: {
               color: getMetricColor(theme, metricColor),
+              opacity: 1,
               strokeWidth: 2,
               strokeCap: "round",
             },

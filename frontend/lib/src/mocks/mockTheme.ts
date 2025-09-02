@@ -41,15 +41,13 @@ const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
   bodyText: colors.gray85,
+  link: colors.blue80,
+
+  // TODO (mgbarnes): Transition each of these to updated text colors
   warning: colors.yellow110,
-  warningBg: transparentize(colors.yellow80, 0.8),
   success: colors.green100,
-  successBg: transparentize(colors.green80, 0.8),
-  infoBg: transparentize(colors.blue70, 0.9),
   info: colors.blue100,
   danger: colors.red100,
-  dangerBg: transparentize(colors.red70, 0.8),
-  link: colors.blue80,
 
   primary: colors.red70,
   secondary: colors.blue70,
@@ -72,6 +70,15 @@ const requiredThemeColors = {
   greenColor: colors.green70,
   violetColor: colors.purple70,
   grayColor: colors.gray60,
+
+  // Default background theme colors (light theme)
+  redBackgroundColor: transparentize(colors.red80, 0.9),
+  orangeBackgroundColor: transparentize(colors.orange70, 0.9),
+  yellowBackgroundColor: transparentize(colors.yellow65, 0.9),
+  blueBackgroundColor: transparentize(colors.blue65, 0.9),
+  greenBackgroundColor: transparentize(colors.green70, 0.9),
+  violetBackgroundColor: transparentize(colors.purple60, 0.9),
+  grayBackgroundColor: transparentize(colors.gray85, 0.9),
 }
 
 interface OptionalThemeColors {

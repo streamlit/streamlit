@@ -22,20 +22,18 @@ export default {
   ...colors,
   bgColor: colors.gray100,
   bodyText: colors.gray10,
-  warning: colors.yellow20,
-  warningBg: transparentize(colors.yellow70, 0.8),
-  success: colors.green10,
-  successBg: transparentize(colors.green60, 0.8),
-  info: colors.blue20,
-  infoBg: transparentize(colors.blue60, 0.8),
-  danger: colors.red20,
-  dangerBg: transparentize(colors.red60, 0.8),
   // Brighten link color a bit so they're easier to read:
   link: lighten(colors.blue80, 0.2),
 
   primary: colors.red70,
   secondaryBg: colors.gray90,
   disabled: colors.gray70,
+
+  // TODO (mgbarnes): Transition each of these to updated text colors
+  warning: colors.yellow20,
+  success: colors.green10,
+  info: colors.blue20,
+  danger: colors.red20,
 
   // TODO (mgbarnes): Reduce/remove these colors to avoid
   // confusion with the default main/text/bg theme colors
@@ -51,4 +49,13 @@ export default {
   greenColor: colors.green80,
   violetColor: colors.purple70,
   grayColor: colors.gray80,
+
+  // Default background theme colors (dark theme)
+  redBackgroundColor: transparentize(colors.red60, 0.8),
+  orangeBackgroundColor: transparentize(colors.orange80, 0.8),
+  yellowBackgroundColor: transparentize(colors.yellow65, 0.8),
+  blueBackgroundColor: transparentize(colors.blue60, 0.8),
+  greenBackgroundColor: transparentize(colors.green60, 0.8),
+  violetBackgroundColor: transparentize(colors.purple60, 0.8),
+  grayBackgroundColor: transparentize(colors.gray70, 0.8),
 }

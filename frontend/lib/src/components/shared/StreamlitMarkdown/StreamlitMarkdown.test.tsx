@@ -17,7 +17,6 @@
 import React, { ReactElement } from "react"
 
 import { cleanup, screen } from "@testing-library/react"
-import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -25,6 +24,7 @@ import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
+import { getMarkdownBgColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
@@ -137,6 +137,25 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
+  let bgColors: ReturnType<typeof getMarkdownBgColors>
+  let backgroundColorMapping: Map<string, string>
+
+  beforeAll(() => {
+    // Use the actual implementation to get background colors
+    bgColors = getMarkdownBgColors(mockTheme.emotion)
+
+    backgroundColorMapping = new Map([
+      ["red", bgColors.redbg],
+      ["orange", bgColors.orangebg],
+      ["yellow", bgColors.yellowbg],
+      ["blue", bgColors.bluebg],
+      ["green", bgColors.greenbg],
+      ["violet", bgColors.violetbg],
+      ["gray", bgColors.graybg],
+      ["grey", bgColors.graybg],
+    ])
+  })
+
   it("renders header anchors when isInSidebar is false", () => {
     const source = "# header"
     render(
@@ -457,26 +476,7 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("properly adds background colors", () => {
-    const redbg = transparentize(colors.red80, 0.9)
-    const orangebg = transparentize(colors.yellow70, 0.9)
-    const yellowbg = transparentize(colors.yellow80, 0.9)
-    const greenbg = transparentize(colors.green70, 0.9)
-    const bluebg = transparentize(colors.blue70, 0.9)
-    const violetbg = transparentize(colors.purple70, 0.9)
-    const graybg = transparentize(colors.gray70, 0.9)
-
-    const colorMapping = new Map([
-      ["red", redbg],
-      ["orange", orangebg],
-      ["yellow", yellowbg],
-      ["blue", bluebg],
-      ["green", greenbg],
-      ["violet", violetbg],
-      ["gray", graybg],
-      ["grey", graybg],
-    ])
-
-    colorMapping.forEach(function (style, color) {
+    backgroundColorMapping.forEach(function (style, color) {
       const source = `:${color}-background[text]`
       render(<StreamlitMarkdown source={source} allowHTML={false} />)
       const markdown = screen.getByText("text")
@@ -490,32 +490,16 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("properly adds rainbow background color", () => {
-    const redbg = transparentize(colors.red80, 0.9)
-    const orangebg = transparentize(colors.yellow70, 0.9)
-    const yellowbg = transparentize(colors.yellow70, 0.9)
-    const greenbg = transparentize(colors.green70, 0.9)
-    const bluebg = transparentize(colors.blue70, 0.9)
-    const violetbg = transparentize(colors.purple70, 0.9)
-    const purplebg = transparentize(colors.purple90, 0.9)
+    const { redbg, orangebg, yellowbg, greenbg, bluebg, violetbg, purplebg } =
+      bgColors
+    const rainbowGradient = `linear-gradient(to right, ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg})`
 
-    const colorMapping = new Map([
-      [
-        "rainbow",
-        `linear-gradient(to right, ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg})`,
-      ],
-    ])
-
-    colorMapping.forEach(function (style, color) {
-      const source = `:${color}-background[text]`
-      render(<StreamlitMarkdown source={source} allowHTML={false} />)
-      const markdown = screen.getByText("text")
-      const tagName = markdown.nodeName.toLowerCase()
-      expect(tagName).toBe("span")
-      expect(markdown).toHaveStyle(`background: ${style}`)
-
-      // Removes rendered StreamlitMarkdown component before next case run
-      cleanup()
-    })
+    const source = `:rainbow-background[text]`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("text")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle(`background: ${rainbowGradient}`)
   })
 
   it("renders small text properly", () => {
