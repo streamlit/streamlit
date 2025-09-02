@@ -209,7 +209,7 @@ def random_date() -> datetime:
 
 
 class TestObject:
-    def __str__(self):
+    def __str__(self) -> str:
         return "TestObject"
 
 
@@ -388,7 +388,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
             [
                 Decimal("1.1"),
                 Decimal("-0.03864734299516908213"),
-                Decimal("1000"),
+                Decimal(1000),
                 Decimal("2.212"),
                 None,
             ]
@@ -434,13 +434,13 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}, None]),
         "objects": pd.Series([TestObject(), TestObject(), TestObject(), None]),
         # TODO(lukasmasuch): Not supported, but currently leads to error
-        # "mixed_types_list": pd.Series(
-        #     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
-        #     for _ in range(n_rows)
-        # ),
+        # > "mixed_types_list": pd.Series(
+        # >     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
+        # >     for _ in range(n_rows)
+        # > ),
         # TODO(lukasmasuch): Sparse array is supported, but currently leads to error
-        # "sparse-array": pd.Series(
-        #     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
-        # ),
+        # > "sparse-array": pd.Series(
+        # >     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
+        # > ),
     }
 )

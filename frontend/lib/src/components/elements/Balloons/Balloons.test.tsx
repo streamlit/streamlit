@@ -18,13 +18,9 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
-import Balloons, { NUM_BALLOONS, Props } from "./Balloons"
-
-const getProps = (): Props => ({
-  scriptRunId: "51522269",
-})
+import Balloons, { NUM_BALLOONS } from "./Balloons"
 
 describe("Balloons element", () => {
   vi.useFakeTimers()
@@ -35,8 +31,7 @@ describe("Balloons element", () => {
   })
 
   it("renders without crashing", () => {
-    const props = getProps()
-    render(<Balloons {...props} />)
+    render(<Balloons scriptRunId="51522269" />)
 
     const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toBeInTheDocument()
@@ -51,10 +46,75 @@ describe("Balloons element", () => {
   })
 
   it("uses correct top-level class", () => {
-    const props = getProps()
-    render(<Balloons {...props} />)
+    render(<Balloons scriptRunId="51522269" />)
 
     const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toHaveClass("stBalloons")
+  })
+
+  describe("crossOrigin attribute", () => {
+    const scenarios = [
+      {
+        backendBaseUrl: undefined,
+        description: "without BACKEND_BASE_URL",
+      },
+      {
+        backendBaseUrl: "http://localhost:8501",
+        description: "with BACKEND_BASE_URL",
+      },
+    ]
+
+    afterEach(() => {
+      // Clean up window.__streamlit after each test
+      if (window.__streamlit) {
+        delete window.__streamlit.BACKEND_BASE_URL
+      }
+    })
+
+    it.each(scenarios)(
+      "sets crossOrigin attribute when resourceCrossOriginMode is configured ($description)",
+      ({ backendBaseUrl }) => {
+        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        if (backendBaseUrl) {
+          window.__streamlit = window.__streamlit || {}
+          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+        }
+
+        renderWithContexts(<Balloons scriptRunId="51522269" />, {
+          libConfig: { resourceCrossOriginMode: "anonymous" },
+        })
+
+        const balloonImages = screen.getAllByRole("img")
+        balloonImages.forEach(node => {
+          if (backendBaseUrl) {
+            // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
+            expect(node).toHaveAttribute("crossOrigin", "anonymous")
+          } else {
+            // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
+            expect(node).not.toHaveAttribute("crossOrigin")
+          }
+        })
+      }
+    )
+
+    it.each(scenarios)(
+      "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
+      ({ backendBaseUrl }) => {
+        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        if (backendBaseUrl) {
+          window.__streamlit = window.__streamlit || {}
+          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+        }
+
+        renderWithContexts(<Balloons scriptRunId="51522269" />, {
+          libConfig: { resourceCrossOriginMode: undefined },
+        })
+
+        const balloonImages = screen.getAllByRole("img")
+        balloonImages.forEach(node => {
+          expect(node).not.toHaveAttribute("crossOrigin")
+        })
+      }
+    )
   })
 })

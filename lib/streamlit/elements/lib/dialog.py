@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from typing_extensions import Self, TypeAlias
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -26,13 +27,15 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
+from streamlit.runtime.state import register_widget
 
 if TYPE_CHECKING:
     from types import TracebackType
 
     from streamlit.cursor import Cursor
+    from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large"]
+DialogWidth: TypeAlias = Literal["small", "large", "medium"]
 
 
 def _process_dialog_width_input(
@@ -44,6 +47,8 @@ def _process_dialog_width_input(
     """
     if width == "large":
         return BlockProto.Dialog.DialogWidth.LARGE
+    if width == "medium":
+        return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
 
@@ -67,7 +72,8 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
     if should_open and script_run_ctx:
         if script_run_ctx.has_dialog_opened:
             raise StreamlitAPIException(
-                "Only one dialog is allowed to be opened at the same time. Please make sure to not call a dialog-decorated function more than once in a script run."
+                "Only one dialog is allowed to be opened at the same time. "
+                "Please make sure to not call a dialog-decorated function more than once in a script run."
             )
         script_run_ctx.has_dialog_opened = True
 
@@ -80,11 +86,49 @@ class Dialog(DeltaGenerator):
         *,
         dismissible: bool = True,
         width: DialogWidth = "small",
+        on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
+        # Validation for on_dismiss parameter
+        if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
+            raise StreamlitAPIException(
+                f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
+                "'rerun', or a callable is supported."
+            )
+
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
+
+        # Handle on_dismiss functionality
+        is_dismiss_activated = on_dismiss != "ignore"
+        element_id = None
+
+        if is_dismiss_activated:
+            # Register as widget when on_dismiss is activated
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "dialog",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=parent,
+                title=title,
+                dismissible=dismissible,
+                width=width,
+                on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
+            )
+            block_proto.dialog.id = element_id
+
+            register_widget(
+                element_id,
+                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                deserializer=lambda x: x,  # Simple passthrough for trigger values
+                serializer=lambda x: x,  # Simple passthrough for trigger values
+                ctx=ctx,
+                value_type="trigger_value",
+            )
 
         # We store the delta path here, because in _update we enqueue a new proto
         # message to update the open status. Without this, the dialog content is gone
@@ -96,6 +140,7 @@ class Dialog(DeltaGenerator):
 
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
+
         return dialog
 
     def __init__(
@@ -104,18 +149,21 @@ class Dialog(DeltaGenerator):
         cursor: Cursor | None,
         parent: DeltaGenerator | None,
         block_type: str | None,
-    ):
+    ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
 
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
 
-    def _update(self, should_open: bool):
+    def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
 
-        assert self._current_proto is not None, "Dialog not correctly initialized!"
-        assert self._delta_path is not None, "Dialog not correctly initialized!"
+        if self._current_proto is None or self._delta_path is None:
+            raise RuntimeError(
+                "Dialog not correctly initialized. This should never happen."
+            )
+
         _assert_first_dialog_to_be_opened(should_open)
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path

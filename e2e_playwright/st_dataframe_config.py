@@ -28,20 +28,20 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=("col_%d" % i for i in range(5)),
+    columns=(f"col_{i}" for i in range(5)),
 )
 
 
-st.header("Hide index parameter:")
-st.dataframe(df, hide_index=True, use_container_width=False)
-st.dataframe(df, hide_index=False, use_container_width=False)
+st.header(":material/visibility_off: Hide index parameter:")
+st.dataframe(df, hide_index=True, width="content")
+st.dataframe(df, hide_index=False, width="content")
 
 st.header("Column order parameter:")
 column_order = ["col_4", "col_3", "col_0"]
 if st.button("Change column order"):
     column_order = ["col_0", "col_3", "col_4"]
 
-st.dataframe(df, column_order=column_order, use_container_width=False)
+st.dataframe(df, column_order=column_order, width="content")
 
 st.header("Set column labels:")
 st.dataframe(
@@ -57,7 +57,7 @@ st.header("Hide columns:")
 st.dataframe(
     df,
     column_config={"col_1": None, "col_3": {"hidden": True}},
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set column width:")
@@ -68,7 +68,7 @@ st.dataframe(
         "col_1": st.column_config.Column(width="medium"),
         "col_4": {"width": "large"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set help tooltips:")
@@ -83,7 +83,7 @@ st.dataframe(
         "col_0": st.column_config.Column(help="This :red[is] a **tooltip** 🌟"),
         "_index": {"help": "Index tooltip!"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 
@@ -95,7 +95,7 @@ st.dataframe(
         }
     ),
     column_config={"col_0": st.column_config.Column(disabled=False, required=True)},
-    use_container_width=False,
+    width="content",
 )
 
 
@@ -121,7 +121,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.TextColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -136,7 +136,7 @@ st.dataframe(
     column_config={
         "col_0": st.column_config.NumberColumn(
             "Number column",
-            width="medium",
+            width=200,
             help="This is a number column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
@@ -149,7 +149,7 @@ st.dataframe(
             format="%.2f%%",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -172,7 +172,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.CheckboxColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -194,10 +194,11 @@ st.dataframe(
             disabled=False,  # Should be ignored
             default=True,  # Should be ignored
             options=[1, 2, 3, 4, 5],
+            format_func=lambda x: f"Option {x}",
         ),
         "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -225,6 +226,12 @@ st.dataframe(
                 "",
                 None,
             ],
+            "col_4": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
         }
     ),
     column_config={
@@ -247,8 +254,12 @@ st.dataframe(
             "Static display text",
             display_text="Open link",
         ),
+        "col_4": st.column_config.LinkColumn(
+            "Static display icon",
+            display_text=":material/open_in_new:",
+        ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -295,7 +306,7 @@ st.dataframe(
         ),
         "col_2": st.column_config.DatetimeColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -339,7 +350,7 @@ st.dataframe(
         "col_1": st.column_config.DateColumn(),
         "col_2": st.column_config.DateColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -385,7 +396,7 @@ st.dataframe(
         ),
         "col_2": st.column_config.TimeColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -394,8 +405,9 @@ st.header("Progress column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [0.1, 0.4, 1.1, None],
+            "col_0": [0.1, 0.4872, 10.1, None],
             "col_1": ["200", "550", "1000", None],
+            "col_2": [0.1, 0.4872, 1.1, None],
         }
     ),
     column_config={
@@ -407,8 +419,11 @@ st.dataframe(
         "col_1": st.column_config.ProgressColumn(
             format="$%f", min_value=0, max_value=1000
         ),
+        "col_2": st.column_config.ProgressColumn(
+            step=0.0001,
+        ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -418,7 +433,16 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": ["a,b", "c,d,e", "", None],
+            "col_1": [
+                [
+                    "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
+                    "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
+                ],
+                [],
+                [],
+                None,
+            ],
+            "col_2": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
@@ -427,9 +451,10 @@ st.dataframe(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(width="medium"),
+        "col_2": st.column_config.ListColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -452,7 +477,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.BarChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -476,7 +501,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.LineChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -499,7 +524,7 @@ st.dataframe(
         ),
         "col_1": st.column_config.AreaChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -512,7 +537,7 @@ st.dataframe(
             "col_0": [
                 "https://streamlit.io/images/brand/streamlit-mark-color.png",
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAABSCAMAAACBpt1yAAAAwFBMVEVHcEyAhJWAhJUzNT97f4+AhJWAhJVtcH9WWWaAhJWAhJWAhJVCRFGAhJWAhJWAhJVVWGeAhJWAhJWAhJVVWGcmJzCAhJWAhJWAhJUmJzAmJzBVWGcmJzAmJzAmJzAmJzAmJzCAhJUmJzBVWGcmJzAmJzAmJzBVWGeAhJVVWGdVWGdVWGeAhJVVWGdVWGdVWGdvcoJVJ2WAhJVVWGcmJzBTVmVaXWx8f5B1eYlhZHNoa3tDRVI3OUQtLzhucoJMT13kXsyQAAAAMXRSTlMA+SYWE/ExBQvmfME1P7Uc9lhpjSdsTZ7cnETlsyP6xvHNg7XXV+bYq6NjTtR1yJLh8/IzCQAABHhJREFUaN7Nmut2mkAYRZGLIMQbRMFbvMQYkmjS9YFJU23z/m9VwEpgGJgZYLo4/2ratXbdhyNMFIS68jzzXm+EpuVl5nne623DqKRXL8yb2iyst4jKG7w0S+HgguU93jZPYZin5mhU32Iqb/DcPIWN0phQGGnUGqewQRpTChuj8fbVQ1ODRnVsDeUaFVbXuBhtpsJYgZYxLP3fUzMKK2qURlvf3wkWBGn1xiVX8PbRw6WsRmm09MOE71YYxe2qNSmMUkqj9rC8i6hWgmzAJYrdVqtfhRU0ag/zC5TvzwVBh2s6drsehWHuGTVq0xjKXz0IgtiBbzBLZFL45OWHSaM6naz8OEspeMWGRBydAex5UIA1Y7iDvklC+f4ofG3cSnLBXu9XV8ik8WayS0L5u0X4qryGdNYm1b5qT4VU3uBAt56bNJTvTy6Xng5o1jTDX6iQVuNis0Wg/Lvp5UftToaLYvgJCqk0RpOOJix8dBm4kA1p+EkKoxyoJh3J5vrzYQvDRRh+okKSRuk66Uh28b/JlD4e/m4FhZFGmTzp+MLjS08YfiqF+RqTk44W/uH7r2FKXzz8VArzNKrT+crPy7XwuaWPwbLDfzPzaJPRqCKTnlf4/NJ/fyKlh1+79+hzKJ703MKH6e+hMPvU8B8YqNIas5OOZJ6eOgsISXwiMShMa8RMekHhw3QVElc8/EwKExqxk45kKyFF7AEx/4b/wEjlzV4ooZDChzGBIsHwsyqMNEpazqQjWU1RrL4DVGD2vXdk55rTQGUKT1X6a/58MmN9namo7kbZ7SWX/pqPP+/MXL9psLYLzOeUAdT5+MUIdjzRvFkT3OenCcAP7HguU/gwosPCBT9/vTN0/0jWeLfE38zaABzByBpH+Fsz+tLHYJ/Ua3Ekatwt8FiyAcARjKRxkneLbgJwBCNcjfjClyh9PGOfdVyNSyn3acQGKAf2Xl3jKP8hadwCrmAn2tvS6qVnASvQOCl6WNahfGiGP1cjeluKlL5TgYtmX0/shRfQMzgOYHkaN8VnKKVLTztjeI07wplT3nFEfWBYjXPSIbcOwBnszFp4wnFETcOP0biViEfRLgBnsBNr4cnHEbXsK6pxRXHIWkPpSfuKapzTHJXrALzBToyFD8vVVoA72Jn0HMat9IXDn9K4EahSV+mLZuyL5rYUOY7YA/AGS3w2zml/N2QBcAc7/qa4La36ZEa3r0fc1UhX+Og4ogfABwxzNU7of+1oAvABe89opC08wxlcxRn7It+W8i89BuzMUnhepU+AHWONuwULlmYAx8TD/1X8HPbfSo/M2PE0ZaIqeRzBDMb6JQ7BbAF/sBnzt41VXeHN9fGjxJdn1bHBF0xx20KZyF3d7hn7jlKvz5bi7A3X1rsVvqqnarLYHg9N3XIDQqejlGJsKUrHWRs929LNYbctylpt3+VVVVnui+1uwBhAWrbb6xnGer13HKeTSvCCs1+vDaPnurYVgJjDcYDSr5GlEDN4J+V+EFEU23GCP4jBa7IcUKilOf4CgQRuuzC9EJcAAAAASUVORK5CYII=",
-                "data:image/svg+xml,%3Csvg width='301' height='165' viewBox='0 0 301 165' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M150.731 101.547L98.1387 73.7471L6.84674 25.4969C6.7634 25.4136 6.59674 25.4136 6.51341 25.4136C3.18007 23.8303 -0.236608 27.1636 1.0134 30.497L47.5302 149.139L47.5385 149.164C47.5885 149.281 47.6302 149.397 47.6802 149.514C49.5885 153.939 53.7552 156.672 58.2886 157.747C58.6719 157.831 58.9461 157.906 59.4064 157.998C59.8645 158.1 60.5052 158.239 61.0552 158.281C61.1469 158.289 61.2302 158.289 61.3219 158.297H61.3886C61.4552 158.306 61.5219 158.306 61.5886 158.314H61.6802C61.7386 158.322 61.8052 158.322 61.8636 158.322H61.9719C62.0386 158.331 62.1052 158.331 62.1719 158.331V158.331C121.084 164.754 180.519 164.754 239.431 158.331V158.331C240.139 158.331 240.831 158.297 241.497 158.231C241.714 158.206 241.922 158.181 242.131 158.156C242.156 158.147 242.189 158.147 242.214 158.139C242.356 158.122 242.497 158.097 242.639 158.072C242.847 158.047 243.056 158.006 243.264 157.964C243.681 157.872 243.87 157.806 244.436 157.611C245.001 157.417 245.94 157.077 246.527 156.794C247.115 156.511 247.522 156.239 248.014 155.931C248.622 155.547 249.201 155.155 249.788 154.715C250.041 154.521 250.214 154.397 250.397 154.222L250.297 154.164L150.731 101.547Z' fill='%23FF4B4B'/%3E%3Cpath d='M294.766 25.4981H294.683L203.357 73.7483L254.124 149.357L300.524 30.4981V30.3315C301.691 26.8314 298.108 23.6648 294.766 25.4981' fill='%237D353B'/%3E%3Cpath d='M155.598 2.55572C153.264 -0.852624 148.181 -0.852624 145.931 2.55572L98.1389 73.7477L150.731 101.548L250.398 154.222C251.024 153.609 251.526 153.012 252.056 152.381C252.806 151.456 253.506 150.465 254.123 149.356L203.356 73.7477L155.598 2.55572Z' fill='%23BD4043'/%3E%3C/svg%3E%0A",
+                "data:image/svg+xml,%3Csvg width='301' height='165' viewBox='0 0 301 165' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M150.731 101.547L98.1387 73.7471L6.84674 25.4969C6.7634 25.4136 6.59674 25.4136 6.51341 25.4136C3.18007 23.8303 -0.236608 27.1636 1.0134 30.497L47.5302 149.139L47.5385 149.164C47.5885 149.281 47.6302 149.397 47.6802 149.514C49.5885 153.939 53.7552 156.672 58.2886 157.747C58.6719 157.831 58.9461 157.906 59.4064 157.998C59.8645 158.1 60.5052 158.239 61.0552 158.281C61.1469 158.289 61.2302 158.289 61.3219 158.297H61.3886C61.4552 158.306 61.5219 158.306 61.5886 158.314H61.6802C61.7386 158.322 61.8052 158.322 61.8636 158.322H61.9719C62.0386 158.331 62.1052 158.331 62.1719 158.331V158.331C121.084 164.754 180.519 164.754 239.431 158.331V158.331C240.139 158.331 240.831 158.297 241.497 158.231C241.714 158.206 241.922 158.181 242.131 158.156C242.156 158.147 242.189 158.147 242.214 158.139C242.356 158.122 242.497 158.097 242.639 158.072C242.847 158.047 243.056 158.006 243.264 157.964C243.681 157.872 243.87 157.806 244.436 157.611C245.001 157.417 245.94 157.077 246.527 156.794C247.115 156.511 247.522 156.239 248.014 155.931C248.622 155.547 249.201 155.155 249.788 154.715C250.041 154.521 250.214 154.397 250.397 154.222L250.297 154.164L150.731 101.547Z' fill='%23FF4B4B'/%3E%3Cpath d='M294.766 25.4981H294.683L203.357 73.7483L254.124 149.357L300.524 30.4981V30.3315C301.691 26.8314 298.108 23.6648 294.766 25.4981' fill='%237D353B'/%3E%3Cpath d='M155.598 2.55572C153.264 -0.852624 148.181 -0.852624 145.931 2.55572L98.1389 73.7477L150.731 101.548L250.398 154.222C251.024 153.609 251.526 153.012 252.056 152.381C252.806 151.456 253.506 150.465 254.123 149.356L203.356 73.7477L155.598 2.55572Z' fill='%23BD4043'/%3E%3C/svg%3E%0A",  # noqa: E501
                 "",
                 None,
             ],
@@ -525,7 +550,7 @@ st.dataframe(
             help="This is a image column",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -554,7 +579,7 @@ st.dataframe(
             "K",
         ],
     ),
-    use_container_width=False,
+    width="content",
 )
 
 st.subheader("Hierarchical headers")
@@ -568,20 +593,21 @@ st.dataframe(
                 ("a", "b", "c"),
                 ("a", "b", "d"),
                 ("e", "f", "c"),
-                ("g", "h", "d"),
+                ("g", "h", "d (Test)"),
                 ("", "h", "i"),
                 ("j", "", ""),
             ],
             names=["first", "second", "third"],
         ),
     ),
-    use_container_width=False,
+    width="content",
 )
 
 df = pd.DataFrame(
-    np.random.randn(5, 25),
-    columns=("col_%d" % i for i in range(25)),
+    np.random.randn(15, 25),
+    columns=(f"col_{i}" for i in range(25)),
 )
+
 st.header("Pinned columns:")
 st.dataframe(
     df,
@@ -594,17 +620,18 @@ st.dataframe(
     # Use reversed column order to test that pinned columns
     # use the column order as well.
     column_order=reversed(df.columns.tolist()),
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Configurable row height:")
 
-streamlit_logo = "data:image/svg+xml,%3Csvg width='301' height='165' viewBox='0 0 301 165' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M150.731 101.547L98.1387 73.7471L6.84674 25.4969C6.7634 25.4136 6.59674 25.4136 6.51341 25.4136C3.18007 23.8303 -0.236608 27.1636 1.0134 30.497L47.5302 149.139L47.5385 149.164C47.5885 149.281 47.6302 149.397 47.6802 149.514C49.5885 153.939 53.7552 156.672 58.2886 157.747C58.6719 157.831 58.9461 157.906 59.4064 157.998C59.8645 158.1 60.5052 158.239 61.0552 158.281C61.1469 158.289 61.2302 158.289 61.3219 158.297H61.3886C61.4552 158.306 61.5219 158.306 61.5886 158.314H61.6802C61.7386 158.322 61.8052 158.322 61.8636 158.322H61.9719C62.0386 158.331 62.1052 158.331 62.1719 158.331V158.331C121.084 164.754 180.519 164.754 239.431 158.331V158.331C240.139 158.331 240.831 158.297 241.497 158.231C241.714 158.206 241.922 158.181 242.131 158.156C242.156 158.147 242.189 158.147 242.214 158.139C242.356 158.122 242.497 158.097 242.639 158.072C242.847 158.047 243.056 158.006 243.264 157.964C243.681 157.872 243.87 157.806 244.436 157.611C245.001 157.417 245.94 157.077 246.527 156.794C247.115 156.511 247.522 156.239 248.014 155.931C248.622 155.547 249.201 155.155 249.788 154.715C250.041 154.521 250.214 154.397 250.397 154.222L250.297 154.164L150.731 101.547Z' fill='%23FF4B4B'/%3E%3Cpath d='M294.766 25.4981H294.683L203.357 73.7483L254.124 149.357L300.524 30.4981V30.3315C301.691 26.8314 298.108 23.6648 294.766 25.4981' fill='%237D353B'/%3E%3Cpath d='M155.598 2.55572C153.264 -0.852624 148.181 -0.852624 145.931 2.55572L98.1389 73.7477L150.731 101.548L250.398 154.222C251.024 153.609 251.526 153.012 252.056 152.381C252.806 151.456 253.506 150.465 254.123 149.356L203.356 73.7477L155.598 2.55572Z' fill='%23BD4043'/%3E%3C/svg%3E%0A"
+streamlit_logo = "data:image/svg+xml,%3Csvg width='301' height='165' viewBox='0 0 301 165' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M150.731 101.547L98.1387 73.7471L6.84674 25.4969C6.7634 25.4136 6.59674 25.4136 6.51341 25.4136C3.18007 23.8303 -0.236608 27.1636 1.0134 30.497L47.5302 149.139L47.5385 149.164C47.5885 149.281 47.6302 149.397 47.6802 149.514C49.5885 153.939 53.7552 156.672 58.2886 157.747C58.6719 157.831 58.9461 157.906 59.4064 157.998C59.8645 158.1 60.5052 158.239 61.0552 158.281C61.1469 158.289 61.2302 158.289 61.3219 158.297H61.3886C61.4552 158.306 61.5219 158.306 61.5886 158.314H61.6802C61.7386 158.322 61.8052 158.322 61.8636 158.322H61.9719C62.0386 158.331 62.1052 158.331 62.1719 158.331V158.331C121.084 164.754 180.519 164.754 239.431 158.331V158.331C240.139 158.331 240.831 158.297 241.497 158.231C241.714 158.206 241.922 158.181 242.131 158.156C242.156 158.147 242.189 158.147 242.214 158.139C242.356 158.122 242.497 158.097 242.639 158.072C242.847 158.047 243.056 158.006 243.264 157.964C243.681 157.872 243.87 157.806 244.436 157.611C245.001 157.417 245.94 157.077 246.527 156.794C247.115 156.511 247.522 156.239 248.014 155.931C248.622 155.547 249.201 155.155 249.788 154.715C250.041 154.521 250.214 154.397 250.397 154.222L250.297 154.164L150.731 101.547Z' fill='%23FF4B4B'/%3E%3Cpath d='M294.766 25.4981H294.683L203.357 73.7483L254.124 149.357L300.524 30.4981V30.3315C301.691 26.8314 298.108 23.6648 294.766 25.4981' fill='%237D353B'/%3E%3Cpath d='M155.598 2.55572C153.264 -0.852624 148.181 -0.852624 145.931 2.55572L98.1389 73.7477L150.731 101.548L250.398 154.222C251.024 153.609 251.526 153.012 252.056 152.381C252.806 151.456 253.506 150.465 254.123 149.356L203.356 73.7477L155.598 2.55572Z' fill='%23BD4043'/%3E%3C/svg%3E%0A"  # noqa: E501
 st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                "this is a very long sentence that does not contain any reasonable content.this is a very long sentence that does not contain any reasonable content.",
+                "this is a very long sentence that does not contain any reasonable content.this is a "
+                "very long sentence that does not contain any reasonable content.",
                 "Hello World",
             ],
             "col_1": [
@@ -614,11 +641,11 @@ st.dataframe(
         },
     ),
     column_config={
-        "col_0": st.column_config.TextColumn("Text", width="large"),
+        "col_0": st.column_config.TextColumn("Text", width=400),
         "col_1": st.column_config.ImageColumn("Logo", width="medium"),
     },
     row_height=100,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("NumberColumn Formatting:")
@@ -634,8 +661,10 @@ st.dataframe(
             "plain": [0.0123123, -1234.567, 12, 0],
             "dollar": [0.0123123, -1234.567, 12, 0],
             "euro": [0.0123123, -1234.567, 12, 0],
+            "yen": [0.0123123, -1234.567, 12, 0],
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
+            "bytes": [0.0123123, -1234.567, 12, 0],
             "custom format": [0.0123123, -1234.567, 12, 0],
         }
     ),
@@ -645,14 +674,16 @@ st.dataframe(
         "scientific": st.column_config.NumberColumn(format="scientific"),
         "engineering": st.column_config.NumberColumn(format="engineering"),
         "plain": st.column_config.NumberColumn(format="plain"),
-        "dollar": st.column_config.NumberColumn(format="dollar"),
+        "dollar": st.column_config.NumberColumn(format="dollar", step=0.1),
         "euro": st.column_config.NumberColumn(format="euro"),
+        "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
+        "bytes": st.column_config.NumberColumn(format="bytes"),
         "custom format": st.column_config.NumberColumn(format="%.2f"),
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Date Time Formatting:")
@@ -707,11 +738,11 @@ st.dataframe(
         "localized time": st.column_config.TimeColumn(format="localized"),
         "iso8601": st.column_config.DatetimeColumn(format="iso8601"),
         # We cannot reliably test distance via e2e tests because it wouldn't
-        # stay stable.
-        # "distance": st.column_config.DatetimeColumn(format="distance"),
+        # stay stable:
+        # "distance": st.column_config.DatetimeColumn(format="distance"),  # noqa: ERA001
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Json column:")
@@ -761,5 +792,72 @@ st.dataframe(
         "incompatible values": st.column_config.JsonColumn(width="medium"),
     },
     hide_index=True,
-    use_container_width=False,
+    width="content",
+)
+
+st.header("Localized Date/Number Formatting:")
+
+st.dataframe(
+    data=pd.DataFrame(
+        {
+            "Name": ["John", "Jane", "Jim", "Jill"],
+            "Percent": [0.5, 0.6, 0.7, 0.8],
+            "Salary": [50000, 54000, 58000, 62000],
+            "appointment": [
+                datetime.datetime(2024, 2, 5, 12, 30),
+                datetime.datetime(2023, 11, 10, 18, 0),
+                datetime.datetime(2024, 3, 11, 20, 10),
+                datetime.datetime(2023, 9, 12, 3, 0),
+            ],
+        }
+    ),
+    column_config={
+        "Name": st.column_config.TextColumn("Name"),
+        "Percent": st.column_config.NumberColumn("Percent", format="localized"),
+        "Salary": st.column_config.NumberColumn("Salary", format="localized"),
+        "appointment": st.column_config.DatetimeColumn(
+            "Appointment",
+            min_value=datetime.datetime(2023, 6, 1),
+            max_value=datetime.datetime(2025, 1, 1),
+            format="localized",
+            step=60,
+        ),
+    },
+)
+
+st.header("Multiselect column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [["a", "b"], ["b", "c", "d"], [], None],
+            "col_1": ["a,b", "b,c,d", "", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MultiselectColumn(
+            "Multiselect column",
+            width="medium",
+            help="This is a multi-select column",
+            required=True,  # Should be ignored
+            disabled=False,  # Should be ignored
+            default=["a", "b"],  # Should be ignored
+            accept_new_options=False,  # Should be ignored
+            options=["a", "b", "c", "d", "e"],
+            color=[
+                "green",
+                "blue",
+                "red",
+                "#19747E",
+            ],
+        ),
+        "col_1": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["a", "b", "c", "d", "e"],
+            color="primary",
+            format_func=lambda x: f"Option {x}",
+        ),
+    },
+    width="content",
+    hide_index=True,
 )

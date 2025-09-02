@@ -16,30 +16,30 @@
 
 import React, { memo, ReactElement, useCallback, useState } from "react"
 
-import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
-import { useTheme } from "@emotion/react"
+import uniqueId from "lodash/uniqueId"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
-import useOnInputChange from "~lib/hooks/useOnInputChange"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "~lib/hooks/useBasicWidgetState"
-import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
-import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
+import {
+  useBasicWidgetState,
+  ValueWithSource,
+} from "~lib/hooks/useBasicWidgetState"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useOnInputChange from "~lib/hooks/useOnInputChange"
+import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
+import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledTextInput } from "./styled-components"
 
@@ -64,7 +64,7 @@ function TextInput({
     () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -97,7 +97,7 @@ function TextInput({
    */
   const [focused, setFocused] = useState(false)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const [id] = useState(() => uniqueId("text_input_"))
   const { placeholder, formId, icon, maxChars } = element
 
@@ -194,20 +194,21 @@ function TextInput({
         overrides={{
           Input: {
             style: {
+              fontWeight: theme.fontWeights.normal,
               // Issue: https://github.com/streamlit/streamlit/issues/2495
               // The input won't shrink in Firefox,
               // unless the line below is provided.
               // See https://stackoverflow.com/a/33811151
               minWidth: 0,
-              "::placeholder": {
-                opacity: "0.7",
-              },
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
               paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {

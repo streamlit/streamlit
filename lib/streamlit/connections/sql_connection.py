@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
@@ -176,8 +176,9 @@ class SQLConnection(BaseConnection["Engine"]):
 
     """
 
-    def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
+    def _connect(self, autocommit: bool = False, **kwargs: Any) -> Engine:
         import sqlalchemy
+        from sqlalchemy.engine import URL, make_url
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
@@ -190,7 +191,7 @@ class SQLConnection(BaseConnection["Engine"]):
             )
 
         if "url" in conn_params:
-            url = sqlalchemy.engine.make_url(conn_params["url"])
+            url = make_url(conn_params["url"])
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
                 if p not in conn_params:
@@ -200,14 +201,14 @@ class SQLConnection(BaseConnection["Engine"]):
                 f"+{conn_params['driver']}" if "driver" in conn_params else ""
             )
 
-            url = sqlalchemy.engine.URL.create(
+            url = URL.create(
                 drivername=drivername,
                 username=conn_params["username"],
                 password=conn_params.get("password"),
                 host=conn_params["host"],
                 port=int(conn_params["port"]) if "port" in conn_params else None,
                 database=conn_params.get("database"),
-                query=conn_params["query"] if "query" in conn_params else None,
+                query=conn_params.get("query", {}),
             )
 
         create_engine_kwargs = ChainMap(
@@ -217,8 +218,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
-        else:
-            return cast("Engine", eng)
+        return cast("Engine", eng)  # ty: ignore[redundant-cast]
 
     def query(
         self,
@@ -228,8 +228,8 @@ class SQLConnection(BaseConnection["Engine"]):
         ttl: float | int | timedelta | None = None,
         index_col: str | list[str] | None = None,
         chunksize: int | None = None,
-        params=None,
-        **kwargs,
+        params: Any | None = None,
+        **kwargs: Any,
     ) -> DataFrame:
         """Run a read-only query.
 
@@ -312,21 +312,24 @@ class SQLConnection(BaseConnection["Engine"]):
         )
         def _query(
             sql: str,
-            index_col=None,
-            chunksize=None,
-            params=None,
-            **kwargs,
+            index_col: str | list[str] | None = None,
+            chunksize: int | None = None,
+            params: Any | None = None,
+            **kwargs: Any,
         ) -> DataFrame:
             import pandas as pd
 
             instance = self._instance.connect()
-            return pd.read_sql(
-                text(sql),
-                instance,
-                index_col=index_col,
-                chunksize=chunksize,
-                params=params,
-                **kwargs,
+            return cast(
+                "DataFrame",
+                pd.read_sql(
+                    text(sql),
+                    instance,
+                    index_col=index_col,
+                    chunksize=chunksize,
+                    params=params,
+                    **kwargs,
+                ),
             )
 
         # We modify our helper function's `__qualname__` here to work around default

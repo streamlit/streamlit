@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
-import { IGitInfo, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
 export interface AppContextProps {
   /**
@@ -36,6 +36,40 @@ export interface AppContextProps {
   pageLinkBaseUrl: string
 
   /**
+   * The current page of a multi-page app.
+   * Pulled from appContext in SidebarNavLink
+   * @see SidebarNavLink
+   */
+  currentPageScriptHash: string
+
+  /**
+   * Change the page in a multi-page app.
+   * @see SidebarNav
+   */
+  onPageChange: (pageScriptHash: string) => void
+
+  /**
+   * The nav sections in a multi-page app.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  navSections: string[]
+
+  /**
+   * The pages in a multi-page app.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  appPages: IAppPage[]
+
+  /**
+   * The app logo (displayed in top left corner of app)
+   * Pulled from appContext in Sidebar
+   * @see SidebarNav
+   */
+  appLogo: Logo | null
+
+  /**
    * If non-zero, this is the number of pixels that the sidebar's
    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
    * the current theme's spacing is used.);
@@ -45,6 +79,20 @@ export interface AppContextProps {
    * @see Sidebar (StyledSidebarOpenContainer)
    */
   sidebarChevronDownshift: number
+
+  /**
+   * Whether to expand the sidebar nav.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  expandSidebarNav: boolean
+
+  /**
+   * Whether to hide the sidebar nav. Can also be configured via host message.
+   * Pulled from appContext in Sidebar
+   * @see Sidebar
+   */
+  hideSidebarNav: boolean
 
   /**
    * Whether to disable widgets and sidebar page navigation links, based on connection
@@ -62,13 +110,29 @@ export interface AppContextProps {
    * @see DeployDialog
    */
   gitInfo: IGitInfo | null
+
+  /**
+   * Whether to show the toolbar in the app header.
+   * Can be configured via host message.
+   * Pulled from appContext in Header
+   * @see Header
+   */
+  showToolbar: boolean
 }
 
-export const AppContext = React.createContext<AppContextProps | null>({
+export const AppContext = createContext<AppContextProps | null>({
   initialSidebarState: PageConfig.SidebarState.AUTO,
   pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: () => {},
+  navSections: [],
+  appPages: [],
+  appLogo: null,
   sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
   widgetsDisabled: false,
   gitInfo: null,
+  showToolbar: true,
 })
 AppContext.displayName = "AppContext"

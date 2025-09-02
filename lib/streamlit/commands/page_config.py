@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
     StreamlitInvalidPageLayoutError,
@@ -52,33 +53,9 @@ _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
 MenuItems: TypeAlias = Mapping[MenuKey, Union[str, None]]
 
-# Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
-# for the term "streamlit". Watch out for zero-width joiners,
-# as they won't parse correctly in the list() call!
 RANDOM_EMOJIS: Final = list(
     "🔥™🎉🚀🌌💣✨🌙🎆🎇💥🤩🤙🌛🤘⬆💡🤪🥂⚡💨🌠🎊🍿😛🔮🤟🌃🍃🍾💫▪🌴🎈🎬🌀🎄😝☔⛽🍂💃😎🍸🎨🥳☀😍🅱🌞😻🌟😜💦💅🦄😋😉👻🍁🤤👯🌻‼🌈👌🎃💛😚🔫🙌👽🍬🌅☁🍷👭☕🌚💁👅🥰🍜😌🎥🕺❕🧡☄💕🍻✅🌸🚬🤓🍹®☺💪😙☘🤠✊🤗🍵🤞😂💯😏📻🎂💗💜🌊❣🌝😘💆🤑🌿🦋😈⛄🚿😊🌹🥴😽💋😭🖤🙆👐⚪💟☃🙈🍭💻🥀🚗🤧🍝💎💓🤝💄💖🔞⁉⏰🕊🎧☠♥🌳🏾🙉⭐💊🍳🌎🙊💸❤🔪😆🌾✈📚💀🏠✌🏃🌵🚨💂🤫🤭😗😄🍒👏🙃🖖💞😅🎅🍄🆓👉💩🔊🤷⌚👸😇🚮💏👳🏽💘💿💉👠🎼🎶🎤👗❄🔐🎵🤒🍰👓🏄🌲🎮🙂📈🚙📍😵🗣❗🌺🙄👄🚘🥺🌍🏡♦💍🌱👑👙☑👾🍩🥶📣🏼🤣☯👵🍫➡🎀😃✋🍞🙇😹🙏👼🐝⚫🎁🍪🔨🌼👆👀😳🌏📖👃🎸👧💇🔒💙😞⛅🏻🍴😼🗿🍗♠🦁✔🤖☮🐢🐎💤😀🍺😁😴📺☹😲👍🎭💚🍆🍋🔵🏁🔴🔔🧐👰☎🏆🤡🐠📲🙋📌🐬✍🔑📱💰🐱💧🎓🍕👟🐣👫🍑😸🍦👁🆗🎯📢🚶🦅🐧💢🏀🚫💑🐟🌽🏊🍟💝💲🐍🍥🐸☝♣👊⚓❌🐯🏈📰🌧👿🐳💷🐺📞🆒🍀🤐🚲🍔👹🙍🌷🙎🐥💵🔝📸⚠❓🎩✂🍼😑⬇⚾🍎💔🐔⚽💭🏌🐷🍍✖🍇📝🍊🐙👋🤔🥊🗽🐑🐘🐰💐🐴♀🐦🍓✏👂🏴👇🆘😡🏉👩💌😺✝🐼🐒🐶👺🖕👬🍉🐻🐾⬅⏬▶👮🍌♂🔸👶🐮👪⛳🐐🎾🐕👴🐨🐊🔹©🎣👦👣👨👈💬⭕📹📷"
 )
-
-# Also pick out some vanity emojis.
-ENG_EMOJIS: Final = [
-    "🎈",  # st.balloons 🎈🎈
-    "🤓",  # Abhi
-    "🏈",  # Amey
-    "🚲",  # Thiago
-    "🐧",  # Matteo
-    "🦒",  # Ken
-    "🐳",  # Karrie
-    "🕹️",  # Jonathan
-    "🇦🇲",  # Henrikh
-    "🎸",  # Guido
-    "🦈",  # Austin
-    "💎",  # Emiliano
-    "👩‍🎤",  # Naomi
-    "🧙‍♂️",  # Jon
-    "🐻",  # Brandon
-    "🎎",  # James
-    # TODO: Solicit emojis from the rest of Streamlit
-]
 
 
 def _lower_clean_dict_keys(dict: MenuItems) -> dict[str, Any]:
@@ -115,7 +92,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     try:
         return image_to_url(
             page_icon,
-            width=-1,  # Always use full width for favicons
+            layout_config=LayoutConfig(
+                width="stretch"
+            ),  # Always use full width for favicons
             clamp=False,
             channels="RGB",
             output_format="auto",
@@ -134,26 +113,34 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
 def set_page_config(
     page_title: str | None = None,
     page_icon: PageIcon | None = None,
-    layout: Layout = "centered",
-    initial_sidebar_state: InitialSideBarState = "auto",
+    layout: Layout | None = None,
+    initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
 ) -> None:
     """
-    Configures the default settings of the page.
+    Configure the default settings of the page.
 
-    .. note::
-        This must be the first Streamlit command used on an app page, and must only
-        be set once per page.
+    This command can be called multiple times in a script run to dynamically
+    change the page configuration. The calls are additive, with each successive
+    call overriding only the parameters that are specified.
 
     Parameters
     ----------
     page_title: str or None
-        The page title, shown in the browser tab. If None, defaults to the
-        filename of the script ("app.py" would show "app • Streamlit").
+        The page title, shown in the browser tab. If this is ``None``
+        (default), the page title is inherited from the previous call of
+        ``st.set_page_config``. If this is ``None`` and no previous call
+        exists, the page title is inferred from the page source.
+
+        If a page source is a Python file, its inferred title is derived from
+        the filename. If a page source is a callable object, its inferred title
+        is derived from the callable's name.
 
     page_icon : Anything supported by st.image (except list), str, or None
-        The page favicon. If ``page_icon`` is ``None`` (default), the favicon
-        will be a monochrome Streamlit logo.
+        The page favicon. If ``page_icon`` is ``None`` (default), the page icon
+        is inherited from the previous call of ``st.set_page_config``. If this
+        is ``None`` and no previous call exists, the favicon is a monochrome
+        Streamlit logo.
 
         In addition to the types supported by |st.image|_ (except list), the
         following strings are valid:
@@ -184,33 +171,45 @@ def set_page_config(
         .. |st.image| replace:: ``st.image``
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-    layout: "centered" or "wide"
-        How the page content should be laid out. Defaults to "centered",
-        which constrains the elements into a centered column of fixed width;
-        "wide" uses the entire screen.
+    layout: "centered", "wide", or None
+        How the page content should be laid out. If this is ``None`` (default),
+        the page layout is inherited from the previous call of
+        ``st.set_page_config``. If this is ``None`` and no previous call
+        exists, the page layout is ``"centered"``.
 
-    initial_sidebar_state: "auto", "expanded", or "collapsed"
-        How the sidebar should start out. Defaults to "auto",
-        which hides the sidebar on small devices and shows it otherwise.
-        "expanded" shows the sidebar initially; "collapsed" hides it.
-        In most cases, you should just use "auto", otherwise the app will
-        look bad when embedded and viewed on mobile.
+        ``"centered"`` constrains the elements into a centered column of fixed
+        width. ``"wide"`` uses the entire screen.
+
+    initial_sidebar_state: "auto", "expanded", "collapsed", or None
+        How the sidebar should start out. If this is ``None`` (default), the
+        sidebar state is inherited from the previous call of
+        ``st.set_page_config``. If no previous call exists, the sidebar state
+        is ``"auto"``.
+
+        The folowing states are supported:
+
+        - ``"auto"``: The sidebar is hidden on small devices and shown otherwise.
+        - ``"expanded"``: The sidebar is shown initially.
+        - ``"collapsed"``: The sidebar is hidden initially.
+
+        In most cases, ``"auto"`` provides the best user experience across
+        devices of different sizes.
 
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
-        The keys in this dict denote the menu item you'd like to configure:
+        The keys in this dict denote the menu item to configure. The following
+        keys can have string or ``None`` values:
 
-        - "Get help": str or None
-            The URL this menu item should point to.
-            If None, hides this menu item.
-        - "Report a Bug": str or None
-            The URL this menu item should point to.
-            If None, hides this menu item.
-        - "About": str or None
-            A markdown string to show in the About dialog.
-            If None, only shows Streamlit's default About text.
+        - "Get help": The URL this menu item should point to.
+        - "Report a Bug": The URL this menu item should point to.
+        - "About": A markdown string to show in the About dialog.
 
-        The URL may also refer to an email address e.g. ``mailto:john@example.com``.
+        A URL may also refer to an email address e.g. ``mailto:john@example.com``.
+
+        If you do not include a key, its menu item will be hidden (unless it
+        was set by a previous call to ``st.set_page_config``). To remove an
+        item that was specified in a previous call to ``st.set_page_config``,
+        set its value to ``None`` in the dictionary.
 
     Example
     -------
@@ -242,7 +241,11 @@ def set_page_config(
         pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
         pb_layout = PageConfigProto.WIDE
+    elif layout is None:
+        # Allows for multiple (additive) calls to set_page_config
+        pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
+        # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidPageLayoutError(layout=layout)
 
     msg.page_config_changed.layout = pb_layout
@@ -254,7 +257,11 @@ def set_page_config(
         pb_sidebar_state = PageConfigProto.EXPANDED
     elif initial_sidebar_state == "collapsed":
         pb_sidebar_state = PageConfigProto.COLLAPSED
+    elif initial_sidebar_state is None:
+        # Allows for multiple (additive) calls to set_page_config
+        pb_sidebar_state = PageConfigProto.SIDEBAR_UNSET
     else:
+        # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidSidebarStateError(
             initial_sidebar_state=initial_sidebar_state
         )
@@ -274,12 +281,13 @@ def set_page_config(
 
 
 def get_random_emoji() -> str:
-    # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?
-    return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
+    return random.choice(RANDOM_EMOJIS)  # noqa: S311
 
 
-def set_menu_items_proto(lowercase_menu_items, menu_items_proto) -> None:
+def set_menu_items_proto(
+    lowercase_menu_items: MenuItems, menu_items_proto: PageConfigProto.MenuItems
+) -> None:
     if GET_HELP_KEY in lowercase_menu_items:
         if lowercase_menu_items[GET_HELP_KEY] is not None:
             menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
@@ -294,7 +302,12 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto) -> None:
 
     if ABOUT_KEY in lowercase_menu_items:
         if lowercase_menu_items[ABOUT_KEY] is not None:
-            menu_items_proto.about_section_md = dedent(lowercase_menu_items[ABOUT_KEY])
+            menu_items_proto.about_section_md = dedent(
+                lowercase_menu_items[ABOUT_KEY] or ""
+            )
+        else:
+            # For multiple calls to set_page_config, clears previously set about markdown
+            menu_items_proto.clear_about_md = True
 
 
 def validate_menu_items(menu_items: MenuItems) -> None:

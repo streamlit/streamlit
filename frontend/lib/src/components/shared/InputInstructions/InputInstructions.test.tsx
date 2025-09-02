@@ -30,16 +30,16 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 describe("InputInstructions", () => {
-  const props = getProps()
+  const defaultProps = getProps()
 
   it("renders without crashing", () => {
-    render(<InputInstructions {...props} />)
+    render(<InputInstructions {...defaultProps} />)
 
     expect(screen.getByTestId("InputInstructions").textContent).toBeDefined()
   })
 
   it("should show Enter instructions by default", () => {
-    render(<InputInstructions {...props} />)
+    render(<InputInstructions {...defaultProps} />)
 
     expect(screen.getByText("Press Enter to apply")).toBeVisible()
   })
@@ -60,20 +60,20 @@ describe("InputInstructions", () => {
         writable: true,
       })
 
-      const props = getProps({
+      const currProps = getProps({
         type: "multiline",
       })
-      render(<InputInstructions {...props} />)
+      render(<InputInstructions {...currProps} />)
 
       expect(screen.getByText("Press ⌘+Enter to apply")).toBeVisible()
     })
 
     it("should show instructions for max length", () => {
-      const props = getProps({
+      const currProps = getProps({
         type: "multiline",
         maxLength: 3,
       })
-      render(<InputInstructions {...props} />)
+      render(<InputInstructions {...currProps} />)
 
       expect(screen.getByTestId("InputInstructions").textContent).toBe(
         "Press ⌘+Enter to apply3/3"
@@ -103,11 +103,11 @@ describe("InputInstructions", () => {
     })
 
     it("should show instructions for max length", () => {
-      const props = getProps({
+      const currProps = getProps({
         type: "chat",
         maxLength: 3,
       })
-      render(<InputInstructions {...props} />)
+      render(<InputInstructions {...currProps} />)
 
       expect(screen.getByText("3/3")).toBeVisible()
     })

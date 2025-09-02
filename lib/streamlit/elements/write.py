@@ -86,7 +86,8 @@ class WriteMixin:
             The generator or iterable to stream.
 
             If you pass an async generator, Streamlit will internally convert
-            it to a sync generator.
+            it to a sync generator. If the generator depends on a cached object
+            with async references, this can raise an error.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to
@@ -156,7 +157,7 @@ class WriteMixin:
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
 
-        def flush_stream_response():
+        def flush_stream_response() -> None:
             """Write the full response to the app."""
             nonlocal streamed_response
             nonlocal stream_container
@@ -208,7 +209,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -245,7 +246,7 @@ class WriteMixin:
         if not written_content:
             # If nothing was streamed, return an empty string.
             return ""
-        elif len(written_content) == 1 and isinstance(written_content[0], str):
+        if len(written_content) == 1 and isinstance(written_content[0], str):
             # If the output only contains a single string, return it as a string
             return written_content[0]
 
@@ -253,7 +254,7 @@ class WriteMixin:
         return written_content
 
     @gather_metrics("write")
-    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
+    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs: Any) -> None:
         """Displays arguments in the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -380,19 +381,19 @@ class WriteMixin:
 
         Oh, one more thing: ``st.write`` accepts chart objects too! For example:
 
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
         >>> import altair as alt
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
-        >>> c = (
+        >>> df = pd.DataFrame(rng(0).standard_normal((200, 3)), columns=["a", "b", "c"])
+        >>> chart = (
         ...     alt.Chart(df)
         ...     .mark_circle()
         ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.write(c)
+        >>> st.write(chart)
 
         ..  output::
             https://doc-vega-lite-chart.streamlit.app/
@@ -428,7 +429,7 @@ class WriteMixin:
                 "when called as `st.write()` or `st.sidebar.write()`."
             )
 
-        def flush_buffer():
+        def flush_buffer() -> None:
             if string_buffer:
                 text_content = " ".join(string_buffer)
                 # The usage of empty here prevents
@@ -528,10 +529,7 @@ class WriteMixin:
             ):
                 flush_buffer()
                 self.write_stream(arg)
-            elif isinstance(arg, HELP_TYPES):
-                flush_buffer()
-                self.dg.help(arg)
-            elif dataclasses.is_dataclass(arg):
+            elif isinstance(arg, HELP_TYPES) or dataclasses.is_dataclass(arg):
                 flush_buffer()
                 self.dg.help(arg)
             elif inspect.isclass(arg):

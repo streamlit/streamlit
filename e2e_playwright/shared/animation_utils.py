@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 from playwright.sync_api import Locator, Page
 
 from e2e_playwright.conftest import wait_until
@@ -54,13 +56,12 @@ def check_if_offscreen(app: Page, img: Locator) -> bool:
         return False
 
     # Check if the bounding box is entirely outside the viewport
-    is_outside = (
+    return (
         bbox["x"] + bbox["width"] <= 0  # Left of viewport
         or bbox["x"] >= viewport["width"]  # Right of viewport
         or bbox["y"] + bbox["height"] <= 0  # Above viewport
         or bbox["y"] >= viewport["height"]  # Below viewport
     )
-    return is_outside
 
 
 def check_if_onscreen(app: Page, img: Locator) -> bool:
@@ -89,7 +90,7 @@ def check_if_onscreen(app: Page, img: Locator) -> bool:
 
 def wait_for_animation_to_be_hidden(
     app: Page, animation_images: Locator, timeout: int = 5000
-):
+) -> None:
     """
     Waits for all animation elements to move outside the viewport.
 
@@ -105,12 +106,12 @@ def wait_for_animation_to_be_hidden(
     for img in animation_images.all():
         wait_until(
             app,
-            lambda current_img=img: check_if_offscreen(app, current_img),
+            partial(check_if_offscreen, app, img),
             timeout=timeout,
         )
 
 
-def assert_animation_is_hidden(app: Page, animation_images: Locator):
+def assert_animation_is_hidden(app: Page, animation_images: Locator) -> None:
     """
     Asserts that all animation elements are outside the viewport.
 

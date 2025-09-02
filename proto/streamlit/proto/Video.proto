@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "VideoProto";
 
+import "streamlit/proto/WidthConfig.proto";
+
 message SubtitleTrack {
     string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
     string url = 2;
@@ -54,6 +56,8 @@ message Video {
   bool muted = 11;
 
   string id = 12;
+
+  optional streamlit.WidthConfig width_config = 13;
 
   reserved 1,2,4;
   reserved "format", "data";

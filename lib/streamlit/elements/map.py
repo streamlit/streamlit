@@ -20,8 +20,8 @@ import copy
 import json
 from typing import TYPE_CHECKING, Any, Final, cast
 
-import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit import config, dataframe_util
+from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -94,21 +94,26 @@ class MapMixin:
         This is a wrapper around ``st.pydeck_chart`` to quickly create
         scatterplot charts on top of a map, with auto-centering and auto-zoom.
 
-        When using this command, Mapbox provides the map tiles to render map
-        content. Note that Mapbox is a third-party product and Streamlit accepts
-        no responsibility or liability of any kind for Mapbox or for any content
-        or information made available by Mapbox.
+        When using this command, a service called Carto_ provides the map tiles to render
+        map content. If you're using advanced PyDeck features you may need to obtain
+        an API key from Carto first. You can do that as
+        ``pydeck.Deck(api_keys={"carto": YOUR_KEY})`` or by setting the CARTO_API_KEY
+        environment variable. See `PyDeck's documentation`_ for more information.
 
-        Mapbox requires users to register and provide a token before users can
-        request map tiles. Currently, Streamlit provides this token for you, but
-        this could change at any time. We strongly recommend all users create and
-        use their own personal Mapbox token to avoid any disruptions to their
-        experience. You can do this with the ``mapbox.token`` config option. The
-        use of Mapbox is governed by Mapbox's Terms of Use.
+        Another common provider for map tiles is Mapbox_. If you prefer to use that,
+        you'll need to create an account at https://mapbox.com and specify your Mapbox
+        key when creating the ``pydeck.Deck`` object. You can do that as
+        ``pydeck.Deck(api_keys={"mapbox": YOUR_KEY})`` or by setting the MAPBOX_API_KEY
+        environment variable.
 
-        To get a token for yourself, create an account at https://mapbox.com.
-        For more info on how to set config options, see
-        https://docs.streamlit.io/develop/api-reference/configuration/config.toml.
+        .. _Carto: https://carto.com
+        .. _Mapbox: https://mapbox.com
+        .. _PyDeck's documentation: https://deckgl.readthedocs.io/en/latest/deck.html
+
+        Carto and Mapbox are third-party products and Streamlit accepts no responsibility
+        or liability of any kind for Carto or Mapbox, or for any content or information
+        made available by Carto or Mapbox. The use of Carto or Mapbox is governed by
+        their respective Terms of Use.
 
         Parameters
         ----------
@@ -183,14 +188,15 @@ class MapMixin:
 
         Examples
         --------
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=["lat", "lon"],
-        ... )
+        >>>     rng(0).standard_normal((1000, 2)) / [50, 50] + [37.76, -122.4],
+        >>>     columns=["lat", "lon"],
+        >>> )
+        >>>
         >>> st.map(df)
 
         .. output::
@@ -205,16 +211,16 @@ class MapMixin:
         and longitude components, as well as set size and color of each
         datapoint dynamically based on other columns:
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df = pd.DataFrame(
         ...     {
-        ...         "col1": np.random.randn(1000) / 50 + 37.76,
-        ...         "col2": np.random.randn(1000) / 50 + -122.4,
-        ...         "col3": np.random.randn(1000) * 100,
-        ...         "col4": np.random.rand(1000, 4).tolist(),
+        ...         "col1": rng(0).standard_normal(1000) / 50 + 37.76,
+        ...         "col2": rng(1).standard_normal(1000) / 50 + -122.4,
+        ...         "col3": rng(2).standard_normal(1000) * 100,
+        ...         "col4": rng(3).standard_normal((1000, 4)).tolist(),
         ...     }
         ... )
         >>>
@@ -225,23 +231,8 @@ class MapMixin:
            height: 600px
 
         """
-        # This feature was turned off while we investigate why different
-        # map styles cause DeckGL to crash.
-        #
-        # For reference, this was the docstring for map_style:
-        #
-        #   map_style : str or None
-        #       One of Mapbox's map style URLs. A full list can be found here:
-        #       https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-        #
-        #       This feature requires a Mapbox token. See the top of these docs
-        #       for information on how to get one and set it up in Streamlit.
-        #
-        map_style = None
         map_proto = DeckGlJsonChartProto()
-        deck_gl_json = to_deckgl_json(
-            data, latitude, longitude, size, color, map_style, zoom
-        )
+        deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
         marshall(
             map_proto, deck_gl_json, use_container_width, width=width, height=height
         )
@@ -259,7 +250,6 @@ def to_deckgl_json(
     lon: str | None,
     size: None | str | float,
     color: None | str | Collection[float],
-    map_style: str | None,
     zoom: int | None,
 ) -> str:
     if data is None:
@@ -291,7 +281,7 @@ def to_deckgl_json(
     )
     df = df[used_columns]
 
-    color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
+    converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 
     zoom, center_lat, center_lon = _get_viewport_details(
         df, lat_col_name, lon_col_name, zoom
@@ -308,18 +298,10 @@ def to_deckgl_json(
             "getRadius": size_arg,
             "radiusMinPixels": 3,
             "radiusUnits": "meters",
-            "getFillColor": color_arg,
+            "getFillColor": converted_color_arg,
             "data": df.to_dict("records"),
         }
     ]
-
-    if map_style:
-        if not config.get_option("mapbox.token"):
-            raise StreamlitAPIException(
-                "You need a Mapbox token in order to select a map type. "
-                "Refer to the docs for st.map for more information."
-            )
-        default["mapStyle"] = map_style
 
     return json.dumps(default)
 
@@ -352,8 +334,7 @@ def _get_lat_or_lon_col_name(
                 f"Map data must contain a {human_readable_name} column named: "
                 f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
             )
-        else:
-            col_name = candidate_col_name
+        col_name = candidate_col_name
 
     # Check that the column is well-formed.
     # IMPLEMENTATION NOTE: We can't use isnull().values.any() because .values can return
@@ -374,7 +355,7 @@ def _get_value_and_col_name(
     data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> tuple[Any, str | None]:
+) -> tuple[str, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -386,7 +367,7 @@ def _get_value_and_col_name(
     - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
     """
 
-    pydeck_arg: str | float
+    pydeck_arg: str
 
     if isinstance(value_or_name, str) and value_or_name in data.columns:
         col_name = value_or_name
@@ -394,17 +375,14 @@ def _get_value_and_col_name(
     else:
         col_name = None
 
-        if value_or_name is None:
-            pydeck_arg = default_value
-        else:
-            pydeck_arg = value_or_name
+        pydeck_arg = default_value if value_or_name is None else value_or_name
 
     return pydeck_arg, col_name
 
 
 def _convert_color_arg_or_column(
     data: DataFrame,
-    color_arg: str | Color,
+    color_arg: str,
     color_col_name: str | None,
 ) -> None | str | IntColorTuple:
     """Converts color to a format accepted by PyDeck.
@@ -433,8 +411,6 @@ def _convert_color_arg_or_column(
                 f'Column "{color_col_name}" does not appear to contain valid colors.'
             )
 
-        # This is guaranteed to be a str because of _get_value_and_col_name
-        assert isinstance(color_arg, str)
         color_arg_out = color_arg
 
     elif color_arg is not None:
@@ -457,10 +433,7 @@ def _get_viewport_details(
     range_lat = abs(max_lat - min_lat)
 
     if zoom is None:
-        if range_lon > range_lat:
-            longitude_distance = range_lon
-        else:
-            longitude_distance = range_lat
+        longitude_distance = max(range_lat, range_lon)
         zoom = _get_zoom_level(longitude_distance)
 
     return zoom, center_lat, center_lon
@@ -506,3 +479,7 @@ def marshall(
         pydeck_proto.height = height
 
     pydeck_proto.id = ""
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token

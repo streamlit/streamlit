@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react"
+import { renderHook } from "@testing-library/react"
 
 import { DOMRectKeys, useResizeObserver } from "./useResizeObserver"
 
@@ -70,32 +70,5 @@ describe("useResizeObserver", () => {
     observer.observe(mockElement)
 
     expect(mockObserve).toHaveBeenCalledWith(mockElement)
-  })
-
-  it("should handle force recalculation", async () => {
-    const properties: DOMRectKeys[] = ["width", "height"]
-    const { result } = renderHook(() => useResizeObserver(properties))
-
-    // Simulate element reference
-    const mockElement = document.createElement("div")
-    vi.spyOn(mockElement, "getBoundingClientRect").mockReturnValue({
-      width: 100,
-      height: 200,
-    } as DOMRect)
-
-    // Set the ref and trigger initial calculation
-    act(() => {
-      result.current.elementRef.current = mockElement
-    })
-
-    // Force recalculation
-    await act(async () => {
-      result.current.forceRecalculate()
-    })
-
-    // Run any pending timers
-    vi.runAllTimers()
-
-    expect(result.current.values).toEqual([100, 200])
   })
 })

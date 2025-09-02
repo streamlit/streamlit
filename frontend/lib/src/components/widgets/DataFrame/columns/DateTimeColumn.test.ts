@@ -297,6 +297,14 @@ describe("DateTimeColumn", () => {
 })
 
 describe("DateColumn", () => {
+  afterEach(() => {
+    // Restore original value after each test
+    Object.defineProperty(navigator, "languages", {
+      value: navigator.languages,
+      configurable: true,
+    })
+  })
+
   it("creates a valid column instance", () => {
     const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
     expect(mockColumn.kind).toEqual("date")
@@ -449,6 +457,47 @@ describe("DateColumn", () => {
     const mockColumn = DateColumn(MOCK_DATE_COLUMN_CUSTOM_FORMAT)
     const cell = mockColumn.getCell(EXAMPLE_DATE)
     expect((cell as DatePickerType).data.displayDate).toEqual("Apr 25th, 2023")
+  })
+
+  // Issue #11291 - st.column_config 'localized' option
+  it("handles localized format", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      value: ["pt-BR"],
+      configurable: true,
+    })
+
+    const MOCK_DATE_COLUMN_CUSTOM_FORMAT = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "localized",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_CUSTOM_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((cell as DatePickerType).data.displayDate).toEqual(
+      "25 de abr. de 2023"
+    )
+  })
+
+  it("handles invalid localized format - falls back to default format", () => {
+    // Update navigator.languages to return an invalid locale for this test
+    Object.defineProperty(navigator, "languages", {
+      value: ["INVALID"],
+      configurable: true,
+    })
+
+    const MOCK_DATE_COLUMN_CUSTOM_FORMAT = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "localized",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_CUSTOM_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((cell as DatePickerType).data.displayDate).toEqual("Apr 25, 2023")
   })
 })
 

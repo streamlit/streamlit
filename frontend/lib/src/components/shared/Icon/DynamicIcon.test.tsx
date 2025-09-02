@@ -58,6 +58,17 @@ describe("Dynamic icon", () => {
     expect(testId.textContent).toEqual(icon.textContent)
   })
 
+  it("renders without crashing with prefixed Emoji icon", () => {
+    const props = getProps({ iconValue: "emoji:⛰️" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stIconEmoji")
+    const icon = screen.getByText("⛰️")
+
+    expect(testId).toBeInTheDocument()
+    expect(icon).toBeInTheDocument()
+    expect(testId.textContent).toEqual(icon.textContent)
+  })
+
   it("renders without crashing Styled image", () => {
     const props = getProps({ iconValue: ":material/star_filled:" })
     render(<DynamicIcon {...props} />)

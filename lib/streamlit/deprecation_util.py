@@ -27,14 +27,25 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-def _should_show_deprecation_warning_in_browser() -> bool:
+def _error_details_in_browser_enabled() -> bool:
     """True if we should print deprecation warnings to the browser."""
     return bool(config.get_option("client.showErrorDetails"))
 
 
-def show_deprecation_warning(message: str) -> None:
-    """Show a deprecation warning message."""
-    if _should_show_deprecation_warning_in_browser():
+def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
+    """Show a deprecation warning message.
+
+    Parameters
+    ----------
+    message : str
+        The deprecation warning message.
+    show_in_browser : bool, default=True
+        Whether to show the deprecation warning in the browser. When this is True,
+        we will show the deprecation warning in the browser unless the user has
+        disabled error details in the browser by setting the `client.showErrorDetails`
+        config option to "none".
+    """
+    if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 
     # We always log deprecation warnings
@@ -93,11 +104,15 @@ def deprecate_func_name(
     """
 
     @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
+    def wrapped_func(*args: Any, **kwargs: Any) -> Any:
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
-                old_name, name_override or func.__name__, removal_date, extra_message
+                old_name,
+                name_override
+                or (str(func.__name__) if hasattr(func, "__name__") else "unknown"),
+                removal_date,
+                extra_message,
             )
         )
         return result
@@ -167,7 +182,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             show_warning()
 
     class Wrapper:
-        def __init__(self):
+        def __init__(self) -> None:
             # Override all the Wrapped object's magic functions
             for name in Wrapper._get_magic_functions(obj.__class__):
                 setattr(
@@ -176,7 +191,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
                     property(self._make_magic_function_proxy(name)),
                 )
 
-        def __getattr__(self, attr):
+        def __getattr__(self, attr: str) -> Any:
             # We handle __getattr__ separately from our other magic
             # functions. The wrapped class may not actually implement it,
             # but we still need to implement it to call all its normal
@@ -188,7 +203,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             return getattr(obj, attr)
 
         @staticmethod
-        def _get_magic_functions(self_cls) -> list[str]:
+        def _get_magic_functions(self_cls: type[object]) -> list[str]:
             # ignore the handful of magic functions we cannot override without
             # breaking the Wrapper.
             ignore = ("__class__", "__dict__", "__getattribute__", "__getattr__")
@@ -199,8 +214,8 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             ]
 
         @staticmethod
-        def _make_magic_function_proxy(name):
-            def proxy(self, *args):
+        def _make_magic_function_proxy(name: str) -> Callable[[Any], Any]:
+            def proxy(_self: Any, *args: Any) -> Any:
                 maybe_show_warning()
                 return getattr(obj, name)
 

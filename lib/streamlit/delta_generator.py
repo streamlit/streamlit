@@ -63,10 +63,15 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.lib.form_utils import FormData, current_form_id
+from streamlit.elements.lib.layout_utils import (
+    get_height_config,
+    get_width_config,
+)
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
+from streamlit.elements.pdf import PdfMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
@@ -100,10 +105,13 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from google.protobuf.message import Message
 
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.elements.lib.layout_utils import LayoutConfig
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -147,6 +155,19 @@ def _maybe_print_use_warning() -> None:
             )
 
 
+def _maybe_print_fragment_callback_warning() -> None:
+    """Print a warning if elements are being modified during a fragment callback."""
+    ctx = get_script_run_ctx()
+    if ctx and getattr(ctx, "in_fragment_callback", False):
+        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+
+        logger.get_logger("root").warning(
+            f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
+            "During a fragment rerun, within a callback, displaying elements is not officially supported because "
+            "those elements will replace the existing elements at the top of your app."
+        )
+
+
 class DeltaGenerator(
     AlertMixin,
     AudioInputMixin,
@@ -176,6 +197,7 @@ class DeltaGenerator(
     MetricMixin,
     MultiSelectMixin,
     NumberInputMixin,
+    PdfMixin,
     PlotlyMixin,
     ProgressMixin,
     PydeckMixin,
@@ -275,7 +297,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for _, func in mixin.__dict__.items():
+            for func in mixin.__dict__.values():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -284,13 +306,13 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        context_dg_stack.set(context_dg_stack.get() + (self,))
+        context_dg_stack.set((*context_dg_stack.get(), self))
 
     def __exit__(
         self,
-        type: Any,
-        value: Any,
-        traceback: Any,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
         # with block ended
 
@@ -352,7 +374,7 @@ class DeltaGenerator(
 
         return wrapper
 
-    def __deepcopy__(self, _memo):
+    def __deepcopy__(self, _memo: Any) -> DeltaGenerator:
         dg = DeltaGenerator(
             root_container=self._root_container,
             cursor=deepcopy(self._cursor),
@@ -393,8 +415,7 @@ class DeltaGenerator(
         """
         if self._provided_cursor is None:
             return cursor.get_container_cursor(self._root_container)
-        else:
-            return self._provided_cursor
+        return self._provided_cursor
 
     @property
     def _is_top_level(self) -> bool:
@@ -423,7 +444,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         add_rows_metadata: AddRowsMetadata | None = None,
-        user_key: str | None = None,
+        layout_config: LayoutConfig | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -435,8 +456,6 @@ class DeltaGenerator(
             The actual proto in the NewElement type e.g. Alert/Button/Slider
         add_rows_metadata : AddRowsMetadata or None
             Metadata for the add_rows method
-        user_key : str or None
-            A custom key for the element provided by the user.
 
         Returns
         -------
@@ -457,11 +476,24 @@ class DeltaGenerator(
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
+        # Warn if an element is being changed during a fragment callback.
+        _maybe_print_fragment_callback_warning()
 
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
+
+        if layout_config:
+            if layout_config.height:
+                msg.delta.new_element.height_config.CopyFrom(
+                    get_height_config(layout_config.height)
+                )
+
+            if layout_config.width:
+                msg.delta.new_element.width_config.CopyFrom(
+                    get_width_config(layout_config.width)
+                )
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
@@ -503,23 +535,24 @@ class DeltaGenerator(
             invoked_dg_id=self.id,
             used_dg_id=dg.id,
             returned_dg_id=output_dg.id,
+            layout_config=layout_config,
         )
 
         return output_dg
 
     def _block(
         self,
-        block_proto: Block_pb2.Block = Block_pb2.Block(),
+        block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
     ) -> DeltaGenerator:
+        if block_proto is None:
+            block_proto = Block_pb2.Block()
+
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
-        # Convert the generator to a list, so we can use it multiple times.
-        ancestor_block_types = list(dg._ancestor_block_types)
-        _check_nested_element_violation(self, block_type, ancestor_block_types)
 
         if dg._root_container is None or dg._cursor is None:
             return dg
@@ -533,7 +566,7 @@ class DeltaGenerator(
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
             root_container=dg._root_container,
-            parent_path=dg._cursor.parent_path + (dg._cursor.index,),
+            parent_path=(*dg._cursor.parent_path, dg._cursor.index),
         )
 
         # `dg_type` param added for st.status container. It allows us to
@@ -572,35 +605,3 @@ def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(list(dg._ancestor_block_types))
     return in_sidebar and not has_container
-
-
-def _check_nested_element_violation(
-    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: list[BlockType]
-) -> None:
-    """Check if elements are nested in a forbidden way.
-
-    Raises
-    ------
-      StreamlitAPIException: throw if an invalid element nesting is detected.
-    """
-
-    if block_type == "column":
-        num_of_parent_columns = dg._count_num_of_parent_columns(ancestor_block_types)
-        if dg._root_container == RootContainer.SIDEBAR and num_of_parent_columns > 0:
-            raise StreamlitAPIException(
-                "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-            )
-        if num_of_parent_columns > 1:
-            raise StreamlitAPIException(
-                "Columns can only be placed inside other columns up to one level of nesting."
-            )
-    if block_type == "chat_message" and block_type in ancestor_block_types:
-        raise StreamlitAPIException(
-            "Chat messages cannot nested inside other chat messages."
-        )
-    if block_type == "expandable" and block_type in ancestor_block_types:
-        raise StreamlitAPIException(
-            "Expanders may not be nested inside other expanders."
-        )
-    if block_type == "popover" and block_type in ancestor_block_types:
-        raise StreamlitAPIException("Popovers may not be nested inside other popovers.")

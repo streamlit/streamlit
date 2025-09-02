@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
+import Selectbox, { Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -35,6 +34,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
   onChange: vi.fn(),
   placeholder: "Select...",
+  acceptNewOptions: false,
   ...props,
 })
 
@@ -69,23 +69,24 @@ describe("Selectbox widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({
+    const currProps = getProps({
       labelVisibility: LabelVisibilityOptions.Hidden,
     })
-    render(<Selectbox {...props} />)
+    render(<Selectbox {...currProps} />)
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
       "visibility: hidden"
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({
+    const currProps = getProps({
       labelVisibility: LabelVisibilityOptions.Collapsed,
     })
-    render(<Selectbox {...props} />)
+    render(<Selectbox {...currProps} />)
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
+  // Placeholder tests
   it("pass placeholder prop correctly", () => {
     props = getProps({
       value: undefined,
@@ -95,27 +96,17 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("Please select")).toBeInTheDocument()
   })
 
-  it("renders a placeholder with empty options", () => {
+  it("integrates with placeholder utility - disabled state when no options", () => {
     props = getProps({
       options: [],
       value: undefined,
+      placeholder: "", // Empty string triggers default logic
     })
     render(<Selectbox {...props} />)
 
+    // Verifies integration with getSelectPlaceholder utility works
     expect(screen.getByText("No options to select")).toBeInTheDocument()
     expect(screen.getByRole("combobox")).toBeDisabled()
-  })
-
-  it("renders a placeholder with empty options when acceptNewOptions is true", () => {
-    props = getProps({
-      options: [],
-      acceptNewOptions: true,
-      value: undefined,
-    })
-    render(<Selectbox {...props} />)
-
-    expect(screen.getByText("Add an option")).toBeInTheDocument()
-    expect(screen.getByRole("combobox")).not.toBeDisabled()
   })
 
   it("renders options", async () => {
@@ -146,12 +137,12 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     await user.click(selectbox)
     const options = screen.getAllByRole("option")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
+    await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(screen.getByText(props.options[2])).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+    ).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
@@ -179,38 +170,21 @@ describe("Selectbox widget", () => {
     expect(options[0]).toHaveTextContent("b")
   })
 
-  it("fuzzy filters options correctly", () => {
-    // This test just makes sure the filter algorithm works correctly. The e2e
-    // test actually types something in the selectbox and makes sure that it
-    // shows the right options.
+  it("predictably produces case sensitive matches", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["aa", "Aa", "aA"],
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
 
-    const options = [
-      { label: "e2e/scripts/components_iframe.py", value: "" },
-      { label: "e2e/scripts/st_warning.py", value: "" },
-      { label: "e2e/scripts/st_container.py", value: "" },
-      { label: "e2e/scripts/st_dataframe_sort_column.py", value: "" },
-      { label: "e2e/scripts/app_hotkeys.py", value: "" },
-      { label: "e2e/scripts/st_info.py", value: "" },
-      { label: "e2e/scripts/st_echo.py", value: "" },
-      { label: "e2e/scripts/st_json.py", value: "" },
-      { label: "e2e/scripts/st_experimental_get_query_params.py", value: "" },
-      { label: "e2e/scripts/st_markdown.py", value: "" },
-      { label: "e2e/scripts/st_color_picker.py", value: "" },
-      { label: "e2e/scripts/st_expander.py", value: "" },
-    ]
+    await user.type(selectboxInput, "aa")
 
-    const results1 = fuzzyFilterSelectOptions(options, "esstm")
-    expect(results1.map(it => it.label)).toEqual([
-      "e2e/scripts/st_markdown.py",
-      "e2e/scripts/st_dataframe_sort_column.py",
-      "e2e/scripts/st_experimental_get_query_params.py",
-      "e2e/scripts/components_iframe.py",
-    ])
-
-    const results2 = fuzzyFilterSelectOptions(options, "eseg")
-    expect(results2.map(it => it.label)).toEqual([
-      "e2e/scripts/st_experimental_get_query_params.py",
-    ])
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[0]).toHaveTextContent("aa")
+    expect(options[1]).toHaveTextContent("Aa")
+    expect(options[2]).toHaveTextContent("aA")
   })
 
   it("updates value if new value provided from parent", () => {
@@ -239,7 +213,7 @@ describe("Selectbox widget", () => {
     )
   })
 
-  it("does not call onChange when the user deletes characters", async () => {
+  it("does not call onChange when the user deletes characters", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(
@@ -281,6 +255,33 @@ describe("Selectbox widget", () => {
     expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
   })
 
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.onChange).toHaveBeenCalledWith("mobile new option")
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: false, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
+  })
+
   it("does not allow new options when acceptNewOptions is false", async () => {
     const user = userEvent.setup()
     props = getProps({
@@ -308,5 +309,19 @@ describe("Selectbox widget with optional props", () => {
     render(<Selectbox {...props} />)
 
     expect(screen.getByTestId("stTooltipIcon")).toBeInTheDocument()
+  })
+
+  it("allows case sensitive new options to be added", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["aa", "Aa", "aA"],
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AA")
+
+    expect(screen.getByText("Add: AA")).toBeInTheDocument()
   })
 })

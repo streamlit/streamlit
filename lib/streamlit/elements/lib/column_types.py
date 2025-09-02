@@ -12,31 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Allow function names with uppercase letters:
+# ruff: noqa: N802
+
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, TypedDict
+import itertools
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
     "localized",
     "dollar",
     "euro",
+    "yen",
     "percent",
     "compact",
     "scientific",
     "engineering",
     "accounting",
+    "bytes",
 ]
 
-ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
+ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -56,6 +63,7 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "multiselect",
     "json",
 ]
 
@@ -78,9 +86,17 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
+SelectboxOptionValue: TypeAlias = Union[str, int, float, bool]
+
+
+class SelectboxOption(TypedDict):
+    value: SelectboxOptionValue
+    label: NotRequired[str | None]
+
+
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[list[str | int | float] | None]
+    options: NotRequired[list[SelectboxOptionValue | SelectboxOption] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -116,6 +132,18 @@ class ListColumnConfig(TypedDict):
     type: Literal["list"]
 
 
+class MultiselectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | None]
+
+
+class MultiselectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[Iterable[MultiselectOption | str] | None]
+    accept_new_options: NotRequired[bool | None]
+
+
 class DatetimeColumnConfig(TypedDict):
     type: Literal["datetime"]
     format: NotRequired[
@@ -148,6 +176,7 @@ class ProgressColumnConfig(TypedDict):
     format: NotRequired[str | NumberFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
+    step: NotRequired[int | float | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -163,7 +192,7 @@ class ColumnConfig(TypedDict, total=False):
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -171,6 +200,7 @@ class ColumnConfig(TypedDict, total=False):
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -182,8 +212,7 @@ class ColumnConfig(TypedDict, total=False):
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -219,7 +248,7 @@ class ColumnConfig(TypedDict, total=False):
     disabled: bool | None
     required: bool | None
     pinned: bool | None
-    default: str | bool | int | float | None
+    default: str | bool | int | float | list[str] | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
         NumberColumnConfig
@@ -236,6 +265,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | MultiselectColumnConfig
         | JsonColumnConfig
         | None
     )
@@ -267,7 +297,7 @@ def Column(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -275,6 +305,7 @@ def Column(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -286,8 +317,7 @@ def Column(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -371,7 +401,7 @@ def NumberColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -379,6 +409,7 @@ def NumberColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -390,8 +421,7 @@ def NumberColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -413,7 +443,7 @@ def NumberColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format:  str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
@@ -423,13 +453,15 @@ def NumberColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-          ``"%X"`` to show an unsigned hexidecimal integer (e.g. "4D2"). You
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
           ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
@@ -451,7 +483,11 @@ def NumberColumn(
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
-        number of digits after the decimal even without setting ``format``.
+        number of digits after the decimal are displayed.
+
+        If ``format`` is a predefined format like ``"dollar"``, ``step``
+        overrides the display precision. If ``format`` is a printf-style format
+        string, ``step`` will not change the display precision.
 
     Examples
     --------
@@ -482,7 +518,7 @@ def NumberColumn(
     .. output::
         https://doc-number-column.streamlit.app/
         height: 300px
-    """
+    """  # noqa: E501
 
     return ColumnConfig(
         label=label,
@@ -527,7 +563,7 @@ def TextColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -535,6 +571,7 @@ def TextColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -546,8 +583,7 @@ def TextColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -649,7 +685,7 @@ def LinkColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -657,6 +693,7 @@ def LinkColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -668,8 +705,7 @@ def LinkColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -706,6 +742,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
+        - A Material icon that is displayed in every cell, e.g. ``":material/open_in_new:"``.
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
@@ -763,6 +800,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
@@ -804,7 +843,7 @@ def CheckboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -812,6 +851,7 @@ def CheckboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -823,8 +863,7 @@ def CheckboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -897,8 +936,9 @@ def SelectboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    default: str | int | float | None = None,
-    options: Iterable[str | int | float] | None = None,
+    default: SelectboxOptionValue | None = None,
+    options: Iterable[SelectboxOptionValue] | None = None,
+    format_func: Callable[[SelectboxOptionValue], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -912,7 +952,7 @@ def SelectboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -920,6 +960,7 @@ def SelectboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -931,8 +972,7 @@ def SelectboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -954,11 +994,17 @@ def SelectboxColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    options: Iterable of str or None
+    options: Iterable[str, int, float, bool] or None
         The options that can be selected during editing. If this is ``None``
         (default), the options will be inferred from the underlying dataframe
         column if its dtype is "category". For more information, see `Pandas docs
         <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
+
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
 
     Examples
     --------
@@ -999,6 +1045,15 @@ def SelectboxColumn(
         height: 300px
     """
 
+    # Process options with format_func
+    processed_options: Iterable[str | int | float | SelectboxOption] | None = options
+    if options and format_func is not None:
+        processed_options = []
+        for option in options:
+            processed_options.append(
+                SelectboxOption(value=option, label=format_func(option))
+            )
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -1008,7 +1063,8 @@ def SelectboxColumn(
         pinned=pinned,
         default=default,
         type_config=SelectboxColumnConfig(
-            type="selectbox", options=list(options) if options is not None else None
+            type="selectbox",
+            options=list(processed_options) if processed_options is not None else None,
         ),
     )
 
@@ -1035,7 +1091,7 @@ def BarChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1043,6 +1099,7 @@ def BarChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1131,7 +1188,7 @@ def LineChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1139,6 +1196,7 @@ def LineChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1228,7 +1286,7 @@ def AreaChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1236,6 +1294,7 @@ def AreaChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1310,7 +1369,7 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
     The cell values need to be one of:
@@ -1331,7 +1390,7 @@ def ImageColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1339,6 +1398,7 @@ def ImageColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1400,12 +1460,20 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+) -> ColumnConfig:
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. List columns are not editable
-    at the moment. This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe`` or ``st.data_editor``.
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow
+        serialization. We recommend you disable editing for these columns or
+        convert of all list values to strings.
 
     Parameters
     ----------
@@ -1413,7 +1481,7 @@ def ListColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1421,6 +1489,7 @@ def ListColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1435,6 +1504,24 @@ def ListColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. If this is ``None``
+        (default), Streamlit will enable editing wherever possible.
+
+        If a column has mixed types, it may become uneditable regardless of
+        ``disabled``.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If this is
+        ``False`` (default), the user can submit empty values for this column.
+        If this is ``True``, an edited cell in this column can only be
+        submitted if its value is not ``None``, and a new row will only be
+        submitted after the user fills in this column.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by
+        the user. This defaults to ``None``.
 
     Examples
     --------
@@ -1473,7 +1560,200 @@ def ListColumn(
         width=width,
         help=help,
         pinned=pinned,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
         type_config=ListColumnConfig(type="list"),
+    )
+
+
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+    options: Iterable[str] | None = None,
+    accept_new_options: bool | None = None,
+    color: str | Iterable[str] | None = None,
+    format_func: Callable[[str], str] | None = None,
+) -> ColumnConfig:
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``. When used with ``st.data_editor``, editing will
+    be enabled with a multiselect widget.
+
+    This column type is also useful for displaying colored labels in a read-only ``st.dataframe``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend to disable editing for these columns or conversion of all list values
+        to strings.
+
+    Parameters
+    ----------
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of "small", "medium", or "large".
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    options: Iterable of str or None
+        The options that can be selected during editing.
+
+    accept_new_options: bool or None
+        Whether the user can add selections that aren't included in ``options``.
+        If this is ``False`` (default), the user can only select from the
+        items in ``options``. If this is ``True``, the user can enter new
+        items that don't exist in ``options``.
+
+        When a user enters and selects a new item, it is included in the
+        returned cell list value as a string. The new item is not added to
+        the options drop-down menu.
+
+    color: str or Iterable of str or None
+        The color to use for different options. This can be:
+
+        - None (default): the primary color is used for all options.
+        - A single color value that is used for all options. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+        - An iterable of color values that are mapped to the options.
+
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
+
+    Examples
+    --------
+    **Example 1: Editable multiselect column**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             help="The categories of the app",
+    >>>             options=[
+    >>>                 "exploration",
+    >>>                 "visualization",
+    >>>                 "llm",
+    >>>             ],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-1.streamlit.app/
+        height: 300px
+
+    **Example 2: Colored tags for st.dataframe**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             options=["exploration", "visualization", "llm"],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-2.streamlit.app/
+        height: 300px
+    """
+
+    # Process options with color and format_func:
+    processed_options: list[MultiselectOption] | None = None
+    if options is not None:
+        processed_options = []
+
+        # Convert color to an iterator
+        color_iter: Iterator[str] | None = None
+        if color is not None:
+            if isinstance(color, str):
+                # Single color for all options
+                color_iter = itertools.repeat(color)
+            else:
+                # Iterable of colors - cycle through them
+                color_iter = itertools.cycle(color)
+
+        for option in options:
+            # Start with the option value
+            option_dict = MultiselectOption(value=option)
+
+            # Apply format_func to generate label if not already present
+            if format_func is not None:
+                option_dict["label"] = format_func(option_dict["value"])
+
+            # Apply color if provided and not already present
+            if color_iter is not None and "color" not in option_dict:
+                option_dict["color"] = next(color_iter)
+
+            processed_options.append(option_dict)
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
+        type_config=MultiselectColumnConfig(
+            type="multiselect",
+            options=processed_options,
+            accept_new_options=accept_new_options,
+        ),
     )
 
 
@@ -1506,7 +1786,7 @@ def DatetimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1514,6 +1794,7 @@ def DatetimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1525,8 +1806,7 @@ def DatetimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1668,7 +1948,7 @@ def TimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1676,6 +1956,7 @@ def TimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1687,8 +1968,7 @@ def TimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1821,7 +2101,7 @@ def DateColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1829,6 +2109,7 @@ def DateColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1840,8 +2121,7 @@ def DateColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1958,6 +2238,7 @@ def ProgressColumn(
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
+    step: int | float | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1971,7 +2252,7 @@ def ProgressColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1979,6 +2260,7 @@ def ProgressColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1988,7 +2270,7 @@ def ProgressColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    format: str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how the numbers are displayed.
         This can be one of the following values:
 
@@ -1998,13 +2280,15 @@ def ProgressColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-          ``"%X"`` to show an unsigned hexidecimal integer (e.g. "4D2"). You
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
           ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
@@ -2026,6 +2310,12 @@ def ProgressColumn(
     max_value: int, float, or None
         The maximum value of the progress bar. If this is ``None`` (default),
         the maximum will be 100 for integer values and 1.0 for float values.
+
+    step: int, float, or None
+        The precision of numbers. If this is ``None`` (default), integer columns
+        will have a step of 1 and float columns will have a step of 0.01.
+        Setting ``step`` for float columns will ensure a consistent number of
+        digits after the decimal are displayed.
 
     Examples
     --------
@@ -2055,7 +2345,7 @@ def ProgressColumn(
     .. output::
         https://doc-progress-column.streamlit.app/
         height: 300px
-    """
+    """  # noqa: E501
 
     return ColumnConfig(
         label=label,
@@ -2067,6 +2357,7 @@ def ProgressColumn(
             format=format,
             min_value=min_value,
             max_value=max_value,
+            step=step,
         ),
     )
 
@@ -2091,7 +2382,7 @@ def JsonColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -2099,6 +2390,7 @@ def JsonColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If

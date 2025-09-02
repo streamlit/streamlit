@@ -106,13 +106,13 @@ class MetricsUtilTest(unittest.TestCase):
         with (
             patch("streamlit.runtime.metrics_util.os.path.exists", return_value=False),
             patch("streamlit.runtime.metrics_util.uuid.uuid4", return_value=UUID),
-            patch("streamlit.file_util.open", mock_open()) as open,
+            patch("streamlit.file_util.open", mock_open()) as file_open,
             patch("streamlit.file_util.os.makedirs"),
             patch_config_options({"browser.gatherUsageStats": True}),
         ):
-            machine_id = metrics_util._get_stable_random_machine_id()
-            open().write.assert_called_once_with(UUID)
-        self.assertEqual(machine_id, UUID)
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().write.assert_called_once_with(UUID)
+        assert machine_id == UUID
 
     @patch(
         "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
@@ -123,12 +123,12 @@ class MetricsUtilTest(unittest.TestCase):
 
         with (
             patch("streamlit.runtime.metrics_util.os.path.exists", return_value=True),
-            patch("streamlit.file_util.open", mock_open(read_data=UUID)) as open,
+            patch("streamlit.file_util.open", mock_open(read_data=UUID)) as file_open,
             patch_config_options({"browser.gatherUsageStats": True}),
         ):
-            machine_id = metrics_util._get_stable_random_machine_id()
-            open().read.assert_called_once()
-        self.assertEqual(machine_id, UUID)
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().read.assert_called_once()
+        assert machine_id == UUID
 
     @patch(
         "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
@@ -140,14 +140,14 @@ class MetricsUtilTest(unittest.TestCase):
         with (
             patch("streamlit.runtime.metrics_util.os.path.exists", return_value=True),
             patch("streamlit.runtime.metrics_util.uuid.uuid4", return_value=UUID),
-            patch("streamlit.file_util.open", mock_open(read_data="")) as open,
+            patch("streamlit.file_util.open", mock_open(read_data="")) as file_open,
             patch("streamlit.file_util.os.makedirs"),
             patch_config_options({"browser.gatherUsageStats": True}),
         ):
-            machine_id = metrics_util._get_stable_random_machine_id()
-            open().read.assert_called_once()
-            open().write.assert_called_once_with(UUID)
-        self.assertEqual(machine_id, UUID)
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().read.assert_called_once()
+            file_open().write.assert_called_once_with(UUID)
+        assert machine_id == UUID
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
@@ -333,7 +333,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # which causes it not to be executed before an Exception is raised due to a
             # lack of required arguments.
             "connection",
-            "experimental_connection",
             "spinner",
             "progress",
             "context",

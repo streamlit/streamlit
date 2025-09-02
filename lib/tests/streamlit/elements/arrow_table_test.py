@@ -19,12 +19,16 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.errors import StreamlitValueError
+from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -52,7 +56,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
+        assert proto.data == convert_arrow_table_to_arrow_bytes(table)
 
     def test_uuid(self):
         df = mock_data_frame()
@@ -61,7 +65,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(proto.styler.uuid, "FAKE_UUID")
+        assert proto.styler.uuid == "FAKE_UUID"
 
     def test_caption(self):
         df = mock_data_frame()
@@ -70,7 +74,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
+        assert proto.styler.caption == "FAKE_CAPTION"
 
     def test_table_styles(self):
         df = mock_data_frame()
@@ -83,9 +87,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(
-            proto.styler.styles, "#T_FAKE_UUID .blank { background-color: red }"
-        )
+        assert proto.styler.styles == "#T_FAKE_UUID .blank { background-color: red }"
 
     def test_cell_styles(self):
         df = mock_data_frame()
@@ -96,8 +98,8 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(
-            proto.styler.styles, "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
+        assert (
+            proto.styler.styles == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
         )
 
     def test_display_values(self):
@@ -127,3 +129,27 @@ class ArrowTest(DeltaGeneratorTestCase):
 
             st.table(df)
             convert_anything_to_df.assert_called_once()
+
+    @parameterized.expand(
+        [
+            (True, ArrowProto.BorderMode.ALL),
+            (False, ArrowProto.BorderMode.NONE),
+            ("horizontal", ArrowProto.BorderMode.HORIZONTAL),
+        ]
+    )
+    def test_table_border_parameter(self, border, expected):
+        """Test that st.table border parameter converts values correctly."""
+        df = mock_data_frame()
+        st.table(df, border=border)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        assert proto.border_mode == expected
+
+    def test_table_border_invalid_value(self):
+        """Test that st.table raises StreamlitValueError for invalid border values."""
+        df = mock_data_frame()
+
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Invalid `border` value.*True, False, 'horizontal'",
+        ):
+            st.table(df, border="invalid")

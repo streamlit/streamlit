@@ -25,6 +25,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 from PIL import Image
 
@@ -307,7 +308,7 @@ class StreamlitWriteTest(unittest.TestCase):
             call.json({"a": 1, "b": 2}),
             call.markdown(" and that is all", unsafe_allow_html=False),
         ]
-        self.assertEqual(manager.mock_calls, expected_calls)
+        assert manager.mock_calls == expected_calls
 
     def test_default_object(self):
         """Test st.write with default clause ie some object."""
@@ -406,7 +407,7 @@ class StreamlitWriteTest(unittest.TestCase):
         ):
             m.side_effect = Exception("some exception")
 
-            with self.assertRaises(Exception):  # noqa: B017
+            with pytest.raises(Exception, match="some exception"):
                 st.write("some text")
 
     def test_unknown_arguments(self):
@@ -414,8 +415,9 @@ class StreamlitWriteTest(unittest.TestCase):
         with self.assertLogs(write._LOGGER) as logs:
             st.write("some text", unknown_keyword_arg=123)
 
-        self.assertIn(
-            'Invalid arguments were passed to "st.write" function.', logs.records[0].msg
+        assert (
+            'Invalid arguments were passed to "st.write" function.'
+            in logs.records[0].msg
         )
 
     def test_spinner(self):
@@ -447,7 +449,7 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # Also override dg._is_top_level for this test.
             with patch.object(
                 st.delta_generator.DeltaGenerator,
@@ -510,7 +512,7 @@ class StreamlitStreamTest(unittest.TestCase):
             yield mock_chunk
 
         stream_return = st.write_stream(openai_stream)
-        self.assertEqual(stream_return, "Hello World")
+        assert stream_return == "Hello World"
 
     def test_with_generator_text(self):
         """Test st.write_stream with generator text content."""
@@ -520,7 +522,7 @@ class StreamlitStreamTest(unittest.TestCase):
             yield "World"
 
         stream_return = st.write_stream(test_stream)
-        self.assertEqual(stream_return, "Hello World")
+        assert stream_return == "Hello World"
 
     def test_with_async_generator_text(self):
         """Test st.write_stream with async generator text content."""
@@ -530,10 +532,10 @@ class StreamlitStreamTest(unittest.TestCase):
             yield "World"
 
         stream_return = st.write_stream(test_stream)
-        self.assertEqual(stream_return, "Hello World")
+        assert stream_return == "Hello World"
 
         stream_return = st.write_stream(test_stream())
-        self.assertEqual(stream_return, "Hello World")
+        assert stream_return == "Hello World"
 
     def test_with_empty_chunks(self):
         """Test st.write_stream with generator that returns empty chunks."""
@@ -543,7 +545,7 @@ class StreamlitStreamTest(unittest.TestCase):
             yield ""
 
         stream_return = st.write_stream(test_stream)
-        self.assertEqual(stream_return, "")
+        assert stream_return == ""
 
     def test_with_empty_stream(self):
         """Test st.write_stream with generator that returns empty chunks."""
@@ -553,15 +555,15 @@ class StreamlitStreamTest(unittest.TestCase):
                 yield "Hello"
 
         stream_return = st.write_stream(test_stream)
-        self.assertEqual(stream_return, "")
+        assert stream_return == ""
 
     def test_with_wrong_input(self):
         """Test st.write_stream with string or dataframe input generates exception."""
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.write_stream("Hello World")
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.write_stream(pd.DataFrame([[1, 2], [3, 4]]))
 
     def test_with_generator_misc(self):
@@ -576,15 +578,12 @@ class StreamlitStreamTest(unittest.TestCase):
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
             stream_return = st.write_stream(test_stream)
             p_dataframe.assert_called_once()
-            self.assertEqual(
-                str(stream_return),
-                str(
-                    [
-                        "This is a dataframe:",
-                        pd.DataFrame([[1, 2], [3, 4]]),
-                        "Text under dataframe",
-                    ]
-                ),
+            assert str(stream_return) == str(
+                [
+                    "This is a dataframe:",
+                    pd.DataFrame([[1, 2], [3, 4]]),
+                    "Text under dataframe",
+                ]
             )
 
     def test_with_list_output(self):
@@ -600,15 +599,12 @@ class StreamlitStreamTest(unittest.TestCase):
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
             stream_return = st.write_stream(data)
             p_dataframe.assert_called_once()
-            self.assertEqual(
-                str(stream_return),
-                str(
-                    [
-                        "This is a dataframe:",
-                        pd.DataFrame([[1, 2], [3, 4]]),
-                        "Text under dataframe",
-                    ]
-                ),
+            assert str(stream_return) == str(
+                [
+                    "This is a dataframe:",
+                    pd.DataFrame([[1, 2], [3, 4]]),
+                    "Text under dataframe",
+                ]
             )
 
 
@@ -630,9 +626,6 @@ def make_is_type_mock(true_type_matchers):
         if type(type_matchers) is not tuple:
             type_matchers = (type_matchers,)
 
-        for type_matcher in type_matchers:
-            if type_matcher in true_type_matchers:
-                return True
-        return False
+        return any(type_matcher in true_type_matchers for type_matcher in type_matchers)
 
     return new_is_type

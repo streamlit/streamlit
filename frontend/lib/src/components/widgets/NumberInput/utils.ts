@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { sprintf } from "sprintf-js"
 import { getLogger } from "loglevel"
+import { sprintf } from "sprintf-js"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
@@ -74,6 +74,7 @@ export const formatValue = ({
   try {
     return sprintf(formatString, value)
   } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     LOG.warn(`Error in sprintf(${formatString}, ${value}): ${e}`)
     return String(value)
   }

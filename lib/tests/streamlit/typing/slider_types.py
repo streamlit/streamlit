@@ -22,7 +22,7 @@ from typing_extensions import assert_type
 # Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy will not detect
 # an <int> value being assigned to a <float> variable. There's nothing we can do about this, apparently.
 if TYPE_CHECKING:
-    from datetime import date, time, timedelta
+    from datetime import date, datetime, time, timedelta
 
     from streamlit.elements.widgets.slider import SliderMixin
 
@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     assert_type(slider("foo", 5.0, 10.0), float)
     assert_type(slider("foo", 5.0, 10.0, 6.0), float)
     assert_type(slider("foo", 5.0, 10.0, 6.0, 1.0), float)
-
     assert_type(slider("foo", 5, 10, [5, 8]), tuple[int, int])
     assert_type(slider("foo", 5, 10, [5, 8], 1), tuple[int, int])
 
@@ -59,8 +58,9 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=10.0, value=5.0, step=1.0), float)
     assert_type(slider("foo", max_value=10.0, step=1.0), float)
-    # kwsingularfloat7 = slider("foo", step=1.0)
+    # kwsingularfloat7 = slider("foo", step=1.0)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
+
     assert_type(slider("foo", min_value=5.0, max_value=10.0), float)
     assert_type(slider("foo", min_value=5.0, max_value=10.0, step=1.0), float)
 
@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     assert_type(
         slider("foo", max_value=10.0, value=[8.0, 9.0], step=1.0), tuple[float, float]
     )
+    assert_type(slider("foo", max_value=10.0, step=1.0, width="stretch"), float)
 
     _2024_5_1 = date(2024, 5, 1)
     _2024_5_8 = date(2024, 5, 8)
@@ -117,8 +118,10 @@ if TYPE_CHECKING:
         slider("foo", max_value=_2024_5_20, value=_2024_5_8, step=_1DAYSPAN), date
     )
     assert_type(slider("foo", max_value=_2024_5_20, step=_1DAYSPAN), date)
-    # kwsingulardate7 = slider("foo", step=_1DAYSPAN)
+
+    # kwsingulardate7 = slider("foo", step=_1DAYSPAN)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
+
     assert_type(slider("foo", min_value=_2024_5_1, max_value=_2024_5_20), date)
     assert_type(
         slider("foo", min_value=_2024_5_1, max_value=_2024_5_20, step=_1DAYSPAN), date
@@ -169,8 +172,10 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=_2000, value=_1400, step=_5MINUTESPAN), time)
     assert_type(slider("foo", max_value=_2000, step=_5MINUTESPAN), time)
-    # kwsingulartime7 = slider("foo", step=_5MINUTESPAN)
+
+    # kwsingulartime7 = slider("foo", step=_5MINUTESPAN)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
+
     assert_type(slider("foo", min_value=_0800, max_value=_2000), time)
     assert_type(
         slider("foo", min_value=_0800, max_value=_2000, step=_5MINUTESPAN), time
@@ -190,4 +195,150 @@ if TYPE_CHECKING:
     assert_type(
         slider("foo", max_value=_2000, value=[_1400, _1800], step=_5MINUTESPAN),
         tuple[time, time],
+    )
+
+    # Datetime checks
+    _2020_01_01_09_30 = datetime(2020, 1, 1, 9, 30)
+    _2020_01_15_12_00 = datetime(2020, 1, 15, 12, 0)
+    _2020_02_01_15_45 = datetime(2020, 2, 1, 15, 45)
+    _2020_02_10_18_00 = datetime(2020, 2, 10, 18, 0)
+    _1HOURSPAN = timedelta(hours=1)
+
+    assert_type(slider("foo", _2020_01_01_09_30), datetime)
+    assert_type(slider("foo", _2020_01_01_09_30, _2020_02_10_18_00), datetime)
+    assert_type(
+        slider("foo", _2020_01_01_09_30, _2020_02_10_18_00, _2020_01_15_12_00), datetime
+    )
+    assert_type(
+        slider(
+            "foo",
+            _2020_01_01_09_30,
+            _2020_02_10_18_00,
+            _2020_01_15_12_00,
+            _1HOURSPAN,
+        ),
+        datetime,
+    )
+
+    assert_type(
+        slider(
+            "foo",
+            _2020_01_01_09_30,
+            _2020_02_10_18_00,
+            [_2020_01_15_12_00, _2020_02_01_15_45],
+        ),
+        tuple[datetime, datetime],
+    )
+    assert_type(
+        slider(
+            "foo",
+            _2020_01_01_09_30,
+            _2020_02_10_18_00,
+            [_2020_01_15_12_00, _2020_02_01_15_45],
+            _1HOURSPAN,
+        ),
+        tuple[datetime, datetime],
+    )
+
+    assert_type(
+        slider("foo", min_value=_2020_01_01_09_30, value=_2020_01_15_12_00), datetime
+    )
+    assert_type(slider("foo", min_value=_2020_01_01_09_30, step=_1HOURSPAN), datetime)
+    assert_type(
+        slider(
+            "foo", min_value=_2020_01_01_09_30, value=_2020_01_15_12_00, step=_1HOURSPAN
+        ),
+        datetime,
+    )
+    assert_type(
+        slider(
+            "foo",
+            min_value=_2020_01_01_09_30,
+            max_value=_2020_02_10_18_00,
+            value=_2020_01_15_12_00,
+            step=_1HOURSPAN,
+        ),
+        datetime,
+    )
+    assert_type(
+        slider(
+            "foo", max_value=_2020_02_10_18_00, value=_2020_01_15_12_00, step=_1HOURSPAN
+        ),
+        datetime,
+    )
+    assert_type(slider("foo", max_value=_2020_02_10_18_00, step=_1HOURSPAN), datetime)
+    assert_type(
+        slider("foo", min_value=_2020_01_01_09_30, max_value=_2020_02_10_18_00),
+        datetime,
+    )
+    assert_type(
+        slider(
+            "foo",
+            min_value=_2020_01_01_09_30,
+            max_value=_2020_02_10_18_00,
+            step=_1HOURSPAN,
+        ),
+        datetime,
+    )
+
+    assert_type(
+        slider(
+            "foo",
+            min_value=_2020_01_01_09_30,
+            value=[_2020_01_15_12_00, _2020_02_01_15_45],
+        ),
+        tuple[datetime, datetime],
+    )
+    assert_type(
+        slider(
+            "foo",
+            min_value=_2020_01_01_09_30,
+            max_value=_2020_02_10_18_00,
+            value=[_2020_01_15_12_00, _2020_02_01_15_45],
+            step=_1HOURSPAN,
+        ),
+        tuple[datetime, datetime],
+    )
+    assert_type(
+        slider(
+            "foo",
+            max_value=_2020_02_10_18_00,
+            value=[_2020_01_15_12_00, _2020_02_01_15_45],
+            step=_1HOURSPAN,
+        ),
+        tuple[datetime, datetime],
+    )
+
+    # single-element sequence values
+    assert_type(slider("foo", value=[1]), tuple[int, int])
+    assert_type(slider("foo", value=(1,)), tuple[int, int])
+
+    assert_type(slider("foo", min_value=0.0, value=[]), tuple[float, float])
+    assert_type(slider("foo", max_value=10.0, value=()), tuple[float, float])
+    assert_type(slider("foo", min_value=0.0, value=[1.0]), tuple[float, float])
+    assert_type(slider("foo", max_value=10.0, value=(1.0,)), tuple[float, float])
+
+    assert_type(slider("foo", min_value=_2024_5_1, value=[]), tuple[date, date])
+    assert_type(
+        slider("foo", min_value=_2024_5_1, value=[_2024_5_8]), tuple[date, date]
+    )
+    assert_type(
+        slider("foo", max_value=_2024_5_20, value=(_2024_5_8,)), tuple[date, date]
+    )
+
+    assert_type(slider("foo", min_value=_0800, value=[]), tuple[time, time])
+    assert_type(slider("foo", min_value=_0800, value=[_1400]), tuple[time, time])
+    assert_type(slider("foo", max_value=_2000, value=(_1400,)), tuple[time, time])
+
+    assert_type(
+        slider("foo", min_value=_2020_01_01_09_30, value=[]),
+        tuple[datetime, datetime],
+    )
+    assert_type(
+        slider("foo", min_value=_2020_01_01_09_30, value=[_2020_01_15_12_00]),
+        tuple[datetime, datetime],
+    )
+    assert_type(
+        slider("foo", max_value=_2020_02_10_18_00, value=(_2020_01_15_12_00,)),
+        tuple[datetime, datetime],
     )

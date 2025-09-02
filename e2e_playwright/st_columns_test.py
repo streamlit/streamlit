@@ -14,16 +14,18 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import click_button, expect_exception, get_expander
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_markdown,
+    expect_no_exception,
+    get_expander,
+)
 
 
-def _get_basic_column_container(
-    app: Page,
-    index: int = 0,
-):
+def _get_basic_column_container(app: Page, index: int = 0) -> Locator:
     column_container = app.get_by_test_id("stHorizontalBlock").nth(index)
     expect(column_container).to_be_visible()
     return column_container
@@ -102,6 +104,19 @@ def test_column_gap_large_is_correctly_applied(
     expect(column_gap_large).to_have_css("gap", re.compile("64px"))
     column_gap_large.scroll_into_view_if_needed()
     assert_snapshot(column_gap_large, name="st_columns-column_gap_large")
+
+
+def test_column_gap_none_is_correctly_applied(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the none column gap is correctly applied."""
+    column_gap_none = (
+        get_expander(app, "Column gap none").get_by_test_id("stHorizontalBlock").nth(0)
+    )
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_none).to_have_css("gap", re.compile("0px"))
+    column_gap_none.scroll_into_view_if_needed()
+    assert_snapshot(column_gap_none, name="st_columns-column_gap_none")
 
 
 def test_one_level_nesting_works_correctly(
@@ -210,26 +225,40 @@ def test_column_vertical_alignment_bottom(
     )
 
 
-def test_two_level_nested_columns_shows_exception(app: Page):
-    """Shows exception when trying to nest columns more than one level deep."""
+def test_nesting_columns_is_allowed(app: Page):
+    """Checks that nesting columns is allowed."""
 
-    click_button(app, "Nested columns - two levels (raises exception)")
-    expect_exception(
-        app,
-        re.compile(
-            "Columns can only be placed inside other columns up to one level of nesting."
-        ),
+    click_button(app, "Nested columns - two levels")
+    expect_no_exception(app)
+
+    click_button(app, "Nested columns - in sidebar")
+    expect_no_exception(app)
+
+
+def test_width_is_correctly_applied(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.columns dimensions are correctly applied."""
+    column_fixed_width_container = (
+        get_expander(app, "Columns with width configuration")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
     )
 
-
-def test_nested_columns_in_sidebar_shows_exception(app: Page):
-    """Shows exception when trying to nest columns in the sidebar."""
-
-    click_button(app, "Nested columns - in sidebar (raises exception)")
-    expect_exception(
+    expect_markdown(
         app,
-        re.compile(
-            "Columns cannot be placed inside other columns in the sidebar. This is "
-            "only possible in the main area of the app."
-        ),
+        "column three",
+    )
+    assert_snapshot(
+        column_fixed_width_container, name="st_columns-width_configuration_fixed"
+    )
+
+    column_stretch_width_container = (
+        get_expander(app, "Columns with width configuration")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(1)
+    )
+    expect(
+        column_stretch_width_container.get_by_test_id("stMarkdownContainer").last
+    ).to_be_visible()
+    assert_snapshot(
+        column_stretch_width_container, name="st_columns-width_configuration_stretch"
     )

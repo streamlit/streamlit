@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -28,6 +31,10 @@ from shared.data_mocks import (
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
 )
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
+    from pandas.io.formats.style import Styler
 
 np.random.seed(0)
 random.seed(0)
@@ -118,7 +125,7 @@ st.table(df.style.format({"test": "{:.2f}"}))
 st.subheader("Pandas Styler: Background color")
 
 
-def highlight_first(value):
+def highlight_first(value: float) -> str:
     return "background-color: yellow" if value == 0 else ""
 
 
@@ -130,11 +137,11 @@ st.subheader("Pandas Styler: Background and font styling")
 df = pd.DataFrame(np.random.randn(10, 4), columns=["A", "B", "C", "D"])
 
 
-def style_negative(v, props=""):
+def style_negative(v: float, props: str) -> str | None:
     return props if v < 0 else None
 
 
-def highlight_max(s, props=""):
+def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
     return np.where(s == np.nanmax(s.values), props, "")
 
 
@@ -162,15 +169,15 @@ weather_df = pd.DataFrame(
 )
 
 
-def rain_condition(v):
+def rain_condition(v: float) -> str:
     if v < 1.75:
         return "Dry"
-    elif v < 2.75:
+    if v < 2.75:
         return "Rain"
     return "Heavy Rain"
 
 
-def make_pretty(styler):
+def make_pretty(styler: Styler) -> Styler:
     styler.set_caption("Weather Conditions")
     styler.format(rain_condition)
     styler.background_gradient(axis=None, vmin=1, vmax=5, cmap="YlGnBu")
@@ -195,9 +202,8 @@ df = pd.DataFrame(
 styled_df = df.style
 
 # Apply formatting
-styled_df.format("{:.0f}").hide(
-    [("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns"
-)
+styled_df.format("{:.0f}")
+styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")
 
 cell_hover = {  # for row hover use <tr> instead of <td>
     "selector": "td:hover",
@@ -239,7 +245,6 @@ styled_df.set_tooltips(
 
 st.table(styled_df)
 
-
 st.header("Markdown Support")
 index = pd.Index(
     [
@@ -275,3 +280,18 @@ data = pd.DataFrame(
 )
 
 st.table(data)
+
+st.header("Border Parameter")
+
+st.subheader("No borders (border=False)")
+data = {
+    "A": [1, 2, 3],
+    "B": ["X", "Y", "Z"],
+    "C": [10.5, 20.3, 30.1],
+    "D": ["Alpha", "Beta", "Gamma"],
+    "E": [True, False, True],
+}
+st.table(data, border=False)
+
+st.subheader("Horizontal borders only (border='horizontal')")
+st.table(data, border="horizontal")

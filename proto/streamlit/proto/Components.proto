@@ -39,6 +39,7 @@ message ComponentInstance {
   string url = 5;
 
   string form_id = 6;
+  optional int32 tab_index = 7;
 }
 
 message SpecialArg {

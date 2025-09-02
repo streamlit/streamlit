@@ -19,38 +19,56 @@ import traceback
 from typing import TYPE_CHECKING, Callable, Final, TypeVar, cast
 
 from streamlit import config
+from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
     MarkdownFormattedException,
     StreamlitAPIWarning,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 _LOGGER: Final = get_logger(__name__)
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
-_GENERIC_UNCAUGHT_EXCEPTION_TEXT: Final = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT: Final = (
+    "This app has encountered an error. The original error message is redacted "
+    "to prevent data leaks. Full error details have been recorded in the logs "
+    "(if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
+)
 
 
 class ExceptionMixin:
     @gather_metrics("exception")
-    def exception(self, exception: BaseException) -> DeltaGenerator:
+    def exception(
+        self, exception: BaseException, width: WidthWithoutContent = "stretch"
+    ) -> DeltaGenerator:
         """Display an exception.
 
-        In the lower-right corner of the exception, Streamlit displays links to
-        Google and ChatGPT that are prefilled with the contents of the
-        exception message.
+        When accessing the app through ``localhost``, in the lower-right corner
+        of the exception, Streamlit displays links to Google and ChatGPT that
+        are prefilled with the contents of the exception message.
 
         Parameters
         ----------
         exception : Exception
             The exception to display.
+        width : "stretch" or int
+            The width of the exception element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -64,7 +82,7 @@ class ExceptionMixin:
             height: 220px
 
         """
-        return _exception(self.dg, exception)
+        return _exception(self.dg, exception, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -77,16 +95,18 @@ class ExceptionMixin:
 def _exception(
     dg: DeltaGenerator,
     exception: BaseException,
+    width: WidthWithoutContent = "stretch",
     is_uncaught_app_exception: bool = False,
 ) -> DeltaGenerator:
     exception_proto = ExceptionProto()
-    marshall(exception_proto, exception, is_uncaught_app_exception)
+    marshall(exception_proto, exception, width, is_uncaught_app_exception)
     return dg._enqueue("exception", exception_proto)
 
 
 def marshall(
     exception_proto: ExceptionProto,
     exception: BaseException,
+    width: WidthWithoutContent = "stretch",
     is_uncaught_app_exception: bool = False,
 ) -> None:
     """Marshalls an Exception.proto message.
@@ -99,9 +119,15 @@ def marshall(
     exception : BaseException
         The exception whose data we're extracting.
 
+    width : int or "stretch"
+        The width of the exception display. Can be either an integer (pixels) or "stretch".
+        Defaults to "stretch".
+
     is_uncaught_app_exception: bool
         The exception originates from an uncaught error during script execution.
     """
+    validate_width(width)
+
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
     # Some exceptions (like UserHashError) have an alternate_name attribute so
@@ -115,6 +141,15 @@ def marshall(
 
     exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)
+
+    width_config = WidthConfig()
+
+    if isinstance(width, int):
+        width_config.pixel_width = width
+    else:
+        width_config.use_stretch = True
+
+    exception_proto.width_config.CopyFrom(width_config)
 
     try:
         if isinstance(exception, SyntaxError):
@@ -199,24 +234,15 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
 
     """
     if exception.text:
-        if exception.offset is not None:
-            caret_indent = " " * max(exception.offset - 1, 0)
-        else:
-            caret_indent = ""
+        caret_indent = (
+            " " * max(exception.offset - 1, 0) if exception.offset is not None else ""
+        )
 
         return (
-            'File "%(filename)s", line %(lineno)s\n'
-            "  %(text)s\n"
-            "  %(caret_indent)s^\n"
-            "%(errname)s: %(msg)s"
-            % {
-                "filename": exception.filename,
-                "lineno": exception.lineno,
-                "text": exception.text.rstrip(),
-                "caret_indent": caret_indent,
-                "errname": type(exception).__name__,
-                "msg": exception.msg,
-            }
+            f'File "{exception.filename}", line {exception.lineno}\n'
+            f"  {exception.text.rstrip()}\n"
+            f"  {caret_indent}^\n"
+            f"{type(exception).__name__}: {exception.msg}"
         )
     # If a few edge cases, SyntaxErrors don't have all these nice fields. So we
     # have a fall back here.
@@ -329,9 +355,8 @@ def _split_list(
     saw_split_point = False
 
     for item in orig_list:
-        if not saw_split_point:
-            if split_point(item):
-                saw_split_point = True
+        if not saw_split_point and split_point(item):
+            saw_split_point = True
 
         if saw_split_point:
             after.append(item)

@@ -17,7 +17,6 @@ import { defineConfig } from "vite"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
@@ -67,14 +66,6 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      {
-        find: "~lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
-      {
-        find: "@streamlit/lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
@@ -115,6 +106,7 @@ export default defineConfig({
     outDir: "build",
     assetsDir: "static",
     sourcemap: DEV_BUILD,
+    manifest: true,
     rollupOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js

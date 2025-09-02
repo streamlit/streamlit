@@ -25,3 +25,20 @@ if st.button("Run spinner basic"):
 if st.button("Run spinner with time"):
     with st.spinner("Loading...", show_time=True):
         time.sleep(2)
+
+st.header("Spinner - width examples")
+
+if st.button("Run spinner with content width (default)"):
+    with st.spinner("Loading with content width...", width="content"):
+        time.sleep(2)
+
+if st.button("Run spinner with stretch width"):
+    with st.spinner("Loading with stretch width...", width="stretch"):
+        time.sleep(2)
+
+if st.button("Run spinner with 300px width"):
+    with st.spinner(
+        "Loading with 300px width.... the text is long and does not fit in the width",
+        width=300,
+    ):
+        time.sleep(2)

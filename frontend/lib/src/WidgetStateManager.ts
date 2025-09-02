@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Draft, default as produce } from "immer"
+import { Draft, produce } from "immer"
 import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
 
@@ -99,7 +99,7 @@ export class WidgetStateDict {
 
   /** Remove the state of widgets that are not contained in `activeIds`. */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.forEach((value, key) => {
+    this.widgetStates.forEach((_value, key) => {
       if (!activeIds.has(key)) {
         this.widgetStates.delete(key)
       }
@@ -235,6 +235,7 @@ export class WidgetStateManager {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`invalid formID '${formId}'`)
     }
 
@@ -861,6 +862,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
     `value ${value} cannot be converted to number without a loss of precision!`
   )
 }

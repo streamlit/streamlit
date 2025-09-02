@@ -19,12 +19,14 @@ from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 
 # Currently, equates to just float, but we can't use `numbers.Real` due to
@@ -58,26 +60,23 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
     )
 
 
-def _get_value(value):
+def _get_value(value: FloatOrInt) -> int:
     if isinstance(value, int):
         if 0 <= value <= 100:
             return value
-        else:
-            raise StreamlitAPIException(
-                "Progress Value has invalid value [0, 100]: %d" % value
-            )
+        raise StreamlitAPIException(
+            f"Progress Value has invalid value [0, 100]: {value}"
+        )
 
-    elif isinstance(value, float):
+    if isinstance(value, float):
         if _check_float_between(value, low=0.0, high=1.0):
             return int(value * 100)
-        else:
-            raise StreamlitAPIException(
-                "Progress Value has invalid value [0.0, 1.0]: %f" % value
-            )
-    else:
         raise StreamlitAPIException(
-            "Progress Value has invalid type: %s" % type(value).__name__
+            f"Progress Value has invalid value [0.0, 1.0]: {value}"
         )
+    raise StreamlitAPIException(
+        f"Progress Value has invalid type: {type(value).__name__}"
+    )
 
 
 def _get_text(text: str | None) -> str | None:
@@ -86,13 +85,18 @@ def _get_text(text: str | None) -> str | None:
     if isinstance(text, str):
         return clean_text(text)
     raise StreamlitAPIException(
-        f"Progress Text is of type {str(type(text))}, which is not an accepted type."
+        f"Progress Text is of type {type(text)}, which is not an accepted type."
         "Text only accepts: str. Please convert the text to an accepted type."
     )
 
 
 class ProgressMixin:
-    def progress(self, value: FloatOrInt, text: str | None = None) -> DeltaGenerator:
+    def progress(
+        self,
+        value: FloatOrInt,
+        text: str | None = None,
+        width: WidthWithoutContent = "stretch",
+    ) -> DeltaGenerator:
         r"""Display a progress bar.
 
         Parameters
@@ -118,6 +122,16 @@ class ProgressMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        width : "stretch" or int
+            The width of the progress element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -148,7 +162,11 @@ class ProgressMixin:
         text = _get_text(text)
         if text is not None:
             progress_proto.text = text
-        return self.dg._enqueue("progress", progress_proto)
+
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

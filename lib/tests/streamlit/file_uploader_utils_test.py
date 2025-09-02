@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import unittest
 from typing import TYPE_CHECKING
+from unittest import mock
 
 from parameterized import parameterized
 
@@ -41,7 +42,7 @@ class FileUploaderUtilsTest(unittest.TestCase):
     def test_file_type(self, file_type: str | Sequence[str], expected: Sequence[str]):
         """Test that it can be called using string(s) for type parameter."""
         normalized = normalize_upload_file_type(file_type=file_type)
-        self.assertEqual(normalized, expected)
+        assert normalized == expected
 
 
 def is_filename_valid(filename: str, allowed_types: Sequence[str]) -> bool:
@@ -59,6 +60,7 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             # Valid cases
             ("valid_single_extension_pdf", "document.pdf", [".pdf", ".png"], True),
             ("valid_single_extension_png", "image.png", [".pdf", ".png"], True),
+            ("case_insensitive", "image.png", [".PDF", ".PNG"], True),
             ("valid_multi_part_tar_gz", "archive.tar.gz", [".tar.gz", ".zip"], True),
             ("valid_multi_part_zip", "data.zip", [".tar.gz", ".zip"], True),
             ("valid_tar_gz_allowed_gz", "archive.tar.gz", [".gz"], True),
@@ -68,6 +70,10 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
                 [".tar.gz", ".pdf"],
                 True,
             ),
+            ("extension_is_uppercase", "document.CSV", [".csv"], True),
+            # On non-Windows, a colon is a valid filename character.
+            ("colon_in_filename_valid", "my:file.txt", [".txt"], True),
+            ("colon_in_filename_invalid", "my:file.txt", [".log"], False),
             # Invalid cases
             ("invalid_single_extension", "document.docx", [".pdf", ".png"], False),
             (
@@ -79,9 +85,56 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             ("no_extension", "file_without_extension", [".pdf", ".png"], False),
             ("empty_filename", "", [".pdf", ".tar.gz"], False),
             ("filename_is_period", ".", [".pdf", ".tar.gz"], False),
+            # Null byte injection
+            ("null_byte_injection", "file.txt\0.pdf", [".pdf"], False),
         ]
     )
     def test_filename_valid(self, _, filename, allowed_types, expected_valid):
         """Test whether filenames are valid against allowed extensions."""
         actual_valid = is_filename_valid(filename, allowed_types)
-        self.assertEqual(actual_valid, expected_valid)
+        assert actual_valid == expected_valid
+
+
+@mock.patch("streamlit.elements.lib.file_uploader_utils.os.name", "nt")
+class EnforceFilenameRestrictionWindowsTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            (
+                "ads_bypass_attempt",
+                "file.txt:$fakeStream.pdf",
+                [".pdf", ".png"],
+                False,
+            ),
+            (
+                "ads_valid_extension",
+                "document.pdf:$fakeStream.txt",
+                [".pdf", ".png"],
+                True,
+            ),
+            (
+                "regular_filename_with_colon_no_ads_extension",
+                "config.ini:section",
+                [".ini"],
+                False,
+            ),
+            (
+                "ads_no_main_extension",
+                "file:$fakeStream.pdf",
+                [".pdf"],
+                False,
+            ),
+            ("filename_starts_with_colon", ":foo.txt", [".txt"], False),
+            (
+                "multiple_colons_in_filename",
+                "file.pdf:stream1.txt:stream2.log",
+                [".pdf"],
+                True,
+            ),
+        ]
+    )
+    def test_filename_valid_on_windows(
+        self, _, filename, allowed_types, expected_valid
+    ):
+        """Test NTFS alternate data stream cases on Windows."""
+        actual_valid = is_filename_valid(filename, allowed_types)
+        assert actual_valid == expected_valid

@@ -28,11 +28,12 @@ export function mockEndpoints(
     checkSourceUrlResponse: vi.fn(),
     buildComponentURL: vi.fn(),
     buildMediaURL: vi.fn(),
+    buildDownloadUrl: vi.fn(),
     buildFileUploadURL: vi.fn(),
     buildAppPageURL: vi
       .fn()
       .mockImplementation(
-        (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+        (_pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),

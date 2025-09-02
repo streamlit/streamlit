@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useState } from "react"
 
 import {
   DataEditorProps,
@@ -41,9 +41,9 @@ type RowHoverReturn = Pick<
  *   get the theme override for a row.
  */
 function useRowHover(gridTheme: CustomGridTheme): RowHoverReturn {
-  const [hoverRow, setHoverRow] = React.useState<number | undefined>(undefined)
+  const [hoverRow, setHoverRow] = useState<number | undefined>(undefined)
 
-  const onItemHovered = React.useCallback(
+  const onItemHovered = useCallback(
     (args: GridMouseEventArgs) => {
       if (args.kind !== "cell") {
         // Clear row hovering state if the event indicates that
@@ -57,7 +57,7 @@ function useRowHover(gridTheme: CustomGridTheme): RowHoverReturn {
     [setHoverRow]
   )
 
-  const getRowThemeOverride = React.useCallback<GetRowThemeCallback>(
+  const getRowThemeOverride = useCallback<GetRowThemeCallback>(
     row => {
       if (row !== hoverRow) {
         return undefined

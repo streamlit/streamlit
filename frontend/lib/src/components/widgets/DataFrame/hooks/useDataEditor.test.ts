@@ -327,7 +327,7 @@ describe("useDataEditor hook", () => {
     )
   })
 
-  it("allows to add new rows via onRowAppended", () => {
+  it("allows to add new rows via onRowAppended", async () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
@@ -349,7 +349,7 @@ describe("useDataEditor hook", () => {
       throw new Error("onRowAppended is expected to be a function")
     }
 
-    result.current.onRowAppended()
+    await result.current.onRowAppended()
 
     // This should have added one row
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
@@ -357,7 +357,7 @@ describe("useDataEditor hook", () => {
     expect(syncEditsMock).toHaveBeenCalled()
   })
 
-  it("uses default values for new rows in onRowAppended", () => {
+  it("uses default values for new rows in onRowAppended", async () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
@@ -379,7 +379,7 @@ describe("useDataEditor hook", () => {
       throw new Error("onRowAppended is expected to be a function")
     }
 
-    result.current.onRowAppended()
+    await result.current.onRowAppended()
 
     // Check with full editing state:
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -387,7 +387,7 @@ describe("useDataEditor hook", () => {
     )
   })
 
-  it("doesn't allow to add new rows via onRowAppended if fix num rows", () => {
+  it("doesn't allow to add new rows via onRowAppended if fix num rows", async () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
@@ -409,7 +409,7 @@ describe("useDataEditor hook", () => {
       throw new Error("onRowAppended is expected to be a function")
     }
 
-    result.current.onRowAppended()
+    await result.current.onRowAppended()
 
     // Row addition is deactivated, this should not add any rows
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)

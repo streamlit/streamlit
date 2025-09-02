@@ -40,7 +40,7 @@ class MemoryCacheStorageManager(CacheStorageManager):
 
 
 class DummyCacheStorage(CacheStorage):
-    def get(self, key: str) -> bytes:
+    def get(self, key: str) -> bytes:  # noqa: ARG002
         """
         Dummy gets the value for a given key,
         always raises an CacheStorageKeyNotFoundError.

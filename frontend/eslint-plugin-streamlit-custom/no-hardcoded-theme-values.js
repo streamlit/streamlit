@@ -46,8 +46,9 @@ module.exports = {
     // though because its less fine-granular than 'em' and we use(d) it heavily to hardcode any kinds of values in our codebase.
     // The following font-related values are allowed: 'small-caps', 'italic', 'normal', 'liga'.
     // The part '(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+' allows for non-zero digits with a unit or 0, or a combination of both separated by whitespaces.
+    // Additionally, allow JS sentinel values 'null' and 'undefined' to permit intentionally unset values.
     const allowedValuesRegex =
-      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|separate|0|(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
+      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|null|undefined|inherit|auto|unset|fit-content|collapse|separate|0|(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
 
     return {
       ObjectExpression(node) {

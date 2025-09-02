@@ -79,14 +79,13 @@ with st.form("form"):
     st.text_input("text input 13 (value from form)", key="text_input_13")
     st.form_submit_button("submit")
 
-form_value = (
-    st.session_state["text_input_13"] if "text_input_13" in st.session_state else None
-)
+form_value = st.session_state.get("text_input_13", None)
 st.write("text input 13 (value from form) - value: ", form_value)
 
 
 st.text_input(
-    "text input 14 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+    "text input 14 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_",
+    key="text_input_14",
 )
 
 if "rerun_counter" not in st.session_state:
@@ -100,3 +99,6 @@ st.text_input("text input 15 - emoji icon", placeholder="Placeholder", icon="ðŸ”
 st.text_input(
     "text input 16 - material icon", placeholder="Placeholder", icon=":material/search:"
 )
+
+st.text_input("text input 17 (width=200px)", "width test", width=200)
+st.text_input("text input 18 (width='stretch')", "width test", width="stretch")

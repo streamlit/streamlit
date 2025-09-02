@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 
 import { getLogger } from "loglevel"
 
-import ErrorElement from "~lib/components/shared/ErrorElement"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
+import ErrorElement from "~lib/components/shared/ErrorElement"
 
 export interface Props {
   width?: number
@@ -35,7 +35,7 @@ const LOG = getLogger("ErrorBoundary")
  * A component that catches errors that take place when React is asynchronously
  * rendering child components.
  */
-class ErrorBoundary extends React.PureComponent<
+class ErrorBoundary extends PureComponent<
   React.PropsWithChildren<Props>,
   State
 > {

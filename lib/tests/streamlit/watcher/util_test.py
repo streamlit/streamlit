@@ -25,7 +25,7 @@ class UtilTest(unittest.TestCase):
     def test_md5_calculation_succeeds_with_bytes_input(self):
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")):
             md5 = util.calc_md5_with_blocking_retries("foo")
-            self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
+            assert md5 == "5d41402abc4b2a76b9719d911017c592"
 
     @patch("os.path.isdir", MagicMock(return_value=True))
     @patch("streamlit.watcher.util._stable_dir_identifier")
@@ -33,7 +33,7 @@ class UtilTest(unittest.TestCase):
         mock_stable_dir_identifier.return_value = "hello"
 
         md5 = util.calc_md5_with_blocking_retries("foo")
-        self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
+        assert md5 == "5d41402abc4b2a76b9719d911017c592"
         mock_stable_dir_identifier.assert_called_once_with("foo", "*")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
@@ -47,7 +47,7 @@ class UtilTest(unittest.TestCase):
     @patch("os.path.exists", MagicMock(return_value=False))
     def test_md5_calculation_allow_nonexistent(self):
         md5 = util.calc_md5_with_blocking_retries("hello", allow_nonexistent=True)
-        self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
+        assert md5 == "5d41402abc4b2a76b9719d911017c592"
 
     def test_md5_calculation_opens_file_with_rb(self):
         # This tests implementation :( . But since the issue this is addressing

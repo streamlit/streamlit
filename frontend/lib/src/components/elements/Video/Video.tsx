@@ -20,6 +20,7 @@ import { getLogger } from "loglevel"
 
 import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -50,6 +51,8 @@ function Video({
   const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
     element
 
+  let crossOrigin = useCrossOriginAttribute(url)
+
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
       // Elements without an ID should never autoplay
@@ -58,17 +61,17 @@ function Video({
 
     // Recover the state in case this component got unmounted
     // and mounted again for the same element.
-    const preventAutoplay = elementMgr.getElementState(
+    const preventAutoplayState = elementMgr.getElementState(
       element.id,
       "preventAutoplay"
     )
 
-    if (!preventAutoplay) {
+    if (!preventAutoplayState) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
-    return preventAutoplay ?? false
+    return preventAutoplayState ?? false
   }, [element.id, elementMgr])
 
   // Create a stable dependency for checking subtitle source urls
@@ -90,6 +93,7 @@ function Video({
     // Since there is no onerror event for track elements, we can't use the onerror event
     // to catch src url load errors. Catch with direct check instead.
     subtitleSrcArr.forEach(subtitleSrc => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       endpoints.checkSourceUrlResponse(subtitleSrc, "Video Subtitle")
     })
   }, [subtitleSrcArrString, endpoints])
@@ -136,6 +140,7 @@ function Video({
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           videoNode.currentTime = startTime || 0
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           videoNode.play()
         } else if (!stoppedByEndTime) {
           stoppedByEndTime = true
@@ -166,6 +171,7 @@ function Video({
     const handleVideoEnd = (): void => {
       if (loop) {
         videoNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         videoNode.play()
       }
     }
@@ -179,9 +185,8 @@ function Video({
     }
   }, [loop, startTime])
 
-  const getYoutubeSrc = (url: string): string => {
-    const { startTime, endTime, loop, autoplay, muted } = element
-    const youtubeUrl = new URL(url)
+  const getYoutubeSrc = (urlArg: string): string => {
+    const youtubeUrl = new URL(urlArg)
 
     if (startTime && !isNaN(startTime)) {
       youtubeUrl.searchParams.append("start", startTime.toString())
@@ -240,9 +245,14 @@ function Video({
     )
   }
 
-  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // When in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running on different ports
+  if (process.env.NODE_ENV === "development" && subtitles.length > 0) {
+    crossOrigin = "anonymous"
+  }
+
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption
     <video
       className="stVideo"
       data-testid="stVideo"
@@ -252,11 +262,7 @@ function Video({
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       style={VIDEO_STYLE}
-      crossOrigin={
-        process.env.NODE_ENV === "development" && subtitles.length > 0
-          ? "anonymous"
-          : undefined
-      }
+      crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
       {subtitles &&

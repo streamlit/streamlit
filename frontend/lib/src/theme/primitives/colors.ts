@@ -59,6 +59,7 @@ export const colors = {
   yellow40: "#ffff7d",
   yellow50: "#ffff59",
   yellow60: "#fff835",
+  yellow65: "#ffff12",
   yellow70: "#ffe312",
   yellow80: "#faca2b",
   yellow90: "#edbb16",
@@ -104,6 +105,7 @@ export const colors = {
   blue40: "#83c9ff",
   blue50: "#60b4ff",
   blue60: "#3d9df3",
+  blue65: "#1c83ff",
   blue70: "#1c83e1",
   blue80: "#0068c9",
   blue90: "#0054a3",
@@ -120,3 +122,5 @@ export const colors = {
   purple90: "#583f84",
   purple100: "#3f3163",
 }
+
+export type PrimitiveColors = Record<keyof typeof colors, string>

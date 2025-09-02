@@ -23,14 +23,19 @@ import {
   notNullOrUndefined,
 } from "@streamlit/utils"
 
-import { ForwardMsgCache } from "./ForwardMessageCache"
-import { buildWsUri } from "./utils"
+import { ConnectionState } from "./ConnectionState"
 import {
   PING_MAXIMUM_RETRY_PERIOD_MS,
   PING_MINIMUM_RETRY_PERIOD_MS,
   WEBSOCKET_STREAM_PATH,
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
+import {
+  AsyncPingRequest,
+  doInitPings,
+  PingCancelledError,
+} from "./DoInitPings"
+import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
   Event,
   IHostConfigResponse,
@@ -39,8 +44,7 @@ import {
   OnRetry,
   StreamlitEndpoints,
 } from "./types"
-import { ConnectionState } from "./ConnectionState"
-import { doInitPings } from "./DoInitPings"
+import { buildWsUri } from "./utils"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -176,12 +180,17 @@ export class WebsocketConnection {
   private websocket?: WebSocket
 
   /**
+   * The AsyncPingRequest returned by doInitPings.
+   */
+  private pingRequest?: AsyncPingRequest
+
+  /**
    * WebSocket objects don't support retries, so we have to implement them
    * ourselves. We use setTimeout to wait for a connection and retry once the
    * timeout fires. This field stores the timer ID from setTimeout, so we can
    * cancel it if needed.
    */
-  private wsConnectionTimeoutId?: number
+  private wsConnectionTimeout?: NodeJS.Timeout | number
 
   constructor(props: Args) {
     this.args = props
@@ -212,6 +221,7 @@ export class WebsocketConnection {
     // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.pingServer()
         break
 
@@ -224,6 +234,7 @@ export class WebsocketConnection {
     // Perform post-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.CONNECTING:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.connectToWebSocket()
         break
 
@@ -328,7 +339,7 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
-    this.uriIndex = await doInitPings(
+    this.pingRequest = doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
@@ -337,7 +348,23 @@ export class WebsocketConnection {
       this.args.onHostConfigResp
     )
 
-    this.stepFsm("SERVER_PING_SUCCEEDED")
+    try {
+      this.uriIndex = await this.pingRequest.promise
+      this.pingRequest = undefined
+      this.stepFsm("SERVER_PING_SUCCEEDED")
+    } catch (e) {
+      if (e instanceof PingCancelledError) {
+        // This is an expected error when the connection is cancelled.
+        // We don't need to do anything here.
+        LOG.info("Ping cancelled")
+      } else {
+        // This is an unexpected error.
+        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
+      }
+    } finally {
+      // Reset the ping request to avoid memory leaks
+      this.pingRequest = undefined
+    }
   }
 
   /**
@@ -430,6 +457,7 @@ export class WebsocketConnection {
         LOG.error("Client Error: WebSocket onerror")
         this.args.sendClientError(
           "Websocket connection onerror triggered",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
           `Error: ${event}`,
           "Websocket Connection"
         )
@@ -440,7 +468,7 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(uri: string): void {
-    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
+    if (notNullOrUndefined(this.wsConnectionTimeout)) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
       throw new Error("WS timeout is already set")
@@ -448,12 +476,12 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
-    this.wsConnectionTimeoutId = window.setTimeout(() => {
+    this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return
       }
 
-      if (isNullOrUndefined(this.wsConnectionTimeoutId)) {
+      if (isNullOrUndefined(this.wsConnectionTimeout)) {
         // Sometimes the clearTimeout doesn't work. No idea why :-/
         LOG.warn("Timeout fired after cancellation")
         return
@@ -479,7 +507,7 @@ export class WebsocketConnection {
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
-    LOG.info(`Set WS timeout ${this.wsConnectionTimeoutId}`)
+    LOG.info(`Set WS timeout ${Number(this.wsConnectionTimeout)}`)
   }
 
   private closeConnection(): void {
@@ -494,10 +522,15 @@ export class WebsocketConnection {
       this.websocket = undefined
     }
 
-    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
-      LOG.info(`Clearing WS timeout ${this.wsConnectionTimeoutId}`)
-      window.clearTimeout(this.wsConnectionTimeoutId)
-      this.wsConnectionTimeoutId = undefined
+    if (notNullOrUndefined(this.wsConnectionTimeout)) {
+      LOG.info(`Clearing WS timeout ${Number(this.wsConnectionTimeout)}`)
+      globalThis.clearTimeout(this.wsConnectionTimeout)
+      this.wsConnectionTimeout = undefined
+    }
+
+    if (this.pingRequest) {
+      this.pingRequest.cancel()
+      this.pingRequest = undefined
     }
   }
 

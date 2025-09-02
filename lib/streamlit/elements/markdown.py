@@ -16,13 +16,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, Literal, cast
 
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr, is_sympy_expression
 
 if TYPE_CHECKING:
-    import sympy  # type: ignore
+    import sympy
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -37,6 +43,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -73,7 +80,7 @@ class MarkdownMixin:
             - Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey,
+              supported colors: red, orange, yellow, green, blue, violet, gray/grey,
               rainbow, or primary. For example, you can use
               ``:orange[your text here]`` or ``:blue-background[your text here]``.
               If you use "primary" for color, Streamlit will use the default
@@ -82,7 +89,7 @@ class MarkdownMixin:
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported
-              colors: blue, green, orange, red, violet, gray/grey, or primary.
+              colors: red, orange, yellow, green, blue, violet, gray/grey, or primary.
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
 
@@ -109,6 +116,18 @@ class MarkdownMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        width : "stretch", "content", or int
+            The width of the Markdown element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -141,7 +160,10 @@ class MarkdownMixin:
         if help:
             markdown_proto.help = help
 
-        return self.dg._enqueue("markdown", markdown_proto)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
     @gather_metrics("caption")
     def caption(
@@ -150,6 +172,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -189,6 +212,18 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : "stretch", "content", or int
+            The width of the caption element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         Examples
         --------
         >>> import streamlit as st
@@ -204,7 +239,11 @@ class MarkdownMixin:
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
             caption_proto.help = help
-        return self.dg._enqueue("markdown", caption_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
     @gather_metrics("latex")
     def latex(
@@ -212,6 +251,7 @@ class MarkdownMixin:
         body: SupportsStr | sympy.Expr,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
@@ -235,6 +275,18 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : "stretch", "content", or int
+            The width of the LaTeX element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         Example
         -------
         >>> import streamlit as st
@@ -246,25 +298,42 @@ class MarkdownMixin:
         ...     ''')
 
         """
+
         if is_sympy_expression(body):
             import sympy
 
             body = sympy.latex(body)
 
         latex_proto = MarkdownProto()
-        latex_proto.body = "$$\n%s\n$$" % clean_text(body)
+        latex_proto.body = f"$$\n{clean_text(body)}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
             latex_proto.help = help
-        return self.dg._enqueue("markdown", latex_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
 
     @gather_metrics("divider")
-    def divider(self) -> DeltaGenerator:
+    def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
         """Display a horizontal rule.
 
         .. note::
             You can achieve the same effect with st.write("---") or
             even just "---" in your script (via magic).
+
+        Parameters
+        ----------
+        width : "stretch" or int
+            The width of the divider element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -273,10 +342,15 @@ class MarkdownMixin:
         >>> st.divider()
 
         """
+
         divider_proto = MarkdownProto()
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
-        return self.dg._enqueue("markdown", divider_proto)
+
+        validate_width(width, allow_content=False)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
 
     @gather_metrics("badge")
     def badge(
@@ -285,15 +359,17 @@ class MarkdownMixin:
         *,  # keyword-only arguments:
         icon: str | None = None,
         color: Literal[
+            "red",
+            "orange",
+            "yellow",
             "blue",
             "green",
-            "orange",
-            "red",
             "violet",
             "gray",
             "grey",
             "primary",
         ] = "blue",
+        width: Width = "content",
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -343,10 +419,23 @@ class MarkdownMixin:
         color : str
             The color to use for the badge. This defaults to ``"blue"``.
 
-            This can be one of the following supported colors: blue, green,
-            orange, red, violet, gray/grey, or primary. If you use
+            This can be one of the following supported colors: red, orange,
+            yellow, blue, green, violet, gray/grey, or primary. If you use
             ``"primary"``, Streamlit will use the default primary accent color
             unless you set the ``theme.primaryColor`` configuration option.
+
+        width : "content", "stretch", or int
+            The width of the badge element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -368,10 +457,7 @@ class MarkdownMixin:
             height: 220px
 
         """
-        if icon is not None:
-            icon_str = validate_icon_or_emoji(icon) + " "
-        else:
-            icon_str = ""
+        icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")
@@ -379,7 +465,11 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
-        return self.dg._enqueue("markdown", badge_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

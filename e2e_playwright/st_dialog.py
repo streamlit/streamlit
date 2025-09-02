@@ -25,7 +25,7 @@ data = np.random.randint(low=0, high=20, size=(20, 3))
 
 
 @st.dialog("Test Dialog with Images")
-def dialog_with_images():
+def dialog_with_images() -> None:
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
 
@@ -49,7 +49,7 @@ if st.button("Open Dialog with Images"):
 
 
 @st.dialog("Simple Dialog")
-def simple_dialog():
+def simple_dialog() -> None:
     st.write("Hello again!")
     st.text_input("Enter something!")
 
@@ -61,8 +61,20 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Medium-width Dialog", width="medium")
+def medium_width_dialog() -> None:
+    st.write("This dialog has a medium width.")
+
+    if st.button("Submit", key="medium-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open medium-width Dialog"):
+    medium_width_dialog()
+
+
 @st.dialog("Large-width Dialog", width="large")
-def large_width_dialog():
+def large_width_dialog() -> None:
     st.write("This dialog has a large width.")
 
     if st.button("Submit", key="dialog4-btn"):
@@ -74,7 +86,7 @@ if st.button("Open large-width Dialog"):
 
 
 @st.dialog("Dialog with headings")
-def headings_dialog():
+def headings_dialog() -> None:
     st.header("Header", help="Some tooltip!")
 
 
@@ -86,7 +98,7 @@ if st.button("Open headings Dialog"):
 with st.sidebar:
 
     @st.dialog("Simple Dialog in Sidebar")
-    def dialog_in_sidebar():
+    def dialog_in_sidebar() -> None:
         st.write("Hello sidebar dialog!")
 
         if st.button("Submit", key="dialog5-btn"):
@@ -97,9 +109,9 @@ with st.sidebar:
 
 
 @st.dialog("Submit-button Dialog")
-def submit_button_dialog():
+def submit_button_dialog() -> None:
     st.write("This dialog has a submit button.")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
 
     if st.button("Submit", key="dialog6-btn"):
         st.rerun()
@@ -110,14 +122,14 @@ if st.button("Open submit-button Dialog"):
 
 
 @st.dialog("Level2 Dialog")
-def level2_dialog():
+def level2_dialog() -> None:
     st.write("Second level dialog")
 
 
 @st.dialog("Level1 Dialog")
-def level1_dialog():
+def level1_dialog() -> None:
     st.write("First level dialog")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
     level2_dialog()
 
 
@@ -126,10 +138,10 @@ if st.button("Open Nested Dialogs"):
 
 
 @st.dialog("Dialog with error")
-def dialog_with_error():
+def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
-        # key is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", key="foo")
+        # foo is an invalid argument, so this shows an error
+        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg]
 
 
 if st.button("Open Dialog with Key Error"):
@@ -137,7 +149,7 @@ if st.button("Open Dialog with Key Error"):
 
 
 @st.dialog("Dialog with copy buttons")
-def dialog_with_copy_buttons():
+def dialog_with_copy_buttons() -> None:
     st.json([1, 2, 3])
 
     copied_text = st.text_input("Enter copied text")
@@ -148,17 +160,8 @@ if st.button("Open Dialog with Copy Buttons"):
     dialog_with_copy_buttons()
 
 
-@st.experimental_dialog("Usage of deprecated experimental_dialog")
-def dialog_with_deprecation_warning():
-    pass  # No need to write anything in the dialog body.
-
-
-if st.button("Open Dialog with deprecation warning"):
-    dialog_with_deprecation_warning()
-
-
 @st.fragment()
-def fragment():
+def fragment() -> None:
     if st.button("Fragment Button"):
         st.write("Fragment Button clicked")
 
@@ -167,7 +170,7 @@ fragment()
 
 
 @st.dialog("Dialog with chart")
-def dialog_with_chart():
+def dialog_with_chart() -> None:
     st.write("This dialog has a chart")
     st.bar_chart(pd.DataFrame(data, columns=["a", "b", "c"]))
 
@@ -177,7 +180,7 @@ if st.button("Open Chart Dialog"):
 
 
 @st.dialog("Dialog with dataframe")
-def dialog_with_dataframe():
+def dialog_with_dataframe() -> None:
     st.dataframe(
         pd.DataFrame(data, columns=["a", "b", "c"]),
         column_config={
@@ -194,7 +197,7 @@ if st.button("Open Dialog with dataframe"):
 
 
 @st.dialog("Dialog with rerun")
-def dialog_with_rerun():
+def dialog_with_rerun() -> None:
     if st.button("Close Dialog"):
         time.sleep(0.15)
         st.rerun()
@@ -202,3 +205,66 @@ def dialog_with_rerun():
 
 if st.button("Open Dialog with rerun"):
     dialog_with_rerun()
+
+
+@st.dialog(
+    "This is a very long dialog title that should not overlap with the close button"
+)
+def dialog_with_long_title() -> None:
+    st.write("This dialog has a very long title to test spacing.")
+
+
+if st.button("Open Dialog with long title"):
+    dialog_with_long_title()
+
+
+@st.dialog("Non-dismissible Dialog", dismissible=False)
+def non_dismissible_dialog() -> None:
+    st.write("This dialog cannot be dismissed by pressing ESC or clicking outside!")
+    st.info(
+        "You can only close this dialog by clicking the 'Close Dialog' button below."
+    )
+
+    if st.button("Close Dialog", key="non-dismissible-close-btn"):
+        st.rerun()
+
+
+if st.button("Open Non-dismissible Dialog"):
+    non_dismissible_dialog()
+
+# Counter for tracking reruns caused by on_dismiss
+if "rerun_count" not in st.session_state:
+    st.session_state.rerun_count = 0
+st.session_state.rerun_count += 1
+st.write(f"Rerun count: {st.session_state.rerun_count}")
+
+
+@st.dialog("Dialog with on_dismiss=rerun", on_dismiss="rerun")
+def dialog_on_dismiss_rerun():
+    st.write("This dialog triggers rerun on dismiss")
+    if st.button("Close", key="close-rerun-dialog"):
+        st.rerun()
+
+
+if st.button("Open on_dismiss=rerun Dialog"):
+    dialog_on_dismiss_rerun()
+
+
+def on_dialog_dismiss_callback():
+    """Callback function for on_dismiss test."""
+    st.session_state.callback_executed = True
+    st.session_state.dismiss_count = st.session_state.get("dismiss_count", 0) + 1
+
+
+@st.dialog("Dialog with on_dismiss callback", on_dismiss=on_dialog_dismiss_callback)
+def dialog_on_dismiss_callback():
+    st.write("This dialog executes callback on dismiss")
+    if st.button("Close", key="close-callback-dialog"):
+        st.rerun()
+
+
+if st.button("Open on_dismiss callback Dialog"):
+    dialog_on_dismiss_callback()
+
+if st.session_state.get("callback_executed"):
+    st.write("Callback executions:", st.session_state.get("dismiss_count", 0))

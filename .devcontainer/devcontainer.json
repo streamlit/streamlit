@@ -75,6 +75,7 @@
         },
         "files.trimTrailingWhitespace": true,
         "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
         "search.exclude": {
           "lib/build/**": true
         },
@@ -85,10 +86,13 @@
           }
         ],
         "eslint.lintTask.enable": true,
-        "editor.codeActionsOnSave": { "source.fixAll": "always" },
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "always"
+        },
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
-        "ruff.lint.extendSelect": ["E501"],
+        "mypy-type-checker.preferDaemon": false,
+        "mypy-type-checker.args": ["--config-file=mypy.ini"],
         "ruff.nativeServer": true,
         "ruff.organizeImports": true,
         "ruff.fixAll": true,
@@ -99,17 +103,33 @@
           "e2e_playwright/**/*"
         ],
         "python.analysis.extraPaths": ["./lib"],
+        "python.analysis.typeCheckingMode": "off",
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.testing.pytestEnabled": true,
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+        "cursorpyright.analysis.exclude": ["lib/build"],
+        "cursorpyright.analysis.include": [
+          "lib/**/*",
+          "scripts/**/*",
+          "e2e_playwright/**/*"
+        ],
+        "cursorpyright.analysis.extraPaths": ["./lib"],
+        "cursorpyright.analysis.typeCheckingMode": "off",
+        "cursorpyright.analysis.useTypingExtensions": true,
+        "cursorpyright.shouldImportPylanceSettings": "always",
+        "cursorpyright.analysis.logLevel": "Information",
         "terminal.integrated.profiles.linux": {
           "frontend-dev": {
             "path": "bash",
             "args": ["-c", "make frontend-dev"]
           }
-        }
+        },
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "git.branchProtection": ["develop"]
       }
     }
   },
-  "updateContentCommand": "make all-devel",
+  "updateContentCommand": "make all-dev",
   "postStartCommand": "make frontend-dev"
 }

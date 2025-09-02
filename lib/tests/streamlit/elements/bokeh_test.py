@@ -45,7 +45,7 @@ class BokehTest(DeltaGeneratorTestCase):
         st.bokeh_chart(plot)
 
         c = self.get_delta_from_queue().new_element.bokeh_chart
-        self.assertEqual(hasattr(c, "figure"), True)
+        assert hasattr(c, "figure")
 
     @unittest.skipIf(
         is_version_less_than(np.__version__, "2.0.0") is False,
@@ -57,8 +57,25 @@ class BokehTest(DeltaGeneratorTestCase):
 
         with patch("bokeh.__version__", return_value="2.4.0"):
             plot = figure()
-            with self.assertRaises(StreamlitAPIException):
+            with pytest.raises(StreamlitAPIException):
                 st.bokeh_chart(plot)
+
+    @unittest.skipIf(
+        is_version_less_than(np.__version__, "2.0.0") is False,
+        "This test only runs if numpy is < 2.0.0. The bokeh version supported "
+        "by Streamlit is not compatible with numpy 2.x.",
+    )
+    @patch("streamlit.elements.bokeh_chart.show_deprecation_warning")
+    def test_calling_bokeh_chart_shows_deprecation_warning(
+        self, patched_show_deprecation_warning
+    ):
+        from bokeh.plotting import figure
+
+        plot = figure()
+        plot.line([1], [1])
+        st.bokeh_chart(plot)
+
+        patched_show_deprecation_warning.assert_called_once()
 
 
 class BokehMissingTest(DeltaGeneratorTestCase):
@@ -75,5 +92,5 @@ class BokehMissingTest(DeltaGeneratorTestCase):
 
     def test_bokeh_chart_missing_dependency(self):
         """Test that ModuleNotFoundError is raised when bokeh is not installed."""
-        with self.assertRaises(ModuleNotFoundError):
+        with pytest.raises(ModuleNotFoundError):
             st.bokeh_chart(None)

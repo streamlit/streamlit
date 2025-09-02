@@ -22,11 +22,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import tornado.concurrent
-import tornado.locks
-import tornado.netutil
 import tornado.web
-import tornado.websocket
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, util
@@ -53,8 +49,8 @@ from streamlit.web.server.routes import (
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import (
-    DEVELOPMENT_PORT,
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -62,25 +58,67 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
 
 _LOGGER: Final = get_logger(__name__)
 
-TORNADO_SETTINGS = {
-    # Gzip HTTP responses.
-    "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
-    # If we don't get a ping response within 30s, the connection
-    # is timed out.
-    "websocket_ping_timeout": 30,
-    "xsrf_cookie_name": "_streamlit_xsrf",
-}
+
+def _get_websocket_ping_interval_and_timeout() -> tuple[int, int]:
+    """Get the websocket ping interval and timeout from config or defaults.
+
+    Returns
+    -------
+        tuple: (ping_interval, ping_timeout)
+    """
+    configured_interval = config.get_option("server.websocketPingInterval")
+
+    if configured_interval is not None:
+        # User has explicitly set a value
+        interval = int(configured_interval)
+
+        # Warn if using Tornado 6.5+ with low interval
+        if not is_tornado_version_less_than("6.5.0") and interval < 30:
+            _LOGGER.warning(
+                "You have set server.websocketPingInterval to %s, but Tornado >= 6.5 "
+                "requires websocket_ping_interval >= websocket_ping_timeout. "
+                "To comply, we are setting both the ping interval and ping timeout to %s. "
+                "Depending on the specific deployment setup, this may cause connection issues.",
+                interval,
+                interval,
+            )
+
+        # When user configures interval, set timeout to match
+        return interval, interval
+
+    # Default behavior: respect Tornado version for interval, always 30s timeout
+    default_interval = 1 if is_tornado_version_less_than("6.5.0") else 30
+    return default_interval, 30
+
+
+def get_tornado_settings() -> dict[str, Any]:
+    """Get Tornado settings for the server.
+
+    This is a function to allow for testing and dynamic configuration.
+    """
+    ping_interval, ping_timeout = _get_websocket_ping_interval_and_timeout()
+
+    return {
+        # Gzip HTTP responses.
+        "compress_response": True,
+        # Ping interval for websocket keepalive.
+        # With recent versions of Tornado, this value must be greater than or
+        # equal to websocket_ping_timeout.
+        # For details, see https://github.com/tornadoweb/tornado/pull/3376
+        # For compatibility with older versions of Tornado, we set the value to 1.
+        "websocket_ping_interval": ping_interval,
+        # If we don't get a ping response within this time, the connection
+        # is timed out.
+        "websocket_ping_timeout": ping_timeout,
+        "xsrf_cookie_name": "_streamlit_xsrf",
+    }
+
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
@@ -112,7 +150,7 @@ AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
 AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
 
 
-class RetriesExceeded(Exception):
+class RetriesExceededError(Exception):
     pass
 
 
@@ -175,7 +213,7 @@ def _get_ssl_options(cert_file: str | None, key_file: str | None) -> SSLContext 
         try:
             ssl_ctx.load_cert_chain(cert_file, key_file)
         except ssl.SSLError:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to load SSL certificate. Make sure "
                 "cert file '%s' and key file '%s' are correct.",
                 cert_file,
@@ -191,8 +229,16 @@ def start_listening_unix_socket(http_server: HTTPServer) -> None:
     address = config.get_option("server.address")
     file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
-    unix_socket = tornado.netutil.bind_unix_socket(file_name)
-    http_server.add_socket(unix_socket)
+    import tornado.netutil
+
+    if hasattr(tornado.netutil, "bind_unix_socket"):
+        unix_socket = tornado.netutil.bind_unix_socket(file_name)
+        http_server.add_socket(unix_socket)
+    else:
+        _LOGGER.error(
+            "Unix socket support is not available in this version of Tornado."
+        )
+        sys.exit(1)
 
 
 def start_listening_tcp_socket(http_server: HTTPServer) -> None:
@@ -203,14 +249,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
-        if int(port) == DEVELOPMENT_PORT:
-            _LOGGER.warning(
-                "Port %s is reserved for internal development. "
-                "It is strongly recommended to select an alternative port "
-                "for `server.port`.",
-                DEVELOPMENT_PORT,
-            )
-
         try:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
@@ -218,16 +256,13 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         except OSError as e:
             if e.errno == errno.EADDRINUSE:
                 if server_port_is_manually_set():
-                    _LOGGER.error("Port %s is already in use", port)
+                    _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
                     sys.exit(1)
                 else:
                     _LOGGER.debug(
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
-                    # Don't use the development port here:
-                    if port == DEVELOPMENT_PORT:
-                        port += 1
 
                     config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
@@ -237,19 +272,24 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
                 raise
 
     if call_count >= MAX_PORT_SEARCH_RETRIES:
-        raise RetriesExceeded(
+        raise RetriesExceededError(
             f"Cannot start Streamlit server. Port {port} is already in use, and "
             f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
         )
 
 
 class Server:
-    def __init__(self, main_script_path: str, is_hello: bool):
+    def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
         self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+
+        # The task that runs the server if an event loop is already running.
+        # We need to save a reference to it so that it doesn't get
+        # garbage collected while running.
+        self._bootstrap_task: asyncio.Task[None] | None = None
 
         # Initialize MediaFileStorage and its associated endpoint
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
@@ -278,6 +318,7 @@ class Server:
         """Ensures that common mime-types are robust against system misconfiguration."""
         mimetypes.add_type("text/html", ".html")
         mimetypes.add_type("application/javascript", ".js")
+        mimetypes.add_type("application/javascript", ".mjs")
         mimetypes.add_type("text/css", ".css")
         mimetypes.add_type("image/webp", ".webp")
 
@@ -428,7 +469,7 @@ class Server:
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
-                            "path": "%s/" % static_path,
+                            "path": f"{static_path}/",
                             "default_filename": "index.html",
                             "reserved_paths": [
                                 # These paths are required for identifying
@@ -451,7 +492,7 @@ class Server:
             xsrf_cookies=is_xsrf_enabled(),
             # Set the websocket message size. The default value is too low.
             websocket_max_message_size=get_max_message_size_bytes(),
-            **TORNADO_SETTINGS,  # type: ignore[arg-type]
+            **get_tornado_settings(),
         )
 
     @property

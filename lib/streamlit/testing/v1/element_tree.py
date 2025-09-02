@@ -11,11 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Assert statements are allowed here since the app testing logic is used within unit tests:
+# ruff: noqa: S101
+
 from __future__ import annotations
 
 import textwrap
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
@@ -29,16 +33,12 @@ from typing import (
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import Self, TypeAlias
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
-from streamlit.elements.widgets.slider import (
-    SliderSerde,
-    SliderStep,
-    SliderValueT,
-)
+from streamlit.elements.widgets.slider import SliderSerde, SliderStep
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
     DateWidgetReturn,
@@ -124,9 +124,9 @@ class Element(ABC):
     key: str | None
 
     @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree): ...
+    def __init__(self, proto: ElementProto, root: ElementTree) -> None: ...
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Self]:
         yield self
 
     @property
@@ -150,13 +150,13 @@ class Element(ABC):
         """
         return self.root.run(timeout=timeout)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return util.repr_(self)
 
 
 @dataclass(repr=False)
 class UnknownElement(Element):
-    def __init__(self, proto: ElementProto, root: ElementTree):
+    def __init__(self, proto: ElementProto, root: ElementTree) -> None:
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.proto = getattr(proto, ty)
@@ -184,13 +184,13 @@ class Widget(Element, ABC):
     key: str | None
     _value: Any
 
-    def __init__(self, proto: Any, root: ElementTree):
+    def __init__(self, proto: Any, root: ElementTree) -> None:
         self.proto = proto
         self.root = root
         self.key = user_key_from_element_id(self.id)
         self._value = None
 
-    def set_value(self, v: Any):
+    def set_value(self, v: Any) -> Self:
         """Set the value of the widget."""
         self._value = v
         return self
@@ -204,7 +204,7 @@ El_co = TypeVar("El_co", bound=Element, covariant=True)
 
 
 class ElementList(Generic[El_co]):
-    def __init__(self, els: Sequence[El_co]):
+    def __init__(self, els: Sequence[El_co]) -> None:
         self._list: Sequence[El_co] = els
 
     def __len__(self) -> int:
@@ -223,20 +223,21 @@ class ElementList(Generic[El_co]):
     def __getitem__(self, idx: int | slice) -> El_co | ElementList[El_co]:
         if isinstance(idx, slice):
             return ElementList(self._list[idx])
-        else:
-            return self._list[idx]
+        return self._list[idx]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[El_co]:
         yield from self._list
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return util.repr_(self)
 
     def __eq__(self, other: ElementList[El_co] | object) -> bool:
         if isinstance(other, ElementList):
             return self._list == other._list
-        else:
-            return self._list == other
+        return self._list == other
+
+    def __hash__(self) -> int:
+        return hash(tuple(self._list))
 
     @property
     def values(self) -> Sequence[Any]:
@@ -260,7 +261,7 @@ class AlertBase(Element):
     proto: AlertProto = field(repr=False)
     icon: str
 
-    def __init__(self, proto: AlertProto, root: ElementTree):
+    def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -272,28 +273,28 @@ class AlertBase(Element):
 
 @dataclass(repr=False)
 class Error(AlertBase):
-    def __init__(self, proto: AlertProto, root: ElementTree):
+    def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "error"
 
 
 @dataclass(repr=False)
-class Warning(AlertBase):
-    def __init__(self, proto: AlertProto, root: ElementTree):
+class Warning(AlertBase):  # noqa: A001
+    def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "warning"
 
 
 @dataclass(repr=False)
 class Info(AlertBase):
-    def __init__(self, proto: AlertProto, root: ElementTree):
+    def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "info"
 
 
 @dataclass(repr=False)
 class Success(AlertBase):
-    def __init__(self, proto: AlertProto, root: ElementTree):
+    def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "success"
 
@@ -309,7 +310,7 @@ class Button(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: ButtonProto, root: ElementTree):
+    def __init__(self, proto: ButtonProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = False
         self.type = "button"
@@ -326,10 +327,9 @@ class Button(Widget):
         """The value of the button. (bool)"""  # noqa: D400
         if self._value:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("bool", state[TESTING_KEY][self.id])
+        state = self.root.session_state
+        assert state
+        return cast("bool", state[TESTING_KEY][self.id])
 
     def set_value(self, v: bool) -> Button:
         """Set the value of the button."""
@@ -349,7 +349,7 @@ class ChatInput(Widget):
     proto: ChatInputProto = field(repr=False)
     placeholder: str
 
-    def __init__(self, proto: ChatInputProto, root: ElementTree):
+    def __init__(self, proto: ChatInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "chat_input"
 
@@ -371,10 +371,9 @@ class ChatInput(Widget):
         """The value of the widget. (str)"""  # noqa: D400
         if self._value:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return state[TESTING_KEY][self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        return state[TESTING_KEY][self.id]  # type: ignore
 
 
 @dataclass(repr=False)
@@ -388,7 +387,7 @@ class Checkbox(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: CheckboxProto, root: ElementTree):
+    def __init__(self, proto: CheckboxProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "checkbox"
 
@@ -404,10 +403,9 @@ class Checkbox(Widget):
         """The value of the widget. (bool)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("bool", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("bool", state[self.id])
 
     def set_value(self, v: bool) -> Checkbox:
         """Set the value of the widget."""
@@ -433,7 +431,7 @@ class Code(Element):
     show_line_numbers: bool
     key: None
 
-    def __init__(self, proto: CodeProto, root: ElementTree):
+    def __init__(self, proto: CodeProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -456,7 +454,7 @@ class ColorPicker(Widget):
 
     proto: ColorPickerProto = field(repr=False)
 
-    def __init__(self, proto: ColorPickerProto, root: ElementTree):
+    def __init__(self, proto: ColorPickerProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "color_picker"
 
@@ -465,10 +463,9 @@ class ColorPicker(Widget):
         """The currently selected value as a hex string. (str)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("str", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("str", state[self.id])
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -497,7 +494,7 @@ class ColorPicker(Widget):
 class Dataframe(Element):
     proto: ArrowProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree):
+    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
@@ -525,7 +522,7 @@ class DateInput(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: DateInputProto, root: ElementTree):
+    def __init__(self, proto: DateInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
@@ -552,20 +549,19 @@ class DateInput(Widget):
         if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed) if parsed is not None else None  # type: ignore
-        else:
-            state = self.root.session_state
-            assert state
-            return state[self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
 
 
 @dataclass(repr=False)
-class Exception(Element):
+class Exception(Element):  # noqa: A001
     message: str
     is_markdown: bool
     stack_trace: list[str]
     is_warning: bool
 
-    def __init__(self, proto: ExceptionProto, root: ElementTree):
+    def __init__(self, proto: ExceptionProto, root: ElementTree) -> None:
         self.key = None
         self.root = root
         self.proto = proto
@@ -588,7 +584,7 @@ class HeadingBase(Element, ABC):
     hide_anchor: bool
     key: None
 
-    def __init__(self, proto: HeadingProto, root: ElementTree, type_: str):
+    def __init__(self, proto: HeadingProto, root: ElementTree, type_: str) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -601,19 +597,19 @@ class HeadingBase(Element, ABC):
 
 @dataclass(repr=False)
 class Header(HeadingBase):
-    def __init__(self, proto: HeadingProto, root: ElementTree):
+    def __init__(self, proto: HeadingProto, root: ElementTree) -> None:
         super().__init__(proto, root, "header")
 
 
 @dataclass(repr=False)
 class Subheader(HeadingBase):
-    def __init__(self, proto: HeadingProto, root: ElementTree):
+    def __init__(self, proto: HeadingProto, root: ElementTree) -> None:
         super().__init__(proto, root, "subheader")
 
 
 @dataclass(repr=False)
 class Title(HeadingBase):
-    def __init__(self, proto: HeadingProto, root: ElementTree):
+    def __init__(self, proto: HeadingProto, root: ElementTree) -> None:
         super().__init__(proto, root, "title")
 
 
@@ -623,7 +619,7 @@ class Json(Element):
 
     expanded: bool
 
-    def __init__(self, proto: JsonProto, root: ElementTree):
+    def __init__(self, proto: JsonProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -642,7 +638,7 @@ class Markdown(Element):
     allow_html: bool
     key: None
 
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
+    def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -655,21 +651,21 @@ class Markdown(Element):
 
 @dataclass(repr=False)
 class Caption(Markdown):
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
+    def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "caption"
 
 
 @dataclass(repr=False)
 class Divider(Markdown):
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
+    def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "divider"
 
 
 @dataclass(repr=False)
 class Latex(Markdown):
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
+    def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "latex"
 
@@ -682,7 +678,7 @@ class Metric(Element):
     color: str
     help: str
 
-    def __init__(self, proto: MetricProto, root: ElementTree):
+    def __init__(self, proto: MetricProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -703,7 +699,7 @@ class ButtonGroup(Widget, Generic[T]):
     options: list[ButtonGroupProto.Option]
     form_id: str
 
-    def __init__(self, proto: ButtonGroupProto, root: ElementTree):
+    def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "button_group"
         self.options = list(proto.options)
@@ -724,10 +720,9 @@ class ButtonGroup(Widget, Generic[T]):
         """The currently selected values from the options. (list)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("list[T]", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("list[T]", state[self.id])
 
     @property
     def indices(self) -> Sequence[int]:
@@ -755,11 +750,10 @@ class ButtonGroup(Widget, Generic[T]):
         current = self.value
         if v in current:
             return self
-        else:
-            new = current.copy()
-            new.append(v)
-            self.set_value(new)
-            return self
+        new = current.copy()
+        new.append(v)
+        self.set_value(new)
+        return self
 
     def unselect(self, v: T) -> ButtonGroup[T]:
         """
@@ -770,12 +764,11 @@ class ButtonGroup(Widget, Generic[T]):
         current = self.value
         if v not in current:
             return self
-        else:
-            new = current.copy()
-            while v in new:
-                new.remove(v)
-            self.set_value(new)
-            return self
+        new = current.copy()
+        while v in new:
+            new.remove(v)
+        self.set_value(new)
+        return self
 
 
 @dataclass(repr=False)
@@ -791,7 +784,7 @@ class Multiselect(Widget, Generic[T]):
     help: str
     form_id: str
 
-    def __init__(self, proto: MultiSelectProto, root: ElementTree):
+    def __init__(self, proto: MultiSelectProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "multiselect"
         self.options = list(proto.options)
@@ -812,10 +805,9 @@ class Multiselect(Widget, Generic[T]):
         """The currently selected values from the options. (list)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("list[T]", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("list[T]", state[self.id])
 
     @property
     def indices(self) -> Sequence[int]:
@@ -848,11 +840,10 @@ class Multiselect(Widget, Generic[T]):
         current = self.value
         if v in current:
             return self
-        else:
-            new = current.copy()
-            new.append(v)
-            self.set_value(new)
-            return self
+        new = current.copy()
+        new.append(v)
+        self.set_value(new)
+        return self
 
     def unselect(self, v: T) -> Multiselect[T]:
         """
@@ -863,12 +854,11 @@ class Multiselect(Widget, Generic[T]):
         current = self.value
         if v not in current:
             return self
-        else:
-            new = current.copy()
-            while v in new:
-                new.remove(v)
-            self.set_value(new)
-            return self
+        new = current.copy()
+        while v in new:
+            new.remove(v)
+        self.set_value(new)
+        return self
 
 
 Number = Union[int, float]
@@ -887,7 +877,7 @@ class NumberInput(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: NumberInputProto, root: ElementTree):
+    def __init__(self, proto: NumberInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "number_input"
@@ -912,12 +902,11 @@ class NumberInput(Widget):
         """Get the current value of the ``st.number_input`` widget."""
         if not isinstance(self._value, InitialValue):
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
+        state = self.root.session_state
+        assert state
 
-            # Awkward to do this with `cast`
-            return state[self.id]  # type: ignore
+        # Awkward to do this with `cast`
+        return state[self.id]  # type: ignore
 
     def increment(self) -> NumberInput:
         """Increment the ``st.number_input`` widget as if the user clicked "+"."""
@@ -949,7 +938,7 @@ class Radio(Widget, Generic[T]):
     help: str
     form_id: str
 
-    def __init__(self, proto: RadioProto, root: ElementTree):
+    def __init__(self, proto: RadioProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "radio"
@@ -967,10 +956,9 @@ class Radio(Widget, Generic[T]):
         """The currently selected value from the options. (Any)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("T", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("T", state[self.id])
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1008,7 +996,7 @@ class Selectbox(Widget, Generic[T]):
     help: str
     form_id: str
 
-    def __init__(self, proto: SelectboxProto, root: ElementTree):
+    def __init__(self, proto: SelectboxProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "selectbox"
@@ -1029,10 +1017,9 @@ class Selectbox(Widget, Generic[T]):
         """The currently selected value from the options. (Any)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("T", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("T", state[self.id])
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1081,7 +1068,7 @@ class SelectSlider(Widget, Generic[T]):
     help: str
     form_id: str
 
-    def __init__(self, proto: SliderProto, root: ElementTree):
+    def __init__(self, proto: SliderProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "select_slider"
         self.options = list(proto.options)
@@ -1112,11 +1099,10 @@ class SelectSlider(Widget, Generic[T]):
         """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            # Awkward to do this with `cast`
-            return state[self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        # Awkward to do this with `cast`
+        return state[self.id]  # type: ignore
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1127,6 +1113,9 @@ class SelectSlider(Widget, Generic[T]):
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         """Set the ranged selection by values."""
         return self.set_value([lower, upper])
+
+
+SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 
 
 @dataclass(repr=False)
@@ -1144,7 +1133,7 @@ class Slider(Widget, Generic[SliderValueT]):
     help: str
     form_id: str
 
-    def __init__(self, proto: SliderProto, root: ElementTree):
+    def __init__(self, proto: SliderProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "slider"
 
@@ -1171,11 +1160,10 @@ class Slider(Widget, Generic[SliderValueT]):
         """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            # Awkward to do this with `cast`
-            return state[self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        # Awkward to do this with `cast`
+        return state[self.id]  # type: ignore
 
     def set_range(
         self, lower: SliderValueT, upper: SliderValueT
@@ -1188,7 +1176,7 @@ class Slider(Widget, Generic[SliderValueT]):
 class Table(Element):
     proto: ArrowProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree):
+    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
@@ -1205,7 +1193,7 @@ class Text(Element):
 
     key: None = None
 
-    def __init__(self, proto: TextProto, root: ElementTree):
+    def __init__(self, proto: TextProto, root: ElementTree) -> None:
         self.proto = proto
         self.root = root
         self.type = "text"
@@ -1229,7 +1217,7 @@ class TextArea(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: TextAreaProto, root: ElementTree):
+    def __init__(self, proto: TextAreaProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "text_area"
@@ -1252,11 +1240,10 @@ class TextArea(Widget):
         """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            # Awkward to do this with `cast`
-            return state[self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        # Awkward to do this with `cast`
+        return state[self.id]  # type: ignore
 
     def input(self, v: str) -> TextArea:
         """
@@ -1282,7 +1269,7 @@ class TextInput(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: TextInputProto, root: ElementTree):
+    def __init__(self, proto: TextInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "text_input"
@@ -1305,11 +1292,10 @@ class TextInput(Widget):
         """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            # Awkward to do this with `cast`
-            return state[self.id]  # type: ignore
+        state = self.root.session_state
+        assert state
+        # Awkward to do this with `cast`
+        return state[self.id]  # type: ignore
 
     def input(self, v: str) -> TextInput:
         """
@@ -1336,7 +1322,7 @@ class TimeInput(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: TimeInputProto, root: ElementTree):
+    def __init__(self, proto: TimeInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "time_input"
@@ -1362,12 +1348,10 @@ class TimeInput(Widget):
         """The current value of the widget. (time)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             v = self._value
-            v = v.time() if isinstance(v, datetime) else v
-            return v
-        else:
-            state = self.root.session_state
-            assert state
-            return state[self.id]  # type: ignore
+            return v.time() if isinstance(v, datetime) else v
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
 
     def increment(self) -> TimeInput:
         """Select the next available time."""
@@ -1389,7 +1373,7 @@ class Toast(Element):
     proto: ToastProto = field(repr=False)
     icon: str
 
-    def __init__(self, proto: ToastProto, root: ElementTree):
+    def __init__(self, proto: ToastProto, root: ElementTree) -> None:
         self.proto = proto
         self.key = None
         self.root = root
@@ -1411,7 +1395,7 @@ class Toggle(Widget):
     help: str
     form_id: str
 
-    def __init__(self, proto: CheckboxProto, root: ElementTree):
+    def __init__(self, proto: CheckboxProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = None
         self.type = "toggle"
@@ -1428,10 +1412,9 @@ class Toggle(Widget):
         """The current value of the widget. (bool)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        else:
-            state = self.root.session_state
-            assert state
-            return cast("bool", state[self.id])
+        state = self.root.session_state
+        assert state
+        return cast("bool", state[self.id])
 
     def set_value(self, v: bool) -> Toggle:
         """Set the value of the widget."""
@@ -1460,7 +1443,7 @@ class Block:
         self,
         proto: BlockProto | None,
         root: ElementTree,
-    ):
+    ) -> None:
         self.children = {}
         self.proto = proto
         if proto:
@@ -1477,7 +1460,7 @@ class Block:
     def __len__(self) -> int:
         return len(self.children)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         yield self
         for child_idx in self.children:
             yield from self.children[child_idx]
@@ -1665,11 +1648,11 @@ class Block:
         """
         return self.root.run(timeout=timeout)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr_(self)
 
 
-def repr_(self) -> str:
+def repr_(self: object) -> str:
     """A custom repr similar to `streamlit.util.repr_` but that shows tree
     structure using indentation.
     """
@@ -1690,10 +1673,11 @@ def repr_(self) -> str:
 
     reprs = []
     for field_name, value in fields_vals:
-        if isinstance(value, dict):
-            line = f"{field_name}={format_dict(value)}"
-        else:
-            line = f"{field_name}={value!r}"
+        line = (
+            f"{field_name}={format_dict(value)}"
+            if isinstance(value, dict)
+            else f"{field_name}={value!r}"
+        )
         reprs.append(line)
 
     reprs[0] = "\n" + reprs[0]
@@ -1703,15 +1687,14 @@ def repr_(self) -> str:
     return f"{classname}({field_reprs}\n)"
 
 
-def format_dict(d: dict[Any, Any]):
+def format_dict(d: dict[Any, Any]) -> str:
     lines = []
     for k, v in d.items():
         line = f"{k}: {v!r}"
         lines.append(line)
     r = ",\n".join(lines)
     r = textwrap.indent(r, " " * 4)
-    r = f"{{\n{r}\n}}"
-    return r
+    return f"{{\n{r}\n}}"
 
 
 @dataclass(repr=False)
@@ -1723,7 +1706,7 @@ class SpecialBlock(Block):
         proto: BlockProto | None,
         root: ElementTree,
         type: str | None = None,
-    ):
+    ) -> None:
         self.children = {}
         self.proto = proto
         if type:
@@ -1750,7 +1733,7 @@ class ChatMessage(Block):
         self,
         proto: BlockProto.ChatMessage,
         root: ElementTree,
-    ):
+    ) -> None:
         self.children = {}
         self.proto = proto
         self.root = root
@@ -1772,7 +1755,7 @@ class Column(Block):
         self,
         proto: BlockProto.Column,
         root: ElementTree,
-    ):
+    ) -> None:
         self.children = {}
         self.proto = proto
         self.root = root
@@ -1788,7 +1771,7 @@ class Expander(Block):
     icon: str
     label: str
 
-    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree) -> None:
         self.children = {}
         self.proto = proto
         self.root = root
@@ -1806,7 +1789,7 @@ class Status(Block):
     icon: str
     label: str
 
-    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree) -> None:
         self.children = {}
         self.proto = proto
         self.root = root
@@ -1815,15 +1798,14 @@ class Status(Block):
         self.label = proto.label
 
     @property
-    def state(self):
+    def state(self) -> str:
         if self.icon == "spinner":
             return "running"
-        elif self.icon == ":material/check:":
+        if self.icon == ":material/check:":
             return "complete"
-        elif self.icon == ":material/error:":
+        if self.icon == ":material/error:":
             return "error"
-        else:
-            raise ValueError("Unknown Status state")
+        raise ValueError("Unknown Status state")
 
 
 @dataclass(repr=False)
@@ -1838,7 +1820,7 @@ class Tab(Block):
         self,
         proto: BlockProto.Tab,
         root: ElementTree,
-    ):
+    ) -> None:
         self.children = {}
         self.proto = proto
         self.root = root
@@ -1852,8 +1834,7 @@ Node: TypeAlias = Union[Element, Block]
 def get_widget_state(node: Node) -> WidgetState | None:
     if isinstance(node, Widget):
         return node._widget_state
-    else:
-        return None
+    return None
 
 
 @dataclass(repr=False)
@@ -1883,7 +1864,7 @@ class ElementTree(Block):
 
     _runner: AppTest | None = field(repr=False, default=None)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.children = {}
         self.root = self
         self.type = "root"
@@ -1928,7 +1909,7 @@ class ElementTree(Block):
         widget_states = self.get_widget_states()
         return self._runner._run(widget_states, timeout=timeout)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return format_dict(self.children)
 
 
@@ -1956,14 +1937,14 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             ty = elt.WhichOneof("type")
             new_node: Node
             if ty == "alert":
-                format = elt.alert.format
-                if format == AlertProto.Format.ERROR:
+                alert_format = elt.alert.format
+                if alert_format == AlertProto.Format.ERROR:
                     new_node = Error(elt.alert, root=root)
-                elif format == AlertProto.Format.INFO:
+                elif alert_format == AlertProto.Format.INFO:
                     new_node = Info(elt.alert, root=root)
-                elif format == AlertProto.Format.SUCCESS:
+                elif alert_format == AlertProto.Format.SUCCESS:
                     new_node = Success(elt.alert, root=root)
-                elif format == AlertProto.Format.WARNING:
+                elif alert_format == AlertProto.Format.WARNING:
                     new_node = Warning(elt.alert, root=root)
                 else:
                     raise ValueError(

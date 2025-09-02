@@ -97,7 +97,7 @@ def check_session_state_rules(
 
 
 class CachedWidgetWarning(StreamlitAPIWarning):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             """
 Your script uses a widget command in a cached function
@@ -126,7 +126,7 @@ def check_cache_replay_rules() -> None:
         exception(CachedWidgetWarning())
 
 
-def check_fragment_path_policy(dg: DeltaGenerator):
+def check_fragment_path_policy(dg: DeltaGenerator) -> None:
     """Ensures that the current widget is not written outside of the
     fragment's delta path.
 
@@ -168,7 +168,7 @@ def check_widget_policies(
     default_value: Sequence[Any] | Any | None = None,
     writes_allowed: bool = True,
     enable_check_callback_rules: bool = True,
-):
+) -> None:
     """Check all widget policies for the given DeltaGenerator."""
     check_fragment_path_policy(dg)
     check_cache_replay_rules()
@@ -179,13 +179,14 @@ def check_widget_policies(
     )
 
 
-def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) -> None:
     if not label:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
             "reasons and may be disallowed in the future by raising an exception. "
             "Please provide a non-empty label and hide it with label_visibility "
-            "if needed."
+            "if needed.",
+            stack_info=True,
         )
     if label_visibility not in ("visible", "hidden", "collapsed"):
         raise errors.StreamlitAPIException(

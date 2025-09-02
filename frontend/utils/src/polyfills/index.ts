@@ -22,6 +22,7 @@ if (typeof Promise.withResolvers === "undefined") {
       promiseResolve = resolve
       promiseReject = reject
     })
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return { resolve: promiseResolve!, reject: promiseReject!, promise }
   }
 }

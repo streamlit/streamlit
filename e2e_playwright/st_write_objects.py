@@ -70,7 +70,7 @@ st.subheader("st.write(reprhtmlable)")
 
 
 class ClassWithReprHtml:
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return "This is an <b>HTML tag</b>!"
 
 

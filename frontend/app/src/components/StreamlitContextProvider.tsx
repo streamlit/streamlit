@@ -17,25 +17,38 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
-  LibConfig,
-  LibContext,
-  LibContextProps,
-  ThemeConfig,
-  useRequiredContext,
-} from "@streamlit/lib"
-import { IGitInfo, PageConfig } from "@streamlit/protobuf"
-import {
   AppContext,
   AppContextProps,
 } from "@streamlit/app/src/components/AppContext"
+import {
+  ComponentRegistry,
+  FormsContext,
+  FormsContextProps,
+  FormsData,
+  LibConfig,
+  LibContext,
+  LibContextProps,
+  ScriptRunState,
+  ThemeConfig,
+  useRequiredContext,
+} from "@streamlit/lib"
+import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
 // Type for AppContext props
 type AppContextValues = {
   initialSidebarState: PageConfig.SidebarState
   pageLinkBaseUrl: string
+  currentPageScriptHash: string
+  onPageChange: (pageScriptHash: string) => void
+  navSections: string[]
+  appPages: IAppPage[]
+  appLogo: Logo | null
   sidebarChevronDownshift: number
+  expandSidebarNav: boolean
+  hideSidebarNav: boolean
   widgetsDisabled: boolean
   gitInfo: IGitInfo | null
+  showToolbar: boolean
 }
 
 // Type for LibContext props
@@ -53,10 +66,17 @@ type LibContextValues = {
   libConfig: LibConfig
   fragmentIdsThisRun: Array<string>
   locale: typeof window.navigator.language
+  scriptRunState: ScriptRunState
+  scriptRunId: string
+  componentRegistry: ComponentRegistry
+}
+
+type FormsContextValues = {
+  formsData: FormsData
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  AppContextValues & LibContextValues
+  AppContextValues & LibContextValues & FormsContextValues
 >
 
 /**
@@ -67,9 +87,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // AppContext
   initialSidebarState,
   pageLinkBaseUrl,
+  navSections,
+  appPages,
+  appLogo,
   sidebarChevronDownshift,
+  expandSidebarNav,
+  hideSidebarNav,
   widgetsDisabled,
   gitInfo,
+  showToolbar,
   // LibContext
   isFullScreen,
   setFullScreen,
@@ -79,11 +105,18 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   setTheme,
   availableThemes,
   addThemes,
-  onPageChange,
-  currentPageScriptHash,
   libConfig,
   fragmentIdsThisRun,
   locale,
+  scriptRunState,
+  scriptRunId,
+  componentRegistry,
+  // Used in both contexts
+  currentPageScriptHash,
+  onPageChange,
+  // FormsContext
+  formsData,
+  // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
   // Memoized object for AppContext values
@@ -91,16 +124,32 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     () => ({
       initialSidebarState,
       pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+      appLogo,
       sidebarChevronDownshift,
+      expandSidebarNav,
+      hideSidebarNav,
       widgetsDisabled,
       gitInfo,
+      showToolbar,
     }),
     [
       initialSidebarState,
       pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+      appLogo,
       sidebarChevronDownshift,
+      expandSidebarNav,
+      hideSidebarNav,
       widgetsDisabled,
       gitInfo,
+      showToolbar,
     ]
   )
 
@@ -120,6 +169,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       libConfig,
       fragmentIdsThisRun,
       locale,
+      scriptRunState,
+      scriptRunId,
+      componentRegistry,
     }),
     [
       isFullScreen,
@@ -135,13 +187,24 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       libConfig,
       fragmentIdsThisRun,
       locale,
+      scriptRunState,
+      scriptRunId,
+      componentRegistry,
     ]
   )
+
+  // formsData is not a stable reference, so memoization does not help
+  // eslint-disable-next-line @eslint-react/no-unstable-context-value
+  const formsContextProps: FormsContextProps = {
+    formsData,
+  }
 
   return (
     <AppContext.Provider value={appContextProps}>
       <LibContext.Provider value={libContextProps}>
-        {children}
+        <FormsContext.Provider value={formsContextProps}>
+          {children}
+        </FormsContext.Provider>
       </LibContext.Provider>
     </AppContext.Provider>
   )

@@ -27,7 +27,7 @@ import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
  * This column type is currently read-only.
  */
 function ImageColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: ImageCell = {
     kind: GridCellKind.Image,
     data: [],
     displayData: [],
@@ -35,11 +35,12 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     allowOverlay: true,
     contentAlign: props.contentAlignment || "center",
     style: "normal",
-  } as ImageCell
+  }
 
   return {
     ...props,
     kind: "image",
+    typeIcon: ":material/image:",
     sortMode: "default",
     isEditable: false, // Image columns are always read-only
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

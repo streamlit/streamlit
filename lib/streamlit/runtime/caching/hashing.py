@@ -34,7 +34,7 @@ import weakref
 from enum import Enum
 from re import Pattern
 from types import MappingProxyType
-from typing import Any, Callable, Final, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -43,6 +43,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
+    import pandas as pd
+    from PIL.Image import Image
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -66,11 +71,11 @@ _CYCLE_PLACEHOLDER: Final = (
 class UserHashError(StreamlitAPIException):
     def __init__(
         self,
-        orig_exc,
-        object_to_hash,
-        hash_func,
+        orig_exc: BaseException,
+        object_to_hash: Any,
+        hash_func: Callable[[Any], Any],
         cache_type: CacheType | None = None,
-    ):
+    ) -> None:
         self.alternate_name = type(orig_exc).__name__
         self.hash_func = hash_func
         self.cache_type = cache_type
@@ -80,30 +85,33 @@ class UserHashError(StreamlitAPIException):
         super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
-    def _get_message_from_func(self, orig_exc, cached_func):
+    def _get_message_from_func(
+        self,
+        orig_exc: BaseException,
+        cached_func: Any,
+    ) -> str:
         args = self._get_error_message_args(orig_exc, cached_func)
 
         return (
-            """
-%(orig_exception_desc)s
+            f"""
+{args["orig_exception_desc"]}
 
-This error is likely due to a bug in %(hash_func_name)s, which is a
-user-defined hash function that was passed into the `%(cache_primitive)s` decorator of
-%(object_desc)s.
+This error is likely due to a bug in {args["hash_func_name"]}, which is a
+user-defined hash function that was passed into the `{args["cache_primitive"]}` decorator of
+{args["object_desc"]}.
 
-%(hash_func_name)s failed when hashing an object of type
-`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
+{args["hash_func_name"]} failed when hashing an object of type
+`{args["failed_obj_type_str"]}`.  If you don't know where that object is coming from,
 try looking at the hash chain below for an object that you do recognize, then
 pass that to `hash_funcs` instead:
 
 ```
-%(hash_stack)s
+{args["hash_stack"]}
 ```
 
 If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose).
 """
-            % args
         ).strip("\n")
 
     def _get_error_message_args(
@@ -117,11 +125,10 @@ If you think this is actually a Streamlit bug, please
 
         if hash_source is None:
             object_desc = "something"
+        elif hasattr(hash_source, "__name__"):
+            object_desc = f"`{hash_source.__name__}()`"
         else:
-            if hasattr(hash_source, "__name__"):
-                object_desc = f"`{hash_source.__name__}()`"
-            else:
-                object_desc = "a function"
+            object_desc = "a function"
 
         decorator_name = ""
         if self.cache_type is CacheType.RESOURCE:
@@ -129,10 +136,11 @@ If you think this is actually a Streamlit bug, please
         elif self.cache_type is CacheType.DATA:
             decorator_name = "@st.cache_data"
 
-        if hasattr(self.hash_func, "__name__"):
-            hash_func_name = f"`{self.hash_func.__name__}()`"
-        else:
-            hash_func_name = "a function"
+        hash_func_name = (
+            f"`{self.hash_func.__name__}()`"
+            if hasattr(self.hash_func, "__name__")
+            else "a function"
+        )
 
         return {
             "orig_exception_desc": str(orig_exc),
@@ -146,7 +154,7 @@ If you think this is actually a Streamlit bug, please
 
 def update_hash(
     val: Any,
-    hasher,
+    hasher: Any,
     cache_type: CacheType,
     hash_source: Callable[..., Any] | None = None,
     hash_funcs: HashFuncsDict | None = None,
@@ -174,7 +182,7 @@ class _HashStack:
     This causes the "in" to crash since it expects a boolean.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
@@ -183,19 +191,19 @@ class _HashStack:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def push(self, val: Any):
+    def push(self, val: Any) -> None:
         self._stack[id(val)] = val
 
-    def pop(self):
+    def pop(self) -> None:
         self._stack.popitem()
 
-    def __contains__(self, val: Any):
+    def __contains__(self, val: Any) -> bool:
         return id(val) in self._stack
 
     def pretty_print(self) -> str:
         def to_str(v: Any) -> str:
             try:
-                return f"Object of type {type_util.get_fqn_type(v)}: {str(v)}"
+                return f"Object of type {type_util.get_fqn_type(v)}: {v}"
             except Exception:
                 return "<Unable to convert item to string>"
 
@@ -205,7 +213,7 @@ class _HashStack:
 class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._stacks: weakref.WeakKeyDictionary[threading.Thread, _HashStack] = (
             weakref.WeakKeyDictionary()
         )
@@ -248,28 +256,20 @@ def _key(obj: Any | None) -> Any:
     if obj is None:
         return None
 
-    def is_simple(obj):
+    def is_simple(obj: Any) -> bool:
         return (
-            isinstance(obj, bytes)
-            or isinstance(obj, bytearray)
-            or isinstance(obj, str)
-            or isinstance(obj, float)
-            or isinstance(obj, int)
-            or isinstance(obj, bool)
-            or isinstance(obj, uuid.UUID)
+            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
             or obj is None
         )
 
     if is_simple(obj):
         return obj
 
-    if isinstance(obj, tuple):
-        if all(map(is_simple, obj)):
-            return obj
+    if isinstance(obj, tuple) and all(map(is_simple, obj)):
+        return obj
 
-    if isinstance(obj, list):
-        if all(map(is_simple, obj)):
-            return ("__l", tuple(obj))
+    if isinstance(obj, list) and all(map(is_simple, obj)):
+        return ("__l", tuple(obj))
 
     if inspect.isbuiltin(obj) or inspect.isroutine(obj) or inspect.iscode(obj):
         return id(obj)
@@ -280,7 +280,9 @@ def _key(obj: Any | None) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(self, cache_type: CacheType, hash_funcs: HashFuncsDict | None = None):
+    def __init__(
+        self, cache_type: CacheType, hash_funcs: HashFuncsDict | None = None
+    ) -> None:
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.
@@ -312,9 +314,8 @@ class _CacheFuncHasher:
         key = (tname, _key(obj))
 
         # Memoize if possible.
-        if key[1] is not NoResult:
-            if key in self._hashes:
-                return self._hashes[key]
+        if key[1] is not NoResult and key in self._hashes:
+            return self._hashes[key]
 
         # Break recursive cycles.
         if obj in hash_stacks.current:
@@ -340,7 +341,7 @@ class _CacheFuncHasher:
 
         return b
 
-    def update(self, hasher, obj: Any) -> None:
+    def update(self, hasher: Any, obj: Any) -> None:
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj)
         hasher.update(b)
@@ -361,10 +362,10 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
+        if isinstance(obj, (bytes, bytearray)):
             return obj
 
-        elif type_util.get_fqn_type(obj) in self._hash_funcs:
+        if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
             hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
             try:
@@ -375,57 +376,58 @@ class _CacheFuncHasher:
                 ) from ex
             return self.to_bytes(output)
 
-        elif isinstance(obj, str):
+        if isinstance(obj, str):
             return obj.encode()
 
-        elif isinstance(obj, float):
+        if isinstance(obj, float):
             return _float_to_bytes(obj)
 
-        elif isinstance(obj, int):
+        if isinstance(obj, int):
             return _int_to_bytes(obj)
 
-        elif isinstance(obj, uuid.UUID):
+        if isinstance(obj, uuid.UUID):
             return obj.bytes
 
-        elif isinstance(obj, datetime.datetime):
+        if isinstance(obj, datetime.datetime):
             return obj.isoformat().encode()
 
-        elif isinstance(obj, (list, tuple)):
+        if isinstance(obj, (list, tuple)):
             for item in obj:
                 self.update(h, item)
             return h.digest()
 
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             for item in obj.items():
                 self.update(h, item)
             return h.digest()
 
-        elif obj is None:
+        if obj is None:
             return b"0"
 
-        elif obj is True:
+        if obj is True:
             return b"1"
 
-        elif obj is False:
+        if obj is False:
             return b"0"
 
-        elif not isinstance(obj, type) and dataclasses.is_dataclass(obj):
+        if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
-        elif isinstance(obj, Enum):
+
+        if isinstance(obj, Enum):
             return str(obj).encode()
 
-        elif type_util.is_type(obj, "pandas.core.series.Series"):
-            import pandas as pd
+        if type_util.is_type(obj, "pandas.core.series.Series"):
+            from pandas.util import hash_pandas_object
 
-            obj = cast("pd.Series", obj)
-            self.update(h, obj.size)
-            self.update(h, obj.dtype.name)
+            series_obj: pd.Series = cast("pd.Series", obj)
+            self.update(h, series_obj.size)
+            self.update(h, series_obj.dtype.name)
 
-            if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+            if len(series_obj) >= _PANDAS_ROWS_LARGE:
+                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
 
             try:
-                self.update(h, pd.util.hash_pandas_object(obj).to_numpy().tobytes())
+                self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
             except TypeError:
                 _LOGGER.warning(
@@ -435,24 +437,24 @@ class _CacheFuncHasher:
 
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
-                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                return b"%s" % pickle.dumps(series_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
-            import pandas as pd
+            from pandas.util import hash_pandas_object
 
-            obj = cast("pd.DataFrame", obj)
-            self.update(h, obj.shape)
+            df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
+            self.update(h, df_obj.shape)
 
-            if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+            if len(df_obj) >= _PANDAS_ROWS_LARGE:
+                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+
             try:
-                column_hash_bytes = self.to_bytes(
-                    pd.util.hash_pandas_object(obj.dtypes)
-                )
+                column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
                 self.update(h, column_hash_bytes)
-                values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(obj))
+                values_hash_bytes = self.to_bytes(hash_pandas_object(df_obj))
                 self.update(h, values_hash_bytes)
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Pandas DataFrame hash failed. Falling back to pickling the object.",
@@ -461,7 +463,7 @@ class _CacheFuncHasher:
 
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
-                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
             import polars as pl  # type: ignore[import-not-found]
@@ -476,6 +478,7 @@ class _CacheFuncHasher:
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Polars Series hash failed. Falling back to pickling the object.",
@@ -485,6 +488,7 @@ class _CacheFuncHasher:
                 # Use pickle if polars cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
         elif type_util.is_type(obj, "polars.dataframe.frame.DataFrame"):
             import polars as pl  # noqa: TC002
 
@@ -504,6 +508,7 @@ class _CacheFuncHasher:
 
                 self.update(h, values_hash_bytes)
                 return h.digest()
+
             except TypeError:
                 _LOGGER.warning(
                     "Polars DataFrame hash failed. Falling back to pickling the object.",
@@ -513,40 +518,35 @@ class _CacheFuncHasher:
                 # Use pickle if polars cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
         elif type_util.is_type(obj, "numpy.ndarray"):
-            import numpy as np
+            np_obj: npt.NDArray[Any] = cast("npt.NDArray[Any]", obj)
+            self.update(h, np_obj.shape)
+            self.update(h, str(np_obj.dtype))
 
-            # write cast type as string to make it work with our Python 3.8 tests
-            # - can be removed once we sunset support for Python 3.8
-            obj = cast("np.ndarray[Any, Any]", obj)
-            self.update(h, obj.shape)
-            self.update(h, str(obj.dtype))
-
-            if obj.size >= _NP_SIZE_LARGE:
+            if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
                 state = np.random.RandomState(0)
-                obj = state.choice(obj.flat, size=_NP_SAMPLE_SIZE)
+                np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
-            self.update(h, obj.tobytes())
+            self.update(h, np_obj.tobytes())
             return h.digest()
+
         elif type_util.is_type(obj, "PIL.Image.Image"):
             import numpy as np
-            from PIL.Image import Image  # noqa: TC002
 
-            obj = cast("Image", obj)
+            pil_obj: Image = cast("Image", obj)
 
             # we don't just hash the results of obj.tobytes() because we want to use
             # the sampling logic for numpy data
-            np_array = np.frombuffer(obj.tobytes(), dtype="uint8")
+            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())
 
-        elif isinstance(obj, MappingProxyType) or isinstance(
-            obj, collections.abc.ItemsView
-        ):
+        elif isinstance(obj, (MappingProxyType, collections.abc.ItemsView)):
             return self.to_bytes(dict(obj))
 
         elif type_util.is_type(obj, "builtins.getset_descriptor"):
@@ -562,16 +562,16 @@ class _CacheFuncHasher:
             return h.digest()
 
         elif hasattr(obj, "name") and (
-            isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
-            or isinstance(obj, tempfile._TemporaryFileWrapper)
+            isinstance(obj, (io.IOBase, tempfile._TemporaryFileWrapper))
         ):
             # Hash files as name + last modification date + offset.
             # NB: we're using hasattr("name") to differentiate between
             # on-disk and in-memory StringIO/BytesIO file representations.
             # That means that this condition must come *before* the next
             # condition, which just checks for StringIO/BytesIO.
-            obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
+            # Just to appease MyPy.
+            obj_name = getattr(obj, "name", "wonthappen")
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
@@ -580,7 +580,7 @@ class _CacheFuncHasher:
         elif isinstance(obj, Pattern):
             return self.to_bytes([obj.pattern, obj.flags])
 
-        elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
+        elif isinstance(obj, (io.StringIO, io.BytesIO)):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
             self.update(h, obj.tell())
@@ -618,6 +618,27 @@ class _CacheFuncHasher:
             self.update(h, obj.func)
             self.update(h, obj.keywords)
             return h.digest()
+
+        elif type_util.is_pydantic_model(obj):
+            try:
+                # We have a choice to use pickle.dumps(), obj.model_dump(), or
+                # obj.model_dump_json(). The advantage of pickle and JSON is that
+                # we'd be treating Pydantic objects opaquely, so there are no surprises
+                # for Pydantic users. And the reason to choose JSON over pickle is
+                # that JSON is faster, weirdly enough.
+                any_obj = cast("Any", obj)
+                if hasattr(any_obj, "model_dump_json"):
+                    # Pydantic v2
+                    json_data = any_obj.model_dump_json()
+                else:
+                    # Pydantic v1
+                    json_data = any_obj.json()
+                self.update(h, json_data)
+                return h.digest()
+            except Exception as ex:
+                raise UnhashableTypeError("""
+                    Pydantic object contains unhashable members, such as functions.
+                """) from ex
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method

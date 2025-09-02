@@ -19,36 +19,43 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "~lib/components/widgets/BaseWidget"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 import {
   isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
+import {
+  StyledInputContainer,
+  StyledInputControl,
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "./styled-components"
 import {
   canDecrement,
   canIncrement,
@@ -56,12 +63,6 @@ import {
   getInitialValue,
   getStep,
 } from "./utils"
-import {
-  StyledInputContainer,
-  StyledInputControl,
-  StyledInputControls,
-  StyledInstructionsContainer,
-} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -76,7 +77,7 @@ const NumberInput: React.FC<Props> = ({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const {
     dataType: elementDataType,
@@ -89,18 +90,34 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
-  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({ value: initialValue, ...element, step })
-  )
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const id = useRef(uniqueId("number_input_"))
+
+  const formattedValue = useMemo(() => {
+    return formatValue({
+      value,
+      dataType: elementDataType,
+      format: elementFormat,
+      step,
+    })
+  }, [value, elementDataType, elementFormat, step])
+
+  // While the input is focused, avoid applying formatting that enforces
+  // fixed decimal places. This prevents keystrokes (including backspace)
+  // from being immediately overridden by formatted output.
+  const displayValue = useMemo(() => {
+    if (isFocused) {
+      return isNullOrUndefined(value) ? "" : value.toString()
+    }
+    return formattedValue ?? ""
+  }, [isFocused, value, formattedValue])
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -120,11 +137,17 @@ const NumberInput: React.FC<Props> = ({
   }, [element.dataType, element.step])
 
   const commitValue = useCallback(
-    ({ value, source }: { value: number | null; source: Source }) => {
-      if (notNullOrUndefined(value) && (min > value || value > max)) {
+    ({
+      value: valueArg,
+      source,
+    }: {
+      value: number | null
+      source: Source
+    }) => {
+      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         inputRef.current?.reportValidity()
       } else {
-        const newValue = value ?? elementDefault ?? null
+        const newValue = valueArg ?? elementDefault ?? null
 
         switch (elementDataType) {
           case NumberInputProto.DataType.INT:
@@ -149,14 +172,6 @@ const NumberInput: React.FC<Props> = ({
 
         setDirty(false)
         setValue(newValue)
-        setFormattedValue(
-          formatValue({
-            value: newValue,
-            dataType: elementDataType,
-            format: elementFormat,
-            step,
-          })
-        )
       }
     },
     [
@@ -165,12 +180,10 @@ const NumberInput: React.FC<Props> = ({
       inputRef,
       widgetMgr,
       fragmentId,
-      step,
       elementDataType,
       elementId,
       elementFormId,
       elementDefault,
-      elementFormat,
     ]
   )
 
@@ -186,12 +199,11 @@ const NumberInput: React.FC<Props> = ({
   }, [])
 
   const updateFromProtobuf = useCallback((): void => {
-    const { value } = element
+    const { value: elementValue } = element
     element.setValue = false
-    setValue(value ?? null)
-    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
-    commitValue({ value: value ?? null, source: { fromUi: false } })
-  }, [element, step, commitValue])
+    setValue(elementValue ?? null)
+    commitValue({ value: elementValue ?? null, source: { fromUi: false } })
+  }, [element, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
@@ -220,7 +232,7 @@ const NumberInput: React.FC<Props> = ({
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 
@@ -246,24 +258,22 @@ const NumberInput: React.FC<Props> = ({
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const { value } = e.target
+    const { value: targetValue } = e.target
 
-    if (value === "") {
+    if (targetValue === "") {
       setDirty(true)
       setValue(null)
-      setFormattedValue(null)
     } else {
       let numValue: number
 
       if (element.dataType === NumberInputProto.DataType.INT) {
-        numValue = parseInt(value, 10)
+        numValue = parseInt(targetValue, 10)
       } else {
-        numValue = parseFloat(value)
+        numValue = parseFloat(targetValue)
       }
 
       setDirty(true)
       setValue(numValue)
-      setFormattedValue(value)
     }
   }
 
@@ -359,7 +369,7 @@ const NumberInput: React.FC<Props> = ({
         <UIInput
           type="number"
           inputRef={inputRef}
-          value={formattedValue ?? ""}
+          value={displayValue}
           placeholder={element.placeholder}
           onBlur={onBlur}
           onFocus={onFocus}
@@ -417,12 +427,16 @@ const NumberInput: React.FC<Props> = ({
                 inputMode: "",
               },
               style: {
+                fontWeight: theme.fontWeights.normal,
                 lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
                 paddingLeft: theme.spacing.md,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                "::placeholder": {
+                  color: theme.colors.fadedText60,
+                },
               },
             },
             InputContainer: {

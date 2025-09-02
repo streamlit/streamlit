@@ -22,3 +22,10 @@ st.write(f"Timezone offset: {st.context.timezone_offset}")
 st.write(f"Locale primary language: {st.context.locale}")
 
 st.write(f"Full url: {st.context.url}")
+
+st.write(f"Theme type: {st.context.theme.type}")
+
+rerun_script = st.button("Trigger rerun")
+
+if rerun_script:
+    st.rerun()

@@ -16,13 +16,13 @@
 
 import React, { ReactElement } from "react"
 
-import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
 import {
   CacheProvider,
   ThemeProvider as EmotionThemeProvider,
   Global,
 } from "@emotion/react"
+import { BaseProvider } from "baseui"
 
 import { globalStyles, ThemeConfig } from "./theme"
 
@@ -44,6 +44,7 @@ export function RootStyleProvider(
   props: RootStyleProviderProps
 ): ReactElement {
   const { children, theme } = props
+
   return (
     <BaseProvider
       theme={theme.basewebTheme}

@@ -29,7 +29,9 @@ if __name__ not in ("__main__", "__mp_main__"):
 SCRIPT_DIR = Path(__file__).resolve().parent
 # We just check if the first line of the license is in the file. This is
 # enough to check that the file is okay.
-LICENSE_TEXT = (SCRIPT_DIR / "license-template.txt").read_text().splitlines()[0]
+LICENSE_TEXT = (
+    (SCRIPT_DIR / "assets" / "license-template.txt").read_text().splitlines()[0]
+)
 
 IGNORE_PATTERN = re.compile(
     # Exclude CI files.
@@ -45,7 +47,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
-    r"|\.(json|prettierrc|nvmrc|mdc)$"
+    r"|\.(json|prettierrc|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
@@ -59,9 +61,9 @@ IGNORE_PATTERN = re.compile(
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^component-lib/\.yarn"
-    r"|^lib/(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
+    r"|(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^.*-requirements\.txt$"
-    r"|^lib/min-constraints-gen\.txt"
+    r"|min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
     # Exclude all .gitignore files
     r"|\.gitignore$"
@@ -76,7 +78,7 @@ IGNORE_PATTERN = re.compile(
 )
 
 
-def main():
+def main() -> None:
     git_files = sorted(
         subprocess.check_output(["git", "ls-files", "--no-empty-directory"])
         .decode()

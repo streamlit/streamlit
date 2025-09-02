@@ -22,8 +22,10 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from "react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
@@ -31,11 +33,11 @@ import {
   Modal,
   ModalBody,
   ModalHeader,
+  SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
   UISelectbox,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledButtonContainer,
@@ -57,6 +59,7 @@ export interface Props {
   openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
+  sessionInfo: SessionInfo
 }
 
 const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
@@ -84,15 +87,16 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   openThemeCreator,
   animateModal,
   metricsMgr,
+  sessionInfo,
 }) {
   const libContext = useContext(LibContext)
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
-  const [state, setState] = React.useState<UserSettings>({ ...settings })
+  const [state, setState] = useState<UserSettings>({ ...settings })
 
   const changeSingleSetting = useCallback(
     (name: string, value: boolean): void => {
-      setState(state => ({ ...state, [name]: value }))
+      setState(prevState => ({ ...prevState, [name]: value }))
     },
     []
   )
@@ -189,11 +193,25 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 disabled={false}
                 onChange={handleThemeChange}
                 value={libContext.activeTheme.name}
+                placeholder=""
+                acceptNewOptions={false}
               />
               {developerMode && (
                 <ThemeCreatorButton openThemeCreator={openThemeCreator} />
               )}
             </StyledFullRow>
+          )}
+
+          {/* Show our version string only if SessionInfo has been created. If Streamlit
+          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+          {sessionInfo.isSet && (
+            <div data-testid="stVersionInfo">
+              <StreamlitMarkdown
+                source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
+                allowHTML={false}
+                isCaption
+              />
+            </div>
           )}
         </StyledDialogBody>
       </ModalBody>

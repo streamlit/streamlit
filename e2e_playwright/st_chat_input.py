@@ -28,15 +28,27 @@ v2 = col1.chat_input(
 )
 st.write("Chat input 2 (in column, disabled) - value:", v2)
 
+if st.button("Set Value"):
+    st.session_state["chat_input_3"] = "Hello, world!"
+
 if runtime.exists():
+    st.write(
+        "Chat input 3 - session state value before execution:",
+        st.session_state.get("chat_input_3"),
+    )
 
     def on_submit():
-        st.text("chat input submitted")
+        st.markdown("chat input submitted")
 
-    st.container().chat_input(
+    v3 = st.container().chat_input(
         "Chat input 3 (callback)", key="chat_input_3", on_submit=on_submit
     )
-    st.write("Chat input 3 (callback) - value:", st.session_state.get("chat_input_3"))
+    st.write(
+        "Chat input 3 (callback) - session state value:",
+        st.session_state["chat_input_3"],
+    )
+    st.write("Chat input 3 (callback) - return value:", v3)
+
 
 v4 = st.container().chat_input(
     "Chat input 4 (single file)", accept_file=True, file_type="txt"
@@ -46,11 +58,26 @@ st.write("Chat input 4 (single file) - value:", v4)
 v5 = st.container().chat_input("Chat input 5 (multiple files)", accept_file="multiple")
 st.write("Chat input 5 (multiple files) - value:", v5)
 
-v6 = st.chat_input(
-    "Chat input 6 (bottom, max_chars, long placeholder) "
+v6 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
+v7 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
+
+
+v8 = st.chat_input(
+    "Chat input 8 (bottom, max_chars, long placeholder) "
     "This is a very long placeholder text that should span multiple lines "
     "and cause the chat input to grow vertically to accommodate all the "
     "text properly when displayed in the UI",
     max_chars=200,
 )
-st.write("Chat input 6 (bottom, max_chars) - value:", v6)
+st.write("Chat input 8 (bottom, max_chars) - value:", v8)
+
+# Directory upload tests
+v9 = st.container().chat_input(
+    "Chat input 9 (directory upload)", accept_file="directory"
+)
+st.write("Chat input 9 (directory upload) - value:", v9)
+
+v10 = st.container().chat_input(
+    "Chat input 10 (directory upload disabled)", accept_file="directory", disabled=True
+)
+st.write("Chat input 10 (directory upload disabled) - value:", v10)

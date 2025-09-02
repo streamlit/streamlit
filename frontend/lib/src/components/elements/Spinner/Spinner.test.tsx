@@ -16,8 +16,8 @@
 
 import React from "react"
 
+import { act, screen, waitFor } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
-import { screen } from "@testing-library/react"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
@@ -37,6 +37,14 @@ const getProps = (
 })
 
 describe("Spinner component", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("renders without crashing", () => {
     render(
       <BaseProvider theme={LightTheme}>
@@ -85,5 +93,80 @@ describe("Spinner component", () => {
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
     expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
+  })
+
+  it("updates timer based on system time", async () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: true })} />
+      </BaseProvider>
+    )
+
+    // Initially shows 0.0 seconds
+    expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
+
+    // Advance time by 1.5 seconds and trigger timer update
+    act(() => {
+      vi.advanceTimersByTime(1500)
+    })
+
+    // Wait for the component to update - allow for some timing variance
+    await waitFor(() => {
+      expect(screen.getByText(/\(1\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    // Advance time by another 3.2 seconds (total 4.7 seconds)
+    act(() => {
+      vi.advanceTimersByTime(3200)
+    })
+
+    await waitFor(() => {
+      // Allow for some variance in timing - should be around 4.7 seconds
+      expect(
+        screen.getByText(/\([4-6]\.\d{1,2} seconds\)/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("formats time correctly for different durations", async () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: true })} />
+      </BaseProvider>
+    )
+
+    // Test seconds
+    act(() => {
+      vi.advanceTimersByTime(5300) // 5.3 seconds
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/\(5\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    // Test minutes
+    act(() => {
+      vi.advanceTimersByTime(60000) // Additional 60 seconds (total 65.3 seconds)
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/\(1 minute, [5-7]\.[0-9] seconds\)/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("does not show timer when showTime is false", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: false })} />
+      </BaseProvider>
+    )
+
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
+
+    // Should not find any timer text
+    expect(screen.queryByText(/seconds/)).not.toBeInTheDocument()
   })
 })

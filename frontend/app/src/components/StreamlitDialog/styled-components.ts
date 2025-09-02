@@ -15,14 +15,7 @@
  */
 
 import styled from "@emotion/styled"
-import { darken } from "color2k"
 import { ChevronLeft } from "react-feather"
-
-export const StyledShortcutLabel = styled.span({
-  "&::first-letter": {
-    textDecoration: "underline",
-  },
-})
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
@@ -122,18 +115,5 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
   "& > ul": {
     paddingLeft: theme.spacing.twoXL,
-  },
-}))
-
-export const StyledAboutInfo = styled.div(({ theme }) => ({
-  padding: `0 0 ${theme.spacing.lg} 0`,
-  overflowY: "scroll",
-}))
-
-export const StyledAboutLink = styled.a(({ theme }) => ({
-  color: `${theme.colors.link} !important`,
-
-  "&:hover": {
-    color: `${darken(theme.colors.link, 0.15)} !important`,
   },
 }))

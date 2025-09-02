@@ -16,9 +16,21 @@ from __future__ import annotations
 from typing import Final
 
 import pytest
-from playwright.sync_api import Page, Response, expect
+from playwright.sync_api import Page, Response, WebSocket, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded
+from e2e_playwright.shared.app_utils import goto_app
+
+
+def test_is_webdriver_set(app: Page):
+    """Test that verifies that the window.navigator.webdriver is set to True
+    when running inside an end-to-end test.
+
+    This isn't great but it's the best way we came up with to double-check that
+    MetricsManager.isWebdriver() does what we want it to. We basically just
+    copy the contents of that function here for testing :( .
+    """
+    content = app.evaluate("window.navigator.webdriver")
+    assert content, "window.navigator.webdriver is set to False"
 
 
 def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
@@ -30,7 +42,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     # frontend (in MB) for a basic app run. While its important to keep the total
     # size of web assets low, you can modify this threshold if it's really needed
     # to add some new features. But make sure that its justified and intended.
-    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.5
+    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.5  # noqa: N806
 
     total_size_bytes = 0
 
@@ -51,8 +63,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     # Register the response handler
     page.on("response", handle_response)
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
     # Wait until Hello world is visible:
@@ -81,24 +92,24 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # and expected
 
     # BackMsg's; currently: ~70 bytes
-    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150
+    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150  # noqa: N806
     # Number of websocket messages sent
-    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1
+    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1  # noqa: N806
 
     # ForwardMsg's; currently: ~1200 bytes
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000  # noqa: N806
     # Number of websocket messages received
-    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8
+    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8  # noqa: N806
 
     total_websocket_sent_size_bytes = 0
     total_websocket_received_size_bytes = 0
     total_websocket_messages_sent = 0
     total_websocket_messages_received = 0
 
-    def on_web_socket(ws):
+    def on_web_socket(ws: WebSocket) -> None:
         print(f"WebSocket opened: {ws.url}")
 
-        def on_frame_sent(payload: str | bytes):
+        def on_frame_sent(payload: str | bytes) -> None:
             nonlocal total_websocket_sent_size_bytes
             nonlocal total_websocket_messages_sent
             if isinstance(payload, str):
@@ -106,7 +117,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
             total_websocket_sent_size_bytes += len(payload)
             total_websocket_messages_sent += 1
 
-        def on_frame_received(payload: str | bytes):
+        def on_frame_received(payload: str | bytes) -> None:
             nonlocal total_websocket_received_size_bytes
             nonlocal total_websocket_messages_received
             if isinstance(payload, str):
@@ -121,8 +132,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # Register websocket handler
     page.on("websocket", on_web_socket)
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
     # Wait until Hello world is visible:

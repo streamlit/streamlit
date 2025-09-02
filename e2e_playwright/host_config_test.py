@@ -16,9 +16,9 @@ from playwright.sync_api import Page, Route, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
-    wait_for_app_loaded,
     wait_until,
 )
+from e2e_playwright.shared.app_utils import goto_app
 
 
 def handle_route_hostconfig_disable_fullscreen_and_error_dialogs(route: Route) -> None:
@@ -42,8 +42,7 @@ def test_disable_fullscreen(
         "**/_stcore/host-config",
         handle_route_hostconfig_disable_fullscreen_and_error_dialogs,
     )
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}")
 
     # Test that the toolbar is not shown when hovering over a dataframe
     dataframe_element = page.get_by_test_id("stDataFrame").nth(0)
@@ -71,8 +70,7 @@ def test_block_error_dialogs(page: Page, app_port: int):
     )
 
     # Initial load of page
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}")
 
     # Capture console messages
     messages = []
@@ -81,7 +79,8 @@ def test_block_error_dialogs(page: Page, app_port: int):
     # Navigate to a non-existent page to trigger page not found error
     page.goto(f"http://localhost:{app_port}/nonexistent_page")
 
-    # Wait until the expected error is logged - console should include 2 404 errors (health & host-config) then the page not found error
+    # Wait until the expected error is logged - console should include 2 404 errors
+    # (health & host-config) then the page not found error
     wait_until(
         page,
         lambda: any(

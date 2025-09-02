@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import time
-from typing import Final, Literal
+from typing import Any, Callable, Final, Literal
 
 from playwright.sync_api import (
     Locator,
@@ -138,7 +138,7 @@ def open_column_menu(
     canvas = dataframe_element.locator("canvas").first
     expect(canvas).to_be_visible()
 
-    def attempt_open_menu():
+    def attempt_open_menu() -> bool:
         # Get the bounding box of the canvas
         bbox = canvas.bounding_box()
         if not bbox:
@@ -345,7 +345,7 @@ def get_open_cell_overlay(page: Page | Locator) -> Locator:
 
 def expect_canvas_to_be_stable(
     locator: Locator, timeout_ms: int = 2000, stability_ms: int = 300
-):
+) -> None:
     """
     Wait for canvas to become stable (no visual changes).
 
@@ -400,7 +400,7 @@ def expect_canvas_to_be_stable(
     # Continue anyway - the test may still succeed
 
 
-def expect_canvas_to_be_visible(locator: Locator):
+def expect_canvas_to_be_visible(locator: Locator) -> None:
     """Expect canvas to be visible.
 
     Should be used before trying to click on it or similar.
@@ -414,7 +414,9 @@ def expect_canvas_to_be_visible(locator: Locator):
     expect_canvas_to_be_stable(locator)
 
 
-def retry_interaction(func, max_attempts=3, delay_ms=100):
+def retry_interaction(
+    func: Callable[[], Any], max_attempts: int = 3, delay_ms: int = 100
+) -> Any:
     """
     Retry a potentially flaky interaction.
 
@@ -464,3 +466,4 @@ def retry_interaction(func, max_attempts=3, delay_ms=100):
 
     if last_exception:
         raise last_exception
+    return None

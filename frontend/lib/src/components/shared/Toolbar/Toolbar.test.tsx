@@ -16,18 +16,18 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
 import { Info } from "@emotion-icons/material-outlined"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
+import { TOP_DISTANCE } from "./styled-components"
 import Toolbar, {
   ToolbarAction,
   ToolbarActionProps,
   ToolbarProps,
 } from "./Toolbar"
-import { TOP_DISTANCE } from "./styled-components"
 
 const onExpand = vi.fn()
 const onCollapse = vi.fn()
@@ -57,7 +57,7 @@ describe("Toolbar element", () => {
     vi.clearAllMocks()
   })
 
-  it("renders a Toolbar", async () => {
+  it("renders a Toolbar", () => {
     render(
       <Toolbar {...getToolbarProps()}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -89,16 +89,7 @@ describe("Toolbar element", () => {
     expect(toolbarButtonContainer).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
   })
 
-  it("does not apply padding if there are no actions", () => {
-    render(<Toolbar {...getToolbarProps({ disableFullscreenMode: true })} />)
-
-    const toolbarButtonContainer = screen.getByTestId(
-      "stElementToolbarButtonContainer"
-    )
-    expect(toolbarButtonContainer).toHaveStyle("padding: 0px")
-  })
-
-  it("doesn't show toolbar if not locked", async () => {
+  it("doesn't show toolbar if not locked", () => {
     render(
       <Toolbar {...getToolbarProps({ locked: false })}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -155,7 +146,7 @@ describe("Toolbar element", () => {
     expect(onCollapse).toHaveBeenCalled()
   })
 
-  it("deactivates fullscreen mode via props", async () => {
+  it("deactivates fullscreen mode via props", () => {
     render(
       <Toolbar
         {...getToolbarProps({ locked: false, disableFullscreenMode: true })}
@@ -172,7 +163,7 @@ describe("Toolbar element", () => {
 })
 
 describe("ToolbarAction Button element", () => {
-  it("renders correctly", async () => {
+  it("renders correctly", () => {
     render(<ToolbarAction {...getToolbarActionsProps()} />)
     // Check if toolbar button is rendered:
     const toolbarButton = screen.getByTestId("stElementToolbarButton")
@@ -183,14 +174,14 @@ describe("ToolbarAction Button element", () => {
     expect(toolbarButtonIcon).toBeInTheDocument()
   })
 
-  it("shows a label if show_labe=true", async () => {
+  it("shows a label if show_labe=true", () => {
     render(<ToolbarAction {...getToolbarActionsProps({ show_label: true })} />)
     // Check that the info label is visible
     const infoLabel = screen.getByText("info")
     expect(infoLabel).toBeVisible()
   })
 
-  it("doesn't show an icon if icon=undefined", async () => {
+  it("doesn't show an icon if icon=undefined", () => {
     render(
       <ToolbarAction
         {...getToolbarActionsProps({ show_label: true, icon: undefined })}

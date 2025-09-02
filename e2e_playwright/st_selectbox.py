@@ -60,9 +60,9 @@ st.write("value 7:", v7)
 
 if runtime.exists():
 
-    def on_change():
+    def on_change(x: int, y: int, z: int):
         st.session_state.selectbox_changed = True
-        st.text("Selectbox widget callback triggered")
+        st.text(f"Selectbox widget callback triggered: x={x}, y={y}, z={z}")
 
     st.selectbox(
         "selectbox 8 (with callback, help)",
@@ -70,6 +70,8 @@ if runtime.exists():
         1,
         key="selectbox8",
         on_change=on_change,
+        args=[1, 2],
+        kwargs={"z": 3},
         help="Help text",
     )
     st.write("value 8:", st.session_state.selectbox8)
@@ -141,3 +143,6 @@ v17 = st.selectbox(
     accept_new_options=True,
 )
 st.write("value 17:", v17)
+
+st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
+st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")

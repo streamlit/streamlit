@@ -56,6 +56,5 @@ message Slider {
   string help = 14;
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
-
   Type type = 17;
 }

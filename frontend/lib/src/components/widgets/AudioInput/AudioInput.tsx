@@ -19,45 +19,38 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
-import WaveSurfer from "wavesurfer.js"
-import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
+import WaveSurfer from "wavesurfer.js"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
 import { FormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { blend, convertRemToPx } from "~lib/theme/utils"
+import { usePrevious } from "~lib/util/Hooks"
+import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { blend, convertRemToPx } from "~lib/theme/utils"
-import { uploadFiles } from "~lib/util/uploadFiles"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
-import { usePrevious } from "~lib/util/Hooks"
-import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  StyledAudioInputContainerDiv,
-  StyledWaveformContainerDiv,
-  StyledWaveformInnerDiv,
-  StyledWaveformTimeCode,
-  StyledWaveSurferDiv,
-  StyledWidgetLabelHelp,
-} from "./styled-components"
-import NoMicPermissions from "./NoMicPermissions"
-import Placeholder from "./Placeholder"
+import AudioInputActionButtons from "./AudioInputActionButtons"
+import AudioInputErrorState from "./AudioInputErrorState"
 import {
   BAR_GAP,
   BAR_RADIUS,
@@ -66,11 +59,18 @@ import {
   STARTING_TIME_STRING,
   WAVEFORM_PADDING,
 } from "./constants"
-import formatTime from "./formatTime"
-import AudioInputActionButtons from "./AudioInputActionButtons"
 import convertAudioToWav from "./convertAudioToWav"
-import AudioInputErrorState from "./AudioInputErrorState"
-
+import formatTime from "./formatTime"
+import NoMicPermissions from "./NoMicPermissions"
+import Placeholder from "./Placeholder"
+import {
+  StyledAudioInputContainerDiv,
+  StyledWaveformContainerDiv,
+  StyledWaveformInnerDiv,
+  StyledWaveformTimeCode,
+  StyledWaveSurferDiv,
+  StyledWidgetLabelHelp,
+} from "./styled-components"
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
@@ -86,10 +86,10 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
-  const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
+  const waveSurferRef = useRef<HTMLDivElement | null>(null)
   const [deleteFileUrl, setDeleteFileUrl] = useWidgetManagerElementState<
     string | null
   >({
@@ -169,7 +169,7 @@ const AudioInput: React.FC<Props> = ({
 
       setRecordingUrl(url)
 
-      uploadFiles({
+      void uploadFiles({
         files: [file],
         uploadClient,
         widgetMgr,
@@ -218,6 +218,7 @@ const AudioInput: React.FC<Props> = ({
       setRecordingUrl(null)
       wavesurfer.empty()
       if (deleteFile) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         uploadClient.deleteFile(deleteFileUrl)
       }
       setDeleteFileUrl(null)
@@ -295,7 +296,8 @@ const AudioInput: React.FC<Props> = ({
       })
     )
 
-    rp.on("record-end", async blob => {
+    rp.on("record-end", blob => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       transcodeAndUploadFile(blob)
     })
 
@@ -313,7 +315,7 @@ const AudioInput: React.FC<Props> = ({
     // note: intentionally excluding theme so that we don't have to recreate the wavesurfer instance
     // and colors will be updated separately
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcodeAndUploadFile])
 
@@ -332,6 +334,7 @@ const AudioInput: React.FC<Props> = ({
 
   const onClickPlayPause = useCallback(() => {
     if (wavesurfer) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       wavesurfer.playPause()
       // This is because we want the time to be the duration of the audio when they stop recording,
       // but once they start playing it, we want it to be the current time. So, once they start playing it
@@ -377,6 +380,7 @@ const AudioInput: React.FC<Props> = ({
       handleClear({ updateWidgetManager: false, deleteFile: true })
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     recordPlugin.startRecording({ deviceId: audioDeviceId }).then(() => {
       // Update the record button to show the user that they can stop recording
       forceRerender()
@@ -420,8 +424,6 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
-  const isDisabled = disabled || hasNoMicPermissions
-
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -429,7 +431,7 @@ const AudioInput: React.FC<Props> = ({
     >
       <WidgetLabel
         label={element.label}
-        disabled={isDisabled}
+        disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -440,7 +442,7 @@ const AudioInput: React.FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
-      <StyledWaveformContainerDiv>
+      <StyledWaveformContainerDiv disabled={disabled}>
         <Toolbar
           isFullScreen={false}
           disableFullscreenMode={true}
@@ -469,6 +471,7 @@ const AudioInput: React.FC<Props> = ({
           isUploading={isUploading}
           isError={isError}
           recordingUrlExists={Boolean(recordingUrl)}
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           startRecording={startRecording}
           stopRecording={stopRecording}
           onClickPlayPause={onClickPlayPause}
@@ -476,7 +479,7 @@ const AudioInput: React.FC<Props> = ({
             handleClear({ updateWidgetManager: false, deleteFile: true })
             setIsError(false)
           }}
-          disabled={isDisabled}
+          disabled={disabled || hasNoMicPermissions}
         />
         <StyledWaveformInnerDiv>
           {isError && <AudioInputErrorState />}
@@ -490,6 +493,7 @@ const AudioInput: React.FC<Props> = ({
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
           isPlayingOrRecording={isPlayingOrRecording}
+          disabled={disabled}
           data-testid="stAudioInputWaveformTimeCode"
         >
           {shouldUpdatePlaybackTime ? progressTime : recordingTime}

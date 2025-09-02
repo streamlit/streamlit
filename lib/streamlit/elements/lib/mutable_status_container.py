@@ -20,6 +20,11 @@ from typing import TYPE_CHECKING, Literal, cast
 from typing_extensions import Self, TypeAlias
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib.layout_utils import (
+    WidthWithoutContent,
+    get_width_config,
+    validate_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -40,6 +45,7 @@ class StatusContainer(DeltaGenerator):
         label: str,
         expanded: bool = False,
         state: States = "running",
+        width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
@@ -59,6 +65,9 @@ class StatusContainer(DeltaGenerator):
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
+
+        validate_width(width=width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
@@ -88,7 +97,7 @@ class StatusContainer(DeltaGenerator):
         cursor: Cursor | None,
         parent: DeltaGenerator | None,
         block_type: str | None,
-    ):
+    ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
 
         # Initialized in `_create()`:
@@ -122,8 +131,10 @@ class StatusContainer(DeltaGenerator):
             The new state of the status container. This mainly changes the
             icon. If None, the state is not changed.
         """
-        assert self._current_proto is not None, "Status not correctly initialized!"
-        assert self._delta_path is not None, "Status not correctly initialized!"
+        if self._current_proto is None or self._delta_path is None:
+            raise RuntimeError(
+                "StatusContainer is not correctly initialized. This should never happen."
+            )
 
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path

@@ -41,7 +41,6 @@ from typing_extensions import TypeAlias, TypeGuard
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
-    NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -924,7 +923,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
     if isinstance(obj, (str, int, float, bool)):
         # Wrap basic objects into a list
-        return [obj]
+        return [obj]  # type: ignore[list-item]
 
     if isinstance(obj, EnumMeta):
         # Support for enum classes. For string enums, we return the string value
@@ -1067,7 +1066,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
             "complex",
         ]:
             return True
-        elif inferred_type == "mixed":
+        if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
             # lists, ...)
             if len(column) == 0 or not hasattr(column, "iloc"):
@@ -1077,9 +1076,9 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
                 return True
 
             # Get the first value to check if it is a supported list-like type.
-            first_value = column.iloc[0]
+            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]
 
-            if (
+            if (  # noqa: SIM103
                 not is_list_like(first_value)
                 # dicts are list-like, but have issues in Arrow JS (see comments in
                 # Quiver.ts)
@@ -1164,53 +1163,53 @@ def determine_data_format(input_data: Any) -> DataFormat:
 
     if input_data is None:
         return DataFormat.EMPTY
-    elif isinstance(input_data, pd.DataFrame):
+    if isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
-    elif isinstance(input_data, np.ndarray):
-        if len(cast("NumpyShape", input_data.shape)) == 1:
+    if isinstance(input_data, np.ndarray):
+        if len(input_data.shape) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
             return DataFormat.NUMPY_LIST
         return DataFormat.NUMPY_MATRIX
-    elif isinstance(input_data, pa.Table):
+    if isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
-    elif isinstance(input_data, pa.Array):
+    if isinstance(input_data, pa.Array):
         return DataFormat.PYARROW_ARRAY
-    elif isinstance(input_data, pd.Series):
+    if isinstance(input_data, pd.Series):
         return DataFormat.PANDAS_SERIES
-    elif isinstance(input_data, pd.Index):
+    if isinstance(input_data, pd.Index):
         return DataFormat.PANDAS_INDEX
-    elif is_pandas_styler(input_data):
+    if is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
-    elif isinstance(input_data, pd.api.extensions.ExtensionArray):
+    if isinstance(input_data, pd.api.extensions.ExtensionArray):
         return DataFormat.PANDAS_ARRAY
-    elif is_polars_series(input_data):
+    if is_polars_series(input_data):
         return DataFormat.POLARS_SERIES
-    elif is_polars_dataframe(input_data):
+    if is_polars_dataframe(input_data):
         return DataFormat.POLARS_DATAFRAME
-    elif is_polars_lazyframe(input_data):
+    if is_polars_lazyframe(input_data):
         return DataFormat.POLARS_LAZYFRAME
-    elif is_modin_data_object(input_data):
+    if is_modin_data_object(input_data):
         return DataFormat.MODIN_OBJECT
-    elif is_snowpandas_data_object(input_data):
+    if is_snowpandas_data_object(input_data):
         return DataFormat.SNOWPANDAS_OBJECT
-    elif is_pyspark_data_object(input_data):
+    if is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
-    elif is_xarray_dataset(input_data):
+    if is_xarray_dataset(input_data):
         return DataFormat.XARRAY_DATASET
-    elif is_xarray_data_array(input_data):
+    if is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
-    elif is_ray_dataset(input_data):
+    if is_ray_dataset(input_data):
         return DataFormat.RAY_DATASET
-    elif is_dask_object(input_data):
+    if is_dask_object(input_data):
         return DataFormat.DASK_OBJECT
-    elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
+    if is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
-    elif is_duckdb_relation(input_data):
+    if is_duckdb_relation(input_data):
         return DataFormat.DUCKDB_RELATION
-    elif is_dbapi_cursor(input_data):
+    if is_dbapi_cursor(input_data):
         return DataFormat.DBAPI_CURSOR
-    elif (
+    if (
         isinstance(
             input_data,
             (ChainMap, UserDict, MappingProxyType),
@@ -1221,9 +1220,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_pydantic_model(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
-    elif isinstance(input_data, (ItemsView, enumerate)):
+    if isinstance(input_data, (ItemsView, enumerate)):
         return DataFormat.LIST_OF_ROWS
-    elif isinstance(input_data, (list, tuple, set, frozenset)):
+    if isinstance(input_data, (list, tuple, set, frozenset)):
         if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
             if isinstance(input_data, tuple):
@@ -1231,15 +1230,14 @@ def determine_data_format(input_data: Any) -> DataFormat:
             if isinstance(input_data, (set, frozenset)):
                 return DataFormat.SET_OF_VALUES
             return DataFormat.LIST_OF_VALUES
-        else:
-            # -> Multi-dimensional data structure
-            # This should always contain at least one element,
-            # otherwise the values type from infer_dtype would have been empty
-            first_element = next(iter(input_data))
-            if isinstance(first_element, dict):
-                return DataFormat.LIST_OF_RECORDS
-            if isinstance(first_element, (list, tuple, set, frozenset)):
-                return DataFormat.LIST_OF_ROWS
+        # -> Multi-dimensional data structure
+        # This should always contain at least one element,
+        # otherwise the values type from infer_dtype would have been empty
+        first_element = next(iter(input_data))
+        if isinstance(first_element, dict):
+            return DataFormat.LIST_OF_RECORDS
+        if isinstance(first_element, (list, tuple, set, frozenset)):
+            return DataFormat.LIST_OF_ROWS
     elif isinstance(input_data, (dict, Mapping)):
         if not input_data:
             return DataFormat.KEY_VALUE_DICT
@@ -1319,7 +1317,8 @@ def convert_pandas_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray.Dataset, xarray.DataArray, polars.Dataframe, polars.Series, list, set, tuple, or dict.
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray.Dataset,
+    xarray.DataArray, polars.Dataframe, polars.Series, list, set, tuple, or dict.
         The converted dataframe.
     """
 
@@ -1339,7 +1338,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPARK_OBJECT,
     }:
         return df
-    elif data_format == DataFormat.NUMPY_LIST:
+    if data_format == DataFormat.NUMPY_LIST:
         import numpy as np
 
         # It's a 1-dimensional array, so we only return
@@ -1347,48 +1346,48 @@ def convert_pandas_df_to_data_format(
         # Calling to_numpy() on the full DataFrame would result in:
         # [[1], [2]] instead of [1, 2]
         return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
-    elif data_format == DataFormat.NUMPY_MATRIX:
+    if data_format == DataFormat.NUMPY_MATRIX:
         import numpy as np
 
         return np.ndarray(0) if df.empty else df.to_numpy()
-    elif data_format == DataFormat.PYARROW_TABLE:
+    if data_format == DataFormat.PYARROW_TABLE:
         import pyarrow as pa
 
         return pa.Table.from_pandas(df)
-    elif data_format == DataFormat.PYARROW_ARRAY:
+    if data_format == DataFormat.PYARROW_ARRAY:
         import pyarrow as pa
 
         return pa.Array.from_pandas(_pandas_df_to_series(df))
-    elif data_format == DataFormat.PANDAS_SERIES:
+    if data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
-    elif data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
+    if data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
         import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)
-    elif data_format == DataFormat.POLARS_SERIES:
+    if data_format == DataFormat.POLARS_SERIES:
         import polars as pl
 
         return pl.from_pandas(_pandas_df_to_series(df))
-    elif data_format == DataFormat.XARRAY_DATASET:
+    if data_format == DataFormat.XARRAY_DATASET:
         import xarray as xr  # type: ignore[import-not-found]
 
         return xr.Dataset.from_dataframe(df)
-    elif data_format == DataFormat.XARRAY_DATA_ARRAY:
+    if data_format == DataFormat.XARRAY_DATA_ARRAY:
         import xarray as xr
 
         return xr.DataArray.from_series(_pandas_df_to_series(df))
-    elif data_format == DataFormat.LIST_OF_RECORDS:
+    if data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
-    elif data_format == DataFormat.LIST_OF_ROWS:
+    if data_format == DataFormat.LIST_OF_ROWS:
         # to_numpy converts the dataframe to a list of rows
         return _unify_missing_values(df).to_numpy().tolist()
-    elif data_format == DataFormat.COLUMN_INDEX_MAPPING:
+    if data_format == DataFormat.COLUMN_INDEX_MAPPING:
         return _unify_missing_values(df).to_dict(orient="dict")
-    elif data_format == DataFormat.COLUMN_VALUE_MAPPING:
+    if data_format == DataFormat.COLUMN_VALUE_MAPPING:
         return _unify_missing_values(df).to_dict(orient="list")
-    elif data_format == DataFormat.COLUMN_SERIES_MAPPING:
+    if data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
-    elif data_format in [
+    if data_format in [
         DataFormat.LIST_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
@@ -1408,7 +1407,7 @@ def convert_pandas_df_to_data_format(
         if data_format == DataFormat.SET_OF_VALUES:
             return set(return_list)
         return return_list
-    elif data_format == DataFormat.KEY_VALUE_DICT:
+    if data_format == DataFormat.KEY_VALUE_DICT:
         df = _unify_missing_values(df)
         # The key is expected to be the index -> this will return the first column
         # as a dict with index as key.

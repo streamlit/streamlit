@@ -20,6 +20,14 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -55,9 +63,14 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
+        *,
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
+        width: Width = "stretch",
+        height: Height = "content",
+        chart_data: OptionSequence[Any] | None = None,
+        chart_type: Literal["line", "bar", "area"] = "line",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -114,13 +127,54 @@ class MetricMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         border : bool
             Whether to show a border around the metric container. If this is
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown.
+
+        height : "content", "stretch", or int
+            The height of the metric element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+        width : "stretch", "content", or int
+            The width of the metric element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        chart_data : Iterable or None
+            A sequence of numeric values to display as a sparkline chart. If
+            this is ``None`` (default), no chart is displayed. The sequence can
+            be anything supported by ``st.dataframe``, including a ``list`` or
+            ``set``. If the sequence is dataframe-like, the first column will
+            be used. Each value will be cast to ``float`` internally by
+            default.
+
+        chart_type : "line", "bar", or "area"
+            The type of sparkline chart to display. This can be one of the
+            following:
+
+            - ``"line"`` (default): A simple sparkline.
+            - ``"area"``: A sparkline with area shading.
+            - ``"bar"``: A bar chart.
 
         Examples
         --------
@@ -158,7 +212,10 @@ class MetricMixin:
         >>> st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
         >>>
         >>> st.metric(
-        ...     label="Active developers", value=123, delta=123, delta_color="off"
+        ...     label="Active developers",
+        ...     value=123,
+        ...     delta=123,
+        ...     delta_color="off",
         ... )
 
         .. output::
@@ -184,6 +241,33 @@ class MetricMixin:
             https://doc-metric-example4.streamlit.app/
             height: 350px
 
+        **Example 5: Show sparklines**
+
+        To show trends over time, add sparklines.
+
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> changes = list(rng(4).standard_normal(20))
+        >>> data = [sum(changes[:i]) for i in range(20)]
+        >>> delta = round(data[-1], 2)
+        >>>
+        >>> row = st.container(horizontal=True)
+        >>> with row:
+        >>>     st.metric(
+        ...         "Line", 10, delta, chart_data=data, chart_type="line", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Area", 10, delta, chart_data=data, chart_type="area", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Bar", 10, delta, chart_data=data, chart_type="bar", border=True
+        ...     )
+
+        .. output::
+            https://doc-metric-example5.streamlit.app/
+            height: 300px
+
         """
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -204,17 +288,48 @@ class MetricMixin:
             label_visibility
         )
 
-        return self.dg._enqueue("metric", metric_proto)
+        if chart_data is not None:
+            prepared_data: list[float] = []
+            for val in convert_anything_to_list(chart_data):
+                try:
+                    prepared_data.append(float(val))
+                except Exception as ex:  # noqa: PERF203
+                    raise StreamlitAPIException(
+                        "Only numeric values are supported for chart data sequence. The "
+                        f"value '{val}' is of type {type(val)} and "
+                        "cannot be converted to float."
+                    ) from ex
+            if len(prepared_data) > 0:
+                metric_proto.chart_data.extend(prepared_data)
+
+        metric_proto.chart_type = _parse_chart_type(chart_type)
+
+        validate_height(height, allow_content=True)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width, height=height)
+
+        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
         return cast("DeltaGenerator", self)
 
 
+def _parse_chart_type(
+    chart_type: Literal["line", "bar", "area"],
+) -> MetricProto.ChartType.ValueType:
+    if chart_type == "bar":
+        return MetricProto.ChartType.BAR
+    if chart_type == "area":
+        return MetricProto.ChartType.AREA
+    # Use line as default chart:
+    return MetricProto.ChartType.LINE
+
+
 def _parse_label(label: str) -> str:
     if not isinstance(label, str):
         raise TypeError(
-            f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type."
+            f"'{label}' is of type {type(label)}, which is not an accepted type."
             " label only accepts: str. Please convert the label to an accepted type."
         )
     return label
@@ -223,20 +338,20 @@ def _parse_label(label: str) -> str:
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
-    if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
+    if isinstance(value, (int, float, str)):
         return str(value)
-    elif hasattr(value, "item"):
+    if hasattr(value, "item"):
         # Add support for numpy values (e.g. int16, float64, etc.)
         try:
             # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), float) or isinstance(value.item(), int):
+            if isinstance(value.item(), (float, int)):
                 return str(value.item())
-        except Exception:
+        except Exception:  # noqa: S110
             # If the numpy item is not a valid value, the TypeError below will be raised.
             pass
 
     raise TypeError(
-        f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type."
+        f"'{value}' is of type {type(value)}, which is not an accepted type."
         " value only accepts: int, float, str, or None."
         " Please convert the value to an accepted type."
     )
@@ -247,14 +362,13 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    elif isinstance(delta, int) or isinstance(delta, float):
+    if isinstance(delta, (int, float)):
         return str(delta)
-    else:
-        raise TypeError(
-            f"'{str(delta)}' is of type {str(type(delta))}, which is not an accepted type."
-            " delta only accepts: int, float, str, or None."
-            " Please convert the value to an accepted type."
-        )
+    raise TypeError(
+        f"'{delta}' is of type {type(delta)}, which is not an accepted type."
+        " delta only accepts: int, float, str, or None."
+        " Please convert the value to an accepted type."
+    )
 
 
 def _determine_delta_color_and_direction(
@@ -263,7 +377,7 @@ def _determine_delta_color_and_direction(
 ) -> MetricColorAndDirection:
     if delta_color not in {"normal", "inverse", "off"}:
         raise StreamlitAPIException(
-            f"'{str(delta_color)}' is not an accepted value. delta_color only accepts: "
+            f"'{delta_color}' is not an accepted value. delta_color only accepts: "
             "'normal', 'inverse', or 'off'"
         )
 

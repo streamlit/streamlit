@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  MockInstance,
+  vi,
+} from "vitest"
 
 import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
-  isColoredLineDisplayed,
+  getSelectPlaceholder,
+  getUrl,
   isDarkThemeInQueryParams,
   isEmbed,
+  isInChildFrame,
   isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
@@ -69,7 +79,6 @@ describe("setCookie", () => {
 
 describe("embedParamValues", () => {
   const embedParamValuesShouldHave = [
-    "show_colored_line",
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
@@ -201,7 +210,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -217,7 +225,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -231,7 +238,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -264,7 +270,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(true)
@@ -279,7 +284,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(true)
     expect(isScrollingHidden()).toBe(false)
@@ -294,23 +298,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(true)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
-    expect(isLightThemeInQueryParams()).toBe(false)
-    expect(isDarkThemeInQueryParams()).toBe(false)
-  })
-
-  it("should show the colored line if in embed options", () => {
-    windowSpy.mockImplementation(() => ({
-      location: {
-        search: "?embed=true&embed_options=show_colored_line",
-      },
-    }))
-
-    expect(isColoredLineDisplayed()).toBe(true)
-    expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
     expect(isLightThemeInQueryParams()).toBe(false)
@@ -365,7 +353,7 @@ describe("getLoadingScreenType", () => {
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
 
-  it("should give precendence to 'hide'", () => {
+  it("should give precedence to 'hide'", () => {
     vi.stubGlobal("window", {
       location: {
         search:
@@ -414,40 +402,47 @@ describe("getLoadingScreenType", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("should return an empty string if not in embed mode", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("")
     })
 
     it("should preserve embed query string even with no embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "embed=true&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "embed=true&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("embed=true")
     })
 
     it("should preserve embed query string with embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search:
-          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search:
+            "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe(
         "embed=true&embed_options=option1&embed_options=option2"
       )
@@ -471,5 +466,267 @@ describe("keysToSnakeCase", () => {
 
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
+  })
+
+  it("should preserve null values inside arrays without throwing", () => {
+    const input = {
+      customdata: [1, null, { innerKey: 5, anotherNull: null }],
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      customdata: [1, null, { inner_key: 5, another_null: null }],
+    })
+  })
+
+  it("should not attempt to recurse into null values", () => {
+    const input = {
+      value: null,
+      array: [null],
+      nested: { child: null },
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      value: null,
+      array: [null],
+      nested: { child: null },
+    })
+  })
+})
+
+// Mock isInChildFrame since getUrl depends on it
+vi.mock("./utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("./utils")>()
+  return {
+    ...actual,
+    isInChildFrame: vi.fn(),
+  }
+})
+
+describe("getUrl", () => {
+  const mockIsInChildFrame = vi.mocked(isInChildFrame)
+  let topSpy: MockInstance<() => unknown>
+  let documentSpy: MockInstance<() => unknown>
+
+  beforeEach(() => {
+    documentSpy = vi.spyOn(global, "document", "get")
+    topSpy = vi.spyOn(global, "top", "get")
+
+    // Reset mocks
+    mockIsInChildFrame.mockReset()
+    documentSpy.mockReset()
+    topSpy.mockReset()
+  })
+
+  afterEach(() => {
+    // Restore original implementations
+    vi.restoreAllMocks()
+  })
+
+  it("should return document.location.href without query params when not in an iframe", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?param=value",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params when in an iframe but window.top access throws error", () => {
+    mockIsInChildFrame.mockReturnValue(true)
+
+    // Simulate error when accessing top getter
+    topSpy.mockImplementation(() => {
+      throw new Error("CSP error simulation")
+    })
+
+    // Mock document location for the fallback
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://iframe.com/page?iframeparam=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://iframe.com/page")
+  })
+
+  it("should handle URLs with no query parameters correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should handle URLs ending with / correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main/?query=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main/")
+  })
+
+  it("should handle complex query parameters correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?foo=bar&baz=qux&embed=true",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params or anchors when not in an iframe", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?param=value#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params or anchors when in an iframe but window.top access throws error", () => {
+    mockIsInChildFrame.mockReturnValue(true)
+
+    // Simulate error when accessing top getter
+    topSpy.mockImplementation(() => {
+      throw new Error("CSP error simulation")
+    })
+
+    // Mock document location for the fallback
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://iframe.com/page?iframeparam=1#top",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://iframe.com/page")
+  })
+
+  it("should handle URLs with only an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should handle URLs ending with / and an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main/#section?query=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main/")
+  })
+
+  it("should handle complex query parameters and an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?foo=bar&baz=qux&embed=true#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+})
+
+describe("getSelectPlaceholder", () => {
+  describe("single-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        false
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, false)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add an option' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, false)
+      expect(result.placeholder).toBe("Add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose an option' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, false)
+      expect(result.placeholder).toBe("Choose an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add an option' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, false)
+      expect(result.placeholder).toBe("Choose or add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("multi-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        true
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, true)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add options' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, true)
+      expect(result.placeholder).toBe("Add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose options' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, true)
+      expect(result.placeholder).toBe("Choose options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add options' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, true)
+      expect(result.placeholder).toBe("Choose or add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("edge cases", () => {
+    it("handles single space placeholder as custom placeholder", () => {
+      const result = getSelectPlaceholder(" ", ["option1"], true, false)
+      expect(result.placeholder).toBe(" ")
+      expect(result.shouldDisable).toBe(false)
+    })
   })
 })

@@ -38,7 +38,6 @@ from typing import (
     Literal,
     NamedTuple,
     Protocol,
-    TypeVar,
     Union,
     overload,
 )
@@ -49,13 +48,11 @@ from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     import graphviz
-    import sympy  # type: ignore
+    import sympy
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-
-T = TypeVar("T")
 
 # we define our own type here because mypy doesn't seem to support the shape type and
 # reports unreachable code. When mypy supports it, we can remove this custom type.
@@ -119,13 +116,22 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     fqn_type = get_fqn_type(obj)
     if isinstance(fqn_type_pattern, str):
         return fqn_type_pattern == fqn_type
-    else:
-        return fqn_type_pattern.match(fqn_type) is not None
+    return fqn_type_pattern.match(fqn_type) is not None
 
 
 def _is_type_instance(obj: object, type_to_check: str) -> bool:
     """Check if instance of type without importing expensive modules."""
     return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
+
+
+def get_object_name(obj: object) -> str:
+    """Get a simplified name of the given object."""
+    if hasattr(obj, "__qualname__") and isinstance(obj.__qualname__, str):
+        return obj.__qualname__
+    if hasattr(obj, "__name__") and isinstance(obj.__name__, str):
+        return obj.__name__
+
+    return type(obj).__qualname__
 
 
 def get_fqn(the_type: type) -> str:
@@ -161,7 +167,7 @@ def to_bytes(obj: BytesLike) -> bytes:
     """
     if isinstance(obj, bytearray):
         return bytes(obj)
-    elif isinstance(obj, bytes):
+    if isinstance(obj, bytes):
         return obj
 
     raise RuntimeError(f"{obj} is not convertible to bytes")
@@ -232,10 +238,10 @@ def is_graphviz_chart(
 ) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
     """True if input looks like a GraphViz chart."""
     return (
-        # GraphViz < 0.18
+        # In GraphViz < 0.18
         is_type(obj, "graphviz.dot.Graph")
         or is_type(obj, "graphviz.dot.Digraph")
-        # GraphViz >= 0.18
+        # In GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
         or is_type(obj, "graphviz.sources.Source")
@@ -263,16 +269,13 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
         return True
 
-    if any(_is_list_of_plotly_objs(v) for v in obj.values()):
-        return True
-
-    return False
+    return bool(any(_is_list_of_plotly_objs(v) for v in obj.values()))
 
 
 def is_delta_generator(obj: object) -> TypeGuard[DeltaGenerator]:
@@ -317,7 +320,7 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def is_pydantic_model(obj) -> bool:
+def is_pydantic_model(obj: object) -> bool:
     """True if input looks like a Pydantic model instance."""
 
     if isinstance(obj, type):

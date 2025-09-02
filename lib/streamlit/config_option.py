@@ -108,7 +108,8 @@ class ConfigOption:
         replaced_by: str | None = None,
         type_: type = str,
         sensitive: bool = False,
-    ):
+        multiple: bool = False,
+    ) -> None:
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -142,6 +143,8 @@ class ConfigOption:
             Useful to cast the config params sent by cmd option parameter.
         sensitive: bool
             Sensitive configuration options cannot be set by CLI parameter.
+        multiple: bool
+            Whether this config option can have multiple values.
         """
         # Parse out the section and name.
         self.key = key
@@ -167,7 +170,8 @@ class ConfigOption:
             r")$"
         )
         match = re.match(key_format, self.key)
-        assert match, f'Key "{self.key}" has invalid format.'
+        if match is None:
+            raise ValueError(f'Key "{self.key}" has invalid format.')
         self.section, self.name = match.group("section"), match.group("name")
 
         self.description = description
@@ -182,17 +186,18 @@ class ConfigOption:
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
-        # infer multiple values if the default value is a list or tuple
-        self.multiple = isinstance(default_val, (list, tuple))
+        self.multiple = multiple
 
         if self.replaced_by:
             self.deprecated = True
             if deprecation_text is None:
-                deprecation_text = "Replaced by %s." % self.replaced_by
+                deprecation_text = f"Replaced by {self.replaced_by}."
 
         if self.deprecated:
-            assert expiration_date, "expiration_date is required for deprecated items"
-            assert deprecation_text, "deprecation_text is required for deprecated items"
+            if not expiration_date:
+                raise ValueError("expiration_date is required for deprecated items.")
+            if not deprecation_text:
+                raise ValueError("deprecation_text is required for deprecated items.")
             self.expiration_date = expiration_date
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
@@ -218,9 +223,10 @@ class ConfigOption:
             Returns self, which makes testing easier. See config_test.py.
 
         """
-        assert get_val_func.__doc__, (
-            "Complex config options require doc strings for their description."
-        )
+        if get_val_func.__doc__ is None:
+            raise RuntimeError(
+                "Complex config options require doc strings for their description."
+            )
         self.description = get_val_func.__doc__
         self._get_val_func = get_val_func
         return self
@@ -257,8 +263,7 @@ class ConfigOption:
                 # Import here to avoid circular imports
                 from streamlit.logger import get_logger
 
-                LOGGER = get_logger(__name__)
-                LOGGER.error(
+                get_logger(__name__).error(
                     textwrap.dedent(
                         f"""
                     ════════════════════════════════════════════════
@@ -275,8 +280,7 @@ class ConfigOption:
                 # Import here to avoid circular imports
                 from streamlit.logger import get_logger
 
-                LOGGER = get_logger(__name__)
-                LOGGER.warning(
+                get_logger(__name__).warning(
                     textwrap.dedent(
                         f"""s
                     ════════════════════════════════════════════════
@@ -301,7 +305,7 @@ class ConfigOption:
         return now > expiration_date
 
     @property
-    def env_var(self):
+    def env_var(self) -> str:
         """Get the name of the environment variable that can be used to set the option."""
         name = self.key.replace(".", "_")
         return f"STREAMLIT_{to_snake_case(name).upper()}"

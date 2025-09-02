@@ -32,6 +32,9 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
+    assert_type(selectbox("foo", []), None)
+    assert_type(selectbox("foo", [], accept_new_options=True), str)
+
     assert_type(selectbox("foo", [1, 2, 3]), int)
     assert_type(selectbox("foo", [1, 2, 3], index=None), Union[int, None])
     assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)

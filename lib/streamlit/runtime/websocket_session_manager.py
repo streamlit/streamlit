@@ -67,9 +67,11 @@ class WebsocketSessionManager(SessionManager):
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be truthy"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be truthy. "
+                "This should never happen."
+            )
 
         if existing_session_id in self._active_session_info_by_id:
             _LOGGER.warning(
@@ -83,7 +85,7 @@ class WebsocketSessionManager(SessionManager):
             and self._session_storage.get(existing_session_id)
         )
 
-        if session_info:
+        if isinstance(session_info, SessionInfo):
             existing_session = session_info.session
             existing_session.register_file_watchers()
 
@@ -109,9 +111,11 @@ class WebsocketSessionManager(SessionManager):
             "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
-        assert session.id not in self._active_session_info_by_id, (
-            f"session.id '{session.id}' registered multiple times!"
-        )
+        if session.id in self._active_session_info_by_id:
+            raise RuntimeError(
+                f"session.id '{session.id}' registered multiple times. "
+                "This should never happen."
+            )
 
         self._active_session_info_by_id[session.id] = ActiveSessionInfo(client, session)
         return session.id
@@ -133,6 +137,10 @@ class WebsocketSessionManager(SessionManager):
             )
             del self._active_session_info_by_id[session_id]
 
+        if not self._active_session_info_by_id:
+            # Avoid stale cached scripts when all file watchers and sessions are disconnected
+            self._script_cache.clear()
+
     def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         return self._active_session_info_by_id.get(session_id)
 
@@ -147,6 +155,10 @@ class WebsocketSessionManager(SessionManager):
             active_session_info = self._active_session_info_by_id[session_id]
             del self._active_session_info_by_id[session_id]
             active_session_info.session.shutdown()
+
+            if not self._active_session_info_by_id:
+                # Avoid stale cached scripts when all file watchers and sessions are disconnected
+                self._script_cache.clear()
             return
 
         session_info = self._session_storage.get(session_id)

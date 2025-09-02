@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { getLogger } from "loglevel"
 
 import { IAppPage } from "@streamlit/protobuf"
@@ -26,6 +26,7 @@ import {
 } from "@streamlit/utils"
 
 import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
+import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DefaultStreamlitEndpoints")
 
@@ -180,6 +181,25 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   /**
+   * Construct a URL for a download file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance. The target server can
+   * be changed by setting window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL.
+   */
+  public buildDownloadUrl(url: string): string {
+    if (!url.startsWith(MEDIA_ENDPOINT)) {
+      return url
+    }
+
+    // The url is relative, so we need to build the full URL.
+    const downloadAssetBaseUrl = window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
+    return downloadAssetBaseUrl
+      ? buildHttpUri(parseUriIntoBaseParts(downloadAssetBaseUrl), url)
+      : buildHttpUri(this.requireServerUri(), url)
+  }
+
+  /**
    * Construct a URL for uploading a file. If the `fileUploadClientConfig`
    * exists, we build URL by prefixing URL with prefix from the config,
    * otherwise if the `fileUploadClientConfig` is not present, if URL is
@@ -226,13 +246,16 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   public async uploadFileUploaderFile(
     fileUploadUrl: string,
     file: File,
-    sessionId: string,
+    _sessionId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    signal?: AbortSignal
   ): Promise<void> {
     const form = new FormData()
-    form.append(file.name, file)
+    const { name, webkitRelativePath } = file
+    // For directory uploads, use the relative path as fileName to preserve directory structure
+    const fileName = webkitRelativePath || name
+    form.append(name, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()
 
@@ -240,7 +263,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     try {
       await this.csrfRequest<number>(uploadUrl, {
-        cancelToken,
+        signal,
         method: "PUT",
         data: form,
         responseType: "text",
@@ -250,6 +273,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // If the request succeeds, we don't care about the response body
     } catch (error: unknown) {
       // Send error info on failure
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Client Error: File uploader error on file upload - ${error}`)
       const message = error instanceof Error ? error.message : "Unknown Error"
       this.sendClientErrorToHost(
@@ -294,6 +318,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // If the request succeeds, we don't care about the response body
     } catch (error: unknown) {
       // Send error info on failure
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Client Error: File uploader error on file delete - ${error}`)
       const message = error instanceof Error ? error.message : "Unknown Error"
       this.sendClientErrorToHost(

@@ -22,6 +22,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -49,6 +50,7 @@ from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SomeUploadedAudioFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
 
@@ -73,13 +75,10 @@ class AudioInputSerde:
         return state_proto
 
     def deserialize(
-        self, ui_value: FileUploaderStateProto | None, widget_id: str
+        self, ui_value: FileUploaderStateProto | None
     ) -> SomeUploadedAudioFile:
         upload_files = _get_upload_files(ui_value)
-        if len(upload_files) == 0:
-            return_value = None
-        else:
-            return_value = upload_files[0]
+        return_value = None if len(upload_files) == 0 else upload_files[0]
         if return_value is not None and not isinstance(return_value, DeletedFile):
             enforce_filename_restriction(return_value.name, [".wav"])
         return return_value
@@ -98,6 +97,7 @@ class AudioInputMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None:
         r"""Display a widget that returns an audio recording from the user's microphone.
 
@@ -143,8 +143,8 @@ class AudioInputMixin:
             An optional callback invoked when this audio input's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -156,8 +156,18 @@ class AudioInputMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "stretch" or int
+            The width of the audio input widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -197,6 +207,7 @@ class AudioInputMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -211,6 +222,7 @@ class AudioInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
@@ -227,9 +239,11 @@ class AudioInputMixin:
         element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=False,
+            dg=self.dg,
             label=label,
             help=help,
+            width=width,
         )
 
         audio_input_proto = AudioInputProto()
@@ -244,6 +258,9 @@ class AudioInputMixin:
         if label and help is not None:
             audio_input_proto.help = dedent(help)
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         serde = AudioInputSerde()
 
         audio_input_state = register_widget(
@@ -257,7 +274,7 @@ class AudioInputMixin:
             value_type="file_uploader_state_value",
         )
 
-        self.dg._enqueue("audio_input", audio_input_proto)
+        self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
 
         if isinstance(audio_input_state.value, DeletedFile):
             return None

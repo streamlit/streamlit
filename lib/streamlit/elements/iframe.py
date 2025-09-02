@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib.layout_utils import LayoutConfig
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -31,6 +33,8 @@ class IframeMixin:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,
+        *,
+        tab_index: int | None = None,
     ) -> DeltaGenerator:
         """Load a remote URL in an iframe.
 
@@ -59,6 +63,27 @@ class IframeMixin:
             does not show a scrollbar. If this is ``True``, Streamlit shows a
             scrollbar when the content is larger than the iframe.
 
+        tab_index : int or None
+            Specifies how and if the iframe is sequentially focusable.
+            Users typically use the ``Tab`` key for sequential focus
+            navigation.
+
+            This can be one of the following values:
+
+            - ``None`` (default): Uses the browser's default behavior.
+            - ``-1``: Removes the iframe from sequential navigation, but still
+              allows it to be focused programmatically.
+            - ``0``: Includes the iframe in sequential navigation in the order
+              it appears in the document but after all elements with a positive
+              ``tab_index``.
+            - Positive integer: Includes the iframe in sequential navigation.
+              Elements are navigated in ascending order of their positive
+              ``tab_index``.
+
+            For more information, see the `tabindex
+            <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
+            documentation on MDN.
+
         Example
         -------
 
@@ -71,11 +96,15 @@ class IframeMixin:
         marshall(
             iframe_proto,
             src=src,
-            width=width,
-            height=height,
             scrolling=scrolling,
+            tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the iframe to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @gather_metrics("_html")
     def _html(
@@ -84,6 +113,8 @@ class IframeMixin:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,
+        *,
+        tab_index: int | None = None,
     ) -> DeltaGenerator:
         """Display an HTML string in an iframe.
 
@@ -115,6 +146,27 @@ class IframeMixin:
             does not show a scrollbar. If this is ``True``, Streamlit shows a
             scrollbar when the content is larger than the iframe.
 
+        tab_index : int or None
+            Specifies how and if the iframe is sequentially focusable.
+            Users typically use the ``Tab`` key for sequential focus
+            navigation.
+
+            This can be one of the following values:
+
+            - ``None`` (default): Uses the browser's default behavior.
+            - ``-1``: Removes the iframe from sequential navigation, but still
+              allows it to be focused programmatically.
+            - ``0``: Includes the iframe in sequential navigation in the order
+              it appears in the document but after all elements with a positive
+              ``tab_index``.
+            - Positive integer: Includes the iframe in sequential navigation.
+              Elements are navigated in ascending order of their positive
+              ``tab_index``.
+
+            For more information, see the `tabindex
+            <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
+            documentation on MDN.
+
         Example
         -------
 
@@ -129,11 +181,15 @@ class IframeMixin:
         marshall(
             iframe_proto,
             srcdoc=html,
-            width=width,
-            height=height,
             scrolling=scrolling,
+            tab_index=tab_index,
         )
-        return self.dg._enqueue("iframe", iframe_proto)
+        # When no width is specified, we want the html to stretch to fill the container.
+        layout_config = LayoutConfig(
+            width=width if width is not None else "stretch",
+            height=height if height is not None else 150,
+        )
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -145,9 +201,8 @@ def marshall(
     proto: IFrameProto,
     src: str | None = None,
     srcdoc: str | None = None,
-    width: int | None = None,
-    height: int | None = None,
     scrolling: bool = False,
+    tab_index: int | None = None,
 ) -> None:
     """Marshalls data into an IFrame proto.
 
@@ -163,14 +218,11 @@ def marshall(
         The URL of the page to embed.
     srcdoc : str
         Inline HTML to embed. Overrides src.
-    width : int
-        The width of the frame in CSS pixels. Defaults to the app's
-        default element width.
-    height : int
-        The height of the frame in CSS pixels. Defaults to 150.
     scrolling : bool
         If true, show a scrollbar when the content is larger than the iframe.
         Otherwise, never show a scrollbar.
+    tab_index : int, optional
+        Specifies the tab order of the iframe.
 
     """
     if src is not None:
@@ -179,13 +231,17 @@ def marshall(
     if srcdoc is not None:
         proto.srcdoc = srcdoc
 
-    if width is not None:
-        proto.width = width
-        proto.has_width = True
-
-    if height is not None:
-        proto.height = height
-    else:
-        proto.height = 150
-
     proto.scrolling = scrolling
+
+    if tab_index is not None:
+        # Validate tab_index according to web specifications
+        if not (
+            isinstance(tab_index, int)
+            and not isinstance(tab_index, bool)
+            and tab_index >= -1
+        ):
+            raise StreamlitAPIException(
+                "tab_index must be None, -1, or a non-negative integer."
+            )
+
+        proto.tab_index = tab_index

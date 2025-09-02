@@ -45,6 +45,7 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.getByText("Automatic")).toBeInTheDocument()
     expect(screen.getByText("Dollar")).toBeInTheDocument()
     expect(screen.getByText("Euro")).toBeInTheDocument()
+    expect(screen.getByText("Yen")).toBeInTheDocument()
     expect(screen.getByText("Percent")).toBeInTheDocument()
     expect(screen.getByText("Scientific")).toBeInTheDocument()
     expect(screen.getByText("Accounting")).toBeInTheDocument()

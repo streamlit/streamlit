@@ -107,3 +107,9 @@ digraph Dot {
 }
 """
 st.graphviz_chart(horizontal_flow_chart, use_container_width=True)
+
+st.subheader("Width Parameters")
+
+st.graphviz_chart(dot_code, width="content")
+st.graphviz_chart(dot_code, width="stretch")
+st.graphviz_chart(dot_code, width=100)

@@ -17,13 +17,13 @@
 import React, {
   memo,
   ReactElement,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { getLogger } from "loglevel"
 import queryString from "query-string"
 import { flushSync } from "react-dom"
@@ -34,21 +34,22 @@ import {
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { LibContext } from "~lib/components/core/LibContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorElement from "~lib/components/shared/ErrorElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
+import ErrorElement from "~lib/components/shared/ErrorElement"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useTimeout from "~lib/hooks/useTimeout"
-import { EmotionTheme } from "~lib/theme"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
-import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 import {
@@ -70,7 +71,6 @@ const LOG = getLogger("ComponentInstance")
 export const COMPONENT_READY_WARNING_TIME_MS = 60000 // 60 seconds
 
 export interface Props {
-  registry: ComponentRegistry
   widgetMgr: WidgetStateManager
   disabled: boolean
   element: ComponentInstanceProto
@@ -98,10 +98,17 @@ function getSrc(
   }
 
   // Add streamlitUrl query parameter to src
+  const customComponentClientId =
+    window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID
   const currentUrl = new URL(window.location.href)
   src = queryString.stringifyUrl({
     url: src,
-    query: { streamlitUrl: currentUrl.origin + currentUrl.pathname },
+    query: {
+      streamlitUrl: currentUrl.origin + currentUrl.pathname,
+      ...(customComponentClientId && {
+        __streamlit_parent_client_id: customComponentClientId,
+      }),
+    },
   })
   return src
 }
@@ -178,10 +185,12 @@ function compareDataframeArgs(
  * by {@link COMPONENT_READY_WARNING_TIME_MS}, a warning element is rendered instead.
  */
 function ComponentInstance(props: Props): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const { componentRegistry: registry } = useContext(LibContext)
+
   const [componentError, setComponentError] = useState<Error>()
 
-  const { disabled, element, registry, widgetMgr, width, fragmentId } = props
+  const { disabled, element, widgetMgr, width, fragmentId } = props
   const { componentName, jsonArgs, specialArgs, url } = element
 
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(
@@ -205,16 +214,10 @@ function ComponentInstance(props: Props): ReactElement {
     dataframeArgs: [],
   })
   const haveDataframeArgsChanged = compareDataframeArgs(
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
     parsedArgsRef.current.dataframeArgs,
     parsedDataframeArgs
   )
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   parsedArgsRef.current.args = parsedNewArgs
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
@@ -233,11 +236,11 @@ function ComponentInstance(props: Props): ReactElement {
   const onBackMsgRef = useRef<IframeMessageHandlerProps>()
 
   // Show a log in the console as a soft-warning to the developer before showing the more disrupting warning element
-  const clearTimeoutLog = useTimeout(
+  const { clear: clearTimeoutLog } = useTimeout(
     () => LOG.warn(getWarnMessage(componentName, url)),
     COMPONENT_READY_WARNING_TIME_MS / 4
   )
-  const clearTimeoutWarningElement = useTimeout(() => {
+  const { clear: clearTimeoutWarningElement } = useTimeout(() => {
     /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
      * behavior the same as before introducing `createRoot` and after, we ensure
      * that the state updates are flushed immediately.
@@ -250,6 +253,7 @@ function ComponentInstance(props: Props): ReactElement {
   useEffect(() => {
     // Iframe onerror event unreliable - check custom component
     // src on mount to catch iframe load errors
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     registry.checkSourceUrlResponse(componentSourceUrl, componentName)
   }, [componentSourceUrl, componentName, registry])
 
@@ -378,6 +382,7 @@ function ComponentInstance(props: Props): ReactElement {
       if (!contentWindow) {
         return
       }
+
       registry.deregisterListener(contentWindow)
     }
   }, [registry, componentName])
@@ -394,7 +399,7 @@ function ComponentInstance(props: Props): ReactElement {
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
@@ -412,7 +417,7 @@ function ComponentInstance(props: Props): ReactElement {
   // display a warning.
   const warns =
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+
     !isReadyRef.current && isReadyTimeout ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
@@ -451,8 +456,9 @@ function ComponentInstance(props: Props): ReactElement {
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}
         // TODO: Update to match React best practices
-        // eslint-disable-next-line react-compiler/react-compiler
+
         componentReady={isReadyRef.current}
+        tabIndex={element.tabIndex ?? undefined}
       />
     </>
   )

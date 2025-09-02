@@ -27,6 +27,7 @@ from streamlit.proto.NewSession_pb2 import (
     EnvironmentInfo,
     FontFace,
     FontSizes,
+    FontSource,
     Initialize,
     NewSession,
     Radii,
@@ -98,22 +99,45 @@ FD = FieldDescriptor
                 ("text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("font", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
                 ("base", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
-                ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("widget_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("radii", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("heading_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("body_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("code_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("code_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
+                ("font_sources", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("base_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("button_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("dataframe_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("widget_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("show_widget_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("link_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("link_underline", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("base_font_size", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("base_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("heading_font_sizes", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("heading_font_weights", FD.LABEL_REPEATED, FD.TYPE_INT32),
+                ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                (
+                    "dataframe_header_background_color",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("red_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("orange_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("yellow_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("blue_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("green_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("violet_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("gray_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },
         ),
@@ -123,7 +147,16 @@ FD = FieldDescriptor
                 ("url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("family", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("weight_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("style", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("unicode_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+            },
+        ),
+        (
+            FontSource,
+            {
+                ("config_name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("source_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
@@ -146,7 +179,7 @@ FD = FieldDescriptor
             {
                 ("installation_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("installation_id_v3", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("stable_random_machine_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("installation_id_v4", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
@@ -154,6 +187,8 @@ FD = FieldDescriptor
             {
                 ("streamlit_version", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("python_version", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("server_os", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("has_display", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
         ),
         (
@@ -212,6 +247,7 @@ def test_alert_proto_stable():
         ("body", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
         ("format", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
         ("icon", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+        ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
     }
 
 
@@ -224,6 +260,7 @@ def test_exception_proto_stable():
         ("message_is_markdown", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
         ("stack_trace", FD.LABEL_REPEATED, FD.TYPE_STRING),
         ("is_warning", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+        ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
     }
 
 

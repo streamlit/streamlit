@@ -21,16 +21,16 @@ c1, c2 = st.columns(2)
 
 with c1:
     checkbox = st.checkbox("checkbox", False)
-    st.text("%s" % checkbox)
+    st.text(f"{checkbox}")
 
     text_area = st.text_area("text_area", "ahoy!")
-    st.text("%s" % text_area)
+    st.text(f"{text_area}")
 
 with c2:
     radio = st.radio("radio", ("0", "1", "2"), 1)
-    st.text("%s" % radio)
+    st.text(f"{radio}")
 
 button = st.button("button")
-st.text("%s" % button)
+st.text(f"{button}")
 
 st.sidebar.radio("sidebar radio", ["a", "b"])

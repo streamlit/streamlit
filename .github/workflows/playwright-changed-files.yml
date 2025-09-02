@@ -12,6 +12,7 @@ concurrency:
 jobs:
   playwright-e2e-tests-changed-files:
     runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -19,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -93,10 +94,18 @@ jobs:
         uses: ./.github/actions/make_init
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Install playwright
-        run: python -m playwright install --with-deps
+        uses: ./.github/actions/playwright_install
       - if: steps.check_changed_files.outputs.run_tests == 'true'
-        name: Run make frontend-build-with-profiler
-        run: make frontend-build-with-profiler
+        name: Run make frontend-with-profiler
+        run: make frontend-with-profiler
+      - name: Get short SHA
+        id: short_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run changed playwright tests
         run: |
@@ -107,7 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright_test_results
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4

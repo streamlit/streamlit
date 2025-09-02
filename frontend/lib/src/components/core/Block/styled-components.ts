@@ -14,58 +14,54 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
-import { Block as BlockProto } from "@streamlit/protobuf"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
+import { assertNever } from "~lib/util/assertNever"
 
-function translateGapWidth(gap: string, theme: EmotionTheme): string {
+function translateGapWidth(
+  gap: streamlit.GapSize | undefined,
+  theme: EmotionTheme
+): string {
   let gapWidth = theme.spacing.lg
-  if (gap === "medium") {
+  if (gap === streamlit.GapSize.MEDIUM) {
     gapWidth = theme.spacing.threeXL
-  } else if (gap === "large") {
+  } else if (gap === streamlit.GapSize.LARGE) {
     gapWidth = theme.spacing.fourXL
+  } else if (gap === streamlit.GapSize.NONE) {
+    gapWidth = theme.spacing.none
   }
   return gapWidth
 }
-export interface StyledHorizontalBlockProps {
-  gap: string
-}
-
-export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
-  ({ theme, gap }) => {
-    const gapWidth = translateGapWidth(gap, theme)
-
-    return {
-      // While using flex for columns, padding is used for large screens and gap
-      // for small ones. This can be adjusted once more information is passed.
-      // More information and discussions can be found: Issue #2716, PR #2811
-      display: "flex",
-      flexWrap: "wrap",
-      flexGrow: 1,
-      alignItems: "stretch",
-      gap: gapWidth,
-    }
-  }
-)
 
 export interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
   elementType: string
+  overflow: React.CSSProperties["overflow"]
+  flex?: React.CSSProperties["flex"]
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, elementType }) => ({
+  ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
     width,
+    height,
+    maxWidth: "100%",
+    // Important so that individual elements don't take up too much space
+    // in horizontal layouts. Particularly when an element uses the full screen wrapper.
+    minWidth: "1rem",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
+    overflow,
+    flex,
 
     "@media print": {
       overflow: "visible",
@@ -105,7 +101,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: string
+  gap: streamlit.GapSize | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -115,7 +111,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
-    const width = `calc(${percentage}% - ${gapWidth})`
+    const width =
+      gapWidth === theme.spacing.none
+        ? `${percentage}%`
+        : `calc(${percentage}% - ${gapWidth})`
 
     return {
       // Calculate width based on percentage, but fill all available space,
@@ -154,49 +153,120 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
-export interface StyledVerticalBlockProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ref?: React.RefObject<any>
-  width?: React.CSSProperties["width"]
-  maxWidth?: React.CSSProperties["maxWidth"]
+const getAlignItems = (
+  align: BlockProto.FlexContainer.Align | undefined | null
+): CSSProperties["alignItems"] => {
+  switch (align) {
+    case BlockProto.FlexContainer.Align.ALIGN_START:
+      return "start"
+    case BlockProto.FlexContainer.Align.ALIGN_CENTER:
+      return "center"
+    case BlockProto.FlexContainer.Align.ALIGN_END:
+      return "end"
+    case BlockProto.FlexContainer.Align.STRETCH:
+      return "stretch"
+    case BlockProto.FlexContainer.Align.ALIGN_UNDEFINED:
+    case undefined:
+    case null:
+      return "stretch"
+    default:
+      assertNever(align)
+  }
 }
 
-export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
-  ({ width, maxWidth, theme }) => ({
-    width,
-    maxWidth,
-    position: "relative", // Required for the automatic width computation.
+const getJustifyContent = (
+  justify: BlockProto.FlexContainer.Justify | undefined | null
+): CSSProperties["justifyContent"] => {
+  switch (justify) {
+    case BlockProto.FlexContainer.Justify.JUSTIFY_START:
+      return "start"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_CENTER:
+      return "center"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_END:
+      return "end"
+    case BlockProto.FlexContainer.Justify.SPACE_BETWEEN:
+      return "space-between"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_UNDEFINED:
+    case undefined:
+    case null:
+      return "start"
+    default:
+      assertNever(justify)
+  }
+}
+
+export interface StyledFlexContainerBlockProps {
+  direction: React.CSSProperties["flexDirection"]
+  gap?: streamlit.GapSize | undefined
+  flex?: React.CSSProperties["flex"]
+  // This marks the prop as a transient property so it is
+  // not passed to the DOM. It overlaps with a valid attribute
+  // so passing it to the DOM will cause an error in the console.
+  $wrap?: boolean
+  height?: React.CSSProperties["height"]
+  border: boolean
+  align?: BlockProto.FlexContainer.Align | null
+  justify?: BlockProto.FlexContainer.Justify | null
+  overflow?: React.CSSProperties["overflow"]
+}
+
+export const StyledFlexContainerBlock =
+  styled.div<StyledFlexContainerBlockProps>(
+    ({
+      theme,
+      direction,
+      gap,
+      flex,
+      $wrap,
+      height,
+      border,
+      align,
+      justify,
+      overflow,
+    }) => {
+      let gapWidth
+      if (gap !== undefined) {
+        gapWidth = translateGapWidth(gap, theme)
+      }
+
+      return {
+        display: "flex",
+        gap: gapWidth,
+        width: "100%",
+        maxWidth: "100%",
+        height: height ?? "auto",
+        minWidth: "1rem",
+        flexDirection: direction,
+        flex,
+        alignItems: getAlignItems(align),
+        justifyContent: getJustifyContent(justify),
+        flexWrap: $wrap ? "wrap" : "nowrap",
+        ...(border && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
+        overflow,
+      }
+    }
+  )
+
+export interface StyledLayoutWrapperProps {
+  width?: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
+  flex?: React.CSSProperties["flex"]
+}
+
+export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
+  ({ width, height, flex }) => ({
     display: "flex",
-    flex: 1,
+    // This shouldn't matter since this is a wrapper and should only have one child.
+    // However, adding it here to be explicit.
     flexDirection: "column",
-    gap: theme.spacing.lg,
+    width,
+    maxWidth: "100%",
+    minWidth: "1rem",
+    height,
+    flex,
   })
 )
-
-export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
-  {
-    display: "flex",
-    flexDirection: "column",
-    flex: 1,
-  }
-)
-
-export interface StyledVerticalBlockBorderWrapperProps {
-  border: boolean
-  height?: number
-}
-
-export const StyledVerticalBlockBorderWrapper =
-  styled.div<StyledVerticalBlockBorderWrapperProps>(
-    ({ theme, border, height }) => ({
-      ...(border && {
-        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-        borderRadius: theme.radii.default,
-        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-      }),
-      ...(height && {
-        height: `${height}px`,
-        overflow: "auto",
-      }),
-    })
-  )

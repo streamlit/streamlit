@@ -417,7 +417,7 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message", () => {
     const mockCustomThemeConfig = {
       primaryColor: "#1A6CE7",
       backgroundColor: "#FFFFFF",
@@ -448,7 +448,7 @@ describe("HostCommunicationManager messaging", () => {
     ).toHaveBeenCalledWith(undefined, mockCustomThemeConfig)
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -467,7 +467,7 @@ describe("HostCommunicationManager messaging", () => {
     ).toHaveBeenCalledWith("Dark", undefined)
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {

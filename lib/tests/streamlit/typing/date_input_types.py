@@ -101,7 +101,7 @@ if TYPE_CHECKING:
     )
 
     # Test with on_change, args, and kwargs
-    def on_change_callback(d: date | None):
+    def on_change_callback(d: date | None) -> None:
         pass
 
     assert_type(date_input("foo", date(2024, 1, 1), on_change=on_change_callback), date)

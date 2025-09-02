@@ -15,6 +15,7 @@
 """Graphviz unit test."""
 
 import graphviz
+from parameterized import parameterized
 
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -33,7 +34,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(hasattr(c, "spec"), True)
+        assert hasattr(c, "spec")
 
     def test_dot(self):
         """Test that it can be called with dot string."""
@@ -45,19 +46,27 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(hasattr(c, "spec"), True)
+        assert hasattr(c, "spec")
 
-    def test_use_container_width_true(self):
-        """Test that it can be called with use_container_width."""
+    @parameterized.expand(
+        [
+            (True, "use_stretch", True),
+            (False, "use_content", True),
+        ]
+    )
+    def test_use_container_width(
+        self, use_container_width_value, expected_field, expected_value
+    ):
+        """Test that use_container_width is properly converted to width parameter."""
         graph = graphviz.Graph(comment="The Round Table")
         graph.node("A", "King Arthur")
         graph.node("B", "Sir Bedevere the Wise")
         graph.edges(["AB"])
 
-        st.graphviz_chart(graph, use_container_width=True)
+        st.graphviz_chart(graph, use_container_width=use_container_width_value)
 
-        c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(c.use_container_width, True)
+        delta = self.get_delta_from_queue()
+        assert getattr(delta.new_element.width_config, expected_field) == expected_value
 
     def test_engines(self):
         """Test that it can be called with engines."""
@@ -71,8 +80,8 @@ class GraphvizTest(DeltaGeneratorTestCase):
             st.graphviz_chart(graph)
 
             c = self.get_delta_from_queue().new_element.graphviz_chart
-            self.assertEqual(hasattr(c, "engine"), True)
-            self.assertEqual(c.engine, engine)
+            assert hasattr(c, "engine")
+            assert c.engine == engine
 
     def test_source(self):
         """Test that it can be called with graphviz.sources.Source object."""
@@ -83,4 +92,23 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertIn("grenade", c.spec)
+        assert "grenade" in c.spec
+
+    @parameterized.expand(
+        [
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (400, "pixel_width", 400),
+        ]
+    )
+    def test_width_parameter(self, width_value, expected_field, expected_value):
+        """Test that it can be called with different width values."""
+        graph = graphviz.Graph(comment="The Round Table")
+        graph.node("A", "King Arthur")
+        graph.node("B", "Sir Bedevere the Wise")
+        graph.edges(["AB"])
+
+        st.graphviz_chart(graph, width=width_value)
+
+        delta = self.get_delta_from_queue()
+        assert getattr(delta.new_element.width_config, expected_field) == expected_value

@@ -16,16 +16,15 @@
 
 import React, { ReactElement } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { useTheme } from "@emotion/react"
 import { StyledComponent } from "@emotion/styled"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import Button, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon from "~lib/components/shared/Icon"
-import { EmotionTheme } from "~lib/theme"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
 
@@ -42,7 +41,7 @@ export function ToolbarAction({
   icon,
   onClick,
 }: ToolbarActionProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const displayLabel = show_label ? label : ""
   return (
@@ -108,9 +107,6 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
     onExpand && !disableFullscreenMode && !isFullScreen
   const showCloseFullscreenButton =
     onCollapse && !disableFullscreenMode && isFullScreen
-  // Need to check if there are any actions to show, otherwise padding visible with no actions
-  const hasActions =
-    !!children || !!showFullscreenButton || !!showCloseFullscreenButton
 
   return (
     <StyledToolbarWrapper
@@ -119,10 +115,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
       locked={locked || isFullScreen}
       target={target}
     >
-      <StyledToolbar
-        hasActions={hasActions}
-        data-testid="stElementToolbarButtonContainer"
-      >
+      <StyledToolbar data-testid="stElementToolbarButtonContainer">
         {children}
         {showFullscreenButton && (
           <ToolbarAction

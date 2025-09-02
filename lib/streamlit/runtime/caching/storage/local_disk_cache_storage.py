@@ -109,9 +109,9 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
             and not math.isinf(context.ttl_seconds)
         ):
             _LOGGER.warning(
-                f"The cached function '{context.function_display_name}' has a TTL "
-                "that will be ignored. Persistent cached functions currently don't "
-                "support TTL."
+                "The cached function '%s' has a TTL that will be ignored. "
+                "Persistent cached functions currently don't support TTL.",
+                context.function_display_name,
             )
 
 
@@ -120,7 +120,7 @@ class LocalDiskCacheStorage(CacheStorage):
     This is the default cache persistence layer for `@st.cache_data`.
     """
 
-    def __init__(self, context: CacheStorageContext):
+    def __init__(self, context: CacheStorageContext) -> None:
         self.function_key = context.function_key
         self.persist = context.persist
         self._ttl_seconds = context.ttl_seconds
@@ -143,8 +143,8 @@ class LocalDiskCacheStorage(CacheStorage):
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
             try:
-                with streamlit_read(path, binary=True) as input:
-                    value = input.read()
+                with streamlit_read(path, binary=True) as file:
+                    value = file.read()
                     _LOGGER.debug("Disk cache HIT: %s", key)
                     return bytes(value)
             except FileNotFoundError:

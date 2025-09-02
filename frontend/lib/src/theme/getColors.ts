@@ -16,24 +16,17 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
-import { EmotionTheme } from "./types"
+import { Metric as MetricProto } from "@streamlit/protobuf"
 
-export type DerivedColors = {
-  fadedText05: string
-  fadedText10: string
-  fadedText20: string
-  fadedText40: string
-  fadedText60: string
-
-  bgMix: string
-  darkenedBgMix100: string
-  darkenedBgMix25: string
-  darkenedBgMix15: string
-  lightenedBg05: string
-}
+import {
+  DerivedColors,
+  EmotionTheme,
+  EmotionThemeColors,
+  GenericColors,
+} from "./types"
 
 export const computeDerivedColors = (
-  genericColors: Record<string, string>
+  genericColors: GenericColors
 ): DerivedColors => {
   const { bodyText, secondaryBg, bgColor } = genericColors
 
@@ -70,14 +63,20 @@ export const computeDerivedColors = (
   }
 }
 
-export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
+function _isLightBackground(bgColor: string): boolean {
+  return getLuminance(bgColor) > 0.5
 }
 
-export const createEmotionColors = (genericColors: {
-  [key: string]: string
-}): { [key: string]: string } => {
+export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
+  return _isLightBackground(theme.colors.bgColor)
+}
+
+export const createEmotionColors = (
+  genericColors: GenericColors
+): EmotionThemeColors => {
   const derivedColors = computeDerivedColors(genericColors)
+  const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
+  const defaultSequentialColors = defaultSequentialColorsArray(genericColors)
 
   return {
     ...genericColors,
@@ -86,36 +85,68 @@ export const createEmotionColors = (genericColors: {
     codeTextColor: genericColors.green,
     codeBackgroundColor: derivedColors.bgMix,
 
-    metricPositiveDeltaColor: genericColors.green,
-    metricNegativeDeltaColor: genericColors.red,
-    metricNeutralDeltaColor: derivedColors.fadedText60,
-
     borderColor: derivedColors.fadedText10,
     borderColorLight: derivedColors.fadedText05,
 
+    dataframeBorderColor: derivedColors.fadedText05,
+    dataframeHeaderBackgroundColor: derivedColors.bgMix,
+
     headingColor: genericColors.bodyText,
+
+    chartCategoricalColors: defaultCategoricalColors,
+    chartSequentialColors: defaultSequentialColors,
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getDividerColors(theme: EmotionTheme): any {
-  const lightTheme = hasLightBackgroundColor(theme)
-  const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
-  const green = lightTheme ? theme.colors.green60 : theme.colors.green90
-  const orange = lightTheme ? theme.colors.orange60 : theme.colors.orange90
-  const red = lightTheme ? theme.colors.red60 : theme.colors.red90
-  const violet = lightTheme ? theme.colors.purple60 : theme.colors.purple80
-  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray70
+type DividerColors = {
+  red: string
+  orange: string
+  yellow: string
+  blue: string
+  green: string
+  violet: string
+  gray: string
+  grey: string
+  rainbow: string
+}
+
+export function getDividerColors(theme: EmotionTheme): DividerColors {
+  // Handling of defaults based on light/dark theme in emotionBaseTheme/emotionDarkTheme
+  const {
+    redColor,
+    orangeColor,
+    yellowColor,
+    blueColor,
+    greenColor,
+    violetColor,
+    grayColor,
+  } = theme.colors
 
   return {
-    blue: blue,
-    green: green,
-    orange: orange,
-    red: red,
-    violet: violet,
-    gray: gray,
-    grey: gray,
-    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${green}, ${blue}, ${violet})`,
+    red: redColor,
+    orange: orangeColor,
+    yellow: yellowColor,
+    blue: blueColor,
+    green: greenColor,
+    violet: violetColor,
+    gray: grayColor,
+    grey: grayColor,
+    rainbow: `linear-gradient(to right, ${redColor}, ${orangeColor}, ${yellowColor}, ${greenColor}, ${blueColor}, ${violetColor})`,
+  }
+}
+
+export function getMetricColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenColor
+    // this must be grey
+    default:
+      return theme.colors.grayColor
   }
 }
 
@@ -124,10 +155,10 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
   const primary = theme.colors.primary
   const red = theme.colors.red
-  const yellow = theme.colors.yellow
-  const green = theme.colors.green
-  const blue = theme.colors.blue
   const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
+  const yellow = lightTheme ? theme.colors.yellow80 : theme.colors.yellow70
+  const blue = theme.colors.blue
+  const green = theme.colors.green
   const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
   const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
   const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
@@ -145,41 +176,51 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getMarkdownBgColors(theme: EmotionTheme): any {
+type MarkdownBgColors = {
+  redbg: string
+  orangebg: string
+  yellowbg: string
+  bluebg: string
+  greenbg: string
+  violetbg: string
+  purplebg: string
+  graybg: string
+  primarybg: string
+}
+
+export function getMarkdownBgColors(theme: EmotionTheme): MarkdownBgColors {
   const lightTheme = hasLightBackgroundColor(theme)
+  const colors = theme.colors
 
   return {
-    redbg: transparentize(
-      theme.colors[lightTheme ? "red80" : "red60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
-    yellowbg: transparentize(
-      theme.colors[lightTheme ? "yellow70" : "yellow50"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    greenbg: transparentize(
-      theme.colors[lightTheme ? "green70" : "green60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    bluebg: transparentize(
-      theme.colors[lightTheme ? "blue70" : "blue60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    violetbg: transparentize(
-      theme.colors[lightTheme ? "purple70" : "purple60"],
-      lightTheme ? 0.9 : 0.7
-    ),
+    redbg: colors.redBackgroundColor,
+    orangebg: colors.orangeBackgroundColor,
+    yellowbg: colors.yellowBackgroundColor,
+    bluebg: colors.blueBackgroundColor,
+    greenbg: colors.greenBackgroundColor,
+    violetbg: colors.violetBackgroundColor,
     purplebg: transparentize(
-      theme.colors[lightTheme ? "purple90" : "purple80"],
+      colors[lightTheme ? "purple90" : "purple80"],
       lightTheme ? 0.9 : 0.7
     ),
-    graybg: transparentize(
-      theme.colors[lightTheme ? "gray70" : "gray50"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    primarybg: transparentize(theme.colors.primary, lightTheme ? 0.9 : 0.7),
+    graybg: colors.grayBackgroundColor,
+    primarybg: transparentize(colors.primary, lightTheme ? 0.9 : 0.7),
+  }
+}
+
+// Metric delta uses the same background colors as Markdown bg colors.
+export function getMetricBackgroundColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redBackgroundColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenBackgroundColor
+    // this must be grey
+    default:
+      return theme.colors.grayBackgroundColor
   }
 }
 
@@ -206,8 +247,7 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayAsc(colors: GenericColors): string[] {
   return [
     colors.blue10,
     colors.blue20,
@@ -221,8 +261,7 @@ function getBlueArrayAsc(theme: EmotionTheme): string[] {
     colors.blue100,
   ]
 }
-function getBlueArrayDesc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayDesc(colors: GenericColors): string[] {
   return [
     colors.blue100,
     colors.blue90,
@@ -235,12 +274,6 @@ function getBlueArrayDesc(theme: EmotionTheme): string[] {
     colors.blue20,
     colors.blue10,
   ]
-}
-
-export function getSequentialColorsArray(theme: EmotionTheme): string[] {
-  return hasLightBackgroundColor(theme)
-    ? getBlueArrayAsc(theme)
-    : getBlueArrayDesc(theme)
 }
 
 export function getDivergingColorsArray(theme: EmotionTheme): string[] {
@@ -259,32 +292,39 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
   ]
 }
 
-export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
-  const { colors } = theme
-  return hasLightBackgroundColor(theme)
+function defaultSequentialColorsArray(genericColors: GenericColors): string[] {
+  return _isLightBackground(genericColors.bgColor)
+    ? getBlueArrayAsc(genericColors)
+    : getBlueArrayDesc(genericColors)
+}
+
+function defaultCategoricalColorsArray(
+  genericColors: GenericColors
+): string[] {
+  return _isLightBackground(genericColors.bgColor)
     ? [
-        colors.blue80,
-        colors.blue40,
-        colors.red80,
-        colors.red40,
-        colors.blueGreen80,
-        colors.green40,
-        colors.orange80,
-        colors.orange50,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue80,
+        genericColors.blue40,
+        genericColors.red80,
+        genericColors.red40,
+        genericColors.blueGreen80,
+        genericColors.green40,
+        genericColors.orange80,
+        genericColors.orange50,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
     : [
-        colors.blue40,
-        colors.blue80,
-        colors.red40,
-        colors.red80,
-        colors.green40,
-        colors.blueGreen80,
-        colors.orange50,
-        colors.orange80,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue40,
+        genericColors.blue80,
+        genericColors.red40,
+        genericColors.red80,
+        genericColors.green40,
+        genericColors.blueGreen80,
+        genericColors.orange50,
+        genericColors.orange80,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
 }
 

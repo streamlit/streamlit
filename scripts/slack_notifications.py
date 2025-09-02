@@ -23,7 +23,7 @@ import sys
 import requests
 
 
-def send_notification():
+def send_notification() -> None:
     """Create a slack message."""
 
     webhook = os.getenv("SLACK_WEBHOOK")
@@ -48,7 +48,8 @@ def send_notification():
     if workflow == "nightly":
         failure = nightly_slack_messages[message_key]
         payload = {
-            "text": f":blobonfire: Nightly build failed {failure} - <https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
+            "text": f":blobonfire: Nightly build failed {failure} - "
+            f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
         }
 
     if workflow == "candidate":
@@ -56,7 +57,8 @@ def send_notification():
             payload = {"text": ":rocket: Release Candidate was successful!"}
         else:
             payload = {
-                "text": f":blobonfire: Release Candidate failed - <https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
+                "text": ":blobonfire: Release Candidate failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
             }
 
     if workflow == "release":
@@ -64,18 +66,21 @@ def send_notification():
             payload = {"text": ":rocket: Release was successful!"}
         else:
             payload = {
-                "text": f":blobonfire: Release failed - <https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
+                "text": ":blobonfire: Release failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
             }
 
     if workflow == "assets":
         if message_key == "new_icons":
             payload = {
-                "text": ":symbols: New Material Symbols available. Please run `make update-material-icons` to update the material icons."
+                "text": ":symbols: New Material Symbols available. Please run `make update-material-icons` "
+                "to update the material icons."
             }
 
         if message_key == "new_emojis":
             payload = {
-                "text": ":symbols: New emojis available. Please run `./scripts/update_emojis.py` to update the emojis."
+                "text": ":symbols: New emojis available. Please run `./scripts/update_emojis.py` "
+                "to update the emojis."
             }
 
     if payload:
@@ -87,7 +92,7 @@ def send_notification():
             )
 
 
-def main():
+def main() -> None:
     send_notification()
 
 

@@ -16,9 +16,9 @@
 
 import React from "react"
 
-import { Mock, MockInstance } from "vitest"
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
+import { Mock, MockInstance } from "vitest"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
@@ -61,7 +61,6 @@ describe("GraphVizChart Element", () => {
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
-      forceRecalculate: vitest.fn(),
       values: [250],
     })
   })
@@ -118,7 +117,7 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("shoud render with height and width set to auto", () => {
+  it("should render with height and width set to auto", () => {
     const props = {
       ...getProps(),
     }

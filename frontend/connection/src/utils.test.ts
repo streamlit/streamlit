@@ -19,56 +19,88 @@ import { buildHttpUri } from "@streamlit/utils"
 import {
   buildWsUri,
   getPossibleBaseUris,
-  getWindowBaseUriParts,
+  parseUriIntoBaseParts,
 } from "./utils"
 
-const location: Partial<Location> = {}
+describe("parseUriIntoBaseParts", () => {
+  const location: Partial<Location> = {}
+  const { location: originalLocation } = window
 
-global.window = Object.create(window)
-Object.defineProperty(window, "location", { value: location })
+  beforeEach(() => {
+    Object.defineProperty(window, "location", { value: location })
+  })
 
-test("gets all window URI parts", () => {
-  location.href = "https://the_host:9988/foo"
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    })
+  })
 
-  const { hostname, port, pathname } = getWindowBaseUriParts()
-  expect(hostname).toBe("the_host")
-  expect(port).toBe("9988")
-  expect(pathname).toBe("/foo")
-})
+  test("gets all window URI parts", () => {
+    location.href = "https://the_host:9988/foo"
 
-test("gets window URI parts without basePath", () => {
-  location.href = "https://the_host:9988"
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo",
+    })
+  })
 
-  const parts = getWindowBaseUriParts()
-  expect(parts).toMatchObject({
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/",
+  test("gets window URI parts without basePath", () => {
+    location.href = "https://the_host:9988"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/",
+    })
+  })
+
+  test("gets window URI parts with long basePath", () => {
+    location.href = "https://the_host:9988/foo/bar"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
+  })
+
+  test("gets window URI parts with weird basePath", () => {
+    location.href = "https://the_host:9988///foo/bar//"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
   })
 })
 
-test("gets window URI parts with long basePath", () => {
+test("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
   location.href = "https://the_host:9988/foo/bar"
 
-  const { hostname, port, pathname } = getWindowBaseUriParts()
-  expect(hostname).toBe("the_host")
-  expect(port).toBe("9988")
-  expect(pathname).toBe("/foo/bar")
-})
-
-test("gets window URI parts with weird basePath", () => {
-  location.href = "https://the_host:9988///foo/bar//"
-
-  const { hostname, port, pathname } = getWindowBaseUriParts()
-  expect(hostname).toBe("the_host")
-  expect(port).toBe("9988")
-  expect(pathname).toBe("/foo/bar")
+  expect(
+    parseUriIntoBaseParts("https://the_other_host:9999/foo/bar/baz")
+  ).toMatchObject({
+    protocol: "https:",
+    hostname: "the_other_host",
+    port: "9999",
+    pathname: "/foo/bar/baz",
+  })
 })
 
 test("builds HTTP URI correctly", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
+      protocol: "http:",
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
@@ -82,6 +114,7 @@ test("builds HTTPS URI correctly", () => {
   location.href = "https://something"
   const uri = buildHttpUri(
     {
+      protocol: "https:",
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
@@ -95,6 +128,7 @@ test("builds HTTP URI with no base path", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
+      protocol: "http:",
       hostname: "the_host",
       port: "9988",
       pathname: "",
@@ -108,6 +142,7 @@ test("builds WS URI correctly", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {
+      protocol: "http:",
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
@@ -118,9 +153,9 @@ test("builds WS URI correctly", () => {
 })
 
 test("builds WSS URI correctly", () => {
-  location.href = "https://something"
   const uri = buildWsUri(
     {
+      protocol: "https:",
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
@@ -134,6 +169,7 @@ test("builds WS URI with no base path", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {
+      protocol: "http:",
       hostname: "the_host",
       port: "9988",
       pathname: "",
@@ -145,13 +181,27 @@ test("builds WS URI with no base path", () => {
 
 describe("getPossibleBaseUris", () => {
   let originalPathName = ""
+  const { location: originalLocation } = window
 
   beforeEach(() => {
     originalPathName = window.location.pathname
+    Object.defineProperty(window, "location", {
+      writable: true,
+      configurable: true,
+      value: {
+        ...originalLocation,
+        origin: "https://app.example.com:8080",
+      },
+    })
   })
 
   afterEach(() => {
-    window.location.pathname = originalPathName
+    window.__streamlit = undefined
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, pathname: originalPathName },
+      writable: true,
+      configurable: true,
+    })
   })
 
   const testCases = [
@@ -184,6 +234,24 @@ describe("getPossibleBaseUris", () => {
       expect(getPossibleBaseUris().map(b => b.pathname)).toEqual(
         expectedBasePaths
       )
+    })
+  })
+
+  it("Calculates possibleBaseUris with window.__streamlit.BACKEND_BASE_URL if set", () => {
+    window.__streamlit = { BACKEND_BASE_URL: "https://used_host:443/foo/bar" }
+    window.location.href = "https://unused_host:443/foo/bar"
+
+    const possibleBaseUris = getPossibleBaseUris()
+    expect(possibleBaseUris[0]).toMatchObject({
+      protocol: "https:",
+      hostname: "used_host",
+      pathname: "/foo/bar",
+    })
+
+    expect(possibleBaseUris[1]).toMatchObject({
+      protocol: "https:",
+      hostname: "used_host",
+      pathname: "/foo",
     })
   })
 })

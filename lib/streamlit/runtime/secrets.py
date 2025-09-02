@@ -27,44 +27,49 @@ from typing import (
 
 from blinker import Signal
 
-import streamlit as st
 import streamlit.watcher.path_watcher
-from streamlit import runtime
-from streamlit.errors import StreamlitSecretNotFoundError
+from streamlit import config, runtime
+from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 
 class SecretErrorMessages:
-    """SecretErrorMessages stores all error messages we use for secrets to allow customization for different environments.
+    """SecretErrorMessages stores all error messages we use for secrets to allow customization
+    for different environments.
+
     For example Streamlit Cloud can customize the message to be different than the open source.
 
     For internal use, may change in future releases without notice.
     """
 
-    def __init__(self):
-        self.missing_attr_message = lambda attr_name: (
+    def __init__(self) -> None:
+        self.missing_attr_message: Callable[[str], str] = lambda attr_name: (
             f'st.secrets has no attribute "{attr_name}". '
-            f"Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings on Streamlit Cloud? "
-            f"More info: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
+            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
+            "on Streamlit Cloud? More info: "
+            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
-        self.missing_key_message = lambda key: (
+        self.missing_key_message: Callable[[str], str] = lambda key: (
             f'st.secrets has no key "{key}". '
-            f"Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings on Streamlit Cloud? "
-            f"More info: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
+            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
+            "on Streamlit Cloud? More info: "
+            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
-        self.no_secrets_found = lambda file_paths: (
+        self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
             f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(file_paths)}"
         )
-        self.error_parsing_file_at_path = (
+        self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
             lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
         )
-        self.subfolder_path_is_not_a_folder = lambda sub_folder_path: (
-            f"{sub_folder_path} is not a folder. "
-            "To use directory based secrets, mount every secret in a subfolder under the secret directory"
+        self.subfolder_path_is_not_a_folder: Callable[[str], str] = (
+            lambda sub_folder_path: (
+                f"{sub_folder_path} is not a folder. "
+                "To use directory based secrets, mount every secret in a subfolder under the secret directory"
+            )
         )
-        self.invalid_secret_path = lambda path: (
+        self.invalid_secret_path: Callable[[str], str] = lambda path: (
             f"Invalid secrets path: {path}: path is not a .toml file or a directory"
         )
 
@@ -144,15 +149,14 @@ class AttrDict(Mapping[str, Any]):
     to provide dot access to nested secrets.
     """
 
-    def __init__(self, value):
+    def __init__(self, value: Mapping[str, Any]) -> None:
         self.__dict__["__nested_secrets__"] = dict(value)
 
     @staticmethod
-    def _maybe_wrap_in_attr_dict(value) -> Any:
+    def _maybe_wrap_in_attr_dict(value: Any) -> Any:
         if not isinstance(value, Mapping):
             return value
-        else:
-            return AttrDict(value)
+        return AttrDict(value)
 
     def __len__(self) -> int:
         return len(self.__nested_secrets__)
@@ -174,13 +178,13 @@ class AttrDict(Mapping[str, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.__nested_secrets__)
 
-    def __setitem__(self, key, value) -> NoReturn:
+    def __setitem__(self, key: str, value: Any) -> NoReturn:
         raise TypeError("Secrets does not support item assignment.")
 
-    def __setattr__(self, key, value) -> NoReturn:
+    def __setattr__(self, key: str, value: Any) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
 
     def to_dict(self) -> dict[str, Any]:
@@ -194,7 +198,7 @@ class Secrets(Mapping[str, Any]):
     Safe to use from multiple threads.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
@@ -272,7 +276,8 @@ class Secrets(Mapping[str, Any]):
         return secrets, found_secrets_file
 
     def _parse_directory(self, path: str) -> tuple[Mapping[str, Any], bool]:
-        """Parse a directory for secrets. Directory style can be used to support Kubernetes secrets that are mounted to folders.
+        """Parse a directory for secrets. Directory style can be used to support Kubernetes secrets that are
+        mounted to folders.
 
         Example structure:
         - top_level_secret_folder
@@ -310,7 +315,7 @@ class Secrets(Mapping[str, Any]):
 
             if len(sub_secrets) == 1:
                 # if there's just one file, collapse it so it's directly under `dirname`
-                secrets[dirname] = sub_secrets[list(sub_secrets.keys())[0]]
+                secrets[dirname] = sub_secrets[next(iter(sub_secrets.keys()))]
             else:
                 secrets[dirname] = sub_secrets
 
@@ -356,7 +361,7 @@ class Secrets(Mapping[str, Any]):
 
             secrets = {}
 
-            file_paths = st.config.get_option("secrets.files")
+            file_paths = config.get_option("secrets.files")
             found_secrets_file = False
             for path in file_paths:
                 path_secrets, found_secrets_file_in_path = self._parse_file_path(path)
@@ -380,7 +385,9 @@ class Secrets(Mapping[str, Any]):
             return self._secrets
 
     def to_dict(self) -> dict[str, Any]:
-        """Converts the secrets store into a nested dictionary, where nested AttrDict objects are also converted into dictionaries."""
+        """Converts the secrets store into a nested dictionary, where nested AttrDict objects are
+        also converted into dictionaries.
+        """
         secrets = self._parse()
         return _convert_to_dict(secrets)
 
@@ -407,7 +414,7 @@ class Secrets(Mapping[str, Any]):
             if self._file_watchers_installed:
                 return
 
-            file_paths = st.config.get_option("secrets.files")
+            file_paths = config.get_option("secrets.files")
             for path in file_paths:
                 try:
                     if path.endswith(".toml"):
@@ -422,9 +429,9 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except FileNotFoundError:
+                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
                     # A user may only have one secrets.toml file defined, so we'd expect
-                    # FileNotFoundErrors to be raised when attempting to install a
+                    # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
                     pass
 
@@ -432,7 +439,7 @@ class Secrets(Mapping[str, Any]):
             # failed to avoid repeatedly trying to install it.
             self._file_watchers_installed = True
 
-    def _on_secrets_changed(self, changed_file_path) -> None:
+    def _on_secrets_changed(self, changed_file_path: str) -> None:
         with self._lock:
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
             self._reset()
@@ -452,8 +459,7 @@ class Secrets(Mapping[str, Any]):
             value = self._parse()[key]
             if not isinstance(value, Mapping):
                 return value
-            else:
-                return AttrDict(value)
+            return AttrDict(value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
         # AttributeError. Without handling FileNotFoundError, unittests.mocks
         # fails during mock creation on Python3.9
@@ -470,8 +476,7 @@ class Secrets(Mapping[str, Any]):
             value = self._parse()[key]
             if not isinstance(value, Mapping):
                 return value
-            else:
-                return AttrDict(value)
+            return AttrDict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 

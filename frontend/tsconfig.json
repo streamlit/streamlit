@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./app" },
+    { "path": "./lib" },
+    { "path": "./connection" },
+    { "path": "./utils" }
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true
+  }
+}

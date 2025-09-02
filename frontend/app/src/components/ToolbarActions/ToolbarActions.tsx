@@ -16,13 +16,13 @@
 
 import React, { ReactElement } from "react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledActionButtonContainer,

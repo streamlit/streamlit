@@ -61,7 +61,7 @@ def ensure_waveform_rendered(audio_input: Locator):
 def test_audio_input_renders(app: Page):
     """Test that the audio input component is rendered the correct number of times."""
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    count = 7  # Expected number of audio input elements
+    count = 9  # Expected number of audio input elements
 
     # Verify that the expected number of elements is rendered
     expect(audio_input_elements).to_have_count(count)
@@ -400,3 +400,15 @@ def test_audio_input_error_state(
     expect(
         audio_input.get_by_text("An error has occurred, please try again.")
     ).not_to_be_visible()
+
+
+def test_audio_input_widths(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test audio_input with different width configurations."""
+    stretch_width_input = app.get_by_test_id("stAudioInput").nth(7)
+    pixel_width_input = app.get_by_test_id("stAudioInput").nth(8)
+
+    expect(stretch_width_input).to_be_visible()
+    expect(pixel_width_input).to_be_visible()
+
+    assert_snapshot(stretch_width_input, name="st_audio_input-width_stretch")
+    assert_snapshot(pixel_width_input, name="st_audio_input-width_300px")

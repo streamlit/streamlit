@@ -27,7 +27,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
-  ComponentRegistry,
+  ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
   FormsData,
@@ -36,7 +36,6 @@ import {
   render,
   ScriptRunState,
   SessionInfo,
-  VerticalBlock,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -79,6 +78,10 @@ class Endpoints implements StreamlitEndpoints {
     return url
   }
 
+  public buildDownloadUrl(url: string): string {
+    return url
+  }
+
   public buildFileUploadURL(url: string): string {
     return url
   }
@@ -96,6 +99,7 @@ class Endpoints implements StreamlitEndpoints {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Props {}
 
 interface State {
@@ -120,8 +124,6 @@ class StreamlitLibExample extends PureComponent<Props, State> {
   private readonly sessionInfo = new SessionInfo()
 
   private readonly endpoints = new Endpoints()
-
-  private readonly componentRegistry = new ComponentRegistry(this.endpoints)
 
   private readonly widgetMgr: WidgetStateManager
 
@@ -160,9 +162,11 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       appId: "",
       streamlitVersion: "",
       pythonVersion: "",
+      serverOS: "",
+      hasDisplay: true,
       installationId: "",
       installationIdV3: "",
-      stableRandomMachineId: "",
+      installationIdV4: "",
       commandLine: "",
       isHello: false,
       isConnected: true,
@@ -224,16 +228,13 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     const blockNode = this.state.elements.main
 
     return (
-      <VerticalBlock
+      <ContainerContentsWrapper
         node={blockNode}
         endpoints={this.endpoints}
-        scriptRunId={this.state.scriptRunId}
-        scriptRunState={this.state.scriptRunState}
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
-        componentRegistry={this.componentRegistry}
-        formsData={this.state.formsData}
+        height="auto"
       />
     )
   }

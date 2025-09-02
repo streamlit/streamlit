@@ -32,7 +32,13 @@ from streamlit.elements.lib.file_uploader_utils import (
     normalize_upload_file_type,
 )
 from streamlit.elements.lib.form_utils import is_in_form
-from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
+from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
@@ -47,6 +53,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -55,6 +62,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.string_util import is_emoji, validate_material_icon
 
@@ -117,11 +125,11 @@ def _process_avatar_input(
     Tuple[AvatarType, str]
         The detected avatar type and the prepared avatar data.
     """
-    AvatarType = BlockProto.ChatMessage.AvatarType
+    AvatarType = BlockProto.ChatMessage.AvatarType  # noqa: N806
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
+    if isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
@@ -131,25 +139,24 @@ def _process_avatar_input(
                 else "user"
             ),
         )
-    elif isinstance(avatar, str) and is_emoji(avatar):
+    if isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
 
-    elif isinstance(avatar, str) and avatar.startswith(":material"):
+    if isinstance(avatar, str) and avatar.startswith(":material"):
         return AvatarType.ICON, validate_material_icon(avatar)
-    else:
-        try:
-            return AvatarType.IMAGE, image_to_url(
-                avatar,
-                width=WidthBehavior.ORIGINAL,
-                clamp=False,
-                channels="RGB",
-                output_format="auto",
-                image_id=delta_path,
-            )
-        except Exception as ex:
-            raise StreamlitAPIException(
-                "Failed to load the provided avatar value as an image."
-            ) from ex
+    try:
+        return AvatarType.IMAGE, image_to_url(
+            avatar,
+            layout_config=LayoutConfig(width="content"),
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id=delta_path,
+        )
+    except Exception as ex:
+        raise StreamlitAPIException(
+            "Failed to load the provided avatar value as an image."
+        ) from ex
 
 
 def _pop_upload_files(
@@ -196,24 +203,21 @@ class ChatInputSerde:
     allowed_types: Sequence[str] | None = None
 
     def deserialize(
-        self,
-        ui_value: ChatInputValueProto | None,
-        widget_id: str = "",
+        self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
         if not self.accept_files:
             return ui_value.data
-        else:
-            uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
-            for file in uploaded_files:
-                if self.allowed_types and not isinstance(file, DeletedFile):
-                    enforce_filename_restriction(file.name, self.allowed_types)
+        uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
+        for file in uploaded_files:
+            if self.allowed_types and not isinstance(file, DeletedFile):
+                enforce_filename_restriction(file.name, self.allowed_types)
 
-            return ChatInputValue(
-                text=ui_value.data,
-                files=uploaded_files,
-            )
+        return ChatInputValue(
+            text=ui_value.data,
+            files=uploaded_files,
+        )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
         return ChatInputValueProto(data=v)
@@ -226,12 +230,17 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert a chat message container.
 
         To add elements to the returned container, you can use ``with`` notation
         (preferred) or just call methods directly on the returned object. See the
         examples below.
+
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest chat message containers.
 
         Parameters
         ----------
@@ -275,6 +284,18 @@ class ChatMixin:
 
             .. |st.image| replace:: ``st.image``
             .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
+
+        width : "stretch", "content", or int
+            The width of the chat message container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -324,13 +345,26 @@ class ChatMixin:
             avatar, self.dg._get_delta_path_str()
         )
 
+        validate_width(width, allow_content=True)
+
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
+
+        # Set up width configuration
+        width_config = WidthConfig()
+        if isinstance(width, int):
+            width_config.pixel_width = width
+        elif width == "content":
+            width_config.use_content = True
+        else:
+            width_config.use_stretch = True
+
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
+        block_proto.width_config.CopyFrom(width_config)
 
         return self.dg._block(block_proto=block_proto)
 
@@ -347,6 +381,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | None: ...
 
     @overload
@@ -356,12 +391,13 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: Literal[True, "multiple"],
+        accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
@@ -371,12 +407,13 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: bool | Literal["multiple"] = False,
+        accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
@@ -396,7 +433,7 @@ class ChatMixin:
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
 
-        accept_file : bool or str
+        accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
             following values:
 
@@ -405,9 +442,9 @@ class ChatMixin:
             - ``True``: The user can add a single file to their submission.
             - ``"multiple"``: The user can add multiple files to their
               submission.
-
-            When the widget is configured to accept files, the accepted file
-            types can be configured with the ``file_type`` parameter.
+            - ``"directory"``: The user can add multiple files to their
+              submission by selecting a directory. If ``file_type`` is set,
+              only files matching those type(s) will be uploaded.
 
             By default, uploaded files are limited to 200 MB each. You can
             configure this using the ``server.maxUploadSize`` config option.
@@ -428,6 +465,12 @@ class ChatMixin:
               example, to only accept JPG/JPEG and PNG files, use
               ``["jpg", "jpeg", "png"]``.
 
+            .. note::
+                This is a best-effort check, but doesn't provide a
+                security guarantee against users uploading files of other types
+                or type extensions. The correct handling of uploaded files is
+                part of the app developer's responsibility.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
@@ -435,11 +478,22 @@ class ChatMixin:
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        width : "stretch" or int
+            The width of the chat input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -535,22 +589,34 @@ class ChatMixin:
             https://doc-chat-input-file-uploader.streamlit.app/
             height: 350px
 
+        **Example 4: Programmatically set the text via session state**
+
+        You can use ``st.session_state`` to set the text of the chat input widget.
+
+        >>> import streamlit as st
+        >>>
+        >>> if st.button("Set Value"):
+        >>>     st.session_state.chat_input = "Hello, world!"
+        >>> st.chat_input(key="chat_input")
+        >>> st.write("Chat input value:", st.session_state.chat_input)
+
+        .. output ::
+            https://doc-chat-input-session-state.streamlit.app/
+            height: 350px
         """
-        # We default to an empty string here and disallow user choice intentionally
-        default = ""
         key = to_key(key)
 
         check_widget_policies(
             self.dg,
             key,
             on_submit,
-            default_value=default,
-            writes_allowed=False,
+            default_value=None,
+            writes_allowed=True,
         )
 
-        if accept_file not in {True, False, "multiple"}:
+        if accept_file not in {True, False, "multiple", "directory"}:
             raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple'."
+                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
         ctx = get_script_run_ctx()
@@ -558,12 +624,13 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            # chat_input is not allowed to be used in a form.
-            form_id=None,
+            key_as_main_identity=False,
+            dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=file_type,
+            width=width,
         )
 
         if file_type:
@@ -573,11 +640,10 @@ class ChatMixin:
         # We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if runtime.exists():
-            if is_in_form(self.dg):
-                raise StreamlitAPIException(
-                    "`st.chat_input()` can't be used in a `st.form()`."
-                )
+        if runtime.exists() and is_in_form(self.dg):
+            raise StreamlitAPIException(
+                "`st.chat_input()` can't be used in a `st.form()`."
+            )
 
         # Determine the position of the chat input:
         # Use bottom position if chat input is within the main container
@@ -599,7 +665,8 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        chat_input_proto.default = default
+        # Setting a default value is currently not supported for chat input.
+        chat_input_proto.default = ""
 
         chat_input_proto.accept_file = get_chat_input_accept_file_proto_value(
             accept_file
@@ -609,7 +676,7 @@ class ChatMixin:
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
         serde = ChatInputSerde(
-            accept_files=bool(accept_file),
+            accept_files=accept_file in {True, "multiple", "directory"},
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]
@@ -623,10 +690,25 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
+            # Support for programmatically setting the text in the chat input
+            # via session state. Since chat input has a trigger state,
+            # it works a bit differently to other widgets. We are not changing
+            # the actual widget state here, but only inserting the provided value
+            # into the chat input field. The user needs to submit the value in
+            # order for the chat input to reflect the value in the backend state.
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
+
+            session_state = get_session_state()
+            if key is not None and key in session_state:
+                # Reset the session state value to None to reflect the actual state
+                # of the widget. Which is None since the value hasn't been submitted yet.
+                session_state.reset_state_value(key, None)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
@@ -634,10 +716,12 @@ class ChatMixin:
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
         else:
-            self.dg._enqueue("chat_input", chat_input_proto)
+            self.dg._enqueue(
+                "chat_input", chat_input_proto, layout_config=layout_config
+            )
 
         return widget_state.value if not widget_state.value_changed else None
 

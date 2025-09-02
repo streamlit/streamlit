@@ -12,39 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import QueryParams
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
+QUERY_PARAMS_DICT_WITH_EMBED_KEY: dict[str, list[str] | str] = {
+    "foo": "bar",
+    "two": ["x", "y"],
+    "embed": "true",
+    "embed_options": "disable_scrolling",
+}
+
 
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
-    query_params_dict_with_embed_key = {
-        "foo": "bar",
-        "two": ["x", "y"],
-        "embed": "true",
-        "embed_options": "disable_scrolling",
-    }
-
     def setUp(self):
         super().setUp()
         self.query_params = QueryParams()
         self.query_params._query_params = {"foo": "bar", "two": ["x", "y"]}
 
     def test__iter__doesnt_include_embed_keys(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         for key in self.query_params.__iter__():
-            if key == "embed" or key == "embed_options":
+            if key in {"embed", "embed_options"}:
                 raise KeyError("Cannot iterate through embed or embed_options key")
 
     def test__getitem__raises_KeyError_for_nonexistent_key_for_embed(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         with pytest.raises(KeyError):
             self.query_params["embed"]
 
     def test__getitem__raises_KeyError_for_nonexistent_key_for_embed_options(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         with pytest.raises(KeyError):
             self.query_params["embed_options"]
 
@@ -82,7 +84,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params["test"] = ""
         assert self.query_params["test"] == ""
         message = self.get_message_from_queue(0)
-        assert "foo=bar&two=x&two=y&test=" == message.page_info_changed.query_string
+        assert message.page_info_changed.query_string == "foo=bar&two=x&two=y&test="
 
     def test__setitem__adds_list_value(self):
         self.query_params["test"] = ["test", "test2"]
@@ -186,13 +188,13 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             del self.query_params["nonexistent"]
 
     def test__delitem__throws_KeyErrorException_for_embed_key(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         with pytest.raises(KeyError):
             del self.query_params["embed"]
         assert "embed" in self.query_params._query_params
 
     def test__delitem__throws_KeyErrorException_for_embed_options_key(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         with pytest.raises(KeyError):
             del self.query_params["embed_options"]
         assert "embed_options" in self.query_params._query_params
@@ -211,22 +213,22 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self.query_params.get_all("test") == ["", "a", "1", "1.23"]
 
     def test_get_all_returns_empty_array_for_embed_key(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         assert self.query_params.get_all("embed") == []
 
     def test_get_all_returns_empty_array_for_embed_options_key(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         assert self.query_params.get_all("embed_options") == []
 
     def test__len__doesnt_include_embed_and_embed_options_key(self):
-        self.query_params._query_params = self.query_params_dict_with_embed_key
+        self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
         assert len(self.query_params) == 2
 
     def test_clear_removes_all_query_params(self):
         self.query_params.clear()
         assert len(self.query_params) == 0
         message = self.get_message_from_queue(0)
-        assert "" == message.page_info_changed.query_string
+        assert message.page_info_changed.query_string == ""
 
     def test_clear_doesnt_remove_embed_query_params(self):
         self.query_params._query_params = {

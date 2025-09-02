@@ -14,202 +14,62 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-} from "react"
+import React, { ReactElement, ReactNode, useContext } from "react"
 
 import classNames from "classnames"
-import { useTheme } from "@emotion/react"
 
-import { Block as BlockProto } from "@streamlit/protobuf"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
-import Form from "~lib/components/widgets/Form"
-import Tabs, { TabProps } from "~lib/components/elements/Tabs"
-import Popover from "~lib/components/elements/Popover"
+import { FormsContext } from "~lib/components/core/FormsContext"
+import { FlexContextProvider } from "~lib/components/core/Layout/FlexContext"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
+import {
+  Direction,
+  getDirectionOfBlock,
+  MinFlexElementWidth,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
+import { LibContext } from "~lib/components/core/LibContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
+import Popover from "~lib/components/elements/Popover"
+import Tabs, { TabProps } from "~lib/components/elements/Tabs"
+import Form from "~lib/components/widgets/Form"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { getElementId, notNullOrUndefined } from "~lib/util/utils"
 
+import ElementNodeRenderer from "./ElementNodeRenderer"
+import {
+  StyledColumn,
+  StyledFlexContainerBlock,
+  StyledFlexContainerBlockProps,
+  StyledLayoutWrapper,
+} from "./styled-components"
 import {
   assignDividerColor,
+  backwardsCompatibleColumnGapSize,
   BaseBlockProps,
+  checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
+  getActivateScrollToBottomBackwardsCompatible,
+  getBorderBackwardsCompatible,
+  getClassnamePrefix,
   getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import ElementNodeRenderer from "./ElementNodeRenderer"
-import {
-  StyledColumn,
-  StyledHorizontalBlock,
-  StyledVerticalBlock,
-  StyledVerticalBlockBorderWrapper,
-  StyledVerticalBlockBorderWrapperProps,
-  StyledVerticalBlockWrapper,
-} from "./styled-components"
 
-export interface BlockPropsWithoutWidth extends BaseBlockProps {
-  node: BlockNode
-}
-
-interface BlockPropsWithWidth extends BaseBlockProps {
-  node: BlockNode
-  width: React.CSSProperties["width"]
-}
-
-// Render BlockNodes (i.e. container nodes).
-const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
-  const { node } = props
-  const { fragmentIdsThisRun } = useContext(LibContext)
-
-  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
-    return <></>
-  }
-
-  const enable = shouldComponentBeEnabled("", props.scriptRunState)
-  const isStale = isComponentStale(
-    enable,
-    node,
-    props.scriptRunState,
-    props.scriptRunId,
-    fragmentIdsThisRun
-  )
-
-  const childProps = { ...props, ...{ node } }
-
-  const disableFullscreenMode =
-    props.disableFullscreenMode ||
-    notNullOrUndefined(node.deltaBlock.dialog) ||
-    notNullOrUndefined(node.deltaBlock.popover)
-
-  const child: ReactElement = (
-    <LayoutBlock
-      {...childProps}
-      disableFullscreenMode={disableFullscreenMode}
-    />
-  )
-
-  if (node.deltaBlock.dialog) {
-    return (
-      <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
-        deltaMsgReceivedAt={node.deltaMsgReceivedAt}
-      >
-        {child}
-      </Dialog>
-    )
-  }
-
-  if (node.deltaBlock.expandable) {
-    return (
-      <Expander
-        empty={node.isEmpty}
-        isStale={isStale}
-        element={node.deltaBlock.expandable as BlockProto.Expandable}
-      >
-        {child}
-      </Expander>
-    )
-  }
-
-  if (node.deltaBlock.popover) {
-    return (
-      <Popover
-        empty={node.isEmpty}
-        element={node.deltaBlock.popover as BlockProto.Popover}
-      >
-        {child}
-      </Popover>
-    )
-  }
-
-  if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit, enterToSubmit, border } = node.deltaBlock
-      .form as BlockProto.Form
-    const submitButtons = props.formsData.submitButtons.get(formId)
-    const hasSubmitButton =
-      submitButtons !== undefined && submitButtons.length > 0
-    return (
-      <Form
-        formId={formId}
-        clearOnSubmit={clearOnSubmit}
-        enterToSubmit={enterToSubmit}
-        hasSubmitButton={hasSubmitButton}
-        scriptRunState={props.scriptRunState}
-        widgetMgr={props.widgetMgr}
-        border={border}
-      >
-        {child}
-      </Form>
-    )
-  }
-
-  if (node.deltaBlock.chatMessage) {
-    return (
-      <ChatMessage
-        element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
-        endpoints={props.endpoints}
-      >
-        {child}
-      </ChatMessage>
-    )
-  }
-
-  if (node.deltaBlock.column) {
-    return (
-      <StyledColumn
-        weight={node.deltaBlock.column.weight ?? 0}
-        gap={node.deltaBlock.column.gap ?? ""}
-        verticalAlignment={
-          node.deltaBlock.column.verticalAlignment ?? undefined
-        }
-        showBorder={node.deltaBlock.column.showBorder ?? false}
-        className="stColumn"
-        data-testid="stColumn"
-      >
-        {child}
-      </StyledColumn>
-    )
-  }
-
-  if (node.deltaBlock.tabContainer) {
-    // Due to an issue with unnecessary unmounts/remounts, we see undesired
-    // horizontal scrolling in Webkit/Safari. We are planning a fix for the
-    // underlying issue, but, for now, only rendering the component when we have
-    // a width != 0 fixes the scrolling issue.
-    if (!childProps.width) {
-      return <div />
-    }
-
-    const renderTabContent = (
-      mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
-    ): ReactElement => {
-      // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      return <VerticalBlock {...mappedChildProps}></VerticalBlock>
-    }
-    const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }
-    return <Tabs {...tabsProps} />
-  }
-
-  return child
-}
-
-const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { libConfig } = useContext(LibContext)
 
   // Handle cycling of colors for dividers:
-  assignDividerColor(props.node, useTheme())
+  assignDividerColor(props.node, useEmotionTheme())
 
   // Capture all the element ids to avoid rendering the same element twice
   const elementKeySet = new Set<string>()
@@ -228,7 +88,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             const childProps = {
               ...props,
               disableFullscreenMode,
-              node: node as ElementNode,
+              node,
             }
 
             const key = getElementId(node.element) || index.toString()
@@ -254,148 +114,349 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             const childProps = {
               ...props,
               disableFullscreenMode,
-              node: node as BlockNode,
+              node,
             }
 
             // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key
+            // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
             return <BlockNodeRenderer key={index} {...childProps} />
           }
 
           // We don't have any other node types!
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
           throw new Error(`Unrecognized AppNode: ${node}`)
         })}
     </>
   )
 }
 
-export interface ScrollToBottomVerticalBlockWrapperProps
-  extends StyledVerticalBlockBorderWrapperProps {
-  children: ReactNode
+/**
+ * Extract only layout-relevant fields from a block submessage to satisfy
+ * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
+ * types like TabContainer.
+ */
+const getLayoutSubElement = (
+  block: BlockProto
+): UseLayoutStylesArgs["subElement"] => {
+  const typeKey = block.type as keyof typeof block | undefined
+  const raw = typeKey
+    ? (block as unknown as Record<string, unknown>)[typeKey]
+    : undefined
+  if (!raw || typeof raw !== "object") return undefined
+
+  const candidate = raw as Record<string, unknown>
+  const subElement = {
+    useContainerWidth: candidate.useContainerWidth as
+      | boolean
+      | null
+      | undefined,
+    height: candidate.height as number | undefined,
+    width: candidate.width as number | undefined,
+    widthConfig: candidate.widthConfig as
+      | streamlit.IWidthConfig
+      | null
+      | undefined,
+  }
+
+  if (
+    subElement.useContainerWidth === undefined &&
+    subElement.height === undefined &&
+    subElement.width === undefined &&
+    subElement.widthConfig === undefined
+  ) {
+    return undefined
+  }
+
+  return subElement
 }
 
-// A wrapper for Vertical Block that adds scrolling with pinned to bottom behavior.
-function ScrollToBottomVerticalBlockWrapper(
-  props: ScrollToBottomVerticalBlockWrapperProps
-): ReactElement {
-  const { border, height, children } = props
-  const scrollContainerRef = useScrollToBottom()
+interface ContainerContentsWrapperProps extends BaseBlockProps {
+  node: BlockNode
+  height: React.CSSProperties["height"]
+}
 
+export const ContainerContentsWrapper = (
+  props: ContainerContentsWrapperProps
+): ReactElement => {
+  const defaultStyles: StyledFlexContainerBlockProps = {
+    direction: Direction.VERTICAL,
+    flex: 1,
+    gap: streamlit.GapSize.SMALL,
+    height: props.height,
+    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+    border: false,
+  }
+
+  const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
-    <StyledVerticalBlockBorderWrapper
-      border={border}
-      height={height}
-      data-testid="stVerticalBlockBorderWrapper"
-      data-test-scroll-behavior="scroll-to-bottom"
-      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
-    >
-      {children}
-    </StyledVerticalBlockBorderWrapper>
+    <FlexContextProvider direction={Direction.VERTICAL}>
+      <StyledFlexContainerBlock
+        {...defaultStyles}
+        className={classNames(
+          getClassnamePrefix(Direction.VERTICAL),
+          convertKeyToClassName(userKey)
+        )}
+        data-testid={getClassnamePrefix(Direction.VERTICAL)}
+      >
+        <ChildRenderer {...props} />
+      </StyledFlexContainerBlock>
+    </FlexContextProvider>
   )
 }
 
-// Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
-// Python side.
-const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
-  const {
-    values: [observedWidth],
-    elementRef: wrapperElement,
-    forceRecalculate,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+interface FlexBoxContainerProps extends BaseBlockProps {
+  node: BlockNode
+}
 
-  // The width should never be set to 0 since it can cause
-  // flickering effects.
-  const calculatedWidth = observedWidth <= 0 ? -1 : observedWidth
+export const FlexBoxContainer = (
+  props: FlexBoxContainerProps
+): ReactElement => {
+  const direction = getDirectionOfBlock(props.node.deltaBlock)
 
-  const border = props.node.deltaBlock.vertical?.border ?? false
-  const height = props.node.deltaBlock.vertical?.height || undefined
+  const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
+    props.node
+  )
+  const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
 
-  const activateScrollToBottom =
-    height &&
-    props.node.children.some(node => {
-      return (
-        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
-      )
-    })
-
-  // We need to update the observer whenever the scrolling is activated or deactivated
-  // Otherwise, it still tries to measure the width of the old wrapper element.
-  useEffect(() => {
-    forceRecalculate()
-  }, [forceRecalculate, activateScrollToBottom])
-
-  // Decide which wrapper to use based on whether we need to activate scrolling to bottom
-  // This is done for performance reasons, to prevent the usage of useScrollToBottom
-  // if it is not needed.
-  const VerticalBlockBorderWrapper = activateScrollToBottom
-    ? ScrollToBottomVerticalBlockWrapper
-    : StyledVerticalBlockBorderWrapper
-
-  // Extract the user-specified key from the block ID (if provided):
-  const userKey = getKeyFromId(props.node.deltaBlock.id)
-  const styles = useLayoutStyles({
-    width: calculatedWidth,
-    element: undefined,
+  const layout_styles = useLayoutStyles({
+    element: props.node.deltaBlock,
+    subElement: getLayoutSubElement(props.node.deltaBlock),
   })
 
-  const propsWithCalculatedWidth = {
-    ...props,
-    width: styles.width,
+  const styles = {
+    gap:
+      // This is backwards compatible with old proto messages since previously
+      // the gap size was defaulted to small.
+      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
+      streamlit.GapSize.SMALL,
+    direction: direction,
+    // This is also backwards compatible since previously wrap was not added
+    // to the flex container.
+    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    overflow: layout_styles.overflow,
+    border: getBorderBackwardsCompatible(props.node.deltaBlock),
+    // We need the height on the container for scrolling.
+    height: layout_styles.height,
+    // Flex properties are set on the LayoutWrapper.
+    flex: "1",
+    align: props.node.deltaBlock.flexContainer?.align,
+    justify: props.node.deltaBlock.flexContainer?.justify,
   }
 
-  // Widths of children autosizes to container width (and therefore window width).
-  // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
-  // the width value coming from the parent via props.
+  const userKey = getKeyFromId(props.node.deltaBlock.id)
 
-  // To apply a border, we need to wrap the StyledVerticalBlockWrapper again, otherwise the width
-  // calculation would not take the padding into consideration.
   return (
-    <VerticalBlockBorderWrapper
-      border={border}
-      height={height}
-      data-testid="stVerticalBlockBorderWrapper"
-      data-test-scroll-behavior="normal"
-    >
-      <StyledVerticalBlockWrapper ref={wrapperElement}>
-        <StyledVerticalBlock
-          className={classNames(
-            "stVerticalBlock",
-            convertKeyToClassName(userKey)
-          )}
-          data-testid="stVerticalBlock"
-          {...styles}
-        >
-          <ChildRenderer {...propsWithCalculatedWidth} />
-        </StyledVerticalBlock>
-      </StyledVerticalBlockWrapper>
-    </VerticalBlockBorderWrapper>
+    <FlexContextProvider direction={direction}>
+      <StyledFlexContainerBlock
+        {...styles}
+        className={classNames(
+          getClassnamePrefix(direction),
+          convertKeyToClassName(userKey)
+        )}
+        data-testid={getClassnamePrefix(direction)}
+        ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
+        data-test-scroll-behavior={
+          activateScrollToBottom ? "scroll-to-bottom" : "normal"
+        }
+      >
+        <ChildRenderer {...props} />
+      </StyledFlexContainerBlock>
+    </FlexContextProvider>
   )
 }
 
-const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
-  // Create a horizontal block as the parent for columns.
-  // The children are always columns, but this is not checked. We just trust the Python side to
-  // do the right thing, then we ask ChildRenderer to handle it.
-  const gap = props.node.deltaBlock.horizontal?.gap ?? ""
-
-  return (
-    <StyledHorizontalBlock
-      gap={gap}
-      className="stHorizontalBlock"
-      data-testid="stHorizontalBlock"
-    >
-      <ChildRenderer {...props} />
-    </StyledHorizontalBlock>
-  )
+export interface BlockPropsWithoutWidth extends BaseBlockProps {
+  node: BlockNode
 }
 
-// A container block with one of two types of layouts: vertical and horizontal.
-function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
-  if (props.node.deltaBlock.horizontal) {
-    return <HorizontalBlock {...props} />
+const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
+const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
+
+const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
+  const { node } = props
+  const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
+    useContext(LibContext)
+  const { formsData } = useRequiredContext(FormsContext)
+
+  let minStretchBehavior: MinFlexElementWidth
+  if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+    minStretchBehavior = "14rem"
+  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+    minStretchBehavior = "8rem"
+  } else if (node.deltaBlock.type === "chatMessage") {
+    if (node.isEmpty) {
+      minStretchBehavior = "8rem"
+    } else {
+      minStretchBehavior = "fit-content"
+    }
+  } else if (
+    node.deltaBlock.type === "flexContainer" ||
+    node.deltaBlock.column ||
+    node.deltaBlock.expandable
+  ) {
+    if (!node.isEmpty) {
+      minStretchBehavior = "8rem"
+    }
   }
 
-  return <VerticalBlock {...props} />
+  const styles = useLayoutStyles({
+    element: node.deltaBlock,
+    subElement: getLayoutSubElement(node.deltaBlock),
+    minStretchBehavior,
+  })
+
+  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
+    return <></>
+  }
+
+  const enable = shouldComponentBeEnabled("", scriptRunState)
+  const isStale = isComponentStale(
+    enable,
+    node,
+    scriptRunState,
+    scriptRunId,
+    fragmentIdsThisRun
+  )
+
+  const childProps = { ...props, ...{ node } }
+
+  const disableFullscreenMode =
+    props.disableFullscreenMode ||
+    notNullOrUndefined(node.deltaBlock.dialog) ||
+    notNullOrUndefined(node.deltaBlock.popover)
+
+  let containerElement: ReactElement | undefined
+  const child: ReactElement = (
+    <ContainerContentsWrapper
+      {...childProps}
+      disableFullscreenMode={disableFullscreenMode}
+      height="100%"
+    />
+  )
+
+  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
+    containerElement = <FlexBoxContainer {...childProps} />
+  }
+
+  if (node.deltaBlock.dialog) {
+    return (
+      <Dialog
+        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+        widgetMgr={props.widgetMgr}
+        fragmentId={node.fragmentId}
+      >
+        {child}
+      </Dialog>
+    )
+  }
+
+  if (node.deltaBlock.expandable) {
+    containerElement = (
+      <Expander
+        isStale={isStale}
+        element={node.deltaBlock.expandable as BlockProto.Expandable}
+      >
+        {child}
+      </Expander>
+    )
+  }
+
+  if (node.deltaBlock.popover) {
+    containerElement = (
+      <Popover
+        empty={node.isEmpty}
+        element={node.deltaBlock.popover as BlockProto.Popover}
+        stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
+      >
+        {child}
+      </Popover>
+    )
+  }
+
+  if (node.deltaBlock.type === "form") {
+    const { formId, clearOnSubmit, enterToSubmit, border } = node.deltaBlock
+      .form as BlockProto.Form
+    const submitButtons = formsData.submitButtons.get(formId)
+    const hasSubmitButton =
+      submitButtons !== undefined && submitButtons.length > 0
+    const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
+    containerElement = (
+      <Form
+        formId={formId}
+        clearOnSubmit={clearOnSubmit}
+        enterToSubmit={enterToSubmit}
+        hasSubmitButton={hasSubmitButton}
+        scriptNotRunning={scriptNotRunning}
+        widgetMgr={props.widgetMgr}
+        border={border}
+        overflow={styles.overflow}
+      >
+        {child}
+      </Form>
+    )
+  }
+
+  if (node.deltaBlock.chatMessage) {
+    containerElement = (
+      <ChatMessage
+        element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
+        endpoints={props.endpoints}
+      >
+        {child}
+      </ChatMessage>
+    )
+  }
+
+  if (node.deltaBlock.column) {
+    return (
+      <StyledColumn
+        weight={node.deltaBlock.column.weight ?? 0}
+        gap={backwardsCompatibleColumnGapSize(node.deltaBlock.column)}
+        verticalAlignment={
+          node.deltaBlock.column.verticalAlignment ?? undefined
+        }
+        showBorder={node.deltaBlock.column.showBorder ?? false}
+        className="stColumn"
+        data-testid="stColumn"
+      >
+        {child}
+      </StyledColumn>
+    )
+  }
+
+  if (node.deltaBlock.tabContainer) {
+    const renderTabContent = (
+      mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
+    ): ReactElement => {
+      // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
+      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
+    }
+    // We can't use StyledLayoutWrapper for tabs currently because of the horizontal scrolling
+    // management that is handled in the Tabs component. TODO(lwilby): Investigate whether it makes
+    // sense to consolidate that logic with the StyledLayoutWrapper.
+    const tabsProps: TabProps = {
+      ...childProps,
+      isStale,
+      renderTabContent,
+      width: styles.width,
+      flex: styles.flex,
+    }
+    return <Tabs {...tabsProps} />
+  }
+
+  if (containerElement) {
+    return (
+      <StyledLayoutWrapper data-testid="stLayoutWrapper" {...styles}>
+        {containerElement}
+      </StyledLayoutWrapper>
+    )
+  }
+
+  return child
 }
 
-export default VerticalBlock
+export const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
+  // Deprecated. Use FlexBoxContainer instead.
+  return <FlexBoxContainer {...props} />
+}

@@ -106,7 +106,8 @@ with open(NAMES_MODULE_PATH, "w") as file:
 response = requests.get(
     MATERIAL_ICONS_FONT_URL,
     headers={
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 "
+        "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
     },
 )
 
@@ -134,7 +135,7 @@ else:
     sys.exit(1)
 
 
-icon_from_latest_font = list(new_icon_names)[0]
+icon_from_latest_font = next(iter(new_icon_names))
 
 generated_code = f"""### LATEST MATERIAL ICON TEST START ###
 st.success(

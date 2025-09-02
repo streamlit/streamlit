@@ -15,8 +15,8 @@
  */
 import { getLogger } from "loglevel"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import { ComponentMessageType } from "./enums"
 
@@ -101,7 +101,7 @@ export class ComponentRegistry {
   private onMessageEvent = (event: MessageEvent): void => {
     if (
       isNullOrUndefined(event.data) ||
-      !event.data.hasOwnProperty("isStreamlitMessage")
+      !Object.hasOwn(event.data, "isStreamlitMessage")
     ) {
       // Disregard messages that don't come from components.
       return

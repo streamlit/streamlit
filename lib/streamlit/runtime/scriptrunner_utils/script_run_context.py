@@ -33,7 +33,6 @@ from typing_extensions import TypeAlias
 from streamlit.errors import (
     NoSessionContext,
     StreamlitAPIException,
-    StreamlitSetPageConfigMustBeFirstCommandError,
 )
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import (
@@ -42,6 +41,7 @@ from streamlit.runtime.forward_msg_cache import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
     from streamlit.cursor import RunningCursor
@@ -97,7 +97,6 @@ class ScriptRunContext:
     command_tracking_deactivated: bool = False
     tracked_commands: list[Command] = field(default_factory=list)
     tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
-    _set_page_config_allowed: bool = True
     _has_script_started: bool = False
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
@@ -107,6 +106,7 @@ class ScriptRunContext:
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
+    in_fragment_callback: bool = False
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
@@ -116,11 +116,11 @@ class ScriptRunContext:
     _production_query_params_used = False
 
     @property
-    def page_script_hash(self):
+    def page_script_hash(self) -> str:
         return self.pages_manager.current_page_script_hash
 
     @property
-    def active_script_hash(self):
+    def active_script_hash(self) -> str:
         return self._active_script_hash
 
     @property
@@ -128,7 +128,7 @@ class ScriptRunContext:
         return self.pages_manager.main_script_parent
 
     @contextlib.contextmanager
-    def run_with_active_hash(self, page_hash: str):
+    def run_with_active_hash(self, page_hash: str) -> Generator[None, None, None]:
         original_page_hash = self._active_script_hash
         self._active_script_hash = page_hash
         try:
@@ -137,7 +137,7 @@ class ScriptRunContext:
             # in the event of any exception, ensure we set the active hash back
             self._active_script_hash = original_page_hash
 
-    def set_mpa_v2_page(self, page_script_hash: str):
+    def set_mpa_v2_page(self, page_script_hash: str) -> None:
         self._active_script_hash = self.pages_manager.main_script_hash
         self.pages_manager.set_current_page_script_hash(page_script_hash)
 
@@ -157,8 +157,6 @@ class ScriptRunContext:
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
         self._active_script_hash = self.pages_manager.main_script_hash
-        # Permit set_page_config when the ScriptRunContext is reused on a rerun
-        self._set_page_config_allowed = True
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
@@ -188,17 +186,6 @@ class ScriptRunContext:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
-        if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
-            raise StreamlitSetPageConfigMustBeFirstCommandError()
-
-        # We want to disallow set_page config if one of the following occurs:
-        # - set_page_config was called on this message
-        # - The script has already started and a different st call occurs (a delta)
-        if msg.HasField("page_config_changed") or (
-            msg.HasField("delta") and self._has_script_started
-        ):
-            self._set_page_config_allowed = False
-
         msg.metadata.active_script_hash = self.active_script_hash
 
         # We populate the hash and cacheable field for all messages.
@@ -217,7 +204,7 @@ class ScriptRunContext:
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg_to_send)
 
-    def ensure_single_query_api_used(self):
+    def ensure_single_query_api_used(self) -> None:
         if self._experimental_query_params_used and self._production_query_params_used:
             raise StreamlitAPIException(
                 "Using `st.query_params` together with either `st.experimental_get_query_params` "
@@ -225,11 +212,11 @@ class ScriptRunContext:
                 " convert your app to only use `st.query_params`"
             )
 
-    def mark_experimental_query_params_used(self):
+    def mark_experimental_query_params_used(self) -> None:
         self._experimental_query_params_used = True
         self.ensure_single_query_api_used()
 
-    def mark_production_query_params_used(self):
+    def mark_production_query_params_used(self) -> None:
         self._production_query_params_used = True
         self.ensure_single_query_api_used()
 
@@ -239,7 +226,7 @@ SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 
 def add_script_run_ctx(
     thread: threading.Thread | None = None, ctx: ScriptRunContext | None = None
-):
+) -> threading.Thread:
     """Adds the current ScriptRunContext to a newly-created thread.
 
     This should be called from this thread's parent thread,

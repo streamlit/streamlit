@@ -31,7 +31,7 @@ _LOGGER: Final = getLogger(__name__)
 class MessageSizeError(MarkdownFormattedException):
     """Exception raised when a websocket message is larger than the configured limit."""
 
-    def __init__(self, failed_msg_str: Any):
+    def __init__(self, failed_msg_str: Any) -> None:
         msg = self._get_message(failed_msg_str)
         super().__init__(msg)
 
@@ -39,7 +39,8 @@ class MessageSizeError(MarkdownFormattedException):
         # This needs to have zero indentation otherwise the markdown will render incorrectly.
         return (
             f"""
-**Data of size {len(failed_msg_str) / 1e6:.1f} MB exceeds the message size limit of {get_max_message_size_bytes() / 1e6} MB.**
+**Data of size {len(failed_msg_str) / 1e6:.1f} MB exceeds the message size limit of
+{get_max_message_size_bytes() / 1e6} MB.**
 
 This is often caused by a large chart or dataframe. Please decrease the amount of data sent
 to the browser, or increase the limit by setting the config option `server.maxMessageSize`.
@@ -54,7 +55,7 @@ of the client's browser and the Streamlit server._
 class BadDurationStringError(StreamlitAPIException):
     """Raised when a bad duration argument string is passed."""
 
-    def __init__(self, duration: str):
+    def __init__(self, duration: str) -> None:
         MarkdownFormattedException.__init__(
             self,
             "TTL string doesn't look right. It should be formatted as"
@@ -74,12 +75,12 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     if len(msg_str) > get_max_message_size_bytes():
         # Overwrite the offending ForwardMsg.delta with an error to display.
         # This assumes that the size limit wasn't exceeded due to metadata.
-        import streamlit.elements.exception as exception
+        from streamlit.elements import exception
 
         msg_size_error = MessageSizeError(msg_str)
         _LOGGER.warning(
-            "Websocket message size limit exceeded. "
-            f"Showing error to the user: {msg_size_error}"
+            "Websocket message size limit exceeded. Showing error to the user: %s",
+            msg_size_error,
         )
         exception.marshall(msg.delta.new_element.exception, msg_size_error)
         # Deactivate caching for this error message:
