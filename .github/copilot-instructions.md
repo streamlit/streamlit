@@ -84,6 +84,7 @@ alwaysApply: false
 
 List of all `make` commands that are available for execution from the repository root folder:
 
+make[1]: Entering directory '/home/runner/work/streamlit/streamlit'
 help                       Show all available make commands.
 all                        Install all dependencies, build frontend, and install editable Streamlit.
 all-dev                    Install all dependencies and editable Streamlit, but do not build the frontend.
@@ -122,6 +123,7 @@ cli-smoke-tests            Run CLI smoke tests.
 autofix                    Autofix linting and formatting errors.
 package                    Create Python wheel files in `dist/`.
 conda-package              Create conda distribution files.
+make[1]: Leaving directory '/home/runner/work/streamlit/streamlit'
 
 ---
 
