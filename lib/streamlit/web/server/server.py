@@ -318,6 +318,7 @@ class Server:
         """Ensures that common mime-types are robust against system misconfiguration."""
         mimetypes.add_type("text/html", ".html")
         mimetypes.add_type("application/javascript", ".js")
+        mimetypes.add_type("application/javascript", ".mjs")
         mimetypes.add_type("text/css", ".css")
         mimetypes.add_type("image/webp", ".webp")
 
