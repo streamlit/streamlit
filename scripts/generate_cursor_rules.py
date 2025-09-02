@@ -80,7 +80,7 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
-        "cursor_mdc": ".cursor/rules/frontend.mdc",
+        "cursor_mdc": ".cursor/rules/typescript.mdc",
         "agents_md": "frontend/AGENTS.md",
         "globs": "*.ts, *.tsx",
         "always_apply": False,
