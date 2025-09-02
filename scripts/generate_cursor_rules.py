@@ -16,8 +16,9 @@
 
 import os
 import subprocess
+from typing import Final, TypedDict
 
-MAKE_COMMANDS_RULE_TEMPLATE = """---
+MAKE_COMMANDS_RULE_TEMPLATE: Final[str] = """---
 description: List of all available make commands
 globs:
 alwaysApply: false
@@ -29,6 +30,54 @@ List of all `make` commands that are available for execution from the repository
 
 {make_commands}
 """
+
+AGENT_RULE_TEMPLATE: Final[str] = """---
+description:
+globs: {globs}
+alwaysApply: false
+---
+{agents_md_content}
+"""
+
+
+class AgentRuleFile(TypedDict):
+    cursor_mdc: str
+    agents_md: str
+    globs: str
+
+
+AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
+    {
+        "cursor_mdc": ".cursor/rules/e2e_playwright.mdc",
+        "agents_md": "e2e_playwright/AGENTS.md",
+        "globs": "e2e_playwright/**/*.py",
+    },
+    {
+        "cursor_mdc": ".cursor/rules/python.mdc",
+        "agents_md": "lib/AGENTS.md",
+        "globs": "*.py",
+    },
+    {
+        "cursor_mdc": ".cursor/rules/python_lib.mdc",
+        "agents_md": "lib/streamlit/AGENTS.md",
+        "globs": "lib/streamlit/**/*.py",
+    },
+    {
+        "cursor_mdc": ".cursor/rules/python_tests.mdc",
+        "agents_md": "lib/tests/AGENTS.md",
+        "globs": "lib/tests/**/*.py",
+    },
+    {
+        "cursor_mdc": ".cursor/rules/protobuf.mdc",
+        "agents_md": "proto/streamlit/proto/AGENTS.md",
+        "globs": "*.proto",
+    },
+    {
+        "cursor_mdc": ".cursor/rules/frontend.mdc",
+        "agents_md": "frontend/AGENTS.md",
+        "globs": "*.ts, *.tsx",
+    },
+]
 
 
 def generate_make_commands_rule() -> None:
@@ -54,5 +103,37 @@ def generate_make_commands_rule() -> None:
     print(f"Generated rule file: {output_path}")
 
 
+def generate_agent_rules() -> None:
+    """Generate agent rule files based on AGENT_RULE_FILES."""
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for rule in AGENT_RULE_FILES:
+        cursor_mdc_rel = rule["cursor_mdc"]
+        agents_md_rel = rule["agents_md"]
+        globs = rule["globs"]
+
+        output_path = os.path.join(workspace_root, cursor_mdc_rel)
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+
+        agents_md_abs = os.path.join(workspace_root, agents_md_rel)
+        if not os.path.isfile(agents_md_abs):
+            raise FileNotFoundError(
+                f"Missing AGENTS.md file at '{agents_md_abs}' for rule '{cursor_mdc_rel}'"
+            )
+        # Read the full content of the AGENTS.md file
+        with open(agents_md_abs) as f:
+            agents_md_content = f.read()
+
+        content = AGENT_RULE_TEMPLATE.format(
+            globs=globs,
+            agents_md_content=agents_md_content.strip(),
+        )
+
+        with open(output_path, "w") as f:
+            f.write(content)
+        print(f"Generated rule file: {output_path}")
+
+
 if __name__ == "__main__":
     generate_make_commands_rule()
+    generate_agent_rules()
