@@ -1,7 +1,5 @@
 # Streamlit Lib Python Guide
 
-The main library code is in the `lib/streamlit` directory.
-
 ### Logging
 
 If something needs to be logged, please use our logger - that returns a default
