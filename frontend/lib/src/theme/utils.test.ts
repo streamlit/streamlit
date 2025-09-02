@@ -800,34 +800,46 @@ describe("createEmotionTheme", () => {
       )
 
       // Check that valid colors are set correctly
-      if (invalidColorConfig !== "primaryColor")
+      if (invalidColorConfig !== "primaryColor") {
         expect(theme.colors.primary).toBe(primary)
-      if (invalidColorConfig !== "textColor")
+      }
+      if (invalidColorConfig !== "textColor") {
         expect(theme.colors.bodyText).toBe(bodyText)
-      if (invalidColorConfig !== "secondaryBackgroundColor")
+      }
+      if (invalidColorConfig !== "secondaryBackgroundColor") {
         expect(theme.colors.secondaryBg).toBe(secondaryBg)
-      if (invalidColorConfig !== "backgroundColor")
+      }
+      if (invalidColorConfig !== "backgroundColor") {
         expect(theme.colors.bgColor).toBe(bgColor)
-      if (invalidColorConfig !== "linkColor")
+      }
+      if (invalidColorConfig !== "linkColor") {
         expect(theme.colors.link).toBe(linkColor)
-      if (invalidColorConfig !== "borderColor")
+      }
+      if (invalidColorConfig !== "borderColor") {
         expect(theme.colors.borderColor).toBe(borderColor)
+      }
 
       // Check that invalid color falls back to default value
-      if (invalidColorConfig === "primaryColor")
+      if (invalidColorConfig === "primaryColor") {
         expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
-      if (invalidColorConfig === "textColor")
+      }
+      if (invalidColorConfig === "textColor") {
         expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
-      if (invalidColorConfig === "secondaryBackgroundColor")
+      }
+      if (invalidColorConfig === "secondaryBackgroundColor") {
         expect(theme.colors.secondaryBg).toBe(
           baseTheme.emotion.colors.secondaryBg
         )
-      if (invalidColorConfig === "backgroundColor")
+      }
+      if (invalidColorConfig === "backgroundColor") {
         expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
-      if (invalidColorConfig === "linkColor")
+      }
+      if (invalidColorConfig === "linkColor") {
         expect(theme.colors.link).toBe(baseTheme.emotion.colors.link)
-      if (invalidColorConfig === "borderColor")
+      }
+      if (invalidColorConfig === "borderColor") {
         expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
+      }
     }
   )
 

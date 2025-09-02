@@ -85,18 +85,6 @@ export const createEmotionColors = (
     codeTextColor: genericColors.green,
     codeBackgroundColor: derivedColors.bgMix,
 
-    // TODO (mgbarnes): These currently control both the metric delta text and chart
-    // line/bar/area top line color. Dislocate these with text color updates.
-    metricPositiveDeltaColor: genericColors.greenColor,
-    metricNegativeDeltaColor: genericColors.redColor,
-    metricNeutralDeltaColor: genericColors.grayColor,
-
-    // Status element colors
-    infoBg: genericColors.blueBackgroundColor,
-    dangerBg: genericColors.redBackgroundColor,
-    successBg: genericColors.greenBackgroundColor,
-    warningBg: genericColors.yellowBackgroundColor,
-
     borderColor: derivedColors.fadedText10,
     borderColorLight: derivedColors.fadedText05,
 
@@ -144,6 +132,21 @@ export function getDividerColors(theme: EmotionTheme): DividerColors {
     gray: grayColor,
     grey: grayColor,
     rainbow: `linear-gradient(to right, ${redColor}, ${orangeColor}, ${yellowColor}, ${greenColor}, ${blueColor}, ${violetColor})`,
+  }
+}
+
+export function getMetricColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenColor
+    // this must be grey
+    default:
+      return theme.colors.grayColor
   }
 }
 

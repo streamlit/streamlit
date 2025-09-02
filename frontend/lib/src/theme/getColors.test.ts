@@ -24,6 +24,7 @@ import {
   getDividerColors,
   getMarkdownBgColors,
   getMetricBackgroundColor,
+  getMetricColor,
   hasLightBackgroundColor,
 } from "./getColors"
 
@@ -206,6 +207,49 @@ describe("getMarkdownBgColors", () => {
     expect(result.graybg).toBe(colors.grayBackgroundColor)
     expect(result.purplebg).toBe(transparentize(colors.purple80, 0.7))
     expect(result.primarybg).toBe(transparentize(colors.primary, 0.7))
+  })
+})
+
+describe("getMetricColor", () => {
+  it("returns correct metric color for light theme", () => {
+    const colors = lightTheme.emotion.colors
+
+    const result1 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redColor)
+    expect(result2).toBe(colors.greenColor)
+    expect(result3).toBe(colors.grayColor)
+  })
+
+  it("returns correct metric color for dark theme", () => {
+    const colors = darkTheme.emotion.colors
+    const result1 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redColor)
+    expect(result2).toBe(colors.greenColor)
+    expect(result3).toBe(colors.grayColor)
   })
 })
 
