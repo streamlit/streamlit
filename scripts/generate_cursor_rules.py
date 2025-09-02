@@ -31,7 +31,7 @@ List of all `make` commands that are available for execution from the repository
 {make_commands}
 """
 
-AGENT_RULE_TEMPLATE: Final[str] = """---
+CURSOR_RULE_TEMPLATE: Final[str] = """---
 description:
 globs: {globs}
 alwaysApply: {always_apply}
@@ -139,7 +139,7 @@ def generate_agent_rules() -> None:
         with open(agents_md_abs) as f:
             agents_md_content = f.read()
 
-        content = AGENT_RULE_TEMPLATE.format(
+        content = CURSOR_RULE_TEMPLATE.format(
             globs=globs,
             agents_md_content=agents_md_content.strip(),
             always_apply="true" if always_apply else "false",
