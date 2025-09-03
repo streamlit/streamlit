@@ -1,6 +1,9 @@
 # Streamlit Lib Python Guide
 
-### Logging
+Tips and guidelines specific to the development of the Streamlit Python library,
+not applicable scripts and e2e tests.
+
+## Logging
 
 If something needs to be logged, please use our logger - that returns a default
 Python logger - with an appropriate logging level:
@@ -11,7 +14,7 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 ```
 
-### Unit Tests
+## Unit Tests
 
 We use the unit tests to cover internal behavior that can work without the web / backend
 counterpart and the e2e tests to test the entire system. We aim for high unit test
