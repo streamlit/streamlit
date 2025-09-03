@@ -86,4 +86,6 @@ jobs:
       - name: Show notices for fork PRs
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
         run: |
-          echo "::notice title=Autofix skipped for fork PR::This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so autofix cannot push changes automatically. Please run 'make autofix' locally and push the results, or a maintainer can apply fixes."
+          notice_title="Autofix skipped for fork PR"
+          notice_body="This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so autofix cannot push changes automatically. Please run 'make autofix' locally and push the results, or a maintainer can apply fixes."
+          echo "::notice title=${notice_title}::${notice_body}"
