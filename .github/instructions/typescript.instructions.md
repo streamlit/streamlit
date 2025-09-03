@@ -1,7 +1,5 @@
 ---
-description:
-globs: **/*.ts, **/*.tsx
-alwaysApply: false
+applyTo: "**/*.ts, **/*.tsx"
 ---
 
 # TypeScript Development Guide

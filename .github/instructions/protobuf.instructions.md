@@ -1,7 +1,5 @@
 ---
-description:
-globs: **/*.proto
-alwaysApply: false
+applyTo: "**/*.proto"
 ---
 
 # Protobuf
