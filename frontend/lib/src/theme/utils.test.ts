@@ -1323,22 +1323,22 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput, lightTheme)
       expect(theme.colors.redBackgroundColor).toBe(expectedColor)
       expect(theme.colors.orangeBackgroundColor).toBe(
-        theme.colors.orangeBackgroundColor
+        lightTheme.emotion.colors.orangeBackgroundColor
       )
       expect(theme.colors.yellowBackgroundColor).toBe(
-        theme.colors.yellowBackgroundColor
+        lightTheme.emotion.colors.yellowBackgroundColor
       )
       expect(theme.colors.blueBackgroundColor).toBe(
-        theme.colors.blueBackgroundColor
+        lightTheme.emotion.colors.blueBackgroundColor
       )
       expect(theme.colors.greenBackgroundColor).toBe(
-        theme.colors.greenBackgroundColor
+        lightTheme.emotion.colors.greenBackgroundColor
       )
       expect(theme.colors.violetBackgroundColor).toBe(
-        theme.colors.violetBackgroundColor
+        lightTheme.emotion.colors.violetBackgroundColor
       )
       expect(theme.colors.grayBackgroundColor).toBe(
-        theme.colors.grayBackgroundColor
+        lightTheme.emotion.colors.grayBackgroundColor
       )
     }
   )
@@ -1362,26 +1362,26 @@ describe("createEmotionTheme", () => {
       )
       // Falls back to default orange background
       expect(theme.colors.orangeBackgroundColor).toBe(
-        theme.colors.orangeBackgroundColor
+        lightTheme.emotion.colors.orangeBackgroundColor
       )
       // All others use defaults
       expect(theme.colors.redBackgroundColor).toBe(
-        theme.colors.redBackgroundColor
+        lightTheme.emotion.colors.redBackgroundColor
       )
       expect(theme.colors.yellowBackgroundColor).toBe(
-        theme.colors.yellowBackgroundColor
+        lightTheme.emotion.colors.yellowBackgroundColor
       )
       expect(theme.colors.blueBackgroundColor).toBe(
-        theme.colors.blueBackgroundColor
+        lightTheme.emotion.colors.blueBackgroundColor
       )
       expect(theme.colors.greenBackgroundColor).toBe(
-        theme.colors.greenBackgroundColor
+        lightTheme.emotion.colors.greenBackgroundColor
       )
       expect(theme.colors.violetBackgroundColor).toBe(
-        theme.colors.violetBackgroundColor
+        lightTheme.emotion.colors.violetBackgroundColor
       )
       expect(theme.colors.grayBackgroundColor).toBe(
-        theme.colors.grayBackgroundColor
+        lightTheme.emotion.colors.grayBackgroundColor
       )
     }
   )
@@ -1456,7 +1456,7 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.blueBackgroundColor).toBe("rgba(0, 0, 255, 0.1)")
     // Should use default for colors not provided
     expect(theme.colors.orangeBackgroundColor).toBe(
-      theme.colors.orangeBackgroundColor
+      lightTheme.emotion.colors.orangeBackgroundColor
     )
   })
 
