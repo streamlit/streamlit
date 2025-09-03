@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// code in this file was adapted from recorder.js library
 
 import { getLogger } from "loglevel"
 
