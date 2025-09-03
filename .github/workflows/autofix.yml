@@ -57,8 +57,8 @@ jobs:
       - name: Commit changes to new branch
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          git config --global user.email "core+streamlitbot-github@streamlit.io"
-          git config --global user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
           fix_branch="autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}"
           git checkout -b "$fix_branch"
           git add -A
