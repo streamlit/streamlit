@@ -33,9 +33,14 @@ List of all `make` commands that are available for execution from the repository
 
 def generate_make_commands_rule() -> None:
     """Generate the make commands rule file."""
-    # Run `make help` and capture the output
+    # Determine workspace root and run `make help` without directory trace noise
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = subprocess.run(
-        ["make", "help"], capture_output=True, text=True, check=True
+        ["make", "--no-print-directory", "help"],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=workspace_root,
     )
     make_commands = result.stdout.strip()
 
@@ -43,7 +48,6 @@ def generate_make_commands_rule() -> None:
     formatted_content = MAKE_COMMANDS_RULE_TEMPLATE.format(make_commands=make_commands)
 
     # Define the output path
-    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     output_dir = os.path.join(workspace_root, ".cursor", "rules")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, "make_commands.mdc")
