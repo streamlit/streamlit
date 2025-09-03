@@ -1,165 +1,4 @@
-# Streamlit Library Rules
-
-<!--
-description:
-globs: e2e_playwright/**/*.py
-alwaysApply: false
--->
-
-
-## Streamlit E2E Tests
-
-We use playwright with pytest to e2e test Streamlit library. E2E tests verify the complete Streamlit system (frontend, backend, communication, state, visual appearance) from a user's perspective (black-box). They complement Python/JS unit tests, which are faster and focus on internal logic, input/output validation, and specific message sequences. Use E2E tests when testing behavior that requires the full stack or visual verification, especially for new elements or significant changes to existing ones.
-
-### Test Structure
-
-- Located in `e2e_playwright/`
-- Each test consists of two files:
-  - `*.py`: Streamlit app script that's being tested
-  - `*_test.py`: Playwright pytest file that runs the app and tests it
-- If the test is specific to a Streamlit element, prefix the filename with `st_<element_name>`
-- Tests can use screenshot comparisons for visual verification
-- Screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
-- Other tests results are stored in `e2e_playwright/test_results/`
-
-
-### Key Fixtures and Utilities
-
-Import from from `conftest.py`:
-
-- `app: Page` - Light mode app fixture
-- `themed_app: Page` - Light & dark mode app fixture
-- `assert_snapshot` - Screenshot testing fixture. Ensure element is stable before calling.
-- `wait_for_app_run(app)` - Wait for app run to finish
-- `wait_for_app_loaded(app)` - Wait for initial app load
-- `rerun_app(app)` - Trigger app rerun and wait
-- `wait_until(app, fn)` - Run test function until True or timeout
-
-### Best Practices
-
-- Use `expect` for assertions, not `assert` (reduces flakiness)
-- Use `get_by_test_id` to locate elements preferentially. Use `.locator` only when necessary.
-- If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
-- Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
-- Minimize screenshot surface area; screenshot specific elements, not the whole page unless necessary.
-- Ensure elements screenshotted are under 640px height to avoid clipping by the header.
-- Naming convention for command-related snapshots: `st_command-test_description`
-- Take a look at other tests in `e2e_playwright/` as inspiration.
-- e2e tests are expensive, please test every aspect only one time.
-
-### Writing Tests & Common Scenarios
-
-When adding or modifying tests for an element, ensure the following are covered:
-
-- **Visuals:** Snapshot tests for both normal and `disabled` states.
-- **Interactivity:** Test user interactions and verify the resulting app state or output (e.g., checking text written via `st.write`, potentially using helpers like `expect_markdown` from `shared/app_utils.py`).
-- **Common Contexts:** Verify behavior within:
-    - A `@st.fragment`.
-    - An `st.form`.
-- **Core Behavior:**
-    - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
-    - The element cannot be interacted with when `disabled=True`.
-    - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
-    - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
-- **Custom Config:** Use module-scoped fixtures with `@pytest.mark.early` for tests requiring specific Streamlit configuration options.
-
-
-### Running tests
-
-- Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py`
-- Debug test: `make debug-e2e-test e2e_playwright/name_of_the_test.py`
-- If frontend logic was changed, it will require running `make frontend-fast` to update the frontend.
-- Use `make update-snapshots` script to retrieve updated snapshots from GitHub workflow.
-
----
-
-<!--
-description: List of all available make commands
-globs:
-alwaysApply: false
--->
-
-
-## Available `make` commands
-
-List of all `make` commands that are available for execution from the repository root folder:
-
-help                       Show all available make commands.
-all                        Install all dependencies, build frontend, and install editable Streamlit.
-all-dev                    Install all dependencies and editable Streamlit, but do not build the frontend.
-init                       Install all dependencies and build protobufs.
-clean                      Remove all generated files.
-protobuf                   Recompile Protobufs for Python and the frontend.
-python-init                Install Python dependencies and Streamlit in editable mode.
-python-lint                Lint and check formatting of Python files.
-python-format              Format Python files.
-python-tests               Run Python unit tests.
-python-performance-tests   Run Python performance tests.
-python-integration-tests   Run Python integration tests. Requires `integration-requirements.txt` to be installed.
-python-types               Run the Python type checker.
-frontend-init              Install all frontend dependencies.
-frontend                   Build the frontend.
-frontend-with-profiler     Build the frontend with the profiler enabled.
-frontend-fast              Build the frontend (as fast as possible).
-frontend-dev               Start the frontend development server.
-frontend-lint              Lint and check formatting of frontend files.
-frontend-types             Run the frontend type checker.
-frontend-format            Format frontend files.
-frontend-tests             Run frontend unit tests and generate coverage report.
-frontend-typesync          Check for unsynced frontend types.
-update-frontend-typesync   Installs missing typescript typings for dependencies.
-update-snapshots           Update e2e playwright snapshots based on the latest completed CI run.
-update-snapshots-changed   Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
-update-material-icons      Update material icons based on latest Google material symbol version.
-update-notices             Update the notices file (licenses of frontend assets and dependencies).
-update-headers             Update all license headers.
-update-min-deps            Update minimum dependency constraints file.
-debug-e2e-test             Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
-run-e2e-test               Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
-lighthouse-tests           Run Lighthouse performance tests.
-bare-execution-tests       Run all e2e tests in bare mode.
-cli-smoke-tests            Run CLI smoke tests.
-autofix                    Autofix linting and formatting errors.
-package                    Create Python wheel files in `dist/`.
-conda-package              Create conda distribution files.
-
----
-
-<!--
-description: Implementation guide for new features
-globs:
-alwaysApply: false
--->
-
-
-## New Feature - Implementation Guide
-
-- Most features need to be implemented in the backend in `lib/streamlit/`, the frontend `frontend/` and will need changes to our protobuf definitions in `proto/`.
-- New features should be covered by Python Unit Tests in `lib/tests`, Vitest Unit Tests, and e2e playwright tests in `e2e_playwright/`.
-- Implementing new element commands requires additional steps to correctly register the element (see notes below).
-
-### Order of implementation
-
-1. implement protobuf changes in `proto/` & run: `make protobuf` (-> @protobuf.mdc)
-   - Note: new elements need to be added to `proto/streamlit/proto/Element.proto`.
-2. implement backend implementation in `lib/streamlit/` (-> @python_lib.mdc)
-   - Note: new elements need to be added to `lib/streamlit/__init__.py`
-3. implement Python unit tests in `lib/tests` & run via: `PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py` (-> @python_tests.mdc)
-   - Note: new elements need to be added to `lib/tests/streamlit/element_mocks.py`
-4. implement frontend changes in `frontend/` (-> @typescript.mdc)
-   - Note: new elements need to be added to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`
-5. implement vitest unit tests in `*.test.tsx` & run via: `cd frontend && yarn vitest lib/src/components/elements/NewElement/NewElement.test.tsx` (-> @typescript_tests.mdc)
-6. implement e2e playwright test in `e2e_playwright/` & run via: `make run-e2e-test e2e_playwright/name_of_the_test.py` (-> @e2e_playwright.mdc)
-7. run `make autofix` to auto-fix linting and formatting issues.
-
----
-
-<!--
-description:
-globs:
-alwaysApply: true
--->
-
+# Streamlit Library Development Rules
 
 ## Streamlit Repo Overview
 
@@ -200,12 +39,6 @@ run-e2e-test               Run e2e test, via: `make run-e2e-test st_command_test
 
 ---
 
-<!--
-description:
-globs: *.proto
-alwaysApply: false
--->
-
 ## Protobuf
 
 ### Protobuf Compatibility
@@ -233,13 +66,7 @@ make protobuf
 
 ---
 
-<!--
-description:
-globs: *.py
-alwaysApply: false
--->
-
-## Python Guide
+## Python Development Guide
 
 - Supported Python versions: 3.9 - 3.13
 - Linter: Ruff 0.x
@@ -276,13 +103,10 @@ alwaysApply: false
 
 ---
 
-<!--
-description:
-globs: lib/streamlit/**/*.py
-alwaysApply: false
--->
-
 ## Streamlit Lib Python Guide
+
+Tips and guidelines specific to the development of the Streamlit Python library,
+not applicable scripts and e2e tests.
 
 ### Logging
 
@@ -305,19 +129,13 @@ coverage (90% or higher) of our Python code in `lib/streamlit`.
 - Preferably in the mirrored directory structure as the non-test files.
 - Naming: `my_example_test.py`
 
-### Typing Tests
+#### Typing Tests
 
 We also have typing tests in `lib/tests/streamlit/typing` for our public API to catch
 typing errors in parameters or return types by using mypy and `assert_type`.
 Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration.
 
 ---
-
-<!--
-description:
-globs: lib/tests/**/*.py
-alwaysApply: false
--->
 
 ## Python Unit Test Guide
 
@@ -353,13 +171,7 @@ PYTHONPATH=lib pytest lib/tests/streamlit/my_example_test.py -k test_that_someth
 
 ---
 
-<!--
-description:
-globs: *.ts, *.tsx
-alwaysApply: false
--->
-
-## TypeScript Guide
+## TypeScript Development Guide
 
 - TypeScript: v5
 - Linter: eslint v9
@@ -397,21 +209,12 @@ alwaysApply: false
 - Packages: `app, connection, lib, protobuf, typescript-config, utils`
 - Package-specific scripts are executed within their respective directories.
 
----
-
-<!--
-description:
-globs: *.ts,*.tsx
-alwaysApply: false
--->
-
-
-## TypeScript Test Guide
+### TypeScript Test Guide
 
 - Test Framework: Vitest
 - UI Testing Library: React Testing Library (RTL)
 
-### Key Principles
+#### Key Principles
 
 - Coverage: Implement both unit and integration tests (using RTL where applicable).
 - Robustness: Test edge cases and error handling scenarios.
@@ -419,7 +222,7 @@ alwaysApply: false
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
-### Running Tests
+#### Running Tests
 
 - Yarn test commands must be run from the `<GIT_ROOT>/frontend` directory.
 
@@ -427,7 +230,7 @@ alwaysApply: false
 - Run Specific File: `yarn test lib/src/components/path/component.test.tsx`
 - Run Specific Test: `yarn test -t "the test name" lib/src/components/path/component.test.tsx`
 
-### React Testing Library best practices
+#### React Testing Library best practices
 
 Cheat sheet for queries from RTL:
 
@@ -444,7 +247,7 @@ Cheat sheet for queries from RTL:
 - User interactions should utilize the `userEvent` library.
 - Tests should be written in a way that asserts user behavior, not implementation details.
 
-#### Query Priority Order
+##### Query Priority Order
 
 Based on the Guiding Principles, your test should resemble how users interact with your code (component, page, etc.) as much as possible. With this in mind, we recommend this order of priority:
 
@@ -459,3 +262,67 @@ Based on the Guiding Principles, your test should resemble how users interact wi
 3. Test IDs
 
    - getByTestId - The user cannot see (or hear) these, so this is only recommended for cases where you can't match by role or text or it doesn't make sense (e.g. the text is dynamic).
+
+---
+
+## Streamlit E2E Tests
+
+We use playwright with pytest to e2e test Streamlit library. E2E tests verify the complete Streamlit system (frontend, backend, communication, state, visual appearance) from a user's perspective (black-box). They complement Python/JS unit tests, which are faster and focus on internal logic, input/output validation, and specific message sequences. Use E2E tests when testing behavior that requires the full stack or visual verification, especially for new elements or significant changes to existing ones.
+
+### Test Structure
+
+- Located in `e2e_playwright/`
+- Each test consists of two files:
+  - `*.py`: Streamlit app script that's being tested
+  - `*_test.py`: Playwright pytest file that runs the app and tests it
+- If the test is specific to a Streamlit element, prefix the filename with `st_<element_name>`
+- Tests can use screenshot comparisons for visual verification
+- Screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
+- Other tests results are stored in `e2e_playwright/test_results/`
+
+### Key Fixtures and Utilities
+
+Import from from `conftest.py`:
+
+- `app: Page` - Light mode app fixture
+- `themed_app: Page` - Light & dark mode app fixture
+- `assert_snapshot` - Screenshot testing fixture. Ensure element is stable before calling.
+- `wait_for_app_run(app)` - Wait for app run to finish
+- `wait_for_app_loaded(app)` - Wait for initial app load
+- `rerun_app(app)` - Trigger app rerun and wait
+- `wait_until(app, fn)` - Run test function until True or timeout
+
+### Best Practices
+
+- Use `expect` for assertions, not `assert` (reduces flakiness)
+- Use `get_by_test_id` to locate elements preferentially. Use `.locator` only when necessary.
+- If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
+- Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
+- Minimize screenshot surface area; screenshot specific elements, not the whole page unless necessary.
+- Ensure elements screenshotted are under 640px height to avoid clipping by the header.
+- Naming convention for command-related snapshots: `st_command-test_description`
+- Take a look at other tests in `e2e_playwright/` as inspiration.
+- e2e tests are expensive, please test every aspect only one time.
+
+### Writing Tests & Common Scenarios
+
+When adding or modifying tests for an element, ensure the following are covered:
+
+- **Visuals:** Snapshot tests for both normal and `disabled` states.
+- **Interactivity:** Test user interactions and verify the resulting app state or output (e.g., checking text written via `st.write`, potentially using helpers like `expect_markdown` from `shared/app_utils.py`).
+- **Common Contexts:** Verify behavior within:
+  - A `@st.fragment`.
+  - An `st.form`.
+- **Core Behavior:**
+  - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
+  - The element cannot be interacted with when `disabled=True`.
+  - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
+  - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
+- **Custom Config:** Use module-scoped fixtures with `@pytest.mark.early` for tests requiring specific Streamlit configuration options.
+
+### Running tests
+
+- Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py`
+- Debug test: `make debug-e2e-test e2e_playwright/name_of_the_test.py`
+- If frontend logic was changed, it will require running `make frontend-fast` to update the frontend.
+- Use `make update-snapshots` script to retrieve updated snapshots from GitHub workflow.
