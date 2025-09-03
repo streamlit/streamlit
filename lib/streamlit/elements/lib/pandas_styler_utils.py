@@ -273,7 +273,7 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
                     if isinstance(cell["display_value"], Enum):
                         new_df.iat[r, c] = str(cell["display_value"].value)
                     else:
-                        # Its important to use .iat[] here because .iloc[]
+                        # It's important to use .iat[] here because .iloc[]
                         # is a lot slower which can have a significant impact on performance
                         # for large dataframes.
                         new_df.iat[r, c] = str(cell["display_value"])
