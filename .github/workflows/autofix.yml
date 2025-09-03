@@ -73,7 +73,7 @@ jobs:
           gh pr create \
             --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
             --base "${{ github.head_ref }}" \
-            --title "Autofix for #${{ github.event.pull_request.number }}" \
+            --title "[autofix] Automated fixes for #${{ github.event.pull_request.number }}" \
             --body $'## Describe your changes\n\nAutomated fixes for #${{ github.event.pull_request.number }} created via the autofix CI workflow. The autofix workflow is triggered by adding the `autofix` label to a PR. This runs formatting, linting, pre-commit, and other automatically fixable tasks (see `make autofix`).\n\nThis PR targets a feature branch and can be merged without review approval.'
 
       - name: Remove 'autofix' label from source PR
