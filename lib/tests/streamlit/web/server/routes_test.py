@@ -130,11 +130,15 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmp_css_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="stylesheet.css", delete=False
         )
+        self._tmp_manifest_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="manifest.json", delete=False
+        )
         self._filename = os.path.basename(self._tmpfile.name)
         self._js_filename = os.path.basename(self._tmp_js_file.name)
         self._mjs_filename = os.path.basename(self._tmp_mjs_file.name)
         self._html_filename = os.path.basename(self._tmp_html_file.name)
         self._css_filename = os.path.basename(self._tmp_css_file.name)
+        self._manifest_filename = os.path.basename(self._tmp_manifest_file.name)
 
         super().setUp()
 
@@ -193,6 +197,19 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         for r in responses:
             assert r.code == 404
+
+    def test_cache_control_header(self):
+        r = self.fetch(f"/{self._html_filename}")
+        assert r.headers["Cache-Control"] == "no-cache"
+
+        r = self.fetch(f"/{self._manifest_filename}")
+        assert r.headers["Cache-Control"] == "no-cache"
+
+        r = self.fetch(f"/{self._js_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
+
+        r = self.fetch(f"/{self._css_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
 
     def test_mimetype_is_overridden_by_server(self):
         """Test get_content_type function."""

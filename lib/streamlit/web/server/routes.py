@@ -62,16 +62,20 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         super().initialize(path, default_filename)
 
     def set_extra_headers(self, path: str) -> None:
-        """Disable cache for HTML files.
+        """Disable cache for HTML files and manifest.json.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
         be cached indefinitely.
         """
+
         is_index_url = len(path) == 0
-        if is_index_url or path.endswith(".html"):
+        if is_index_url or path.endswith((".html", "manifest.json")):
             self.set_header("Cache-Control", "no-cache")
         else:
-            self.set_header("Cache-Control", "public")
+            # For all other static files, we set a long cache time.
+            # This is because these files are versioned with a hash in their name,
+            # so they can be cached indefinitely.
+            self.set_header("Cache-Control", "public, immutable, max-age=31536000")
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         try:
