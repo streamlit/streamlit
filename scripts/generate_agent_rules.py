@@ -207,7 +207,7 @@ def generate_agent_rules() -> None:
 
         with open(github_copilot_path, "w") as f:
             f.write(content)
-        print(f"Generated Github Copilot rule file: {github_copilot_path}")
+        print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
 if __name__ == "__main__":
