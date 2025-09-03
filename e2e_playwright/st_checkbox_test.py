@@ -19,14 +19,16 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_checkbox,
     get_element_by_key,
     get_expander,
 )
 
-CHECKBOX_ELEMENTS = 15
+CHECKBOX_ELEMENTS = 17
 
 
 def test_checkbox_widget_display(
@@ -161,3 +163,46 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "checkbox4")).to_be_visible()
+
+
+def test_dynamic_checkbox_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the checkbox can be updated dynamically."""
+    dynamic_checkbox = get_element_by_key(app, "dynamic_checkbox_with_key")
+    expect(dynamic_checkbox).to_be_visible()
+
+    expect(dynamic_checkbox).to_contain_text("Initial dynamic checkbox")
+
+    # Check that the initial checkbox state is True
+    expect_prefixed_markdown(app, "Initial checkbox state:", "True")
+
+    assert_snapshot(dynamic_checkbox, name="st_checkbox-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_checkbox, "initial help")
+
+    # Click checkbox -> state is False
+    click_checkbox(app, "Initial dynamic checkbox")
+    expect_prefixed_markdown(app, "Initial checkbox state:", "False")
+
+    # Click checkbox again -> state is True
+    click_checkbox(app, "Initial dynamic checkbox")
+    expect_prefixed_markdown(app, "Initial checkbox state:", "True")
+
+    # Click the toggle to update the checkbox props
+    click_toggle(app, "Update checkbox props")
+
+    # new checkbox is visible:
+    expect(dynamic_checkbox).to_contain_text("Updated dynamic checkbox")
+
+    # Check the the updated checkbox state is still True
+    expect_prefixed_markdown(app, "Updated checkbox state:", "True")
+
+    dynamic_checkbox.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_checkbox, name="st_checkbox-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_checkbox, "updated help")
+
+    # Click the checkbox
+    click_checkbox(app, "Updated dynamic checkbox")
+    expect_prefixed_markdown(app, "Updated checkbox state:", "False")

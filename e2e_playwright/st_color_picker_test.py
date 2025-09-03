@@ -20,8 +20,11 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     expect_help_tooltip,
+    get_color_picker,
     get_element_by_key,
 )
+
+NUM_COLOR_PICKERS = 11
 
 
 def test_color_picker_widget_display(
@@ -29,23 +32,41 @@ def test_color_picker_widget_display(
 ):
     """Test that st.color_picker renders correctly."""
     color_pickers = themed_app.get_by_test_id("stColorPicker")
-    expect(color_pickers).to_have_count(11)
-    assert_snapshot(color_pickers.nth(0), name="st_color_picker-regular")
-    assert_snapshot(color_pickers.nth(1), name="st_color_picker-default_help")
-    assert_snapshot(color_pickers.nth(2), name="st_color_picker-disabled")
-    assert_snapshot(color_pickers.nth(3), name="st_color_picker-hidden_label")
-    assert_snapshot(color_pickers.nth(4), name="st_color_picker-collapsed_label")
+    expect(color_pickers).to_have_count(NUM_COLOR_PICKERS)
+    assert_snapshot(
+        get_color_picker(themed_app, "Default Color"),
+        name="st_color_picker-regular",
+    )
+    assert_snapshot(
+        get_color_picker(themed_app, "New Color"),
+        name="st_color_picker-default_help",
+    )
+    assert_snapshot(
+        get_color_picker(themed_app, "Disabled"), name="st_color_picker-disabled"
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "color_picker_hidden"),
+        name="st_color_picker-hidden_label",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "color_picker_collapsed"),
+        name="st_color_picker-collapsed_label",
+    )
     # The other color pickers do not need to be snapshot tested since they
     # don't have any visually interesting differences.
-    assert_snapshot(color_pickers.nth(7), name="st_color_picker-markdown_label")
+    assert_snapshot(
+        get_element_by_key(themed_app, "color_picker_markdown_label"),
+        name="st_color_picker-markdown_label",
+    )
 
 
 def test_color_picker_popover_display(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that color picker popover renders correctly in both themes."""
-    color_pickers = themed_app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+    get_color_picker(themed_app, "Default Color").get_by_test_id(
+        "stColorPickerBlock"
+    ).click()
 
     popover = themed_app.get_by_test_id("stColorPickerPopover")
     expect(popover).to_be_visible()
@@ -53,7 +74,7 @@ def test_color_picker_popover_display(
 
 
 def test_help_tooltip_works(app: Page):
-    element_with_help = app.get_by_test_id("stColorPicker").nth(1)
+    element_with_help = get_color_picker(app, "New Color")
     expect_help_tooltip(app, element_with_help, "help string")
 
 
@@ -62,8 +83,8 @@ def test_help_tooltip_works(app: Page):
 def test_clicking_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+    default_picker = get_color_picker(app, "Default Color")
+    default_picker.get_by_test_id("stColorPickerBlock").click()
 
     app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
 
@@ -71,15 +92,15 @@ def test_clicking_color_on_color_picker_works(
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
     expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(color_pickers.nth(0), name="st_color_picker-clicked_new_color")
+    assert_snapshot(default_picker, name="st_color_picker-clicked_new_color")
 
 
 def test_typing_new_hex_color_on_color_picker_works_with_callback(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     expect(app.get_by_text("Hello world")).to_have_count(0)
-    color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+    default_picker = get_color_picker(app, "Default Color")
+    default_picker.get_by_test_id("stColorPickerBlock").click()
 
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
@@ -91,14 +112,14 @@ def test_typing_new_hex_color_on_color_picker_works_with_callback(
     # callback writes "Hello world"
     expect(app.get_by_text("Hello world")).to_be_visible()
     expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hex_color")
+    assert_snapshot(default_picker, name="st_color_picker-typed_new_hex_color")
 
 
 def test_typing_new_rgb_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+    default_picker = get_color_picker(app, "Default Color")
+    default_picker.get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -114,14 +135,14 @@ def test_typing_new_rgb_color_on_color_picker_works(
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
     expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_rgb_color")
+    assert_snapshot(default_picker, name="st_color_picker-typed_new_rgb_color")
 
 
 def test_typing_new_hsl_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+    default_picker = get_color_picker(app, "Default Color")
+    default_picker.get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -139,7 +160,7 @@ def test_typing_new_hsl_color_on_color_picker_works(
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
     expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hsl_color")
+    assert_snapshot(default_picker, name="st_color_picker-typed_new_hsl_color")
 
 
 def test_in_form_selection_and_session_state(app: Page):
@@ -148,7 +169,7 @@ def test_in_form_selection_and_session_state(app: Page):
         app.get_by_text("color_picker-in-form selection in session state: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id(
+    get_color_picker(app, "Form Color Picker").get_by_test_id(
         "stColorPickerBlock"
     ).click()
 
@@ -172,7 +193,7 @@ def test_color_picker_in_fragment(app: Page):
         app.get_by_text("color_picker-in-fragment selection: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id(
+    get_color_picker(app, "Fragment Color Picker").get_by_test_id(
         "stColorPickerBlock"
     ).click()
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
@@ -203,9 +224,15 @@ def test_color_picker_width_examples(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that color picker elements with different width configurations are displayed correctly."""
-    color_pickers = themed_app.get_by_test_id("stColorPicker")
-
-    # Test width examples (these are the last 3 color picker elements)
-    assert_snapshot(color_pickers.nth(8), name="st_color_picker-width_content")
-    assert_snapshot(color_pickers.nth(9), name="st_color_picker-width_stretch")
-    assert_snapshot(color_pickers.nth(10), name="st_color_picker-width_100px")
+    assert_snapshot(
+        get_color_picker(themed_app, "Color picker with content width (default)"),
+        name="st_color_picker-width_content",
+    )
+    assert_snapshot(
+        get_color_picker(themed_app, "Color picker with stretch width"),
+        name="st_color_picker-width_stretch",
+    )
+    assert_snapshot(
+        get_color_picker(themed_app, "Color picker with 100px width"),
+        name="st_color_picker-width_100px",
+    )

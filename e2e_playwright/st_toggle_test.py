@@ -20,13 +20,15 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
+    expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     get_toggle,
 )
 
-TOGGLE_ELEMENTS = 15
+TOGGLE_ELEMENTS = 17
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -135,3 +137,46 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "toggle4")).to_be_visible()
+
+
+def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the toggle can be updated dynamically."""
+    dynamic_toggle = get_element_by_key(app, "dynamic_toggle_with_key")
+    expect(dynamic_toggle).to_be_visible()
+
+    expect(dynamic_toggle).to_contain_text("Initial dynamic toggle")
+
+    # Check that the initial toggle state is True
+    expect_prefixed_markdown(app, "Initial toggle state:", "True")
+
+    assert_snapshot(dynamic_toggle, name="st_toggle-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_toggle, "initial help")
+
+    # Click toggle -> state is False
+    click_toggle(app, "Initial dynamic toggle")
+    expect_prefixed_markdown(app, "Initial toggle state:", "False")
+
+    # Click toggle again -> state is True
+    click_toggle(app, "Initial dynamic toggle")
+    expect_prefixed_markdown(app, "Initial toggle state:", "True")
+
+    # Click the toggle to update the toggle props
+    click_toggle(app, "Update toggle props")
+
+    # new toggle is visible:
+    expect(dynamic_toggle).to_contain_text("Updated dynamic toggle")
+
+    # Check that the updated toggle state is still True.
+    expect_prefixed_markdown(app, "Updated toggle state:", "True")
+
+    dynamic_toggle.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_toggle, name="st_toggle-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_toggle, "updated help")
+
+    # Click the toggle
+    click_toggle(app, "Updated dynamic toggle")
+    expect_prefixed_markdown(app, "Updated toggle state:", "False")

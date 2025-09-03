@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -22,6 +24,7 @@ from e2e_playwright.shared.app_utils import (
     expect_markdown,
     fill_number_input,
     get_element_by_key,
+    get_number_input,
 )
 
 NUMBER_INPUT_COUNT = 17
@@ -31,77 +34,109 @@ def test_number_input_widget_display(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.number_input renders correctly."""
-    number_input_elements = themed_app.get_by_test_id("stNumberInput")
-    expect(number_input_elements).to_have_count(NUMBER_INPUT_COUNT)
+    expect(themed_app.get_by_test_id("stNumberInput")).to_have_count(NUMBER_INPUT_COUNT)
 
-    assert_snapshot(number_input_elements.nth(0), name="st_number_input-default")
-    assert_snapshot(number_input_elements.nth(1), name="st_number_input-value_1")
-    assert_snapshot(number_input_elements.nth(2), name="st_number_input-min_max")
-    assert_snapshot(number_input_elements.nth(3), name="st_number_input-step_2")
-    assert_snapshot(number_input_elements.nth(4), name="st_number_input-max_10")
-    assert_snapshot(number_input_elements.nth(5), name="st_number_input-disabled_true")
-    assert_snapshot(number_input_elements.nth(6), name="st_number_input-label_hidden")
     assert_snapshot(
-        number_input_elements.nth(7), name="st_number_input-label_collapsed"
-    )
-    assert_snapshot(number_input_elements.nth(8), name="st_number_input-on_change")
-    assert_snapshot(number_input_elements.nth(9), name="st_number_input-small_width")
-    assert_snapshot(number_input_elements.nth(10), name="st_number_input-value_none")
-    assert_snapshot(
-        number_input_elements.nth(11), name="st_number_input-value_none_min_1"
+        get_number_input(themed_app, "number input 1 (default)"),
+        name="st_number_input-default",
     )
     assert_snapshot(
-        number_input_elements.nth(12), name="st_number_input-markdown_label"
+        get_number_input(themed_app, "number input 2 (value=1)"),
+        name="st_number_input-value_1",
     )
-    assert_snapshot(number_input_elements.nth(13), name="st_number_input-emoji_icon")
-    assert_snapshot(number_input_elements.nth(14), name="st_number_input-material_icon")
-    assert_snapshot(number_input_elements.nth(15), name="st_number_input-width_200px")
-    assert_snapshot(number_input_elements.nth(16), name="st_number_input-width_stretch")
+    assert_snapshot(
+        get_number_input(themed_app, "number input 3 (min & max)"),
+        name="st_number_input-min_max",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 4 (step=2)"),
+        name="st_number_input-step_2",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 5 (max=10)"),
+        name="st_number_input-max_10",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 6 (disabled=True)"),
+        name="st_number_input-disabled_true",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 7 (label=hidden)"),
+        name="st_number_input-label_hidden",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 8 (label=collapsed)"),
+        name="st_number_input-label_collapsed",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "number_input_9"),
+        name="st_number_input-on_change",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 10 (small width)"),
+        name="st_number_input-small_width",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 11 (value=None)"),
+        name="st_number_input-value_none",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "number_input_12"),
+        name="st_number_input-value_none_min_1",
+    )
+    # Use regex to avoid matching full markdown label text
+    assert_snapshot(
+        get_number_input(themed_app, re.compile(r"^number input 13")),
+        name="st_number_input-markdown_label",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 14 - emoji icon"),
+        name="st_number_input-emoji_icon",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 15 - material icon"),
+        name="st_number_input-material_icon",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 16 (width=200px)"),
+        name="st_number_input-width_200px",
+    )
+    assert_snapshot(
+        get_number_input(themed_app, "number input 17 (width='stretch')"),
+        name="st_number_input-width_stretch",
+    )
 
 
 def test_help_tooltip_works(app: Page):
-    expect_help_tooltip(app, app.get_by_test_id("stNumberInput").nth(0), "Help text")
+    expect_help_tooltip(
+        app, get_number_input(app, "number input 1 (default)"), "Help text"
+    )
 
 
 def test_number_input_has_correct_default_values(app: Page):
     """Test that st.number_input has the correct initial values."""
-    markdown_elements = app.get_by_test_id("stMarkdown")
-    # 1 st.write for each number input value (inputs 1-12)
-    # + 1 extra st.write for number input 9 (on_change)
-    expect(markdown_elements).to_have_count(NUMBER_INPUT_COUNT - 4)
-
-    expected = [
-        "number input 1 (default) - value: 0.0",
-        "number input 2 (value=1) - value: 1",
-        "number input 3 (min & max) - value: 1",
-        "number input 4 (step=2) - value: 0",
-        "number input 5 (max=10) - value: 0",
-        "number input 6 (disabled=True) - value: 0.0",
-        "number input 7 (label=hidden) - value: 0.0",
-        "number input 8 (label=collapsed) - value: 0.0",
-        "number input 9 (on_change) - value: 0.0",
-        "number input 9 (on_change) - changed: False",
-        "number input 10 (small width) - value: 0",
-        "number input 11 (value=None) - value: None",
-        "number input 12 (value from state & min=1) - value: 10",
-    ]
-
-    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    expect_markdown(app, "number input 1 (default) - value: 0.0")
+    expect_markdown(app, "number input 2 (value=1) - value: 1")
+    expect_markdown(app, "number input 3 (min & max) - value: 1")
+    expect_markdown(app, "number input 4 (step=2) - value: 0")
+    expect_markdown(app, "number input 5 (max=10) - value: 0")
+    expect_markdown(app, "number input 6 (disabled=True) - value: 0.0")
+    expect_markdown(app, "number input 7 (label=hidden) - value: 0.0")
+    expect_markdown(app, "number input 8 (label=collapsed) - value: 0.0")
+    expect_markdown(app, "number input 9 (on_change) - value: 0.0")
+    expect_markdown(app, "number input 9 (on_change) - changed: False")
+    expect_markdown(app, "number input 10 (small width) - value: 0")
+    expect_markdown(app, "number input 11 (value=None) - value: None")
+    expect_markdown(app, "number input 12 (value from state & min=1) - value: 10")
 
 
 def test_number_input_shows_instructions_when_dirty(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.number_input shows the instructions correctly when dirty."""
-    first_number_input = app.get_by_label("number input 1 (default)")
-    first_number_input.fill("10")
-    # Find the container of the number input to snapshot
-    first_number_input_field = app.locator("[data-testid='stNumberInput']").filter(
-        has=first_number_input
-    )
-
-    assert_snapshot(first_number_input_field, name="st_number_input-input_instructions")
+    number_input_el = get_number_input(app, "number input 1 (default)")
+    number_input_el.locator("input").first.fill("10")
+    assert_snapshot(number_input_el, name="st_number_input-input_instructions")
 
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
@@ -112,59 +147,60 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
     """Test that st.number_input has the correct value on increment click."""
-    number_input_up_buttons = app.get_by_test_id("stNumberInput").get_by_test_id(
-        "stNumberInputStepUp"
-    )
-    # The small number input doesn't have the increment button
-    expect(number_input_up_buttons).to_have_count(NUMBER_INPUT_COUNT - 1)
-    for i, button in enumerate(number_input_up_buttons.all()):
-        if i not in [5, 9]:
-            button.click()
-            wait_for_app_run(app)
 
-    markdown_elements = app.get_by_test_id("stMarkdown")
+    def click_step_up(label: str) -> None:
+        el = get_number_input(app, label)
+        btn = el.get_by_test_id("stNumberInputStepUp").first
+        expect(btn).to_be_visible()
 
-    expected = [
-        "number input 1 (default) - value: 0.01",
-        "number input 2 (value=1) - value: 2",
-        "number input 3 (min & max) - value: 2",
-        "number input 4 (step=2) - value: 2",
-        "number input 5 (max=10) - value: 1",
-        "number input 6 (disabled=True) - value: 0.0",
-        "number input 7 (label=hidden) - value: 0.01",
-        "number input 8 (label=collapsed) - value: 0.01",
-        "number input 9 (on_change) - value: 0.01",
-        "number input 9 (on_change) - changed: True",
-        "number input 10 (small width) - value: 0",
-        "number input 11 (value=None) - value: None",
-        "number input 12 (value from state & min=1) - value: 11",
-    ]
+        # Force click if the button is disabled
+        btn.click(force=not btn.is_enabled())
+        wait_for_app_run(app)
 
-    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    click_step_up("number input 1 (default)")
+    click_step_up("number input 2 (value=1)")
+    click_step_up("number input 3 (min & max)")
+    click_step_up("number input 4 (step=2)")
+    click_step_up("number input 5 (max=10)")
+    click_step_up("number input 6 (disabled=True)")
+    click_step_up("number input 7 (label=hidden)")
+    click_step_up("number input 8 (label=collapsed)")
+    click_step_up("number input 9 (on_change)")
+    click_step_up("number input 12 (value from state & min=1)")
+
+    expect_markdown(app, "number input 1 (default) - value: 0.01")
+    expect_markdown(app, "number input 2 (value=1) - value: 2")
+    expect_markdown(app, "number input 3 (min & max) - value: 2")
+    expect_markdown(app, "number input 4 (step=2) - value: 2")
+    expect_markdown(app, "number input 5 (max=10) - value: 1")
+    expect_markdown(app, "number input 6 (disabled=True) - value: 0.0")
+    expect_markdown(app, "number input 7 (label=hidden) - value: 0.01")
+    expect_markdown(app, "number input 8 (label=collapsed) - value: 0.01")
+    expect_markdown(app, "number input 9 (on_change) - value: 0.01")
+    expect_markdown(app, "number input 9 (on_change) - changed: True")
+    expect_markdown(app, "number input 10 (small width) - value: 0")
+    expect_markdown(app, "number input 11 (value=None) - value: None")
+    expect_markdown(app, "number input 12 (value from state & min=1) - value: 11")
 
 
 def test_number_input_has_correct_value_on_arrow_up(app: Page):
     """Test that st.number_input has the correct value on arrow up."""
-    first_number_input_field = app.get_by_label("number input 1 (default)")
-    first_number_input_field.press("ArrowUp")
-
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
-        "number input 1 (default) - value: 0.01", use_inner_text=True
+    first_number_input_field = (
+        get_number_input(app, "number input 1 (default)").locator("input").first
     )
+    first_number_input_field.press("ArrowUp")
+    expect_markdown(app, "number input 1 (default) - value: 0.01")
 
 
 def test_number_input_has_correct_value_on_blur(app: Page):
     """Test that st.number_input has the correct value on blur."""
-
-    first_number_input_field = app.get_by_label("number input 1 (default)")
+    first_number_input_field = (
+        get_number_input(app, "number input 1 (default)").locator("input").first
+    )
     first_number_input_field.focus()
     first_number_input_field.fill("10")
     first_number_input_field.blur()
-
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
-        "number input 1 (default) - value: 10.0", use_inner_text=True
-    )
+    expect_markdown(app, "number input 1 (default) - value: 10.0")
 
 
 def test_number_input_typing_decimal_via_keyboard(app: Page):
@@ -183,43 +219,43 @@ def test_empty_number_input_behaves_correctly(
 ):
     """Test that st.number_input behaves correctly when empty."""
     # Enter 10 in the first empty input:
-    empty_number_input = app.get_by_test_id("stNumberInput").nth(10)
+    empty_number_input = get_number_input(app, "number input 11 (value=None)")
     empty_number_input_field = empty_number_input.locator("input").first
     empty_number_input_field.fill("10")
     empty_number_input_field.press("Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
-        "number input 11 (value=None) - value: 10.0", use_inner_text=True
-    )
+    expect_markdown(app, "number input 11 (value=None) - value: 10.0")
 
     assert_snapshot(empty_number_input, name="st_number_input-clearable_input")
 
     # Press escape to clear value:
-    empty_number_input.focus()
-    empty_number_input.press("Escape")
-    empty_number_input.press("Enter")
+    empty_number_input_field.focus()
+    empty_number_input_field.press("Escape")
+    empty_number_input_field.press("Enter")
 
     # Should be empty again:
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
-        "number input 11 (value=None) - value: None", use_inner_text=True
-    )
+    expect_markdown(app, "number input 11 (value=None) - value: None")
 
     # Check with second empty input, this one should be integer since the min_value was
     # set to an integer:
     empty_number_input_with_min = (
-        app.get_by_test_id("stNumberInput").nth(11).locator("input").first
+        get_number_input(app, "number input 12 (value from state & min=1)")
+        .locator("input")
+        .first
     )
     empty_number_input_with_min.fill("15")
     empty_number_input_with_min.press("Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
-        "number input 12 (value from state & min=1) - value: 15", use_inner_text=True
-    )
+    expect_markdown(app, "number input 12 (value from state & min=1) - value: 15")
 
 
 def test_number_input_does_not_allow_wheel_events(app: Page):
     """Test that st.number_input does not allow wheel events."""
-    number_input = app.locator(".stNumberInput input[type='number']").nth(1)
+    number_input = (
+        get_number_input(app, "number input 2 (value=1)")
+        .locator("input[type='number']")
+        .first
+    )
 
     # Click/focus needed to bring mouse to center of input
     number_input.click()
