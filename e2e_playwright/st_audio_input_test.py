@@ -14,6 +14,10 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
+import wave
+
 import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
@@ -418,8 +422,78 @@ def test_audio_input_widths(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(pixel_width_input, name="st_audio_input-width_300px")
 
 
-def test_audio_input_sample_rates(app: Page):
-    """Test audio_input with different sample rate configurations."""
+@pytest.mark.only_browser("chromium")
+def test_audio_input_sample_rates_recording(app: Page):
+    """Test that audio_input records at different sample rates correctly."""
+    app.context.grant_permissions(["microphone"])
+
+    # Test 48 kHz recording
+    high_quality_input = (
+        app.get_by_test_id("stAudioInput")
+        .filter(has=app.get_by_text("High Quality (48 kHz)"))
+        .first
+    )
+    expect(high_quality_input).to_be_visible()
+
+    # Record audio at 48 kHz
+    high_quality_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(2000)  # Record for 2 seconds
+    stop_recording(high_quality_input, app)
+    wait_for_app_run(app)
+
+    # Verify recording was created
+    expect(app.get_by_text("48 kHz recorded")).to_be_visible()
+
+    # Download and verify the sample rate
+    with app.expect_download() as download_info:
+        high_quality_input.get_by_role("button", name="Download as WAV").click()
+
+    download = download_info.value
+    temp_path = tempfile.mktemp(suffix=".wav")
+    download.save_as(temp_path)
+
+    try:
+        with wave.open(temp_path, "rb") as wav_file:
+            sample_rate = wav_file.getframerate()
+            # Verify it's 48 kHz
+            assert sample_rate == 48000, f"Expected 48000Hz, got {sample_rate}Hz"
+    finally:
+        os.unlink(temp_path)
+
+    # Test browser default (should be 44.1 or 48 kHz)
+    browser_default_input = (
+        app.get_by_test_id("stAudioInput")
+        .filter(has=app.get_by_text("Browser Default"))
+        .first
+    )
+
+    browser_default_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(2000)
+    stop_recording(browser_default_input, app)
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Browser default recorded")).to_be_visible()
+
+    with app.expect_download() as download_info:
+        browser_default_input.get_by_role("button", name="Download as WAV").click()
+
+    download = download_info.value
+    temp_path = tempfile.mktemp(suffix=".wav")
+    download.save_as(temp_path)
+
+    try:
+        with wave.open(temp_path, "rb") as wav_file:
+            sample_rate = wav_file.getframerate()
+            # Browser default is typically 44100 or 48000
+            assert sample_rate in [44100, 48000], (
+                f"Expected browser default (44100 or 48000Hz), got {sample_rate}Hz"
+            )
+    finally:
+        os.unlink(temp_path)
+
+
+def test_audio_input_sample_rates_display(app: Page):
+    """Test that audio_input widgets with different sample rates display correctly."""
     # Navigate to sample rate section
     sample_rate_header = app.get_by_role("heading", name="Sample Rate Tests")
     expect(sample_rate_header).to_be_visible()
