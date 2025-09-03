@@ -264,7 +264,16 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     label : str or Pattern[str]
         The label of the element to get.
     """
-    element = locator.get_by_test_id("stRadio").filter(has_text=label)
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # similar to multiselect/date input helpers.
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stRadio").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
 
