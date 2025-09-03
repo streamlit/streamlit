@@ -1,9 +1,3 @@
----
-description:
-globs: lib/streamlit/**/*.py
-alwaysApply: false
----
-
 # Streamlit Lib Python Guide
 
 Tips and guidelines specific to the development of the Streamlit Python library,

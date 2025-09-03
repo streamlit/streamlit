@@ -1,9 +1,3 @@
----
-description:
-globs: *.proto
-alwaysApply: false
----
-
 # Protobuf
 
 ## Protobuf Compatibility

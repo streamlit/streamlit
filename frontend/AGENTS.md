@@ -1,15 +1,47 @@
----
-description:
-globs: *.ts,*.tsx
-alwaysApply: false
----
+# TypeScript Development Guide
 
-# TypeScript Test Guide
+- TypeScript: v5
+- Linter: eslint v9
+- Formatter: prettier v3
+- Framework: React v18
+- Styling: @emotion/styled v11
+- Build tool: vite v6
+- Package manager: yarn v4 with workspaces
+
+## Key TypeScript Principles
+
+- Prefer functional, declarative programming.
+- Prefer iteration and modularization over duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading).
+- Use the Receive an Object, Return an Object (RORO) pattern.
+- Ensure functions have explicit return types.
+
+## Key Frontend Principles
+
+- Leverage all of best practices of React 18.
+- Write performant frontend code.
+- Ensure referential stability by leveraging React Hooks.
+- Prefix event handlers with "handle" (eg: handleClick, handleSubmit).
+- Favor leveraging @emotion/styled instead of inline styles.
+- Leverage object style notation in Emotion.
+- All styled components begin with the word `Styled` to indicate it's a styled component.
+- Utilize props in styled components to display elements that may have some interactivity.
+  - Avoid the need to target other components.
+- When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
+- Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
+
+## Yarn Workspaces
+
+- Project Structure: Monorepo managed with Yarn Workspaces.
+- Packages: `app, connection, lib, protobuf, typescript-config, utils`
+- Package-specific scripts are executed within their respective directories.
+
+## TypeScript Test Guide
 
 - Test Framework: Vitest
 - UI Testing Library: React Testing Library (RTL)
 
-## Key Principles
+### Key Principles
 
 - Coverage: Implement both unit and integration tests (using RTL where applicable).
 - Robustness: Test edge cases and error handling scenarios.
@@ -17,7 +49,7 @@ alwaysApply: false
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
-## Running Tests
+### Running Tests
 
 - Yarn test commands must be run from the `<GIT_ROOT>/frontend` directory.
 
@@ -25,7 +57,7 @@ alwaysApply: false
 - Run Specific File: `yarn test lib/src/components/path/component.test.tsx`
 - Run Specific Test: `yarn test -t "the test name" lib/src/components/path/component.test.tsx`
 
-## React Testing Library best practices
+### React Testing Library best practices
 
 Cheat sheet for queries from RTL:
 
@@ -42,7 +74,7 @@ Cheat sheet for queries from RTL:
 - User interactions should utilize the `userEvent` library.
 - Tests should be written in a way that asserts user behavior, not implementation details.
 
-### Query Priority Order
+#### Query Priority Order
 
 Based on the Guiding Principles, your test should resemble how users interact with your code (component, page, etc.) as much as possible. With this in mind, we recommend this order of priority:
 

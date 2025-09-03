@@ -1,9 +1,3 @@
----
-description:
-globs: *.py
-alwaysApply: false
----
-
 # Python Development Guide
 
 - Supported Python versions: 3.9 - 3.13

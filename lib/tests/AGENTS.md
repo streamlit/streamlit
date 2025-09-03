@@ -1,9 +1,3 @@
----
-description:
-globs: lib/tests/**/*.py
-alwaysApply: false
----
-
 # Python Unit Test Guide
 
 We use the unit tests to cover internal behavior that can work without the web / backend counterpart.
