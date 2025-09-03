@@ -1,3 +1,4 @@
+# Autofix workflow makes it easy to apply automated fixes to PRs
 name: Autofix
 
 on:
