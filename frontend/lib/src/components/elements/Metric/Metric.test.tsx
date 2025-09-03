@@ -140,7 +140,7 @@ describe("Metric element", () => {
       "color: rgb(163, 168, 184);"
     )
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(128, 132, 149, 0.1);"
+      "background-color: rgba(49, 51, 63, 0.1);"
     )
   })
 
@@ -412,7 +412,7 @@ describe("Metric element", () => {
           expect.objectContaining({
             mark: expect.objectContaining({
               type: "area",
-              opacity: 0.2,
+              opacity: 1,
               line: expect.objectContaining({
                 strokeWidth: 2,
                 strokeCap: "round",

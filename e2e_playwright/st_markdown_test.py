@@ -80,13 +80,13 @@ def test_displays_individual_markdowns(app: Page):
     rainbow_background = markdown_elements.nth(9).locator("span").first
     green_background = markdown_elements.nth(10).locator("span").first
 
-    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 225, 0.1)")
+    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 255, 0.1)")
     expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
     expect(rainbow_background).to_have_css(
         "background-image",
-        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), "
-        "rgba(250, 202, 43, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), "
-        "rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
+        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 164, 33, 0.1), "
+        "rgba(255, 255, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 255, 0.1), "
+        "rgba(154, 93, 255, 0.1), rgba(88, 63, 132, 0.1))",
     )
     expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
 

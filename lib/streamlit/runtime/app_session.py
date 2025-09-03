@@ -811,6 +811,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
