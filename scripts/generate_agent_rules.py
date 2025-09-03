@@ -57,7 +57,8 @@ applyTo: "{globs}"
 {agents_md_content}
 """
 
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{agents_md_content}"""
+GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{agents_md_content}
+"""
 
 
 class AgentRuleFile(TypedDict):
