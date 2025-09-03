@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -68,7 +68,9 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse directories")
+    expect(
+      within(button).getByTestId("stMarkdownContainer")
+    ).toHaveTextContent("Upload a directory")
   })
 
   it("renders regular file upload button text when not directory mode", () => {
@@ -78,7 +80,9 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse files")
+    expect(
+      within(button).getByTestId("stMarkdownContainer")
+    ).toHaveTextContent("Upload files")
   })
 
   it("sets webkitdirectory attribute for directory uploads", () => {

@@ -514,7 +514,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const browseButton = screen.getByRole("button", {
-      name: "Browse directories",
+      name: /upload a directory/i,
     })
     expect(browseButton).toBeVisible()
   })
@@ -605,9 +605,10 @@ describe("FileUploader widget tests", () => {
     })
     render(<FileUploader {...props} />)
 
-    // Check that browse button shows directory text
-    const browseButton = screen.getByText("Browse directories")
-    expect(browseButton).toBeVisible()
+    // Check that button shows directory text
+    expect(
+      screen.getByRole("button", { name: /upload a directory/i })
+    ).toBeVisible()
 
     // Verify dropzone has webkitdirectory attribute
     const input = screen.getByTestId("stFileUploaderDropzoneInput")

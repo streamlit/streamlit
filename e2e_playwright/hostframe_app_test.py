@@ -105,9 +105,7 @@ def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
     expect(file_uploader.get_by_test_id("stWidgetLabel")).to_have_attribute(
         "disabled", ""
     )
-    expect(
-        file_uploader.get_by_role("button").get_by_text("Browse files")
-    ).to_be_disabled()
+    expect(file_uploader.get_by_role("button")).to_be_disabled()
 
     # Color picker
     color_picker = frame_locator.get_by_test_id("stColorPicker")

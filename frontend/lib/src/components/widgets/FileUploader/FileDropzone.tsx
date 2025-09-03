@@ -21,7 +21,10 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
+  DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { getUploadDescription } from "~lib/components/widgets/ChatInput/fileUpload/fileUploadUtils"
+import { AcceptFileValue } from "~lib/util/utils"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 import {
@@ -64,6 +67,12 @@ const FileDropzone = ({
         multiple: multiple || !!acceptDirectory,
       })
 
+      const acceptFile: AcceptFileValue = acceptDirectory
+        ? AcceptFileValue.Directory
+        : multiple
+          ? AcceptFileValue.Multiple
+          : AcceptFileValue.Single
+
       return (
         <StyledFileDropzoneSection
           {...getRootProps()}
@@ -90,7 +99,11 @@ const FileDropzone = ({
               disabled={disabled}
               size={BaseButtonSize.SMALL}
             >
-              {acceptDirectory ? "Browse directories" : "Browse files"}
+              <DynamicButtonLabel
+                icon=":material/upload:"
+                iconSize="lg"
+                label={`Upload ${getUploadDescription(acceptFile)}`}
+              />
             </BaseButton>
           </StyledButtonNoWrapContainer>
         </StyledFileDropzoneSection>

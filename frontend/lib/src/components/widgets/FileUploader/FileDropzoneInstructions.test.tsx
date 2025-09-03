@@ -43,7 +43,7 @@ describe("FileDropzoneInstructions widget", () => {
     const props = getProps({ maxSizeBytes: 2000 })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText("Limit 2KB per file")).toBeInTheDocument()
+    expect(screen.getByText("2KB per file")).toBeInTheDocument()
   })
 
   it("renders without extensions", () => {
@@ -69,7 +69,7 @@ describe("FileDropzoneInstructions widget", () => {
     render(<FileDropzoneInstructions {...props} />)
 
     const container = screen.getByTestId("stFileUploaderDropzoneInstructions")
-    expect(container).toHaveTextContent("Drag and drop directories here")
+    expect(container).toHaveTextContent("Drag and drop directory here")
   })
 
   it("shows regular file upload instructions", () => {
@@ -91,7 +91,7 @@ describe("FileDropzoneInstructions widget", () => {
 
     // Directory mode shows directory instructions regardless of multiple flag
     const container = screen.getByTestId("stFileUploaderDropzoneInstructions")
-    expect(container).toHaveTextContent("Drag and drop directories here")
+    expect(container).toHaveTextContent("Drag and drop directory here")
   })
 
   it("shows file type restrictions with directory upload", () => {
@@ -111,6 +111,6 @@ describe("FileDropzoneInstructions widget", () => {
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText("Limit 5KB per file")).toBeVisible()
+    expect(screen.getByText("5KB per file")).toBeVisible()
   })
 })

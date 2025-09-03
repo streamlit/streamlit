@@ -151,7 +151,7 @@ def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(iframe, name="st_pdf-basic_functionality")
 
 
-def test_st_pdf_file_upload_no_file(app: Page, assert_snapshot: ImageCompareFunction):
+def test_st_pdf_file_upload_no_file(app: Page):
     """Test st.pdf with file upload when no file is uploaded."""
     _select_pdf_scenario(app, "fileUpload")
 
@@ -160,10 +160,6 @@ def test_st_pdf_file_upload_no_file(app: Page, assert_snapshot: ImageCompareFunc
 
     # Should not display any PDF when no file is uploaded
     expect(app.locator("iframe")).not_to_be_attached()
-
-    # Take snapshot of just the file uploader state
-    file_uploader = app.get_by_test_id("stFileUploader")
-    assert_snapshot(file_uploader, name="st_pdf-file_upload_no_file")
 
 
 def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
