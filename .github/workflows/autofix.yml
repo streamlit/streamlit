@@ -55,7 +55,7 @@ jobs:
           echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
 
       - name: Commit changes to new branch
-        if: steps.git-check.outputs.changes == 'true'
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config --global user.email "core+streamlitbot-github@streamlit.io"
           git config --global user.name "Streamlit Bot"
@@ -66,7 +66,7 @@ jobs:
           git push --set-upstream origin "$fix_branch"
 
       - name: Create PR with autofix changes
-        if: steps.git-check.outputs.changes == 'true'
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -77,8 +77,13 @@ jobs:
             --body $'## Describe your changes\n\nAutomated fixes for #${{ github.event.pull_request.number }} created via the autofix CI workflow. The autofix workflow is triggered by adding the `autofix` label to a PR. This runs formatting, linting, pre-commit, and other automatically fixable tasks (see `make autofix`).\n\nThis PR targets a feature branch and can be merged without review approval.'
 
       - name: Remove 'autofix' label from source PR
-        if: steps.git-check.outputs.changes == 'true'
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
+
+      - name: Show notices for fork PRs
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::notice title=Autofix skipped for fork PR::This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so autofix cannot push changes automatically. Please run 'make autofix' locally and push the results, or a maintainer can apply fixes."
