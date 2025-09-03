@@ -210,8 +210,8 @@ const resolveBgColor = (
 ): string => {
   if (configBackgroundColor) return configBackgroundColor
   if (configMainColor) {
-    const opacity = isLightTheme ? 0.9 : 0.8
-    return transparentize(configMainColor, opacity)
+    const transparency = isLightTheme ? 0.9 : 0.8
+    return transparentize(configMainColor, transparency)
   }
   return defaultBackgroundColor
 }
