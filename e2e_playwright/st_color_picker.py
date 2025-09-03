@@ -28,10 +28,14 @@ st.write("Color 2", c2)
 c3 = st.color_picker("Disabled", disabled=True)
 st.write("Color 3", c3)
 
-c4 = st.color_picker("Hidden Label", label_visibility="hidden")
+c4 = st.color_picker(
+    "Hidden Label", label_visibility="hidden", key="color_picker_hidden"
+)
 st.write("Color 4", c4)
 
-c5 = st.color_picker("Collapsed Label", label_visibility="collapsed")
+c5 = st.color_picker(
+    "Collapsed Label", label_visibility="collapsed", key="color_picker_collapsed"
+)
 st.write("Color 5", c5)
 
 with st.form(key="my_form", clear_on_submit=True):
@@ -54,7 +58,10 @@ def test_fragment():
 
 test_fragment()
 
-st.color_picker(":material/check: :rainbow[Fancy] _**markdown** `label` _support_")
+st.color_picker(
+    ":material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="color_picker_markdown_label",
+)
 
 # Width examples
 st.color_picker(

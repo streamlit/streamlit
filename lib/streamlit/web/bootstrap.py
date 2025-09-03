@@ -21,7 +21,6 @@ import sys
 from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
-from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
@@ -101,7 +100,6 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 
 
 def _on_server_start(server: Server) -> None:
-    _maybe_print_old_git_warning(server.main_script_path)
     _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
@@ -226,35 +224,6 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("  May you create awesome apps!")
         cli_util.print_to_cli("")
         cli_util.print_to_cli("")
-
-
-def _maybe_print_old_git_warning(main_script_path: str) -> None:
-    """If our script is running in a Git repo, and we're running a very old
-    Git version, print a warning that Git integration will be unavailable.
-    """
-    repo = GitRepo(main_script_path)
-    if (
-        not repo.is_valid()
-        and repo.git_version is not None
-        and repo.git_version < MIN_GIT_VERSION
-    ):
-        git_version_string = ".".join(str(val) for val in repo.git_version)
-        min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
-        cli_util.print_to_cli("")
-        cli_util.print_to_cli("  Git integration is disabled.", fg="yellow", bold=True)
-        cli_util.print_to_cli("")
-        cli_util.print_to_cli(
-            f"  Streamlit requires Git {min_version_string} or later, "
-            f"but you have {git_version_string}.",
-            fg="yellow",
-        )
-        cli_util.print_to_cli(
-            "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
-            fg="yellow",
-        )
-        cli_util.print_to_cli(
-            "  To enable this feature, please update Git.", fg="yellow"
-        )
 
 
 def load_config_options(flag_options: dict[str, Any]) -> None:
