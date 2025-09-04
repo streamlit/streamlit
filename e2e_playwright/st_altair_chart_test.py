@@ -43,15 +43,14 @@ def test_altair_chart_displays_correctly(
         charts.nth(3), name="st_altair_chart-scatter_chart_overwritten_theme"
     )
     assert_snapshot(charts.nth(4), name="st_altair_chart-bar_chart_overwritten_theme")
-    assert_snapshot(
-        charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme"
-    )
-    assert_snapshot(
-        charts.nth(6), name="st_altair_chart-grouped_bar_chart_streamlit_theme"
-    )
     # TODO(lukasmasuch): Temporarily disabled because of flickering in webkit & chromium.
-    # assert_snapshot(charts.nth(7), name="st_altair_chart-grouped_use_container_width_default_theme")  # noqa: ERA001
-
+    # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme")  # noqa: ERA001
+    assert_snapshot(
+        charts.nth(5), name="st_altair_chart-grouped_bar_chart_streamlit_theme"
+    )
+    assert_snapshot(
+        charts.nth(6), name="st_altair_chart-grouped_use_container_width_default_theme"
+    )
     assert_snapshot(
         charts.nth(7), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
     )
