@@ -380,7 +380,6 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
 default-src 'none';
 worker-src blob:;
 form-action 'none';
-upgrade-insecure-requests;
 frame-ancestors {fake_iframe_server_origin};
 frame-src data: {app_url}/_stcore/component/ {app_url}/component/;
 img-src 'self' https: data: blob:;
