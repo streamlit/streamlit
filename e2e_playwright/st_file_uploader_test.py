@@ -332,8 +332,13 @@ def test_uploads_directory_with_multiple_files(app: Page):
 
     uploader_index = 3  # Directory uploader index
 
+    file_uploader_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(
+        uploader_index
+    )
+    expect(file_uploader_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_uploader_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=[temp_dir])
@@ -350,6 +355,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
 
     # Test deleting files from directory upload
     delete_buttons = app.get_by_test_id("stFileUploaderDeleteBtn")
+    expect(delete_buttons).to_be_visible()
     delete_buttons.first.click()
     wait_for_app_run(app)
 
