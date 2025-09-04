@@ -23,7 +23,6 @@ from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_
 from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
-    reset_hovering,
 )
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
@@ -373,7 +372,6 @@ def _test_csv_download(
     click_enter_on_file_picker: bool = False,
 ):
     # Reset current hovering to reduce potential flakiness:
-    reset_hovering(page)
     dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
     expect(dataframe_element).to_be_visible()
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
