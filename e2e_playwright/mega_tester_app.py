@@ -202,7 +202,8 @@ st.caption("st.caption", help=help_text)
 st.code("# st.code\na = 1234")
 st.code("# st.code with line numbers\na = 1234", line_numbers=True)
 st.code(
-    '# st.code with line wrapping\na = "This is a very very very very very very very very very very very very long string"',
+    '# st.code with line wrapping\na = "This is a very very very very very very very very very '
+    'very very very long string"',
     wrap_lines=True,
 )
 with st.echo():
