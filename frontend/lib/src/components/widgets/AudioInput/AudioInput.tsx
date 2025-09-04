@@ -231,11 +231,8 @@ const AudioInput: React.FC<Props> = ({
       setRecordingUrl(null)
       wavesurfer.empty()
       if (deleteFile) {
-        uploadClient.deleteFile(deleteFileUrl).catch(error => {
-          // Log error but don't fail the clear operation
-          if (error) {
-            // Silently handle deletion errors as they're not critical
-          }
+        uploadClient.deleteFile(deleteFileUrl).catch(() => {
+          // Silently handle deletion errors as they're not critical
         })
       }
       setDeleteFileUrl(null)
@@ -390,11 +387,9 @@ const AudioInput: React.FC<Props> = ({
 
   const onClickPlayPause = useCallback(() => {
     if (wavesurfer) {
-      void wavesurfer.playPause().catch(error => {
+      void wavesurfer.playPause().catch(() => {
         // Handle playback errors
-        if (error) {
-          setIsError(true)
-        }
+        setIsError(true)
       })
       // This is because we want the time to be the duration of the audio when they stop recording,
       // but once they start playing it, we want it to be the current time. So, once they start playing it
