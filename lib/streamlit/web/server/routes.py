@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, cast
 
 import tornado.web
 
@@ -28,6 +28,11 @@ from streamlit.web.server.server_util import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Sequence
+
+
+NO_CACHE_SUFFIXES: Final = (".html", "manifest.json")
+
+STATIC_ASSET_CACHE_MAX_AGE: Final = 31536000
 
 
 def allow_all_cross_origin_requests() -> bool:
@@ -69,13 +74,16 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         """
 
         is_index_url = len(path) == 0
-        if is_index_url or path.endswith((".html", "manifest.json")):
+        if is_index_url or path.endswith(NO_CACHE_SUFFIXES):
             self.set_header("Cache-Control", "no-cache")
         else:
             # For all other static files, we set a long cache time.
             # This is because these files are versioned with a hash in their name,
             # so they can be cached indefinitely.
-            self.set_header("Cache-Control", "public, immutable, max-age=31536000")
+            self.set_header(
+                "Cache-Control",
+                f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE}",
+            )
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         try:
