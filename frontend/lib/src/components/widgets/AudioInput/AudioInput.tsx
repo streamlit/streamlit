@@ -335,6 +335,7 @@ const AudioInput: React.FC<Props> = ({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       cursorWidth: CURSOR_WIDTH,
+      interact: true,
       // Don't set URL here - we'll load it separately
     })
 
@@ -371,6 +372,8 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => {
     if (wavesurfer && recordingUrl) {
       void wavesurfer.load(recordingUrl)
+      // Ensure the waveform is interactive after loading
+      wavesurfer.setOptions({ interact: true })
     }
   }, [wavesurfer, recordingUrl])
 
@@ -381,6 +384,7 @@ const AudioInput: React.FC<Props> = ({
           ? blend(theme.colors.fadedText40, theme.colors.secondaryBg)
           : theme.colors.primary,
         progressColor: theme.colors.bodyText,
+        interact: true,
       })
     }
   }, [theme, previousTheme, recordingUrl, wavesurfer])
@@ -419,7 +423,12 @@ const AudioInput: React.FC<Props> = ({
 
     try {
       // Use WaveSurfer's record plugin for visualization
-      if (recordPluginRef.current) {
+      if (recordPluginRef.current && wavesurfer) {
+        // Set recording colors when starting to record
+        wavesurfer.setOptions({
+          waveColor: theme.colors.primary,
+        })
+
         // Prepare audio constraints for getUserMedia
         // Sample rate is set here, not in MediaRecorder options
         const audioConstraints: MediaTrackConstraints = targetSampleRate
@@ -452,6 +461,8 @@ const AudioInput: React.FC<Props> = ({
     setRecordingTime,
     hasNoMicPermissions,
     targetSampleRate,
+    wavesurfer,
+    theme.colors.primary,
   ])
 
   const stopRecording = useCallback(async () => {
@@ -472,6 +483,16 @@ const AudioInput: React.FC<Props> = ({
           transcodeAndUploadFile(blob)
             .then(() => {
               recordedBlobRef.current = null
+              // Update colors to playback state after recording
+              if (wavesurfer) {
+                wavesurfer.setOptions({
+                  waveColor: blend(
+                    theme.colors.fadedText40,
+                    theme.colors.secondaryBg
+                  ),
+                  progressColor: theme.colors.bodyText,
+                })
+              }
               resolve()
             })
             .catch(error => {
@@ -496,7 +517,7 @@ const AudioInput: React.FC<Props> = ({
         reject(err instanceof Error ? err : new Error(String(err)))
       }
     })
-  }, [transcodeAndUploadFile])
+  }, [transcodeAndUploadFile, wavesurfer, theme])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
