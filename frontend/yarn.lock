@@ -3900,7 +3900,7 @@ __metadata:
     react-responsive-carousel: "npm:^3.2.23"
     react-syntax-highlighter: "npm:^15.6.3"
     react-webcam: "npm:7.2.0"
-    react-window: "npm:^1.8.11"
+    react-window: "npm:^2.0.0"
     rehype-katex: "npm:^7.0.1"
     rehype-raw: "npm:^7.0.0"
     remark-directive: "npm:^4.0.0"
@@ -17287,19 +17287,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-window@npm:^1.8.11":
-  version: 1.8.11
-  resolution: "react-window@npm:1.8.11"
-  dependencies:
-    "@babel/runtime": "npm:^7.0.0"
-    memoize-one: "npm:>=3.1.1 <6"
-  peerDependencies:
-    react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10c0/5ae8da1bc5c47d8f0a428b28a600256e2db511975573e52cb65a9b27ed1a0e5b9f7b3bee5a54fb0da93956d782c24010be434be451072f46ba5a89159d2b3944
-  languageName: node
-  linkType: hard
-
 "react-window@npm:^1.8.5":
   version: 1.8.10
   resolution: "react-window@npm:1.8.10"
@@ -17310,6 +17297,16 @@ __metadata:
     react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
     react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
   checksum: 10c0/eda9afb667d9784513dcc2755b65edf3a1412e7877975322993c1382908aaef0c0b948b7e3b2d705e353306556274d90f7ab19ac40aef2184fa39d4c1e2232ea
+  languageName: node
+  linkType: hard
+
+"react-window@npm:^2.0.0":
+  version: 2.0.2
+  resolution: "react-window@npm:2.0.2"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  checksum: 10c0/017260e40c60cfa3d34c74358e48dfb8df61d1f5e0ae2413f875a5ebad4caf59de678756e5f45574fa4dcc741e26fb0a3873bc614d23fd4d2da54948c29ae078
   languageName: node
   linkType: hard
 
