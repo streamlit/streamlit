@@ -1,7 +1,5 @@
 ---
-description:
-globs: **/*.py
-alwaysApply: false
+applyTo: "**/*.py"
 ---
 
 # Python Development Guide
