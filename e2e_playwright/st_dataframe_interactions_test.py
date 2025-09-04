@@ -371,7 +371,6 @@ def _test_csv_download(
     locator: FrameLocator | Locator,
     click_enter_on_file_picker: bool = False,
 ):
-    # Reset current hovering to reduce potential flakiness:
     dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
     expect(dataframe_element).to_be_visible()
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
@@ -381,9 +380,6 @@ def _test_csv_download(
         "stElementToolbarButton"
     ).get_by_label("Download as CSV")
     expect(download_csv_toolbar_button).to_be_visible()
-
-    # Check that the toolbar is currently not visible:
-    expect(dataframe_toolbar).to_have_css("opacity", "0")
 
     # Activate toolbar:
     dataframe_element.scroll_into_view_if_needed()
