@@ -20,7 +20,11 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+    get_element_by_key,
+    reset_hovering,
+)
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     click_on_cell,
@@ -368,6 +372,8 @@ def _test_csv_download(
     locator: FrameLocator | Locator,
     click_enter_on_file_picker: bool = False,
 ):
+    # Reset current hovering to reduce potential flakiness:
+    reset_hovering(page)
     dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
     expect(dataframe_element).to_be_visible()
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
@@ -376,6 +382,7 @@ def _test_csv_download(
     download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"
     ).get_by_label("Download as CSV")
+    expect(download_csv_toolbar_button).to_be_visible()
 
     # Check that the toolbar is currently not visible:
     expect(dataframe_toolbar).to_have_css("opacity", "0")
