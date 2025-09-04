@@ -285,21 +285,11 @@ const AudioInput: React.FC<Props> = ({
   const initializeRecordPlugin = useCallback(() => {
     if (!wavesurfer || recordPluginRef.current) return
 
-    // Initialize the Record plugin with sample rate if specified
+    // Initialize the Record plugin
     const recordOptions: Record<string, unknown> = {
       renderRecordedAudio: false, // Don't pre-render waveform to avoid layout shift
       scrollingWaveform: false,
       mimeType: "audio/webm", // Use WebM for better browser support
-    }
-
-    // Add sample rate constraint if specified
-    if (targetSampleRate) {
-      recordOptions.mediaRecorderOptions = {
-        audioBitsPerSecond: targetSampleRate * 16, // 16-bit audio
-      }
-      recordOptions.audioContext = {
-        sampleRate: targetSampleRate,
-      }
     }
 
     try {
@@ -330,7 +320,7 @@ const AudioInput: React.FC<Props> = ({
         setHasNoMicPermissions(true)
       }
     }
-  }, [wavesurfer, targetSampleRate, setRecordingTime])
+  }, [wavesurfer, setRecordingTime])
 
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
@@ -435,7 +425,18 @@ const AudioInput: React.FC<Props> = ({
     try {
       // Use WaveSurfer's record plugin for visualization
       if (recordPluginRef.current) {
-        await recordPluginRef.current.startRecording()
+        // Prepare audio constraints for getUserMedia
+        // Sample rate is set here, not in MediaRecorder options
+        const audioConstraints: MediaTrackConstraints = targetSampleRate
+          ? {
+              sampleRate: { ideal: targetSampleRate },
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            }
+          : {} // Default constraints
+
+        await recordPluginRef.current.startRecording(audioConstraints)
         setRecordingTime("00:00")
         forceRerender()
       } else if (!hasNoMicPermissions) {
@@ -455,6 +456,7 @@ const AudioInput: React.FC<Props> = ({
     hasRequestedMicPermissions,
     setRecordingTime,
     hasNoMicPermissions,
+    targetSampleRate,
   ])
 
   const stopRecording = useCallback(async () => {
