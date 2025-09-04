@@ -258,24 +258,54 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
     # If values in a column are not of the same type, Arrow
     # serialization would fail. Thus, we need to cast all values
     # of the dataframe to strings before assigning them display values.
-    new_df = df.astype(str)
 
+    new_df = df.astype(str)
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
-    if "body" in styles:
-        rows = styles["body"]
-        for row in rows:
-            for cell in row:
-                if "id" in cell and (match := cell_selector_regex.match(cell["id"])):
-                    r, c = map(int, match.groups())
+    updates_by_col: dict[int, list[tuple[int, str]]] = {}
+    for row in styles.get("body", []):
+        for cell in row:
+            cell_id = cell.get("id")
+            if not cell_id:
+                continue
+            match = cell_selector_regex.match(cell_id)
+            if not match:
+                continue
+            row_idx, col_idx = map(int, match.groups())
+
+            display_value = cell.get("display_value")
+            updates_by_col.setdefault(col_idx, []).append(
+                (
+                    row_idx,
+                    str(display_value.value)
                     # Check if the display value is an Enum type. Enum values need to be
                     # converted to their `.value` attribute to ensure proper serialization
-                    # and display logic.
-                    if isinstance(cell["display_value"], Enum):
-                        new_df.iat[r, c] = str(cell["display_value"].value)
-                    else:
-                        # It's important to use .iat[] here because .iloc[]
-                        # is a lot slower which can have a significant impact on performance
-                        # for large dataframes.
-                        new_df.iat[r, c] = str(cell["display_value"])
+                    #                 # and display logic.
+                    if isinstance(display_value, Enum)
+                    else str(display_value),
+                )
+            )
+
+    for col_idx, pairs in updates_by_col.items():
+        row_idx, vals = zip(*pairs)
+        new_df.iloc[list(row_idx), col_idx] = list(vals)
+
+    # new_df = df.astype(str)
+    # cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
+    # if "body" in styles:
+    #     rows = styles["body"]
+    #     for row in rows:
+    #         for cell in row:
+    #             if "id" in cell and (match := cell_selector_regex.match(cell["id"])):
+    #                 r, c = map(int, match.groups())
+    #                 # Check if the display value is an Enum type. Enum values need to be
+    #                 # converted to their `.value` attribute to ensure proper serialization
+    #                 # and display logic.
+    #                 if isinstance(cell["display_value"], Enum):
+    #                     new_df.iat[r, c] = str(cell["display_value"].value)
+    #                 else:
+    #                     # It's important to use .iat[] here because .iloc[]
+    #                     # is a lot slower which can have a significant impact on performance
+    #                     # for large dataframes.
+    #                     new_df.iat[r, c] = str(cell["display_value"])
 
     return new_df
