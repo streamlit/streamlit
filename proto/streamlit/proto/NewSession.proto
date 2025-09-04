@@ -197,7 +197,16 @@ message CustomThemeConfig {
   optional string violet_color = 43;
   optional string gray_color = 44;
 
-  // Next ID: 45
+  // Background color configs:
+  optional string red_background_color = 45;
+  optional string orange_background_color = 46;
+  optional string yellow_background_color = 47;
+  optional string blue_background_color = 48;
+  optional string green_background_color = 49;
+  optional string violet_background_color = 50;
+  optional string gray_background_color = 51;
+
+  // Next ID: 52
 }
 
 message FontFace {
