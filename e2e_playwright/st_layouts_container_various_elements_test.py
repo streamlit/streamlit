@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key
 
 CONTAINER_KEYS = [
@@ -44,7 +44,6 @@ def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
-    wait_for_app_run(app)
 
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
@@ -55,7 +54,6 @@ def test_layouts_container_various_elements(
 @pytest.mark.skip_browser("firefox")
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for the container with map in st_layouts_container_various_elements.py."""
-    wait_for_app_run(app)
 
     # Wait for map elements to load
     map_elements = app.get_by_test_id("stDeckGlJsonChart")
@@ -75,7 +73,6 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
-    wait_for_app_run(app)
     expect(app.get_by_test_id("stExpander")).to_have_count(3)
 
     for container_key in CONTAINER_KEYS_WITH_EXPANDERS:
@@ -85,11 +82,9 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         # Get the first (and only) expander in this container
         container_expanders = container.get_by_test_id("stExpander")
         expander = container_expanders.first
+        expect(expander).to_be_visible()
         expander.click()
-
-        # Wait for charts to load.
-        wait_for_app_run(app)
-        app.wait_for_timeout(500)
+        app.wait_for_timeout(2000)
 
         assert_snapshot(
             container,
