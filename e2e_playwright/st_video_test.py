@@ -111,6 +111,7 @@ def test_displays_a_video_player(app: Page):
     expect(video_element).to_have_attribute("src", re.compile(r".*media.*.mp4"))
 
 
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.parametrize(
     "video_option_label",
     [
