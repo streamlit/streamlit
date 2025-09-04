@@ -178,7 +178,6 @@ def test_video_end_time_loop(app: Page, video_option_label: str):
     wait_until(app, lambda: 36 < video_element.evaluate("el => el.currentTime") < 38)
 
 
-@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_autoplay(app: Page):
     """Test that `st.video` autoplay property works correctly."""
     video_element = _select_video_to_show(app, "webm video with autoplay")
@@ -203,7 +202,6 @@ def test_video_muted_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", False)
 
 
-@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_remount_no_autoplay(app: Page):
     """Test that `st.video` remounts correctly without autoplay."""
     video_element = _select_video_to_show(app, "webm video with autoplay")
