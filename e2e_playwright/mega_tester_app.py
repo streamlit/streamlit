@@ -686,12 +686,17 @@ st.video(
 )
 
 "st.pdf"
-EXAMPLE_PDF_PATH = TEST_ASSETS_DIR / "sample.pdf"
-st.pdf(
-    EXAMPLE_PDF_PATH
-    if EXAMPLE_PDF_PATH.is_file()
-    else "https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf"
-)
+# TODO: st.pdf is not compatible with the current CSP / iframe configuration
+# within our tests:
+show_pdf = st.toggle("Show pdf", False)
+if show_pdf:
+    EXAMPLE_PDF_PATH = TEST_ASSETS_DIR / "sample.pdf"
+
+    st.pdf(
+        EXAMPLE_PDF_PATH
+        if EXAMPLE_PDF_PATH.is_file()
+        else "https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf"
+    )
 
 
 "## Layouts and containers"

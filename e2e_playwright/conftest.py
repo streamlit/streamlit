@@ -451,8 +451,8 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 else ""
             }
                         title="Iframed Streamlit App"
-                        allow="clipboard-write; microphone;"
-                        sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
+                        allow="clipboard-read; clipboard-write; microphone; camera;"
+                        sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
                         width="100%"
                     >
                     </iframe>
