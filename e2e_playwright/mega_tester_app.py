@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 from pathlib import Path
 from typing import Literal, cast
@@ -28,6 +29,9 @@ import pydeck as pdk
 import streamlit as st
 
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+
+np.random.seed(42)
+random.seed(42)
 
 LOREM = (
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor "
@@ -209,7 +213,6 @@ st.divider()
 
 
 "## Data elements"
-np.random.seed(42)
 data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
 "st.dataframe"
