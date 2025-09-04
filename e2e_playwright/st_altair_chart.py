@@ -86,8 +86,8 @@ barley_chart = (
 # st.write("Grouped Bar Chart with default theme:")  # noqa: ERA001
 # st.altair_chart(barley_chart, theme=None)  # noqa: ERA001
 
-st.write("Grouped Bar Chart with streamlit theme:")
-st.altair_chart(barley_chart, theme="streamlit")
+# st.write("Grouped Bar Chart with streamlit theme:")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme="streamlit")  # noqa: ERA001
 
 st.write(
     "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)"
