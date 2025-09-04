@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER: Final = get_logger(__name__)
+
 
 _TEXT_CURSOR: Final = " ▏"
 
