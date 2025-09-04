@@ -18,6 +18,7 @@ import json
 import mimetypes
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
@@ -130,15 +131,16 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmp_css_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="stylesheet.css", delete=False
         )
-        self._tmp_manifest_file = tempfile.NamedTemporaryFile(
-            dir=self._tmpdir.name, suffix="manifest.json", delete=False
-        )
+        # The manifest file must not have a prefix - create it manually in the tmpdir
+        self._tmp_manifest_filename = os.path.join(self._tmpdir.name, "manifest.json")
+        Path(self._tmp_manifest_filename).touch()
+
         self._filename = os.path.basename(self._tmpfile.name)
         self._js_filename = os.path.basename(self._tmp_js_file.name)
         self._mjs_filename = os.path.basename(self._tmp_mjs_file.name)
         self._html_filename = os.path.basename(self._tmp_html_file.name)
         self._css_filename = os.path.basename(self._tmp_css_file.name)
-        self._manifest_filename = os.path.basename(self._tmp_manifest_file.name)
+        self._manifest_filename = os.path.basename(self._tmp_manifest_filename)
 
         super().setUp()
 
@@ -204,6 +206,9 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         r = self.fetch(f"/{self._manifest_filename}")
         assert r.headers["Cache-Control"] == "no-cache"
+
+        r = self.fetch(f"/nested/{self._manifest_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
 
         r = self.fetch(f"/{self._js_filename}")
         assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"

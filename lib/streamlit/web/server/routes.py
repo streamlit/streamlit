@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any, Callable, Final, cast
 
 import tornado.web
@@ -30,9 +31,11 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Sequence
 
 
-NO_CACHE_SUFFIXES: Final = (".html", "manifest.json")
+# Files that match this pattern do not get cached.
+NO_CACHE_PATTERN = re.compile(r"(?:\.html$|^manifest\.json$)")
 
-STATIC_ASSET_CACHE_MAX_AGE: Final = 31536000
+# The max-age value to send with cached assets. Set to one year.
+STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
 
 
 def allow_all_cross_origin_requests() -> bool:
@@ -74,15 +77,13 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         """
 
         is_index_url = len(path) == 0
-        if is_index_url or path.endswith(NO_CACHE_SUFFIXES):
+        if is_index_url or NO_CACHE_PATTERN.search(path):
             self.set_header("Cache-Control", "no-cache")
         else:
-            # For all other static files, we set a long cache time.
-            # This is because these files are versioned with a hash in their name,
-            # so they can be cached indefinitely.
+            # For all other static files suffixed with their hash, we set a long cache time.
             self.set_header(
                 "Cache-Control",
-                f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE}",
+                f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}",
             )
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
