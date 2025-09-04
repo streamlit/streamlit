@@ -354,9 +354,9 @@ def test_uploads_directory_with_multiple_files(app: Page):
     verify_uploaded_files_in_widget(app, uploader_index, expected_files, 3)
 
     # Test deleting files from directory upload
-    delete_buttos = app.get_by_test_id("stFileUploaderDeleteBtn").first
-    expect(delete_buttos).to_be_visible()
-    delete_buttos.click()
+    delete_button = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    expect(delete_button).to_be_visible()
+    delete_button.click()
     wait_for_app_run(app)
 
     # Verify file count decreased
