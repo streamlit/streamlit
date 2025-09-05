@@ -20,6 +20,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
     fill_number_input,
@@ -27,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
     get_number_input,
 )
 
-NUMBER_INPUT_COUNT = 17
+NUMBER_INPUT_COUNT = 18
 
 
 def test_number_input_widget_display(
@@ -279,3 +280,39 @@ def test_custom_css_class_via_key(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stNumberInput")
+
+
+def test_dynamic_number_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number input can be updated dynamically while keeping the state."""
+    dynamic_number_input = get_element_by_key(app, "dynamic_number_input_with_key")
+    expect(dynamic_number_input).to_be_visible()
+
+    expect(dynamic_number_input).to_contain_text("Initial dynamic number input")
+    assert_snapshot(dynamic_number_input, name="st_number_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_number_input, "initial help")
+
+    # Type something and submit
+    input_field = dynamic_number_input.locator("input").first
+    input_field.fill("7")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Initial number input value: 7")
+
+    # Click the toggle to update the number input props
+
+    click_toggle(app, "Update number input props")
+
+    # new number input is visible:
+    expect(dynamic_number_input).to_contain_text("Updated dynamic number input")
+
+    # Ensure the previously entered value remains visible
+    expect_markdown(app, "Updated number input value: 7")
+
+    dynamic_number_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_number_input, name="st_number_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_number_input, "updated help")
