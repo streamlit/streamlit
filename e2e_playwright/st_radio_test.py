@@ -14,7 +14,6 @@
 
 import re
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -124,7 +123,6 @@ def test_radio_has_correct_default_values(app: Page):
     expect_markdown(app, "value 13: None")
 
 
-@pytest.mark.flaky(reruns=4)
 def test_set_value_correctly_when_click(app: Page):
     """Change selections by user-visible labels and validate markdown values."""
     # radio 1 -> male
