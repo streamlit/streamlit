@@ -138,9 +138,16 @@ async function convertFileToWav(
  * Encodes an AudioBuffer as a WAV file blob.
  * Separated from the main function for better modularity and testability.
  *
- * @param audioBuffer - The audio buffer to encode
- * @param sampleRate - The sample rate for the WAV header
- * @returns A WAV file as a Blob
+ * @param audioBuffer - The AudioBuffer containing the audio data to encode.
+ *   - Each channel in the buffer will be interleaved in the output WAV file.
+ *   - The buffer should contain PCM float samples in the range [-1, 1].
+ * @param sampleRate - The sample rate (in Hz) to use for the WAV file header.
+ *   - This determines the playback rate of the resulting WAV file.
+ * @returns A Blob containing a WAV file encoded according to the RIFF/WAVE specification:
+ *   - 44-byte header (RIFF, WAVE, fmt, data chunks)
+ *   - 16-bit PCM samples, interleaved for multiple channels
+ *   - Audio data starts at byte 44
+ *   - MIME type is "audio/wav"
  */
 function encodeWAV(audioBuffer: AudioBuffer, sampleRate: number): Blob {
   const HEADER_SIZE = 44

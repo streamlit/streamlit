@@ -431,6 +431,10 @@ const AudioInput: React.FC<Props> = ({
 
         // Prepare audio constraints for getUserMedia
         // Sample rate is set here, not in MediaRecorder options
+        // Audio processing features are disabled to ensure:
+        // - Predictable sample rate behavior across browsers
+        // - Raw audio capture without processing artifacts
+        // - Consistent recording quality regardless of environment
         const audioConstraints: MediaTrackConstraints = targetSampleRate
           ? {
               sampleRate: { ideal: targetSampleRate },
@@ -465,6 +469,11 @@ const AudioInput: React.FC<Props> = ({
     theme.colors.primary,
   ])
 
+  // stopRecording uses Promise wrapper to handle the asynchronous event-based recording API
+  // The complexity is necessary because:
+  // 1. The record plugin fires events asynchronously after stopping
+  // 2. We need to ensure proper cleanup of event listeners
+  // 3. Error handling must cover both stopping errors and processing errors
   const stopRecording = useCallback(async () => {
     return new Promise<void>((resolve, reject) => {
       if (!recordPluginRef.current) {
