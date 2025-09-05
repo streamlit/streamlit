@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
+import Selectbox, { Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -138,12 +137,12 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     await user.click(selectbox)
     const options = screen.getAllByRole("option")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
+    await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(screen.getByText(props.options[2])).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+    ).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
@@ -169,40 +168,6 @@ describe("Selectbox widget", () => {
     options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
     expect(options[0]).toHaveTextContent("b")
-  })
-
-  it("fuzzy filters options correctly", () => {
-    // This test just makes sure the filter algorithm works correctly. The e2e
-    // test actually types something in the selectbox and makes sure that it
-    // shows the right options.
-
-    const options = [
-      { label: "e2e/scripts/components_iframe.py", value: "" },
-      { label: "e2e/scripts/st_warning.py", value: "" },
-      { label: "e2e/scripts/st_container.py", value: "" },
-      { label: "e2e/scripts/st_dataframe_sort_column.py", value: "" },
-      { label: "e2e/scripts/app_hotkeys.py", value: "" },
-      { label: "e2e/scripts/st_info.py", value: "" },
-      { label: "e2e/scripts/st_echo.py", value: "" },
-      { label: "e2e/scripts/st_json.py", value: "" },
-      { label: "e2e/scripts/st_experimental_get_query_params.py", value: "" },
-      { label: "e2e/scripts/st_markdown.py", value: "" },
-      { label: "e2e/scripts/st_color_picker.py", value: "" },
-      { label: "e2e/scripts/st_expander.py", value: "" },
-    ]
-
-    const results1 = fuzzyFilterSelectOptions(options, "esstm")
-    expect(results1.map(it => it.label)).toEqual([
-      "e2e/scripts/st_markdown.py",
-      "e2e/scripts/st_dataframe_sort_column.py",
-      "e2e/scripts/st_experimental_get_query_params.py",
-      "e2e/scripts/components_iframe.py",
-    ])
-
-    const results2 = fuzzyFilterSelectOptions(options, "eseg")
-    expect(results2.map(it => it.label)).toEqual([
-      "e2e/scripts/st_experimental_get_query_params.py",
-    ])
   })
 
   it("predictably produces case sensitive matches", async () => {
@@ -288,6 +253,33 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     const selectbox = screen.getByTestId("stSelectbox")
     expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
+  })
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.onChange).toHaveBeenCalledWith("mobile new option")
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      props = getProps({ acceptNewOptions: false, options: ["a", "b", "c"] })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
   })
 
   it("does not allow new options when acceptNewOptions is false", async () => {

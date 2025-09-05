@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { Field, Utf8 } from "apache-arrow"
+import { Field, makeVector, Utf8 } from "apache-arrow"
 import moment, { Moment } from "moment-timezone"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { withTimezones } from "~lib/util/withTimezones"
 
 import {
+  arrayToCopyValue,
   BaseColumnProps,
   countDecimals,
   formatMoment,
@@ -29,6 +30,7 @@ import {
   getErrorCell,
   getLinkDisplayValueFromRegex,
   getTextCell,
+  isEditableArrayValue,
   isErrorCell,
   isMissingValueCell,
   mergeColumnParameters,
@@ -154,6 +156,50 @@ describe("toSafeArray", () => {
   })
 })
 
+describe("isEditableArrayValue", () => {
+  it.each([
+    // strings
+    ["foo", true],
+    [new String("bar"), true],
+    // arrays
+    [["a", "b"], true],
+    [[new String("a"), new String("b")], true],
+    [[], true],
+    [["a", 1], false],
+    [[1, 2, 3], false],
+    // numbers/booleans/objects
+    [123, false],
+    [true, false],
+    [false, false],
+    [{ foo: "bar" }, false],
+    [null, false],
+    [undefined, false],
+    // Apache Arrow vectors
+    [makeVector(Int32Array.from([1, 2, 3])), false],
+  ])("interprets %s as editable array value: %s", (input, expected) => {
+    expect(isEditableArrayValue(input)).toBe(expected)
+  })
+})
+
+describe("arrayToCopyValue", () => {
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    [[], ""],
+    [["a"], "a"],
+    [["a", "b"], "a,b"],
+    // commas inside values are replaced by spaces before joining
+    [["a,b"], "a b"],
+    [["a,b", "c,d"], "a b,c d"],
+    [[1, "a,b"], "1,a b"],
+    [["hello,world", 42, true], "hello world,42,true"],
+    [[{ foo: "bar" }], "[object Object]"],
+  ])("converts %s to copy string '%s'", (input, expected) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(arrayToCopyValue(input as any)).toBe(expected)
+  })
+})
+
 describe("toSafeString", () => {
   it.each([
     [null, ""],
@@ -248,6 +294,25 @@ describe("toSafeNumber", () => {
 })
 
 describe("formatNumber", () => {
+  it("enforces localized currency format as narrow", () => {
+    const originalLanguages = navigator.languages
+    // Change locale for this test:
+    Object.defineProperty(navigator, "languages", {
+      value: ["pt-BR"],
+      configurable: true,
+    })
+
+    expect(formatNumber(10.123, "euro")).toEqual("€ 10,12")
+    expect(formatNumber(10.123, "dollar")).toEqual("$ 10,12")
+    expect(formatNumber(10.123, "yen")).toEqual("¥ 10") // would be JP¥ 10 if narrow symbol is not used
+
+    // Restore original navigator languages
+    Object.defineProperty(navigator, "languages", {
+      value: originalLanguages,
+      configurable: true,
+    })
+  })
+
   it.each([
     [10, "10"],
     [10.1, "10.1"],

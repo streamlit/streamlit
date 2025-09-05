@@ -18,15 +18,18 @@ import React, { ReactElement, ReactNode, useCallback } from "react"
 
 import { StyledAction, StyledBody } from "baseui/card"
 
-import { BaseButton, BaseButtonKind } from "@streamlit/lib"
-import { GitInfo, IGitInfo } from "@streamlit/protobuf"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import {
+  DetachedHead,
+  ModuleIsNotAdded,
+  NoRepositoryDetected,
+} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   DEPLOY_URL,
   SNOWFLAKE_LEARN_MORE_URL,
@@ -35,15 +38,12 @@ import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,
 } from "@streamlit/app/src/urls"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import { BaseButton, BaseButtonKind } from "@streamlit/lib"
+import { GitInfo, IGitInfo } from "@streamlit/protobuf"
 
-import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
+import Modal from "./DeployModal"
 import {
   StyledActionsWrapper,
   StyledCardContainer,

@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
     StreamlitInvalidPageLayoutError,
@@ -91,7 +92,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     try:
         return image_to_url(
             page_icon,
-            width=-1,  # Always use full width for favicons
+            layout_config=LayoutConfig(
+                width="stretch"
+            ),  # Always use full width for favicons
             clamp=False,
             channels="RGB",
             output_format="auto",
@@ -194,21 +197,19 @@ def set_page_config(
 
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
-        The keys in this dict denote the menu item you'd like to configure:
+        The keys in this dict denote the menu item to configure. The following
+        keys can have string or ``None`` values:
 
-        - "Get help": str or None
-            The URL this menu item should point to.
-            If None, hides this menu item.
-        - "Report a Bug": str or None
-            The URL this menu item should point to.
-            If None, hides this menu item.
-        - "About": str or None
-            A markdown string to show in the About dialog.
-            If None, only shows Streamlit's default About text.
+        - "Get help": The URL this menu item should point to.
+        - "Report a Bug": The URL this menu item should point to.
+        - "About": A markdown string to show in the About dialog.
 
-        The URL may also refer to an email address e.g. ``mailto:john@example.com``.
-        To remove an item that was specified in a previous call to
-        ``st.set_page_config``, set its value to ``None`` in the dictionary.
+        A URL may also refer to an email address e.g. ``mailto:john@example.com``.
+
+        If you do not include a key, its menu item will be hidden (unless it
+        was set by a previous call to ``st.set_page_config``). To remove an
+        item that was specified in a previous call to ``st.set_page_config``,
+        set its value to ``None`` in the dictionary.
 
     Example
     -------
@@ -301,7 +302,9 @@ def set_menu_items_proto(
 
     if ABOUT_KEY in lowercase_menu_items:
         if lowercase_menu_items[ABOUT_KEY] is not None:
-            menu_items_proto.about_section_md = dedent(lowercase_menu_items[ABOUT_KEY])
+            menu_items_proto.about_section_md = dedent(
+                lowercase_menu_items[ABOUT_KEY] or ""
+            )
         else:
             # For multiple calls to set_page_config, clears previously set about markdown
             menu_items_proto.clear_about_md = True

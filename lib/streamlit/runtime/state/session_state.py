@@ -121,7 +121,7 @@ class WStates(MutableMapping[str, Any]):
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
-            value = value.data
+            value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
 

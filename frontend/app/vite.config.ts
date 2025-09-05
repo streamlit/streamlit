@@ -17,7 +17,6 @@ import { defineConfig } from "vite"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"

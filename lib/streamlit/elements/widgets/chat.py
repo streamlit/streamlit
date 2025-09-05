@@ -32,7 +32,7 @@ from streamlit.elements.lib.file_uploader_utils import (
     normalize_upload_file_type,
 )
 from streamlit.elements.lib.form_utils import is_in_form
-from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
+from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
@@ -147,7 +147,7 @@ def _process_avatar_input(
     try:
         return AvatarType.IMAGE, image_to_url(
             avatar,
-            width=WidthBehavior.ORIGINAL,
+            layout_config=LayoutConfig(width="content"),
             clamp=False,
             channels="RGB",
             output_format="auto",
@@ -391,7 +391,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: Literal[True, "multiple"],
+        accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -407,7 +407,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: bool | Literal["multiple"] = False,
+        accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -433,7 +433,7 @@ class ChatMixin:
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
 
-        accept_file : bool or str
+        accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
             following values:
 
@@ -442,9 +442,9 @@ class ChatMixin:
             - ``True``: The user can add a single file to their submission.
             - ``"multiple"``: The user can add multiple files to their
               submission.
-
-            When the widget is configured to accept files, the accepted file
-            types can be configured with the ``file_type`` parameter.
+            - ``"directory"``: The user can add multiple files to their
+              submission by selecting a directory. If ``file_type`` is set,
+              only files matching those type(s) will be uploaded.
 
             By default, uploaded files are limited to 200 MB each. You can
             configure this using the ``server.maxUploadSize`` config option.
@@ -465,6 +465,12 @@ class ChatMixin:
               example, to only accept JPG/JPEG and PNG files, use
               ``["jpg", "jpeg", "png"]``.
 
+            .. note::
+                This is a best-effort check, but doesn't provide a
+                security guarantee against users uploading files of other types
+                or type extensions. The correct handling of uploaded files is
+                part of the app developer's responsibility.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
@@ -472,8 +478,8 @@ class ChatMixin:
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -608,9 +614,9 @@ class ChatMixin:
             writes_allowed=True,
         )
 
-        if accept_file not in {True, False, "multiple"}:
+        if accept_file not in {True, False, "multiple", "directory"}:
             raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple'."
+                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
         ctx = get_script_run_ctx()
@@ -618,8 +624,7 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            # chat_input is not allowed to be used in a form.
-            form_id=None,
+            key_as_main_identity=False,
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
@@ -671,7 +676,7 @@ class ChatMixin:
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
         serde = ChatInputSerde(
-            accept_files=bool(accept_file),
+            accept_files=accept_file in {True, "multiple", "directory"},
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]

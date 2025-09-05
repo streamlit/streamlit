@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -62,11 +63,14 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
+        *,
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
         height: Height = "content",
+        chart_data: OptionSequence[Any] | None = None,
+        chart_type: Literal["line", "bar", "area"] = "line",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -156,6 +160,22 @@ class MetricMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        chart_data : Iterable or None
+            A sequence of numeric values to display as a sparkline chart. If
+            this is ``None`` (default), no chart is displayed. The sequence can
+            be anything supported by ``st.dataframe``, including a ``list`` or
+            ``set``. If the sequence is dataframe-like, the first column will
+            be used. Each value will be cast to ``float`` internally by
+            default.
+
+        chart_type : "line", "bar", or "area"
+            The type of sparkline chart to display. This can be one of the
+            following:
+
+            - ``"line"`` (default): A simple sparkline.
+            - ``"area"``: A sparkline with area shading.
+            - ``"bar"``: A bar chart.
+
         Examples
         --------
         **Example 1: Show a metric**
@@ -192,7 +212,10 @@ class MetricMixin:
         >>> st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
         >>>
         >>> st.metric(
-        ...     label="Active developers", value=123, delta=123, delta_color="off"
+        ...     label="Active developers",
+        ...     value=123,
+        ...     delta=123,
+        ...     delta_color="off",
         ... )
 
         .. output::
@@ -218,6 +241,33 @@ class MetricMixin:
             https://doc-metric-example4.streamlit.app/
             height: 350px
 
+        **Example 5: Show sparklines**
+
+        To show trends over time, add sparklines.
+
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> changes = list(rng(4).standard_normal(20))
+        >>> data = [sum(changes[:i]) for i in range(20)]
+        >>> delta = round(data[-1], 2)
+        >>>
+        >>> row = st.container(horizontal=True)
+        >>> with row:
+        >>>     st.metric(
+        ...         "Line", 10, delta, chart_data=data, chart_type="line", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Area", 10, delta, chart_data=data, chart_type="area", border=True
+        ...     )
+        >>>     st.metric(
+        ...         "Bar", 10, delta, chart_data=data, chart_type="bar", border=True
+        ...     )
+
+        .. output::
+            https://doc-metric-example5.streamlit.app/
+            height: 300px
+
         """
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -238,6 +288,22 @@ class MetricMixin:
             label_visibility
         )
 
+        if chart_data is not None:
+            prepared_data: list[float] = []
+            for val in convert_anything_to_list(chart_data):
+                try:
+                    prepared_data.append(float(val))
+                except Exception as ex:  # noqa: PERF203
+                    raise StreamlitAPIException(
+                        "Only numeric values are supported for chart data sequence. The "
+                        f"value '{val}' is of type {type(val)} and "
+                        "cannot be converted to float."
+                    ) from ex
+            if len(prepared_data) > 0:
+                metric_proto.chart_data.extend(prepared_data)
+
+        metric_proto.chart_type = _parse_chart_type(chart_type)
+
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width, height=height)
@@ -247,6 +313,17 @@ class MetricMixin:
     @property
     def dg(self) -> DeltaGenerator:
         return cast("DeltaGenerator", self)
+
+
+def _parse_chart_type(
+    chart_type: Literal["line", "bar", "area"],
+) -> MetricProto.ChartType.ValueType:
+    if chart_type == "bar":
+        return MetricProto.ChartType.BAR
+    if chart_type == "area":
+        return MetricProto.ChartType.AREA
+    # Use line as default chart:
+    return MetricProto.ChartType.LINE
 
 
 def _parse_label(label: str) -> str:

@@ -14,10 +14,16 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_warning
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_warning,
+    wait_for_all_images_to_be_loaded,
+)
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 
 
 def test_displays_a_pyplot_figures(
@@ -31,7 +37,7 @@ def test_displays_a_pyplot_figures(
     )
 
     pyplot_elements = themed_app.get_by_test_id("stImage").locator("img")
-    expect(pyplot_elements).to_have_count(8)
+    expect(pyplot_elements).to_have_count(11)
 
     assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-normal_figure")
     assert_snapshot(pyplot_elements.nth(1), name="st_pyplot-resized_figure")
@@ -48,6 +54,48 @@ def test_displays_a_pyplot_figures(
 def test_shows_deprecation_warning(app: Page):
     """Test that the deprecation warning is displayed correctly."""
     expect_warning(app, "without providing a figure argument has been deprecated")
+
+
+@pytest.mark.skip_browser("webkit")
+def test_width_parameter_content(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the width parameter with content option."""
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(11)
+    wait_for_all_images_to_be_loaded(app)
+
+    content_pyplot = pyplot_elements.nth(8)
+    expect(content_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, content_pyplot, assert_snapshot, name="st_pyplot-width_content"
+    )
+
+
+# Running this in webkit is a bit flaky, resulting in mismatched snapshots:
+@pytest.mark.skip_browser("webkit")
+def test_width_parameter_stretch(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the width parameter with stretch option."""
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(11)
+    wait_for_all_images_to_be_loaded(app)
+
+    stretch_pyplot = pyplot_elements.nth(9)
+    expect(stretch_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, stretch_pyplot, assert_snapshot, name="st_pyplot-width_stretch"
+    )
+
+
+def test_width_parameter_pixel(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the width parameter with pixel value."""
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(11)
+    wait_for_all_images_to_be_loaded(app)
+
+    pixel_pyplot = pyplot_elements.nth(10)
+    expect(pixel_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, pixel_pyplot, assert_snapshot, name="st_pyplot-width_pixel"
+    )
 
 
 def test_check_top_level_class(app: Page):

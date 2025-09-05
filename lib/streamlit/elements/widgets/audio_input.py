@@ -143,8 +143,8 @@ class AudioInputMixin:
             An optional callback invoked when this audio input's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -239,7 +239,7 @@ class AudioInputMixin:
         element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             help=help,

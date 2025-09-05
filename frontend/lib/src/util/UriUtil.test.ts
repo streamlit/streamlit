@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isValidOrigin } from "./UriUtil"
+import { getCrossOriginAttribute, isValidOrigin } from "./UriUtil"
 
 describe("isValidOrigin", () => {
   it("returns false if allowedOrigin is invalid", () => {
@@ -316,6 +316,299 @@ describe("isValidOrigin", () => {
       expect(
         isValidOrigin("https://example.com:80*", "https://example.com:91")
       ).toBe(false)
+    })
+  })
+})
+
+describe("getCrossOriginAttribute", () => {
+  let originalStreamlit: typeof window.__streamlit
+
+  beforeEach(() => {
+    // Save the original window.__streamlit
+    originalStreamlit = window.__streamlit
+  })
+
+  afterEach(() => {
+    // Restore the original window.__streamlit
+    window.__streamlit = originalStreamlit
+  })
+
+  describe("when no URL is provided", () => {
+    it("returns undefined regardless of resourceCrossOriginMode", () => {
+      expect(getCrossOriginAttribute("anonymous")).toBe(undefined)
+      expect(getCrossOriginAttribute("use-credentials")).toBe(undefined)
+      expect(getCrossOriginAttribute(undefined)).toBe(undefined)
+    })
+  })
+
+  describe("when URL is an absolute URL", () => {
+    describe("when window.__streamlit.BACKEND_BASE_URL is set", () => {
+      beforeEach(() => {
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com",
+        } as typeof window.__streamlit
+      })
+
+      it("returns resourceCrossOriginMode when URL has same origin as BACKEND_BASE_URL", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com/image.png"
+          )
+        ).toBe("anonymous")
+        expect(
+          getCrossOriginAttribute(
+            "use-credentials",
+            "https://backend.example.com/api/data"
+          )
+        ).toBe("use-credentials")
+        expect(
+          getCrossOriginAttribute(
+            undefined,
+            "https://backend.example.com/resource"
+          )
+        ).toBe(undefined)
+      })
+
+      it("returns undefined when URL has different origin than BACKEND_BASE_URL", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://different.example.com/image.png"
+          )
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute(
+            "use-credentials",
+            "https://backend.different.com/api/data"
+          )
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute("anonymous", "https://example.com/resource")
+        ).toBe(undefined)
+      })
+
+      it("handles URLs with different ports correctly", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com:8080/image.png"
+          )
+        ).toBe(undefined)
+
+        // Same port as BACKEND_BASE_URL (default HTTPS port)
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com:443/image.png"
+          )
+        ).toBe("anonymous")
+      })
+
+      it("handles URLs with different protocols correctly", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "http://backend.example.com/image.png"
+          )
+        ).toBe(undefined)
+      })
+    })
+
+    describe("when window.__streamlit.BACKEND_BASE_URL has explicit port", () => {
+      beforeEach(() => {
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com:8080",
+        } as typeof window.__streamlit
+      })
+
+      it("matches URLs with the same explicit port", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com:8080/image.png"
+          )
+        ).toBe("anonymous")
+      })
+
+      it("does not match URLs without port or with different port", () => {
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com/image.png"
+          )
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute(
+            "anonymous",
+            "https://backend.example.com:3000/image.png"
+          )
+        ).toBe(undefined)
+      })
+    })
+
+    describe("when window.__streamlit is not set", () => {
+      beforeEach(() => {
+        window.__streamlit = undefined as unknown as typeof window.__streamlit
+      })
+
+      it("returns undefined for any absolute URL", () => {
+        expect(
+          getCrossOriginAttribute("anonymous", "https://example.com/image.png")
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute(
+            "use-credentials",
+            "https://backend.example.com/api/data"
+          )
+        ).toBe(undefined)
+      })
+    })
+
+    describe("when window.__streamlit.BACKEND_BASE_URL is not set", () => {
+      beforeEach(() => {
+        window.__streamlit = {} as typeof window.__streamlit
+      })
+
+      it("returns undefined for any absolute URL", () => {
+        expect(
+          getCrossOriginAttribute("anonymous", "https://example.com/image.png")
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute(
+            "use-credentials",
+            "https://backend.example.com/api/data"
+          )
+        ).toBe(undefined)
+      })
+    })
+  })
+
+  describe("when URL is a relative URL or invalid", () => {
+    describe("when window.__streamlit.BACKEND_BASE_URL is set", () => {
+      beforeEach(() => {
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com",
+        } as typeof window.__streamlit
+      })
+
+      it("returns resourceCrossOriginMode for relative URLs", () => {
+        expect(getCrossOriginAttribute("anonymous", "/image.png")).toBe(
+          "anonymous"
+        )
+        expect(getCrossOriginAttribute("use-credentials", "./api/data")).toBe(
+          "use-credentials"
+        )
+        expect(getCrossOriginAttribute(undefined, "../resource")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("anonymous", "image.png")).toBe(
+          "anonymous"
+        )
+      })
+
+      it("returns resourceCrossOriginMode for URLs without scheme", () => {
+        expect(
+          getCrossOriginAttribute("anonymous", "www.example.com/image.png")
+        ).toBe("anonymous")
+        expect(
+          getCrossOriginAttribute("use-credentials", "//example.com/api/data")
+        ).toBe("use-credentials")
+      })
+
+      it("returns resourceCrossOriginMode for invalid URLs", () => {
+        expect(getCrossOriginAttribute("anonymous", "not a url")).toBe(
+          "anonymous"
+        )
+        expect(getCrossOriginAttribute("use-credentials", "http://")).toBe(
+          "use-credentials"
+        )
+      })
+    })
+
+    describe("when window.__streamlit.BACKEND_BASE_URL is not set", () => {
+      beforeEach(() => {
+        window.__streamlit = {} as typeof window.__streamlit
+      })
+
+      it("returns undefined for relative URLs", () => {
+        expect(getCrossOriginAttribute("anonymous", "/image.png")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("use-credentials", "./api/data")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("anonymous", "../resource")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("anonymous", "image.png")).toBe(
+          undefined
+        )
+      })
+
+      it("returns undefined for URLs without scheme", () => {
+        expect(
+          getCrossOriginAttribute("anonymous", "www.example.com/image.png")
+        ).toBe(undefined)
+        expect(
+          getCrossOriginAttribute("use-credentials", "//example.com/api/data")
+        ).toBe(undefined)
+      })
+
+      it("returns undefined for invalid URLs", () => {
+        expect(getCrossOriginAttribute("anonymous", "not a url")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("use-credentials", "http://")).toBe(
+          undefined
+        )
+      })
+    })
+
+    describe("when window.__streamlit is not set", () => {
+      beforeEach(() => {
+        window.__streamlit = undefined as unknown as typeof window.__streamlit
+      })
+
+      it("returns undefined for relative URLs", () => {
+        expect(getCrossOriginAttribute("anonymous", "/image.png")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("use-credentials", "./api/data")).toBe(
+          undefined
+        )
+        expect(getCrossOriginAttribute("anonymous", "image.png")).toBe(
+          undefined
+        )
+      })
+    })
+  })
+
+  describe("edge cases", () => {
+    it("handles empty string URL", () => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+      } as typeof window.__streamlit
+
+      // Empty string is falsy, so the function returns undefined
+      expect(getCrossOriginAttribute("anonymous", "")).toBe(undefined)
+    })
+
+    it("handles malformed BACKEND_BASE_URL", () => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "not a valid url",
+      } as typeof window.__streamlit
+
+      // Should not throw and should return resourceCrossOriginMode for relative URLs
+      expect(getCrossOriginAttribute("anonymous", "/image.png")).toBe(
+        "anonymous"
+      )
+      // When parsing the absolute URL succeeds but comparing with malformed BACKEND_BASE_URL fails,
+      // the error is caught and the function treats it as a parsing failure,
+      // returning resourceCrossOriginMode since BACKEND_BASE_URL is set
+      expect(
+        getCrossOriginAttribute("anonymous", "https://example.com/image.png")
+      ).toBe("anonymous")
     })
   })
 })

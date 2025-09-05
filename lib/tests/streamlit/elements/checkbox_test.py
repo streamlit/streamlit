@@ -161,6 +161,59 @@ hello
         )
         assert c.type == CheckboxProto.StyleType.TOGGLE
 
+    @parameterized.expand(
+        [
+            (
+                "checkbox",
+                lambda label="Label", **kwargs: st.checkbox(label, **kwargs),
+                "checkbox",
+            ),
+            (
+                "toggle",
+                lambda label="Label", **kwargs: st.toggle(label, **kwargs),
+                "checkbox",
+            ),
+        ]
+    )
+    def test_stable_id_with_key(self, name, command, attr):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            command(
+                label="Label 1",
+                key=f"{name}_key",
+                value=True,
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = getattr(self.get_delta_from_queue().new_element, attr)
+            id1 = c1.id
+
+            # Second render with different params but same key
+            command(
+                label="Label 2",
+                key=f"{name}_key",
+                value=False,
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = getattr(self.get_delta_from_queue().new_element, attr)
+            id2 = c2.id
+            assert id1 == id2
+
     def test_checkbox_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.checkbox("the label"))()

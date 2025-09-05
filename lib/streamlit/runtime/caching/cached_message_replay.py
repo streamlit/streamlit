@@ -17,13 +17,12 @@ from __future__ import annotations
 import contextlib
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union
 
 from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from google.protobuf.message import Message
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType
 
@@ -59,6 +59,7 @@ class ElementMsgData:
     id_of_dg_called_on: str
     returned_dgs_id: str
     media_data: list[MediaMsgData] | None = None
+    layout_config: LayoutConfig | None = None
 
 
 @dataclass(frozen=True)
@@ -168,6 +169,7 @@ class CachedMessageReplayContext(threading.local):
         invoked_dg_id: str,
         used_dg_id: str,
         returned_dg_id: str,
+        layout_config: LayoutConfig | None = None,
     ) -> None:
         """Record the element protobuf as having been produced during any currently
         executing cached functions, so they can be replayed any time the function's
@@ -187,6 +189,7 @@ class CachedMessageReplayContext(threading.local):
                 id_to_save,
                 returned_dg_id,
                 media_data,
+                layout_config,
             )
             for msgs in self._cached_message_stack:
                 msgs.append(element_msg_data)
@@ -275,7 +278,9 @@ def replay_cached_messages(
                             data.media, data.mimetype, data.media_id
                         )
                 dg = returned_dgs[msg.id_of_dg_called_on]
-                maybe_dg = dg._enqueue(msg.delta_type, msg.message)
+                maybe_dg = dg._enqueue(
+                    msg.delta_type, msg.message, layout_config=msg.layout_config
+                )
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg
             elif isinstance(msg, BlockMsgData):
@@ -284,20 +289,3 @@ def replay_cached_messages(
                 returned_dgs[msg.returned_dgs_id] = new_dg
     except KeyError as ex:
         raise CacheReplayClosureError(cache_type, cached_func) from ex
-
-
-def show_widget_replay_deprecation(
-    decorator: Literal["cache_data", "cache_resource"],
-) -> None:
-    show_deprecation_warning(
-        "The cached widget replay feature was removed in 1.38. The "
-        "`experimental_allow_widgets` parameter will also be removed "
-        "in a future release. Please remove the `experimental_allow_widgets` parameter "
-        f"from the `@st.{decorator}` decorator and move all widget commands outside of "
-        "cached functions.\n\nTo speed up your app, we recommend moving your widgets "
-        "into fragments. Find out more about fragments in "
-        "[our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
-        "\n\nIf you have a specific use-case that requires the "
-        "`experimental_allow_widgets` functionality, please tell us via an "
-        "[issue on Github](https://github.com/streamlit/streamlit/issues)."
-    )

@@ -29,6 +29,7 @@ import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
+import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
   FileUploaderState as FileUploaderStateProto,
@@ -36,28 +37,32 @@ import {
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
-import { useWindowDimensionsContext } from "@streamlit/lib"
 
+import Icon from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import {
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { getAccept } from "~lib/components/widgets/FileUploader/utils"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import { FileSize, sizeConverter } from "~lib/util/FileHelper"
+import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
   AcceptFileValue,
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import Icon from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { isEnterKeyPressed } from "~lib/util/inputUtils"
-import {
-  UploadedStatus,
-  UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileSize, sizeConverter } from "~lib/util/FileHelper"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 
+import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
+import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
+import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
+import { createDropHandler } from "./fileUpload/createDropHandler"
+import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
   StyledChatInput,
   StyledChatInputContainer,
@@ -65,11 +70,6 @@ import {
   StyledSendIconButton,
   StyledSendIconButtonContainer,
 } from "./styled-components"
-import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
-import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
-import { createDropHandler } from "./fileUpload/createDropHandler"
-import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
-import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 
 export interface Props {
   disabled: boolean
@@ -104,7 +104,7 @@ function ChatInput({
   const counterRef = useRef(0)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
   const { innerWidth, innerHeight } = useWindowDimensionsContext()
 
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
@@ -154,7 +154,7 @@ function ChatInput({
           // Cancel request as the file hasn't been uploaded.
           // However, it may have been received by the server so we'd still
           // send out a request to delete it.
-          file.status.cancelToken.cancel()
+          file.status.abortController.abort()
         }
 
         if (
@@ -193,7 +193,10 @@ function ChatInput({
   }
 
   const dropHandler = createDropHandler({
-    acceptMultipleFiles: acceptFile === AcceptFileValue.Multiple,
+    acceptMultipleFiles:
+      acceptFile === AcceptFileValue.Multiple ||
+      acceptFile === AcceptFileValue.Directory,
+    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
@@ -220,7 +223,7 @@ function ChatInput({
             fileId,
             file.setStatus({
               type: "uploading",
-              cancelToken: file.status.cancelToken,
+              abortController: file.status.abortController,
               progress: newProgress,
             }),
             prevFiles
@@ -259,11 +262,14 @@ function ChatInput({
         chatInputRef.current.focus()
       }
     },
+    element,
   })
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
-    multiple: acceptFile === AcceptFileValue.Multiple,
+    multiple:
+      acceptFile === AcceptFileValue.Multiple ||
+      acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
   })
@@ -292,6 +298,7 @@ function ChatInput({
     )
     setFiles([])
     setValue("")
+    autoExpand.clearScrollHeight()
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {

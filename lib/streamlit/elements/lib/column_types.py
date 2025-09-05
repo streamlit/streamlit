@@ -18,7 +18,8 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, TypedDict, Union
+import itertools
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
@@ -26,7 +27,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -62,6 +63,7 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "multiselect",
     "json",
 ]
 
@@ -84,9 +86,17 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
+SelectboxOptionValue: TypeAlias = Union[str, int, float, bool]
+
+
+class SelectboxOption(TypedDict):
+    value: SelectboxOptionValue
+    label: NotRequired[str | None]
+
+
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[list[str | int | float] | None]
+    options: NotRequired[list[SelectboxOptionValue | SelectboxOption] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -120,6 +130,18 @@ class ImageColumnConfig(TypedDict):
 
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
+
+
+class MultiselectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | None]
+
+
+class MultiselectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[Iterable[MultiselectOption | str] | None]
+    accept_new_options: NotRequired[bool | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -190,8 +212,7 @@ class ColumnConfig(TypedDict, total=False):
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -227,7 +248,7 @@ class ColumnConfig(TypedDict, total=False):
     disabled: bool | None
     required: bool | None
     pinned: bool | None
-    default: str | bool | int | float | None
+    default: str | bool | int | float | list[str] | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
         NumberColumnConfig
@@ -244,6 +265,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | MultiselectColumnConfig
         | JsonColumnConfig
         | None
     )
@@ -295,8 +317,7 @@ def Column(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -400,8 +421,7 @@ def NumberColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -563,8 +583,7 @@ def TextColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -686,8 +705,7 @@ def LinkColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -845,8 +863,7 @@ def CheckboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -919,8 +936,9 @@ def SelectboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    default: str | int | float | None = None,
-    options: Iterable[str | int | float] | None = None,
+    default: SelectboxOptionValue | None = None,
+    options: Iterable[SelectboxOptionValue] | None = None,
+    format_func: Callable[[SelectboxOptionValue], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -954,8 +972,7 @@ def SelectboxColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -977,11 +994,17 @@ def SelectboxColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    options: Iterable of str or None
+    options: Iterable[str, int, float, bool] or None
         The options that can be selected during editing. If this is ``None``
         (default), the options will be inferred from the underlying dataframe
         column if its dtype is "category". For more information, see `Pandas docs
         <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
+
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
 
     Examples
     --------
@@ -1022,6 +1045,15 @@ def SelectboxColumn(
         height: 300px
     """
 
+    # Process options with format_func
+    processed_options: Iterable[str | int | float | SelectboxOption] | None = options
+    if options and format_func is not None:
+        processed_options = []
+        for option in options:
+            processed_options.append(
+                SelectboxOption(value=option, label=format_func(option))
+            )
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -1031,7 +1063,8 @@ def SelectboxColumn(
         pinned=pinned,
         default=default,
         type_config=SelectboxColumnConfig(
-            type="selectbox", options=list(options) if options is not None else None
+            type="selectbox",
+            options=list(processed_options) if processed_options is not None else None,
         ),
     )
 
@@ -1427,12 +1460,20 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
 ) -> ColumnConfig:
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. List columns are not editable
-    at the moment. This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe`` or ``st.data_editor``.
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow
+        serialization. We recommend you disable editing for these columns or
+        convert of all list values to strings.
 
     Parameters
     ----------
@@ -1463,6 +1504,24 @@ def ListColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. If this is ``None``
+        (default), Streamlit will enable editing wherever possible.
+
+        If a column has mixed types, it may become uneditable regardless of
+        ``disabled``.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If this is
+        ``False`` (default), the user can submit empty values for this column.
+        If this is ``True``, an edited cell in this column can only be
+        submitted if its value is not ``None``, and a new row will only be
+        submitted after the user fills in this column.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by
+        the user. This defaults to ``None``.
 
     Examples
     --------
@@ -1501,7 +1560,200 @@ def ListColumn(
         width=width,
         help=help,
         pinned=pinned,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
         type_config=ListColumnConfig(type="list"),
+    )
+
+
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+    options: Iterable[str] | None = None,
+    accept_new_options: bool | None = None,
+    color: str | Iterable[str] | None = None,
+    format_func: Callable[[str], str] | None = None,
+) -> ColumnConfig:
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``. When used with ``st.data_editor``, editing will
+    be enabled with a multiselect widget.
+
+    This column type is also useful for displaying colored labels in a read-only ``st.dataframe``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
+        We recommend to disable editing for these columns or conversion of all list values
+        to strings.
+
+    Parameters
+    ----------
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of "small", "medium", or "large".
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    options: Iterable of str or None
+        The options that can be selected during editing.
+
+    accept_new_options: bool or None
+        Whether the user can add selections that aren't included in ``options``.
+        If this is ``False`` (default), the user can only select from the
+        items in ``options``. If this is ``True``, the user can enter new
+        items that don't exist in ``options``.
+
+        When a user enters and selects a new item, it is included in the
+        returned cell list value as a string. The new item is not added to
+        the options drop-down menu.
+
+    color: str or Iterable of str or None
+        The color to use for different options. This can be:
+
+        - None (default): the primary color is used for all options.
+        - A single color value that is used for all options. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+        - An iterable of color values that are mapped to the options.
+
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
+
+    Examples
+    --------
+    **Example 1: Editable multiselect column**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             help="The categories of the app",
+    >>>             options=[
+    >>>                 "exploration",
+    >>>                 "visualization",
+    >>>                 "llm",
+    >>>             ],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-1.streamlit.app/
+        height: 300px
+
+    **Example 2: Colored tags for st.dataframe**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             ["exploration", "visualization"],
+    >>>             ["llm", "visualization"],
+    >>>             ["exploration"],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.MultiselectColumn(
+    >>>             "App Categories",
+    >>>             options=["exploration", "visualization", "llm"],
+    >>>             color=["orange", "red", "#ffc38a"],
+    >>>             format_func=lambda x: x.capitalize(),
+    >>>         ),
+    >>>     },
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column-2.streamlit.app/
+        height: 300px
+    """
+
+    # Process options with color and format_func:
+    processed_options: list[MultiselectOption] | None = None
+    if options is not None:
+        processed_options = []
+
+        # Convert color to an iterator
+        color_iter: Iterator[str] | None = None
+        if color is not None:
+            if isinstance(color, str):
+                # Single color for all options
+                color_iter = itertools.repeat(color)
+            else:
+                # Iterable of colors - cycle through them
+                color_iter = itertools.cycle(color)
+
+        for option in options:
+            # Start with the option value
+            option_dict = MultiselectOption(value=option)
+
+            # Apply format_func to generate label if not already present
+            if format_func is not None:
+                option_dict["label"] = format_func(option_dict["value"])
+
+            # Apply color if provided and not already present
+            if color_iter is not None and "color" not in option_dict:
+                option_dict["color"] = next(color_iter)
+
+            processed_options.append(option_dict)
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
+        type_config=MultiselectColumnConfig(
+            type="multiselect",
+            options=processed_options,
+            accept_new_options=accept_new_options,
+        ),
     )
 
 
@@ -1554,8 +1806,7 @@ def DatetimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1717,8 +1968,7 @@ def TimeColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
@@ -1871,8 +2121,7 @@ def DateColumn(
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
-        (default), Streamlit will decide: indices are disabled and data columns
-        are not.
+        (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.

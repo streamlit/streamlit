@@ -18,6 +18,8 @@ import { BooleanCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { Bool, Field } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { convertRemToPx } from "~lib/theme"
 
 import CheckboxColumn from "./CheckboxColumn"
 import { isErrorCell } from "./utils"
@@ -47,7 +49,10 @@ const MOCK_CHECKBOX_COLUMN_PROPS = {
 
 describe("CheckboxColumn", () => {
   it("creates a valid column instance", () => {
-    const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+    const mockColumn = CheckboxColumn(
+      MOCK_CHECKBOX_COLUMN_PROPS,
+      mockTheme.emotion
+    )
     expect(mockColumn.kind).toEqual("checkbox")
     expect(mockColumn.title).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.id)
@@ -83,7 +88,10 @@ describe("CheckboxColumn", () => {
     "supports boolean compatible value (%p parsed as %p)",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: boolean | null) => {
-      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+      const mockColumn = CheckboxColumn(
+        MOCK_CHECKBOX_COLUMN_PROPS,
+        mockTheme.emotion
+      )
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect(isErrorCell(cell)).toEqual(false)
@@ -94,9 +102,32 @@ describe("CheckboxColumn", () => {
     "%p results in error cell: %p",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any) => {
-      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+      const mockColumn = CheckboxColumn(
+        MOCK_CHECKBOX_COLUMN_PROPS,
+        mockTheme.emotion
+      )
       const cell = mockColumn.getCell(input)
       expect(isErrorCell(cell)).toEqual(true)
     }
   )
+
+  it("applies themeOverride roundingRadius based on theme radii", () => {
+    const mockColumn = CheckboxColumn(
+      MOCK_CHECKBOX_COLUMN_PROPS,
+      mockTheme.emotion
+    )
+
+    expect(mockColumn.themeOverride).toBeDefined()
+
+    const expectedRoundingRadius = Math.round(
+      Math.min(
+        convertRemToPx(mockTheme.emotion.radii.md),
+        convertRemToPx(mockTheme.emotion.radii.maxCheckbox)
+      )
+    )
+
+    expect(mockColumn.themeOverride?.roundingRadius).toEqual(
+      expectedRoundingRadius
+    )
+  })
 })

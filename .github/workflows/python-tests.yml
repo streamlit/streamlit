@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -119,7 +119,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -168,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -230,7 +230,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -242,7 +242,7 @@ jobs:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -314,7 +314,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}

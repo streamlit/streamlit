@@ -16,17 +16,30 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import embed from "vega-embed"
+import { TopLevelSpec } from "vega-lite"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
-import Metric, { MetricProps } from "./Metric"
+import Metric, { getMetricChartSpec, MetricProps } from "./Metric"
+
+// Mock vega-embed
+vi.mock("vega-embed", () => ({
+  default: vi.fn(),
+}))
+
+// Mock useCalculatedDimensions hook
+vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
+  useCalculatedDimensions: vi.fn(),
+}))
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
   element: MetricProto.create({
@@ -38,11 +51,21 @@ const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
 })
 
 describe("Metric element", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Default mock implementation for useCalculatedDimensions
+    vi.mocked(useCalculatedDimensions).mockReturnValue({
+      width: 200,
+      height: 100,
+      elementRef: { current: null },
+    })
+  })
+
   it("renders metric as expected", () => {
     const props = getProps()
     render(<Metric {...props} />)
     const metricElement = screen.getByTestId("stMetric")
-    expect(metricElement).toBeInTheDocument()
+    expect(metricElement).toBeVisible()
     expect(metricElement).toHaveClass("stMetric")
   })
 
@@ -84,7 +107,7 @@ describe("Metric element", () => {
   it("renders direction icon based on props - red/up", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon-Up")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Up")).toBeVisible()
   })
 
   it("renders direction icon based on props - green/down", () => {
@@ -93,7 +116,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon-Down")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Down")).toBeVisible()
   })
 
   it("renders no text and icon based on props", () => {
@@ -113,11 +136,13 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     render(<Metric {...props} />)
+    // This is the gray metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgba(49, 51, 63, 0.6);"
     )
+    // This is the gray metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(128, 132, 149, 0.1);"
+      "background-color: rgba(49, 51, 63, 0.1);"
     )
   })
 
@@ -127,9 +152,11 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
+    // This is the green metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgb(21, 130, 55);"
     )
+    // This is the green metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(33, 195, 84, 0.1);"
     )
@@ -138,9 +165,11 @@ describe("Metric element", () => {
   it("renders correct red based on props", () => {
     const props = getProps()
     render(<Metric {...props} />)
+    // This is the red metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(255, 43, 43);"
+      "color: rgb(189, 64, 67);"
     )
+    // This is the red metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(255, 43, 43, 0.1);"
     )
@@ -167,5 +196,310 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetric")).toHaveStyle(
       `border: ${expectedBorder}`
     )
+  })
+
+  // Chart feature tests
+  describe("Chart feature", () => {
+    it("renders chart when chartData is provided", () => {
+      const props = getProps({
+        chartData: [1, 2, 3, 4, 5],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricChart")).toBeVisible()
+    })
+
+    it("does not render chart when chartData is empty", () => {
+      const props = getProps({
+        chartData: [],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.queryByTestId("stMetricChart")).not.toBeInTheDocument()
+    })
+
+    it("does not render chart when chartData is not provided", () => {
+      const props = getProps()
+      render(<Metric {...props} />)
+
+      expect(screen.queryByTestId("stMetricChart")).not.toBeInTheDocument()
+    })
+
+    it("calls vega-embed when chart data is provided and width is available", async () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const props = getProps({
+        chartData,
+        chartType: MetricProto.ChartType.LINE,
+      })
+
+      render(<Metric {...props} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledWith(
+          expect.any(HTMLElement),
+          expect.objectContaining({
+            data: {
+              values: chartData.map((value, index) => ({
+                x: index,
+                y: value,
+              })),
+            },
+          }),
+          expect.objectContaining({
+            actions: false,
+            renderer: "svg",
+            ast: true,
+            tooltip: expect.objectContaining({
+              theme: "custom",
+            }),
+          })
+        )
+      })
+    })
+
+    it("does not call vega-embed when width is zero", () => {
+      vi.mocked(useCalculatedDimensions).mockReturnValue({
+        width: 0,
+        height: 100,
+        elementRef: { current: null },
+      })
+
+      const props = getProps({
+        chartData: [1, 2, 3, 4, 5],
+        chartType: MetricProto.ChartType.LINE,
+      })
+
+      render(<Metric {...props} />)
+
+      expect(vi.mocked(embed)).not.toHaveBeenCalled()
+    })
+
+    it("renders chart with different chart types", async () => {
+      const chartTypes = [
+        MetricProto.ChartType.LINE,
+        MetricProto.ChartType.BAR,
+        MetricProto.ChartType.AREA,
+      ]
+
+      for (const chartType of chartTypes) {
+        vi.clearAllMocks()
+
+        const props = getProps({
+          chartData: [1, 2, 3, 4, 5],
+          chartType,
+        })
+
+        render(<Metric {...props} />)
+
+        await waitFor(() => {
+          expect(vi.mocked(embed)).toHaveBeenCalled()
+        })
+      }
+    })
+
+    it("handles single value chartData by duplicating the value", async () => {
+      const props = getProps({
+        chartData: [42],
+        chartType: MetricProto.ChartType.LINE,
+      })
+
+      render(<Metric {...props} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledWith(
+          expect.any(HTMLElement),
+          expect.objectContaining({
+            data: {
+              values: [
+                { x: 0, y: 42 },
+                { x: 1, y: 42 },
+              ],
+            },
+          }),
+          expect.any(Object)
+        )
+      })
+    })
+
+    it("formats the tooltip correctly", async () => {
+      const chartData = [10.123, 20.456, 30.789]
+      const props = getProps({
+        chartData,
+        chartType: MetricProto.ChartType.LINE,
+      })
+
+      render(<Metric {...props} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalled()
+      })
+
+      const embedCall = vi.mocked(embed).mock.calls[0]
+      const tooltipOptions = embedCall[2]?.tooltip as
+        | { formatTooltip: (value: { y: number }) => string }
+        | undefined
+
+      expect(tooltipOptions).toBeDefined()
+      if (tooltipOptions) {
+        expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
+        expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
+      }
+    })
+  })
+
+  describe("getMetricChartSpec function", () => {
+    it("generates correct spec for line chart", () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const spec = getMetricChartSpec(
+        chartData,
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      )
+
+      expect(spec).toMatchObject({
+        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+        width: 200,
+        data: {
+          values: chartData.map((value, index) => ({ x: index, y: value })),
+        },
+        layer: expect.arrayContaining([
+          expect.objectContaining({
+            mark: expect.objectContaining({
+              type: "line",
+              strokeCap: "round",
+              strokeWidth: 2,
+            }),
+          }),
+        ]),
+      })
+    })
+
+    it("generates correct spec for bar chart", () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const spec = getMetricChartSpec(
+        chartData,
+        MetricProto.ChartType.BAR,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GREEN
+      )
+
+      expect(spec).toMatchObject({
+        layer: expect.arrayContaining([
+          expect.objectContaining({
+            mark: expect.objectContaining({
+              type: "bar",
+              cornerRadius: 9999,
+            }),
+          }),
+        ]),
+        config: expect.objectContaining({
+          padding: { left: 0, right: 0, top: 2, bottom: 2 },
+        }),
+      })
+    })
+
+    it("generates correct spec for area chart", () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const spec = getMetricChartSpec(
+        chartData,
+        MetricProto.ChartType.AREA,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GRAY
+      )
+
+      expect(spec).toMatchObject({
+        layer: expect.arrayContaining([
+          expect.objectContaining({
+            mark: expect.objectContaining({
+              type: "area",
+              opacity: 1,
+              line: expect.objectContaining({
+                strokeWidth: 2,
+                strokeCap: "round",
+              }),
+            }),
+          }),
+        ]),
+      })
+    })
+
+    it("handles single value by duplicating it", () => {
+      const chartData = [42]
+      const spec = getMetricChartSpec(
+        chartData,
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      )
+
+      const data = spec.data as { values: { x: number; y: number }[] }
+      expect(data?.values).toEqual([
+        { x: 0, y: 42 },
+        { x: 1, y: 42 },
+      ])
+    })
+
+    it("sets correct width and height", () => {
+      const spec = getMetricChartSpec(
+        [1, 2, 3],
+        MetricProto.ChartType.LINE,
+        150,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { width: number; height: number }
+
+      expect(spec.width).toBe(150)
+      expect(typeof spec.height).toBe("number")
+      expect(spec.height).toBeGreaterThan(0)
+    })
+
+    it("includes interactive hover selection", () => {
+      const spec = getMetricChartSpec(
+        [1, 2, 3],
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { layer: unknown[] }
+
+      // Check for hover selection parameter
+      const pointsLayer = spec.layer?.[1] as { params?: unknown[] }
+      expect(pointsLayer?.params).toBeDefined()
+      expect(pointsLayer?.params?.[0]).toMatchObject({
+        select: expect.objectContaining({
+          type: "point",
+          encodings: ["x"],
+          nearest: true,
+          on: "mousemove",
+          clear: "mouseout",
+        }),
+      })
+    })
+
+    it("includes highlighted points layer", () => {
+      const spec = getMetricChartSpec(
+        [1, 2, 3],
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { layer: unknown[] }
+
+      // Check for highlighted points layer
+      const highlightedPointsLayer = spec.layer?.[2] as { mark?: unknown }
+      expect(highlightedPointsLayer?.mark).toMatchObject({
+        type: "point",
+        filled: true,
+        size: 65,
+        tooltip: true,
+      })
+    })
   })
 })

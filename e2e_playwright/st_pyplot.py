@@ -13,12 +13,16 @@
 # limitations under the License.
 
 import textwrap
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns  # type: ignore
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 np.random.seed(0)
 
@@ -34,18 +38,18 @@ st.write("Resized figure:")
 fig.set_size_inches(6.4 / 4, 4.8 / 4)
 st.pyplot(fig)
 
-st.write("Resized figure with `use_container_width=True`:")
-st.pyplot(fig, use_container_width=True)
+st.write("Resized figure with `width='stretch'`:")
+st.pyplot(fig, width="stretch")
 
-st.write("Resized figure with `use_container_width=False`:")
-st.pyplot(fig, use_container_width=False)
+st.write("Resized figure with `width='content'`:")
+st.pyplot(fig, width="content")
 
 st.write("Advanced Seaborn figure:")
 # Generate data
 data_points = 100
-x_data: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
-y_data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
-data2: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
+x_data: "NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
+y_data: "NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
+data2: "NDArray[np.float64]" = np.random.randn(data_points, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))
@@ -89,3 +93,19 @@ plt.clf()
 
 fig, ax = plt.subplots()
 st.pyplot(fig)
+
+st.write("width parameter examples:")
+
+# Create a simple figure for width testing
+fig_width_test, ax_width_test = plt.subplots(figsize=(4, 3))
+ax_width_test.plot([1, 2, 3, 4], [1, 4, 2, 3])
+ax_width_test.set_title("Width Parameter Test")
+
+st.write("width='content' (default):")
+st.pyplot(fig_width_test, width="content")
+
+st.write("width='stretch':")
+st.pyplot(fig_width_test, width="stretch")
+
+st.write("width=200 (pixels):")
+st.pyplot(fig_width_test, width=200)

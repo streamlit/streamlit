@@ -18,19 +18,19 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export { AppRoot, BlockNode, ElementNode } from "./AppNode"
-export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
 } from "./components/core/Block"
+export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
+export { FormsContext } from "./components/core/FormsContext"
+export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { LibContext } from "./components/core/LibContext"
 export type { LibConfig, LibContextProps } from "./components/core/LibContext"
-export { FormsContext } from "./components/core/FormsContext"
-export type { FormsContextProps } from "./components/core/FormsContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { default as AlertElement } from "./components/elements/AlertElement"
@@ -59,15 +59,22 @@ export {
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
-export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
-export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
+export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
+export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
+export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
-export { useRequiredContext } from "./hooks/useRequiredContext"
+export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
+export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
+export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export { useRequiredContext } from "./hooks/useRequiredContext"
+export {
+  measureScrollbarGutterSize,
+  useScrollbarGutterSize,
+} from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
@@ -87,7 +94,7 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export { renderWithContexts, mockWindowLocation, render } from "./test_util"
+export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 export {
   AUTO_THEME_NAME,
   baseTheme,
@@ -123,18 +130,18 @@ export {
 } from "./util/performance"
 export { LocalStore } from "./util/storageUtils"
 export { Timer } from "./util/Timer"
+export { getCrossOriginAttribute } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,
   generateUID,
   getElementId,
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
-  getUrl,
+  getLocaleLanguage,
   getTimezone,
   getTimezoneOffset,
-  getLocaleLanguage,
+  getUrl,
   hashString,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,
@@ -149,4 +156,3 @@ export {
 } from "./util/utils"
 export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
-export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"

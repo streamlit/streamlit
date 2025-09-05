@@ -50,10 +50,14 @@ st.write("checkbox 5 - value:", i5)
 i6 = st.checkbox("checkbox 6 (True, disabled)", value=True, disabled=True)
 st.write("checkbox 6 - value:", i6)
 
-i7 = st.checkbox("checkbox 7 (label hidden)", label_visibility="hidden")
+i7 = st.checkbox(
+    "checkbox 7 (label hidden)", label_visibility="hidden", key="checkbox_7"
+)
 st.write("checkbox 7 - value:", i7)
 
-i8 = st.checkbox("checkbox 8 (label collapsed)", label_visibility="collapsed")
+i8 = st.checkbox(
+    "checkbox 8 (label collapsed)", label_visibility="collapsed", key="checkbox_8"
+)
 st.write("checkbox 8 - value:", i8)
 
 with st.expander("Grouped checkboxes", expanded=True):
@@ -63,9 +67,41 @@ with st.expander("Grouped checkboxes", expanded=True):
     st.text("A non-checkbox element")
 
 st.checkbox(
-    "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="checkbox_9",
 )
 
 st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
+
+st.markdown("Dynamic checkbox:")
+
+if st.toggle("Update checkbox props"):
+    state = st.checkbox(
+        "Updated dynamic checkbox",
+        value=False,
+        width="stretch",
+        help="updated help",
+        key="dynamic_checkbox_with_key",
+        on_change=lambda a, param: print(
+            f"Updated checkbox - callback triggered: {a} {param}"
+        ),
+        args=("Updated checkbox arg",),
+        kwargs={"param": "updated kwarg param"},
+    )
+    st.write("Updated checkbox state:", state)
+else:
+    state = st.checkbox(
+        "Initial dynamic checkbox",
+        value=True,
+        width="content",
+        help="initial help",
+        key="dynamic_checkbox_with_key",
+        on_change=lambda a, param: print(
+            f"Initial checkbox - callback triggered: {a} {param}"
+        ),
+        args=("Initial checkbox arg",),
+        kwargs={"param": "initial kwarg param"},
+    )
+    st.write("Initial checkbox state:", state)

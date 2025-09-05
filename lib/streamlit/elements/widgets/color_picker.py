@@ -126,8 +126,8 @@ class ColorPickerMixin:
             An optional callback invoked when this color_picker's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -219,7 +219,7 @@ class ColorPickerMixin:
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             value=str(value),

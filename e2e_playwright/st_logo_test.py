@@ -39,6 +39,11 @@ def test_small_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-small_w_sidebar_expanded",
@@ -63,6 +68,11 @@ def test_medium_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-medium_w_sidebar_expanded",
@@ -87,6 +97,11 @@ def test_large_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-large_w_sidebar_expanded",
@@ -95,7 +110,6 @@ def test_large_logo_w_sidebar(
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
     expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
-    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
     assert_snapshot(
         themed_app.get_by_test_id("stHeader"),
@@ -111,6 +125,11 @@ def test_logo_w_sidebar_and_nav(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
 
 

@@ -25,7 +25,7 @@ export function buildHttpUri(
   path: string
 ): string {
   const fullPath = makePath(pathname, path)
-  return `${protocol}//${hostname}:${port}/${fullPath}`
+  return `${protocol}//${hostname}${port ? `:${port}` : ""}/${fullPath}`
 }
 
 export function makePath(basePath: string, subPath: string): string {

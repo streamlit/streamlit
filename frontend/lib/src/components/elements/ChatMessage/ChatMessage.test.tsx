@@ -21,7 +21,7 @@ import { screen } from "@testing-library/react"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
 
@@ -66,14 +66,89 @@ describe("ChatMessage", () => {
     expect(screen.getByText("😃")).toBeTruthy()
   })
 
-  it("renders with an image avatar", () => {
-    const props = getProps({
-      avatar: "http://example.com/avatar.jpg",
-      avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+  describe("image avatar", () => {
+    it("renders with an image avatar", () => {
+      const props = getProps({
+        avatar: "http://example.com/avatar.jpg",
+        avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+      })
+      render(<ChatMessage {...props} />)
+      const chatAvatar = screen.getByAltText("user avatar")
+      expect(chatAvatar).toHaveAttribute(
+        "src",
+        "http://example.com/avatar.jpg"
+      )
     })
-    render(<ChatMessage {...props} />)
-    const chatAvatar = screen.getByAltText("user avatar")
-    expect(chatAvatar).toHaveAttribute("src", "http://example.com/avatar.jpg")
+
+    describe("crossOrigin attribute", () => {
+      const scenarios = [
+        {
+          backendBaseUrl: undefined,
+          description: "without BACKEND_BASE_URL",
+        },
+        {
+          backendBaseUrl: "http://localhost:8501",
+          description: "with BACKEND_BASE_URL",
+        },
+      ]
+
+      afterEach(() => {
+        // Clean up window.__streamlit after each test
+        if (window.__streamlit) {
+          delete window.__streamlit.BACKEND_BASE_URL
+        }
+      })
+
+      it.each(scenarios)(
+        "sets crossOrigin attribute when resourceCrossOriginMode is configured ($description)",
+        ({ backendBaseUrl }) => {
+          // Setup window.__streamlit.BACKEND_BASE_URL if specified
+          if (backendBaseUrl) {
+            window.__streamlit = window.__streamlit || {}
+            window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+          }
+
+          const props = getProps({
+            avatar: "avatar.jpg",
+            avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+          })
+          renderWithContexts(<ChatMessage {...props} />, {
+            libConfig: { resourceCrossOriginMode: "anonymous" },
+          })
+
+          const chatAvatar = screen.getByAltText("user avatar")
+          if (backendBaseUrl) {
+            // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
+            expect(chatAvatar).toHaveAttribute("crossOrigin", "anonymous")
+          } else {
+            // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
+            expect(chatAvatar).not.toHaveAttribute("crossOrigin")
+          }
+        }
+      )
+
+      it.each(scenarios)(
+        "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
+        ({ backendBaseUrl }) => {
+          // Setup window.__streamlit.BACKEND_BASE_URL if specified
+          if (backendBaseUrl) {
+            window.__streamlit = window.__streamlit || {}
+            window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+          }
+
+          const props = getProps({
+            avatar: "avatar.jpg",
+            avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+          })
+          renderWithContexts(<ChatMessage {...props} />, {
+            libConfig: { resourceCrossOriginMode: undefined },
+          })
+
+          const chatAvatar = screen.getByAltText("user avatar")
+          expect(chatAvatar).not.toHaveAttribute("crossOrigin")
+        }
+      )
+    })
   })
 
   it("renders with a name label character as fallback", () => {

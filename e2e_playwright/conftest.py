@@ -563,6 +563,21 @@ def browser_type_launch_args(
     return browser_type_launch_args
 
 
+@pytest.fixture(scope="session")
+def browser_context_args(
+    browser_context_args: dict[str, Any], browser_name: str
+) -> dict[str, Any]:
+    """Fixture that adds clipboard permissions to the browser context for Chromium."""
+    # Clipboard permissions are only supported in Chromium-based browsers
+    if browser_name == "chromium":
+        return {
+            **browser_context_args,
+            "permissions": ["clipboard-read", "clipboard-write"],
+        }
+
+    return browser_context_args
+
+
 @pytest.fixture(params=["light_theme", "dark_theme"])
 def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
@@ -890,20 +905,31 @@ def playwright_profiling(
 def wait_for_app_run(
     page_or_locator: Page | Locator | FrameLocator,
     wait_delay: int = 100,
+    initial_wait: int = 210,
 ) -> None:
-    """Wait for the given page to finish running."""
-    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    """Wait for the given page to finish running.
 
-    page = None
-    if isinstance(page_or_locator, Page):
-        page = page_or_locator
-    elif isinstance(page_or_locator, Locator):
+    Parameters
+    ----------
+    page_or_locator : Page | Locator | FrameLocator
+        The page or locator to wait for.
+    wait_delay : int, optional
+        The delay to wait for the rerun to finish.
+    initial_wait : int, optional
+        The initial wait before checking for the rerun to finish.
+        This is needed for some widgets that have a debounce timeout.
+        For example, pydeck charts have a debounce timeout of 200ms.
+    """
+
+    page: Page
+    if isinstance(page_or_locator, Locator):
         page = page_or_locator.page
     elif isinstance(page_or_locator, FrameLocator):
         page = page_or_locator.owner.page
+    else:
+        page = page_or_locator
 
-    # if isinstance(page, Page):
-    page.wait_for_timeout(155)
+    page.wait_for_timeout(initial_wait)
 
     if isinstance(page_or_locator, StaticPage):
         # Check that static connection established.

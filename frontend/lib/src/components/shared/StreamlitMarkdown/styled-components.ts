@@ -179,6 +179,10 @@ export const StyledStreamlitMarkdown =
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
+        // Always respect the width of the parent container:
+        maxWidth: "100%",
+        // Break long words to prevent them from overflowing the container:
+        overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 
@@ -208,6 +212,8 @@ export const StyledStreamlitMarkdown =
           // In labels, widgets should never be taller than the text.
           maxHeight: isLabel ? "1em" : undefined,
           verticalAlign: "middle",
+          // Ensure that images are not distorted:
+          objectFit: "scale-down",
         },
 
         li: {
@@ -235,6 +241,11 @@ export const StyledStreamlitMarkdown =
 
         "b, strong": {
           fontWeight: theme.fontWeights.bold,
+        },
+
+        // Issue #11976: Handle bolded inline code
+        "b code, strong code": {
+          fontWeight: theme.fontWeights.codeBold,
         },
 
         // Handles the horizontal divider:

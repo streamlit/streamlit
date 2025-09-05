@@ -19,10 +19,14 @@ are executed.
 
 from __future__ import annotations
 
+import logging
 import os
+from typing import Final
 from unittest.mock import mock_open, patch
 
 import pytest
+
+_LOGGER: Final = logging.getLogger(__name__)
 
 # Do not import any Streamlit modules here! See below for details.
 
@@ -49,9 +53,12 @@ with (
     import streamlit as st  # noqa: F401
     from streamlit import config, file_util
 
-    assert not config._config_options, (
-        "config.get_option() should not be called on file import!"
-    )
+    if config._config_options:
+        _LOGGER.warning(
+            "The config options have been populated already. This can happen if there "
+            "is a config file in a supported path. This can lead to unreliable test "
+            "execution."
+        )
 
     config_path = file_util.get_streamlit_file_path("config.toml")
     path_exists.side_effect = lambda path: path == config_path

@@ -80,13 +80,13 @@ def test_displays_individual_markdowns(app: Page):
     rainbow_background = markdown_elements.nth(9).locator("span").first
     green_background = markdown_elements.nth(10).locator("span").first
 
-    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 225, 0.1)")
+    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 255, 0.1)")
     expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
     expect(rainbow_background).to_have_css(
         "background-image",
-        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), "
-        "rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), "
-        "rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
+        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 164, 33, 0.1), "
+        "rgba(255, 255, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 255, 0.1), "
+        "rgba(154, 93, 255, 0.1), rgba(88, 63, 132, 0.1))",
     )
     expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
 
@@ -263,6 +263,7 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     expect(badge_container).to_contain_text("This is a very long badge")
     expect(badge_container).to_contain_text("Blue markdown badge")
     expect(badge_container).to_contain_text("🌱 Green markdown badge")
+    expect(badge_container).to_contain_text("Yellow markdown badge")
 
     # Take a snapshot of all badges together
     assert_snapshot(badge_container, name="st_badge-examples")
@@ -405,3 +406,10 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     )
     expect(markdown_element).to_be_visible()
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
+
+
+def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
+    container = get_element_by_key(app, "long_word")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_markdown-long_word_in_container")

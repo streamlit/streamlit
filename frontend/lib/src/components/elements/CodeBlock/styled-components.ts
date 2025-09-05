@@ -165,12 +165,12 @@ export const StyledPre = styled.pre<StyledCodeProps>(
 
     ".token.function, .token.class-name, .token.selector": {
       color: theme.colors.blue70,
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.codeExtraBold,
     },
 
     ".token.important": {
       color: theme.colors.red70,
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.codeExtraBold,
     },
 
     ".token.comment": {
@@ -242,12 +242,38 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
   transform: "scale(0)",
+  top: 0,
+  right: 0,
 
-  [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {
+  // Show button on container hover
+  [`${StyledCodeBlock}:hover &`]: {
     opacity: 1,
     transform: "scale(1)",
     outline: "none",
     transition: "none",
+  },
+
+  // Show button on its own hover/focus states
+  "&:hover, &:focus, &:active, &:focus-visible": {
+    opacity: 1,
+    transform: "scale(1)",
+    outline: "none",
+    transition: "none",
+    borderRadius: theme.radii.md,
+  },
+
+  "&:hover": {
     color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+
+  "&:active": {
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+
+  // Accessible focus ring when keyboard focusing the button
+  "&:focus-visible": {
+    boxShadow: `0 0 0 0.2rem ${theme.colors.darkenedBgMix25}`,
   },
 }))

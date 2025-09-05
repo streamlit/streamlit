@@ -216,14 +216,17 @@ with st.container(key="badge_elements"):
         "Streamlit interface.",
     )
     st.markdown(
-        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge]"
+        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge] :yellow-badge[Yellow markdown badge]"
     )
 
 "---"
 
-st.markdown(
-    "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
-)
+col1, _ = st.columns(2)
+with col1:
+    st.markdown(
+        "Images in markdown should stay inside the container width and not be distorted:\n\n"
+        "![image](./app/static/streamlit-logo.png)"
+    )
 
 "---"
 
@@ -248,13 +251,13 @@ $$
 | --------- | ----------- |
 | Some      | :material/description: :streamlit: Data        |
 
-- :small[small], :small[:red[small red]], :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange],
-  :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
-- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet],
-  :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary],
-  :rainbow-background[rainbow]
-- [x] :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
-  :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
+- :small[small], :small[:red[small red]], :blue[blue], :green[green], :yellow[yellow], :red[red], :violet[violet],
+  :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
+- :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
+  :violet-background[violet], :orange-background[orange], :gray-background[gray],
+  :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
+  :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
@@ -329,3 +332,7 @@ with st.expander("Badge Width Examples", expanded=True):
         st.badge("Fixed 100px badge", width=100)
 
         st.badge("Stretch badge", width="stretch")
+
+
+with st.container(border=True, width=150, key="long_word"):
+    st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")
