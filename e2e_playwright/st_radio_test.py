@@ -12,155 +12,195 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import (
-    ImageCompareFunction,
-    wait_for_app_run,
-)
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    expect_markdown,
     get_element_by_key,
+    get_radio,
+    get_radio_option,
+    select_radio_option,
 )
 
 
 def test_radio_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the radio widgets are correctly rendered via screenshot matching."""
-    radio_widgets = themed_app.get_by_test_id("stRadio")
-    expect(radio_widgets).to_have_count(17)
+    """Render radios and snapshot by label/key (no index-based selection)."""
+    expect(themed_app.get_by_test_id("stRadio")).to_have_count(17)
 
-    assert_snapshot(radio_widgets.nth(0), name="st_radio-default")
-    assert_snapshot(radio_widgets.nth(1), name="st_radio-formatted_options")
-    assert_snapshot(radio_widgets.nth(2), name="st_radio-no_options")
-    assert_snapshot(radio_widgets.nth(3), name="st_radio-disabled")
-    assert_snapshot(radio_widgets.nth(4), name="st_radio-horizontal")
-    assert_snapshot(radio_widgets.nth(5), name="st_radio-dataframe_options")
-    assert_snapshot(radio_widgets.nth(6), name="st_radio-hidden_label")
-    assert_snapshot(radio_widgets.nth(7), name="st_radio-collapsed_label")
-    assert_snapshot(radio_widgets.nth(8), name="st_radio-markdown_options")
-    assert_snapshot(radio_widgets.nth(9), name="st_radio-captions")
-    assert_snapshot(radio_widgets.nth(10), name="st_radio-horizontal_captions")
-    assert_snapshot(radio_widgets.nth(11), name="st_radio-callback_help")
-    assert_snapshot(radio_widgets.nth(12), name="st_radio-empty_selection")
-    assert_snapshot(radio_widgets.nth(13), name="st_radio-markdown_label")
+    assert_snapshot(get_radio(themed_app, "radio 1 (default)"), name="st_radio-default")
+    assert_snapshot(
+        get_radio(themed_app, "radio 2 (Formatted options)"),
+        name="st_radio-formatted_options",
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 3 (no options)"), name="st_radio-no_options"
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 4 (disabled)"), name="st_radio-disabled"
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 5 (horizontal)"), name="st_radio-horizontal"
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 6 (options from dataframe)"),
+        name="st_radio-dataframe_options",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "radio_7"), name="st_radio-hidden_label"
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "radio_8"), name="st_radio-collapsed_label"
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 9 (markdown options)"),
+        name="st_radio-markdown_options",
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 10 (with captions)"), name="st_radio-captions"
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 11 (horizontal, captions)"),
+        name="st_radio-horizontal_captions",
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 12 (with callback, help)"),
+        name="st_radio-callback_help",
+    )
+    assert_snapshot(
+        get_radio(themed_app, "radio 13 (empty selection)"),
+        name="st_radio-empty_selection",
+    )
+    assert_snapshot(
+        get_radio(themed_app, re.compile(r"^radio 14")), name="st_radio-markdown_label"
+    )
 
 
 def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the radio width examples are correctly rendered."""
-    radio_widgets = app.get_by_test_id("stRadio")
-
-    # Test width examples (last 3 radio widgets)
-    assert_snapshot(radio_widgets.nth(14), name="st_radio-width_content")
-    assert_snapshot(radio_widgets.nth(15), name="st_radio-width_stretch")
-    assert_snapshot(radio_widgets.nth(16), name="st_radio-width_200px")
+    """Test width examples via label targeting."""
+    assert_snapshot(
+        get_radio(app, "Radio with content width (default)"),
+        name="st_radio-width_content",
+    )
+    assert_snapshot(
+        get_radio(app, "Radio with stretch width"), name="st_radio-width_stretch"
+    )
+    assert_snapshot(
+        get_radio(
+            app,
+            "Radio with 200px width. Label is too long to fit in the width",
+        ),
+        name="st_radio-width_200px",
+    )
 
 
 def test_help_tooltip_works(app: Page):
-    element_with_help = app.get_by_test_id("stRadio").nth(11)
+    element_with_help = get_radio(app, "radio 12 (with callback, help)")
     expect_help_tooltip(app, element_with_help, "help text")
 
 
 def test_radio_has_correct_default_values(app: Page):
-    """Test that st.radio returns the correct initial values."""
-    markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(14)
-
-    expected = [
-        "value 1: female",
-        "value 2: male",
-        "value 3: None",
-        "value 4: female",
-        "value 5: female",
-        "value 6: female",
-        "value 7: female",
-        "value 8: female",
-        "value 9: bold text",
-        "value 10: A",
-        "value 11: yes",
-        "value 12: male",
-        "radio changed: False",
-        "value 13: None",
-    ]
-
-    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    """Verify initial markdown values using helper."""
+    expect_markdown(app, "value 1: female")
+    expect_markdown(app, "value 2: male")
+    expect_markdown(app, "value 3: None")
+    expect_markdown(app, "value 4: female")
+    expect_markdown(app, "value 5: female")
+    expect_markdown(app, "value 6: female")
+    expect_markdown(app, "value 7: female")
+    expect_markdown(app, "value 8: female")
+    expect_markdown(app, "value 9: bold text")
+    expect_markdown(app, "value 10: A")
+    expect_markdown(app, "value 11: yes")
+    expect_markdown(app, "value 12: male")
+    expect_markdown(app, "radio changed: False")
+    expect_markdown(app, "value 13: None")
 
 
 def test_set_value_correctly_when_click(app: Page):
-    """Test that st.radio returns the correct values when the selection is changed."""
+    """Change selections by user-visible labels and validate markdown values."""
+    # radio 1 -> male
+    select_radio_option(app, option=re.compile(r"^male$"), label="radio 1 (default)")
 
-    expected = [
-        "value 1: male",
-        "value 2: male",
-        "value 3: None",
-        "value 4: female",
-        "value 5: male",
-        "value 6: male",
-        "value 7: male",
-        "value 8: male",
-        "value 9: italics text",
-        "value 10: B",
-        "value 11: maybe",
-        "value 12: male",
-        "radio changed: False",
-        "value 13: male",
-    ]
+    # radio 2 already set to male; re-select to mimic previous behavior
+    select_radio_option(
+        app, option=re.compile(r"^Male$"), label="radio 2 (Formatted options)"
+    )
 
-    for radio_index, expected_text in enumerate(expected):
-        if radio_index not in [2, 3]:  # skip disabled and no-options widget
-            element = app.get_by_test_id("stRadio").nth(radio_index)
-            expect(element).to_be_visible()
-            element.scroll_into_view_if_needed()
+    # radio 3 (no options) -> skip
+    # radio 4 (disabled) -> skip
 
-            # Get the second radio option (index 1)
-            radio_option = element.locator('label[data-baseweb="radio"]').nth(1)
-            expect(radio_option).to_be_visible()
+    # radio 5 -> male
+    select_radio_option(app, option=re.compile(r"^male$"), label="radio 5 (horizontal)")
 
-            radio_option.click(delay=50)
-            wait_for_app_run(app)
+    # radio 6 -> male
+    select_radio_option(
+        app, option=re.compile(r"^male$"), label="radio 6 (options from dataframe)"
+    )
 
-        expect(app.get_by_test_id("stMarkdown").nth(radio_index)).to_have_text(
-            expected_text, use_inner_text=True
-        )
+    # radio 7 (hidden label) -> male via key
+    get_radio_option(get_element_by_key(app, "radio_7"), re.compile(r"^male$")).click()
+    wait_for_app_run(app)
+
+    # radio 8 (collapsed label) -> male via key
+    get_radio_option(get_element_by_key(app, "radio_8"), re.compile(r"^male$")).click()
+    wait_for_app_run(app)
+
+    # radio 9 (markdown options) -> italics text
+    select_radio_option(app, option="italics text", label="radio 9 (markdown options)")
+
+    # radio 10 (with captions) -> B (match at start to avoid caption text)
+    select_radio_option(app, option=re.compile(r"^B"), label="radio 10 (with captions)")
+
+    # radio 11 (horizontal, captions) -> maybe
+    select_radio_option(app, option="maybe", label="radio 11 (horizontal, captions)")
+
+    # radio 12 (with callback, help) -> keep as male (do not change)
+
+    # radio changed -> remains False
+
+    # radio 13 (empty selection) -> male
+    select_radio_option(
+        app, option=re.compile(r"^male$"), label="radio 13 (empty selection)"
+    )
+
+    # Verify expected markdowns
+    expect_markdown(app, "value 1: male")
+    expect_markdown(app, "value 2: male")
+    expect_markdown(app, "value 3: None")
+    expect_markdown(app, "value 4: female")
+    expect_markdown(app, "value 5: male")
+    expect_markdown(app, "value 6: male")
+    expect_markdown(app, "value 7: male")
+    expect_markdown(app, "value 8: male")
+    expect_markdown(app, "value 9: italics text")
+    expect_markdown(app, "value 10: B")
+    expect_markdown(app, "value 11: maybe")
+    expect_markdown(app, "value 12: male")
+    expect_markdown(app, "radio changed: False")
+    expect_markdown(app, "value 13: male")
 
 
 def test_calls_callback_on_change(app: Page):
-    """Test that it correctly calls the callback on change."""
-    radio_widget = app.get_by_test_id("stRadio").nth(11)
+    """Verify callback behavior using label-based selection."""
+    # Change radio 12 from male -> female
+    select_radio_option(app, option="female", label="radio 12 (with callback, help)")
 
-    radio_widget.locator('label[data-baseweb="radio"]').first.click(force=True)
-    wait_for_app_run(app)
+    expect_markdown(app, "value 12: female")
+    expect_markdown(app, "radio changed: True")
 
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
-        "value 12: female",
-        use_inner_text=True,
-    )
-    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
-        "radio changed: True",
-        use_inner_text=True,
-    )
+    # Trigger delta path change via radio 1
+    select_radio_option(app, option=re.compile(r"^male$"), label="radio 1 (default)")
 
-    # Change different date input to trigger delta path change
-    first_date_input_field = app.get_by_test_id("stRadio").first
-    first_date_input_field.locator('label[data-baseweb="radio"]').last.click(force=True)
-    wait_for_app_run(app)
-
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "value 1: male", use_inner_text=True
-    )
-
-    # Test if value is still correct after delta path change
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
-        "value 12: female",
-        use_inner_text=True,
-    )
-    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
-        "radio changed: False",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "value 1: male")
+    expect_markdown(app, "value 12: female")
+    expect_markdown(app, "radio changed: False")
 
 
 def test_check_top_level_class(app: Page):
