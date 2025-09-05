@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     expect_markdown,
     get_element_by_key,
     goto_app,
+    reset_hovering,
 )
 
 
@@ -382,10 +383,17 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
     file_upload_helper(app, app.get_by_test_id("stChatInput").nth(3), [file1])
 
+    # Reset hovering to not cause issues with the upload tooltip being
+    # shown over the uploaded file tooltip hover target:
+    reset_hovering(app)
+
     expect(app.get_by_text(file_name1)).to_be_visible()
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(1)
-    uploaded_files.get_by_test_id("stTooltipHoverTarget").nth(0).hover()
+    expect(uploaded_files).to_be_visible()
+    tooltip_hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget").nth(0)
+    expect(tooltip_hover_target).to_be_visible()
+    tooltip_hover_target.hover()
     expect(app.get_by_text("File must be 1.0MB or smaller.")).to_be_visible()
 
 
@@ -401,6 +409,7 @@ def test_single_file_upload_button_tooltip(app: Page):
 
     # Hover on the tooltip hover target
     hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
     hover_target.hover()
 
     # The tooltip has a 500ms delay, so we need to wait for it to appear
@@ -421,6 +430,7 @@ def test_multi_file_upload_button_tooltip(app: Page):
 
     # Hover on the tooltip hover target
     hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
     hover_target.hover()
 
     # The tooltip has a 500ms delay, so we need to wait for it to appear
@@ -441,6 +451,7 @@ def test_directory_upload_button_tooltip(app: Page):
 
     # Hover on the tooltip hover target
     hover_target = chat_input_upload_button.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
     hover_target.hover()
 
     # The tooltip has a 500ms delay, so we need to wait for it to appear

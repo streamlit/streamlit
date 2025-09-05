@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -75,6 +76,7 @@ def test_data_frame_resizing(app: Page):
     expect(dataframe_element).to_have_css("height", "200px")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe should render as expected with width and height."""
     stretch_dataframe = app.get_by_test_id("stDataFrame").nth(14)

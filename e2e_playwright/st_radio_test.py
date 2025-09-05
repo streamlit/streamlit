@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -90,7 +89,6 @@ def test_radio_has_correct_default_values(app: Page):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
 
-@pytest.mark.flaky(reruns=4)
 def test_set_value_correctly_when_click(app: Page):
     """Test that st.radio returns the correct values when the selection is changed."""
 

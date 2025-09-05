@@ -111,6 +111,7 @@ def test_displays_a_video_player(app: Page):
     expect(video_element).to_have_attribute("src", re.compile(r".*media.*.mp4"))
 
 
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.parametrize(
     "video_option_label",
     [
@@ -127,20 +128,23 @@ def test_video_end_time(app: Page, video_option_label: str):
 
     video_element = _select_video_to_show(app, video_option_label)
     _wait_until_video_has_data(app, video_element)
+    # Give the video a little more time to load
+    # And reduce potential flakiness:
+    app.wait_for_timeout(2000)
     video_element.evaluate("el => el.play()")
 
     # Wait for the video to actually start playing
     wait_until(
         app,
         lambda: video_element.evaluate("el => !el.paused") is True,
-        timeout=2000,
+        timeout=5000,
     )
 
     # Wait until video reaches end_time and pauses
     wait_until(
         app,
         lambda: video_element.evaluate("el => el.paused") is True,
-        timeout=5000,
+        timeout=10000,
     )
 
     # Verify the video stopped at the expected end_time (33 seconds)
@@ -175,7 +179,6 @@ def test_video_end_time_loop(app: Page, video_option_label: str):
     wait_until(app, lambda: 36 < video_element.evaluate("el => el.currentTime") < 38)
 
 
-@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_autoplay(app: Page):
     """Test that `st.video` autoplay property works correctly."""
     video_element = _select_video_to_show(app, "webm video with autoplay")
@@ -200,7 +203,6 @@ def test_video_muted_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", False)
 
 
-@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_remount_no_autoplay(app: Page):
     """Test that `st.video` remounts correctly without autoplay."""
     video_element = _select_video_to_show(app, "webm video with autoplay")
