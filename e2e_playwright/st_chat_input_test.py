@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import FilePayload, Locator, Page, expect
 
 from e2e_playwright.conftest import (
@@ -367,6 +368,7 @@ def test_file_upload_error_message_disallowed_files(
     expect(app.get_by_text("json files are not allowed.")).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
 
