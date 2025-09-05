@@ -208,7 +208,7 @@ export const StyledGhostButton = styled(
   "&:disabled, &:disabled:hover, &:disabled:active": {
     backgroundColor: theme.colors.gray30,
     borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.gray60,
   },
 }))
 
@@ -376,7 +376,7 @@ export const StyledHeaderButton = styled(
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -497,7 +497,7 @@ export const StyledElementToolbarButton = styled(
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })

@@ -64,9 +64,9 @@ const createBaseUiThemePrimitives = (
     mono200: colors.secondaryBg, // Text input, text area, selectbox
     mono300: colors.gray30, // Disabled widget background
     mono400: colors.gray30, // Slider track
-    mono500: colors.gray, // Clicked checkbox and radio
+    mono500: colors.gray60, // Clicked checkbox and radio
     mono600: colors.fadedText40, // Disabled widget text
-    mono700: colors.gray, // Unselected checkbox and radio
+    mono700: colors.gray60, // Unselected checkbox and radio
     mono800: colors.bodyText, // Selectbox text
     mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,

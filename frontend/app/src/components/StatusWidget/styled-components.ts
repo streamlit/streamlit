@@ -26,12 +26,12 @@ export const StyledConnectionStatus = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: theme.colors.gray,
+  color: theme.colors.gray60,
 }))
 
 export const StyledConnectionStatusLabel = styled.label(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
-  color: theme.colors.gray,
+  color: theme.colors.gray60,
   textTransform: "uppercase",
   marginTop: theme.spacing.none,
   marginRight: theme.spacing.lg,
@@ -65,7 +65,7 @@ export interface StyledAppStatusLabelProps {
 export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
   ({ isPrompt, theme }) => ({
     fontSize: theme.fontSizes.sm,
-    color: isPrompt ? theme.colors.bodyText : theme.colors.gray,
+    color: isPrompt ? theme.colors.bodyText : theme.colors.gray60,
     textTransform: isPrompt ? "none" : "uppercase",
     margin: `0 0 0 ${theme.spacing.sm}`,
     whiteSpace: "nowrap",

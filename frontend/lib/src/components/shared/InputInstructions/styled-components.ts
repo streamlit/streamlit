@@ -36,7 +36,7 @@ export const StyledMessage = styled.span<StyledMessageProps>(
             opacity: 1,
             content: '"•"',
             animation: "none",
-            color: theme.colors.gray,
+            color: theme.colors.gray60,
             margin: `0 ${theme.spacing.twoXS}`,
           },
         }

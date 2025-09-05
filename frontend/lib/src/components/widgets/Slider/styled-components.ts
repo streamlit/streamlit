@@ -25,7 +25,7 @@ export interface StyledThumbProps {
 export const StyledThumb = styled.div<StyledThumbProps>(
   ({ disabled, theme, isDragged }) => ({
     alignItems: "center",
-    backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
+    backgroundColor: disabled ? theme.colors.gray60 : theme.colors.primary,
     borderTopLeftRadius: "100%",
     borderTopRightRadius: "100%",
     borderBottomLeftRadius: "100%",
@@ -58,7 +58,7 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,
-    color: disabled ? theme.colors.gray : theme.colors.primary,
+    color: disabled ? theme.colors.gray60 : theme.colors.primary,
     top: "-1.6em",
     position: "absolute",
     whiteSpace: "nowrap",

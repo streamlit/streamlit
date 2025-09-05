@@ -28,8 +28,6 @@ const requiredThemeColors = {
   primary: colors.red70,
   secondary: colors.blue70, // Used in progress bar
   disabled: colors.gray40,
-  gray: colors.gray60,
-  darkGray: colors.gray70,
 
   // Default main theme colors (light theme)
   redColor: colors.red70,

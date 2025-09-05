@@ -131,7 +131,7 @@ export const StyledTableCellHeader = styled.th<{
 export const StyledEmptyTableCell = styled(StyledTableCell)<{
   borderMode: Arrow.BorderMode
 }>(({ theme }) => ({
-  color: theme.colors.darkGray,
+  color: theme.colors.gray70,
   fontStyle: "italic",
   fontSize: theme.fontSizes.md,
   textAlign: "center",

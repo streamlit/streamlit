@@ -90,7 +90,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
-        color: theme.colors.gray,
+        color: theme.colors.gray60,
         cursor: "not-allowed",
       },
     }
