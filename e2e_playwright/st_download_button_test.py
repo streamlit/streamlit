@@ -27,7 +27,6 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     goto_app,
-    reset_hovering,
 )
 
 DOWNLOAD_BUTTON_ELEMENTS = 17
@@ -264,7 +263,8 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
     # Clean hovering before clicking the toggle:
-    reset_hovering(app)
+    app.get_by_text("Dynamic download button props:").hover(force=True)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     # Click the toggle to update the button props
     click_toggle(app, "Update button props")

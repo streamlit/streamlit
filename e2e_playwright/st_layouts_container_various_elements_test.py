@@ -47,6 +47,7 @@ def test_layouts_container_various_elements(
 
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
+        expect(locator).to_be_visible()
         assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
 
 
@@ -63,6 +64,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
     app.wait_for_timeout(10000)
 
     locator = get_element_by_key(app, "layout-horizontal-map")
+    expect(locator).to_be_visible()
     # Use higher pixel threshold for containers with maps due to their flakiness
     assert_snapshot(
         locator,

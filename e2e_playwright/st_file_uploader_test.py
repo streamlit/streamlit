@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -254,9 +255,11 @@ def test_uploads_and_deletes_multiple_files(
     ]
 
     uploader_index = 2
+    uploader_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(uploader_dropzone).to_be_visible()
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        uploader_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
@@ -313,6 +316,7 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_uploads_directory_with_multiple_files(app: Page):
     """Test that directory upload works correctly with multiple files.
 
