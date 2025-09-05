@@ -107,11 +107,13 @@ st.number_input(
     width="stretch",
 )
 
+st.markdown("Dynamic number input:")
+
 if st.toggle("Update number input props"):
     dyn_val = st.number_input(
         "Updated dynamic number input",
         value=15,
-        width=200,
+        width=300,
         help="updated help",
         format="%0.2f",
         placeholder="Updated placeholder",
