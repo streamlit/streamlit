@@ -103,7 +103,7 @@ export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
     padding: theme.spacing.threeXS,
   },
   "& > button:hover, & > button:focus": {
-    color: theme.colors.red,
+    color: theme.colors.redColor,
   },
 }))
 

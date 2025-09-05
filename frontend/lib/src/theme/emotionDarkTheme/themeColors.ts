@@ -27,12 +27,6 @@ export default {
   secondaryBg: colors.gray90,
   disabled: colors.gray70,
 
-  // TODO (mgbarnes): Reduce/remove these colors to avoid
-  // confusion with the default main/text/bg theme colors
-  red: colors.red70,
-  blue: colors.blue50,
-  green: colors.green60,
-
   // Default main theme colors (dark theme)
   redColor: colors.red80,
   orangeColor: colors.orange80,
