@@ -398,9 +398,7 @@ function DateInput({
                 EndEnhancer: {
                   style: {
                     // Match text color with st.error in light and dark mode
-                    color: hasLightBackgroundColor(theme)
-                      ? colors.red100
-                      : colors.red20,
+                    color: colors.redTextColor,
                     backgroundColor: colors.transparent,
                   },
                 },
@@ -460,9 +458,7 @@ function DateInput({
 
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {
-                      color: hasLightBackgroundColor(theme)
-                        ? colors.red100
-                        : colors.red20,
+                      color: colors.redTextColor,
                     }),
                   },
                   props: {

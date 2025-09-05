@@ -19,7 +19,10 @@ import styled from "@emotion/styled"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
-import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
+import {
+  getMetricBackgroundColor,
+  getMetricTextColor,
+} from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface StyledMetricContainerProps {
@@ -100,8 +103,8 @@ export interface StyledMetricDeltaTextProps {
 
 export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
   ({ theme, metricColor }) => ({
-    // TODO (mgbarnes): Upon default text color updates, use text color instead of main colors
-    color: getMetricColor(theme, metricColor),
+    // Uses text colors
+    color: getMetricTextColor(theme, metricColor),
     // Uses same color as shaded bg of area chart (bg color)
     backgroundColor: getMetricBackgroundColor(theme, metricColor),
     fontSize: theme.fontSizes.sm,

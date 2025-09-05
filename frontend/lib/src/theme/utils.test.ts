@@ -367,8 +367,8 @@ describe("createTheme", () => {
     )
     expect(customTheme.emotion.colors.primary).toBe("blue")
     // Auxiliary colors should be those of the Dark theme.
-    expect(customTheme.emotion.colors.warning).toBe(
-      darkTheme.emotion.colors.warning
+    expect(customTheme.emotion.colors.yellowTextColor).toBe(
+      darkTheme.emotion.colors.yellowTextColor
     )
   })
 
@@ -384,8 +384,8 @@ describe("createTheme", () => {
     expect(customTheme.emotion.colors.bgColor).toBe("black")
     // Auxiliary colors should be picked to be ones that work well with the
     // black background even though the user set the base theme to light.
-    expect(customTheme.emotion.colors.warning).toBe(
-      darkTheme.emotion.colors.warning
+    expect(customTheme.emotion.colors.yellowTextColor).toBe(
+      darkTheme.emotion.colors.yellowTextColor
     )
     // Theme options should be inherited from the light theme as defined by the
     // user.

@@ -82,7 +82,9 @@ export const createEmotionColors = (
     ...genericColors,
     ...derivedColors,
 
-    codeTextColor: genericColors.green,
+    link: genericColors.blueTextColor,
+
+    codeTextColor: genericColors.greenTextColor,
     codeBackgroundColor: derivedColors.bgMix,
 
     borderColor: derivedColors.fadedText10,
@@ -150,32 +152,6 @@ export function getMetricColor(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getMarkdownTextColors(theme: EmotionTheme): any {
-  const lightTheme = hasLightBackgroundColor(theme)
-  const primary = theme.colors.primary
-  const red = theme.colors.red
-  const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
-  const yellow = lightTheme ? theme.colors.yellow80 : theme.colors.yellow70
-  const blue = theme.colors.blue
-  const green = theme.colors.green
-  const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
-  const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
-  const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
-
-  return {
-    red: red,
-    orange: orange,
-    yellow: yellow,
-    green: green,
-    blue: blue,
-    violet: violet,
-    purple: purple,
-    gray: gray,
-    primary: primary,
-  }
-}
-
 type MarkdownBgColors = {
   redbg: string
   orangebg: string
@@ -221,6 +197,63 @@ export function getMetricBackgroundColor(
     // this must be grey
     default:
       return theme.colors.grayBackgroundColor
+  }
+}
+
+type MarkdownTextColors = {
+  red: string
+  orange: string
+  yellow: string
+  blue: string
+  green: string
+  violet: string
+  purple: string
+  gray: string
+  primary: string
+}
+
+export function getMarkdownTextColors(
+  theme: EmotionTheme
+): MarkdownTextColors {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const colors = theme.colors
+
+  const primary = colors.primary
+  const red = colors.redTextColor
+  const orange = colors.orangeTextColor
+  const yellow = colors.yellowTextColor
+  const blue = colors.blueTextColor
+  const green = colors.greenTextColor
+  const violet = colors.violetTextColor
+  const purple = lightTheme ? colors.purple100 : colors.purple80
+  const gray = colors.grayTextColor
+
+  return {
+    red: red,
+    orange: orange,
+    yellow: yellow,
+    green: green,
+    blue: blue,
+    violet: violet,
+    purple: purple,
+    gray: gray,
+    primary: primary,
+  }
+}
+
+// Metric delta text uses the same text colors as Markdown.
+export function getMetricTextColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redTextColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenTextColor
+    // this must be grey
+    default:
+      return theme.colors.grayTextColor
   }
 }
 
