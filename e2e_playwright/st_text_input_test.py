@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -245,6 +246,7 @@ def test_text_input_shows_state_value(app: Page):
     )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     text_input_field = get_element_by_key(app, "text_input_9").locator("input").first

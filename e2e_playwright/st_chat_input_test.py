@@ -280,6 +280,7 @@ def test_uploads_and_deletes_single_file(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that it correctly uploads and deletes a single file."""
+    app.set_viewport_size({"width": 750, "height": 1500})
     chat_input = app.get_by_test_id("stChatInput").nth(3)
     expect(chat_input).to_be_visible()
 
