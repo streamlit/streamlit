@@ -293,6 +293,7 @@ def test_uploads_and_deletes_single_file(
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(1)
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+    uploaded_files.scroll_into_view_if_needed()
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
     # Upload a second file. This one will replace the first.
