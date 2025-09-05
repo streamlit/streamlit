@@ -24,7 +24,6 @@ const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
   bodyText: colors.gray85,
-  link: colors.blue80,
 
   primary: colors.red70,
   secondary: colors.blue70, // Used in progress bar and spinners
@@ -33,12 +32,6 @@ const requiredThemeColors = {
   lightGray: colors.gray30,
   gray: colors.gray60,
   darkGray: colors.gray70,
-
-  // TODO (mgbarnes): Transition each of these to updated text colors
-  warning: colors.yellow110,
-  success: colors.green100,
-  info: colors.blue100,
-  danger: colors.red100,
 
   // TODO (mgbarnes): Reduce/remove these colors to avoid
   // confusion with the default main/text/bg theme colors
@@ -63,6 +56,15 @@ const requiredThemeColors = {
   greenBackgroundColor: transparentize(colors.green70, 0.9),
   violetBackgroundColor: transparentize(colors.purple60, 0.9),
   grayBackgroundColor: transparentize(colors.gray85, 0.9),
+
+  // Default text theme colors (light theme)
+  redTextColor: colors.red90,
+  orangeTextColor: colors.orange95,
+  yellowTextColor: colors.yellow115,
+  blueTextColor: colors.blue90,
+  greenTextColor: colors.green90,
+  violetTextColor: colors.purple90,
+  grayTextColor: transparentize(colors.gray85, 0.4),
 }
 
 export type RequiredThemeColors = Record<

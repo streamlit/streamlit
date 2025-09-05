@@ -17,6 +17,7 @@
 import React, { ReactElement } from "react"
 
 import { cleanup, screen } from "@testing-library/react"
+import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -430,15 +431,17 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("colours text properly", () => {
+    const grayTextColor = transparentize(colors.gray85, 0.4)
+
     const colorMapping = new Map([
-      ["red", colors.red80],
-      ["orange", colors.orange100],
-      ["yellow", colors.yellow80],
-      ["blue", colors.blue80],
+      ["red", colors.red90],
+      ["orange", colors.orange95],
+      ["yellow", colors.yellow115],
+      ["blue", colors.blue90],
       ["green", colors.green90],
-      ["violet", colors.purple80],
-      ["gray", colors.gray80],
-      ["grey", colors.gray80],
+      ["violet", colors.purple90],
+      ["gray", grayTextColor],
+      ["grey", grayTextColor],
       ["rainbow", "rgba(0, 0, 0, 0)"],
     ])
 

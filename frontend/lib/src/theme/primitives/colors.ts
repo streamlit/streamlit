@@ -51,6 +51,7 @@ export const colors = {
   orange70: "#ffa421",
   orange80: "#ff8700",
   orange90: "#ed6f13",
+  orange95: "#e2660c",
   orange100: "#d95a00",
 
   yellow10: "#ffffe1",
@@ -65,6 +66,7 @@ export const colors = {
   yellow90: "#edbb16",
   yellow100: "#dea816",
   yellow110: "#916e10",
+  yellow115: "#926c05",
 
   green10: "#dffde9",
   green20: "#c0fcd3",
