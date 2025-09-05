@@ -45,7 +45,7 @@ import {
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
-import { DerivedColors } from "./types"
+import { DerivedColors, EmotionThemeColors } from "./types"
 
 // Extended theme config type to include properties not in the protobuf definition
 export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
@@ -194,6 +194,87 @@ const parseColor = (
   }
 
   return undefined
+}
+
+/**
+ * Helper function for theme background colors
+ * If the background color is configured, use it.
+ * If the main color is configured, derive background color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveBgColor = (
+  configBackgroundColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultBackgroundColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configBackgroundColor) return configBackgroundColor
+  if (configMainColor) {
+    const transparency = isLightTheme ? 0.9 : 0.8
+    return transparentize(configMainColor, transparency)
+  }
+  return defaultBackgroundColor
+}
+
+/**
+ * Applies background color overrides to theme colors using smart fallback logic.
+ * For each background color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with background colors applied
+ */
+const setBackgroundColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const backgroundColorMap = {
+    redBackgroundColor: {
+      main: parsedColors.redColor,
+      background: parsedColors.redBackgroundColor,
+    },
+    orangeBackgroundColor: {
+      main: parsedColors.orangeColor,
+      background: parsedColors.orangeBackgroundColor,
+    },
+    yellowBackgroundColor: {
+      main: parsedColors.yellowColor,
+      background: parsedColors.yellowBackgroundColor,
+    },
+    blueBackgroundColor: {
+      main: parsedColors.blueColor,
+      background: parsedColors.blueBackgroundColor,
+    },
+    greenBackgroundColor: {
+      main: parsedColors.greenColor,
+      background: parsedColors.greenBackgroundColor,
+    },
+    violetBackgroundColor: {
+      main: parsedColors.violetColor,
+      background: parsedColors.violetBackgroundColor,
+    },
+    grayBackgroundColor: {
+      main: parsedColors.grayColor,
+      background: parsedColors.grayBackgroundColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(backgroundColorMap).forEach(([key, { main, background }]) => {
+    const typedKey = key as keyof typeof backgroundColorMap
+    updatedColors[typedKey] = resolveBgColor(
+      background,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
 }
 
 /**
@@ -537,7 +618,6 @@ export const createEmotionTheme = (
     bodyText: bodyText ?? colors.bodyText,
     secondaryBg: secondaryBg ?? colors.secondaryBg,
     bgColor: bgColor ?? colors.bgColor,
-    link: linkColor ?? colors.link,
     // Main theme colors
     redColor: redColor ?? colors.redColor,
     orangeColor: orangeColor ?? colors.orangeColor,
@@ -574,6 +654,8 @@ export const createEmotionTheme = (
   }
 
   // Conditional Overrides - Colors
+
+  conditionalOverrides.colors.link = linkColor ?? colors.link
 
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? colors.codeBackgroundColor
@@ -640,6 +722,12 @@ export const createEmotionTheme = (
       )
     }
   }
+
+  // Apply background color overrides based on configured background color or main color as fallback
+  conditionalOverrides.colors = setBackgroundColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
 
   // Conditional Overrides - Radii
 
