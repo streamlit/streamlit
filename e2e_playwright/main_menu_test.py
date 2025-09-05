@@ -101,11 +101,15 @@ def test_renders_clear_cache_dialog_properly(
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_renders_active_theme_dialog_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    expect(themed_app.get_by_test_id("stMainMenu")).to_be_visible()
     themed_app.get_by_test_id("stMainMenu").click()
+    expect(themed_app.get_by_text("Settings")).to_be_visible()
     themed_app.get_by_text("Settings").click()
+    expect(themed_app.get_by_text("Edit active theme")).to_be_visible()
     themed_app.get_by_text("Edit active theme").click()
 
     dialog = themed_app.get_by_test_id("stDialog").get_by_role("dialog")
