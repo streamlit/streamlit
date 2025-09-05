@@ -705,6 +705,10 @@ class ArrowMixin:
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
+        if is_selection_activated and selection_mode in ["multi-row", "single-row"]:
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
         if hide_index is not None:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
