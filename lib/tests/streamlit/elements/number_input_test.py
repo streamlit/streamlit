@@ -548,24 +548,14 @@ class NumberInputTest(DeltaGeneratorTestCase):
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # Base config uses int type; for format case we switch to float-safe config
-            if kwarg_name == "format":
-                base_kwargs = {
-                    "label": "Label",
-                    "key": "number_input_key",
-                    "min_value": 0.0,
-                    "max_value": 10.0,
-                    "step": 1.0,
-                }
-            else:
-                base_kwargs = {
-                    "label": "Label",
-                    "key": "number_input_key",
-                    # keep other whitelisted values stable to avoid type/format interactions
-                    "min_value": 0,
-                    "max_value": 10,
-                    "step": 1,
-                }
+            base_kwargs = {
+                "label": "Label",
+                "key": "number_input_key",
+                # keep other whitelisted values stable to avoid type/format interactions
+                "min_value": 0,
+                "max_value": 10,
+                "step": 1,
+            }
             base_kwargs[kwarg_name] = value1
 
             st.number_input(**base_kwargs)
