@@ -84,6 +84,7 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   "iframe",
   "arrowDataFrame",
   "deckGlJsonChart",
+  "arrowVegaLiteChart",
 ]
 
 export const StyledElementContainerLayoutWrapper: FC<
@@ -160,7 +161,16 @@ export const StyledElementContainerLayoutWrapper: FC<
       }
       return styles
     } else if (node.element.type === "arrowVegaLiteChart") {
-      if (isInHorizontalLayout) {
+      if (node.element.widthConfig?.useContent) {
+        // This is necessary due to the read-only grid feature because the dataframe
+        // does not render correctly if it has a parent with fit-content styling which
+        // is the default for width.
+        // TODO (lawilby): Investigate if we can alter dataframes so that we
+        // don't need this.
+        styles.width = "100%"
+      }
+      if (isInHorizontalLayout && !node.element.widthConfig) {
+        // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
         styles.flex = "1 1 14rem"
       }
       return styles
@@ -173,6 +183,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.deckGlJsonChart?.useContainerWidth,
     node.element.deckGlJsonChart?.width,
     isInHorizontalLayout,
+    node.element.widthConfig,
   ])
 
   const styles = useLayoutStyles({

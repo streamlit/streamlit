@@ -680,6 +680,7 @@ class SliderMixin:
         element_id = compute_and_register_element_id(
             "slider",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             min_value=min_value,

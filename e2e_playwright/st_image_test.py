@@ -291,6 +291,18 @@ def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(large_stretch, name="st_image-width_stretch_large")
 
 
+def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that width='stretch' works correctly in fullscreen mode."""
+    small_stretch_image = get_image(app, "Small image with width='stretch'")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), True)
+
+    fullscreen_image = small_stretch_image.locator("img")
+    assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), False)
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stImage")

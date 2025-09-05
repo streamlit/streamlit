@@ -318,7 +318,11 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key", dg=None
+            "button",
+            label="the label",
+            user_key="my_key",
+            dg=None,
+            key_as_main_identity=False,
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
@@ -356,7 +360,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["user_key", "dg"]:
+        for kwarg in ["user_key", "dg", "key_as_main_identity"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -594,10 +598,16 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             match="There are multiple `button` elements with the same",
         ):
             compute_and_register_element_id(
-                element_type="button", user_key=None, dg=None
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
             )
             compute_and_register_element_id(
-                element_type="button", user_key=None, dg=None
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
             )
 
 

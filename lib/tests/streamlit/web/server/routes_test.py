@@ -18,6 +18,7 @@ import json
 import mimetypes
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
@@ -121,16 +122,25 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmp_js_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="script.js", delete=False
         )
+        self._tmp_mjs_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="module.mjs", delete=False
+        )
         self._tmp_html_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="file.html", delete=False
         )
         self._tmp_css_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="stylesheet.css", delete=False
         )
+        # The manifest file must not have a prefix - create it manually in the tmpdir
+        self._tmp_manifest_filename = os.path.join(self._tmpdir.name, "manifest.json")
+        Path(self._tmp_manifest_filename).touch()
+
         self._filename = os.path.basename(self._tmpfile.name)
         self._js_filename = os.path.basename(self._tmp_js_file.name)
+        self._mjs_filename = os.path.basename(self._tmp_mjs_file.name)
         self._html_filename = os.path.basename(self._tmp_html_file.name)
         self._css_filename = os.path.basename(self._tmp_css_file.name)
+        self._manifest_filename = os.path.basename(self._tmp_manifest_filename)
 
         super().setUp()
 
@@ -190,10 +200,27 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for r in responses:
             assert r.code == 404
 
+    def test_cache_control_header(self):
+        r = self.fetch(f"/{self._html_filename}")
+        assert r.headers["Cache-Control"] == "no-cache"
+
+        r = self.fetch(f"/{self._manifest_filename}")
+        assert r.headers["Cache-Control"] == "no-cache"
+
+        r = self.fetch(f"/nested/{self._manifest_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
+
+        r = self.fetch(f"/{self._js_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
+
+        r = self.fetch(f"/{self._css_filename}")
+        assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
+
     def test_mimetype_is_overridden_by_server(self):
         """Test get_content_type function."""
         mimetypes.add_type("custom/html", ".html")
         mimetypes.add_type("custom/js", ".js")
+        mimetypes.add_type("custom/mjs", ".mjs")
         mimetypes.add_type("custom/css", ".css")
 
         r = self.fetch(f"/{self._html_filename}")
@@ -201,6 +228,9 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         r = self.fetch(f"/{self._js_filename}")
         assert r.headers["Content-Type"] == "custom/js"
+
+        r = self.fetch(f"/{self._mjs_filename}")
+        assert r.headers["Content-Type"] == "custom/mjs"
 
         r = self.fetch(f"/{self._css_filename}")
         assert r.headers["Content-Type"] == "custom/css"
@@ -211,6 +241,9 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert r.headers["Content-Type"] == "text/html"
 
         r = self.fetch(f"/{self._js_filename}")
+        assert r.headers["Content-Type"] == "application/javascript"
+
+        r = self.fetch(f"/{self._mjs_filename}")
         assert r.headers["Content-Type"] == "application/javascript"
 
         r = self.fetch(f"/{self._css_filename}")

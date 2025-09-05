@@ -19,7 +19,6 @@ We use playwright with pytest to e2e test Streamlit library. E2E tests verify th
 - Screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
 - Other tests results are stored in `e2e_playwright/test_results/`
 
-
 ## Key Fixtures and Utilities
 
 Import from from `conftest.py`:
@@ -51,15 +50,14 @@ When adding or modifying tests for an element, ensure the following are covered:
 - **Visuals:** Snapshot tests for both normal and `disabled` states.
 - **Interactivity:** Test user interactions and verify the resulting app state or output (e.g., checking text written via `st.write`, potentially using helpers like `expect_markdown` from `shared/app_utils.py`).
 - **Common Contexts:** Verify behavior within:
-    - A `@st.fragment`.
-    - An `st.form`.
+  - A `@st.fragment`.
+  - An `st.form`.
 - **Core Behavior:**
-    - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
-    - The element cannot be interacted with when `disabled=True`.
-    - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
-    - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
+  - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
+  - The element cannot be interacted with when `disabled=True`.
+  - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
+  - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
 - **Custom Config:** Use module-scoped fixtures with `@pytest.mark.early` for tests requiring specific Streamlit configuration options.
-
 
 ## Running tests
 

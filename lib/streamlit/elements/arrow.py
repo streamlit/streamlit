@@ -16,15 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -51,7 +43,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -116,13 +108,16 @@ class DataframeSelectionState(TypedDict, total=False):
         The selected columns, identified by their names.
     cells : list[tuple[int, str]]
         The selected cells, provided as a tuple of row integer position
-        and column name, e.g. ``(0, "col 1")``.
+        and column name. For example, the first cell in a column named "col 1"
+        is represented as ``(0, "col 1")``. Cells within index columns are not
+        returned.
 
     Example
     -------
     The following example has multi-row and multi-column selections enabled.
-    Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
-    selecting columns. Hold ``Shift`` to select a range of columns.
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
+    or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
+    range of columns.
 
     >>> import pandas as pd
     >>> import streamlit as st
@@ -136,7 +131,7 @@ class DataframeSelectionState(TypedDict, total=False):
     ...     df,
     ...     key="data",
     ...     on_select="rerun",
-    ...     selection_mode=["multi-row", "multi-column"],
+    ...     selection_mode=["multi-row", "multi-column", "multi-cell"],
     ... )
     >>>
     >>> event.selection
@@ -267,6 +262,17 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
+def parse_border_mode(
+    border: bool | Literal["horizontal"],
+) -> ArrowProto.BorderMode.ValueType:
+    """Parse and check the user provided border mode."""
+    if isinstance(border, bool):
+        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+    if border == "horizontal":
+        return ArrowProto.BorderMode.HORIZONTAL
+    raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -363,30 +369,30 @@ class ArrowMixin:
 
             If ``data`` is ``None``, Streamlit renders an empty table.
 
-        width : int, "stretch", or "content"
-            Desired width of the dataframe. If ``"stretch"`` (default),
-            Streamlit sets the width of the dataframe to match the width of
-            the parent container. If ``"content"``, Streamlit sets the width
-            of the dataframe to fit its contents up to the width of the parent
-            container. If an integer, Streamlit sets the width of the dataframe
-            to the specified number of pixels. If the specified width is greater
-            than the width of the parent container, Streamlit sets the dataframe
-            width to match the width of the parent container.
+        width : "stretch", "content", or int
+            The width of the dataframe element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         height : int or "auto"
-            Desired height of the dataframe. If ``"auto"`` (default),
-            Streamlit sets the height to show at most ten rows. Vertical
-            scrolling within the dataframe element is enabled when the height
-            does not accommodate all rows. If an
-            integer, Streamlit sets the height of the dataframe to the
-            specified number of pixels.
+            The height of the dataframe element. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - An integer specifying the height in pixels: The element has a
+              fixed height.
+
+            Vertical scrolling within the dataframe element is enabled when the
+            height does not accommodate all rows.
 
         use_container_width : bool
-            .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead.
-
             Whether to override ``width`` with the width of the parent
             container. If this is ``True`` (default), Streamlit sets the width
             of the dataframe to match the width of the parent container. If
@@ -470,10 +476,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
-            - "single-cell": Only one cell can be selected at a time.
             - "multi-cell": A rectangular range of cells can be selected.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified (e.g., ``["multi-row", "single-cell"]``).
+              selection based on the modes specified. For example, to allow the
+              user to select multiple rows and multiple cells, use
+              ``["multi-row", "multi-cell"]``.
 
             When column selections are enabled, column sorting is disabled.
 
@@ -481,6 +489,11 @@ class ArrowMixin:
             The height of each row in the dataframe in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``.
 
         Returns
         -------
@@ -715,6 +728,7 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
                 data=proto.data,
                 width=width,
@@ -741,7 +755,9 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
 
     @gather_metrics("table")
-    def table(self, data: Data = None) -> DeltaGenerator:
+    def table(
+        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+    ) -> DeltaGenerator:
         """Display a static table.
 
         While ``st.dataframe`` is geared towards large datasets and interactive
@@ -765,49 +781,59 @@ class ArrowMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
+        border : bool or "horizontal"
+            Whether to show borders around the table and between cells. This can be one
+            of the following:
+
+            - ``True`` (default): Show borders around the table and between cells
+            - ``False``: Show no borders
+            - ``"horizontal"``: Show only horizontal borders between rows
+
         Examples
         --------
-        **Example 1: Display a simple dataframe as a static table**
+        **Example 1: Display a confusion matrix**
 
         >>> import pandas as pd
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(
-        ...     rng(0).standard_normal(size=(10, 5)),
-        ...     columns=("col %d" % i for i in range(5)),
+        >>> confusion_matrix = pd.DataFrame(
+        ...     {
+        ...         "Predicted Cat": [85, 3, 2, 1],
+        ...         "Predicted Dog": [2, 78, 4, 0],
+        ...         "Predicted Bird": [1, 5, 72, 3],
+        ...         "Predicted Fish": [0, 2, 1, 89],
+        ...     },
+        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
         ... )
-        >>>
-        >>> st.table(df)
+        >>> st.table(confusion_matrix)
 
         .. output::
            https://doc-table.streamlit.app/
            height: 480px
 
-        **Example 2: Display a table of Markdown strings**
+        **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
-        >>> import pandas as pd
         >>> import streamlit as st
         >>>
-        >>> df = pd.DataFrame(
-        ...     {
-        ...         "Command": ["**st.table**", "*st.dataframe*"],
-        ...         "Type": ["`static`", "`interactive`"],
-        ...         "Docs": [
-        ...             "[:rainbow[docs]](https://docs.streamlit.io"
-        ...             "/develop/api-reference/data/st.dataframe)",
-        ...             "[:open_book:](https://docs.streamlit.io"
-        ...             "/develop/api-reference/data/st.table)",
-        ...         ],
-        ...     }
-        ... )
-        >>>
-        >>> st.table(df)
+        >>> product_data = {
+        ...     "Product": [
+        ...         ":material/devices: Widget Pro",
+        ...         ":material/smart_toy: Smart Device",
+        ...         ":material/inventory: Premium Kit",
+        ...     ],
+        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
+        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
+        ...     "Units sold": [1247, 892, 654],
+        ...     "Revenue": [125000, 89000, 98000],
+        ... }
+        >>> st.table(product_data, border="horizontal")
 
         .. output::
            https://doc-table-markdown.streamlit.app/
            height: 200px
+
         """
+        # Parse border parameter to enum value
+        border_mode = parse_border_mode(border)
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -833,6 +859,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
+        proto.border_mode = border_mode
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
@@ -1024,8 +1051,10 @@ def _arrow_add_rows(
 
         if metadata.chart_command == "bar_chart":
             kwargs["horizontal"] = metadata.horizontal
+            kwargs["sort"] = metadata.sort
 
-        kwargs["use_container_width"] = metadata.use_container_width
+        if metadata.use_container_width is not None:
+            kwargs["use_container_width"] = metadata.use_container_width
 
         st_method(data, **kwargs)
         return None

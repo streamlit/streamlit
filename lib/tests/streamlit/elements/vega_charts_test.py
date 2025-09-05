@@ -20,7 +20,7 @@ import json
 import unittest
 from typing import Any, Callable
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import altair as alt
 import pandas as pd
@@ -34,7 +34,10 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
+from streamlit.elements.lib.built_in_chart_utils import (
+    _PROTECTION_SUFFIX,
+    StreamlitColumnNotFoundError,
+)
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
@@ -1313,7 +1316,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             }
         )
 
-        chart_command(df, x="categorical", y="numbers")
+        if chart_command == st.bar_chart:
+            # Enable Altair's automatic sorting for bar charts. We disable this
+            # by default in `st.bar_chart`.
+            chart_command(df, x="categorical", y="numbers", sort=True)
+        else:
+            chart_command(df, x="categorical", y="numbers")
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
@@ -1559,6 +1567,247 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # Verify the horizontal orientation is preserved after adding rows
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
+
+    def test_bar_chart_preserves_initial_sort_param(self):
+        """Test that the sort parameter is preserved when adding rows to a bar chart."""
+        empty_df = pd.DataFrame({"A": [], "B": [], "C": []})
+        test_sort = "C"
+
+        chart = st.bar_chart(empty_df, x="A", y="B", sort=test_sort)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        initial_spec = json.loads(proto.spec)
+
+        # Verify sort is applied to the categorical (x) axis
+        assert initial_spec["encoding"]["x"]["sort"]["field"] == test_sort
+        assert initial_spec["encoding"]["x"]["sort"]["order"] == "ascending"
+
+        chart.add_rows(
+            pd.DataFrame(
+                {
+                    "A": ["foo", "bar", "baz"],
+                    "B": [10, 20, 30],
+                    "C": [1, 3, 2],
+                }
+            )
+        )
+
+        new_proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        updated_spec = json.loads(new_proto.spec)
+
+        # Verify the sort parameter is preserved after adding rows
+        assert updated_spec["encoding"]["x"]["sort"]["field"] == test_sort
+        assert updated_spec["encoding"]["x"]["sort"]["order"] == "ascending"
+
+    def test_bar_chart_sort_descending(self):
+        """Test that descending sort works correctly."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort="-C")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify descending sort is applied to the categorical (x) axis
+        assert chart_spec["encoding"]["x"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
+
+    def test_bar_chart_sort_horizontal(self):
+        """Test that sort works correctly on horizontal bar charts."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort="C", horizontal=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # In horizontal bar charts, sort should be applied to the categorical (y) axis
+        assert chart_spec["encoding"]["y"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["y"]["sort"]["order"] == "ascending"
+
+    def test_bar_chart_sort_false_disables_default_sorting(self):
+        """Test that sort=False disables default alphabetical sorting."""
+        df = pd.DataFrame(
+            {
+                "A": ["zebra", "apple", "banana"],  # Intentionally not alphabetical
+                "B": [10, 20, 30],
+            }
+        )
+
+        st.bar_chart(df, x="A", y="B", sort=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify sort is set to None (disables default sorting)
+        assert chart_spec["encoding"]["x"]["sort"] is None
+
+    def test_bar_chart_sort_invalid_column_raises_error(self):
+        """Test that invalid column names in sort parameter raise an error."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+            }
+        )
+
+        with pytest.raises(StreamlitColumnNotFoundError):
+            st.bar_chart(df, x="A", y="B", sort="nonexistent_column")
+
+        with pytest.raises(StreamlitColumnNotFoundError):
+            st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
+
+
+class LineChartWidthHeightTest(DeltaGeneratorTestCase):
+    """Test line_chart width and height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, height, expected_width_spec, expected_width_value, expected_height_spec, expected_height_value
+            (
+                "stretch",
+                "content",
+                "use_stretch",
+                True,
+                "use_content",
+                True,
+            ),  # defaults
+            ("content", "content", "use_content", True, "use_content", True),
+            ("stretch", "stretch", "use_stretch", True, "use_stretch", True),
+            (500, "content", "pixel_width", 500, "use_content", True),
+            ("stretch", 400, "use_stretch", True, "pixel_height", 400),
+            (600, 400, "pixel_width", 600, "pixel_height", 400),
+        ]
+    )
+    def test_line_chart_width_height_combinations(
+        self,
+        width: str | int,
+        height: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test line_chart with various width and height combinations."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        st.line_chart(df, x="a", y="b", width=width, height=height)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Check width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+        # Check height configuration
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            # Test parameters: use_container_width, width, expected_width_spec, expected_width_value
+            (
+                True,
+                None,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True -> width="stretch"
+            (
+                False,
+                None,
+                "use_content",
+                True,
+            ),  # use_container_width=False -> width="content"
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides integer width
+            (
+                True,
+                "content",
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides string width
+            (
+                False,
+                "content",
+                "use_content",
+                True,
+            ),  # use_container_width=False, width="content"
+            (
+                False,
+                500,
+                "pixel_width",
+                500,
+            ),  # use_container_width=False, integer width -> respect integer
+            (
+                False,
+                300,
+                "pixel_width",
+                300,
+            ),  # use_container_width=False, different integer -> respect integer
+        ]
+    )
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_line_chart_use_container_width_deprecation(
+        self,
+        use_container_width: bool,
+        width: int | str | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_warning: Mock,
+    ):
+        """Test that use_container_width shows deprecation warning and is correctly translated to
+        the new width parameter."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        kwargs = {"use_container_width": use_container_width}
+        if width is not None:
+            kwargs["width"] = width
+
+        st.line_chart(df, x="a", y="b", **kwargs)
+
+        mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+
+        # Should be translated to the correct width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            ("width", "invalid_width"),
+            ("height", "invalid_height"),
+            ("width", 0),  # width must be positive
+            ("height", 0),  # height must be positive
+            ("width", -100),  # negative width
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_line_chart_validation_errors(
+        self, param_name: str, invalid_value: str | int
+    ):
+        """Test that invalid width/height values raise validation errors."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.line_chart(df, x="a", y="b", **kwargs)
 
 
 class VegaUtilitiesTest(unittest.TestCase):

@@ -296,7 +296,7 @@ class FileUploaderMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        type : str or list of str or None
+        type : str, list of str, or None
             The allowed file extension(s) for uploaded files. This can be one
             of the following types:
 
@@ -313,20 +313,19 @@ class FileUploaderMixin:
                 or type extensions. The correct handling of uploaded files is
                 part of the app developer's responsibility.
 
-        accept_multiple_files : bool or str
+        accept_multiple_files : bool or "directory"
             Whether to accept more than one file in a submission. This can be one
             of the following values:
 
             - ``False`` (default): The user can only submit one file at a time.
-            - ``True``: The user can upload multiple files at the same time,
-              in which case the return value will be a list of files.
-            - ``"directory"``: The user can upload an entire directory (all
-              files within the directory), in which case the return value will
-              be a list of files preserving the directory structure.
+            - ``True``: The user can upload multiple files at the same time.
+            - ``"directory"``: The user can select a directory to upload all
+              files in the directory and its subdirectories. If ``type`` is
+              set, only files matching those type(s) will be uploaded.
 
-            When the widget is configured to accept directories, the accepted file
-            types can be configured with the ``type`` parameter to filter files
-            within the directory.
+            When this is ``True`` or ``"directory"``, the return value will be
+            a list and a user can additively select files if they click the
+            browse button on the widget multiple times.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -376,19 +375,19 @@ class FileUploaderMixin:
         Returns
         -------
         None, UploadedFile, or list of UploadedFile
-            - If accept_multiple_files is False, returns either None or
-              an UploadedFile object.
-            - If accept_multiple_files is True, returns a list with the
-              uploaded files as UploadedFile objects. If no files were
-              uploaded, returns an empty list.
+            - If accept_multiple_files is ``False``, returns either ``None`` or
+              an ``UploadedFile`` object.
+            - If accept_multiple_files is ``True`` or ``"directory"``, returns
+              a list with the uploaded files as ``UploadedFile`` objects. If no
+              files were uploaded, returns an empty list.
 
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO``, and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected.
 
         Examples
         --------
-        Insert a file uploader that accepts a single file at a time:
+        **Example 1: Accept a single file at a time**
 
         >>> import streamlit as st
         >>> import pandas as pd
@@ -412,31 +411,34 @@ class FileUploaderMixin:
         ...     dataframe = pd.read_csv(uploaded_file)
         ...     st.write(dataframe)
 
-        Insert a file uploader that accepts multiple files at a time:
+        **Example 2: Accept multiple files at a time**
 
+        >>> import pandas as pd
         >>> import streamlit as st
         >>>
         >>> uploaded_files = st.file_uploader(
-        ...     "Choose a CSV file", accept_multiple_files=True
+        ...     "Upload data", accept_multiple_files=True, type="csv"
         ... )
         >>> for uploaded_file in uploaded_files:
-        ...     bytes_data = uploaded_file.read()
-        ...     st.write("filename:", uploaded_file.name)
-        ...     st.write(bytes_data)
-
-        Insert a file uploader that accepts an entire directory:
-
-        >>> import streamlit as st
-        >>>
-        >>> uploaded_files = st.file_uploader(
-        ...     "Choose a directory", accept_multiple_files="directory"
-        ... )
-        >>> for uploaded_file in uploaded_files:
-        ...     st.write("filename:", uploaded_file.name)
-        ...     st.write("file size:", uploaded_file.size)
+        ...     df = pd.read_csv(uploaded_file)
+        ...     st.write(df)
 
         .. output::
            https://doc-file-uploader.streamlit.app/
+           height: 375px
+
+        **Example 3: Accept an entire directory**
+
+        >>> import streamlit as st
+        >>>
+        >>> uploaded_files = st.file_uploader(
+        ...     "Upload images", accept_multiple_files="directory", type=["jpg", "png"]
+        ... )
+        >>> for uploaded_file in uploaded_files:
+        ...     st.image(uploaded_file)
+
+        .. output::
+           https://doc-file-uploader-directory.streamlit.app/
            height: 375px
 
         """
@@ -486,6 +488,7 @@ class FileUploaderMixin:
         element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             type=type,

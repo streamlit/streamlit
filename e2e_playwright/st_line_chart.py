@@ -63,7 +63,7 @@ st.line_chart(df)
 st.line_chart(df, x="a")
 st.line_chart(df, y="a")
 st.line_chart(df, y=["a", "b"])
-st.line_chart(df, x="a", y="b", height=500, width=300, use_container_width=False)
+st.line_chart(df, x="a", y="b", height=500, width=300)
 st.line_chart(df, x="b", y="a")
 st.line_chart(df, x="a", y=["b", "c"])
 st.line_chart(utc_df)
@@ -79,9 +79,21 @@ st.line_chart(
     y=["c_one", "b_two", "a_three"],
     color=[(255, 0, 0), (0, 255, 0), (0, 0, 255)],
 )
+st.write("width=content")
+st.line_chart(df, width="content")
+
+st.write("height=stretch")
+with st.container(border=True, key="test_height_stretch", height=500):
+    st.line_chart(df, height="stretch")
+
+with st.container(
+    border=True, horizontal=True, key="test_fixed_width_in_horizontal_container"
+):
+    st.line_chart(df, width=300)
+
 
 # Test that add_rows maintains original styling params:
-# color, width, height, use_container_width
+# color, width, height
 line_data = pd.DataFrame({"Line 1": [], "Line 2": []})
 
 empty_line = st.line_chart(
@@ -90,7 +102,6 @@ empty_line = st.line_chart(
     color=["#800080", "#0000FF"],  # Purple and Blue
     width=600,
     height=300,
-    use_container_width=False,
 )
 
 if st.button("Add data to Line Chart"):

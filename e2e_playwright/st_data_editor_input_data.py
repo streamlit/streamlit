@@ -51,7 +51,7 @@ for i, test_case in enumerate(TEST_CASES):
         data,
         key=f"data_editor-{i}",
         num_rows="dynamic" if activate_dynamic_editing else "fixed",
-        use_container_width=False,
+        width="content",
     )
     if show_return_data:
         st.dataframe(return_df_fixed, use_container_width=False)

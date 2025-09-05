@@ -79,6 +79,8 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  widthConfig: null,
+  heightConfig: null,
   ...props,
 })
 

@@ -39,11 +39,18 @@ const mockCustomThemeConfig = {
   widgetBorderColor: "#D3DAE8",
   // Option is deprecated, but we still test to ensure backwards compatibility:
   skeletonBackgroundColor: "#CCDDEE",
+  headingFont: "playwrite-cc-za",
   fontFaces: [
     {
       family: "Inter",
       url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
       weight: 400,
+    },
+  ],
+  fontSources: [
+    {
+      configName: "headingFont",
+      sourceUrl: "https://use.typekit.net/eor5wum.css",
     },
   ],
 }
@@ -179,5 +186,148 @@ describe("useThemeManager", () => {
 
     expect(fontFaces2).toHaveLength(1)
     expect(fontFaces2).toEqual(mockCustomThemeConfig.fontFaces)
+  })
+
+  it("handles a font source", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setImportedTheme(mockCustomThemeConfig)
+    })
+
+    // Test that useThemeManager returns the correct fontSources state
+    const [, , fontSources] = result.current
+    expect(fontSources).toEqual({
+      headingFont: "https://use.typekit.net/eor5wum.css",
+    })
+  })
+
+  it("handles multiple font sources and replaces existing ones", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    // First, set a theme with multiple font sources
+    const multiSourceThemeConfig = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+        {
+          configName: "codeFont",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+        },
+        {
+          configName: "headingFont",
+          sourceUrl: "https://use.typekit.net/eor5wum.css",
+        },
+      ],
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(multiSourceThemeConfig)
+    })
+
+    // Test that useThemeManager returns the correct fontSources state
+    const [, , fontSources] = result.current
+    expect(fontSources).toEqual({
+      font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+      codeFont:
+        "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+      headingFont: "https://use.typekit.net/eor5wum.css",
+    })
+  })
+
+  it("handles font sources from both theme and sidebar", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    const themeWithSidebarFontSources = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+      ],
+      sidebar: {
+        fontSources: [
+          {
+            configName: "font-sidebar",
+            sourceUrl:
+              "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+          },
+          {
+            configName: "codeFont-sidebar",
+            sourceUrl:
+              "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+          },
+        ],
+      },
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(themeWithSidebarFontSources)
+    })
+
+    // Test that useThemeManager returns font sources from both theme and sidebar
+    const [, , fontSources] = result.current
+    expect(fontSources).toEqual({
+      font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+      "font-sidebar":
+        "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+      "codeFont-sidebar":
+        "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+    })
+  })
+
+  it("handles theme replacement correctly", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    // First theme with multiple sources
+    const firstTheme = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        { configName: "font", sourceUrl: "https://example.com/font1.css" },
+        { configName: "codeFont", sourceUrl: "https://example.com/code1.css" },
+      ],
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(firstTheme)
+    })
+
+    const [, , fontSources] = result.current
+    expect(fontSources).toEqual({
+      font: "https://example.com/font1.css",
+      codeFont: "https://example.com/code1.css",
+    })
+
+    // Replace with different theme
+    const secondTheme = {
+      ...mockCustomThemeConfig,
+      fontSources: [
+        {
+          configName: "headingFont",
+          sourceUrl: "https://example.com/heading2.css",
+        },
+      ],
+    }
+
+    act(() => {
+      themeManager.setImportedTheme(secondTheme)
+    })
+
+    // Should completely replace the previous font sources
+    const [, , updatedFontSources] = result.current
+    expect(updatedFontSources).toEqual({
+      headingFont: "https://example.com/heading2.css",
+    })
   })
 })

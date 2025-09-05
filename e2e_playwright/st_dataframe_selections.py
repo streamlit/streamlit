@@ -47,7 +47,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="single-row",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="single_row_select",
 )
 st.write("Dataframe single-row selection:", str(selection))
@@ -59,7 +59,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="single-column",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="single_column_select",
 )
 st.write("Dataframe single-column selection:", str(selection))
@@ -71,7 +71,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="multi-row",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_row_select",
 )
 st.write("Dataframe multi-row selection:", str(selection))
@@ -84,7 +84,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="multi-column",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_column_select",
 )
 st.write("Dataframe multi-column selection:", str(selection))
@@ -103,7 +103,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-row", "multi-column"],
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_row_multi_column_select",
 )
 st.write("Dataframe multi-row-multi-column selection:", str(selection))
@@ -115,7 +115,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["single-row", "single-column"],
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="single_row_single_column_select",
 )
 st.write("Dataframe single-row-single-column selection:", str(selection))
@@ -130,7 +130,7 @@ with st.form(key="my_form", clear_on_submit=True):
         selection_mode=["multi-row", "multi-column"],
         key="df_selection_in_form",
         column_config=column_config,
-        use_container_width=False,
+        width="content",
     )
     st.form_submit_button("Submit")
 
@@ -155,7 +155,7 @@ st.dataframe(
     selection_mode=["multi-row", "multi-column"],
     key="df_selection",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Selections in fragment:")
@@ -170,7 +170,7 @@ def test_fragment() -> None:
         selection_mode=["multi-row", "multi-column"],
         key="inside_fragment",
         column_config=column_config,
-        use_container_width=False,
+        width="content",
     )
     st.write("Dataframe-in-fragment selection:", str(selection))
 
@@ -192,7 +192,7 @@ selection = st.dataframe(
     key="with_index",
     column_config=column_config,
     column_order=["col_1", "col_3"],
-    use_container_width=False,
+    width="content",
 )
 st.write("No selection on index column:", str(selection))
 
@@ -203,7 +203,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="single-cell",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="single_cell_select",
 )
 st.write("Dataframe single-cell selection:", str(selection))
@@ -215,7 +215,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="multi-cell",
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_cell_select",
 )
 st.write("Dataframe multi-cell selection:", str(selection))
@@ -227,7 +227,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-row", "single-cell"],
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_row_single_cell_select",
 )
 st.write("Dataframe multi-row & single-cell selection:", str(selection))
@@ -239,7 +239,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-row", "multi-column", "multi-cell"],
     column_config=column_config,
-    use_container_width=False,
+    width="content",
     key="multi_row_multi_column_multi_cell_select",
 )
 st.write("Dataframe multi-row, multi-column & multi-cell selection:", str(selection))

@@ -33,64 +33,54 @@ st.set_page_config(layout="wide")
 st.header("Index types")
 
 st.subheader("String Index (pd.Index)")
-st.data_editor(
-    BASE_TYPES_DF.set_index("string"), use_container_width=True, num_rows="dynamic"
-)
+st.data_editor(BASE_TYPES_DF.set_index("string"), width="stretch", num_rows="dynamic")
 
 st.subheader("Float64 Index (pd.Float64Index)")
 st.data_editor(
-    NUMBER_TYPES_DF.set_index("float64"), use_container_width=True, num_rows="dynamic"
+    NUMBER_TYPES_DF.set_index("float64"), width="stretch", num_rows="dynamic"
 )
 
 st.subheader("Int64 Index (pd.Int64Index)")
-st.data_editor(
-    NUMBER_TYPES_DF.set_index("int64"), use_container_width=True, num_rows="dynamic"
-)
+st.data_editor(NUMBER_TYPES_DF.set_index("int64"), width="stretch", num_rows="dynamic")
 
 st.subheader("Uint64 Index (pd.UInt64Index)")
-st.data_editor(
-    NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True, num_rows="dynamic"
-)
+st.data_editor(NUMBER_TYPES_DF.set_index("uint64"), width="stretch", num_rows="dynamic")
 
 st.subheader("Date Index (pd.Index)")
-st.data_editor(
-    DATETIME_TYPES_DF.set_index("date"), use_container_width=True, num_rows="dynamic"
-)
+st.data_editor(DATETIME_TYPES_DF.set_index("date"), width="stretch", num_rows="dynamic")
 
 st.subheader("Time Index (pd.Index)")
-st.data_editor(
-    DATETIME_TYPES_DF.set_index("time"), use_container_width=True, num_rows="dynamic"
-)
+st.data_editor(DATETIME_TYPES_DF.set_index("time"), width="stretch", num_rows="dynamic")
 
 st.subheader("Datetime Index (pd.DatetimeIndex)")
 st.data_editor(
     DATETIME_TYPES_DF.set_index("datetime"),
-    use_container_width=True,
+    width="stretch",
     num_rows="dynamic",
 )
 
 st.subheader("Categorical Index (pd.CategoricalIndex)")
 st.data_editor(
     SPECIAL_TYPES_DF.set_index("categorical"),
-    use_container_width=True,
+    width="stretch",
     num_rows="dynamic",
 )
 
 # List index isn't editable currently:
 # st.subheader("List Index (pd.Index)")
 # st.data_editor(
-#     LIST_TYPES_DF.set_index("string_list"), use_container_width=True, num_rows="dynamic"
+#     LIST_TYPES_DF.set_index("string_list"), width="stretch", num_rows="dynamic"
 # )
 
 # Interval type isn't editable currently:
 # st.subheader("Interval Index (pd.IntervalIndex)")
-# st.data_editor(INTERVAL_TYPES_DF.set_index("int64_both"), use_container_width=True)
+# st.data_editor(INTERVAL_TYPES_DF.set_index("int64_both"), width="stretch")
 
 # Multi index is not yet supported for editing:
 # st.subheader("Multi Index (pd.MultiIndex)")
 # st.data_editor(
 #     BASE_TYPES_DF.set_index(["string", "int64"]),
-#     use_container_width=True,
+#     width="stretch",
 #     num_rows="dynamic",
 # )
 
@@ -98,6 +88,6 @@ st.data_editor(
 # st.subheader("Timedelta Index (pd.TimedeltaIndex)")
 # st.data_editor(
 #     SPECIAL_TYPES_DF.set_index("timedelta"),
-#     use_container_width=True,
+#     width="stretch",
 #     num_rows="dynamic",
 # )

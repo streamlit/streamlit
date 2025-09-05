@@ -113,7 +113,8 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, lineHeights, spacing, sizes } = useEmotionTheme()
+  const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
+    useEmotionTheme()
 
   const { locale } = useContext(LibContext)
   const loadedLocale = useIntlLocale(locale)
@@ -204,8 +205,27 @@ function DateInput({
         return
       }
 
+      /**
+       * Normalize selected dates to start of day (00:00) to avoid time
+       * component inconsistencies. Specifically, BaseWeb quick select uses
+       * 12:00 for the selected date, which can cause validation errors.
+       *
+       * @see https://github.com/streamlit/streamlit/issues/12293
+       */
+      const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
+        date
+      )
+        ? date
+            .filter((d): d is Date => Boolean(d))
+            .map(d => normalizeToStartOfDay(d))
+        : normalizeToStartOfDay(date)
+
       // Handles FE date validation
-      const { errorType, newDates } = validateDates(date, minDate, maxDate)
+      const { errorType, newDates } = validateDates(
+        normalizedDateInput,
+        minDate,
+        maxDate
+      )
       if (errorType) {
         setError(createErrorMessage(errorType))
       }
@@ -263,7 +283,7 @@ function DateInput({
               overrides: {
                 Body: {
                   style: {
-                    marginTop: theme.spacing.px,
+                    marginTop: spacing.px,
                   },
                 },
               },
@@ -378,9 +398,7 @@ function DateInput({
                 EndEnhancer: {
                   style: {
                     // Match text color with st.error in light and dark mode
-                    color: hasLightBackgroundColor(theme)
-                      ? colors.red100
-                      : colors.red20,
+                    color: colors.redTextColor,
                     backgroundColor: colors.transparent,
                   },
                 },
@@ -396,7 +414,7 @@ function DateInput({
                     // Baseweb has an error prop for the input, but its coloring doesn't reconcile
                     // with our dark theme - we handle error state coloring manually here
                     ...(error && {
-                      backgroundColor: colors.dangerBg,
+                      backgroundColor: colors.redBackgroundColor,
                     }),
                   },
                 },
@@ -426,7 +444,7 @@ function DateInput({
                 },
                 Input: {
                   style: {
-                    fontWeight: theme.fontWeights.normal,
+                    fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
                     paddingLeft: spacing.md,
@@ -435,14 +453,12 @@ function DateInput({
                     lineHeight: lineHeights.inputWidget,
 
                     "::placeholder": {
-                      color: theme.colors.fadedText60,
+                      color: colors.fadedText60,
                     },
 
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {
-                      color: hasLightBackgroundColor(theme)
-                        ? colors.red100
-                        : colors.red20,
+                      color: colors.redTextColor,
                     }),
                   },
                   props: {
@@ -457,12 +473,12 @@ function DateInput({
               overrides: {
                 ControlContainer: {
                   style: {
-                    height: theme.sizes.minElementHeight,
+                    height: sizes.minElementHeight,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: theme.sizes.borderWidth,
-                    borderRightWidth: theme.sizes.borderWidth,
-                    borderTopWidth: theme.sizes.borderWidth,
-                    borderBottomWidth: theme.sizes.borderWidth,
+                    borderLeftWidth: sizes.borderWidth,
+                    borderRightWidth: sizes.borderWidth,
+                    borderTopWidth: sizes.borderWidth,
+                    borderBottomWidth: sizes.borderWidth,
                   },
                 },
               },
@@ -511,7 +527,10 @@ function updateWidgetMgrState(
   let isValid = true
 
   // Check if date(s) outside of allowed min/max
-  const { errorType } = validateDates(vws.value, minDate, maxDate)
+  const normalizedStateValues = (vws.value || []).map(d =>
+    normalizeToStartOfDay(d)
+  )
+  const { errorType } = validateDates(normalizedStateValues, minDate, maxDate)
   if (errorType) {
     isValid = false
   }
@@ -527,8 +546,10 @@ function updateWidgetMgrState(
   }
 }
 
+type DateOrEmpty = Date | null | undefined
+
 function validateDates(
-  dates: Date | (Date | null | undefined)[] | null | undefined,
+  dates: DateOrEmpty[] | DateOrEmpty,
   minDate: Date,
   maxDate: Date | undefined
 ): ValidationResult {
@@ -571,6 +592,12 @@ function getMaxDate(element: DateInputProto): Date | undefined {
   return maxDate && maxDate.length > 0
     ? moment(maxDate, DATE_FORMAT).toDate()
     : undefined
+}
+
+function normalizeToStartOfDay(date: Date): Date {
+  const normalized = new Date(date.getTime())
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
 }
 
 export default memo(DateInput)

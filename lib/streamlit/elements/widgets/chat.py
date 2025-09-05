@@ -433,7 +433,7 @@ class ChatMixin:
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
 
-        accept_file : bool or str
+        accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
             following values:
 
@@ -442,11 +442,9 @@ class ChatMixin:
             - ``True``: The user can add a single file to their submission.
             - ``"multiple"``: The user can add multiple files to their
               submission.
-            - ``"directory"``: The user can add a directory (all files within
-              the directory) to their submission.
-
-            When the widget is configured to accept files, the accepted file
-            types can be configured with the ``file_type`` parameter.
+            - ``"directory"``: The user can add multiple files to their
+              submission by selecting a directory. If ``file_type`` is set,
+              only files matching those type(s) will be uploaded.
 
             By default, uploaded files are limited to 200 MB each. You can
             configure this using the ``server.maxUploadSize`` config option.
@@ -626,6 +624,7 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,

@@ -26,12 +26,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit import config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace
+from streamlit.proto.NewSession_pb2 import FontFace, FontSource
 from streamlit.runtime import Runtime, app_session
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -719,6 +720,20 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "redColor": "red",
+        "orangeColor": "orange",
+        "yellowColor": "yellow",
+        "blueColor": "blue",
+        "greenColor": "green",
+        "violetColor": "violet",
+        "grayColor": "gray",
+        "redBackgroundColor": "#ff8c8c",
+        "orangeBackgroundColor": "#ffd16a",
+        "yellowBackgroundColor": "#ffff59",
+        "blueBackgroundColor": "#60b4ff",
+        "greenBackgroundColor": "#5ce488",
+        "violetBackgroundColor": "#b27eff",
+        "grayBackgroundColor": "#bfc5d3",
     }
 
     if overrides.get("sidebar") is not None:
@@ -795,6 +810,20 @@ def _mock_get_options_for_section(
             "#158237",
             "#177233",
         ],
+        "redColor": "#7d353b",
+        "orangeColor": "#d95a00",
+        "yellowColor": "#916e10",
+        "blueColor": "#004280",
+        "greenColor": "#177233",
+        "violetColor": "#3f3163",
+        "grayColor": "#0e1117",
+        "redBackgroundColor": "#ff4b4b",
+        "orangeBackgroundColor": "#ffa421",
+        "yellowBackgroundColor": "#ffe312",
+        "blueBackgroundColor": "#1c83e1",
+        "greenBackgroundColor": "#21c354",
+        "violetBackgroundColor": "#803df5",
+        "grayBackgroundColor": "#808495",
     }
 
     for k, v in overrides.items():
@@ -1261,6 +1290,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                 }
             )
         )
@@ -1304,6 +1347,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                 }
             )
         )
@@ -1347,6 +1404,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1368,6 +1439,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "textColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "redColor": None,
+                        "orangeColor": None,
+                        "yellowColor": None,
+                        "blueColor": None,
+                        "greenColor": None,
+                        "violetColor": None,
+                        "grayColor": None,
                     },
                 }
             )
@@ -1406,6 +1484,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("red_color")
+        assert not new_session_msg.custom_theme.HasField("orange_color")
+        assert not new_session_msg.custom_theme.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.HasField("blue_color")
+        assert not new_session_msg.custom_theme.HasField("green_color")
+        assert not new_session_msg.custom_theme.HasField("violet_color")
+        assert not new_session_msg.custom_theme.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.heading_font_sizes
@@ -1446,6 +1531,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("blue_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("green_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("violet_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
@@ -1485,6 +1577,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.red_color == "#7d353b"
+        assert new_session_msg.custom_theme.orange_color == "#d95a00"
+        assert new_session_msg.custom_theme.yellow_color == "#916e10"
+        assert new_session_msg.custom_theme.blue_color == "#004280"
+        assert new_session_msg.custom_theme.green_color == "#177233"
+        assert new_session_msg.custom_theme.violet_color == "#3f3163"
+        assert new_session_msg.custom_theme.gray_color == "#0e1117"
+        assert new_session_msg.custom_theme.red_background_color == "#ff4b4b"
+        assert new_session_msg.custom_theme.orange_background_color == "#ffa421"
+        assert new_session_msg.custom_theme.yellow_background_color == "#ffe312"
+        assert new_session_msg.custom_theme.blue_background_color == "#1c83e1"
+        assert new_session_msg.custom_theme.green_background_color == "#21c354"
+        assert new_session_msg.custom_theme.violet_background_color == "#803df5"
+        assert new_session_msg.custom_theme.gray_background_color == "#808495"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1587,6 +1693,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
         )
+        assert new_session_msg.custom_theme.sidebar.red_color == "red"
+        assert new_session_msg.custom_theme.sidebar.orange_color == "orange"
+        assert new_session_msg.custom_theme.sidebar.yellow_color == "yellow"
+        assert new_session_msg.custom_theme.sidebar.blue_color == "blue"
+        assert new_session_msg.custom_theme.sidebar.green_color == "green"
+        assert new_session_msg.custom_theme.sidebar.violet_color == "violet"
+        assert new_session_msg.custom_theme.sidebar.gray_color == "gray"
+        assert new_session_msg.custom_theme.sidebar.red_background_color == "#ff8c8c"
+        assert new_session_msg.custom_theme.sidebar.orange_background_color == "#ffd16a"
+        assert new_session_msg.custom_theme.sidebar.yellow_background_color == "#ffff59"
+        assert new_session_msg.custom_theme.sidebar.blue_background_color == "#60b4ff"
+        assert new_session_msg.custom_theme.sidebar.green_background_color == "#5ce488"
+        assert new_session_msg.custom_theme.sidebar.violet_background_color == "#b27eff"
+        assert new_session_msg.custom_theme.sidebar.gray_background_color == "#bfc5d3"
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0
@@ -1607,6 +1727,95 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         app_session._populate_theme_msg(new_session_msg.custom_theme)
 
         patched_logger.warning.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the body_font field
+        assert new_session_msg.custom_theme.body_font == "Inter"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="font",
+                source_url="https://fonts.googleapis.com/css2?family=Inter&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_code_font_config(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "codeFont": "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the code_font field
+        assert new_session_msg.custom_theme.code_font == "Tagesschrift"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="codeFont",
+                source_url="https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_handles_populating_font_source_for_heading_font_config(
+        self, patched_config
+    ):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {"headingFont": "playwrite-cc-za:https://use.typekit.net/eor5wum.css"}
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        # Font name is added to the heading_font field
+        assert new_session_msg.custom_theme.heading_font == "playwrite-cc-za"
+
+        # Font source is added to the font_sources field
+        assert list(new_session_msg.custom_theme.font_sources) == [
+            FontSource(
+                config_name="headingFont",
+                source_url="https://use.typekit.net/eor5wum.css",
+            )
+        ]
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_raises_exception_if_source_contains_multiple_fonts(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                "font": "Inter:https://fonts.googleapis.com/css2?family=Inter&family=Inter+Bold&display=swap"
+            }
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        with pytest.raises(StreamlitAPIException) as ctx:
+            app_session._populate_theme_msg(new_session_msg.custom_theme)
+
+        assert (
+            "The source URL specified in the font property of config.toml contains multiple fonts."
+            in str(ctx.value)
+        )
 
 
 @patch.object(
