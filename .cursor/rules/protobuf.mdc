@@ -1,6 +1,6 @@
 ---
 description:
-globs: *.proto
+globs: **/*.proto
 alwaysApply: false
 ---
 

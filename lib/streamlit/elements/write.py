@@ -37,7 +37,6 @@ from typing import (
 
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
     is_mem_address_str,
@@ -56,7 +55,6 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER: Final = get_logger(__name__)
 
 _TEXT_CURSOR: Final = " ▏"
 

@@ -72,6 +72,8 @@ export type DerivedColors = {
  * Extra colors added by createEmotionColors (related to custom theming)
  */
 export type SpecialEmotionColors = {
+  link: string
+
   codeTextColor: string
   codeBackgroundColor: string
 

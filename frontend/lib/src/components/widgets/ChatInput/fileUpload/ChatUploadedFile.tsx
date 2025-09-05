@@ -66,7 +66,11 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
     case "error":
       return (
         <ChatUploadedFileIconTooltip content={fileInfo.status.errorMessage}>
-          <Icon color={theme.colors.red} content={ErrorOutline} size="lg" />
+          <Icon
+            color={theme.colors.redTextColor}
+            content={ErrorOutline}
+            size="lg"
+          />
         </ChatUploadedFileIconTooltip>
       )
     case "uploaded":
