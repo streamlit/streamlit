@@ -727,6 +727,13 @@ def _mock_get_options_for_section(
         "greenColor": "green",
         "violetColor": "violet",
         "grayColor": "gray",
+        "redBackgroundColor": "#ff8c8c",
+        "orangeBackgroundColor": "#ffd16a",
+        "yellowBackgroundColor": "#ffff59",
+        "blueBackgroundColor": "#60b4ff",
+        "greenBackgroundColor": "#5ce488",
+        "violetBackgroundColor": "#b27eff",
+        "grayBackgroundColor": "#bfc5d3",
     }
 
     if overrides.get("sidebar") is not None:
@@ -810,6 +817,13 @@ def _mock_get_options_for_section(
         "greenColor": "#177233",
         "violetColor": "#3f3163",
         "grayColor": "#0e1117",
+        "redBackgroundColor": "#ff4b4b",
+        "orangeBackgroundColor": "#ffa421",
+        "yellowBackgroundColor": "#ffe312",
+        "blueBackgroundColor": "#1c83e1",
+        "greenBackgroundColor": "#21c354",
+        "violetBackgroundColor": "#803df5",
+        "grayBackgroundColor": "#808495",
     }
 
     for k, v in overrides.items():
@@ -1283,6 +1297,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenColor": None,
                     "violetColor": None,
                     "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                 }
             )
         )
@@ -1333,6 +1354,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenColor": None,
                     "violetColor": None,
                     "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                 }
             )
         )
@@ -1383,6 +1411,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenColor": None,
                     "violetColor": None,
                     "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1549,6 +1584,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.green_color == "#177233"
         assert new_session_msg.custom_theme.violet_color == "#3f3163"
         assert new_session_msg.custom_theme.gray_color == "#0e1117"
+        assert new_session_msg.custom_theme.red_background_color == "#ff4b4b"
+        assert new_session_msg.custom_theme.orange_background_color == "#ffa421"
+        assert new_session_msg.custom_theme.yellow_background_color == "#ffe312"
+        assert new_session_msg.custom_theme.blue_background_color == "#1c83e1"
+        assert new_session_msg.custom_theme.green_background_color == "#21c354"
+        assert new_session_msg.custom_theme.violet_background_color == "#803df5"
+        assert new_session_msg.custom_theme.gray_background_color == "#808495"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1658,6 +1700,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.green_color == "green"
         assert new_session_msg.custom_theme.sidebar.violet_color == "violet"
         assert new_session_msg.custom_theme.sidebar.gray_color == "gray"
+        assert new_session_msg.custom_theme.sidebar.red_background_color == "#ff8c8c"
+        assert new_session_msg.custom_theme.sidebar.orange_background_color == "#ffd16a"
+        assert new_session_msg.custom_theme.sidebar.yellow_background_color == "#ffff59"
+        assert new_session_msg.custom_theme.sidebar.blue_background_color == "#60b4ff"
+        assert new_session_msg.custom_theme.sidebar.green_background_color == "#5ce488"
+        assert new_session_msg.custom_theme.sidebar.violet_background_color == "#b27eff"
+        assert new_session_msg.custom_theme.sidebar.gray_background_color == "#bfc5d3"
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0

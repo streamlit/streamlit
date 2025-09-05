@@ -1307,6 +1307,246 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.grayColor).toBe(theme.colors.gray80)
   })
 
+  // Test valid background color values
+  it.each([
+    ["#ff0000", "#ff0000"],
+    ["rgb(255, 0, 0)", "rgb(255, 0, 0)"],
+    ["rgba(196, 77, 86, 0.1)", "rgba(196, 77, 86, 0.1)"],
+    ["red", "red"],
+    ["ff0000", "#ff0000"], // Handles no leading #
+  ])(
+    "uses configured background theme colors if set",
+    (color, expectedColor) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        redBackgroundColor: color,
+      }
+      const theme = createEmotionTheme(themeInput, lightTheme)
+      expect(theme.colors.redBackgroundColor).toBe(expectedColor)
+      expect(theme.colors.orangeBackgroundColor).toBe(
+        lightTheme.emotion.colors.orangeBackgroundColor
+      )
+      expect(theme.colors.yellowBackgroundColor).toBe(
+        lightTheme.emotion.colors.yellowBackgroundColor
+      )
+      expect(theme.colors.blueBackgroundColor).toBe(
+        lightTheme.emotion.colors.blueBackgroundColor
+      )
+      expect(theme.colors.greenBackgroundColor).toBe(
+        lightTheme.emotion.colors.greenBackgroundColor
+      )
+      expect(theme.colors.violetBackgroundColor).toBe(
+        lightTheme.emotion.colors.violetBackgroundColor
+      )
+      expect(theme.colors.grayBackgroundColor).toBe(
+        lightTheme.emotion.colors.grayBackgroundColor
+      )
+    }
+  )
+
+  // Test invalid background color values
+  it.each([
+    ["invalid"],
+    ["rgb(255, 0, 0"], // Missing closing parenthesis
+    ["corgi"], // Invalid color name
+    ["#G00000"], // Invalid hex code
+  ])(
+    "logs a warning and falls back to default for invalid background theme colors '%s'",
+    color => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        orangeBackgroundColor: color,
+      }
+      const theme = createEmotionTheme(themeInput, lightTheme)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for orangeBackgroundColor in theme: "${color}"`
+      )
+      // Falls back to default orange background
+      expect(theme.colors.orangeBackgroundColor).toBe(
+        lightTheme.emotion.colors.orangeBackgroundColor
+      )
+      // All others use defaults
+      expect(theme.colors.redBackgroundColor).toBe(
+        lightTheme.emotion.colors.redBackgroundColor
+      )
+      expect(theme.colors.yellowBackgroundColor).toBe(
+        lightTheme.emotion.colors.yellowBackgroundColor
+      )
+      expect(theme.colors.blueBackgroundColor).toBe(
+        lightTheme.emotion.colors.blueBackgroundColor
+      )
+      expect(theme.colors.greenBackgroundColor).toBe(
+        lightTheme.emotion.colors.greenBackgroundColor
+      )
+      expect(theme.colors.violetBackgroundColor).toBe(
+        lightTheme.emotion.colors.violetBackgroundColor
+      )
+      expect(theme.colors.grayBackgroundColor).toBe(
+        lightTheme.emotion.colors.grayBackgroundColor
+      )
+    }
+  )
+
+  it("defaults background colors are set correctly for light theme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+    expect(theme.colors.redBackgroundColor).toBe(
+      transparentize(theme.colors.red80, 0.9)
+    )
+    expect(theme.colors.orangeBackgroundColor).toBe(
+      transparentize(theme.colors.orange70, 0.9)
+    )
+    expect(theme.colors.yellowBackgroundColor).toBe(
+      transparentize(theme.colors.yellow65, 0.9)
+    )
+    expect(theme.colors.blueBackgroundColor).toBe(
+      transparentize(theme.colors.blue65, 0.9)
+    )
+    expect(theme.colors.greenBackgroundColor).toBe(
+      transparentize(theme.colors.green70, 0.9)
+    )
+    expect(theme.colors.violetBackgroundColor).toBe(
+      transparentize(theme.colors.purple60, 0.9)
+    )
+    expect(theme.colors.grayBackgroundColor).toBe(
+      transparentize(theme.colors.gray85, 0.9)
+    )
+  })
+
+  it("default background colors are set correctly for dark theme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+    expect(theme.colors.redBackgroundColor).toBe(
+      transparentize(theme.colors.red60, 0.8)
+    )
+    expect(theme.colors.orangeBackgroundColor).toBe(
+      transparentize(theme.colors.orange80, 0.8)
+    )
+    expect(theme.colors.yellowBackgroundColor).toBe(
+      transparentize(theme.colors.yellow65, 0.8)
+    )
+    expect(theme.colors.blueBackgroundColor).toBe(
+      transparentize(theme.colors.blue60, 0.8)
+    )
+    expect(theme.colors.greenBackgroundColor).toBe(
+      transparentize(theme.colors.green60, 0.8)
+    )
+    expect(theme.colors.violetBackgroundColor).toBe(
+      transparentize(theme.colors.purple60, 0.8)
+    )
+    expect(theme.colors.grayBackgroundColor).toBe(
+      transparentize(theme.colors.gray70, 0.8)
+    )
+  })
+
+  it("derives background colors from main colors with correct opacity for light theme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: "#ff0000",
+      blueColor: "#0000ff",
+      backgroundColor: "#ffffff", // Light theme
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    // Should derive red background from provided red color with 10% opacity (light theme)
+    expect(theme.colors.redBackgroundColor).toBe("rgba(255, 0, 0, 0.1)")
+    // Should derive blue background from provided blue color with 10% opacity (light theme)
+    expect(theme.colors.blueBackgroundColor).toBe("rgba(0, 0, 255, 0.1)")
+    // Should use default for colors not provided
+    expect(theme.colors.orangeBackgroundColor).toBe(
+      lightTheme.emotion.colors.orangeBackgroundColor
+    )
+  })
+
+  it("derives background colors from main colors with correct opacity for dark theme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: "#ff0000",
+      greenColor: "#00ff00",
+      backgroundColor: "#000000", // Dark theme
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+
+    // Should derive colors with 20% opacity for dark theme
+    expect(theme.colors.redBackgroundColor).toBe("rgba(255, 0, 0, 0.2)")
+    expect(theme.colors.greenBackgroundColor).toBe("rgba(0, 255, 0, 0.2)")
+    // Should use default for colors not provided
+    expect(theme.colors.blueBackgroundColor).toBe(
+      darkTheme.emotion.colors.blueBackgroundColor
+    )
+  })
+
+  it("uses explicit background color when both main color and background color are provided", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: "#ff0000",
+      redBackgroundColor: "#ffcccc", // Explicitly provided
+      backgroundColor: "#ffffff",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    // Should use explicitly provided background color, not derived
+    expect(theme.colors.redBackgroundColor).toBe("#ffcccc")
+  })
+
+  it("handles mixed explicit and derived background colors correctly", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      // Explicit background colors
+      redBackgroundColor: "#ffe6e6",
+      blueBackgroundColor: "#e6f3ff",
+
+      // Main colors that should derive backgrounds
+      greenColor: "#00ff00",
+      violetColor: "#8b00ff",
+
+      // No yellow/orange/gray configs - should use defaults
+
+      backgroundColor: "#ffffff", // Light theme
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    // Should use explicit backgrounds
+    expect(theme.colors.redBackgroundColor).toBe("#ffe6e6")
+    expect(theme.colors.blueBackgroundColor).toBe("#e6f3ff")
+
+    // Should derive from main colors
+    expect(theme.colors.greenBackgroundColor).toBe("rgba(0, 255, 0, 0.1)")
+    expect(theme.colors.violetBackgroundColor).toBe("rgba(139, 0, 255, 0.1)")
+
+    // Should use defaults
+    expect(theme.colors.orangeBackgroundColor).toBe(
+      lightTheme.emotion.colors.orangeBackgroundColor
+    )
+    expect(theme.colors.yellowBackgroundColor).toBe(
+      lightTheme.emotion.colors.yellowBackgroundColor
+    )
+    expect(theme.colors.grayBackgroundColor).toBe(
+      lightTheme.emotion.colors.grayBackgroundColor
+    )
+  })
+
+  it("falls back to default when main color is invalid and no explicit background provided", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      redColor: "invalid-color", // Invalid main color
+      blueColor: "#0000ff", // Valid main color
+      backgroundColor: "#ffffff",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      'Invalid color passed for redColor in theme: "invalid-color"'
+    )
+
+    // Should use default for red (main color invalid)
+    expect(theme.colors.redBackgroundColor).toBe(
+      lightTheme.emotion.colors.redBackgroundColor
+    )
+
+    // Should derive for blue (main color valid)
+    expect(theme.colors.blueBackgroundColor).toBe("rgba(0, 0, 255, 0.1)")
+  })
+
   // Conditional Overrides - Radii Tests
 
   it("adapts the radii theme props if baseRadius is provided", () => {
