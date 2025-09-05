@@ -3,25 +3,14 @@
   "license": "Apache-2.0",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/eslint-plugin-streamlit-custom.es.js",
-  "module": "./dist/eslint-plugin-streamlit-custom.es.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/eslint-plugin-streamlit-custom.es.js"
-    }
-  },
+  "main": "./src/index.ts",
   "files": [
-    "dist"
+    "src"
   ],
   "scripts": {
-    "build": "vite build",
-    "buildWatch": "vite build --watch",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "lint": "eslint --max-warnings 0 src",
-    "postinstall": "yarn build",
     "test": "vitest run",
     "testWatch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -37,9 +26,6 @@
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
     "typesync": "^0.14.3",
-    "vite": "^7.0.4",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
