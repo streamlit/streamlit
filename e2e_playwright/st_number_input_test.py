@@ -20,6 +20,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
     fill_number_input,
@@ -301,7 +302,6 @@ def test_dynamic_number_input_props(app: Page, assert_snapshot: ImageCompareFunc
     expect_markdown(app, "Initial number input value: 7")
 
     # Click the toggle to update the number input props
-    from e2e_playwright.shared.app_utils import click_toggle
 
     click_toggle(app, "Update number input props")
 
