@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
-import noHardcodedThemeValues from "./no-hardcoded-theme-values"
 import enforceMemo from "./enforce-memo"
 import noForceReflowAccess from "./no-force-reflow-access"
+import noHardcodedThemeValues from "./no-hardcoded-theme-values"
+import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
 
 export default {
   rules: {
-    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
-    "no-hardcoded-theme-values": noHardcodedThemeValues,
     "enforce-memo": enforceMemo,
     "no-force-reflow-access": noForceReflowAccess,
+    "no-hardcoded-theme-values": noHardcodedThemeValues,
+    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
   },
 }

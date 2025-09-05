@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { afterAll, describe, it } from "vitest"
 import { RuleTester } from "@typescript-eslint/rule-tester"
+import { afterAll, describe, it } from "vitest"
 
 // @see https://typescript-eslint.io/packages/rule-tester/#vitest
 RuleTester.afterAll = afterAll
