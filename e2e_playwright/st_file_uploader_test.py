@@ -368,6 +368,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
+@pytest.mark.flaky(reruns=3)
 def test_directory_upload_with_file_type_filtering(app: Page):
     """Test that directory upload correctly filters files by type.
 
@@ -387,9 +388,11 @@ def test_directory_upload_with_file_type_filtering(app: Page):
     ]
 
     temp_dir = create_temp_directory_with_files(directory_data)
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=[temp_dir])
@@ -402,6 +405,7 @@ def test_directory_upload_with_file_type_filtering(app: Page):
 
     # Additionally verify the .pdf file was NOT uploaded (it should have been filtered)
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    expect(file_uploader).to_be_visible()
     file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
     all_file_names = [elem.inner_text() for elem in file_name_elements]
     assert not any("disallowed.pdf" in name for name in all_file_names), (
@@ -414,8 +418,10 @@ def test_directory_upload_empty_directory(app: Page):
     uploader_index = 3  # Directory uploader index
 
     # Click and cancel dialog to simulate empty directory selection
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
     with app.expect_file_chooser():
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     wait_for_app_run(app, wait_delay=500)
 
@@ -439,8 +445,11 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
 
     uploader_index = 2
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=files[0])
@@ -480,7 +489,9 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    file_uploader_delete_btn = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    expect(file_uploader_delete_btn).to_be_visible()
+    file_uploader_delete_btn.click()
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -511,8 +522,11 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
 
     uploader_index = 2
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     # Here we wait for the first file to be uploaded before uploading the second
@@ -554,7 +568,9 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    file_uploader_delete_btn = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    expect(file_uploader_delete_btn).to_be_visible()
+    file_uploader_delete_btn.click()
 
     wait_for_app_run(app)
 
@@ -579,8 +595,11 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     # Since callback did not called at this moment, counter value should
     # be equal 0
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -614,8 +633,11 @@ def test_works_inside_form(app: Page):
 
     uploader_index = 4
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -680,8 +702,11 @@ def test_file_uploader_works_with_fragments(app: Page):
 
     uploader_index = 8
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -820,8 +845,11 @@ def test_toggle_disable_after_upload_snapshot(
     file_name = "snap.txt"
     file_content = b"snapshot content"
 
+    file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(file_dropzone).to_be_visible()
+
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+        file_dropzone.click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -836,6 +864,7 @@ def test_toggle_disable_after_upload_snapshot(
 
     # Snapshot the uploader in disabled state with an uploaded file
     toggled_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    expect(toggled_uploader).to_be_visible()
     assert_snapshot(
         toggled_uploader, name="st_file_uploader-toggle_disabled_after_upload"
     )
