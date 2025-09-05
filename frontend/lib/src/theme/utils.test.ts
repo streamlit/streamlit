@@ -1679,7 +1679,7 @@ describe("createEmotionTheme", () => {
     )
   })
 
-  it("derives text colors from main colors for light theme (darkens by 20%)", () => {
+  it("derives text colors from main colors for light theme (darkens by 15%)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       redColor: "#ff4b4b", // red70
@@ -1688,9 +1688,9 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
 
-    // Should derive text colors from main colors (darken by 20%)
-    expect(theme.colors.redTextColor).toBe(darken("#ff4b4b", 0.2))
-    expect(theme.colors.blueTextColor).toBe(darken("#1c83e1", 0.2))
+    // Should derive text colors from main colors (darken by 15%)
+    expect(theme.colors.redTextColor).toBe(darken("#ff4b4b", 0.15))
+    expect(theme.colors.blueTextColor).toBe(darken("#1c83e1", 0.15))
 
     // Should use defaults for colors without main colors configured
     expect(theme.colors.orangeTextColor).toBe(
@@ -1698,7 +1698,7 @@ describe("createEmotionTheme", () => {
     )
   })
 
-  it("derives text colors from main colors for dark theme (lightens by 20%)", () => {
+  it("derives text colors from main colors for dark theme (lightens by 15%)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.DARK,
       redColor: "#7d353b", // red100
@@ -1707,9 +1707,9 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, darkTheme)
 
-    // Should derive text colors from main colors (lighten by 20%)
-    expect(theme.colors.redTextColor).toBe(lighten("#7d353b", 0.2))
-    expect(theme.colors.blueTextColor).toBe(lighten("#004280", 0.2))
+    // Should derive text colors from main colors (lighten by 15%)
+    expect(theme.colors.redTextColor).toBe(lighten("#7d353b", 0.15))
+    expect(theme.colors.blueTextColor).toBe(lighten("#004280", 0.15))
 
     // Should use defaults for colors without main colors configured
     expect(theme.colors.orangeTextColor).toBe(
@@ -1727,7 +1727,7 @@ describe("createEmotionTheme", () => {
 
     // Should use explicit text color, not derived from main color
     expect(theme.colors.redTextColor).toBe("#ffabab")
-    expect(theme.colors.redTextColor).not.toBe(darken("#ff4b4b", 0.2))
+    expect(theme.colors.redTextColor).not.toBe(darken("#ff4b4b", 0.15))
   })
 
   it("handles mixed explicit and derived text colors correctly", () => {
@@ -1749,9 +1749,9 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.redTextColor).toBe("#ff9999")
     expect(theme.colors.blueTextColor).toBe("#9999ff")
 
-    // Should derive from main colors (darken by 20% for light theme)
-    expect(theme.colors.greenTextColor).toBe(darken("#00ff00", 0.2))
-    expect(theme.colors.violetTextColor).toBe(darken("#8b00ff", 0.2))
+    // Should derive from main colors (darken by 15% for light theme)
+    expect(theme.colors.greenTextColor).toBe(darken("#00ff00", 0.15))
+    expect(theme.colors.violetTextColor).toBe(darken("#8b00ff", 0.15))
 
     // Should use defaults
     expect(theme.colors.orangeTextColor).toBe(
@@ -1784,7 +1784,7 @@ describe("createEmotionTheme", () => {
     )
 
     // Should derive for blue (main color valid)
-    expect(theme.colors.blueTextColor).toBe(darken("#0000ff", 0.2))
+    expect(theme.colors.blueTextColor).toBe(darken("#0000ff", 0.15))
   })
 
   it("handles mixed explicit and derived text colors correctly for dark theme", () => {
@@ -1806,9 +1806,9 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.redTextColor).toBe("#ff9999")
     expect(theme.colors.blueTextColor).toBe("#9999ff")
 
-    // Should derive from main colors (lighten by 20% for dark theme)
-    expect(theme.colors.greenTextColor).toBe(lighten("#008800", 0.2))
-    expect(theme.colors.violetTextColor).toBe(lighten("#6600bb", 0.2))
+    // Should derive from main colors (lighten by 15% for dark theme)
+    expect(theme.colors.greenTextColor).toBe(lighten("#008800", 0.15))
+    expect(theme.colors.violetTextColor).toBe(lighten("#6600bb", 0.15))
 
     // Should use defaults
     expect(theme.colors.orangeTextColor).toBe(
@@ -1840,8 +1840,8 @@ describe("createEmotionTheme", () => {
       darkTheme.emotion.colors.redTextColor
     )
 
-    // Should derive for blue (main color valid, lighten by 20% for dark theme)
-    expect(theme.colors.blueTextColor).toBe(lighten("#000080", 0.2))
+    // Should derive for blue (main color valid, lighten by 15% for dark theme)
+    expect(theme.colors.blueTextColor).toBe(lighten("#000080", 0.15))
   })
 
   it("handles mixed valid/invalid main colors for text color derivation", () => {
@@ -1863,7 +1863,7 @@ describe("createEmotionTheme", () => {
     )
 
     // Should derive for blue (main color valid)
-    expect(theme.colors.blueTextColor).toBe(darken("#0000ff", 0.2))
+    expect(theme.colors.blueTextColor).toBe(darken("#0000ff", 0.15))
   })
 
   // Conditional Overrides - Radii Tests
