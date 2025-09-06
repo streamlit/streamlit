@@ -107,8 +107,6 @@ st.number_input(
     width="stretch",
 )
 
-st.markdown("Dynamic number input:")
-
 if st.toggle("Update number input props"):
     dyn_val = st.number_input(
         "Updated dynamic number input",
