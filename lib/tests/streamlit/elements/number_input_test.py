@@ -481,6 +481,93 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.number_input(
+                label="Label 1",
+                key="number_input_key",
+                value=3,
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                placeholder="placeholder 1",
+                format="%0.2f",
+                icon=":material/attach_money:",
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c1 = self.get_delta_from_queue().new_element.number_input
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.number_input(
+                label="Label 2",
+                key="number_input_key",
+                value=7,
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                placeholder="placeholder 2",
+                format="%d",
+                icon="💵",
+                # Keep whitelisted the same to ensure ID stability
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c2 = self.get_delta_from_queue().new_element.number_input
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("min_value", 0, 1),
+            ("max_value", 10, 11),
+            ("step", 1, 2),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "number_input_key",
+                # keep other whitelisted values stable to avoid type/format interactions
+                "min_value": 0,
+                "max_value": 10,
+                "step": 1,
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.number_input(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.number_input
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.number_input(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.number_input
+            id2 = c2.id
+            assert id1 != id2
+
 
 def test_number_input_interaction():
     """Test interactions with an empty number input widget."""
