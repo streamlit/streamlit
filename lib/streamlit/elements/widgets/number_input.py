@@ -452,7 +452,7 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity={"min_value", "max_value", "step"},
             dg=self.dg,
             label=label,
             min_value=min_value,
