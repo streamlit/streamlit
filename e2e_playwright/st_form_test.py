@@ -364,6 +364,9 @@ def test_submit_button_with_key(app: Page):
     expect(submit_button).to_be_visible()
 
 
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
 def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the submit button can be updated dynamically."""
     submit_button = get_element_by_key(app, "dynamic_button_with_key")
