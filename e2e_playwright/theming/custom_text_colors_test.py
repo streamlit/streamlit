@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons
 @pytest.mark.early
 def configure_custom_theme_text_colors():
     """Configure custom theme text colors."""
-    # Background colors
+    # Main theme text colors (medium intensity)
     os.environ["STREAMLIT_THEME_RED_TEXT_COLOR"] = "#e74c3c"
     os.environ["STREAMLIT_THEME_ORANGE_TEXT_COLOR"] = "#f39c12"
     os.environ["STREAMLIT_THEME_YELLOW_TEXT_COLOR"] = "#f1c40f"
@@ -34,13 +34,14 @@ def configure_custom_theme_text_colors():
     os.environ["STREAMLIT_THEME_GREEN_TEXT_COLOR"] = "#27ae60"
     os.environ["STREAMLIT_THEME_VIOLET_TEXT_COLOR"] = "#9b59b6"
     os.environ["STREAMLIT_THEME_GRAY_TEXT_COLOR"] = "#7f8c8d"
-    os.environ["STREAMLIT_THEME_SIDEBAR_RED_TEXT_COLOR"] = "#dc3545"
-    os.environ["STREAMLIT_THEME_SIDEBAR_ORANGE_TEXT_COLOR"] = "#fd7e14"
-    os.environ["STREAMLIT_THEME_SIDEBAR_YELLOW_TEXT_COLOR"] = "#ffc107"
-    os.environ["STREAMLIT_THEME_SIDEBAR_BLUE_TEXT_COLOR"] = "#007bff"
-    os.environ["STREAMLIT_THEME_SIDEBAR_GREEN_TEXT_COLOR"] = "#28a745"
-    os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_TEXT_COLOR"] = "#6f42c1"
-    os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_TEXT_COLOR"] = "#6c757d"
+    # Sidebar text colors (much darker/more saturated for clear distinction)
+    os.environ["STREAMLIT_THEME_SIDEBAR_RED_TEXT_COLOR"] = "#8b0000"
+    os.environ["STREAMLIT_THEME_SIDEBAR_ORANGE_TEXT_COLOR"] = "#cc4400"
+    os.environ["STREAMLIT_THEME_SIDEBAR_YELLOW_TEXT_COLOR"] = "#b8860b"
+    os.environ["STREAMLIT_THEME_SIDEBAR_BLUE_TEXT_COLOR"] = "#000080"
+    os.environ["STREAMLIT_THEME_SIDEBAR_GREEN_TEXT_COLOR"] = "#006400"
+    os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_TEXT_COLOR"] = "#4b0082"
+    os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_TEXT_COLOR"] = "#2f2f2f"
     yield
     del os.environ["STREAMLIT_THEME_RED_TEXT_COLOR"]
     del os.environ["STREAMLIT_THEME_ORANGE_TEXT_COLOR"]
