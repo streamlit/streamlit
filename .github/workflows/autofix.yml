@@ -45,6 +45,9 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
 
+      - name: Run make frontend-fast
+        run: make frontend-fast
+
       - name: Run make autofix
         run: make autofix
 
