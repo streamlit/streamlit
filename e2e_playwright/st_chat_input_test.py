@@ -373,6 +373,7 @@ def test_file_upload_error_message_disallowed_files(
 @pytest.mark.flaky(reruns=3)
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
+    app.set_viewport_size({"width": 750, "height": 1500})
 
     file_name1 = "large.txt"
     file1 = FilePayload(
@@ -385,15 +386,16 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
     file_upload_helper(app, app.get_by_test_id("stChatInput").nth(3), [file1])
 
-    # Reset hovering to not cause issues with the upload tooltip being
-    # shown over the uploaded file tooltip hover target:
-    reset_hovering(app)
-    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
-
     expect(app.get_by_text(file_name1)).to_be_visible()
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(1)
     expect(uploaded_files).to_be_visible()
+    uploaded_files.scroll_into_view_if_needed()
+
+    # Reset hovering to not cause issues with the upload tooltip being
+    # shown over the uploaded file tooltip hover target:
+    reset_hovering(app)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
     tooltip_hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget").nth(0)
     expect(tooltip_hover_target).to_be_visible()
     tooltip_hover_target.hover()
