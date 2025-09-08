@@ -435,7 +435,8 @@ class DateInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_whitelisted_stable_key_kwargs_single(self, kwarg_name, value1, value2):
-        """Test that the widget ID changes for single mode when a whitelisted kwarg changes even when the key is provided."""
+        """Test that the widget ID changes for single mode when a whitelisted kwarg changes even
+        when the key is provided."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
@@ -466,7 +467,8 @@ class DateInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_whitelisted_stable_key_kwargs_range(self, kwarg_name, value1, value2):
-        """Test that the widget ID changes for range mode when a whitelisted kwarg changes even when the key is provided."""
+        """Test that the widget ID changes for range mode when a whitelisted kwarg changes
+        even when the key is provided."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
