@@ -15,6 +15,7 @@
 """time_input unit test."""
 
 from datetime import datetime, time, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -205,6 +206,78 @@ class TimeInputTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.time_input("the label", width=width)
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.time_input(
+                label="Label 1",
+                key="time_input_key",
+                value=time(8, 45),
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                # Whitelisted kwargs:
+                step=timedelta(minutes=15),
+            )
+            c1 = self.get_delta_from_queue().new_element.time_input
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.time_input(
+                label="Label 2",
+                key="time_input_key",
+                value=time(9, 0),
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                # Keep whitelisted the same to ensure ID stability
+                step=timedelta(minutes=15),
+            )
+            c2 = self.get_delta_from_queue().new_element.time_input
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("step", timedelta(minutes=15), timedelta(minutes=5)),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(self, kwarg_name, value1, value2):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "time_input_key",
+                # keep other params stable
+                "value": time(8, 45),
+                "step": value1,
+            }
+
+            st.time_input(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.time_input
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.time_input(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.time_input
+            id2 = c2.id
+            assert id1 != id2
 
 
 def test_time_input_interaction():

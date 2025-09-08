@@ -529,7 +529,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            key_as_main_identity=False,
+            # Ensure stable ID when key is provided; only whitelist step since it
+            # affects the selection granularity and available options.
+            key_as_main_identity={"step"},
             dg=self.dg,
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
@@ -912,7 +914,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            key_as_main_identity=False,
+            # Ensure stable ID when key is provided; explicitly whitelist parameters that
+            # that might invalidate the current widget state.
+            key_as_main_identity={"min_value", "max_value"},
             dg=self.dg,
             label=label,
             value=parsed,
