@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
-NUM_CHARTS = 9
+NUM_CHARTS = 8
 
 
 def test_altair_chart_displays_correctly(
@@ -47,15 +47,13 @@ def test_altair_chart_displays_correctly(
     # TODO(lukasmasuch): Temporarily disabled because of flickering in webkit & chromium.
     # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme")  # noqa: ERA001
     # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_bar_chart_streamlit_theme")  # noqa: ERA001
+    # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_use_container_width_default_theme")  # noqa: ERA001
     assert_snapshot(
-        charts.nth(5), name="st_altair_chart-grouped_use_container_width_default_theme"
+        charts.nth(5), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
     )
+    assert_snapshot(charts.nth(6), name="st_altair_chart-vconcat_width")
     assert_snapshot(
-        charts.nth(6), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
-    )
-    assert_snapshot(charts.nth(7), name="st_altair_chart-vconcat_width")
-    assert_snapshot(
-        charts.nth(8), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
+        charts.nth(7), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
     )
 
 
