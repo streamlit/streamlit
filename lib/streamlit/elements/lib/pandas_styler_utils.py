@@ -261,7 +261,8 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
 
     new_df = df.astype(str)
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
-    updates_by_col: dict[int, list[tuple[int, str]]] = {}
+    # Outer key = column index; inner key = row index -> target string value
+    updates_by_col: dict[int, dict[int, str]] = {}
     for row in styles.get("body", []):
         for cell in row:
             cell_id = cell.get("id")
@@ -271,41 +272,25 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
             if not match:
                 continue
             row_idx, col_idx = map(int, match.groups())
-
             display_value = cell.get("display_value")
-            updates_by_col.setdefault(col_idx, []).append(
-                (
-                    row_idx,
-                    str(display_value.value)
-                    # Check if the display value is an Enum type. Enum values need to be
-                    # converted to their `.value` attribute to ensure proper serialization
-                    #                 # and display logic.
-                    if isinstance(display_value, Enum)
-                    else str(display_value),
-                )
+
+            str_value = (
+                str(display_value.value)
+                # Check if the display value is an Enum type. Enum values need to be
+                # converted to their `.value` attribute to ensure proper serialization
+                # and display logic.
+                if isinstance(display_value, Enum)
+                else str(display_value)
             )
+            # Use a nested dict so last-write-wins is natural and no post-processing needed.
+            updates_by_col.setdefault(col_idx, {})[row_idx] = str_value
 
-    for col_idx, pairs in updates_by_col.items():
-        row_idx, vals = zip(*pairs)
-        new_df.iloc[list(row_idx), col_idx] = list(vals)
-
-    # new_df = df.astype(str)
-    # cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
-    # if "body" in styles:
-    #     rows = styles["body"]
-    #     for row in rows:
-    #         for cell in row:
-    #             if "id" in cell and (match := cell_selector_regex.match(cell["id"])):
-    #                 r, c = map(int, match.groups())
-    #                 # Check if the display value is an Enum type. Enum values need to be
-    #                 # converted to their `.value` attribute to ensure proper serialization
-    #                 # and display logic.
-    #                 if isinstance(cell["display_value"], Enum):
-    #                     new_df.iat[r, c] = str(cell["display_value"].value)
-    #                 else:
-    #                     # It's important to use .iat[] here because .iloc[]
-    #                     # is a lot slower which can have a significant impact on performance
-    #                     # for large dataframes.
-    #                     new_df.iat[r, c] = str(cell["display_value"])
+    for col_idx, values_by_row in updates_by_col.items():
+        if not values_by_row:
+            continue
+        row_indices = list(values_by_row.keys())
+        values = list(values_by_row.values())
+        # Batch-assign updates for this column using iloc for performance.
+        new_df.iloc[row_indices, col_idx] = values
 
     return new_df
