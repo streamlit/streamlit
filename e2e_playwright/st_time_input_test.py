@@ -299,7 +299,7 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     wait_for_app_loaded(app)
 
     time_input_widgets = app.get_by_test_id("stTimeInput")
-    expect(time_input_widgets).to_have_count(12)
+    expect(time_input_widgets).to_have_count(NUM_TIME_INPUTS)
 
     # Click on the first time input to open the dropdown
     get_time_input(app, "Time input 1 (8:45)").locator("input").click()

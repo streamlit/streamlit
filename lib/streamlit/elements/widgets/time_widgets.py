@@ -914,7 +914,7 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters that
+            # Ensure stable ID when key is provided; explicitly whitelist parameterss
             # that might invalidate the current widget state.
             key_as_main_identity={"min_value", "max_value"},
             dg=self.dg,
