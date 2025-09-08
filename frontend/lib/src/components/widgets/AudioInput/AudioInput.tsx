@@ -99,8 +99,14 @@ const AudioInput: React.FC<Props> = ({
     defaultValue: null,
   })
 
-  // Simple state for blob URL - no persistence needed or wanted
-  const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
+  const [recordingUrl, setRecordingUrl] = useWidgetManagerElementState<
+    string | null
+  >({
+    widgetMgr,
+    id: element.id,
+    key: "recordingUrl",
+    defaultValue: null,
+  })
 
   // Clean up blob URL on unmount
   useEffect(() => {
@@ -228,7 +234,6 @@ const AudioInput: React.FC<Props> = ({
       }
     },
     [
-      setRecordingUrl,
       uploadClient,
       widgetMgr,
       wavesurfer,
@@ -237,6 +242,7 @@ const AudioInput: React.FC<Props> = ({
       fragmentId,
       setDeleteFileUrl,
       targetSampleRate,
+      setRecordingUrl,
     ]
   )
 
@@ -284,8 +290,8 @@ const AudioInput: React.FC<Props> = ({
       widgetMgr,
       fragmentId,
       setRecordingTime,
-      setRecordingUrl,
       setDeleteFileUrl,
+      setRecordingUrl,
     ]
   )
 
