@@ -282,7 +282,6 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
                 if isinstance(display_value, Enum)
                 else str(display_value)
             )
-            # Use a nested dict so last-write-wins is natural and no post-processing needed.
             updates_by_col.setdefault(col_idx, {})[row_idx] = str_value
 
     for col_idx, values_by_row in updates_by_col.items():
