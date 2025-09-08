@@ -108,15 +108,6 @@ const AudioInput: React.FC<Props> = ({
     defaultValue: null,
   })
 
-  // Clean up blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (recordingUrl) {
-        URL.revokeObjectURL(recordingUrl)
-      }
-    }
-  }, [recordingUrl])
-
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
     setRerender(prev => prev + 1)
@@ -364,7 +355,7 @@ const AudioInput: React.FC<Props> = ({
       barRadius: BAR_RADIUS,
       cursorWidth: CURSOR_WIDTH,
       interact: true,
-      // Don't set URL here - we'll load it separately
+      url: recordingUrl ?? undefined,
     })
 
     ws.on("timeupdate", time => {
@@ -386,6 +377,14 @@ const AudioInput: React.FC<Props> = ({
   }, [])
 
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
+
+  // Load recording URL when wavesurfer is ready and URL exists
+  useEffect(() => {
+    if (wavesurfer && recordingUrl) {
+      void wavesurfer.load(recordingUrl)
+      wavesurfer.setOptions({ interact: true })
+    }
+  }, [wavesurfer, recordingUrl])
 
   // Initialize record plugin when wavesurfer is ready
   useEffect(() => {
