@@ -625,104 +625,9 @@ describe("createEmotionTheme", () => {
     )
   })
 
-  it("showSidebarBorder config is set to false by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
-  })
+  // == Theme color properties ==
 
-  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
-    const theme = createEmotionTheme({ showSidebarBorder: true })
-    expect(theme.showSidebarBorder).toBe(true)
-  })
-
-  it("linkUnderline config is set to true by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.linkUnderline).toBe(true)
-  })
-
-  it("sets the linkUnderline config to false if linkUnderline=false", () => {
-    const theme = createEmotionTheme({ linkUnderline: false })
-    expect(theme.linkUnderline).toBe(false)
-  })
-
-  // Conditional Overrides - Colors Tests
-
-  it("sets the codeBackgroundColor if configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      codeBackgroundColor: "pink",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.codeBackgroundColor).toBe("pink")
-  })
-
-  it("uses default codeBackgroundColor if not configured", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.colors.codeBackgroundColor).toBe(theme.colors.bgMix)
-  })
-
-  it("sets the dataframeHeaderBackgroundColor if configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      dataframeHeaderBackgroundColor: "#FFC0CB",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("#FFC0CB")
-  })
-
-  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
-      theme.colors.bgMix
-    )
-  })
-
-  it("sets the borderColor properties based on borderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      borderColor: "blue",
-      // Note no specified dataframeBorderColor
-    }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.colors.borderColor).toBe("blue")
-    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
-    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
-    // not configured
-    expect(theme.colors.dataframeBorderColor).toBe(
-      theme.colors.borderColorLight
-    )
-  })
-
-  it("sets the dataframeBorderColor if configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      borderColor: "red",
-      dataframeBorderColor: "green",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.borderColor).toBe("red")
-    expect(theme.colors.dataframeBorderColor).toBe("green")
-  })
-
-  it("handles showWidgetBorder config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      showWidgetBorder: true,
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
-  })
-
-  it("handles legacy widgetBorderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      widgetBorderColor: "yellow",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe("yellow")
-  })
-
+  // Handled in newGenericColors
   it.each([
     // Test valid color values
     ["red", "orange", "blue", "pink", "purple"],
@@ -842,6 +747,104 @@ describe("createEmotionTheme", () => {
       }
     }
   )
+
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
+  })
+
+  it("linkUnderline config is set to true by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.linkUnderline).toBe(true)
+  })
+
+  it("sets the linkUnderline config to false if linkUnderline=false", () => {
+    const theme = createEmotionTheme({ linkUnderline: false })
+    expect(theme.linkUnderline).toBe(false)
+  })
+
+  // Conditional Overrides - Colors
+
+  it("sets the codeBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      codeBackgroundColor: "pink",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.codeBackgroundColor).toBe("pink")
+  })
+
+  it("uses default codeBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.codeBackgroundColor).toBe(theme.colors.bgMix)
+  })
+
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("#FFC0CB")
+  })
+
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
+  })
+
+  it("sets the borderColor properties based on borderColor config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "blue",
+      // Note no specified dataframeBorderColor
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.colors.borderColor).toBe("blue")
+    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
+    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
+    // not configured
+    expect(theme.colors.dataframeBorderColor).toBe(
+      theme.colors.borderColorLight
+    )
+  })
+
+  it("sets the dataframeBorderColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "red",
+      dataframeBorderColor: "green",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.borderColor).toBe("red")
+    expect(theme.colors.dataframeBorderColor).toBe("green")
+  })
+
+  it("handles showWidgetBorder config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      showWidgetBorder: true,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
+  })
+
+  it("handles legacy widgetBorderColor config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      widgetBorderColor: "yellow",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.widgetBorderColor).toBe("yellow")
+  })
 
   it.each([
     // Test valid color values
@@ -1229,8 +1232,9 @@ describe("createEmotionTheme", () => {
     }
   )
 
-  // Test valid main color values
+  // Main theme colors (handled in newGenericColors)
   it.each([
+    // Test valid color values
     ["#ff0000", "#ff0000"],
     ["rgb(255, 0, 0)", "rgb(255, 0, 0)"],
     ["rgba(196, 77, 86, 1)", "rgba(196, 77, 86, 1)"],
