@@ -126,17 +126,17 @@ if st.toggle("Update date input props"):
         value=date(2023, 9, 10),
         width=300,
         help="updated help",
-        format="DD/MM/YYYY",
         on_change=lambda a, param: print(
             f"Updated date input - callback triggered: {a} {param}"
         ),
         args=("Updated date arg",),
         kwargs={"param": "updated kwarg param"},
         key="dynamic_date_input_with_key",
-        # min_value & max_value are not yet supported for dynamic changes
+        # min_value, max_value, & format are not yet supported for dynamic changes
         # keeping it at the same value for now:
         min_value=date(2010, 1, 1),
         max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
     )
     st.write("Updated date input value:", dval)
 else:
@@ -145,7 +145,6 @@ else:
         value=date(2020, 1, 1),
         width="stretch",
         help="initial help",
-        format="YYYY/MM/DD",
         on_change=lambda a, param: print(
             f"Initial date input - callback triggered: {a} {param}"
         ),
@@ -154,5 +153,6 @@ else:
         key="dynamic_date_input_with_key",
         min_value=date(2010, 1, 1),
         max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
     )
     st.write("Initial date input value:", dval)

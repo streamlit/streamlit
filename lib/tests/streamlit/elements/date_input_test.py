@@ -399,10 +399,10 @@ class DateInputTest(DeltaGeneratorTestCase):
                 args=("arg1", "arg2"),
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
-                format="DD/MM/YYYY",
                 # Whitelisted kwargs:
                 min_value=date(2010, 1, 1),
                 max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
             )
             c1 = self.get_delta_from_queue().new_element.date_input
             id1 = c1.id
@@ -419,10 +419,10 @@ class DateInputTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
-                format="YYYY/MM/DD",
                 # Keep whitelisted the same to ensure ID stability
                 min_value=date(2010, 1, 1),
                 max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
@@ -464,6 +464,7 @@ class DateInputTest(DeltaGeneratorTestCase):
         [
             ("min_value", date(2009, 7, 6), date(2010, 7, 6)),
             ("max_value", date(2029, 7, 8), date(2030, 7, 8)),
+            ("format", "YYYY/MM/DD", "DD/MM/YYYY"),
         ]
     )
     def test_whitelisted_stable_key_kwargs_range(self, kwarg_name, value1, value2):
@@ -479,6 +480,7 @@ class DateInputTest(DeltaGeneratorTestCase):
                 "value": (date(2019, 7, 6), date(2019, 7, 8)),
                 "min_value": date(2009, 7, 6),
                 "max_value": date(2029, 7, 8),
+                "format": "YYYY/MM/DD",
             }
             base_kwargs[kwarg_name] = value1
 
