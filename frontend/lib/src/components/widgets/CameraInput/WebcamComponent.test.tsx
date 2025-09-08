@@ -39,9 +39,9 @@ beforeEach(() => {
 
 // Clean up timers after each test to prevent memory leaks
 afterEach(() => {
-  vi.clearAllTimers()
-  vi.runOnlyPendingTimers()
-  vi.useRealTimers()
+  vi.runOnlyPendingTimers() // Execute pending timers first
+  vi.clearAllTimers() // Then clear any remaining timers
+  vi.useRealTimers() // Finally restore real timers
 })
 
 const getProps = (props: Partial<Props> = {}): Props => {
