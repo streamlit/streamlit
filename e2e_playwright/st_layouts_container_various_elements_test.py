@@ -86,7 +86,7 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         expander = container_expanders.first
         expect(expander).to_be_visible()
         expander.click()
-        app.wait_for_timeout(2000)
+        app.wait_for_timeout(3000)
 
         assert_snapshot(
             container,
