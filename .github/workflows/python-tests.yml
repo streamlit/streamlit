@@ -294,7 +294,7 @@ jobs:
       - name: Get latest develop run ID
         if: github.event_name == 'pull_request'
         id: get-latest-run
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -326,7 +326,7 @@ jobs:
 
       - name: Check coverage changes and comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
