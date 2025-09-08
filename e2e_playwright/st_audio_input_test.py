@@ -408,10 +408,8 @@ def test_audio_input_error_state(
 
 def test_audio_input_widths(app: Page, assert_snapshot: ImageCompareFunction):
     """Test audio_input with different width configurations."""
-    stretch_width_input = app.get_by_test_id("stAudioInput").nth(
-        10
-    )  # Updated index after adding sample rate tests
-    pixel_width_input = app.get_by_test_id("stAudioInput").nth(11)  # Updated index
+    stretch_width_input = app.get_by_test_id("stAudioInput").nth(10)
+    pixel_width_input = app.get_by_test_id("stAudioInput").nth(11)
 
     expect(stretch_width_input).to_be_visible()
     expect(pixel_width_input).to_be_visible()

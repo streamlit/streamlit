@@ -37,7 +37,6 @@ async function convertFileToWav(
     return undefined
   }
 
-  // Get the appropriate AudioContext constructor (with webkit fallback)
   const AudioContextClass =
     window.AudioContext ||
     (
