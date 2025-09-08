@@ -52,10 +52,14 @@ st.write("value 5:", v5)
 v6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
 st.write("value 6:", v6)
 
-v7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
+v7 = st.radio(
+    "radio 7 (hidden label)", options, label_visibility="hidden", key="radio_7"
+)
 st.write("value 7:", v7)
 
-v8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
+v8 = st.radio(
+    "radio 8 (collapsed label)", options, label_visibility="collapsed", key="radio_8"
+)
 st.write("value 8:", v8)
 
 v9 = st.radio("radio 9 (markdown options)", options=markdown_options)

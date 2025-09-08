@@ -147,6 +147,8 @@ with st.expander("Download Button Width Examples", expanded=True):
     st.download_button("Stretch Width", "data", width="stretch")
     st.download_button("300px Width", "data", width=300)
 
+st.markdown("Dynamic download button props:")
+
 if st.toggle("Update button props"):
     clicked = st.download_button(
         "Updated dynamic button",

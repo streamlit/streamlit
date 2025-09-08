@@ -43,7 +43,7 @@ export const StyledMessage = styled.span<StyledMessageProps>(
       : {}),
     ...(shouldBlink
       ? {
-          color: theme.colors.red,
+          color: theme.colors.redTextColor,
           animationName: `${blink}`,
           animationDuration: "0.5s",
           animationIterationCount: 5,

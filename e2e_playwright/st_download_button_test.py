@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -28,7 +27,6 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     goto_app,
-    reset_hovering,
 )
 
 DOWNLOAD_BUTTON_ELEMENTS = 17
@@ -215,7 +213,6 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "download_button")).to_be_visible()
 
 
-@pytest.mark.flaky(reruns=4)
 def test_download_button_source_error(app: Page, app_port: int):
     """Test that the download button source error is correctly logged."""
     # Ensure download source request return a 404 status
@@ -266,7 +263,8 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
     # Clean hovering before clicking the toggle:
-    reset_hovering(app)
+    app.get_by_text("Dynamic download button props:").hover(force=True)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     # Click the toggle to update the button props
     click_toggle(app, "Update button props")
