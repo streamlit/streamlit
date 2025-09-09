@@ -86,10 +86,10 @@ runs:
         # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            # Switch slow Azure mirror to main Ubuntu mirror to improve throughput.
-            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list || true
-            sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list || true
-            sudo apt-get update || true
+            # Switch slow Azure mirror to main Ubuntu mirror, then refresh package lists.
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+            sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+            sudo apt-get update
           fi
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
         else
