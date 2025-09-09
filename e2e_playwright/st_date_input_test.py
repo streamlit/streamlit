@@ -453,7 +453,8 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Type something and submit (select same date via typing)
     input_field = dynamic_date_input.locator("input")
     input_field.type("2020/01/02", delay=50)
-    input_field.blur()
+    input_field.press("Enter")
+    input_field.press("Escape")
     wait_for_app_run(app)
     expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
 
