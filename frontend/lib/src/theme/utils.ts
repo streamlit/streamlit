@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { getLuminance, parseToRgba, toHex, transparentize } from "color2k"
+import {
+  darken,
+  getLuminance,
+  lighten,
+  parseToRgba,
+  toHex,
+  transparentize,
+} from "color2k"
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
 import merge from "lodash/merge"
@@ -217,6 +224,28 @@ const resolveBgColor = (
 }
 
 /**
+ * Helper function for theme text colors
+ * If the text color is configured, use it.
+ * If the main color is configured, derive text color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveTextColor = (
+  configTextColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultTextColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configTextColor) return configTextColor
+  if (configMainColor) {
+    const adjustmentAmount = 0.15
+    return isLightTheme
+      ? darken(configMainColor, adjustmentAmount)
+      : lighten(configMainColor, adjustmentAmount)
+  }
+  return defaultTextColor
+}
+
+/**
  * Applies background color overrides to theme colors using smart fallback logic.
  * For each background color: uses explicit config if provided, derives from main color if available,
  * or falls back to default.
@@ -268,6 +297,67 @@ const setBackgroundColors = (
     const typedKey = key as keyof typeof backgroundColorMap
     updatedColors[typedKey] = resolveBgColor(
       background,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
+}
+
+/**
+ * Applies text color overrides to theme colors using smart fallback logic.
+ * For each text color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with text colors applied
+ */
+const setTextColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const textColorMap = {
+    redTextColor: {
+      main: parsedColors.redColor,
+      text: parsedColors.redTextColor,
+    },
+    orangeTextColor: {
+      main: parsedColors.orangeColor,
+      text: parsedColors.orangeTextColor,
+    },
+    yellowTextColor: {
+      main: parsedColors.yellowColor,
+      text: parsedColors.yellowTextColor,
+    },
+    blueTextColor: {
+      main: parsedColors.blueColor,
+      text: parsedColors.blueTextColor,
+    },
+    greenTextColor: {
+      main: parsedColors.greenColor,
+      text: parsedColors.greenTextColor,
+    },
+    violetTextColor: {
+      main: parsedColors.violetColor,
+      text: parsedColors.violetTextColor,
+    },
+    grayTextColor: {
+      main: parsedColors.grayColor,
+      text: parsedColors.grayTextColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(textColorMap).forEach(([key, { main, text }]) => {
+    const typedKey = key as keyof typeof textColorMap
+    updatedColors[typedKey] = resolveTextColor(
+      text,
       main,
       existingColors[typedKey],
       isLightTheme
@@ -686,6 +776,18 @@ export const createEmotionTheme = (
       widgetBorderColor || conditionalOverrides.colors.borderColor
   }
 
+  // Apply background color overrides based on configured background color or main color as fallback
+  conditionalOverrides.colors = setBackgroundColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
+
+  // Apply text color overrides based on configured text color or main color as fallback
+  conditionalOverrides.colors = setTextColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
+
   if (
     notNullOrUndefined(chartCategoricalColors) &&
     chartCategoricalColors.length > 0
@@ -722,12 +824,6 @@ export const createEmotionTheme = (
       )
     }
   }
-
-  // Apply background color overrides based on configured background color or main color as fallback
-  conditionalOverrides.colors = setBackgroundColors(
-    conditionalOverrides.colors,
-    parsedColors
-  )
 
   // Conditional Overrides - Radii
 

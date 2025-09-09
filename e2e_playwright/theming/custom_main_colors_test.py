@@ -41,7 +41,8 @@ def configure_custom_theme_colors():
     os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_COLOR"] = "#dbbbff"
     os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_COLOR"] = "#e6eaf1"
 
-    # Since main colors are configured, these are used to derive background colors as well
+    # Since main colors are configured, these are used to derive background
+    # and text colors as well
     yield
     del os.environ["STREAMLIT_THEME_RED_COLOR"]
     del os.environ["STREAMLIT_THEME_ORANGE_COLOR"]
