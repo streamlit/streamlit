@@ -493,7 +493,7 @@ function formatInterval(x: StructRow, field?: Field): string {
   const extensionName = field?.metadata.get("ARROW:extension:name")
   if (extensionName && extensionName === "pandas.interval") {
     const extensionMetadata = JSON.parse(
-      field.metadata.get("ARROW:extension:metadata") as string
+      field?.metadata.get("ARROW:extension:metadata") as string
     )
     const { subtype, closed } = extensionMetadata
 
@@ -512,7 +512,7 @@ function formatInterval(x: StructRow, field?: Field): string {
         name: "",
         metadata: null,
       },
-      arrowField: (field.type as Struct)?.children?.[0],
+      arrowField: (field?.type as Struct)?.children?.[0],
     })
     const rightInterval = format(interval.right, {
       // Construct a arrow type for the right interval
@@ -524,7 +524,7 @@ function formatInterval(x: StructRow, field?: Field): string {
         name: "",
         metadata: null,
       },
-      arrowField: (field.type as Struct)?.children?.[1],
+      arrowField: (field?.type as Struct)?.children?.[1],
     })
 
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
