@@ -18,20 +18,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import convertFileToWav from "./convertAudioToWav"
 
-// Type definitions for webkit-prefixed APIs
-interface WebkitWindow extends Window {
-  webkitAudioContext?: typeof AudioContext
-  webkitOfflineAudioContext?: typeof OfflineAudioContext
-}
-
-// Type assertion helper
-const webkitWindow = window as unknown as WebkitWindow
-
 describe("convertAudioToWav", () => {
   let originalAudioContext: typeof AudioContext | undefined
   let originalOfflineAudioContext: typeof OfflineAudioContext | undefined
-  let originalWebkitAudioContext: typeof AudioContext | undefined
-  let originalWebkitOfflineAudioContext: typeof OfflineAudioContext | undefined
 
   // Helper function to create a blob with mocked arrayBuffer method
   const createMockBlob = (size = 100): Blob => {
@@ -46,8 +35,6 @@ describe("convertAudioToWav", () => {
     // Save original values
     originalAudioContext = window.AudioContext
     originalOfflineAudioContext = window.OfflineAudioContext
-    originalWebkitAudioContext = webkitWindow.webkitAudioContext
-    originalWebkitOfflineAudioContext = webkitWindow.webkitOfflineAudioContext
 
     // Clear console mocks
     vi.clearAllMocks()
@@ -60,13 +47,6 @@ describe("convertAudioToWav", () => {
     }
     if (originalOfflineAudioContext !== undefined) {
       window.OfflineAudioContext = originalOfflineAudioContext
-    }
-    if (originalWebkitAudioContext !== undefined) {
-      webkitWindow.webkitAudioContext = originalWebkitAudioContext
-    }
-    if (originalWebkitOfflineAudioContext !== undefined) {
-      webkitWindow.webkitOfflineAudioContext =
-        originalWebkitOfflineAudioContext
     }
   })
 
@@ -86,40 +66,10 @@ describe("convertAudioToWav", () => {
       // Remove AudioContext completely
       delete (window as Window & { AudioContext?: typeof AudioContext })
         .AudioContext
-      delete webkitWindow.webkitAudioContext
 
       const blob = createMockBlob()
       const result = await convertFileToWav(blob)
       expect(result).toBeUndefined()
-    })
-
-    it("should handle webkit fallback for AudioContext", async () => {
-      const mockClose = vi.fn()
-      const mockDecodeAudioData = vi.fn().mockResolvedValue({
-        sampleRate: 44100,
-        numberOfChannels: 2,
-        length: 100,
-        duration: 100 / 44100,
-        getChannelData: vi.fn().mockReturnValue(new Float32Array(100)),
-      })
-
-      const MockAudioContext = vi.fn().mockImplementation(() => ({
-        close: mockClose,
-        decodeAudioData: mockDecodeAudioData,
-      }))
-
-      // Remove standard AudioContext but keep webkit version
-      delete (window as Window & { AudioContext?: typeof AudioContext })
-        .AudioContext
-      webkitWindow.webkitAudioContext =
-        MockAudioContext as unknown as typeof AudioContext
-
-      const blob = createMockBlob()
-      const result = await convertFileToWav(blob)
-
-      expect(MockAudioContext).toHaveBeenCalled()
-      expect(result).toBeInstanceOf(Blob)
-      expect(result?.type).toBe("audio/wav")
     })
 
     it("should handle arrayBuffer() failure", async () => {
@@ -278,46 +228,6 @@ describe("convertAudioToWav", () => {
       }
     )
 
-    it("should handle webkit fallback for OfflineAudioContext", async () => {
-      const mockAudioBuffer = createMockAudioBuffer(22050)
-      const mockResampledBuffer = createMockAudioBuffer(44100)
-      const mockClose = vi.fn()
-      const mockDecodeAudioData = vi.fn().mockResolvedValue(mockAudioBuffer)
-
-      const MockAudioContext = vi.fn().mockImplementation(() => ({
-        close: mockClose,
-        decodeAudioData: mockDecodeAudioData,
-      }))
-      window.AudioContext = MockAudioContext as unknown as typeof AudioContext
-
-      const mockStartRendering = vi.fn().mockResolvedValue(mockResampledBuffer)
-      const mockCreateBufferSource = vi.fn().mockReturnValue({
-        buffer: null,
-        connect: vi.fn(),
-        start: vi.fn(),
-      })
-
-      const MockOfflineAudioContext = vi.fn().mockImplementation(() => ({
-        createBufferSource: mockCreateBufferSource,
-        destination: {},
-        startRendering: mockStartRendering,
-      }))
-
-      // Remove standard OfflineAudioContext but keep webkit version
-      delete (
-        window as Window & { OfflineAudioContext?: typeof OfflineAudioContext }
-      ).OfflineAudioContext
-      webkitWindow.webkitOfflineAudioContext =
-        MockOfflineAudioContext as unknown as typeof OfflineAudioContext
-
-      const blob = createMockBlob()
-      const result = await convertFileToWav(blob, 44100)
-
-      expect(result).toBeInstanceOf(Blob)
-      expect(result?.type).toBe("audio/wav")
-      expect(MockOfflineAudioContext).toHaveBeenCalled()
-    })
-
     it("should fallback to original sample rate if OfflineAudioContext is not supported", async () => {
       const mockAudioBuffer = createMockAudioBuffer(22050)
       const mockClose = vi.fn()
@@ -333,7 +243,6 @@ describe("convertAudioToWav", () => {
       delete (
         window as Window & { OfflineAudioContext?: typeof OfflineAudioContext }
       ).OfflineAudioContext
-      delete webkitWindow.webkitOfflineAudioContext
 
       const blob = createMockBlob()
       const result = await convertFileToWav(blob, 44100)
