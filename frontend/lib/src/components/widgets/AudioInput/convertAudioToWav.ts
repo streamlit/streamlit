@@ -79,7 +79,7 @@ async function convertFileToWav(
 
   const duration = audioBuffer.duration
   const numberOfChannels = audioBuffer.numberOfChannels
-  const frameCount = Math.floor(duration * outputSampleRate)
+  const frameCount = Math.ceil(duration * outputSampleRate)
 
   if (!window.OfflineAudioContext) {
     LOG.error(
