@@ -14,15 +14,20 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Enable and Prepare Latest Yarn
-      run: corepack enable
-      shell: bash
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
         cache-dependency-path: "**/yarn.lock"
+    - name: Enable and Prepare Latest Yarn
+      run: |
+        if ! command -v corepack >/dev/null 2>&1; then
+          echo "corepack not found; ensure Node is installed by setup-node"
+          exit 1
+        fi
+        corepack enable
+      shell: bash
     - name: Initialize React
       run: |
         # Create the cache directory if it does not exist.
