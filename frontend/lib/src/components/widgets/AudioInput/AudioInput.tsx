@@ -134,7 +134,6 @@ const AudioInput: React.FC<Props> = ({
   const widgetId = element.id
   const widgetFormId = element.formId
 
-  // If sample_rate is not specified (null), the recorder will use browser default
   const targetSampleRate = element.sampleRate || null
 
   const recordPluginRef = useRef<RecordPlugin | null>(null)
@@ -168,7 +167,6 @@ const AudioInput: React.FC<Props> = ({
           return
         }
 
-        // Create blob URL for immediate playback
         let blobUrl: string
         try {
           blobUrl = URL.createObjectURL(wavBlob)
@@ -221,7 +219,6 @@ const AudioInput: React.FC<Props> = ({
           if (upload?.fileUrl?.deleteUrl) {
             setDeleteFileUrl(upload.fileUrl.deleteUrl)
           }
-          // Keep using the blob URL for playback since server doesn't provide media URLs
         } catch {
           setIsError(true)
         } finally {
@@ -263,25 +260,17 @@ const AudioInput: React.FC<Props> = ({
       if (isNullOrUndefined(wavesurfer)) {
         return
       }
-      // Revoke blob URL before clearing state
-      if (notNullOrUndefined(recordingUrl)) {
-        URL.revokeObjectURL(recordingUrl)
-      }
+
+      const urlToRevoke = recordingUrl
+
       setRecordingUrl(null)
-      // According to WaveSurfer source, empty() just loads empty data and doesn't destroy plugins
-      // Only destroy() actually destroys plugins
-      wavesurfer.empty()
-      if (deleteFile && deleteFileUrl) {
-        // Await file deletion to ensure cleanup is complete
-        try {
-          await uploadClient.deleteFile(deleteFileUrl)
-        } catch {
-          // Silently handle deletion errors as they're not critical
-        }
-      }
       setDeleteFileUrl(null)
       setProgressTime(STARTING_TIME_STRING)
       setRecordingTime(STARTING_TIME_STRING)
+      setShouldUpdatePlaybackTime(false)
+
+      wavesurfer.empty()
+
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
           element,
@@ -290,7 +279,18 @@ const AudioInput: React.FC<Props> = ({
           fragmentId
         )
       }
-      setShouldUpdatePlaybackTime(false)
+
+      if (deleteFile && deleteFileUrl) {
+        try {
+          await uploadClient.deleteFile(deleteFileUrl)
+        } catch {
+          // Silently handle deletion errors
+        }
+      }
+
+      if (notNullOrUndefined(urlToRevoke)) {
+        URL.revokeObjectURL(urlToRevoke)
+      }
     },
     [
       deleteFileUrl,
@@ -387,7 +387,6 @@ const AudioInput: React.FC<Props> = ({
     }
 
     return () => {
-      // Clean up record plugin
       if (recordPluginRef.current) {
         if (recordPluginRef.current.isRecording()) {
           recordPluginRef.current.stopRecording()
