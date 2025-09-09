@@ -534,6 +534,7 @@ def test_audio_input_sample_rates_display(app: Page):
     )  # Updated count including new widgets
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit has CI audio permission issues
 def test_audio_input_re_recording(app: Page):
     """Test that clicking record with an existing recording clears it and starts new recording."""
     audio_input = app.get_by_test_id("stAudioInput").first
