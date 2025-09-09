@@ -14,20 +14,15 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Enable and Prepare Latest Yarn
+      run: corepack enable
+      shell: bash
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
         cache-dependency-path: "**/yarn.lock"
-    - name: Enable and Prepare Latest Yarn
-      run: |
-        if ! command -v corepack >/dev/null 2>&1; then
-          echo "corepack not found; ensure Node is installed by setup-node"
-          exit 1
-        fi
-        corepack enable
-      shell: bash
     - name: Initialize React
       run: |
         # Create the cache directory if it does not exist.
@@ -42,10 +37,9 @@ runs:
       run: |
         PROTOC_VERSION=26.1
         curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
-        if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=; fi
-        $SUDO unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
-        $SUDO unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
-        $SUDO ln -sf /usr/local/bin/protoc /usr/bin/protoc || true
+        sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
+        sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
+        sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
         # Print out your System's protoc version:
         protoc --version
       shell: bash
