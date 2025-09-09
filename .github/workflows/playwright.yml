@@ -21,8 +21,6 @@ concurrency:
 jobs:
   playwright-e2e-tests:
     runs-on: ubuntu-latest-32-cores
-    container:
-      image: mcr.microsoft.com/playwright/python:v1.55.0-jammy
     timeout-minutes: 35
 
     defaults:
@@ -47,8 +45,6 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Install playwright
         uses: ./.github/actions/playwright_install
-        with:
-          with-deps: "false"
       - name: Run make frontend-with-profiler
         run: make frontend-with-profiler
       - name: Get short SHA

@@ -61,8 +61,8 @@ runs:
     # On Ubuntu runners, apt triggers for man-db can take significant time.
     # Purging man-db (which we don't need in CI) avoids those triggers during
     # Playwright's --with-deps step and speeds up installs considerably.
-    - name: Disable man-db to speed up apt (Linux only, only when installing deps)
-      if: ${{ runner.os == 'Linux' && inputs.with-deps == 'true' }}
+    - name: Disable man-db to speed up apt (Linux only)
+      if: ${{ runner.os == 'Linux' }}
       shell: bash
       run: |
         set -e
@@ -85,6 +85,12 @@ runs:
         #   - Then run this action to install browsers
         # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            # Switch slow Azure mirror to main Ubuntu mirror to improve throughput.
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list || true
+            sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list || true
+            sudo apt-get update || true
+          fi
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
         else
           python -m playwright install
