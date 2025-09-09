@@ -431,21 +431,23 @@ const AudioInput: React.FC<Props> = ({
   }, [theme, previousTheme, recordingUrl, wavesurfer])
 
   const onClickPlayPause = useCallback(() => {
-    void (async () => {
-      if (wavesurfer) {
-        try {
-          await wavesurfer.playPause()
-        } catch {
-          setIsError(true)
-        }
-        // This is because we want the time to be the duration of the audio when they stop recording,
-        // but once they start playing it, we want it to be the current time. So, once they start playing it
-        // we'll start keeping track of the playback time from that point onwards (until re-recording).
-        setShouldUpdatePlaybackTime(true)
-        // despite the state change above, this is still needed to force a rerender and make the time styling work
-        forceRerender()
+    if (!wavesurfer) return
+
+    const handlePlayPause = async (): Promise<void> => {
+      try {
+        await wavesurfer.playPause()
+      } catch {
+        setIsError(true)
       }
-    })()
+      // This is because we want the time to be the duration of the audio when they stop recording,
+      // but once they start playing it, we want it to be the current time. So, once they start playing it
+      // we'll start keeping track of the playback time from that point onwards (until re-recording).
+      setShouldUpdatePlaybackTime(true)
+      // despite the state change above, this is still needed to force a rerender and make the time styling work
+      forceRerender()
+    }
+
+    void handlePlayPause()
   }, [wavesurfer, forceRerender])
 
   const startRecording = useCallback(async () => {
@@ -585,6 +587,17 @@ const AudioInput: React.FC<Props> = ({
     setIsError(false)
   }, [handleClear])
 
+  const handleDownloadClick = useCallback(() => {
+    downloadRecording()
+  }, [downloadRecording])
+
+  const handleDeleteClick = useCallback(() => {
+    void handleClear({
+      updateWidgetManager: true,
+      deleteFile: true,
+    })
+  }, [handleClear])
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -613,19 +626,14 @@ const AudioInput: React.FC<Props> = ({
             <ToolbarAction
               label="Download as WAV"
               icon={FileDownload}
-              onClick={() => downloadRecording()}
+              onClick={handleDownloadClick}
             />
           )}
           {deleteFileUrl && (
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
-              onClick={() => {
-                void handleClear({
-                  updateWidgetManager: true,
-                  deleteFile: true,
-                })
-              }}
+              onClick={handleDeleteClick}
             />
           )}
         </Toolbar>
