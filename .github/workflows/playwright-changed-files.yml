@@ -74,7 +74,8 @@ jobs:
                 relative_file="${test_file#e2e_playwright/}"
 
                 # Check if we've already added this test
-                if [[ ! " ${processed_tests[@]} " =~ " ${relative_file} " ]]; then
+                # Only check for duplicates if the array is not empty
+                if [[ ${#processed_tests[@]} -eq 0 ]] || [[ ! " ${processed_tests[@]} " =~ " ${relative_file} " ]]; then
                   changed_files+=("$relative_file")
                   processed_tests+=("$relative_file")
                   changed_files_count=$((changed_files_count + 1))
