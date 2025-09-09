@@ -81,6 +81,8 @@ st.time_input(
 st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
 st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")
 
+st.markdown("Dynamic time input:")
+
 if st.toggle("Update time input props"):
     tval = st.time_input(
         "Updated dynamic time input",
