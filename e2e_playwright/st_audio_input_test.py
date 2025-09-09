@@ -51,7 +51,17 @@ def ensure_waveform_is_not_rendered(audio_input: Locator):
 
 def ensure_waveform_rendered(audio_input: Locator):
     # Check for the waveform and time code
-    expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).to_be_visible()
+    wavesurfer = audio_input.get_by_test_id("stAudioInputWaveSurfer")
+    expect(wavesurfer).to_be_visible()
+
+    # Check that WaveSurfer has actually rendered content with a canvas
+    # A properly rendered waveform must have at least one canvas element
+    # WaveSurfer may create multiple canvases for waveform and progress
+    canvas = wavesurfer.locator("canvas")
+    expect(canvas.first).to_be_visible()
+    # Ensure there's at least one canvas (not zero which would indicate no rendering)
+    canvas_count = canvas.count()
+    assert canvas_count > 0, "No canvas elements found - waveform not rendered"
 
     time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
     expect(time_code).to_be_visible()
@@ -522,3 +532,55 @@ def test_audio_input_sample_rates_display(app: Page):
     expect(app.get_by_test_id("stAudioInput")).to_have_count(
         12
     )  # Updated count including new widgets
+
+
+def test_audio_input_re_recording(app: Page):
+    """Test that clicking record with an existing recording clears it and starts new recording."""
+    audio_input = app.get_by_test_id("stAudioInput").first
+
+    # Get the record button by aria-label since it's an icon button
+    record_button = audio_input.locator("[aria-label='Record']")
+
+    # Start first recording
+    record_button.click()
+
+    # Wait for recording to start - button changes to stop
+    stop_button = audio_input.get_by_role("button", name="Stop recording")
+    expect(stop_button).to_be_visible(timeout=2000)
+
+    # Record for 1 second
+    app.wait_for_timeout(1000)
+
+    # Stop recording
+    stop_button.click()
+
+    # Wait for recording to process
+    app.wait_for_timeout(3000)
+
+    # After stopping, should have both play and record buttons
+    play_button = audio_input.get_by_role("button", name="Play")
+    expect(play_button).to_be_visible()
+
+    record_button = audio_input.locator("[aria-label='Record']")
+    expect(record_button).to_be_visible()
+
+    # Now test re-recording: click record again with existing recording
+    # This should clear the old recording and start a new one immediately
+    record_button.click()
+
+    # The button should change to "Stop recording" indicating recording started
+    # This is the critical test - it should work with just one click
+    stop_button = audio_input.get_by_role("button", name="Stop recording")
+    expect(stop_button).to_be_visible(timeout=3000)
+
+    # Record for another second
+    app.wait_for_timeout(1000)
+
+    # Stop the second recording
+    stop_button.click()
+
+    # Wait for processing
+    app.wait_for_timeout(3000)
+
+    # Should have play button again
+    expect(play_button).to_be_visible()

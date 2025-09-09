@@ -109,9 +109,9 @@ const AudioInput: React.FC<Props> = ({
   })
 
   const [, setRerender] = useState(0)
-  const forceRerender = (): void => {
+  const forceRerender = useCallback((): void => {
     setRerender(prev => prev + 1)
-  }
+  }, [])
   const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
 
   const [recordingTime, setRecordingTime] =
@@ -136,6 +136,11 @@ const AudioInput: React.FC<Props> = ({
 
   // If sample_rate is not specified (null), the recorder will use browser default
   const targetSampleRate = element.sampleRate || null
+
+  const recordPluginRef = useRef<RecordPlugin | null>(null)
+  const recordPluginHandlersRef = useRef<{
+    handleRecordProgress?: (time: number) => void
+  }>({})
 
   const transcodeAndUploadFile = useCallback(
     async (blob: Blob) => {
@@ -297,11 +302,6 @@ const AudioInput: React.FC<Props> = ({
     return () => formClearHelper.disconnect()
   }, [widgetFormId, handleClear, widgetMgr])
 
-  const recordPluginRef = useRef<RecordPlugin | null>(null)
-  const recordPluginHandlersRef = useRef<{
-    handleRecordProgress?: (time: number) => void
-  }>({})
-
   const initializeRecordPlugin = useCallback(() => {
     if (!wavesurfer || recordPluginRef.current) return
 
@@ -355,7 +355,6 @@ const AudioInput: React.FC<Props> = ({
       barRadius: BAR_RADIUS,
       cursorWidth: CURSOR_WIDTH,
       interact: true,
-      url: recordingUrl ?? undefined,
     })
 
     ws.on("timeupdate", time => {
@@ -371,20 +370,28 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       if (ws) ws.destroy()
     }
-    // Intentionally excluding theme and recordingUrl to avoid recreating wavesurfer unnecessarily
-    // Theme colors are updated separately via setOptions
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [theme, setProgressTime, forceRerender, recordingUrl])
 
-  useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
+  useEffect(() => {
+    const cleanup = initializeWaveSurfer()
+    return cleanup
+  }, [initializeWaveSurfer])
 
   // Load recording URL when wavesurfer is ready and URL exists
   useEffect(() => {
     if (wavesurfer && recordingUrl) {
       void wavesurfer.load(recordingUrl)
-      wavesurfer.setOptions({ interact: true })
+      wavesurfer.setOptions({
+        interact: true,
+        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
+        progressColor: theme.colors.bodyText,
+      })
     }
-  }, [wavesurfer, recordingUrl])
+  }, [wavesurfer, recordingUrl, theme])
+
+  // Note: We don't revoke blob URLs here because they need to persist
+  // across component remounts. They'll be cleaned up when the page unloads
+  // or when the user explicitly clears the recording.
 
   // Initialize record plugin when wavesurfer is ready
   useEffect(() => {
@@ -438,7 +445,7 @@ const AudioInput: React.FC<Props> = ({
       // despite the state change above, this is still needed to force a rerender and make the time styling work
       forceRerender()
     }
-  }, [wavesurfer])
+  }, [wavesurfer, forceRerender])
 
   const startRecording = useCallback(async () => {
     if (!hasRequestedMicPermissions) {
@@ -459,59 +466,68 @@ const AudioInput: React.FC<Props> = ({
 
     if (recordingUrl) {
       handleClear({ updateWidgetManager: false, deleteFile: true })
+      // Plugin was destroyed by empty(), reinitialize it
+      await new Promise(resolve => setTimeout(resolve, 100))
+      initializeRecordPlugin()
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
 
-    try {
-      // Use WaveSurfer's record plugin for visualization
-      if (recordPluginRef.current && wavesurfer) {
-        // Set recording colors when starting to record
-        wavesurfer.setOptions({
-          waveColor: theme.colors.primary,
+    // Use WaveSurfer's record plugin for visualization
+    if (recordPluginRef.current && wavesurfer) {
+      // Set recording colors when starting to record
+      wavesurfer.setOptions({
+        waveColor: theme.colors.primary,
+      })
+
+      // Disable audio processing for consistent sample rate and raw capture
+      const audioConstraints: MediaTrackConstraints = targetSampleRate
+        ? {
+            sampleRate: { ideal: targetSampleRate },
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          }
+        : {} // Default constraints
+
+      // Start recording with a promise to handle the async nature
+      // This matches the original pattern in develop
+      recordPluginRef.current
+        .startRecording(audioConstraints)
+        .then(() => {
+          setRecordingTime("00:00")
+          forceRerender()
         })
-
-        // Disable audio processing for consistent sample rate and raw capture
-        const audioConstraints: MediaTrackConstraints = targetSampleRate
-          ? {
-              sampleRate: { ideal: targetSampleRate },
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            }
-          : {} // Default constraints
-
-        await recordPluginRef.current.startRecording(audioConstraints)
-        setRecordingTime("00:00")
-        forceRerender()
-      } else if (!hasNoMicPermissions) {
-        setIsError(true)
-      }
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        (err.name === "NotAllowedError" ||
-          err.name === "PermissionDeniedError")
-      ) {
-        setHasNoMicPermissions(true)
-      } else {
-        setIsError(true)
-      }
+        .catch(err => {
+          if (
+            err instanceof Error &&
+            (err.name === "NotAllowedError" ||
+              err.name === "PermissionDeniedError")
+          ) {
+            setHasNoMicPermissions(true)
+          } else {
+            setIsError(true)
+          }
+        })
+    } else if (!hasNoMicPermissions) {
+      setIsError(true)
     }
   }, [
-    recordingUrl,
-    handleClear,
     hasRequestedMicPermissions,
     setRecordingTime,
     hasNoMicPermissions,
     targetSampleRate,
     wavesurfer,
     theme.colors.primary,
+    forceRerender,
+    recordingUrl,
+    handleClear,
+    initializeRecordPlugin,
   ])
 
   const stopRecording = useCallback(async () => {
     const recordPlugin = recordPluginRef.current
-    if (!recordPlugin) {
-      setIsError(true)
-      throw new Error("Record plugin not initialized")
+    if (!recordPlugin || !recordPlugin.isRecording()) {
+      return
     }
 
     const waitForRecordEnd = new Promise<Blob>((resolve, reject) => {
@@ -526,14 +542,24 @@ const AudioInput: React.FC<Props> = ({
       }
 
       recordPlugin.on("record-end", handleRecordEnd)
+
+      // Call stopRecording AFTER setting up the listener to avoid race condition
+      recordPlugin.stopRecording()
     })
 
     try {
-      recordPlugin.stopRecording()
       const blob = await waitForRecordEnd
       await transcodeAndUploadFile(blob)
 
       if (wavesurfer) {
+        // We are blending this color instead of directly using the theme color (fadedText40)
+        // because the "faded" part of fadedText40 means introducing some transparency, which
+        // causes problems with the progress waveform color because wavesurfer is choosing to
+        // tint the waveColor with the progressColor instead of directly setting the progressColor.
+        // This means that the low opacity of fadedText40 causes the progress waveform to
+        // have the same opacity which makes it impossible to darken it enough to match designs.
+        // We fix this by blending the colors to figure out what the resulting color should be at
+        // full opacity, and we use that color to set the waveColor.
         wavesurfer.setOptions({
           waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
           progressColor: theme.colors.bodyText,
