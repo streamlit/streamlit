@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     expect_help_tooltip,
+    expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
     get_slider,
@@ -90,7 +91,7 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
-    expect_prefixed_markdown(app, "Value B:", "10000")
+    c(app, "Value B: 10000")
     expect_prefixed_markdown(app, "Range Value B:", "(10000, 25000)")
     # Target by label at page scope to avoid container scoping issues
     first_slider_in_expander = get_slider(app, "Label B")
@@ -108,8 +109,8 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     app.mouse.up()
     wait_for_app_run(app)
 
-    expect(app.get_by_text("Value B: 17500")).to_have_count(1)
-    expect(app.get_by_text("Range Value B: (17500, 25000)")).to_have_count(1)
+    expect_markdown(app, "Value B: 17500")
+    expect_prefixed_markdown(app, "Range Value B:", "(17500, 25000)")
 
     assert_snapshot(first_slider_in_expander, name="st_slider-in_expander_regular")
     assert_snapshot(second_slider_in_expander, name="st_slider-in_expander_range")
