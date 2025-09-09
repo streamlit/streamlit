@@ -126,7 +126,9 @@ def test_declare_component_correctly_sets_attr(app: Page):
     checkbox_element = get_checkbox(app, "Show custom component")
     checkbox_element.locator("label").click()
 
-    declare_component = app.locator("iframe").nth(11)
+    iframes = app.locator("iframe")
+    expect(iframes).to_have_count(NUM_IFRAMES + 1)
+    declare_component = iframes.nth(11)
 
     expect(declare_component).to_have_attribute(
         "title", "st_components_v1.test_component"
