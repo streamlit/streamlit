@@ -86,9 +86,13 @@ runs:
         # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            # Switch slow Azure mirror to main Ubuntu mirror, then refresh package lists.
-            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
-            sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+            # Rewrite all apt source files to use archive.ubuntu.com instead of Azure mirror
+            # and replace mirrorlist URIs so apt doesn't pick Azure from /etc/apt/apt-mirrors.txt.
+            sudo find /etc/apt -maxdepth 2 -type f \( -name '*.list' -o -name '*.sources' -o -name 'sources.list' \) -print0 \
+              | sudo xargs -0 sed -i -E \
+                -e 's|mirror\\+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu|g' \
+                -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
+                -e 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'
             sudo apt-get update
           fi
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
