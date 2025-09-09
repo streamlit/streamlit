@@ -346,7 +346,6 @@ const AudioInput: React.FC<Props> = ({
 
     setWavesurfer(ws)
 
-    // Load existing recording if present (e.g., after remount)
     if (recordingUrl) {
       void ws.load(recordingUrl)
       ws.setOptions({
@@ -354,8 +353,6 @@ const AudioInput: React.FC<Props> = ({
       })
     }
 
-    // Initialize the record plugin immediately after creating wavesurfer
-    // This avoids the need for a separate useEffect
     const recordOptions: Record<string, unknown> = {
       renderRecordedAudio: false,
       scrollingWaveform: false,
@@ -372,7 +369,6 @@ const AudioInput: React.FC<Props> = ({
 
       record.on("record-progress", handleRecordProgress)
 
-      // Store handlers for cleanup
       recordPluginHandlersRef.current = {
         handleRecordProgress,
       }
@@ -440,7 +436,6 @@ const AudioInput: React.FC<Props> = ({
         try {
           await wavesurfer.playPause()
         } catch {
-          // Playback error - likely due to browser autoplay policy or corrupted audio
           setIsError(true)
         }
         // This is because we want the time to be the duration of the audio when they stop recording,
@@ -457,12 +452,11 @@ const AudioInput: React.FC<Props> = ({
     if (!hasRequestedMicPermissions) {
       setHasRequestedMicPermissions(true)
 
-      // Explicitly request microphone permission for WebKit compatibility
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         })
-        // Stop the tracks immediately as we only needed to request permission
+
         stream.getTracks().forEach(track => track.stop())
       } catch {
         setHasNoMicPermissions(true)
@@ -472,17 +466,13 @@ const AudioInput: React.FC<Props> = ({
 
     if (recordingUrl) {
       await handleClear({ updateWidgetManager: false, deleteFile: true })
-      // Plugin is preserved because empty() doesn't destroy plugins (only destroy() does)
     }
 
-    // Use WaveSurfer's record plugin for visualization
     if (recordPluginRef.current && wavesurfer) {
-      // Set recording colors when starting to record
       wavesurfer.setOptions({
         waveColor: theme.colors.primary,
       })
 
-      // Disable audio processing for consistent sample rate and raw capture
       const audioConstraints: MediaTrackConstraints = targetSampleRate
         ? {
             sampleRate: { ideal: targetSampleRate },
@@ -492,7 +482,6 @@ const AudioInput: React.FC<Props> = ({
           }
         : {} // Default constraints
 
-      // Start recording with async/await for consistency
       try {
         await recordPluginRef.current.startRecording(audioConstraints)
         setRecordingTime("00:00")
@@ -523,7 +512,6 @@ const AudioInput: React.FC<Props> = ({
     handleClear,
   ])
 
-  // Helper function to wait for record-end event
   const waitForRecordEnd = (plugin: RecordPlugin): Promise<Blob> => {
     return new Promise<Blob>((resolve, reject) => {
       const handleRecordEnd = (blob: Blob): void => {
@@ -537,7 +525,7 @@ const AudioInput: React.FC<Props> = ({
       }
 
       plugin.on("record-end", handleRecordEnd)
-      // Call stopRecording AFTER setting up the listener to avoid race condition
+
       plugin.stopRecording()
     })
   }
@@ -578,7 +566,7 @@ const AudioInput: React.FC<Props> = ({
   const isPlaying = Boolean(wavesurfer?.isPlaying())
 
   const isPlayingOrRecording = isRecording || isPlaying
-  // Show placeholder when not recording and no recording exists
+
   const showPlaceholder = !isRecording && !recordingUrl && !hasNoMicPermissions
 
   const showNoMicPermissionsOrPlaceholderOrError =

@@ -42,7 +42,6 @@ async function convertFileToWav(
     return undefined
   }
 
-  // First, decode the audio at its original sample rate
   const audioContext = new AudioContext()
 
   let arrayBuffer: ArrayBuffer
@@ -65,11 +64,8 @@ async function convertFileToWav(
     void audioContext.close()
   }
 
-  // Determine the output sample rate
   const outputSampleRate = targetSampleRate || audioBuffer.sampleRate
 
-  // If no resampling is needed, skip the expensive resampling step
-  // This is a common optimization - avoid unnecessary processing
   if (outputSampleRate === audioBuffer.sampleRate) {
     LOG.debug(
       `No resampling needed, sample rate is already ${outputSampleRate}Hz`
@@ -81,9 +77,6 @@ async function convertFileToWav(
     `Resampling from ${audioBuffer.sampleRate}Hz to ${outputSampleRate}Hz`
   )
 
-  // Use OfflineAudioContext for high-quality resampling
-  // This provides professional-quality sinc resampling with proper anti-aliasing
-  // Much better than linear interpolation which causes aliasing artifacts
   const duration = audioBuffer.duration
   const numberOfChannels = audioBuffer.numberOfChannels
   const frameCount = Math.floor(duration * outputSampleRate)
@@ -101,20 +94,16 @@ async function convertFileToWav(
     outputSampleRate
   )
 
-  // Create a buffer source node and connect it to the destination
   const source = offlineContext.createBufferSource()
   source.buffer = audioBuffer
   source.connect(offlineContext.destination)
   source.start(0)
 
   try {
-    // Render the resampled audio
-    // The browser's native resampling uses high-quality algorithms
     const resampledBuffer = await offlineContext.startRendering()
     return encodeWAV(resampledBuffer, outputSampleRate)
   } catch (error) {
     LOG.error("Failed to resample audio using OfflineAudioContext", error)
-    // Fallback: return the original audio without resampling
     return encodeWAV(audioBuffer, audioBuffer.sampleRate)
   }
 }
@@ -173,12 +162,10 @@ function encodeWAV(audioBuffer: AudioBuffer, sampleRate: number): Blob {
   let offset = HEADER_SIZE
   for (let i = 0; i < audioBuffer.length; i++) {
     for (let channel = 0; channel < numOfChan; channel++) {
-      // Get the sample and clamp it to [-1, 1] range for safety
       const sample = Math.max(
         -1,
         Math.min(1, audioBuffer.getChannelData(channel)[i])
       )
-      // Convert from float [-1, 1] to 16-bit PCM
       view.setInt16(offset, sample * 0x7fff, true)
       offset += 2
     }
