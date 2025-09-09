@@ -1,5 +1,9 @@
 # Streamlit Repo Overview
 
+## Lint Rules
+
+- **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
+
 ## Folder Structure
 
 - `lib/`: All backend code and assets.
