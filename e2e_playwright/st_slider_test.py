@@ -91,7 +91,7 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
-    c(app, "Value B: 10000")
+    expect_markdown(app, "Value B: 10000")
     expect_prefixed_markdown(app, "Range Value B:", "(10000, 25000)")
     # Target by label at page scope to avoid container scoping issues
     first_slider_in_expander = get_slider(app, "Label B")
