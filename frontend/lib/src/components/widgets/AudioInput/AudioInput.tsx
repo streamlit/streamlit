@@ -307,42 +307,6 @@ const AudioInput: React.FC<Props> = ({
     return () => formClearHelper.disconnect()
   }, [widgetFormId, handleClear, widgetMgr])
 
-  const initializeRecordPlugin = useCallback(() => {
-    if (!wavesurfer || recordPluginRef.current) return
-
-    const recordOptions: Record<string, unknown> = {
-      renderRecordedAudio: false,
-      scrollingWaveform: false,
-      mimeType: "audio/webm",
-    }
-
-    try {
-      const record = wavesurfer.registerPlugin(
-        RecordPlugin.create(recordOptions)
-      )
-      recordPluginRef.current = record
-
-      const handleRecordProgress = (time: number): void => {
-        setRecordingTime(formatTime(time))
-      }
-
-      record.on("record-progress", handleRecordProgress)
-
-      // Store handlers for cleanup
-      recordPluginHandlersRef.current = {
-        handleRecordProgress,
-      }
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        (err.name === "NotAllowedError" ||
-          err.name === "PermissionDeniedError")
-      ) {
-        setHasNoMicPermissions(true)
-      }
-    }
-  }, [wavesurfer, setRecordingTime])
-
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
 
@@ -372,10 +336,65 @@ const AudioInput: React.FC<Props> = ({
 
     setWavesurfer(ws)
 
+    // Initialize the record plugin immediately after creating wavesurfer
+    // This avoids the need for a separate useEffect
+    const recordOptions: Record<string, unknown> = {
+      renderRecordedAudio: false,
+      scrollingWaveform: false,
+      mimeType: "audio/webm",
+    }
+
+    try {
+      const record = ws.registerPlugin(RecordPlugin.create(recordOptions))
+      recordPluginRef.current = record
+
+      const handleRecordProgress = (time: number): void => {
+        setRecordingTime(formatTime(time))
+      }
+
+      record.on("record-progress", handleRecordProgress)
+
+      // Store handlers for cleanup
+      recordPluginHandlersRef.current = {
+        handleRecordProgress,
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError")
+      ) {
+        setHasNoMicPermissions(true)
+      }
+    }
+
     return () => {
+      // Clean up record plugin
+      if (recordPluginRef.current) {
+        if (recordPluginRef.current.isRecording()) {
+          recordPluginRef.current.stopRecording()
+        }
+        const handlers = recordPluginHandlersRef.current
+        if (handlers.handleRecordProgress) {
+          recordPluginRef.current.un(
+            "record-progress",
+            handlers.handleRecordProgress
+          )
+        }
+        recordPluginRef.current.destroy()
+        recordPluginRef.current = null
+        recordPluginHandlersRef.current = {}
+      }
       if (ws) ws.destroy()
     }
-  }, [theme, setProgressTime, forceRerender, recordingUrl])
+  }, [
+    theme,
+    setProgressTime,
+    forceRerender,
+    recordingUrl,
+    setRecordingTime,
+    setHasNoMicPermissions,
+  ])
 
   useEffect(() => {
     const cleanup = initializeWaveSurfer()
@@ -397,33 +416,6 @@ const AudioInput: React.FC<Props> = ({
   // Note: We don't revoke blob URLs here because they need to persist
   // across component remounts. They'll be cleaned up when the page unloads
   // or when the user explicitly clears the recording.
-
-  // Initialize record plugin when wavesurfer is ready
-  useEffect(() => {
-    if (wavesurfer && !recordPluginRef.current) {
-      initializeRecordPlugin()
-    }
-
-    return () => {
-      if (recordPluginRef.current) {
-        // Stop recording if still in progress
-        if (recordPluginRef.current.isRecording()) {
-          recordPluginRef.current.stopRecording()
-        }
-        // Remove event listeners before destroying
-        const handlers = recordPluginHandlersRef.current
-        if (handlers.handleRecordProgress) {
-          recordPluginRef.current.un(
-            "record-progress",
-            handlers.handleRecordProgress
-          )
-        }
-        recordPluginRef.current.destroy()
-        recordPluginRef.current = null
-        recordPluginHandlersRef.current = {}
-      }
-    }
-  }, [wavesurfer, initializeRecordPlugin])
 
   useEffect(() => {
     if (!isEqual(previousTheme, theme)) {
@@ -477,7 +469,43 @@ const AudioInput: React.FC<Props> = ({
       handleClear({ updateWidgetManager: false, deleteFile: true })
       // Plugin was destroyed by empty(), reinitialize it
       await new Promise(resolve => setTimeout(resolve, 100))
-      initializeRecordPlugin()
+
+      // Recreate the record plugin since it was destroyed
+      if (wavesurfer && !recordPluginRef.current) {
+        const recordOptions: Record<string, unknown> = {
+          renderRecordedAudio: false,
+          scrollingWaveform: false,
+          mimeType: "audio/webm",
+        }
+
+        try {
+          const record = wavesurfer.registerPlugin(
+            RecordPlugin.create(recordOptions)
+          )
+          recordPluginRef.current = record
+
+          const handleRecordProgress = (time: number): void => {
+            setRecordingTime(formatTime(time))
+          }
+
+          record.on("record-progress", handleRecordProgress)
+
+          // Store handlers for cleanup
+          recordPluginHandlersRef.current = {
+            handleRecordProgress,
+          }
+        } catch (err) {
+          if (
+            err instanceof Error &&
+            (err.name === "NotAllowedError" ||
+              err.name === "PermissionDeniedError")
+          ) {
+            setHasNoMicPermissions(true)
+            return
+          }
+        }
+      }
+
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
@@ -527,7 +555,6 @@ const AudioInput: React.FC<Props> = ({
     forceRerender,
     recordingUrl,
     handleClear,
-    initializeRecordPlugin,
   ])
 
   // Helper function to wait for record-end event
