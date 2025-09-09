@@ -260,9 +260,14 @@ const AudioInput: React.FC<Props> = ({
       setRecordingUrl(null)
       wavesurfer.empty()
       if (deleteFile && deleteFileUrl) {
-        uploadClient.deleteFile(deleteFileUrl).catch(() => {
-          // Silently handle deletion errors as they're not critical
-        })
+        // Fire-and-forget deletion, errors are not critical
+        void (async () => {
+          try {
+            await uploadClient.deleteFile(deleteFileUrl)
+          } catch {
+            // Silently handle deletion errors as they're not critical
+          }
+        })()
       }
       setDeleteFileUrl(null)
       setProgressTime(STARTING_TIME_STRING)
@@ -433,18 +438,22 @@ const AudioInput: React.FC<Props> = ({
   }, [theme, previousTheme, recordingUrl, wavesurfer])
 
   const onClickPlayPause = useCallback(() => {
-    if (wavesurfer) {
-      void wavesurfer.playPause().catch(() => {
-        // Playback error - likely due to browser autoplay policy or corrupted audio
-        setIsError(true)
-      })
-      // This is because we want the time to be the duration of the audio when they stop recording,
-      // but once they start playing it, we want it to be the current time. So, once they start playing it
-      // we'll start keeping track of the playback time from that point onwards (until re-recording).
-      setShouldUpdatePlaybackTime(true)
-      // despite the state change above, this is still needed to force a rerender and make the time styling work
-      forceRerender()
-    }
+    void (async () => {
+      if (wavesurfer) {
+        try {
+          await wavesurfer.playPause()
+        } catch {
+          // Playback error - likely due to browser autoplay policy or corrupted audio
+          setIsError(true)
+        }
+        // This is because we want the time to be the duration of the audio when they stop recording,
+        // but once they start playing it, we want it to be the current time. So, once they start playing it
+        // we'll start keeping track of the playback time from that point onwards (until re-recording).
+        setShouldUpdatePlaybackTime(true)
+        // despite the state change above, this is still needed to force a rerender and make the time styling work
+        forceRerender()
+      }
+    })()
   }, [wavesurfer, forceRerender])
 
   const startRecording = useCallback(async () => {
@@ -489,25 +498,22 @@ const AudioInput: React.FC<Props> = ({
           }
         : {} // Default constraints
 
-      // Start recording with a promise to handle the async nature
-      // This matches the original pattern in develop
-      recordPluginRef.current
-        .startRecording(audioConstraints)
-        .then(() => {
-          setRecordingTime("00:00")
-          forceRerender()
-        })
-        .catch(err => {
-          if (
-            err instanceof Error &&
-            (err.name === "NotAllowedError" ||
-              err.name === "PermissionDeniedError")
-          ) {
-            setHasNoMicPermissions(true)
-          } else {
-            setIsError(true)
-          }
-        })
+      // Start recording with async/await for consistency
+      try {
+        await recordPluginRef.current.startRecording(audioConstraints)
+        setRecordingTime("00:00")
+        forceRerender()
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.name === "NotAllowedError" ||
+            err.name === "PermissionDeniedError")
+        ) {
+          setHasNoMicPermissions(true)
+        } else {
+          setIsError(true)
+        }
+      }
     } else if (!hasNoMicPermissions) {
       setIsError(true)
     }
