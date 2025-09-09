@@ -141,3 +141,42 @@ with col2:
         """Height matches partner column""",
         height="stretch",
     )
+
+st.markdown("Dynamic text area:")
+
+if st.toggle("Update text area props"):
+    ta_value = st.text_area(
+        "Updated dynamic text area",
+        value="updated",
+        width=200,
+        height=150,
+        help="updated help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text area - callback triggered: {a} {param}"
+        ),
+        args=("Updated text area arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        max_chars=100,
+    )
+    st.write("Updated text area value:", ta_value)
+else:
+    ta_value = st.text_area(
+        "Initial dynamic text area",
+        value="initial",
+        width="stretch",
+        height="content",
+        help="initial help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text area - callback triggered: {a} {param}"
+        ),
+        args=("Initial text area arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        max_chars=100,
+    )
+    st.write("Initial text area value:", ta_value)
