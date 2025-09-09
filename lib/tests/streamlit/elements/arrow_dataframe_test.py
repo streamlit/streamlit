@@ -471,7 +471,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             styler = df.style.format("{:.2f}")
             st.dataframe(styler)
 
-        self.benchmark(large_styler_df, self)
+        self.benchmark(large_styler_df)
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):
