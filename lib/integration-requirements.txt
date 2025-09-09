@@ -3,8 +3,8 @@ snowflake-snowpark-python[modin]>=1.17.0
 snowflake-connector-python>=3.3.0
 
 # Required for testing the langchain integration
-langchain>=0.2.0,<=0.3.21
-langchain-community>=0.2.0,<=0.3.14
+langchain>=0.2.0,<0.4
+langchain-community>=0.2.0,<0.4
 
 # Additional dataframe formats for testing:
 polars
