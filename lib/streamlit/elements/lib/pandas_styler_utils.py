@@ -285,8 +285,6 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
             updates_by_col.setdefault(col_idx, {})[row_idx] = str_value
 
     for col_idx, values_by_row in updates_by_col.items():
-        if not values_by_row:
-            continue
         row_indices = list(values_by_row.keys())
         values = list(values_by_row.values())
         # Batch-assign updates for this column using iloc for performance.
