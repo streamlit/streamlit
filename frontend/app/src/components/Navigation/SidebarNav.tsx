@@ -175,7 +175,7 @@ const SidebarNav = ({
 
     // Only count pages in expanded sections
     return navSections.reduce((count, sectionName) => {
-      if (expandedSections && expandedSections[sectionName]) {
+      if (expandedSections?.[sectionName]) {
         return count + (pagesBySectionHeader[sectionName]?.length || 0)
       }
       return count

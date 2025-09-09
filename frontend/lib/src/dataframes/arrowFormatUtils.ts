@@ -490,7 +490,7 @@ function formatInterval(x: StructRow, field?: Field): string {
   // Serialization for pandas.Interval is provided by Arrow extensions
   // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/
   // pandas/core/arrays/arrow/extension_types.py#L17
-  const extensionName = field && field.metadata.get("ARROW:extension:name")
+  const extensionName = field?.metadata.get("ARROW:extension:name")
   if (extensionName && extensionName === "pandas.interval") {
     const extensionMetadata = JSON.parse(
       field.metadata.get("ARROW:extension:metadata") as string
