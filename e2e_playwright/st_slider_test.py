@@ -192,6 +192,8 @@ def test_slider_works_in_forms(app: Page):
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
 
+    # need to wait for the actual component value to update and then submit
+    app.wait_for_timeout(200)
     click_form_button(app, "Submit")
 
     expect(app.get_by_text("slider-in-form selection: 50")).to_be_visible()
