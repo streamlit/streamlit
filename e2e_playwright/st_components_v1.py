@@ -58,6 +58,11 @@ with st.container(key="html-iframe-in-vertical-container"):
     components.html(long_html)
     components.iframe(data_url)
 
+# Zero dimension tests
+st.markdown("### Zero dimension tests")
+components.html("<p>Zero width and height HTML</p>", width=0, height=0)
+components.iframe(data_url, width=0, height=0)
+
 if st.toggle("Show custom component"):
     # Set a query parameter to ensure that it doesn't affect the path of the custom component,
     # since that would trigger a reload if the query param changes
