@@ -530,15 +530,11 @@ const AudioInput: React.FC<Props> = ({
     initializeRecordPlugin,
   ])
 
-  const stopRecording = useCallback(async () => {
-    const recordPlugin = recordPluginRef.current
-    if (!recordPlugin || !recordPlugin.isRecording()) {
-      return
-    }
-
-    const waitForRecordEnd = new Promise<Blob>((resolve, reject) => {
+  // Helper function to wait for record-end event
+  const waitForRecordEnd = (plugin: RecordPlugin): Promise<Blob> => {
+    return new Promise<Blob>((resolve, reject) => {
       const handleRecordEnd = (blob: Blob): void => {
-        recordPlugin.un("record-end", handleRecordEnd)
+        plugin.un("record-end", handleRecordEnd)
 
         if (blob && blob instanceof Blob && blob.size > 0) {
           resolve(blob)
@@ -547,14 +543,20 @@ const AudioInput: React.FC<Props> = ({
         }
       }
 
-      recordPlugin.on("record-end", handleRecordEnd)
-
+      plugin.on("record-end", handleRecordEnd)
       // Call stopRecording AFTER setting up the listener to avoid race condition
-      recordPlugin.stopRecording()
+      plugin.stopRecording()
     })
+  }
+
+  const stopRecording = useCallback(async () => {
+    const recordPlugin = recordPluginRef.current
+    if (!recordPlugin || !recordPlugin.isRecording()) {
+      return
+    }
 
     try {
-      const blob = await waitForRecordEnd
+      const blob = await waitForRecordEnd(recordPlugin)
       await transcodeAndUploadFile(blob)
 
       if (wavesurfer) {
