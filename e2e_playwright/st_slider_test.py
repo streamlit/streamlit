@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     click_form_button,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_slider,
 )
@@ -90,8 +91,8 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
-    expect_markdown(app, "Value B: 10000")
-    expect_markdown(app, "Range Value B: (10000, 25000)")
+    expect_prefixed_markdown(app, "Value B:", "10000")
+    expect_markdown(app, "Range Value B:", "(10000, 25000)")
     # Target by label at page scope to avoid container scoping issues
     first_slider_in_expander = get_slider(app, "Label B")
     second_slider_in_expander = get_slider(app, "Range B")
@@ -118,9 +119,10 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
 def test_slider_contains_correct_format_func_value_and_in_session_state(
     app: Page,
 ):
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))",
+        "Value 1:",
+        "(datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))",
     )
     slider = get_slider(app, "Label 1")
     slider.hover()
@@ -132,16 +134,18 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     app.mouse.up()
     wait_for_app_run(app)
 
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 8, 1))",
+        "Value 1:",
+        "(datetime.date(2019, 8, 1), datetime.date(2019, 8, 1))",
     )
 
 
 def test_using_arrow_keys_on_slider_produces_correct_values(app: Page):
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))",
+        "Value 1:",
+        "(datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))",
     )
     slider = get_slider(app, "Label 1")
     slider.hover()
@@ -151,18 +155,20 @@ def test_using_arrow_keys_on_slider_produces_correct_values(app: Page):
     # Move slider once to right
     app.keyboard.press("ArrowRight")
     wait_for_app_run(app)
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Value 1: (datetime.date(2019, 8, 1), datetime.date(2020, 7, 3))",
+        "Value 1:",
+        "(datetime.date(2019, 8, 1), datetime.date(2020, 7, 3))",
     )
 
     # Move slider once to left
     app.keyboard.press("ArrowLeft")
     wait_for_app_run(app)
 
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Value 1: (datetime.date(2019, 8, 1), datetime.date(2020, 7, 2))",
+        "Value 1:",
+        "(datetime.date(2019, 8, 1), datetime.date(2020, 7, 2))",
     )
 
 
