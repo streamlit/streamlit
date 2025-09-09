@@ -184,7 +184,14 @@ const AudioInput: React.FC<Props> = ({
 
         if (wavesurfer) {
           void wavesurfer.load(blobUrl)
-          wavesurfer.setOptions({ interact: true })
+          wavesurfer.setOptions({
+            interact: true,
+            waveColor: blend(
+              theme.colors.fadedText40,
+              theme.colors.secondaryBg
+            ),
+            progressColor: theme.colors.bodyText,
+          })
         }
 
         const timestamp = new Date()
@@ -239,6 +246,9 @@ const AudioInput: React.FC<Props> = ({
       setDeleteFileUrl,
       targetSampleRate,
       setRecordingUrl,
+      theme.colors.fadedText40,
+      theme.colors.secondaryBg,
+      theme.colors.bodyText,
     ]
   )
 
@@ -336,6 +346,14 @@ const AudioInput: React.FC<Props> = ({
 
     setWavesurfer(ws)
 
+    // Load existing recording if present (e.g., after remount)
+    if (recordingUrl) {
+      void ws.load(recordingUrl)
+      ws.setOptions({
+        interact: true,
+      })
+    }
+
     // Initialize the record plugin immediately after creating wavesurfer
     // This avoids the need for a separate useEffect
     const recordOptions: Record<string, unknown> = {
@@ -400,18 +418,6 @@ const AudioInput: React.FC<Props> = ({
     const cleanup = initializeWaveSurfer()
     return cleanup
   }, [initializeWaveSurfer])
-
-  // Load recording URL when wavesurfer is ready and URL exists
-  useEffect(() => {
-    if (wavesurfer && recordingUrl) {
-      void wavesurfer.load(recordingUrl)
-      wavesurfer.setOptions({
-        interact: true,
-        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
-        progressColor: theme.colors.bodyText,
-      })
-    }
-  }, [wavesurfer, recordingUrl, theme])
 
   // Note: We don't revoke blob URLs here because they need to persist
   // across component remounts. They'll be cleaned up when the page unloads

@@ -37,20 +37,13 @@ async function convertFileToWav(
     return undefined
   }
 
-  const AudioContextClass =
-    window.AudioContext ||
-    (
-      window as typeof window & {
-        webkitAudioContext?: typeof AudioContext
-      }
-    ).webkitAudioContext
-  if (!AudioContextClass) {
+  if (!window.AudioContext) {
     LOG.error("AudioContext not supported in this browser")
     return undefined
   }
 
   // First, decode the audio at its original sample rate
-  const audioContext = new AudioContextClass()
+  const audioContext = new AudioContext()
 
   let arrayBuffer: ArrayBuffer
   try {
@@ -95,21 +88,14 @@ async function convertFileToWav(
   const numberOfChannels = audioBuffer.numberOfChannels
   const frameCount = Math.floor(duration * outputSampleRate)
 
-  const OfflineAudioContextClass =
-    window.OfflineAudioContext ||
-    (
-      window as typeof window & {
-        webkitOfflineAudioContext?: typeof OfflineAudioContext
-      }
-    ).webkitOfflineAudioContext
-  if (!OfflineAudioContextClass) {
+  if (!window.OfflineAudioContext) {
     LOG.error(
       "OfflineAudioContext not supported, falling back to no resampling"
     )
     return encodeWAV(audioBuffer, audioBuffer.sampleRate)
   }
 
-  const offlineContext = new OfflineAudioContextClass(
+  const offlineContext = new OfflineAudioContext(
     numberOfChannels,
     frameCount,
     outputSampleRate
