@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -262,7 +263,7 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
     new_df = df.astype(str)
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     # Outer key = column index; inner key = row index -> target string value
-    updates_by_col: dict[int, dict[int, str]] = {}
+    updates_by_col: defaultdict[int, dict[int, str]] = defaultdict(dict)
     for row in styles.get("body", []):
         for cell in row:
             cell_id = cell.get("id")
@@ -282,7 +283,7 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
                 if isinstance(display_value, Enum)
                 else str(display_value)
             )
-            updates_by_col.setdefault(col_idx, {})[row_idx] = str_value
+            updates_by_col[col_idx][row_idx] = str_value
 
     for col_idx, values_by_row in updates_by_col.items():
         row_indices = list(values_by_row.keys())
