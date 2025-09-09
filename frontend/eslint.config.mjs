@@ -162,6 +162,8 @@ export default tseslint.config([
       ],
       // We want this on
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Prefer optional chaining over && chains
+      "@typescript-eslint/prefer-optional-chain": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
