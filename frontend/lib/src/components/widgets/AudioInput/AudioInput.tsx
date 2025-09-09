@@ -556,9 +556,8 @@ const AudioInput: React.FC<Props> = ({
           progressColor: theme.colors.bodyText,
         })
       }
-    } catch (error) {
+    } catch {
       setIsError(true)
-      throw error instanceof Error ? error : new Error(String(error))
     }
   }, [transcodeAndUploadFile, wavesurfer, theme])
 
