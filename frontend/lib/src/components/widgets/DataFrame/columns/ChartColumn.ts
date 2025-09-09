@@ -74,7 +74,7 @@ export interface ChartColumnParams {
   readonly y_max?: number
   /**
    * The color to use for the charts. Can be:
-   * - trend & trend-inverse: To color the charts green or red depending on the data.
+   * - auto & auto-inverse: To color the charts green or red depending on the data.
    * - red, blue, green, yellow, orange, violet, gray/grey, primary
    * - a color value compatible with canvas rendering
    */
@@ -105,7 +105,7 @@ function BaseChartColumn(
   const colorMapping = getColorMapping(theme)
 
   let defaultColor: string | undefined
-  if (parameters.color === "trend" || parameters.color === "trend-inverse") {
+  if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
     defaultColor = parameters.color
@@ -235,14 +235,14 @@ function BaseChartColumn(
       // Check if the first value is larger than the second value
       let chartColor = defaultColor
       if (
-        parameters.color === "trend" &&
+        parameters.color === "auto" &&
         // Chart is pointing down
         normalizedChartData[0] >
           normalizedChartData[normalizedChartData.length - 1]
       ) {
         chartColor = theme.colors.redColor
       } else if (
-        parameters.color === "trend-inverse" &&
+        parameters.color === "auto-inverse" &&
         // Chart is pointing up:
         normalizedChartData[0] <
           normalizedChartData[normalizedChartData.length - 1]

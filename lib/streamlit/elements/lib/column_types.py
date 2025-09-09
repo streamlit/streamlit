@@ -67,7 +67,25 @@ ColumnType: TypeAlias = Literal[
     "json",
 ]
 
-ChartColor: TypeAlias = Union[Literal["trend", "trend-inverse"], str]
+# Themeable colors supported in the theme config:
+ThemeColor: TypeAlias = Literal[
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "orange",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
+]
+
+# Color options for chart columns:
+ChartColor: TypeAlias = Union[
+    Literal["auto", "auto-inverse"],
+    ThemeColor,
+    str,
+]
 
 
 class NumberColumnConfig(TypedDict):
@@ -140,7 +158,7 @@ class ListColumnConfig(TypedDict):
 class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
-    color: NotRequired[str | None]
+    color: NotRequired[str | ThemeColor | None]
 
 
 class MultiselectColumnConfig(TypedDict):
@@ -1129,13 +1147,13 @@ def BarChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
-    color: "trend", "trend-inverse", or str or None
+    color: "auto", "auto-inverse", or str or None
         The color to use for the chart. Can be one of the following:
 
         - ``None`` (default): The primary color will be used.
-        - ``"trend"``: To color the chart green if the data is increasing, and
+        - ``"auto"``: To color the chart green if the data is increasing, and
           red if the data is decreasing.
-        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
           green if the data is decreasing.
         - A single color value that is applied to all charts in the column. This supports either
           a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
@@ -1241,13 +1259,13 @@ def LineChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
-    color: "trend", "trend-inverse", or str or None
+    color: "auto", "auto-inverse", or str or None
         The color to use for the chart. Can be one of the following:
 
         - ``None`` (default): The primary color will be used.
-        - ``"trend"``: To color the chart green if the data is increasing, and
+        - ``"auto"``: To color the chart green if the data is increasing, and
           red if the data is decreasing.
-        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
           green if the data is decreasing.
         - A single color value that is applied to all charts in the column. This supports either
           a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
@@ -1354,13 +1372,13 @@ def AreaChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
-    color: "trend", "trend-inverse", or str or None
+    color: "auto", "auto-inverse", or str or None
         The color to use for the chart. Can be one of the following:
 
         - ``None`` (default): The primary color will be used.
-        - ``"trend"``: To color the chart green if the data is increasing, and
+        - ``"auto"``: To color the chart green if the data is increasing, and
           red if the data is decreasing.
-        - ``"trend-inverse"``: To color the chart red if the data is increasing, and
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
           green if the data is decreasing.
         - A single color value that is applied to all charts in the column. This supports either
           a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
@@ -1628,7 +1646,7 @@ def MultiselectColumn(
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
-    color: str | Iterable[str] | None = None,
+    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
     format_func: Callable[[str], str] | None = None,
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
