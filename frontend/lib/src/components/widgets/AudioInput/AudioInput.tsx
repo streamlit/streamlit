@@ -253,13 +253,13 @@ const AudioInput: React.FC<Props> = ({
   )
 
   const handleClear = useCallback(
-    ({
+    async ({
       updateWidgetManager,
       deleteFile,
     }: {
       updateWidgetManager: boolean
       deleteFile: boolean
-    }) => {
+    }): Promise<void> => {
       if (isNullOrUndefined(wavesurfer)) {
         return
       }
@@ -268,16 +268,16 @@ const AudioInput: React.FC<Props> = ({
         URL.revokeObjectURL(recordingUrl)
       }
       setRecordingUrl(null)
+      // According to WaveSurfer source, empty() just loads empty data and doesn't destroy plugins
+      // Only destroy() actually destroys plugins
       wavesurfer.empty()
       if (deleteFile && deleteFileUrl) {
-        // Fire-and-forget deletion, errors are not critical
-        void (async () => {
-          try {
-            await uploadClient.deleteFile(deleteFileUrl)
-          } catch {
-            // Silently handle deletion errors as they're not critical
-          }
-        })()
+        // Await file deletion to ensure cleanup is complete
+        try {
+          await uploadClient.deleteFile(deleteFileUrl)
+        } catch {
+          // Silently handle deletion errors as they're not critical
+        }
       }
       setDeleteFileUrl(null)
       setProgressTime(STARTING_TIME_STRING)
@@ -310,9 +310,9 @@ const AudioInput: React.FC<Props> = ({
     if (isNullOrUndefined(widgetFormId)) return
 
     const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(widgetMgr, widgetFormId, () =>
-      handleClear({ updateWidgetManager: true, deleteFile: false })
-    )
+    formClearHelper.manageFormClearListener(widgetMgr, widgetFormId, () => {
+      void handleClear({ updateWidgetManager: true, deleteFile: false })
+    })
 
     return () => formClearHelper.disconnect()
   }, [widgetFormId, handleClear, widgetMgr])
@@ -472,47 +472,8 @@ const AudioInput: React.FC<Props> = ({
     }
 
     if (recordingUrl) {
-      handleClear({ updateWidgetManager: false, deleteFile: true })
-      // Plugin was destroyed by empty(), reinitialize it
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Recreate the record plugin since it was destroyed
-      if (wavesurfer && !recordPluginRef.current) {
-        const recordOptions: Record<string, unknown> = {
-          renderRecordedAudio: false,
-          scrollingWaveform: false,
-          mimeType: "audio/webm",
-        }
-
-        try {
-          const record = wavesurfer.registerPlugin(
-            RecordPlugin.create(recordOptions)
-          )
-          recordPluginRef.current = record
-
-          const handleRecordProgress = (time: number): void => {
-            setRecordingTime(formatTime(time))
-          }
-
-          record.on("record-progress", handleRecordProgress)
-
-          // Store handlers for cleanup
-          recordPluginHandlersRef.current = {
-            handleRecordProgress,
-          }
-        } catch (err) {
-          if (
-            err instanceof Error &&
-            (err.name === "NotAllowedError" ||
-              err.name === "PermissionDeniedError")
-          ) {
-            setHasNoMicPermissions(true)
-            return
-          }
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await handleClear({ updateWidgetManager: false, deleteFile: true })
+      // Plugin is preserved because empty() doesn't destroy plugins (only destroy() does)
     }
 
     // Use WaveSurfer's record plugin for visualization
@@ -633,7 +594,7 @@ const AudioInput: React.FC<Props> = ({
   }, [stopRecording])
 
   const handleClearWithError = useCallback(() => {
-    handleClear({ updateWidgetManager: false, deleteFile: true })
+    void handleClear({ updateWidgetManager: false, deleteFile: true })
     setIsError(false)
   }, [handleClear])
 
@@ -672,9 +633,12 @@ const AudioInput: React.FC<Props> = ({
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
-              onClick={() =>
-                handleClear({ updateWidgetManager: true, deleteFile: true })
-              }
+              onClick={() => {
+                void handleClear({
+                  updateWidgetManager: true,
+                  deleteFile: true,
+                })
+              }}
             />
           )}
         </Toolbar>
