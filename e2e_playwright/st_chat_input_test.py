@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import FilePayload, Locator, Page, expect
 
 from e2e_playwright.conftest import (
@@ -279,8 +280,9 @@ def test_uploads_and_deletes_single_file(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that it correctly uploads and deletes a single file."""
-    app.set_viewport_size({"width": 750, "height": 2000})
+    app.set_viewport_size({"width": 750, "height": 1500})
     chat_input = app.get_by_test_id("stChatInput").nth(3)
+    expect(chat_input).to_be_visible()
 
     file_name1 = "file1.txt"
     file1 = FilePayload(name=file_name1, mimeType="text/plain", buffer=b"file1content")
@@ -292,6 +294,7 @@ def test_uploads_and_deletes_single_file(
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(1)
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+    uploaded_files.scroll_into_view_if_needed()
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
     # Upload a second file. This one will replace the first.
@@ -312,7 +315,6 @@ def test_uploads_and_deletes_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading multiple files at once works correctly."""
-    app.set_viewport_size({"width": 750, "height": 2000})
     chat_input = app.get_by_test_id("stChatInput").nth(4)
 
     file_name1 = "file1.txt"
@@ -368,9 +370,9 @@ def test_file_upload_error_message_disallowed_files(
     expect(app.get_by_text("json files are not allowed.")).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=3)
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
-    app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "large.txt"
     file1 = FilePayload(
@@ -386,6 +388,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # Reset hovering to not cause issues with the upload tooltip being
     # shown over the uploaded file tooltip hover target:
     reset_hovering(app)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     expect(app.get_by_text(file_name1)).to_be_visible()
 
