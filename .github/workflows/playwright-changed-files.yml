@@ -12,6 +12,8 @@ concurrency:
 jobs:
   playwright-e2e-tests-changed-files:
     runs-on: ubuntu-latest-8-cores
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.55.0-jammy
     timeout-minutes: 20
 
     defaults:
@@ -123,6 +125,8 @@ jobs:
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Install playwright
         uses: ./.github/actions/playwright_install
+        with:
+          with-deps: "false"
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run make frontend-with-profiler
         run: make frontend-with-profiler

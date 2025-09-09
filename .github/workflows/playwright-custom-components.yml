@@ -21,6 +21,8 @@ concurrency:
 jobs:
   playwright-e2e-tests-custom-components:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.55.0-jammy
     defaults:
       run:
         shell: bash
@@ -43,6 +45,8 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Install playwright
         uses: ./.github/actions/playwright_install
+        with:
+          with-deps: "false"
       - name: Run make frontend-fast
         run: make frontend-fast
       - name: Get short SHA

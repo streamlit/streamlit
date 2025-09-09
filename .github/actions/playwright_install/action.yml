@@ -61,8 +61,8 @@ runs:
     # On Ubuntu runners, apt triggers for man-db can take significant time.
     # Purging man-db (which we don't need in CI) avoids those triggers during
     # Playwright's --with-deps step and speeds up installs considerably.
-    - name: Disable man-db to speed up apt (Linux only)
-      if: ${{ runner.os == 'Linux' }}
+    - name: Disable man-db to speed up apt (Linux only, only when installing deps)
+      if: ${{ runner.os == 'Linux' && inputs.with-deps == 'true' }}
       shell: bash
       run: |
         set -e
