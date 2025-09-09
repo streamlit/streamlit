@@ -1274,7 +1274,7 @@ def LineChartColumn(
     Examples
     --------
     >>> import pandas as pd
-    >>> import streamlit as sts
+    >>> import streamlit as st
     >>>
     >>> data_df = pd.DataFrame(
     >>>     {
