@@ -124,7 +124,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_valid_sample_rates(self, sample_rate):
-        """Test that valid sample rates are accepted."""
+        """Test that valid sample rates are accepted and properly set in the protobuf."""
         st.audio_input("the label", sample_rate=sample_rate)
 
         c = self.get_delta_from_queue().new_element.audio_input
