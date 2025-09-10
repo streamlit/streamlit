@@ -496,7 +496,12 @@ class MultiSelectMixin:
             # changes to the options, accept_new_options, and max_selections
             # in the identity computation as those can invalidate the
             # current selection.
-            key_as_main_identity={"options", "max_selections", "accept_new_options"},
+            key_as_main_identity={
+                "options",
+                "max_selections",
+                "accept_new_options",
+                "format_func",
+            },
             dg=self.dg,
             label=label,
             options=formatted_options,

@@ -375,8 +375,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 placeholder="placeholder 1",
-                format_func=lambda x: x.capitalize(),
                 # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
                 options=["a", "b", "c"],
                 accept_new_options=True,
                 max_selections=3,
@@ -397,8 +397,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 placeholder="placeholder 2",
-                format_func=lambda x: x.upper(),
                 # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
                 options=["a", "b", "c"],
                 accept_new_options=True,
                 max_selections=3,
@@ -412,6 +412,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             ("options", ["a", "b"], ["a", "b", "c"]),
             ("max_selections", 2, 3),
             ("accept_new_options", True, False),
+            ("format_func", lambda x: x.capitalize(), lambda x: x.upper()),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -429,6 +430,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "default": ["a"],
                 "max_selections": 2,
                 "accept_new_options": True,
+                "format_func": lambda x: x.capitalize(),
             }
 
             base_kwargs[kwarg_name] = value1
