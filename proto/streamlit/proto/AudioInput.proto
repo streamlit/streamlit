@@ -28,4 +28,5 @@ message AudioInput {
   string form_id = 4;
   bool disabled = 5;
   LabelVisibilityMessage label_visibility = 6;
+  optional int32 sample_rate = 7;
 }
