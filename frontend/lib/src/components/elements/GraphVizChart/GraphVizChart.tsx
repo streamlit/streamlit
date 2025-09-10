@@ -78,8 +78,6 @@ function GraphVizChart({
     try {
       graphviz(`#${chartId}`)
         .zoom(false)
-        .width(containerWidth)
-        .height(containerHeight)
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)

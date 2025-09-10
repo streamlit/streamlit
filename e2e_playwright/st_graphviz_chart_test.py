@@ -201,8 +201,22 @@ def test_height_content(app: Page, assert_snapshot: ImageCompareFunction):
 def test_height_stretch(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that it renders correctly with height='stretch'."""
     height_stretch_chart = app.get_by_test_id("stGraphVizChart").nth(11)
+    svg_element = height_stretch_chart.locator("svg")
+
+    def check_stretched_dimensions() -> bool:
+        svg_dimensions = svg_element.bounding_box()
+        print(f"Current SVG dimensions during wait: {svg_dimensions}")
+        if svg_dimensions is None:
+            return False
+        # The container has height=400px, so the SVG should be significantly larger than default
+        # Default height is typically much smaller (around 116pt ≈ 155px from the first graph test)
+        return svg_dimensions["height"] > 300
+
+    print("Starting wait_until for stretched dimensions...")
+    wait_until(app, check_stretched_dimensions)
+
     assert_snapshot(
-        height_stretch_chart.locator("svg"),
+        svg_element,
         name="st_graphviz_chart_height_stretch",
     )
 
