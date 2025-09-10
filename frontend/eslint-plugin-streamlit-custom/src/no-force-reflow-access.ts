@@ -14,21 +14,38 @@
  * limitations under the License.
  */
 
+import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
+
+import { createRule } from "./utils/createRule"
+
+type MessageIds =
+  | "noForceReflowProperty"
+  | "noForceReflowMethod"
+  | "noForceReflowVisualViewport"
+
 /**
  * This rule will disallow properties that force reflow.
  * @see https://gist.github.com/paulirish/5d52fb081b3570c81e3a
  */
-module.exports = {
+const noForceReflowAccess = createRule<[], MessageIds>({
+  name: "no-force-reflow-access",
   meta: {
-    name: "no-force-reflow-access",
-    type: "error",
+    type: "problem",
     docs: {
       description: "Disallow properties that force reflow",
-      category: "Best Practices",
-      recommended: true,
     },
+    fixable: undefined,
     schema: [],
+    messages: {
+      noForceReflowProperty:
+        "Accessing '{{property}}' forces layout/reflow and can hurt performance. {{alternative}}",
+      noForceReflowMethod:
+        "Calling '{{method}}()' forces layout/reflow and can hurt performance. {{alternative}}",
+      noForceReflowVisualViewport:
+        "Accessing 'visualViewport.{{property}}' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
+    },
   },
+  defaultOptions: [],
   create(context) {
     // Properties that force reflow when accessed
     const forceReflowProperties = new Set([
@@ -106,7 +123,7 @@ module.exports = {
       "offsetLeft",
     ])
 
-    function getPropertyAlternative(propertyName) {
+    function getPropertyAlternative(propertyName: string): string {
       // Element box metrics
       if (
         ["offsetLeft", "offsetTop", "offsetWidth", "offsetHeight"].includes(
@@ -168,7 +185,7 @@ module.exports = {
       return "Consider alternative approaches that don't require layout calculations."
     }
 
-    function getMethodAlternative(methodName) {
+    function getMethodAlternative(methodName: string): string {
       if (["getClientRects", "getBoundingClientRect"].includes(methodName)) {
         return "Consider batching these calls or using IntersectionObserver for visibility detection."
       }
@@ -204,13 +221,13 @@ module.exports = {
       return "Consider alternative approaches that don't trigger layout calculations."
     }
 
-    function checkMemberExpression(node) {
-      if (node.property.type === "Identifier") {
+    function checkMemberExpression(node: TSESTree.MemberExpression): void {
+      if (node.property.type === AST_NODE_TYPES.Identifier) {
         const propertyName = node.property.name
 
         // Skip if this is a property definition in an object literal (like { offsetWidth: 100 })
         if (
-          node.parent.type === "Property" &&
+          node.parent?.type === AST_NODE_TYPES.Property &&
           node.parent.key === node.property
         ) {
           return
@@ -218,7 +235,7 @@ module.exports = {
 
         // Skip if this is an assignment (like obj.offsetWidth = 50)
         if (
-          node.parent.type === "AssignmentExpression" &&
+          node.parent?.type === AST_NODE_TYPES.AssignmentExpression &&
           node.parent.left === node
         ) {
           return
@@ -226,14 +243,17 @@ module.exports = {
 
         // Check for visualViewport property access FIRST (higher priority)
         if (
-          node.object.type === "MemberExpression" &&
-          node.object.property &&
+          node.object.type === AST_NODE_TYPES.MemberExpression &&
+          node.object.property?.type === AST_NODE_TYPES.Identifier &&
           node.object.property.name === "visualViewport" &&
           visualViewportProperties.has(propertyName)
         ) {
           context.report({
             node,
-            message: `Accessing 'visualViewport.${propertyName}' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.`,
+            messageId: "noForceReflowVisualViewport",
+            data: {
+              property: propertyName,
+            },
           })
           return
         }
@@ -243,7 +263,7 @@ module.exports = {
           // Only flag if this looks like a DOM element access
           // Skip obvious configuration objects
           if (
-            node.object.type === "Identifier" &&
+            node.object.type === AST_NODE_TYPES.Identifier &&
             (node.object.name === "config" ||
               node.object.name === "options" ||
               node.object.name === "settings" ||
@@ -256,16 +276,20 @@ module.exports = {
           const alternative = getPropertyAlternative(propertyName)
           context.report({
             node,
-            message: `Accessing '${propertyName}' forces layout/reflow and can hurt performance. ${alternative}`,
+            messageId: "noForceReflowProperty",
+            data: {
+              property: propertyName,
+              alternative,
+            },
           })
         }
       }
     }
 
-    function checkCallExpression(node) {
+    function checkCallExpression(node: TSESTree.CallExpression): void {
       if (
-        node.callee.type === "MemberExpression" &&
-        node.callee.property.type === "Identifier"
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.property.type === AST_NODE_TYPES.Identifier
       ) {
         const methodName = node.callee.property.name
 
@@ -273,8 +297,85 @@ module.exports = {
           const alternative = getMethodAlternative(methodName)
           context.report({
             node,
-            message: `Calling '${methodName}()' forces layout/reflow and can hurt performance. ${alternative}`,
+            messageId: "noForceReflowMethod",
+            data: {
+              method: methodName,
+              alternative,
+            },
           })
+        }
+      }
+    }
+
+    function checkVariableDeclarator(node: TSESTree.VariableDeclarator): void {
+      // Check for destructuring patterns like: const { scrollWidth, clientWidth } = element
+      if (
+        node.id.type === AST_NODE_TYPES.ObjectPattern &&
+        node.init // Make sure there's an initializer
+      ) {
+        // Skip if the init looks like a configuration object
+        if (
+          node.init.type === AST_NODE_TYPES.Identifier &&
+          (node.init.name === "config" ||
+            node.init.name === "options" ||
+            node.init.name === "settings" ||
+            node.init.name === "props" ||
+            node.init.name === "state")
+        ) {
+          return
+        }
+
+        // Skip if the init is undefined or null (these are not DOM elements)
+        if (
+          node.init.type === AST_NODE_TYPES.Identifier &&
+          (node.init.name === "undefined" || node.init.name === "null")
+        ) {
+          return
+        }
+
+        // Skip if the init is a literal (like number, string, boolean)
+        if (node.init.type === AST_NODE_TYPES.Literal) {
+          return
+        }
+
+        // Skip if the init is a function call or hook call (these abstract performance concerns)
+        if (node.init.type === AST_NODE_TYPES.CallExpression) {
+          return
+        }
+
+        // Skip if the init is a new expression (constructor call)
+        if (node.init.type === AST_NODE_TYPES.NewExpression) {
+          return
+        }
+
+        // Only flag destructuring from direct object/element references
+        // This includes:
+        // - Direct identifiers: const { scrollWidth } = element
+        // - Member expressions: const { scrollWidth } = ref.current
+        // - But NOT function calls: const { scrollWidth } = getElement()
+
+        // Check each property in the destructuring pattern
+        for (const property of node.id.properties) {
+          if (
+            property.type === AST_NODE_TYPES.Property &&
+            property.key.type === AST_NODE_TYPES.Identifier &&
+            !property.computed
+          ) {
+            const propertyName = property.key.name
+
+            // Check if this property forces reflow
+            if (forceReflowProperties.has(propertyName)) {
+              const alternative = getPropertyAlternative(propertyName)
+              context.report({
+                node: property.key,
+                messageId: "noForceReflowProperty",
+                data: {
+                  property: propertyName,
+                  alternative,
+                },
+              })
+            }
+          }
         }
       }
     }
@@ -282,6 +383,9 @@ module.exports = {
     return {
       MemberExpression: checkMemberExpression,
       CallExpression: checkCallExpression,
+      VariableDeclarator: checkVariableDeclarator,
     }
   },
-}
+})
+
+export default noForceReflowAccess

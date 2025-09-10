@@ -16,6 +16,7 @@
 
 import path from "path"
 import { fileURLToPath } from "url"
+import { createJiti } from "jiti"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
@@ -29,7 +30,6 @@ import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
-import streamlitCustom from "eslint-plugin-streamlit-custom"
 import globals from "globals"
 import { globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
@@ -39,6 +39,14 @@ import jsxA11y from "eslint-plugin-jsx-a11y"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// This is to support our custom rules, which are written in TypeScript,
+// but need to be imported as JS to work in ESLint.
+const jiti = createJiti(import.meta.url)
+const streamlitCustom = await jiti.import(
+  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
+  { default: true }
+)
 
 export default tseslint.config([
   // Base recommended configs

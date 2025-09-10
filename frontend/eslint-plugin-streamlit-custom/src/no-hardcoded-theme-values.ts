@@ -14,27 +14,38 @@
  * limitations under the License.
  */
 
+import { AST_NODE_TYPES } from "@typescript-eslint/utils"
+
+import { createRule } from "./utils/createRule"
+
+type MessageIds = "noHardcodedTheme" | "noHardcodedThemeTemplate"
+
 /**
  * This rule will disallow hardcoded theme values in styled-components / in all object expressions.
- * This includues:
+ * This includes:
  * - <div style={{ backgroundColor: 'red', width: '100px' }} />
  * - styled.div`background-color: red; width: 100px;`
  * - const foo = styled.div(() => { backgroundColor: 'red', width: '100px' })
  */
-module.exports = {
+const noHardcodedThemeValues = createRule<[], MessageIds>({
+  name: "no-hardcoded-theme-values",
   meta: {
-    name: "no-hardcoded-theme-values",
-    type: "error",
+    type: "problem",
     docs: {
       description: "Disallow hardcoded theme values",
-      category: "Best Practices",
-      recommended: true,
     },
     fixable: "code",
     schema: [],
+    messages: {
+      noHardcodedTheme:
+        "Hardcoded theme values are not allowed. All values must start with 'theme' or be a CSS built-in value such as 'none'.",
+      noHardcodedThemeTemplate:
+        "Hardcoded theme values are not allowed in template strings. All values must start with 'theme' or be a CSS built-in value such as 'none'. In general, please use the styled-object notation anyways.",
+    },
   },
+  defaultOptions: [],
   create(context) {
-    // Properties to check for values not allowed byt the allowedValuesRegex. We check the whole set of CSS properties with the allowed values,
+    // Properties to check for values not allowed by the allowedValuesRegex. We check the whole set of CSS properties with the allowed values,
     // instead of checking for each property individually based on what they allow (e.g. only check 'background-color' for 'transparent'), since
     // we do not need more fine granular matching.
     const cssPropertiesToCheck =
@@ -52,23 +63,25 @@ module.exports = {
 
     return {
       ObjectExpression(node) {
-        node.properties.map(property => {
+        node.properties.forEach(property => {
           if (
+            property.type !== AST_NODE_TYPES.Property ||
             !property.key ||
-            !property.key.name ||
+            property.key.type !== AST_NODE_TYPES.Identifier ||
             !property.value ||
-            !property.value.raw
+            property.value.type !== AST_NODE_TYPES.Literal ||
+            typeof property.value.raw !== "string"
           ) {
             return
           }
+
           if (
             cssPropertiesToCheck.test(property.key.name) &&
             allowedValuesRegex.test(property.value.raw)
           ) {
             context.report({
               node: property,
-              message:
-                "Hardcoded theme values are not allowed. All values must start with 'theme' or be a CSS built-in value such as 'none'.",
+              messageId: "noHardcodedTheme",
             })
           }
         })
@@ -77,14 +90,16 @@ module.exports = {
         // we only check templateExpressions in combination of the styled object,
         // e.g. styled.div`color: theme.colors.primary;`
         if (
-          !node.tag.object ||
+          node.tag.type !== AST_NODE_TYPES.MemberExpression ||
+          node.tag.object.type !== AST_NODE_TYPES.Identifier ||
           node.tag.object.name !== "styled" ||
           !node.quasi
         ) {
           return
         }
-        node.quasi.quasis.map(quasi => {
-          if (quasi.type !== "TemplateElement") {
+
+        node.quasi.quasis.forEach(quasi => {
+          if (quasi.type !== AST_NODE_TYPES.TemplateElement) {
             return
           }
 
@@ -106,8 +121,7 @@ module.exports = {
             ) {
               context.report({
                 node: quasi,
-                message:
-                  "Hardcoded theme values are not allowed in template strings. All values must start with 'theme' or be a CSS built-in value such as 'none'. In general, please use the styled-object notation anyways.",
+                messageId: "noHardcodedThemeTemplate",
               })
             }
           }
@@ -115,4 +129,6 @@ module.exports = {
       },
     }
   },
-}
+})
+
+export default noHardcodedThemeValues
