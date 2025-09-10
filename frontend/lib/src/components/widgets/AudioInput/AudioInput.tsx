@@ -182,7 +182,7 @@ const AudioInput: React.FC<Props> = ({
             return
           }
           const upload = successfulUploads[0]
-          if (upload && upload.fileUrl.deleteUrl) {
+          if (upload?.fileUrl.deleteUrl) {
             setDeleteFileUrl(upload.fileUrl.deleteUrl)
           }
         })
