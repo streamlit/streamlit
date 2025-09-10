@@ -268,7 +268,7 @@ def test_dynamic_selectbox_props(app: Page):
 
     # Initial state
     expect(dynamic_select).to_contain_text("Initial dynamic selectbox")
-    expect_prefixed_markdown(app, "Initial selectbox value:", "male")
+    expect_prefixed_markdown(app, "Initial selectbox value:", "a")
     assert_snapshot(dynamic_select, name="st_selectbox-dynamic_initial")
 
     # Check that the help tooltip is correct:
@@ -276,9 +276,9 @@ def test_dynamic_selectbox_props(app: Page):
 
     # Type something and submit
     select_input = dynamic_select.locator("input").first
-    select_input.type("male")
+    select_input.type("b")
     select_input.press("Enter")
-    expect_prefixed_markdown(app, "Initial selectbox value:", "male")
+    expect_prefixed_markdown(app, "Initial selectbox value:", "b")
 
     # Toggle to update props
     click_toggle(app, "Update selectbox props")
@@ -287,13 +287,18 @@ def test_dynamic_selectbox_props(app: Page):
     expect(dynamic_select).to_contain_text("Updated dynamic selectbox")
 
     # Ensure new select is visible and previous value remains
-    expect_prefixed_markdown(app, "Updated selectbox value:", "male")
+    expect_prefixed_markdown(app, "Updated selectbox value:", "b")
 
     dynamic_select.scroll_into_view_if_needed()
     assert_snapshot(dynamic_select, name="st_selectbox-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select, "updated help")
+
+    # Select a different option
+    select_input.type("c")
+    select_input.press("Enter")
+    expect_prefixed_markdown(app, "Updated selectbox value:", "c")
 
 
 def test_dismiss_change_by_clicking_away(app: Page):

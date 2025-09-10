@@ -163,14 +163,14 @@ if st.toggle("Update selectbox props"):
         format_func=lambda x: x.capitalize(),
         # options & accept_new_options are not yet supported for dynamic changes
         # keeping it at the same value for now:
-        options=["male", "female"],
+        options=["a", "b", "c"],
         accept_new_options=True,
     )
     st.write("Updated selectbox value:", sel_value)
 else:
     sel_value = st.selectbox(
         "Initial dynamic selectbox",
-        index=None,
+        index=0,
         width="stretch",
         help="initial help",
         key="dynamic_selectbox_with_key",
@@ -181,7 +181,7 @@ else:
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
         format_func=lambda x: x.upper(),
-        options=["male", "female"],
+        options=["a", "b", "c"],
         accept_new_options=True,
     )
     st.write("Initial selectbox value:", sel_value)
