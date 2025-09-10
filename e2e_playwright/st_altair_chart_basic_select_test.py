@@ -222,7 +222,7 @@ def test_interval_area_chart_displays_selection_text(app: Page):
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
-# The altair chart seems to sometimes be rendered to small in the
+# The altair chart seems to sometimes be rendered too small in the
 # initial rendering.
 @pytest.mark.flaky(reruns=3)
 def test_point_histogram_chart_displays_selection_text(app: Page):
