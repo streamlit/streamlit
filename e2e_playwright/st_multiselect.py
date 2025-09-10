@@ -173,7 +173,6 @@ st.multiselect(
     width="stretch",
 )
 
-
 if st.toggle("Update multiselect props"):
     ms_value = st.multiselect(
         "Updated dynamic multiselect",
