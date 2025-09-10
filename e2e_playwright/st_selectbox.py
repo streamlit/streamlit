@@ -150,7 +150,7 @@ st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch"
 if st.toggle("Update selectbox props"):
     sel_value = st.selectbox(
         "Updated dynamic selectbox",
-        index=None,
+        index=1,
         width=200,
         help="updated help",
         key="dynamic_selectbox_with_key",
