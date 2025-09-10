@@ -294,7 +294,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
-                options=["a", "b", "c"],
+                options=["a", "b", "cd"],
                 accept_new_options=True,
             )
             c1 = self.get_delta_from_queue().new_element.selectbox
@@ -315,7 +315,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
-                options=["a", "b", "c"],
+                options=["a", "b", "cd"],
                 accept_new_options=True,
             )
             c2 = self.get_delta_from_queue().new_element.selectbox
