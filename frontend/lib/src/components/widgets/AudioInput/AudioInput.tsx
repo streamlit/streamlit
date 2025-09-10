@@ -483,7 +483,7 @@ const AudioInput: React.FC<Props> = ({
 
       try {
         await recordPluginRef.current.startRecording(audioConstraints)
-        setRecordingTime("00:00")
+        setRecordingTime(formatTime(0))
         forceRerender()
       } catch (err) {
         if (
@@ -511,23 +511,26 @@ const AudioInput: React.FC<Props> = ({
     handleClear,
   ])
 
-  const waitForRecordEnd = (plugin: RecordPlugin): Promise<Blob> => {
-    return new Promise<Blob>((resolve, reject) => {
-      const handleRecordEnd = (blob: Blob): void => {
-        plugin.un("record-end", handleRecordEnd)
+  const waitForRecordEnd = useCallback(
+    (plugin: RecordPlugin): Promise<Blob> => {
+      return new Promise<Blob>((resolve, reject) => {
+        const handleRecordEnd = (blob: Blob): void => {
+          plugin.un("record-end", handleRecordEnd)
 
-        if (blob && blob instanceof Blob && blob.size > 0) {
-          resolve(blob)
-        } else {
-          reject(new Error("Invalid or empty recording blob"))
+          if (blob && blob instanceof Blob && blob.size > 0) {
+            resolve(blob)
+          } else {
+            reject(new Error("Invalid or empty recording blob"))
+          }
         }
-      }
 
-      plugin.on("record-end", handleRecordEnd)
+        plugin.on("record-end", handleRecordEnd)
 
-      plugin.stopRecording()
-    })
-  }
+        plugin.stopRecording()
+      })
+    },
+    []
+  )
 
   const stopRecording = useCallback(async () => {
     const recordPlugin = recordPluginRef.current
@@ -556,7 +559,7 @@ const AudioInput: React.FC<Props> = ({
     } catch {
       setIsError(true)
     }
-  }, [transcodeAndUploadFile, wavesurfer, theme])
+  }, [transcodeAndUploadFile, wavesurfer, theme, waitForRecordEnd])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
