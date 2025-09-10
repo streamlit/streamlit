@@ -77,8 +77,7 @@ async function convertFileToWav(
     `Resampling from ${audioBuffer.sampleRate}Hz to ${outputSampleRate}Hz`
   )
 
-  const duration = audioBuffer.duration
-  const numberOfChannels = audioBuffer.numberOfChannels
+  const { duration, numberOfChannels } = audioBuffer
   const frameCount = Math.ceil(duration * outputSampleRate)
 
   if (!window.OfflineAudioContext) {
