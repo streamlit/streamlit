@@ -377,7 +377,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
-                options=["a", "b", "c"],
+                options=["a", "b", "cd"],
                 accept_new_options=True,
                 max_selections=3,
             )
@@ -399,7 +399,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
-                options=["a", "b", "c"],
+                options=["a", "b", "cd"],
                 accept_new_options=True,
                 max_selections=3,
             )
