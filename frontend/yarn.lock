@@ -904,6 +904,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@emotion/is-prop-valid@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "@emotion/is-prop-valid@npm:1.4.0"
+  dependencies:
+    "@emotion/memoize": "npm:^0.9.0"
+  checksum: 10c0/5f857814ec7d8c7e727727346dfb001af6b1fb31d621a3ce9c3edf944a484d8b0d619546c30899ae3ade2f317c76390ba4394449728e9bf628312defc2c41ac3
+  languageName: node
+  linkType: hard
+
 "@emotion/memoize@npm:^0.9.0":
   version: 0.9.0
   resolution: "@emotion/memoize@npm:0.9.0"
@@ -3690,7 +3699,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^11.0.1"
+    "@swc/plugin-emotion": "npm:^11.1.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.8.0"
     "@testing-library/react": "npm:^16.3.0"
@@ -3816,7 +3825,7 @@ __metadata:
     "@emotion-icons/material-rounded": "npm:^3.14.0"
     "@emotion-icons/open-iconic": "npm:^3.14.0"
     "@emotion/cache": "npm:^11.13.5"
-    "@emotion/is-prop-valid": "npm:^1.2.0"
+    "@emotion/is-prop-valid": "npm:^1.4.0"
     "@emotion/react": "npm:^11.13.5"
     "@emotion/styled": "npm:^11.14.1"
     "@glideapps/glide-data-grid": "npm:6.0.4-alpha23"
@@ -3828,7 +3837,7 @@ __metadata:
     "@sindresorhus/slugify": "npm:^2.2.1"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^11.0.1"
+    "@swc/plugin-emotion": "npm:^11.1.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.8.0"
     "@testing-library/react": "npm:^16.3.0"
@@ -4228,12 +4237,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^11.0.1":
-  version: 11.0.2
-  resolution: "@swc/plugin-emotion@npm:11.0.2"
+"@swc/plugin-emotion@npm:^11.1.0":
+  version: 11.1.0
+  resolution: "@swc/plugin-emotion@npm:11.1.0"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/bf7375124a039978942cfb531c0c84052497be23ccfe09e642b9e56ddc049f55b05f801b2c11b8f039aec745218e51af8abb4b6c73f24fa76b05aeb30adaee92
+  checksum: 10c0/2f53007b06a90ac2bd4aabfbc8932837a83d69ae70878e2e325cb6d8dc50b8cbdca494e345d93bc2a79d8edce00feb0ce662bfd09a36b9fe1c7b89290db45f77
   languageName: node
   linkType: hard
 
