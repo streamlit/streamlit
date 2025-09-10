@@ -31,7 +31,6 @@ from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 MAC = "mac"
@@ -295,7 +294,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
             (st.query_params.__setattr__, "query_params.set_attr"),
