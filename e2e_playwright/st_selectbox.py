@@ -146,3 +146,42 @@ st.write("value 17:", v17)
 
 st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
 st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")
+
+if st.toggle("Update selectbox props"):
+    sel_value = st.selectbox(
+        "Updated dynamic selectbox",
+        index=None,
+        width=200,
+        help="updated help",
+        key="dynamic_selectbox_with_key",
+        on_change=lambda a, param: print(
+            f"Updated selectbox - callback triggered: {a} {param}"
+        ),
+        args=("Updated select arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        format_func=lambda x: x.capitalize(),
+        # options & accept_new_options are not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        options=["male", "female"],
+        accept_new_options=True,
+    )
+    st.write("Updated selectbox value:", sel_value)
+else:
+    sel_value = st.selectbox(
+        "Initial dynamic selectbox",
+        index=None,
+        width="stretch",
+        help="initial help",
+        key="dynamic_selectbox_with_key",
+        on_change=lambda a, param: print(
+            f"Initial selectbox - callback triggered: {a} {param}"
+        ),
+        args=("Initial select arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        format_func=lambda x: x.upper(),
+        options=["male", "female"],
+        accept_new_options=True,
+    )
+    st.write("Initial selectbox value:", sel_value)

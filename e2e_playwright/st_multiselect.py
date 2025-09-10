@@ -172,3 +172,45 @@ st.multiselect(
     default=many_options[0:28],
     width="stretch",
 )
+
+
+if st.toggle("Update multiselect props"):
+    ms_value = st.multiselect(
+        "Updated dynamic multiselect",
+        default=[],
+        width=300,
+        help="updated help",
+        key="dynamic_multiselect_with_key",
+        on_change=lambda a, param: print(
+            f"Updated multiselect - callback triggered: {a} {param}"
+        ),
+        args=("Updated ms arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        format_func=lambda x: x.capitalize(),
+        # options, max_selections, & accept_new_options are not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        options=["apple", "banana", "orange", "kiwi"],
+        max_selections=2,
+        accept_new_options=True,
+    )
+    st.write("Updated multiselect value:", ms_value)
+else:
+    ms_value = st.multiselect(
+        "Initial dynamic multiselect",
+        default=["apple"],
+        width="stretch",
+        help="initial help",
+        key="dynamic_multiselect_with_key",
+        on_change=lambda a, param: print(
+            f"Initial multiselect - callback triggered: {a} {param}"
+        ),
+        args=("Initial ms arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        format_func=lambda x: x.upper(),
+        options=["apple", "banana", "orange", "kiwi"],
+        max_selections=2,
+        accept_new_options=True,
+    )
+    st.write("Initial multiselect value:", ms_value)
