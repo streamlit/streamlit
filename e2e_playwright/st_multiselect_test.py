@@ -310,8 +310,8 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
 
     expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'banana']")
 
-    # Click the toggle to update the date input props
-    click_toggle(app, "Update date input props")
+    # Click the toggle to update the multiselect props
+    click_toggle(app, "Update multiselect props")
 
     # new multiselect is visible:
     expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
