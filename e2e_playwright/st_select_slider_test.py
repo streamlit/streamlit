@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     expect_help_tooltip,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     get_slider,
@@ -114,8 +115,8 @@ def test_select_slider_calls_callback(app: Page):
     slider.click()
     wait_for_app_run(app)
     expect(app.get_by_text("Hello world")).to_be_visible()
-    expect(app.get_by_text("Value 8: 3")).to_be_visible()
-    expect(app.get_by_text("Select slider changed: True")).to_be_visible()
+    expect_prefixed_markdown(app, "Value 8:", "3")
+    expect_prefixed_markdown(app, "Select slider changed:", "True")
 
 
 def test_select_slider_label_realigns_when_expander_opens(app: Page):
@@ -136,24 +137,24 @@ def test_select_slider_works_in_forms(app: Page):
     slider.click()
 
     # The value is not submitted so the value should not have changed yet
-    expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-form selection:", "1")
 
     # need to wait for the actual component value to update and then submit
     app.wait_for_timeout(200)
     click_form_button(app, "Submit")
 
-    expect(app.get_by_text("select_slider-in-form selection: 3")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-form selection:", "3")
 
 
 def test_select_slider_works_with_fragments(app: Page):
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
-    expect(app.get_by_text("select_slider-in-fragment selection: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "Runs:", "1")
+    expect_prefixed_markdown(app, "select_slider-in-fragment selection:", "1")
     slider = get_slider(app, "Label 11 (fragment)")
     # click in middle
     slider.click()
     wait_for_app_run(app)
-    expect(app.get_by_text("select_slider-in-fragment selection: 3")).to_be_visible()
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-fragment selection:", "3")
+    expect_prefixed_markdown(app, "Runs:", "1")
 
 
 def test_no_rerun_on_drag(app: Page):
