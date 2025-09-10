@@ -460,6 +460,19 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         )
         assert el.width_config.pixel_width == 400
 
+    @pytest.mark.usefixtures("benchmark")
+    def test_pandas_styler_performance(self):
+        """Performance benchmark for using styled dataframes with st.dataframe."""
+
+        def large_styler_df() -> None:
+            # Create a large DF with random numbers:
+            df = pd.DataFrame(np.random.rand(10000, 10), columns=list("ABCDEFGHIJ"))
+            # Format all numbers with pandas styler:
+            styler = df.style.format("{:.2f}")
+            st.dataframe(styler)
+
+        self.benchmark(large_styler_df)
+
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
