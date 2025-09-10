@@ -478,9 +478,6 @@ const AudioInput: React.FC<Props> = ({
       const audioConstraints: MediaTrackConstraints = targetSampleRate
         ? {
             sampleRate: { ideal: targetSampleRate },
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
           }
         : {} // Default constraints
 
