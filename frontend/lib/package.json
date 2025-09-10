@@ -48,7 +48,7 @@
     "@emotion-icons/material-rounded": "^3.14.0",
     "@emotion-icons/open-iconic": "^3.14.0",
     "@emotion/cache": "^11.13.5",
-    "@emotion/is-prop-valid": "^1.2.0",
+    "@emotion/is-prop-valid": "^1.4.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.14.1",
     "@glideapps/glide-data-grid": "6.0.4-alpha23",
@@ -133,7 +133,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^11.0.1",
+    "@swc/plugin-emotion": "^11.1.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
