@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 import streamlit as st
@@ -163,12 +165,13 @@ with st.container(
 with st.container(
     horizontal_alignment="center", key="container-horizontal-centered-elements"
 ):
-    st.image("https://static.streamlit.io/examples/dice.jpg")
+    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+    st.image(img)
     st.dataframe(
         pd.DataFrame(
             {
-                "x": list(range(5)),
-                "y": [i * i for i in range(5)],
+                "x": list(range(3)),
+                "y": [i * i for i in range(3)],
             }
         ),
         width=250,
