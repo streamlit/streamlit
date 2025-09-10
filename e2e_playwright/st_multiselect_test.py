@@ -327,6 +327,14 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_ms, "updated help")
 
+    # Type something different and submit
+    input_el.type("orange")
+    input_el.press("Enter")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Updated multiselect value:", "['apple', 'banana', 'orange']"
+    )
+
 
 def test_multiselect_accept_new_options(app: Page):
     """Should allow adding new options when accept_new_options is True and respect
