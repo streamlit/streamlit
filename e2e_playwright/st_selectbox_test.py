@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import assert_snapshot
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -261,7 +260,7 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "selectbox8")).to_be_visible()
 
 
-def test_dynamic_selectbox_props(app: Page):
+def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the selectbox can be updated dynamically while keeping the state."""
     dynamic_select = get_element_by_key(app, "dynamic_selectbox_with_key")
     expect(dynamic_select).to_be_visible()
