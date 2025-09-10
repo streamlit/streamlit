@@ -1934,7 +1934,7 @@ export class App extends PureComponent<Props, State> {
     let windowToPrint
     try {
       const htmlIFrameElement = getIFrameEnclosingApp(this.embeddingId)
-      if (htmlIFrameElement && htmlIFrameElement.contentWindow) {
+      if (htmlIFrameElement?.contentWindow) {
         windowToPrint = htmlIFrameElement.contentWindow.window
       } else {
         windowToPrint = window
