@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import React, {
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+} from "react"
 
 import classNames from "classnames"
 
@@ -42,7 +49,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
@@ -64,69 +71,77 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
+import VirtualReconciler from "./VirtualReconciler"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { libConfig } = useContext(LibContext)
+  const { libConfig, scriptRunId } = useContext(LibContext)
 
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
   // Capture all the element ids to avoid rendering the same element twice
-  const elementKeySet = new Set<string>()
+  const elementKeySet = useRef(new Set<string>())
+
+  const renderChild = useCallback(
+    (node: AppNode, key: string): ReactNode => {
+      const disableFullscreenMode =
+        libConfig.disableFullscreenMode || props.disableFullscreenMode
+
+      // Base case: render a leaf node.
+      if (node instanceof ElementNode) {
+        // Avoid rendering the same element twice
+        if (elementKeySet.current.has(key)) {
+          return null
+        }
+        elementKeySet.current.add(key)
+
+        const childProps = {
+          ...props,
+          disableFullscreenMode,
+          node,
+        }
+
+        return <ElementNodeRenderer key={key} {...childProps} />
+      }
+
+      // Recursive case: render a block
+      if (node instanceof BlockNode) {
+        const childProps = {
+          ...props,
+          disableFullscreenMode,
+          node,
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        return <BlockNodeRenderer key={key} {...childProps} />
+      }
+
+      // We don't have any other node types!
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
+      throw new Error(`Unrecognized AppNode: ${node}`)
+    },
+    [libConfig.disableFullscreenMode, props]
+  )
+
+  // Reset elementKeySet on each render
+  useEffect(() => {
+    elementKeySet.current.clear()
+  })
+
+  // Enable virtual reconciliation for better state preservation
+  const enableReconciliation = props.node.deltaBlock.type !== "form" // Forms handle their own state
+
+  if (!props.node.children || props.node.children.length === 0) {
+    return <></>
+  }
 
   return (
-    <>
-      {props.node.children &&
-        props.node.children.map((node: AppNode, index: number): ReactNode => {
-          const disableFullscreenMode =
-            libConfig.disableFullscreenMode || props.disableFullscreenMode
-
-          // Base case: render a leaf node.
-          if (node instanceof ElementNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
-
-            const key = getElementId(node.element) || index.toString()
-            // Avoid rendering the same element twice. We assume the first one is the one we want
-            // because the page is rendered top to bottom, so a valid widget would be rendered
-            // correctly and we assume the second one is therefore stale (or throw an error).
-            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
-            // most recent one should always come first.
-            if (elementKeySet.has(key)) {
-              return null
-            }
-
-            elementKeySet.add(key)
-
-            return <ElementNodeRenderer key={key} {...childProps} />
-          }
-
-          // Recursive case: render a block, which can contain other blocks
-          // and elements.
-          if (node instanceof BlockNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
-
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
-            return <BlockNodeRenderer key={index} {...childProps} />
-          }
-
-          // We don't have any other node types!
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-          throw new Error(`Unrecognized AppNode: ${node}`)
-        })}
-    </>
+    <VirtualReconciler
+      nodes={props.node.children}
+      renderChild={renderChild}
+      scriptRunId={scriptRunId}
+      enableReconciliation={enableReconciliation}
+    />
   )
 }
 
