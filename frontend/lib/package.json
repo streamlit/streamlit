@@ -72,7 +72,7 @@
     "deck.gl": "^9.1.14",
     "dompurify": "^3.2.6",
     "hoist-non-react-statics": "^3.3.2",
-    "immer": "^10.1.1",
+    "immer": "^10.1.3",
     "json5": "^2.2.3",
     "katex": "^0.16.22",
     "lodash": "^4.17.21",
