@@ -326,7 +326,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         [
             ("options", ["a", "b"], ["a", "b", "c"]),
             ("accept_new_options", True, False),
-            ("format_func", lambda x: x.capitalize(), lambda x: x.upper()),
+            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -342,7 +342,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 "key": "selectbox_key_whitelist",
                 "options": ["a", "b"],
                 "accept_new_options": True,
-                "format_func": lambda x: x.capitalize(),
+                "format_func": lambda x: x.lower(),
             }
 
             base_kwargs[kwarg_name] = value1
