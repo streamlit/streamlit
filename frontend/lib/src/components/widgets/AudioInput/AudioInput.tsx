@@ -531,7 +531,7 @@ const AudioInput: React.FC<Props> = ({
 
   const stopRecording = useCallback(async () => {
     const recordPlugin = recordPluginRef.current
-    if (!recordPlugin || !recordPlugin.isRecording()) {
+    if (!recordPlugin?.isRecording()) {
       return
     }
 
