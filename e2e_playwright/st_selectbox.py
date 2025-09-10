@@ -163,7 +163,7 @@ if st.toggle("Update selectbox props"):
         format_func=lambda x: x.capitalize(),
         # options & accept_new_options are not yet supported for dynamic changes
         # keeping it at the same value for now:
-        options=["a", "b", "c"],
+        options=["apple", "banana", "orange"],
         accept_new_options=True,
     )
     st.write("Updated selectbox value:", sel_value)
@@ -181,7 +181,7 @@ else:
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
         format_func=lambda x: x.upper(),
-        options=["a", "b", "c"],
+        options=["apple", "banana", "orange"],
         accept_new_options=True,
     )
     st.write("Initial selectbox value:", sel_value)
