@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pandas as pd
+
 import streamlit as st
 
 with st.container(
@@ -157,3 +159,18 @@ with st.container(
     st.html('<div style="background:lightblue;">One</div>', width="content")
     st.html('<div style="background:lightblue;">Two</div>', width="content")
     st.html('<div style="background:lightblue;">Three</div>', width="content")
+
+with st.container(
+    horizontal_alignment="center", key="container-horizontal-centered-elements"
+):
+    st.image("https://static.streamlit.io/examples/dice.jpg")
+    st.dataframe(
+        pd.DataFrame(
+            {
+                "x": list(range(5)),
+                "y": [i * i for i in range(5)],
+            }
+        ),
+        width=250,
+    )
+    st.button("Details")
