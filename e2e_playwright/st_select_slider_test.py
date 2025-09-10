@@ -52,7 +52,9 @@ def test_select_slider_rendering(
         name="st_select_slider-label_collapsed",
     )
     assert_snapshot(
-        # Use pattern since the label is too complex:
+        # The label for this slider contains Markdown formatting and dynamic content,
+        # making it difficult to match with a simple string. Use a regex pattern to
+        # reliably select the slider by matching the beginning of the label.
         get_slider(themed_app, re.compile(r"^Label 12")),
         name="st_select_slider-markdown_label",
     )
