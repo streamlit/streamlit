@@ -92,8 +92,7 @@ runs:
               | sudo xargs -0 sed -i -E \
                 -e 's|mirror\+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu|g' \
                 -e 's|mirror://mirrors.ubuntu.com/mirrors.txt|http://archive.ubuntu.com/ubuntu|g' \
-                -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
-                -e 's|http://security.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'
+                -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'
             echo 'http://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
             sudo apt-get update
           fi
