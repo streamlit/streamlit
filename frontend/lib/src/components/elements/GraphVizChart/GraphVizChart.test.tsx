@@ -30,11 +30,15 @@ import GraphVizChart, { GraphVizChartProps, LOG } from "./GraphVizChart"
 vi.mock("d3-graphviz", () => ({
   graphviz: vi.fn().mockReturnValue({
     zoom: () => ({
-      fit: () => ({
-        scale: () => ({
-          engine: () => ({
-            renderDot: () => ({
-              on: vi.fn(),
+      width: () => ({
+        height: () => ({
+          fit: () => ({
+            scale: () => ({
+              engine: () => ({
+                renderDot: () => ({
+                  on: vi.fn(),
+                }),
+              }),
             }),
           }),
         }),
@@ -96,10 +100,14 @@ describe("GraphVizChart Element", () => {
     // Modify the graphviz mock to use the mockRenderDot
     ;(graphviz as Mock).mockReturnValue({
       zoom: () => ({
-        fit: () => ({
-          scale: () => ({
-            engine: () => ({
-              renderDot: mockRenderDot,
+        width: () => ({
+          height: () => ({
+            fit: () => ({
+              scale: () => ({
+                engine: () => ({
+                  renderDot: mockRenderDot,
+                }),
+              }),
             }),
           }),
         }),
