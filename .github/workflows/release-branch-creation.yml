@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           git checkout "${{ inputs.nightly_tag }}"
           echo "Checked out nightly ref: ${{ inputs.nightly_tag }}"
-          LAST_MSG=$(git log -1 --pretty=%B | sed -e 's/\r$//' || true)
+          LAST_MSG=$(git log -1 --pretty=%B | sed -e 's/\r$//')
           EXPECTED_MSG="Update version and project name in files"
           if [ "$LAST_MSG" != "$EXPECTED_MSG" ]; then
             echo "::error::The last commit message is not the expected nightly marker."
