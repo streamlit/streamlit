@@ -83,6 +83,32 @@ def send_notification() -> None:
                 "to update the emojis."
             }
 
+    # OSS Release automation notifications
+    if workflow == "release_automation":
+        repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
+        release_version = os.getenv("RELEASE_VERSION", "")
+
+        if message_key == "branch_created":
+            release_branch = os.getenv("RELEASE_BRANCH", "")
+            nightly_tag = os.getenv("NIGHTLY_TAG", "")
+            lines = [
+                ":evergreen_tree: Release branch created",
+                f"- Version: {release_version}" if release_version else None,
+                (
+                    f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+                    if repo and release_branch
+                    else None
+                ),
+                f"- Based on nightly: {nightly_tag}" if nightly_tag else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
     if payload:
         response = requests.post(webhook, json=payload)
 
