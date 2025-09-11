@@ -14,15 +14,8 @@
  * limitations under the License.
  */
 
-const { RuleTester } = require("eslint")
-const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    ecmaVersion: 2018,
-    sourceType: "module",
-  },
-})
+import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
+import { ruleTester } from "./utils/ruleTester"
 
 // Throws error if the tests do not pass
 ruleTester.run(
@@ -41,25 +34,23 @@ ruleTester.run(
       {
         code: "foo == null",
         output: "isNullOrUndefined(foo)",
-        errors: 1,
+        errors: [{ messageId: "useStrictEquality" }],
       },
       {
         code: "foo != null",
         output: "notNullOrUndefined(foo)",
-        errors: 1,
+        errors: [{ messageId: "useStrictEquality" }],
       },
       {
         code: "foo == undefined",
         output: "isNullOrUndefined(foo)",
-        errors: 1,
+        errors: [{ messageId: "useStrictEquality" }],
       },
       {
         code: "foo != undefined",
         output: "notNullOrUndefined(foo)",
-        errors: 1,
+        errors: [{ messageId: "useStrictEquality" }],
       },
     ],
   }
 )
-
-console.log("All 'use-strict-null-equality-checks' tests passed!")

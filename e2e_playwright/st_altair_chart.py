@@ -89,10 +89,8 @@ barley_chart = (
 # st.write("Grouped Bar Chart with streamlit theme:")  # noqa: ERA001
 # st.altair_chart(barley_chart, theme="streamlit")  # noqa: ERA001
 
-st.write(
-    "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)"
-)
-st.altair_chart(barley_chart, theme=None, use_container_width=True)
+# st.write( "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme=None, use_container_width=True)  # noqa: ERA001
 
 st.write("Layered chart")
 # Taken from vega_datasets

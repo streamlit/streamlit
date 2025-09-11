@@ -14,15 +14,8 @@
  * limitations under the License.
  */
 
-const { RuleTester } = require("eslint")
-const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    ecmaVersion: 2018,
-    sourceType: "module",
-  },
-})
+import noHardcodedThemeValues from "./no-hardcoded-theme-values"
+import { ruleTester } from "./utils/ruleTester"
 
 ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
   valid: [
@@ -107,53 +100,50 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
     {
       name: "color value should not be allowed",
       code: "var a = { color: 'red' };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "color value and line-height number should not be allowed",
       code: "var a = { color: 'red', lineHeight: 1.5 };",
-      errors: 2,
+      errors: [
+        { messageId: "noHardcodedTheme" },
+        { messageId: "noHardcodedTheme" },
+      ],
     },
     {
       name: "color value should not be allowed, but line-height value is allowed",
       code: "var a = { color: 'red', lineHeight: 'inherit' };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "number should not be allowed",
       code: "var a = { margin: 40 };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "zIndex is not allowed to have a number",
       code: "var a = { zIndex: 100 };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "percentages in non-numbers are disallowed",
       code: "var a = { color: theme.colors.primary, lineHeight: 'sneaky-non-number%' };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "rem unit with number is disallowed",
       code: "var a = { lineHeight: '1rem' };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
       name: "hardcoded fonts are not allowed",
       code: "var a = { font: 'Helvetica, Calibri, Roboto, \"Open Sans\", Arial, sans-serif' };",
-      errors: 1,
+      errors: [{ messageId: "noHardcodedTheme" }],
     },
     {
-      name: "template strings with valid values are allowed",
-      code: `var MyComponent = styled.div\`
-        color: 1px;
-        line-height: theme.lineHeights.body;
-        \`
-      `,
-      errors: 1,
+      name: "template strings with hardcoded values are not allowed",
+      code: "var MyComponent = styled.div`\n        color: 1px;\n        line-height: theme.lineHeights.body;\n        `",
+      errors: [{ messageId: "noHardcodedThemeTemplate" }],
     },
   ],
 })
-
-console.log("All 'no-hardcoded-theme-values' tests passed!")

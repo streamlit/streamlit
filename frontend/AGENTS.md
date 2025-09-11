@@ -15,6 +15,7 @@
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading).
 - Use the Receive an Object, Return an Object (RORO) pattern.
 - Ensure functions have explicit return types.
+- **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
 
 ## Key Frontend Principles
 

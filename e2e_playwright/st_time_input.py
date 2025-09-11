@@ -80,3 +80,37 @@ st.time_input(
 
 st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
 st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")
+
+st.markdown("Dynamic time input:")
+
+if st.toggle("Update time input props"):
+    tval = st.time_input(
+        "Updated dynamic time input",
+        value=time(10, 15),
+        width=200,
+        help="updated help",
+        key="dynamic_time_input_with_key",
+        on_change=lambda a, param: print(
+            f"Updated time input - callback triggered: {a} {param}"
+        ),
+        args=("Updated time arg",),
+        kwargs={"param": "updated kwarg param"},
+        # keep whitelisted 'step' stable across updates to preserve ID
+        step=60,
+    )
+    st.write("Updated time input value:", tval)
+else:
+    tval = st.time_input(
+        "Initial dynamic time input",
+        value=time(8, 45),
+        width="stretch",
+        help="initial help",
+        key="dynamic_time_input_with_key",
+        on_change=lambda a, param: print(
+            f"Initial time input - callback triggered: {a} {param}"
+        ),
+        args=("Initial time arg",),
+        kwargs={"param": "initial kwarg param"},
+        step=60,
+    )
+    st.write("Initial time input value:", tval)

@@ -489,9 +489,9 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize && validatedSize.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem")) {
     return validatedSize
-  } else if (validatedSize && validatedSize.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
