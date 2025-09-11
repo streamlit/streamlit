@@ -78,9 +78,11 @@ function GraphVizChart({
     try {
       const graphvizInstance = graphviz(`#${chartId}`).zoom(false)
 
-      // Only set dimensions if we have at least one valid dimension.
-      if (containerWidth > 0 || containerHeight > 0) {
+      // Set the dimensions explicitly when height stretching is enabled.
+      // This is necessary for height stretch to work properly in webkit.
+      if (heightConfig?.useStretch) {
         graphvizInstance
+          // We must also set width for the height stretch to work properly.
           .width(containerWidth < 0 ? 0 : containerWidth)
           .height(containerHeight < 0 ? 0 : containerHeight)
       }
@@ -100,6 +102,7 @@ function GraphVizChart({
     containerWidth,
     containerHeight,
     isFullScreen,
+    heightConfig?.useStretch,
   ])
 
   return (
