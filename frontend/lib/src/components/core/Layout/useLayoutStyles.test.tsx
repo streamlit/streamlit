@@ -423,15 +423,7 @@ describe("#useLayoutStyles", () => {
             flex: "0 0 200px",
           }),
         ],
-        [
-          0,
-          null,
-          getDefaultStyles({
-            height: "0px",
-            overflow: "auto",
-            flex: "0 0 0px",
-          }),
-        ],
+        [0, null, getDefaultStyles({})],
         [-100, null, getDefaultStyles({})],
         [NaN, null, getDefaultStyles({})],
         [
@@ -452,15 +444,7 @@ describe("#useLayoutStyles", () => {
             flex: "0 0 200px",
           }),
         ],
-        [
-          0,
-          undefined,
-          getDefaultStyles({
-            height: "0px",
-            overflow: "auto",
-            flex: "0 0 0px",
-          }),
-        ],
+        [0, undefined, getDefaultStyles({})],
         [-100, undefined, getDefaultStyles({})],
         [NaN, undefined, getDefaultStyles({})],
       ])(
