@@ -68,7 +68,7 @@ describe("#useLayoutStyles", () => {
 
       it.each([
         [undefined, getDefaultStyles({})],
-        [0, getDefaultStyles({ width: "0px" })],
+        [0, getDefaultStyles({})],
         [-100, getDefaultStyles({})],
         [NaN, getDefaultStyles({})],
         [100, getDefaultStyles({ width: "100px" })],
@@ -294,11 +294,9 @@ describe("#useLayoutStyles", () => {
           [100, false, null, getDefaultStyles({ width: "100px" })],
           [200, false, null, getDefaultStyles({ width: "200px" })],
           [100, true, null, getDefaultStyles({ width: "100%" })],
-          [0, false, null, getDefaultStyles({ width: "0px" })],
           [100, false, undefined, getDefaultStyles({ width: "100px" })],
           [200, false, undefined, getDefaultStyles({ width: "200px" })],
           [100, true, undefined, getDefaultStyles({ width: "100%" })],
-          [0, false, undefined, getDefaultStyles({ width: "0px" })],
         ])(
           "and with a width value of %s, useContainerWidth %s, and widthConfig %s, returns %o",
           (width, useContainerWidth, widthConfig, expected) => {
@@ -321,6 +319,8 @@ describe("#useLayoutStyles", () => {
 
       describe("with invalid width values", () => {
         it.each([
+          [0, false, null, getDefaultStyles({})],
+          [0, false, undefined, getDefaultStyles({})],
           [-100, false, null, getDefaultStyles({})],
           [-100, false, undefined, getDefaultStyles({})],
         ])(
@@ -484,14 +484,6 @@ describe("#useLayoutStyles", () => {
         it.each([
           [undefined, getDefaultStyles({})],
           [
-            0,
-            getDefaultStyles({
-              height: "0px",
-              overflow: "auto",
-              flex: "0 0 0px",
-            }),
-          ],
-          [
             100,
             getDefaultStyles({
               height: "100px",
@@ -514,6 +506,7 @@ describe("#useLayoutStyles", () => {
 
       describe("with invalid height values", () => {
         it.each([
+          [0, getDefaultStyles({})],
           [-100, getDefaultStyles({})],
           [NaN, getDefaultStyles({})],
         ])("and with a height value of %s, returns %o", (height, expected) => {
@@ -663,7 +656,6 @@ describe("#useLayoutStyles", () => {
         [
           { width: 0, height: 100 },
           getDefaultStyles({
-            width: "0px",
             height: "100px",
             overflow: "auto",
             flex: "0 0 100px",
@@ -673,9 +665,6 @@ describe("#useLayoutStyles", () => {
           { width: 100, height: 0 },
           getDefaultStyles({
             width: "100px",
-            height: "0px",
-            overflow: "auto",
-            flex: "0 0 0px",
           }),
         ],
       ])(

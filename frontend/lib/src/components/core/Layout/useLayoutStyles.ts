@@ -46,6 +46,9 @@ export type UseLayoutStylesArgs = {
 const isPositiveNumber = (value: unknown): value is number =>
   typeof value === "number" && value >= 0 && !isNaN(value)
 
+const isNonZeroPositiveNumber = (value: unknown): value is number =>
+  typeof value === "number" && value > 0 && !isNaN(value)
+
 enum DimensionType {
   PIXEL = "pixel",
   STRETCH = "stretch",
@@ -91,7 +94,10 @@ const getWidth = (
   ) {
     type = DimensionType.PIXEL
     pixels = subElement?.widthConfig?.pixelWidth
-  } else if (isPositiveNumber(subElement?.width) && !element.widthConfig) {
+  } else if (
+    isNonZeroPositiveNumber(subElement?.width) &&
+    !element.widthConfig
+  ) {
     pixels = subElement?.width
     type = DimensionType.PIXEL
   }
@@ -128,7 +134,10 @@ const getHeight = (
   } else if (isPixel && isPositiveNumber(element.heightConfig?.pixelHeight)) {
     type = DimensionType.PIXEL
     pixels = element.heightConfig?.pixelHeight
-  } else if (isPositiveNumber(subElement?.height) && !element.heightConfig) {
+  } else if (
+    isNonZeroPositiveNumber(subElement?.height) &&
+    !element.heightConfig
+  ) {
     pixels = subElement?.height
     type = DimensionType.PIXEL
   }
