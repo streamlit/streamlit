@@ -173,7 +173,7 @@ const SidebarNav = ({
     // Only count pages in expanded sections
     Object.entries(navigationStructure.sections).forEach(
       ([sectionName, pages]) => {
-        if (expandedSections && expandedSections[sectionName]) {
+        if (expandedSections?.[sectionName]) {
           count += pages.length
         }
       }
