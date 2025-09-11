@@ -544,7 +544,7 @@ describe("#useLayoutStyles", () => {
               height: "0px",
               overflow: "auto",
               flex: "0 0 0px",
-            }), // 0 is now valid
+            }),
           ],
         ])("and with element props %o, returns %o", (props, expected) => {
           const element = new MockElement({ heightConfig: props.heightConfig })
