@@ -86,14 +86,14 @@ runs:
         # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            # Rewrite all apt source files to use archive.ubuntu.com instead of Azure mirror
-            # and replace mirrorlist URIs so apt doesn't pick Azure from /etc/apt/apt-mirrors.txt.
-            sudo find /etc/apt -maxdepth 2 -type f \( -name '*.list' -o -name '*.sources' -o -name 'sources.list' \) -print0 \
-              | sudo xargs -0 sed -i -E \
-                -e 's|mirror\+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu|g' \
-                -e 's|mirror://mirrors.ubuntu.com/mirrors.txt|http://archive.ubuntu.com/ubuntu|g' \
-                -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'
-            echo 'http://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+            # Adjust apt mirror priorities to avoid slow Azure mirror (see
+            # https://github.com/actions/runner-images/issues/7048). Inspired by
+            # https://github.com/CrowdStrike/glide-core/pull/1113 and
+            # https://github.com/servo/servo/pull/39190 and
+            sudo sed -i '/archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:2/priority:0/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/azure.archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:0/priority:1/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/security.ubuntu.com\/ubuntu\/\tpriority/ s/priority:3/priority:2/' /etc/apt/apt-mirrors.txt
+            sudo cat /etc/apt/apt-mirrors.txt
             sudo apt-get update
           fi
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
