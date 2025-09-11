@@ -78,6 +78,8 @@ function GraphVizChart({
     try {
       graphviz(`#${chartId}`)
         .zoom(false)
+        .width(containerWidth < 0 ? 0 : containerWidth)
+        .height(containerHeight < 0 ? 0 : containerHeight)
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)
@@ -92,6 +94,8 @@ function GraphVizChart({
     containerWidth,
     containerHeight,
     isFullScreen,
+    shouldUseContainerWidth,
+    shouldUseContainerHeight,
   ])
 
   return (
