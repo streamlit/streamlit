@@ -72,6 +72,7 @@ w6 = st.select_slider(
     "Label 6 (hidden visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="hidden",
+    key="select_slider_hidden",
 )
 
 st.write("Value 6:", w6)
@@ -81,6 +82,7 @@ w7 = st.select_slider(
     "Label 7 (collapsed visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="collapsed",
+    key="select_slider_collapsed",
 )
 
 st.write("Value 7:", w7)
