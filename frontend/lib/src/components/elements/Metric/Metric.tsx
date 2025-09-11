@@ -36,10 +36,10 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
-  getMetricColor,
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
@@ -100,9 +100,13 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
-            opacity: 0.2,
+            // Controls the color of the shaded area of area chart (bg color)
+            color: getMetricBackgroundColor(theme, metricColor),
+            opacity: 1,
             line: {
+              // Controls the color of the line in area chart (main color)
               color: getMetricColor(theme, metricColor),
+              opacity: 1,
               strokeWidth: 2,
               strokeCap: "round",
             },

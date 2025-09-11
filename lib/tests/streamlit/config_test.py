@@ -544,6 +544,20 @@ class ConfigTest(unittest.TestCase):
                 "theme.greenColor",
                 "theme.violetColor",
                 "theme.grayColor",
+                "theme.redBackgroundColor",
+                "theme.orangeBackgroundColor",
+                "theme.yellowBackgroundColor",
+                "theme.blueBackgroundColor",
+                "theme.greenBackgroundColor",
+                "theme.violetBackgroundColor",
+                "theme.grayBackgroundColor",
+                "theme.redTextColor",
+                "theme.orangeTextColor",
+                "theme.yellowTextColor",
+                "theme.blueTextColor",
+                "theme.greenTextColor",
+                "theme.violetTextColor",
+                "theme.grayTextColor",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -571,6 +585,20 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.greenColor",
                 "theme.sidebar.violetColor",
                 "theme.sidebar.grayColor",
+                "theme.sidebar.redBackgroundColor",
+                "theme.sidebar.orangeBackgroundColor",
+                "theme.sidebar.yellowBackgroundColor",
+                "theme.sidebar.blueBackgroundColor",
+                "theme.sidebar.greenBackgroundColor",
+                "theme.sidebar.violetBackgroundColor",
+                "theme.sidebar.grayBackgroundColor",
+                "theme.sidebar.redTextColor",
+                "theme.sidebar.orangeTextColor",
+                "theme.sidebar.yellowTextColor",
+                "theme.sidebar.blueTextColor",
+                "theme.sidebar.greenTextColor",
+                "theme.sidebar.violetTextColor",
+                "theme.sidebar.grayTextColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -815,6 +843,20 @@ class ConfigTest(unittest.TestCase):
             "greenColor": None,
             "violetColor": None,
             "grayColor": None,
+            "redBackgroundColor": None,
+            "orangeBackgroundColor": None,
+            "yellowBackgroundColor": None,
+            "blueBackgroundColor": None,
+            "greenBackgroundColor": None,
+            "violetBackgroundColor": None,
+            "grayBackgroundColor": None,
+            "redTextColor": None,
+            "orangeTextColor": None,
+            "yellowTextColor": None,
+            "blueTextColor": None,
+            "greenTextColor": None,
+            "violetTextColor": None,
+            "grayTextColor": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -874,6 +916,20 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.greenColor", "green", "test")
         config._set_option("theme.violetColor", "violet", "test")
         config._set_option("theme.grayColor", "gray", "test")
+        config._set_option("theme.redBackgroundColor", "#ff8c8c", "test")
+        config._set_option("theme.orangeBackgroundColor", "#ffd16a", "test")
+        config._set_option("theme.yellowBackgroundColor", "#ffff59", "test")
+        config._set_option("theme.blueBackgroundColor", "#60b4ff", "test")
+        config._set_option("theme.greenBackgroundColor", "#5ce488", "test")
+        config._set_option("theme.violetBackgroundColor", "#b27eff", "test")
+        config._set_option("theme.grayBackgroundColor", "#bfc5d3", "test")
+        config._set_option("theme.redTextColor", "#ffabab", "test")
+        config._set_option("theme.orangeTextColor", "#ffe08e", "test")
+        config._set_option("theme.yellowTextColor", "#ffff7d", "test")
+        config._set_option("theme.blueTextColor", "#83c9ff", "test")
+        config._set_option("theme.greenTextColor", "#7defa1", "test")
+        config._set_option("theme.violetTextColor", "#c89dff", "test")
+        config._set_option("theme.grayTextColor", "#d5dae5", "test")
 
         expected = {
             "base": "dark",
@@ -923,6 +979,20 @@ class ConfigTest(unittest.TestCase):
             "greenColor": "green",
             "violetColor": "violet",
             "grayColor": "gray",
+            "redBackgroundColor": "#ff8c8c",
+            "orangeBackgroundColor": "#ffd16a",
+            "yellowBackgroundColor": "#ffff59",
+            "blueBackgroundColor": "#60b4ff",
+            "greenBackgroundColor": "#5ce488",
+            "violetBackgroundColor": "#b27eff",
+            "grayBackgroundColor": "#bfc5d3",
+            "redTextColor": "#ffabab",
+            "orangeTextColor": "#ffe08e",
+            "yellowTextColor": "#ffff7d",
+            "blueTextColor": "#83c9ff",
+            "greenTextColor": "#7defa1",
+            "violetTextColor": "#c89dff",
+            "grayTextColor": "#d5dae5",
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -961,6 +1031,20 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.greenColor", "#177233", "test")
         config._set_option("theme.sidebar.violetColor", "#3f3163", "test")
         config._set_option("theme.sidebar.grayColor", "#0e1117", "test")
+        config._set_option("theme.sidebar.redBackgroundColor", "#ff4b4b", "test")
+        config._set_option("theme.sidebar.orangeBackgroundColor", "#ffa421", "test")
+        config._set_option("theme.sidebar.yellowBackgroundColor", "#ffe312", "test")
+        config._set_option("theme.sidebar.blueBackgroundColor", "#1c83e1", "test")
+        config._set_option("theme.sidebar.greenBackgroundColor", "#21c354", "test")
+        config._set_option("theme.sidebar.violetBackgroundColor", "#803df5", "test")
+        config._set_option("theme.sidebar.grayBackgroundColor", "#808495", "test")
+        config._set_option("theme.sidebar.redTextColor", "#ff6c6c", "test")
+        config._set_option("theme.sidebar.orangeTextColor", "#ffbd45", "test")
+        config._set_option("theme.sidebar.yellowTextColor", "#fff835", "test")
+        config._set_option("theme.sidebar.blueTextColor", "#3d9df3", "test")
+        config._set_option("theme.sidebar.greenTextColor", "#3dd56d", "test")
+        config._set_option("theme.sidebar.violetTextColor", "#9a5dff", "test")
+        config._set_option("theme.sidebar.grayTextColor", "#a3a8b8", "test")
 
         expected = {
             "primaryColor": "#FFF000",
@@ -990,6 +1074,20 @@ class ConfigTest(unittest.TestCase):
             "greenColor": "#177233",
             "violetColor": "#3f3163",
             "grayColor": "#0e1117",
+            "redBackgroundColor": "#ff4b4b",
+            "orangeBackgroundColor": "#ffa421",
+            "yellowBackgroundColor": "#ffe312",
+            "blueBackgroundColor": "#1c83e1",
+            "greenBackgroundColor": "#21c354",
+            "violetBackgroundColor": "#803df5",
+            "grayBackgroundColor": "#808495",
+            "redTextColor": "#ff6c6c",
+            "orangeTextColor": "#ffbd45",
+            "yellowTextColor": "#fff835",
+            "blueTextColor": "#3d9df3",
+            "greenTextColor": "#3dd56d",
+            "violetTextColor": "#9a5dff",
+            "grayTextColor": "#a3a8b8",
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 

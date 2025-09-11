@@ -89,19 +89,39 @@ page14 = st.Page(page_14, title="page 14")
 hide_sidebar = st.checkbox("Hide sidebar")
 dynamic_nav = st.checkbox("Change navigation dynamically")
 expanded = st.checkbox("Expand navigation")
+test_mixed_sections = st.checkbox("Test Mixed Empty/Named Sections")
+test_empty_middle = st.checkbox("Test Empty Section in Middle")
+
+# Configure pages based on test mode
+if test_mixed_sections:
+    # Mixed empty and named sections
+    pages_config = {
+        "": [page2, page3],
+        "Admin": [page4, page5],
+        "Reports": [page6],
+    }
+elif test_empty_middle:
+    # Empty section in the middle of named sections
+    pages_config = {
+        "Section A": [page2, page3],
+        "": [page4, page5],
+        "Section B": [page6, page7],
+        "Section C": [page8, page9],
+    }
+elif dynamic_nav:
+    pages_config = [page2, page3, page5, page9]  # type: ignore
+else:
+    pages_config = {
+        "Section 1 - long title that should be truncated": [page2, page3],
+        "Section 2": [page4, page5],
+        "Section 3": [page6],
+        "Section 4": [page7, page8, page9],
+        "Section 5": [page10, page11, page12],
+        "Section 6": [page13, page14],
+    }
+
 pg = st.navigation(
-    (
-        [page2, page3, page5, page9]
-        if dynamic_nav
-        else {
-            "Section 1 - long title that should be truncated": [page2, page3],
-            "Section 2": [page4, page5],
-            "Section 3": [page6],
-            "Section 4": [page7, page8, page9],
-            "Section 5": [page10, page11, page12],
-            "Section 6": [page13, page14],
-        }
-    ),
+    pages_config,
     position="hidden" if hide_sidebar else "sidebar",
     expanded=expanded,
 )

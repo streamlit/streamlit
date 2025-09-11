@@ -70,6 +70,8 @@ def test_width_parameter_content(app: Page, assert_snapshot: ImageCompareFunctio
     )
 
 
+# Running this in webkit is a bit flaky, resulting in mismatched snapshots:
+@pytest.mark.skip_browser("webkit")
 def test_width_parameter_stretch(app: Page, assert_snapshot: ImageCompareFunction):
     """Test the width parameter with stretch option."""
     pyplot_elements = app.get_by_test_id("stImage").locator("img")

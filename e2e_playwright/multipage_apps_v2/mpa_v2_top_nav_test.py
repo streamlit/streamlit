@@ -256,8 +256,13 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     section_a.click()
 
     # Wait for popover to appear using proper expect
-    popover = app.get_by_test_id("stTopNavSection").filter(has_text="Page 1")
-    expect(popover).to_be_visible()
+    # The dropdown link should be visible after clicking the section
+    dropdown_link = app.get_by_test_id("stTopNavDropdownLink").filter(has_text="Page 1")
+    expect(dropdown_link).to_be_visible()
+
+    # Get the visible popover container by its test ID
+    # There are multiple popovers (one per section), so we need the visible one
+    popover = app.get_by_test_id("stTopNavPopover").locator("visible=true")
     assert_snapshot(popover, name="st_navigation-top_nav_section_popover")
 
     # Test single section
@@ -283,13 +288,141 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     expect(page3_in_popover).to_be_visible()
 
     # Take screenshot of single section popover
-    single_section_popover = app.get_by_test_id("stTopNavSection").filter(
+    # Get one of the dropdown links to locate the popover container
+    dropdown_link_in_single = app.get_by_test_id("stTopNavDropdownLink").filter(
         has_text="Page 1"
     )
-    expect(single_section_popover).to_be_visible()
+    expect(dropdown_link_in_single).to_be_visible()
+
+    # Get the popover container by its test ID
+    # For single section there's only one popover but we use .first for consistency
+    single_section_popover = app.get_by_test_id("stTopNavPopover").first
     assert_snapshot(
         single_section_popover, name="st_navigation-top_nav_single_section_popover"
     )
+
+
+def test_mixed_empty_and_named_sections(app: Page):
+    """Test top navigation with mixed empty and named sections.
+
+    This tests the issue #12243 scenario where some sections have names
+    and some sections are empty (""). The empty section pages should appear
+    at the top level of navigation while named sections should have dropdowns.
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    # Enable mixed sections test mode
+    click_checkbox(app, "Test Mixed Empty/Named Sections")
+    wait_for_app_run(app)
+
+    # Verify that empty section pages appear as top-level nav items
+    home_nav = app.get_by_test_id("stTopNavLink").filter(has_text="Home")
+    dashboard_nav = app.get_by_test_id("stTopNavLink").filter(has_text="Dashboard")
+    expect(home_nav).to_be_visible()
+    expect(dashboard_nav).to_be_visible()
+
+    # Verify that named sections appear as section triggers
+    admin_trigger = app.get_by_text("Admin").first
+    reports_trigger = app.get_by_text("Reports").first
+    expect(admin_trigger).to_be_visible()
+    expect(reports_trigger).to_be_visible()
+
+    # Click on a top-level page (from empty section)
+    dashboard_nav.click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 2")).to_be_visible()
+
+    # Click on Admin section to open dropdown
+    admin_trigger.click()
+
+    # Wait for Admin section pages to be visible
+    settings_link = app.get_by_role("link", name="Settings")
+    users_link = app.get_by_role("link", name="Users")
+    expect(settings_link).to_be_visible()
+    expect(users_link).to_be_visible()
+
+    # Navigate to Settings page
+    settings_link.click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 3")).to_be_visible()
+
+    # Click on Reports section
+    reports_trigger.click()
+
+    # Verify Reports section has only one page
+    analytics_link = app.get_by_role("link", name="Analytics")
+    expect(analytics_link).to_be_visible()
+
+    # Navigate to Analytics
+    analytics_link.click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 5")).to_be_visible()
+
+    # Navigate back to a top-level page to verify mixed navigation still works
+    home_nav.click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
+
+
+def test_mixed_sections_visual_regression(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for mixed empty and named sections navigation.
+
+    Verifies the visual appearance of top navigation when configuration includes
+    both empty sections (pages at top level) and named sections (with dropdowns).
+    Tests navigation bar rendering, dropdown popovers, and hover states.
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    # Enable mixed sections test mode
+    click_checkbox(app, "Test Mixed Empty/Named Sections")
+    wait_for_app_run(app)
+
+    # Wait for navigation to stabilize
+    home_nav = app.get_by_test_id("stTopNavLink").filter(has_text="Home")
+    expect(home_nav).to_be_visible()
+
+    # Take screenshot of mixed navigation bar
+    nav_area = app.locator("header").first
+    assert_snapshot(nav_area, name="st_navigation-mixed_sections_nav_bar")
+
+    # Open Admin dropdown and capture popover
+    admin_trigger = app.get_by_text("Admin").first
+    admin_trigger.click()
+
+    # Wait for dropdown to open
+    settings_link = app.get_by_role("link", name="Settings")
+    expect(settings_link).to_be_visible()
+
+    # Capture Admin section popover
+    admin_popover = app.get_by_test_id("stTopNavPopover").locator("visible=true")
+    assert_snapshot(admin_popover, name="st_navigation-mixed_sections_admin_popover")
+
+    # Close Admin dropdown by clicking elsewhere
+    app.get_by_test_id("stMain").click()
+
+    # Open Reports dropdown
+    reports_trigger = app.get_by_text("Reports").first
+    reports_trigger.click()
+
+    # Wait for Reports dropdown
+    analytics_link = app.get_by_role("link", name="Analytics")
+    expect(analytics_link).to_be_visible()
+
+    # Capture Reports section popover (single item)
+    reports_popover = app.get_by_test_id("stTopNavPopover").locator("visible=true")
+    assert_snapshot(
+        reports_popover, name="st_navigation-mixed_sections_reports_popover"
+    )
+
+    # Test hover state on mixed navigation
+    home_nav.hover()
+    assert_snapshot(nav_area, name="st_navigation-mixed_sections_hover_home")
+
+    # Hover on a section trigger
+    admin_trigger.hover()
+    assert_snapshot(nav_area, name="st_navigation-mixed_sections_hover_admin")
 
 
 def test_mobile_sidebar_overlay_visual(

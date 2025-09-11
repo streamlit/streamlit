@@ -143,7 +143,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hasSidebarElements: false,
   endpoints: mockEndpoints(),
   onPageChange: vi.fn(),
-  navSections: [],
   currentPageScriptHash: "",
   expandSidebarNav: false,
   ...props,
@@ -388,7 +387,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
@@ -438,7 +436,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
@@ -462,11 +459,14 @@ describe("SidebarNav", () => {
     const appPages = createAppPagesForSections(sectionPageCounts)
     const navSections = Object.keys(sectionPageCounts)
 
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({ navSections })
+    )
+
     render(
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections,
           appPages,
         })}
       />
@@ -512,7 +512,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2", "section 3"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2", "section 3"],
           }),

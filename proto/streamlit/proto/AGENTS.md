@@ -1,0 +1,24 @@
+# Protobuf
+
+## Protobuf Compatibility
+
+Always keep Streamlit's protobuf messages backwards compatible. New versions of the protobuf messages must work with
+old versions of Streamlit. Thereby, we can assume that the backend and frontend version are the same. All changes
+that would not work with an older Streamlit version are incompatible and should be avoided as much as possible.
+
+Typical incompatible changes are:
+
+- Removing a field → instead add a `// DEPRECATED` comment and mark is as `[deprecated=true]`
+- Renaming a field → instead deprecate it and introduce a new field with a *new* number
+- Changing the number of a field -> all field numbers must be kept as is.
+- Adding or removing the `optional` keyword -> deprecate field and add a new one.
+- Changing the type of a field in an incompatible way → see the @Protobuf docs for message types for more details.
+
+## Compile Protobuf
+
+If you ever modify our protobufs, you'll need to run the command below to compile the
+protos into libraries that can be used in Python and JS:
+
+```bash
+make protobuf
+```

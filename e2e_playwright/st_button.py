@@ -105,6 +105,8 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Stretch Width", width="stretch")
     st.button("200px Width", width=200)
 
+st.markdown("Dynamic button props:")
+
 if st.toggle("Update button props"):
     clicked = st.button(
         "Updated dynamic button",

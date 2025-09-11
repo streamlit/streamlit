@@ -1255,7 +1255,7 @@ function DataFrame({
             })}
         />
       </Resizable>
-      {tooltip && tooltip.content && (
+      {tooltip?.content && (
         <Tooltip
           top={tooltip.top}
           left={tooltip.left}
