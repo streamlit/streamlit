@@ -210,7 +210,7 @@ def test_height_stretch(app: Page, assert_snapshot: ImageCompareFunction):
             return False
         # The container has height=400px, so the SVG should be significantly larger than default
         # Default height is typically much smaller (around 116pt ≈ 155px from the first graph test)
-        return svg_dimensions["height"] > 300
+        return svg_dimensions["height"] > 300 and svg_dimensions["width"] > 300
 
     print("Starting wait_until for stretched dimensions...")
     wait_until(app, check_stretched_dimensions)
