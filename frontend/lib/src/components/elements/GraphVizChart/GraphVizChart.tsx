@@ -76,10 +76,16 @@ function GraphVizChart({
 
   useEffect(() => {
     try {
-      graphviz(`#${chartId}`)
-        .zoom(false)
-        .width(containerWidth < 0 ? 0 : containerWidth)
-        .height(containerHeight < 0 ? 0 : containerHeight)
+      const graphvizInstance = graphviz(`#${chartId}`).zoom(false)
+
+      // Only set dimensions if we have at least one valid dimension.
+      if (containerWidth > 0 || containerHeight > 0) {
+        graphvizInstance
+          .width(containerWidth < 0 ? 0 : containerWidth)
+          .height(containerHeight < 0 ? 0 : containerHeight)
+      }
+
+      graphvizInstance
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)
