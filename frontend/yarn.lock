@@ -3657,7 +3657,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     ua-parser-js: "npm:^1.0.41"
     util: "npm:^0.12.5"
-    uuid: "npm:^11.1.0"
+    uuid: "npm:^12.0.0"
     vite: "npm:^7.1.5"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3809,7 +3809,7 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.0.0"
     urlpattern-polyfill: "npm:^10.1.0"
-    uuid: "npm:^11.1.0"
+    uuid: "npm:^12.0.0"
     vega: "npm:^6.1.2"
     vega-embed: "npm:^7.0.2"
     vega-interpreter: "npm:^2.0.0"
@@ -20313,12 +20313,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^11.1.0":
-  version: 11.1.0
-  resolution: "uuid@npm:11.1.0"
+"uuid@npm:^12.0.0":
+  version: 12.0.0
+  resolution: "uuid@npm:12.0.0"
   bin:
-    uuid: dist/esm/bin/uuid
-  checksum: 10c0/34aa51b9874ae398c2b799c88a127701408cd581ee89ec3baa53509dd8728cbb25826f2a038f9465f8b7be446f0fbf11558862965b18d21c993684297628d4d3
+    uuid: dist/bin/uuid
+  checksum: 10c0/242db6735d15a187a0d7f22576db02668f974ffc65d0806b23fe4237cbb0db3153442cb3082c7550784acb6272e5c6c931532916f9604bd814dfab1edf2dac40
   languageName: node
   linkType: hard
 
