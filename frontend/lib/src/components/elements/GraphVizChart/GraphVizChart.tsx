@@ -94,8 +94,6 @@ function GraphVizChart({
     containerWidth,
     containerHeight,
     isFullScreen,
-    shouldUseContainerWidth,
-    shouldUseContainerHeight,
   ])
 
   return (
