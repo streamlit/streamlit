@@ -87,9 +87,9 @@ def send_notification() -> None:
     if workflow == "release_automation":
         repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
         release_version = os.getenv("RELEASE_VERSION", "")
+        release_branch = os.getenv("RELEASE_BRANCH", "")
 
         if message_key == "branch_created":
-            release_branch = os.getenv("RELEASE_BRANCH", "")
             nightly_tag = os.getenv("NIGHTLY_TAG", "")
             lines = [
                 ":evergreen_tree: Release branch created",
@@ -111,7 +111,6 @@ def send_notification() -> None:
 
         # OSS Patch cherry-pick notifications
         if message_key == "patch_cherry_pick_success":
-            release_branch = os.getenv("RELEASE_BRANCH", "")
             commit_sha = os.getenv("CHERRY_PICK_SHA", "")
             lines = [
                 ":cherries: Patch cherry-pick succeeded",
@@ -144,6 +143,11 @@ def send_notification() -> None:
                 (
                     f"- Commit: https://github.com/{repo}/commit/{commit_sha}"
                     if repo and commit_sha
+                    else None
+                ),
+                (
+                    f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+                    if repo and release_branch
                     else None
                 ),
                 (
