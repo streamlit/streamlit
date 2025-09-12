@@ -65,10 +65,8 @@ jobs:
       - name: Validate inputs and repository state
         run: |
           set -euo pipefail
-          git fetch --prune --tags --force origin
-
-          # Ensure target branch exists on origin
-          if ! git ls-remote --heads origin | grep -q "refs/heads/${{ steps.vars.outputs.release_branch }}$"; then
+          # Ensure target branch exists on origin by attempting a shallow fetch of that branch
+          if ! git fetch --no-tags --depth=1 origin "${{ steps.vars.outputs.release_branch }}"; then
             echo "::error::Branch '${{ steps.vars.outputs.release_branch }}' does not exist on origin" >&2
             exit 1
           fi
