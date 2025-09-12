@@ -109,6 +109,53 @@ def send_notification() -> None:
             text = "\n".join([ln for ln in lines if ln])
             payload = {"text": text}
 
+        # OSS Patch cherry-pick notifications
+        if message_key == "patch_cherry_pick_success":
+            release_branch = os.getenv("RELEASE_BRANCH", "")
+            commit_sha = os.getenv("CHERRY_PICK_SHA", "")
+            lines = [
+                ":cherries: Patch cherry-pick succeeded",
+                f"- Version: {release_version}" if release_version else None,
+                (
+                    f"- Commit: https://github.com/{repo}/commit/{commit_sha}"
+                    if repo and commit_sha
+                    else None
+                ),
+                (
+                    f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+                    if repo and release_branch
+                    else None
+                ),
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
+        if message_key == "patch_cherry_pick_failed":
+            commit_sha = os.getenv("CHERRY_PICK_SHA", "")
+            error_reason = os.getenv("ERROR_REASON", "")
+            lines = [
+                ":x: Patch cherry-pick failed due to merge conflicts",
+                f"- Version: {release_version}" if release_version else None,
+                (
+                    f"- Commit: https://github.com/{repo}/commit/{commit_sha}"
+                    if repo and commit_sha
+                    else None
+                ),
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+                (f"- Note: {error_reason}" if error_reason else None),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
     if payload:
         response = requests.post(webhook, json=payload)
 
