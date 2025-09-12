@@ -204,11 +204,7 @@ def to_snake_case(camel_case_str: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-RealNumber: TypeAlias = Union[
-    "np.integer[Any]",
-    "np.floating[Any]",
-    numbers.Real,
-]
+RealNumber: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", numbers.Number]
 
 
 def from_number(value: RealNumber) -> str:
@@ -216,9 +212,9 @@ def from_number(value: RealNumber) -> str:
 
     Parameters
     ----------
-    value : StringCastableNumber
+    value : RealNumber
         The numeric value to convert to a string. Can be an ``int``, ``float``,
-        any ``numbers.Real`` (e.g., ``decimal.Decimal``), or a NumPy numeric type
+        any ``numbers.Number`` (e.g., ``decimal.Decimal``), or a NumPy numeric type
         with an ``item()`` method.
 
     Returns
@@ -231,7 +227,7 @@ def from_number(value: RealNumber) -> str:
     TypeError
         If the value is not of an accepted real numeric type.
     """
-    if isinstance(value, numbers.Real):
+    if isinstance(value, numbers.Number):
         return str(value)
     if hasattr(value, "item"):
         # Add support for numpy values (e.g. int16, float64, etc.)
