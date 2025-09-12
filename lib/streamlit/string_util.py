@@ -244,5 +244,6 @@ def from_number(value: RealNumber) -> str:
             pass
 
     raise TypeError(
-        f"'{value}' is of type {type(value)}, which is not a known numeric type."
+        f"'{value}' is of type {type(value)}, which is not an accepted type. "
+        "Please convert the value to an accepted real number type."
     )
