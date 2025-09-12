@@ -91,11 +91,8 @@ jobs:
               per_page: 100,
             });
 
-            const candidates = Array.isArray(pulls) ? pulls.filter(p => p && p.base && p.head && p.base.ref === base && p.head.ref === head) : [];
-
-            if (candidates.length > 0) {
-              candidates.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-              const existing = candidates[0];
+            const existing = pulls.find(p => p.base.ref === base && p.head.ref === head);
+            if (existing) {
               core.setFailed(`Open PR already exists for ${head} -> ${base}: ${existing.html_url}`);
             }
         env:
