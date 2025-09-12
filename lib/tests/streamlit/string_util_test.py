@@ -152,6 +152,7 @@ class StringUtilTest(unittest.TestCase):
         assert "not a valid Material icon." in str(e.value)
 
     def test_from_number(self):
+        """Test that from_number returns correct string representations for numeric types."""
         assert string_util.from_number(1) == "1"
         assert string_util.from_number(1.0) == "1.0"
         assert string_util.from_number(decimal.Decimal("1.0")) == "1.0"
