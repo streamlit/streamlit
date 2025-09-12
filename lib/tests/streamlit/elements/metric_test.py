@@ -224,7 +224,7 @@ class MetricTest(DeltaGeneratorTestCase):
             st.metric("Testing", [1, 2, 3])
 
         assert str(exc.value) == (
-            "'[1, 2, 3]' is of type <class 'list'>, which is not a known numeric type."
+            "'[1, 2, 3]' is not an accepted type. Please convert the value to an accepted real number type."
         )
 
     def test_invalid_delta(self):
