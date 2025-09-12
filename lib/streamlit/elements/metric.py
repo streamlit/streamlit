@@ -36,14 +36,14 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import StringCastableNumber, clean_text, from_number
+from streamlit.string_util import RealNumber, clean_text, from_number
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union[StringCastableNumber, str, None]
-Delta: TypeAlias = Union[float, int, str, None]
+Value: TypeAlias = Union[RealNumber, str, None]
+Delta: TypeAlias = Union[RealNumber, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
@@ -96,10 +96,10 @@ class MetricMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        value : int, float, str, or None
-             Value of the metric. None is rendered as a long dash.
+        value : int, float, decimal.Decimal, str, or None
+             Value of the metric. ``None`` is rendered as a long dash.
 
-        delta : int, float, str, or None
+        delta : int, float, decimal.Decimal, str, or None
             Indicator of how the metric changed, rendered with an arrow below
             the metric. If delta is negative (int/float) or starts with a minus
             sign (str), the arrow points down and the text is red; else the
@@ -346,13 +346,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    if isinstance(delta, (int, float)):
-        return str(delta)
-    raise TypeError(
-        f"'{delta}' is of type {type(delta)}, which is not an accepted type."
-        " delta only accepts: int, float, str, or None."
-        " Please convert the value to an accepted type."
-    )
+    return from_number(delta)
 
 
 def _determine_delta_color_and_direction(
