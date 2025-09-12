@@ -157,5 +157,6 @@ class StringUtilTest(unittest.TestCase):
         assert string_util.from_number(decimal.Decimal("1.0")) == "1.0"
 
     def test_from_number_invalid_object_exception(self):
+        """Test that from_number raises TypeError for invalid objects."""
         with pytest.raises(TypeError):
             string_util.from_number(None)
