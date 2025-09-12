@@ -52,37 +52,28 @@ jobs:
       - name: Validate inputs and branch existence
         run: |
           set -euo pipefail
+
+          # Ensure the release version is a valid semver
           if ! echo "${{ inputs.release_version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::release_version must be full semver (i.j.k). Got '${{ inputs.release_version }}'" >&2
             exit 1
           fi
+
           # Ensure the release branch exists remotely
           if ! git ls-remote --heads origin | grep -q "refs/heads/release/${{ inputs.release_version }}$"; then
             echo "::error::Branch release/${{ inputs.release_version }} not found on origin. Run Release Branch Creation first." >&2
             exit 1
           fi
+
           # Ensure the tag doesn't already exist remotely
           if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.release_version }}$"; then
             echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
             exit 1
           fi
 
-      - name: Switch to release branch
+      - name: Check for existing open PR for release
         if: ${{ inputs.dry_run != true }}
-        run: |
-          git fetch origin "release/${{ inputs.release_version }}:release/${{ inputs.release_version }}"
-          git switch "release/${{ inputs.release_version }}"
-
-      - name: Create annotated tag for the release
-        if: ${{ inputs.dry_run != true }}
-        run: |
-          set -euo pipefail
-          git tag -a "${{ inputs.release_version }}" -m "Streamlit ${{ inputs.release_version }}"
-          git push origin "refs/tags/${{ inputs.release_version }}"
-
-      - name: Create PR to merge release branch into develop
-        id: create_pr
-        if: ${{ inputs.dry_run != true }}
+        id: check_existing_pr
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -97,29 +88,75 @@ jobs:
               state: 'open',
               head: `${context.repo.owner}:${head}`,
               base,
+              per_page: 100,
             });
 
-            let pr = pulls && pulls.length > 0 ? pulls[0] : null;
+            const candidates = Array.isArray(pulls) ? pulls.filter(p => p && p.base && p.head && p.base.ref === base && p.head.ref === head) : [];
 
-            if (!pr) {
-              const title = `[chore] Release v${releaseVersion}`;
-              const body = [
-                `Automated PR to merge release branch into ${base}.`,
-                `Release version: ${releaseVersion}`,
-              ].join('\n\n');
-
-              const created = await github.rest.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                head,
-                base,
-                body,
-                draft: false,
-              });
-
-              pr = created.data;
+            if (candidates.length > 0) {
+              candidates.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+              const existing = candidates[0];
+              core.setFailed(`Open PR already exists for ${head} -> ${base}: ${existing.html_url}`);
             }
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+
+      - name: Switch to release branch
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git fetch origin "release/${{ inputs.release_version }}:release/${{ inputs.release_version }}"
+          git switch "release/${{ inputs.release_version }}"
+
+      - name: Create annotated tag for the release
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+
+          # Verify the tag will be created from the expected commit on the remote release branch
+          expected_commit_sha="$(git ls-remote --heads origin "release/${{ inputs.release_version }}" | awk '{print $1}')"
+          if [ -z "${expected_commit_sha}" ]; then
+            echo "::error::Unable to resolve origin/release/${{ inputs.release_version }} commit" >&2
+            exit 1
+          fi
+
+          current_head_sha="$(git rev-parse HEAD)"
+          if [ "${current_head_sha}" != "${expected_commit_sha}" ]; then
+            echo "::error::Current HEAD (${current_head_sha}) does not match origin/release/${{ inputs.release_version }} (${expected_commit_sha}). Aborting tag creation." >&2
+            exit 1
+          fi
+
+          # Create the tag explicitly on the verified commit
+          git tag -a "${{ inputs.release_version }}" "${expected_commit_sha}" -m "Streamlit ${{ inputs.release_version }}"
+          git push origin "refs/tags/${{ inputs.release_version }}"
+
+      - name: Create PR to merge release branch into develop
+        id: create_pr
+        if: ${{ inputs.dry_run != true }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const releaseVersion = process.env.RELEASE_VERSION;
+            const head = `release/${releaseVersion}`;
+            const base = 'develop';
+
+            const title = `[chore] Release v${releaseVersion}`;
+            const body = [
+              `Automated PR to merge release branch into ${base}.`,
+              `Release version: ${releaseVersion}`,
+            ].join('\n\n');
+
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body,
+              draft: false,
+            });
+
+            const pr = created.data;
 
             core.setOutput('pr_url', pr.html_url);
 
