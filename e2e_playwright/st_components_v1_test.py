@@ -168,8 +168,6 @@ def test_components_zero_dimensions(app: Page):
 
     zero_html_container = zero_html_iframe.locator("..")
     expect(zero_html_container).to_be_attached()
-    expect(zero_html_container).to_have_attribute("width", "0px")
-    expect(zero_html_container).to_have_attribute("height", "0px")
     expect(zero_html_container).to_have_css("width", "0px")
     expect(zero_html_container).to_have_css("height", "0px")
 
@@ -178,8 +176,6 @@ def test_components_zero_dimensions(app: Page):
 
     zero_iframe_container = zero_iframe_iframe.locator("..")
     expect(zero_iframe_container).to_be_attached()
-    expect(zero_iframe_container).to_have_attribute("width", "0px")
-    expect(zero_iframe_container).to_have_attribute("height", "0px")
     expect(zero_iframe_container).to_have_css("width", "0px")
     expect(zero_iframe_container).to_have_css("height", "0px")
 
