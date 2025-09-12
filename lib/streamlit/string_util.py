@@ -204,7 +204,9 @@ def to_snake_case(camel_case_str: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-AnyNumber: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", numbers.Number]
+AnyNumber: TypeAlias = Union[
+    "np.integer[Any]", "np.floating[Any]", int, float, numbers.Number
+]
 
 
 def from_number(value: AnyNumber) -> str:
