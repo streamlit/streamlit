@@ -112,7 +112,7 @@ def send_notification() -> None:
         elif message_key == "tag_pr_created":
             pr_url = os.getenv("PR_URL", "")
             tag_url = (
-                f"https://github.com/{repo}/releases/tag/{release_version}"
+                f"https://github.com/{repo}/tree/{release_version}"
                 if repo and release_version
                 else ""
             )
