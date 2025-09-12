@@ -204,15 +204,15 @@ def to_snake_case(camel_case_str: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-RealNumber: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", numbers.Number]
+AnyNumber: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", numbers.Number]
 
 
-def from_number(value: RealNumber) -> str:
+def from_number(value: AnyNumber) -> str:
     """Render a real numeric type as a string for display.
 
     Parameters
     ----------
-    value : RealNumber
+    value : AnyNumber
         The numeric value to convert to a string. Can be an ``int``, ``float``,
         any ``numbers.Number`` (e.g., ``decimal.Decimal``), or a NumPy numeric type
         with an ``item()`` method.
@@ -225,7 +225,7 @@ def from_number(value: RealNumber) -> str:
     Raises
     ------
     TypeError
-        If the value is not of an accepted real numeric type.
+        If the value is not of an accepted numeric type.
     """
     if isinstance(value, numbers.Number):
         return str(value)
@@ -241,5 +241,5 @@ def from_number(value: RealNumber) -> str:
 
     raise TypeError(
         f"'{value}' is of type {type(value)}, which is not an accepted type. "
-        "Please convert the value to an accepted real number type."
+        "Please convert the value to an accepted number type."
     )

@@ -36,14 +36,14 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import RealNumber, clean_text, from_number
+from streamlit.string_util import AnyNumber, clean_text, from_number
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union[RealNumber, str, None]
-Delta: TypeAlias = Union[RealNumber, str, None]
+Value: TypeAlias = Union[AnyNumber, str, None]
+Delta: TypeAlias = Union[AnyNumber, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
