@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import decimal
+import fractions
 import numbers
 import re
 import textwrap
@@ -205,7 +207,14 @@ def to_snake_case(camel_case_str: str) -> str:
 
 
 AnyNumber: TypeAlias = Union[
-    "np.integer[Any]", "np.floating[Any]", int, float, numbers.Number
+    "np.integer[Any]",
+    "np.floating[Any]",
+    int,
+    float,
+    decimal.Decimal,
+    fractions.Fraction,
+    numbers.Real,
+    numbers.Number,
 ]
 
 
