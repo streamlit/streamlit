@@ -114,20 +114,26 @@ def configurator_options(func: F) -> F:
 def _download_remote(main_script_path: str, url_path: str) -> None:
     """Fetch remote file at url_path to main_script_path."""
     import requests
+    from requests.exceptions import RequestException
 
     with open(main_script_path, "wb") as fp:
         try:
             resp = requests.get(url_path, timeout=30)
             resp.raise_for_status()
             fp.write(resp.content)
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
-
-@click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
+@click.group(
+    context_settings={
+        "auto_envvar_prefix": "STREAMLIT",
+        "help_option_names": ["-h", "--help"],
+    }
+)
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
-def main(log_level: str = "info") -> None:
+@click.pass_context
+def main(ctx: click.Context, log_level: str = "info") -> None:
     """Try out a demo with:
 
         $ streamlit hello
@@ -139,13 +145,11 @@ def main(log_level: str = "info") -> None:
 
     if log_level:
         from streamlit.logger import get_logger
-
         logger: Final = get_logger(__name__)
         logger.warning(
             "Setting the log level using the --log_level flag is unsupported."
             "\nUse the --logger.level flag (after your streamlit command) instead."
         )
-
 
 @main.command("help")
 def help() -> None:  # noqa: A001
@@ -194,7 +198,7 @@ def main_hello(**kwargs: Any) -> None:
 
 @main.command("run")
 @configurator_options
-@click.option("-hd", "--headless", is_flag=True,  default=None, help="Run in headless mode")
+@click.option("-H", "--headless", is_flag=True,  default=None, help="Run in headless mode")
 @click.option("-r", "--run-on-save", is_flag=True,  default=None, help="Run on save")
 @click.option("-p", "--port", type=int,  default=None, help="Port to listen on")
 @click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")

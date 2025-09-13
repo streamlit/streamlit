@@ -367,6 +367,20 @@ class CliTest(unittest.TestCase):
             self.runner.invoke(cli, ["help"])
             assert args[1] == "--help"
 
+    def test_short_help_flag_displays_help(self):
+        """`streamlit -h` should display help text."""
+        result = self.runner.invoke(cli, ["-h"])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Usage:", result.output)
+        self.assertIn("Commands:", result.output)
+
+    def test_short_help_flag_with_extra_command_ignored(self):
+        """`streamlit -h run -H -r` should still only display help and exit 0."""
+        result = self.runner.invoke(cli, ["-h", "run", "-H", "-r"])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Usage:", result.output)
+        self.assertIn("Commands:", result.output)
+
     def test_version_command(self):
         """Tests the version command redirects to using the --version flag"""
         with patch.object(sys, "argv", ["streamlit", "version"]) as args:
