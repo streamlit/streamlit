@@ -16,8 +16,12 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.vega_utils import (
+    assert_vega_chart_height,
+    assert_vega_chart_width,
+)
 
-TOTAL_BAR_CHARTS = 19
+TOTAL_BAR_CHARTS = 28
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -25,8 +29,10 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     bar_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(bar_chart_elements).to_have_count(TOTAL_BAR_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
-    expect(bar_chart_elements.locator("canvas")).to_have_count(TOTAL_BAR_CHARTS)
+    # Also make sure that all Vega display objects are rendered:
+    expect(bar_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_BAR_CHARTS
+    )
 
     # Take individual snapshots for each chart with meaningful names
     assert_snapshot(bar_chart_elements.nth(0), name="st_bar_chart-empty_chart")
@@ -53,7 +59,28 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(bar_chart_elements.nth(15), name="st_bar_chart-stacked_normalize")
     assert_snapshot(bar_chart_elements.nth(16), name="st_bar_chart-stacked_center")
     assert_snapshot(bar_chart_elements.nth(17), name="st_bar_chart-stacked_layered")
-    # The add_rows chart (index 18) is tested separately in test_add_rows_preserves_styling
+    # Sort behavior snapshots
+    assert_snapshot(bar_chart_elements.nth(18), name="st_bar_chart-sort_false")
+    assert_snapshot(bar_chart_elements.nth(19), name="st_bar_chart-sort_true")
+    assert_snapshot(
+        bar_chart_elements.nth(20), name="st_bar_chart-sort_by_categories_asc"
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(21), name="st_bar_chart-sort_by_categories_desc"
+    )
+    assert_snapshot(bar_chart_elements.nth(22), name="st_bar_chart-sort_by_values_asc")
+    assert_snapshot(bar_chart_elements.nth(23), name="st_bar_chart-sort_by_values_desc")
+    assert_snapshot(
+        bar_chart_elements.nth(24), name="st_bar_chart-sort_by_other_column_asc"
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(25),
+        name="st_bar_chart-horizontal_sort_by_categories_asc",
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(26), name="st_bar_chart-horizontal_sort_by_values_asc"
+    )
+    # The add_rows chart (index 27) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_bar_chart_rendering(
@@ -63,8 +90,10 @@ def test_themed_bar_chart_rendering(
     bar_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(bar_chart_elements).to_have_count(TOTAL_BAR_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
-    expect(bar_chart_elements.locator("canvas")).to_have_count(TOTAL_BAR_CHARTS)
+    # Also make sure that all Vega display objects are rendered:
+    expect(bar_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_BAR_CHARTS
+    )
 
     # Only test a single chart per built-in chart type:
     assert_snapshot(bar_chart_elements.nth(1), name="st_bar_chart_themed")
@@ -80,7 +109,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width, horizontal, stack).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(18)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(27)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart
@@ -88,11 +117,11 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     # Wait for the chart to update
-    chart_canvas = add_rows_chart.locator("canvas")
-    expect(chart_canvas).to_be_visible()
+    vega_display = add_rows_chart.locator("[role='graphics-document']")
+    expect(vega_display).to_be_visible()
 
     # Check that the chart has the correct styling params
-    expect(chart_canvas).to_have_attribute("width", "600")
-    expect(chart_canvas).to_have_attribute("height", "300")
+    assert_vega_chart_width(add_rows_chart, 600)
+    assert_vega_chart_height(add_rows_chart, 300)
 
     assert_snapshot(add_rows_chart, name="st_bar_chart-add_rows_preserves_styling")

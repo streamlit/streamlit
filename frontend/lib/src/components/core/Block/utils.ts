@@ -16,13 +16,13 @@
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { EmotionTheme, getDividerColors } from "~lib/theme"
 import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { Direction } from "~lib/components/core/Layout/utils"
 
 export function getClassnamePrefix(direction: Direction): string {
   return direction === Direction.HORIZONTAL
@@ -50,7 +50,7 @@ export function isElementStale(
   }
 
   if (scriptRunState === ScriptRunState.RUNNING) {
-    if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+    if (fragmentIdsThisRun?.length) {
       // if the fragmentId is set, we only want to mark elements as stale
       // that belong to the same fragmentId and have a different scriptRunId.
       // If they have the same scriptRunId, they were just updated.
@@ -87,9 +87,9 @@ export function assignDividerColor(
   const allColorMap = getDividerColors(theme)
   const allColorKeys = Object.keys(allColorMap)
 
-  // Limited colors for auto assignment
-  const { blue, green, orange, red, violet } = allColorMap
-  const autoColorMap = { blue, green, orange, red, violet }
+  // Limited colors for auto assignment - exclude gray/grey & rainbow
+  const { blue, green, orange, red, violet, yellow } = allColorMap
+  const autoColorMap = { blue, green, orange, red, violet, yellow }
   const autoColorKeys = Object.keys(autoColorMap)
   let dividerIndex = 0
 

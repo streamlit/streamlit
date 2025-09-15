@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 37
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -270,6 +270,37 @@ def test_markdown_caption_support(app: Page, assert_snapshot: ImageCompareFuncti
         .first
     )
     assert_snapshot(image_element, name="st_image-markdown_caption_support")
+
+
+def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the new width parameter options: content, stretch, and pixel values."""
+    # Test content width with small image
+    small_content = get_image(app, "Small image with width='content' (default)")
+    assert_snapshot(small_content, name="st_image-width_content_small")
+
+    # Test content width with large image
+    large_content = get_image(app, "Large image with width='content'")
+    assert_snapshot(large_content, name="st_image-width_content_large")
+
+    # Test stretch width with small image
+    small_stretch = get_image(app, "Small image with width='stretch'")
+    assert_snapshot(small_stretch, name="st_image-width_stretch_small")
+
+    # Test stretch width with large image
+    large_stretch = get_image(app, "Large image with width='stretch'")
+    assert_snapshot(large_stretch, name="st_image-width_stretch_large")
+
+
+def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that width='stretch' works correctly in fullscreen mode."""
+    small_stretch_image = get_image(app, "Small image with width='stretch'")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), True)
+
+    fullscreen_image = small_stretch_image.locator("img")
+    assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), False)
 
 
 def test_check_top_level_class(app: Page):

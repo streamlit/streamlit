@@ -34,12 +34,18 @@ v6 = st.text_area("text area 6 (disabled)", "default text", disabled=True)
 st.write("value 6:", v6)
 
 v7 = st.text_area(
-    "text area 7 (hidden label)", "default text", label_visibility="hidden"
+    "text area 7 (hidden label)",
+    "default text",
+    label_visibility="hidden",
+    key="text_area_7",
 )
 st.write("value 7:", v7)
 
 v8 = st.text_area(
-    "text area 8 (collapsed label)", "default text", label_visibility="collapsed"
+    "text area 8 (collapsed label)",
+    "default text",
+    label_visibility="collapsed",
+    key="text_area_8",
 )
 st.write("value 8:", v8)
 
@@ -51,11 +57,11 @@ if runtime.exists():
 
     st.text_area(
         "text area 9 (callback, help)",
-        key="text_area9",
+        key="text_area_9",
         on_change=on_change,
         help="Help text",
     )
-    st.write("value 9:", st.session_state.text_area9)
+    st.write("value 9:", st.session_state.text_area_9)
     st.write("text area changed:", st.session_state.get("text_area_changed") is True)
     # Reset to False:
     st.session_state.text_area_changed = False
@@ -91,7 +97,8 @@ form_value = st.session_state.get("text_area_15", None)
 st.write("text area 15 (value from form) - value: ", form_value)
 
 st.text_area(
-    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_",
+    key="text_area_16",
 )
 
 st.text_area("text area 17 (width=200px)", "width test", width=200)
@@ -105,9 +112,17 @@ with st.form("form2", height=500):
     )
     st.form_submit_button("submit")
 
+with st.container(horizontal=True, height=300, key="layout-horizontal-text-area"):
+    st.text_area(
+        "text area in horizontal layout (height='content')",
+        """Line 1\nLine 2\nLine 3""",
+        width="stretch",
+        height="content",
+    )
+
 with st.form("form3", height=500):
     st.text_area(
-        "text area 20 (height='stretch)",
+        "text area 20 (height='stretch')",
         "Height stretches to fill space in fixed height form.",
         height="stretch",
     )
@@ -126,3 +141,42 @@ with col2:
         """Height matches partner column""",
         height="stretch",
     )
+
+st.markdown("Dynamic text area:")
+
+if st.toggle("Update text area props"):
+    ta_value = st.text_area(
+        "Updated dynamic text area",
+        value="updated",
+        width=200,
+        height=150,
+        help="updated help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text area - callback triggered: {a} {param}"
+        ),
+        args=("Updated text area arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        max_chars=100,
+    )
+    st.write("Updated text area value:", ta_value)
+else:
+    ta_value = st.text_area(
+        "Initial dynamic text area",
+        value="initial",
+        width="stretch",
+        height="content",
+        help="initial help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text area - callback triggered: {a} {param}"
+        ),
+        args=("Initial text area arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        max_chars=100,
+    )
+    st.write("Initial text area value:", ta_value)

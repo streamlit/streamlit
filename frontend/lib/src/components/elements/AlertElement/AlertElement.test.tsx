@@ -20,8 +20,8 @@ import { screen } from "@testing-library/react"
 
 import { Alert as AlertProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import { Kind } from "~lib/components/shared/AlertContainer"
+import { render } from "~lib/test_util"
 
 import AlertElement, { AlertElementProps } from "./AlertElement"
 import { getAlertElementKind } from "./utils"

@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/utils",
-  "version": "1.46.1",
+  "version": "1.49.1",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/streamlit-utils.cjs.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/streamlit-utils.es.js",
+      "require": "./dist/streamlit-utils.cjs.js",
       "default": "./dist/streamlit-utils.umd.js"
     }
   },
@@ -21,6 +22,7 @@
     "test": "vitest run",
     "testWatch": "vitest",
     "lint": "eslint --max-warnings 0 src",
+    "lint:fix": "eslint --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
@@ -29,10 +31,10 @@
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",
-    "eslint": "^9.31.0",
+    "eslint": "^9.35.0",
     "prettier": "^3.6.2",
     "typesync": "^0.14.3",
-    "vite": "^7.0.5",
+    "vite": "^7.1.5",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"

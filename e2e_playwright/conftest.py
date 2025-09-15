@@ -563,6 +563,21 @@ def browser_type_launch_args(
     return browser_type_launch_args
 
 
+@pytest.fixture(scope="session")
+def browser_context_args(
+    browser_context_args: dict[str, Any], browser_name: str
+) -> dict[str, Any]:
+    """Fixture that adds clipboard permissions to the browser context for Chromium."""
+    # Clipboard permissions are only supported in Chromium-based browsers
+    if browser_name == "chromium":
+        return {
+            **browser_context_args,
+            "permissions": ["clipboard-read", "clipboard-write"],
+        }
+
+    return browser_context_args
+
+
 @pytest.fixture(params=["light_theme", "dark_theme"])
 def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
@@ -906,13 +921,13 @@ def wait_for_app_run(
         For example, pydeck charts have a debounce timeout of 200ms.
     """
 
-    page = None
-    if isinstance(page_or_locator, Page):
-        page = page_or_locator
-    elif isinstance(page_or_locator, Locator):
+    page: Page
+    if isinstance(page_or_locator, Locator):
         page = page_or_locator.page
     elif isinstance(page_or_locator, FrameLocator):
         page = page_or_locator.owner.page
+    else:
+        page = page_or_locator
 
     page.wait_for_timeout(initial_wait)
 

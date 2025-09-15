@@ -21,7 +21,6 @@ export const StyledHeader = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
   fontWeight: theme.fontWeights.bold,
   fontSize: theme.fontSizes.lg,
-  color: theme.colors.grey90,
   marginTop: theme.spacing.twoXL,
   marginBottom: theme.spacing.twoXS,
 
@@ -35,7 +34,6 @@ export const StyledSubheader = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
   fontWeight: theme.fontWeights.normal,
   fontSize: theme.fontSizes.md,
-  color: theme.colors.grey90,
   marginTop: theme.spacing.twoXS,
   marginBottom: theme.spacing.md,
 

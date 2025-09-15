@@ -9,3 +9,4 @@ streamlit-folium
 streamlit-option-menu
 streamlit-url-fragment
 streamlit-bokeh
+streamlit-pdf

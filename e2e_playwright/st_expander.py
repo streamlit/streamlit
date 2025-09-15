@@ -14,18 +14,18 @@
 
 import streamlit as st
 
-sidebar = st.sidebar.expander("Expand me!")
+sidebar = st.sidebar.expander("Sidebar collapsed")
 sidebar.write("I am in the sidebar")
 
-expander = st.expander("Collapse me!", expanded=True)
+expander = st.expander("Normal expanded", expanded=True)
 expander.write("I can collapse")
 expander.slider("I don't get cut off")
 expander.button("I'm also not cut off (while focused)")
 
-collapsed = st.expander("_Expand_ **me**!")
+collapsed = st.expander("Normal collapsed")
 collapsed.write("I am already collapsed")
 
-with st.expander("Expander with number input", expanded=True):
+with st.expander("With number input", expanded=True):
     # We deliberately use a list to implement this for the screenshot
     st.write("* Example list item")
     value = st.number_input("number", value=1.0, key="number")
@@ -43,14 +43,13 @@ if st.button("Print State Value"):
     st.text(st.session_state.get("number"))
 
 expander_long = st.expander(
-    "Expand me! "
+    "Long expanded: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam.",
     expanded=True,
 )
 expander_long.write(
-    "I can collapse. "
     "Integer et justo orci. In euismod posuere nulla ac maximus. Mauris tristique hendrerit "
     "placerat. Integer eu imperdiet ipsum. Praesent maximus pharetra est, ut ultrices ante "
     "molestie id. Nulla sollicitudin arcu orci, eget lobortis lacus ultricies eu. Ut suscipit est "
@@ -59,36 +58,50 @@ expander_long.write(
 )
 
 collapsed_long = st.expander(
-    "Expand me! "
+    "Long collapsed: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam."
 )
 collapsed_long.write("I am already collapsed")
 
-expander_material_icon = st.expander(
-    "Expander with material icon!", icon=":material/bolt:"
-).write("This is an expander with a material icon.")
+expander_material_icon = st.expander("Material icon", icon=":material/bolt:").write(
+    "This is an expander with a material icon."
+)
 
-expander_emoji_icon = st.expander("Expander with emoji icon!", icon="🎈").write(
+expander_emoji_icon = st.expander("Emoji icon", icon="🎈").write(
     "This is an expander with an emoji icon."
 )
 
 st.expander(
-    "-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "Markdown -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 ).write("Content")
 
 
-level1 = st.expander("Nested expander", expanded=True)
+level1 = st.expander("Nested", expanded=True)
 level1.write("First level expander")
 
-level2 = level1.expander("Inside expander")
+level2 = level1.expander("Inner expander")
 level2.write("Second level expander")
 
-with st.expander("Fixed width expander", width=200):
+with st.expander("Fixed width", width=200):
     st.write("Hello")
 
-with st.expander("Stretch width expander", width="stretch"):
+with st.expander("Stretch width", width="stretch"):
     st.write("Hello")
 
-st.expander("Empty expander", expanded=True)
+st.expander("Empty", expanded=True)
+
+
+# To test for: https://github.com/streamlit/streamlit/issues/12149
+code_block = """
+
+```python
+print('I am hopelessly, breathlessly, madly in love with Streamlit—the smooth-talking, curve-hugging seductress of \
+the coding world that takes raw, unfiltered Python and slips it into something sleek, interactive, and irresistibly \
+gorgeous, making every app feel like a love letter to data, every click a flirtation, and every build a slow, \
+satisfying dance of creation that leaves you wanting more.')
+```
+
+"""
+st.expander("With code block:\n" + code_block)

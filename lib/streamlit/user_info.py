@@ -100,7 +100,9 @@ def login(provider: str | None = None) -> None:
         - You must install ``Authlib>=1.3.2`` to use this command. You can
           install it as an extra with Streamlit:
 
-          >>> pip install streamlit[auth]
+          .. code-block:: shell
+
+             pip install streamlit[auth]
 
         - Your authentication configuration is dependent on your host location.
           When you deploy your app, remember to update your ``redirect_uri``
@@ -270,6 +272,7 @@ def login(provider: str | None = None) -> None:
     Your app code:
 
     >>> import streamlit as st
+    >>>
     >>> if st.button("Log in"):
     >>>     st.login("auth0")
     >>> if st.user.is_logged_in:

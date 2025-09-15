@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -32,25 +32,53 @@ jobs:
           # Get all changed files using git diff-tree
           git_output=$(git diff-tree --no-commit-id --name-only -r HEAD^ HEAD)
 
-          # Filter files in e2e_playwright directory that match the pattern **/*_test.py
-          # and exclude files in custom_components directory and deleted files
+          # Filter files in e2e_playwright directory and find relevant test files
+          # Includes both changed test files and test files for changed app scripts
           changed_files=()
           changed_files_count=0
+          processed_tests=()  # Track already added test files to avoid duplicates
 
           while IFS= read -r file; do
             # Check if file is in e2e_playwright directory (including subdirectories)
             if [[ $file == e2e_playwright/* ]]; then
-              # Check if file matches the pattern **/*_test.py
+              # Skip if file is in custom_components directory
+              if [[ $file == *custom_components* ]]; then
+                continue
+              fi
+
+              # Check if file still exists (not deleted)
+              if [[ ! -f "$file" ]]; then
+                continue
+              fi
+
+              test_file=""
+
+              # If it's a test file, add it directly
               if [[ $file == *_test.py ]]; then
-                # Check if file is not in custom_components directory
-                if [[ $file != *custom_components* ]]; then
-                  # Check if the file still exists (not deleted)
-                  if [[ -f "$file" ]]; then
-                    # Remove the e2e_playwright/ prefix from the file path
-                    relative_file="${file#e2e_playwright/}"
-                    changed_files+=("$relative_file")
-                    changed_files_count=$((changed_files_count + 1))
-                  fi
+                test_file="$file"
+              # If it's a Python file (but not a test file), check for corresponding test
+              elif [[ $file == *.py ]]; then
+                # Construct the test file name by adding _test before .py
+                base_name="${file%.py}"
+                potential_test="${base_name}_test.py"
+
+                # Check if the corresponding test file exists
+                if [[ -f "$potential_test" ]]; then
+                  test_file="$potential_test"
+                fi
+              fi
+
+              # Add the test file if we found one and haven't already added it
+              if [[ -n "$test_file" ]]; then
+                # Remove the e2e_playwright/ prefix from the file path
+                relative_file="${test_file#e2e_playwright/}"
+
+                # Check if we've already added this test
+                # Only check for duplicates if the array is not empty
+                if [[ ${#processed_tests[@]} -eq 0 ]] || [[ ! " ${processed_tests[@]} " =~ " ${relative_file} " ]]; then
+                  changed_files+=("$relative_file")
+                  processed_tests+=("$relative_file")
+                  changed_files_count=$((changed_files_count + 1))
                 fi
               fi
             fi
@@ -86,7 +114,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - if: steps.check_changed_files.outputs.run_tests == 'true'
@@ -94,10 +122,18 @@ jobs:
         uses: ./.github/actions/make_init
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Install playwright
-        run: python -m playwright install --with-deps
+        uses: ./.github/actions/playwright_install
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run make frontend-with-profiler
         run: make frontend-with-profiler
+      - name: Get short SHA
+        id: short_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run changed playwright tests
         run: |
@@ -108,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright_test_results
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4

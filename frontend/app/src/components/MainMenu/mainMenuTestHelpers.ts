@@ -37,7 +37,7 @@ export function getMenuStructure(
     ).map(d =>
       d.getAttribute("data-testid") == "stMainMenuDivider"
         ? { type: "separator" }
-        : { type: "option", label: d.textContent as string }
+        : { type: "option", label: d.textContent }
     )
   })
 }

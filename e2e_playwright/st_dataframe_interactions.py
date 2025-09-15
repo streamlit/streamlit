@@ -68,6 +68,7 @@ cell_overlay_test_df = pd.DataFrame(
     {
         "big_numbers": [1231231.41, 12012],
         "text": ["hello\nworld", "foo"],
+        "list": [["hello", "world"], ["c", "d", "e"]],
     }
 )
 
@@ -80,6 +81,9 @@ cell_overlay_test_column_config = {
     "text": st.column_config.TextColumn(
         width="medium",
     ),
+    "list": st.column_config.ListColumn(
+        width="medium",
+    ),
 }
 
 
@@ -88,7 +92,7 @@ st.dataframe(
     cell_overlay_test_df,
     hide_index=True,
     column_config=cell_overlay_test_column_config,
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Test cell editor")
@@ -97,12 +101,12 @@ result = st.data_editor(
     cell_overlay_test_df,
     hide_index=True,
     column_config=cell_overlay_test_column_config,
-    use_container_width=False,
+    width="content",
 )
 
 st.write("Edited DF:", str(result))
 
-st.dataframe(fullscreen_df, use_container_width=False)
+st.dataframe(fullscreen_df, width="content")
 
 st.header("Column menu interaction")
 
@@ -130,5 +134,5 @@ st.container(key="column-menu-test").dataframe(
         "Column F": st.column_config.Column(width="small"),
     },
     column_order=["Column A", "Column B", "Column E", "Column C", "Column D"],
-    use_container_width=False,
+    width="content",
 )

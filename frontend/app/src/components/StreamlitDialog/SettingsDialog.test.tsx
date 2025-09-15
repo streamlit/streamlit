@@ -16,9 +16,10 @@
 
 import React from "react"
 
-import { userEvent } from "@testing-library/user-event"
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   createPresetThemes,
   darkTheme,
@@ -28,7 +29,6 @@ import {
   renderWithContexts,
   SessionInfo,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 

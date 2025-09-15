@@ -23,15 +23,16 @@ import { Heading as HeadingProto } from "@streamlit/protobuf"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 
 import {
-  StyledHeaderDivider,
-  StyledStreamlitMarkdown,
-} from "./styled-components"
-import "katex/dist/katex.min.css"
-import {
   HeadingWithActionElements,
   RenderedMarkdown,
   Tags,
 } from "./StreamlitMarkdown"
+import {
+  StyledHeaderDivider,
+  StyledStreamlitMarkdown,
+} from "./styled-components"
+
+import "katex/dist/katex.min.css"
 
 export interface HeadingProtoProps {
   element: HeadingProto

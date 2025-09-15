@@ -48,12 +48,18 @@ v6 = st.date_input("Disabled, no date", [], disabled=True)
 st.write("Value 6:", v6)
 
 v7 = st.date_input(
-    "Label hidden", datetime(2019, 7, 6, 21, 15), label_visibility="hidden"
+    "Label hidden",
+    datetime(2019, 7, 6, 21, 15),
+    label_visibility="hidden",
+    key="date_input_7",
 )
 st.write("Value 7:", v7)
 
 v8 = st.date_input(
-    "Label collapsed", datetime(2019, 7, 6, 21, 15), label_visibility="collapsed"
+    "Label collapsed",
+    datetime(2019, 7, 6, 21, 15),
+    label_visibility="collapsed",
+    key="date_input_8",
 )
 st.write("Value 8:", v8)
 
@@ -105,6 +111,7 @@ st.write("Value 14:", v14)
 st.date_input(
     "date input 15 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     date(1970, 1, 1),
+    key="date_input_15",
 )
 
 st.date_input("Date input 16 (width=200px)", date(1970, 1, 1), width=200)
@@ -112,3 +119,40 @@ st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretc
 
 st.write("""This is a block of text. We can click on it to
          trigger a click outside of the element to submit the value.""")
+
+if st.toggle("Update date input props"):
+    dval = st.date_input(
+        "Updated dynamic date input",
+        value=date(2023, 9, 10),
+        width=300,
+        help="updated help",
+        on_change=lambda a, param: print(
+            f"Updated date input - callback triggered: {a} {param}"
+        ),
+        args=("Updated date arg",),
+        kwargs={"param": "updated kwarg param"},
+        key="dynamic_date_input_with_key",
+        # min_value, max_value, & format are not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        min_value=date(2010, 1, 1),
+        max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
+    )
+    st.write("Updated date input value:", dval)
+else:
+    dval = st.date_input(
+        "Initial dynamic date input",
+        value=date(2020, 1, 1),
+        width="stretch",
+        help="initial help",
+        on_change=lambda a, param: print(
+            f"Initial date input - callback triggered: {a} {param}"
+        ),
+        args=("Initial date arg",),
+        kwargs={"param": "initial kwarg param"},
+        key="dynamic_date_input_with_key",
+        min_value=date(2010, 1, 1),
+        max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
+    )
+    st.write("Initial date input value:", dval)

@@ -16,12 +16,12 @@
 
 import React, { ReactElement } from "react"
 
+import { mergeOverrides } from "baseui"
+import { Overrides } from "baseui/overrides"
 import {
   type ProgressBarOverrides,
   ProgressBar as UIProgressBar,
 } from "baseui/progress-bar"
-import { mergeOverrides } from "baseui"
-import { Overrides } from "baseui/overrides"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 

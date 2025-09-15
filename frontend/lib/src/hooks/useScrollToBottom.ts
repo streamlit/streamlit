@@ -16,8 +16,8 @@
 
 import { RefObject, useCallback, useEffect, useRef } from "react"
 
-import useScrollSpy from "./useScrollSpy"
 import useScrollAnimation from "./useScrollAnimation"
+import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
 export interface ScrollToBottomOptions {
@@ -119,7 +119,9 @@ export function useScrollToBottom<T extends HTMLElement>(
       // Chrome will emit "synthetic" scroll event if the container is resized or an element is added
       // We need to ignore these "synthetic" events
       const {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         offsetHeight: nextOffsetHeight,
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         scrollHeight: nextScrollHeight,
       } = target
       const { current: offsetHeight } = offsetHeightRef

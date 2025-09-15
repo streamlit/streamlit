@@ -25,10 +25,6 @@ const INITIAL_SLASH_RE = /^\/+/
 export function parseUriIntoBaseParts(url?: string): URL {
   const currentUrl = new URL(url ?? window.location.href)
 
-  if (!currentUrl.port) {
-    currentUrl.port = currentUrl.protocol === "https:" ? "443" : "80"
-  }
-
   currentUrl.pathname = currentUrl.pathname
     .replace(FINAL_SLASH_RE, "")
     .replace(INITIAL_SLASH_RE, "")

@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useContext, useState } from "react"
+import React, { ReactElement, useCallback, useContext } from "react"
 
 import { Check } from "@emotion-icons/material-outlined"
 
+import {
+  themeBuilder,
+  toMinimalToml,
+} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
@@ -32,12 +37,8 @@ import {
   StreamlitMarkdown,
   ThemeConfig,
   toThemeInput,
+  useCopyToClipboard,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  themeBuilder,
-  toMinimalToml,
-} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
 
 import {
   StyledBackButton,
@@ -90,7 +91,6 @@ export interface Props {
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
-  const [copied, updateCopied] = useState(false)
   const { activeTheme, addThemes, setTheme } = useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
@@ -106,22 +106,17 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
       [key]: newVal,
     })
     updateTheme(customTheme)
-    updateCopied(false)
   }
 
   const config = toMinimalToml(themeInput)
 
-  const copyConfig = async (): Promise<void> => {
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
+
+  const copyConfig = (): void => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    try {
-      await navigator.clipboard.writeText(config)
-      updateCopied(true)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      updateCopied(false)
-    }
+    copyToClipboard(config)
   }
 
   const onClickedBack = (): void => {
@@ -204,7 +199,7 @@ To save your changes, copy your custom theme into the clipboard and paste it int
           <StyledFullRow>
             <div>
               <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
-                {copied ? (
+                {isCopied ? (
                   <React.Fragment>
                     {"Copied to clipboard "}
                     <Icon

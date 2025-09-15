@@ -19,8 +19,8 @@ import React from "react"
 import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { render, ScriptRunState } from "@streamlit/lib"
 import { ConnectionState } from "@streamlit/connection"
+import { render, ScriptRunState } from "@streamlit/lib"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 

@@ -16,22 +16,26 @@
 
 import styled from "@emotion/styled"
 
-export const StyledImageList = styled.div(({ theme }) => ({
+export const StyledImageList = styled.div<{
+  shouldStretch?: boolean
+}>(({ theme, shouldStretch }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
   // Not supported in Safari, but at least it's not a regression for those users:
   rowGap: theme.spacing.lg,
   maxWidth: "100%",
-  width: "fit-content",
+  width: shouldStretch ? "100%" : "fit-content",
 }))
 
-export const StyledImageContainer = styled.div(({ theme }) => ({
+export const StyledImageContainer = styled.div<{
+  shouldStretch?: boolean
+}>(({ theme, shouldStretch }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  width: "auto",
-  flexGrow: 0,
+  width: shouldStretch ? "100%" : "auto",
+  flexGrow: shouldStretch ? 1 : 0,
 
   ">img": {
     borderRadius: theme.radii.default,

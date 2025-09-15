@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
-import { toHex } from "color2k"
 
 import {
   BaseColorPicker,
@@ -123,11 +123,9 @@ export const themeBuilder: Record<string, ThemeOptionBuilder> = {
       humanizeString(font)
     ),
     getValue: (value: string, config: ThemeOptionBuilder): number =>
-      (config.options &&
-        config.options.findIndex(
-          (font: string) => font === displayFontOption(value)
-        )) ||
-      0,
+      config.options?.findIndex(
+        (font: string) => font === displayFontOption(value)
+      ) || 0,
     component: UISelectbox,
   },
 }

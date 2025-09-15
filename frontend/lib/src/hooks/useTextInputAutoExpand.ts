@@ -76,6 +76,7 @@ const initializeHeightGuidance = (
   heightGuidance: RefObject<HeightGuidance>
 ): void => {
   if (textareaRef.current && heightGuidance.current) {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const { offsetHeight } = textareaRef.current
     heightGuidance.current.minHeight = offsetHeight
     heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
@@ -112,6 +113,8 @@ export interface UseTextInputAutoExpandResult {
   maxHeight: string
   /** Function to update scroll height (call this when content changes) */
   updateScrollHeight: () => void
+  /** Function to clear scroll height */
+  clearScrollHeight: () => void
 }
 
 export interface UseTextInputAutoExpandOptions {
@@ -138,6 +141,10 @@ export const useTextInputAutoExpand = ({
   const updateScrollHeight = useCallback((): void => {
     setScrollHeight(getScrollHeight(textareaRef))
   }, [textareaRef, setScrollHeight])
+
+  const clearScrollHeight = useCallback((): void => {
+    setScrollHeight(0)
+  }, [setScrollHeight])
 
   // Initialize height guidance
   useLayoutEffect(() => {
@@ -173,5 +180,6 @@ export const useTextInputAutoExpand = ({
     height: calculatedHeight,
     maxHeight: calculatedMaxHeight,
     updateScrollHeight,
+    clearScrollHeight,
   }
 }

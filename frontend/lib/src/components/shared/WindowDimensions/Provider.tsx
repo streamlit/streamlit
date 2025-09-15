@@ -16,8 +16,8 @@
 
 import React, { FC, PropsWithChildren, useContext } from "react"
 
-import { useWindowDimensions } from "~lib/components/shared/WindowDimensions/useWindowDimensions"
 import { WindowDimensionsContext } from "~lib/components/shared/WindowDimensions"
+import { useWindowDimensions } from "~lib/components/shared/WindowDimensions/useWindowDimensions"
 
 /**
  * Registers the current window dimensions in the context. A runtime error will

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
@@ -22,6 +22,7 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
+import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
   gap: streamlit.GapSize | undefined,
@@ -53,6 +54,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     width,
     height,
     maxWidth: "100%",
+    // Important so that individual elements don't take up too much space
+    // in horizontal layouts. Particularly when an element uses the full screen wrapper.
+    // Some components support zero width (e.g. iframe).
+    minWidth: width === "0px" ? 0 : "1rem",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -149,6 +154,48 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
+const getAlignItems = (
+  align: BlockProto.FlexContainer.Align | undefined | null
+): CSSProperties["alignItems"] => {
+  switch (align) {
+    case BlockProto.FlexContainer.Align.ALIGN_START:
+      return "start"
+    case BlockProto.FlexContainer.Align.ALIGN_CENTER:
+      return "center"
+    case BlockProto.FlexContainer.Align.ALIGN_END:
+      return "end"
+    case BlockProto.FlexContainer.Align.STRETCH:
+      return "stretch"
+    case BlockProto.FlexContainer.Align.ALIGN_UNDEFINED:
+    case undefined:
+    case null:
+      return "stretch"
+    default:
+      assertNever(align)
+  }
+}
+
+const getJustifyContent = (
+  justify: BlockProto.FlexContainer.Justify | undefined | null
+): CSSProperties["justifyContent"] => {
+  switch (justify) {
+    case BlockProto.FlexContainer.Justify.JUSTIFY_START:
+      return "start"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_CENTER:
+      return "center"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_END:
+      return "end"
+    case BlockProto.FlexContainer.Justify.SPACE_BETWEEN:
+      return "space-between"
+    case BlockProto.FlexContainer.Justify.JUSTIFY_UNDEFINED:
+    case undefined:
+    case null:
+      return "start"
+    default:
+      assertNever(justify)
+  }
+}
+
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
@@ -159,12 +206,25 @@ export interface StyledFlexContainerBlockProps {
   $wrap?: boolean
   height?: React.CSSProperties["height"]
   border: boolean
+  align?: BlockProto.FlexContainer.Align | null
+  justify?: BlockProto.FlexContainer.Justify | null
   overflow?: React.CSSProperties["overflow"]
 }
 
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
-    ({ theme, direction, gap, flex, $wrap, height, border, overflow }) => {
+    ({
+      theme,
+      direction,
+      gap,
+      flex,
+      $wrap,
+      height,
+      border,
+      align,
+      justify,
+      overflow,
+    }) => {
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
@@ -175,9 +235,12 @@ export const StyledFlexContainerBlock =
         gap: gapWidth,
         width: "100%",
         maxWidth: "100%",
-        height: height,
+        height: height ?? "auto",
+        minWidth: "1rem",
         flexDirection: direction,
         flex,
+        alignItems: getAlignItems(align),
+        justifyContent: getJustifyContent(justify),
         flexWrap: $wrap ? "wrap" : "nowrap",
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -203,6 +266,7 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     flexDirection: "column",
     width,
     maxWidth: "100%",
+    minWidth: "1rem",
     height,
     flex,
   })

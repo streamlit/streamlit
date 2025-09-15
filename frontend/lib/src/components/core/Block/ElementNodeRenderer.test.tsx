@@ -24,12 +24,12 @@ import {
   Snow as SnowProto,
 } from "@streamlit/protobuf"
 
-import { renderWithContexts } from "~lib/test_util"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { ElementNode } from "~lib/AppNode"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ElementNodeRenderer, {
   ElementNodeRendererProps,

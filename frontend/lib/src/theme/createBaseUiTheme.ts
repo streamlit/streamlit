@@ -195,14 +195,14 @@ const createBaseUiThemeOverrides = (
 
       modalCloseColor: colors.bodyText,
 
-      notificationInfoBackground: colors.infoBg,
-      notificationInfoText: colors.info,
-      notificationPositiveBackground: colors.successBg,
-      notificationPositiveText: colors.success,
-      notificationWarningBackground: colors.warningBg,
-      notificationWarningText: colors.warning,
-      notificationNegativeBackground: colors.dangerBg,
-      notificationNegativeText: colors.danger,
+      notificationInfoBackground: colors.blueBackgroundColor,
+      notificationInfoText: colors.blueTextColor,
+      notificationPositiveBackground: colors.greenBackgroundColor,
+      notificationPositiveText: colors.greenTextColor,
+      notificationWarningBackground: colors.yellowBackgroundColor,
+      notificationWarningText: colors.yellowTextColor,
+      notificationNegativeBackground: colors.redBackgroundColor,
+      notificationNegativeText: colors.redTextColor,
       progressbarTrackFill: widgetBackgroundColor,
 
       // mono100 overrides

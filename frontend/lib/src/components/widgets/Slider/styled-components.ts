@@ -17,12 +17,13 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface StyledSliderProps {
+export interface StyledThumbProps {
   disabled: boolean
+  isDragged: boolean
 }
 
-export const StyledThumb = styled.div<StyledSliderProps>(
-  ({ disabled, theme }) => ({
+export const StyledThumb = styled.div<StyledThumbProps>(
+  ({ disabled, theme, isDragged }) => ({
     alignItems: "center",
     backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
     borderTopLeftRadius: "100%",
@@ -33,11 +34,13 @@ export const StyledThumb = styled.div<StyledSliderProps>(
     borderBottomStyle: "none",
     borderRightStyle: "none",
     borderLeftStyle: "none",
-    boxShadow: "none",
     display: "flex",
     justifyContent: "center",
     height: theme.sizes.sliderThumb,
     width: theme.sizes.sliderThumb,
+    boxShadow: isDragged
+      ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
+      : "none",
     ":focus": {
       outline: "none",
     },
@@ -47,9 +50,13 @@ export const StyledThumb = styled.div<StyledSliderProps>(
   })
 )
 
+export interface StyledSliderProps {
+  disabled: boolean
+}
+
 export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
-    fontFamily: theme.genericFonts.codeFont,
+    fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.gray : theme.colors.primary,
     top: "-1.6em",
@@ -61,25 +68,5 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     // If values are clickable, it's hard to move the right thumb when they're
     // very close. So make them unclickable:
     pointerEvents: "none",
-  })
-)
-
-export const StyledTickBar = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  paddingBottom: theme.spacing.none,
-  paddingLeft: theme.spacing.none,
-  paddingRight: theme.spacing.none,
-  paddingTop: "0.65em",
-  justifyContent: "space-between",
-  alignItems: "center",
-  display: "flex",
-}))
-
-export const StyledTickBarItem = styled.div<StyledSliderProps>(
-  ({ disabled, theme }) => ({
-    lineHeight: theme.lineHeights.base,
-    fontWeight: theme.fontWeights.normal,
-    fontFamily: theme.genericFonts.codeFont,
-    color: disabled ? theme.colors.fadedText40 : "inherit",
   })
 )

@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -139,6 +139,34 @@ describe("TimeInput widget", () => {
 
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveTextContent("12:45")
+  })
+
+  it("opens dropdown and shows time options", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TimeInput {...props} />)
+
+    // Open the dropdown
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    await user.click(timeDisplay)
+
+    // Check that the dropdown is open and shows time options
+    const dropdown = screen.getByRole("listbox")
+    expect(dropdown).toBeVisible()
+
+    // Check that the currently selected time is present in the dropdown
+    // and has aria-selected set to true
+    const selectedTime = within(dropdown).getByText("12:45")
+    expect(selectedTime).toHaveAttribute("aria-selected", "true")
+
+    // Check that other time options are also present/visible (based on 15-minute steps)
+    // with aria-selected set to false
+    const alternateOption1 = within(dropdown).getByText("12:30")
+    const alternateOption2 = within(dropdown).getByText("13:00")
+    expect(alternateOption1).toBeVisible()
+    expect(alternateOption1).toHaveAttribute("aria-selected", "false")
+    expect(alternateOption2).toBeVisible()
+    expect(alternateOption2).toHaveAttribute("aria-selected", "false")
   })
 
   it("has a 24 format", () => {

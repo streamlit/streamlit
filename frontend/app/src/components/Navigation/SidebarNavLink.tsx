@@ -32,6 +32,7 @@ export interface SidebarNavLinkProps {
   icon: string | undefined | null
   onClick: (e: MouseEvent) => void
   isTopNav?: boolean
+  isInDropdown?: boolean
   children: string
 }
 
@@ -41,6 +42,7 @@ const SidebarNavLink = ({
   icon,
   onClick,
   isTopNav,
+  isInDropdown,
   children,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
@@ -48,7 +50,15 @@ const SidebarNavLink = ({
   // disable sidebar nav links
   const { widgetsDisabled: disableSidebarNavLinks } = useAppContext()
 
-  const navLinkTestId = isTopNav ? "stTopNavLink" : "stSidebarNavLink"
+  // Determine the appropriate test ID based on context
+  let navLinkTestId: string
+  if (isTopNav && isInDropdown) {
+    navLinkTestId = "stTopNavDropdownLink"
+  } else if (isTopNav) {
+    navLinkTestId = "stTopNavLink"
+  } else {
+    navLinkTestId = "stSidebarNavLink"
+  }
   const navLinkContainerTestId = isTopNav
     ? "stTopNavLinkContainer"
     : "stSidebarNavLinkContainer"

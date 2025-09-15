@@ -19,11 +19,11 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import * as isMobile from "@streamlit/lib"
 import { mockEndpoints, render } from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import SidebarNav, { Props } from "./SidebarNav"
 
@@ -143,7 +143,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hasSidebarElements: false,
   endpoints: mockEndpoints(),
   onPageChange: vi.fn(),
-  navSections: [],
   currentPageScriptHash: "",
   expandSidebarNav: false,
   ...props,
@@ -164,7 +163,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     widgetsDisabled: false,
     gitInfo: null,
     showToolbar: true,
-    showColoredLine: true,
     ...context,
   }
 }
@@ -389,7 +387,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
@@ -439,7 +436,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
@@ -463,11 +459,14 @@ describe("SidebarNav", () => {
     const appPages = createAppPagesForSections(sectionPageCounts)
     const navSections = Object.keys(sectionPageCounts)
 
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({ navSections })
+    )
+
     render(
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections,
           appPages,
         })}
       />
@@ -513,7 +512,6 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          navSections: ["section 1", "section 2", "section 3"],
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2", "section 3"],
           }),

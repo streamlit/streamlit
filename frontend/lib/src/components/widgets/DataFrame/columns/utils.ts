@@ -23,6 +23,7 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
+import { Vector } from "apache-arrow"
 import merge from "lodash/merge"
 import toString from "lodash/toString"
 import moment, { Moment } from "moment"
@@ -350,6 +351,27 @@ export function toSafeArray(data: any): any[] {
 }
 
 /**
+ * Checks if the provided data used as array value is supported for editing.
+ *
+ * @param data - The value to inspect.
+ * @returns True if `data` is supported for array-editing.
+ */
+export function isEditableArrayValue(data: unknown): boolean {
+  if (typeof data === "string" || data instanceof String) {
+    return true
+  }
+
+  if (data instanceof Vector) {
+    data = Array.from(data)
+  }
+
+  return (
+    Array.isArray(data) &&
+    data.every(v => typeof v === "string" || v instanceof String)
+  )
+}
+
+/**
  * Efficient check to determine if a string is looks like a JSON string.
  *
  * This is only a heuristic check and does not guarantee that the string is a
@@ -361,7 +383,7 @@ export function toSafeArray(data: any): any[] {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function isMaybeJson(data: any): boolean {
-  return data && data.startsWith("{") && data.endsWith("}")
+  return data?.startsWith("{") && data.endsWith("}")
 }
 
 /**
@@ -466,6 +488,28 @@ export function toSafeNumber(value: any): number | null {
   }
 
   return Number(value)
+}
+
+/**
+ * Converts an array to a string representation suitable for copying.
+ *
+ * @param array - The array to convert.
+ * @returns The string representation of the array.
+ */
+export function arrayToCopyValue(array?: object[] | null): string {
+  if (isNullOrUndefined(array)) {
+    return ""
+  }
+
+  return toSafeString(
+    array.map((x: object) =>
+      // Replace commas with spaces since commas are used to
+      // separate the list items.
+      typeof x === "string" && (x as string).includes(",")
+        ? (x as string).replace(/,/g, " ")
+        : x
+    )
+  )
 }
 
 /**
@@ -622,6 +666,7 @@ export function formatNumber(
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
+      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
@@ -629,6 +674,7 @@ export function formatNumber(
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
+      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 0,
       maximumFractionDigits: maxPrecision ?? 0,
     })
@@ -898,7 +944,7 @@ export function getLinkDisplayValueFromRegex(
   try {
     // apply the regex pattern to display the value
     const patternMatch = href.match(displayTextRegex)
-    if (patternMatch && patternMatch[1] !== undefined) {
+    if (patternMatch?.[1] !== undefined) {
       // return the first matching group
       // Since this might be a URI encoded value, we decode it.
       // Note: we replace + with %20 to correctly convert + to whitespaces.

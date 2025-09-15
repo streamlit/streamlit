@@ -23,8 +23,8 @@ import {
 } from "@streamlit/protobuf"
 
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SuccessfulUpload = {
   fileUrl: IFileURLs
@@ -70,7 +70,7 @@ export const uploadFiles = async ({
 
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
-      if (!file || !fileUrl || !fileUrl.uploadUrl || !fileUrl.fileId) {
+      if (!file || !fileUrl?.uploadUrl || !fileUrl.fileId) {
         return { file, fileUrl, error: new Error("No upload URL found") }
       }
 
@@ -96,7 +96,7 @@ export const uploadFiles = async ({
           new UploadedFileInfoProto({
             fileId: fileUrl.fileId,
             fileUrls: fileUrl,
-            name: file.name,
+            name: file.webkitRelativePath || file.name,
             size: file.size,
           })
       ),

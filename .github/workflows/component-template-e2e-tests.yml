@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -22,7 +22,7 @@ jobs:
         run: corepack enable
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
@@ -32,7 +32,7 @@ jobs:
         uses: ./.github/actions/build_info
 
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
@@ -71,7 +71,7 @@ jobs:
           echo "output_file=${component_lib_tar_gz}" >> $GITHUB_OUTPUT
 
       - name: Checkout streamlit/component-template
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           repository: streamlit/component-template

@@ -74,13 +74,15 @@ st.markdown(
 st.markdown("""
 Text colors:
 
-:blue[blue] :green[green] :orange[orange] :red[red] :violet[violet] :gray[gray] :rainbow[rainbow] :primary[primary]
+:blue[blue] :green[green] :orange[orange] :red[red] :violet[violet] :yellow[yellow] :gray[gray] :rainbow[rainbow]
+:primary[primary]
 
 :blue-background[blue] :green-background[green] :orange-background[orange] :red-background[red]
-:violet-background[violet] :gray-background[gray] :rainbow-background[rainbow] :primary-background[primary]
+:violet-background[violet] :yellow-background[yellow] :gray-background[gray] :rainbow-background[rainbow]
+:primary-background[primary]
 
 :blue-badge[blue] :green-badge[green] :orange-badge[orange] :red-badge[red] :violet-badge[violet]
-:gray-badge[gray] :primary-badge[primary]
+:yellow-badge[yellow] :gray-badge[gray] :primary-badge[primary]
 """)
 st.title("st.title", help="Hello!")
 st.header("st.header", help="Hello!")
@@ -89,6 +91,7 @@ st.header("st.header with green divider", divider="green")
 st.header("st.header with orange divider", divider="orange")
 st.header("st.header with red divider", divider="red")
 st.header("st.header with violet divider", divider="violet")
+st.header("st.header with yellow divider", divider="yellow")
 st.header("st.header with gray divider", divider="gray")
 st.header("st.header with rainbow divider", divider="rainbow")
 st.subheader("st.subheader", help="Hello!")
@@ -288,16 +291,6 @@ fig = px.scatter(
     size_max=60,
 )
 st.plotly_chart(fig, use_container_width=True)
-
-"st.bokeh_chart"
-if st.toggle("Show Bokeh chart (has some issues)", False):
-    from bokeh.plotting import figure
-
-    x = [1, 2, 3, 4, 5]
-    y = [6, 7, 2, 4, 5]
-    p = figure(title="simple line example", x_axis_label="x", y_axis_label="y")
-    p.line(x, y, legend_label="Trend", line_width=2)
-    st.bokeh_chart(p, use_container_width=True)
 
 "st.pydeck_chart"
 data = pd.DataFrame(

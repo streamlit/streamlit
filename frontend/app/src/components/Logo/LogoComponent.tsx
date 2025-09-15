@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
-import { Logo } from "@streamlit/protobuf"
 import {
   StyledLogo,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
+import { StreamlitEndpoints } from "@streamlit/connection"
+import { getCrossOriginAttribute, LibContext } from "@streamlit/lib"
+import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 
@@ -31,7 +32,6 @@ export interface LogoComponentProps {
   appLogo: Logo | null
   endpoints: StreamlitEndpoints
   collapsed?: boolean
-  sidebarWidth?: string
   componentName?: string
   dataTestId?: string
 }
@@ -43,10 +43,11 @@ const LogoComponent = ({
   appLogo,
   endpoints,
   collapsed = false,
-  sidebarWidth,
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
+  const { libConfig } = useContext(LibContext)
+
   if (!appLogo) {
     return null
   }
@@ -68,16 +69,21 @@ const LogoComponent = ({
 
   const source = endpoints.buildMediaURL(displayImage)
 
+  const crossOrigin = getCrossOriginAttribute(
+    libConfig.resourceCrossOriginMode,
+    displayImage
+  )
+
   const logo = (
     <StyledLogo
       src={source}
       size={appLogo.size}
-      sidebarWidth={sidebarWidth}
       alt="Logo"
       className="stLogo"
       data-testid={dataTestId}
       // Save to logo's src to send on load error
       onError={_ => handleLogoError(source)}
+      crossOrigin={crossOrigin}
     />
   )
 
@@ -94,7 +100,11 @@ const LogoComponent = ({
     )
   }
 
-  return logo
+  // Wrapping the logo into a div makes it easier to correctly
+  // handle the width in all cases. It already gets wrapped via a
+  // link element (<a>) above when link is provided.
+  // https://github.com/streamlit/streamlit/issues/12326
+  return <div>{logo}</div>
 }
 
 export default LogoComponent

@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
-import { getLogger } from "loglevel"
 
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 
+import FormattingMenu from "./FormattingMenu"
 import {
   StyledColumnHeaderRow,
   StyledColumnNameText,
@@ -40,9 +35,6 @@ import {
   StyledMenuListItem,
   StyledTypeIconContainer,
 } from "./styled-components"
-import FormattingMenu from "./FormattingMenu"
-
-const LOG = getLogger("ColumnMenu")
 
 export interface ColumnMenuProps {
   // The top position of the menu
@@ -90,6 +82,8 @@ function ColumnMenu({
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const { colors, fontSizes, radii, fontWeights } = theme
 
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
+
   // Disable page scrolling while the menu is open to keep the menu und
   // column header aligned.
   // This is done by preventing defaults on wheel and touch events:
@@ -112,14 +106,8 @@ function ColumnMenu({
   }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(column.title).catch(error => {
-        LOG.error("Failed to copy column name to clipboard:", error)
-      })
-    } else {
-      LOG.error("Clipboard API not supported.")
-    }
-  }, [column.title])
+    copyToClipboard(column.title)
+  }, [column.title, copyToClipboard])
 
   return (
     <Popover
@@ -143,7 +131,9 @@ function ColumnMenu({
                 aria-label="Copy column name"
               >
                 <DynamicIcon
-                  iconValue=":material/content_copy:"
+                  iconValue={
+                    isCopied ? ":material/check:" : ":material/content_copy:"
+                  }
                   size="sm"
                   margin="0"
                   color="inherit"

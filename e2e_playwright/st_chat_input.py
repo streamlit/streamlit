@@ -70,3 +70,14 @@ v8 = st.chat_input(
     max_chars=200,
 )
 st.write("Chat input 8 (bottom, max_chars) - value:", v8)
+
+# Directory upload tests
+v9 = st.container().chat_input(
+    "Chat input 9 (directory upload)", accept_file="directory"
+)
+st.write("Chat input 9 (directory upload) - value:", v9)
+
+v10 = st.container().chat_input(
+    "Chat input 10 (directory upload disabled)", accept_file="directory", disabled=True
+)
+st.write("Chat input 10 (directory upload disabled) - value:", v10)

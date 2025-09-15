@@ -33,7 +33,9 @@ function EventContainer({
     <>
       <ToasterContainer
         placement={PLACEMENT.topRight}
-        autoHideDuration={4 * 1000} // in milliseconds
+        // Default autoHideDuration ( in milliseconds), can be adapted by the user
+        // in the Toast.tsx component
+        autoHideDuration={4 * 1000}
         overrides={{
           Root: {
             style: {

@@ -27,14 +27,25 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-def _should_show_deprecation_warning_in_browser() -> bool:
+def _error_details_in_browser_enabled() -> bool:
     """True if we should print deprecation warnings to the browser."""
     return bool(config.get_option("client.showErrorDetails"))
 
 
-def show_deprecation_warning(message: str) -> None:
-    """Show a deprecation warning message."""
-    if _should_show_deprecation_warning_in_browser():
+def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
+    """Show a deprecation warning message.
+
+    Parameters
+    ----------
+    message : str
+        The deprecation warning message.
+    show_in_browser : bool, default=True
+        Whether to show the deprecation warning in the browser. When this is True,
+        we will show the deprecation warning in the browser unless the user has
+        disabled error details in the browser by setting the `client.showErrorDetails`
+        config option to "none".
+    """
+    if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 
     # We always log deprecation warnings
@@ -97,7 +108,11 @@ def deprecate_func_name(
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
-                old_name, name_override or func.__name__, removal_date, extra_message
+                old_name,
+                name_override
+                or (str(func.__name__) if hasattr(func, "__name__") else "unknown"),
+                removal_date,
+                extra_message,
             )
         )
         return result

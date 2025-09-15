@@ -24,8 +24,8 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { notNullOrUndefined } from "@streamlit/utils"
 import { CustomThemeConfig } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 

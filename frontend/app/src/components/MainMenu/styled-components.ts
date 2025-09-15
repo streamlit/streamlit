@@ -117,8 +117,7 @@ export const StyledCoreItem = styled.li<ItemStyleProps>(
     const margin = styleProps?.margin || 0
     const padding =
       styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor =
-      styleProps?.backgroundColor || theme.colors.primaryBg
+    const backgroundColor = styleProps?.backgroundColor || theme.colors.bgColor
     const fontSize = styleProps?.fontSize || theme.fontSizes.md
 
     return {

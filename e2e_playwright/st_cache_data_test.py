@@ -17,7 +17,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import rerun_app, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import click_button, click_checkbox, get_image
 
 
@@ -97,3 +97,19 @@ def test_cached_image_replay(app: Page):
     expect(image_element).to_have_css("height", "200px")
     expect(image_element).to_have_css("width", "200px")
     expect(image_element).to_have_attribute("src", image_src or "")
+
+
+def test_cached_code_replay(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the code is cached and replayed correctly with width and height."""
+    code_element = app.get_by_test_id("stCode").first
+    expect(code_element).to_be_visible()
+
+    # Test dimensions with snapshots since the width/height is set on the element container.
+    assert_snapshot(code_element, name="st_cache_data-st_code_before_caching")
+
+    click_checkbox(app, "Show code")
+    expect(code_element).not_to_be_attached()
+
+    click_checkbox(app, "Show code")
+    expect(code_element).to_be_visible()
+    assert_snapshot(code_element, name="st_cache_data-st_code_after_caching")

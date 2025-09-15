@@ -20,9 +20,9 @@ import { screen } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { render } from "~lib/test_util"
 
 import Heading, { HeadingProtoProps } from "./Heading"
 

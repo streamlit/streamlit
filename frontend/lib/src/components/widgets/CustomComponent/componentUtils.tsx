@@ -23,8 +23,8 @@ import {
   SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { EmotionTheme, toExportedTheme } from "~lib/theme"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"

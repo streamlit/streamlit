@@ -19,10 +19,10 @@ import React, { FC } from "react"
 import { act, render, renderHook, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import Form from "~lib/components/widgets/Form"
 import { RootStyleProvider } from "~lib/RootStyleProvider"
 import { getDefaultTheme } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useWidgetManagerElementState from "./useWidgetManagerElementState"
 

@@ -15,3 +15,4 @@
  */
 
 export { default } from "./DataFrame"
+export { ReadOnlyGrid } from "./ReadOnlyGrid"

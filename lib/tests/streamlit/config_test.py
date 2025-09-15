@@ -391,6 +391,36 @@ class ConfigTest(unittest.TestCase):
         assert config.get_option("_test.tomlTest") == DESIRED_VAL
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
 
+    def test_parsing_to_map(self):
+        """Test that we can parse into a dict-valued option."""
+        DUMMY_DEFINITION = "<test definition>"
+        DEFAULT_VAL = {}
+        # Create a dummy default option.
+        config._create_option(
+            "_test.tomlTest",
+            description="This option tests the TOML parser.",
+            default_val=DEFAULT_VAL,
+        )
+        config.get_config_options(force_reparse=True)
+        assert config.get_option("_test.tomlTest") == DEFAULT_VAL
+        assert (
+            config.get_where_defined("_test.tomlTest")
+            == ConfigOption.DEFAULT_DEFINITION
+        )
+
+        # Validate that we can set nested values and get back a dict.
+        NEW_TOML = """
+            [_test.tomlTest]
+            one-value = "one"
+            two-value = "two"
+        """
+        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
+        assert config.get_option("_test.tomlTest") == {
+            "one-value": "one",
+            "two-value": "two",
+        }
+        assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
+
     def test_parsing_sensitive_options(self):
         """Test config._update_config_with_sensitive_env_var()."""
         # Some useful variables.
@@ -507,6 +537,27 @@ class ConfigTest(unittest.TestCase):
                 "theme.showSidebarBorder",
                 "theme.chartCategoricalColors",
                 "theme.chartSequentialColors",
+                "theme.redColor",
+                "theme.orangeColor",
+                "theme.yellowColor",
+                "theme.blueColor",
+                "theme.greenColor",
+                "theme.violetColor",
+                "theme.grayColor",
+                "theme.redBackgroundColor",
+                "theme.orangeBackgroundColor",
+                "theme.yellowBackgroundColor",
+                "theme.blueBackgroundColor",
+                "theme.greenBackgroundColor",
+                "theme.violetBackgroundColor",
+                "theme.grayBackgroundColor",
+                "theme.redTextColor",
+                "theme.orangeTextColor",
+                "theme.yellowTextColor",
+                "theme.blueTextColor",
+                "theme.greenTextColor",
+                "theme.violetTextColor",
+                "theme.grayTextColor",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -517,6 +568,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.codeFontSize",
+                "theme.sidebar.codeFontWeight",
                 "theme.sidebar.headingFontSizes",
                 "theme.sidebar.headingFontWeights",
                 "theme.sidebar.borderColor",
@@ -526,6 +578,27 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.linkUnderline",
                 "theme.sidebar.codeBackgroundColor",
                 "theme.sidebar.dataframeHeaderBackgroundColor",
+                "theme.sidebar.redColor",
+                "theme.sidebar.orangeColor",
+                "theme.sidebar.yellowColor",
+                "theme.sidebar.blueColor",
+                "theme.sidebar.greenColor",
+                "theme.sidebar.violetColor",
+                "theme.sidebar.grayColor",
+                "theme.sidebar.redBackgroundColor",
+                "theme.sidebar.orangeBackgroundColor",
+                "theme.sidebar.yellowBackgroundColor",
+                "theme.sidebar.blueBackgroundColor",
+                "theme.sidebar.greenBackgroundColor",
+                "theme.sidebar.violetBackgroundColor",
+                "theme.sidebar.grayBackgroundColor",
+                "theme.sidebar.redTextColor",
+                "theme.sidebar.orangeTextColor",
+                "theme.sidebar.yellowTextColor",
+                "theme.sidebar.blueTextColor",
+                "theme.sidebar.greenTextColor",
+                "theme.sidebar.violetTextColor",
+                "theme.sidebar.grayTextColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -547,30 +620,32 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",
                 "secrets.files",
-                "server.baseUrlPath",
-                "server.customComponentBaseUrlPath",
-                "server.enableCORS",
-                "server.cookieSecret",
-                "server.corsAllowedOrigins",
-                "server.scriptHealthCheckEnabled",
-                "server.enableWebsocketCompression",
-                "server.enableXsrfProtection",
-                "server.fileWatcherType",
-                "server.folderWatchList",
-                "server.folderWatchBlacklist",
-                "server.headless",
-                "server.showEmailPrompt",
                 "server.address",
                 "server.allowRunOnSave",
+                "server.baseUrlPath",
+                "server.cookieSecret",
+                "server.corsAllowedOrigins",
+                "server.customComponentBaseUrlPath",
+                "server.disconnectedSessionTTL",
+                "server.enableArrowTruncation",
+                "server.enableCORS",
+                "server.enableStaticServing",
+                "server.enableWebsocketCompression",
+                "server.websocketPingInterval",
+                "server.enableXsrfProtection",
+                "server.fileWatcherType",
+                "server.folderWatchBlacklist",
+                "server.folderWatchList",
+                "server.headless",
+                "server.maxMessageSize",
+                "server.maxUploadSize",
                 "server.port",
                 "server.runOnSave",
-                "server.maxUploadSize",
-                "server.maxMessageSize",
-                "server.enableStaticServing",
-                "server.enableArrowTruncation",
+                "server.scriptHealthCheckEnabled",
+                "server.showEmailPrompt",
                 "server.sslCertFile",
                 "server.sslKeyFile",
-                "server.disconnectedSessionTTL",
+                "server.trustedUserHeaders",
                 "ui.hideTopBar",
             ]
         )
@@ -602,6 +677,64 @@ class ConfigTest(unittest.TestCase):
             match="browser.serverPort does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
+
+    def test_parse_trusted_user_headers_handles_bad_json(self):
+        # JSON that fails to parse.
+        config._set_option("server.trustedUserHeaders", "{123:}", "test")
+        with pytest.raises(
+            RuntimeError,
+            match="bad JSON value",
+        ):
+            config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_handles_non_objects(self):
+        # Non-object values.
+        for value in ("[]", "null", "123", "false", '"str"'):
+            config._set_option("server.trustedUserHeaders", value, "test")
+            with pytest.raises(
+                RuntimeError,
+                match="JSON must be an object",
+            ):
+                config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_handles_non_string_entries(self):
+        # Non-string object values.
+        for value in (
+            '{"key": null}',
+            '{"key": 123}',
+            '{"key": []}',
+            '{"good_key": "value", "bad_key": false}',
+        ):
+            config._set_option("server.trustedUserHeaders", value, "test")
+            with pytest.raises(
+                RuntimeError,
+                match="JSON must only have string values",
+            ):
+                config._parse_trusted_user_headers()
+
+    def test_parse_trusted_user_headers_parses_good_json(self):
+        config._set_option(
+            "server.trustedUserHeaders",
+            '{"value_one": "val", "value_two": "v2"}',
+            "test",
+        )
+        config._parse_trusted_user_headers()
+        assert config.get_option("server.trustedUserHeaders") == {
+            "value_one": "val",
+            "value_two": "v2",
+        }
+
+    def test_parse_trusted_user_headers_forbids_duplicate_user_keys(self):
+        config._set_option(
+            "server.trustedUserHeaders",
+            {"hdr-one": "duplicate", "hdr-two": "duplicate", "hdr-three": "unique"},
+            "test",
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="had multiple mappings.*duplicate",
+        ):
+            config._parse_trusted_user_headers()
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
@@ -703,6 +836,27 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": None,
             "chartCategoricalColors": None,
             "chartSequentialColors": None,
+            "redColor": None,
+            "orangeColor": None,
+            "yellowColor": None,
+            "blueColor": None,
+            "greenColor": None,
+            "violetColor": None,
+            "grayColor": None,
+            "redBackgroundColor": None,
+            "orangeBackgroundColor": None,
+            "yellowBackgroundColor": None,
+            "blueBackgroundColor": None,
+            "greenBackgroundColor": None,
+            "violetBackgroundColor": None,
+            "grayBackgroundColor": None,
+            "redTextColor": None,
+            "orangeTextColor": None,
+            "yellowTextColor": None,
+            "blueTextColor": None,
+            "greenTextColor": None,
+            "violetTextColor": None,
+            "grayTextColor": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -755,6 +909,27 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
+        config._set_option("theme.redColor", "red", "test")
+        config._set_option("theme.orangeColor", "orange", "test")
+        config._set_option("theme.yellowColor", "yellow", "test")
+        config._set_option("theme.blueColor", "blue", "test")
+        config._set_option("theme.greenColor", "green", "test")
+        config._set_option("theme.violetColor", "violet", "test")
+        config._set_option("theme.grayColor", "gray", "test")
+        config._set_option("theme.redBackgroundColor", "#ff8c8c", "test")
+        config._set_option("theme.orangeBackgroundColor", "#ffd16a", "test")
+        config._set_option("theme.yellowBackgroundColor", "#ffff59", "test")
+        config._set_option("theme.blueBackgroundColor", "#60b4ff", "test")
+        config._set_option("theme.greenBackgroundColor", "#5ce488", "test")
+        config._set_option("theme.violetBackgroundColor", "#b27eff", "test")
+        config._set_option("theme.grayBackgroundColor", "#bfc5d3", "test")
+        config._set_option("theme.redTextColor", "#ffabab", "test")
+        config._set_option("theme.orangeTextColor", "#ffe08e", "test")
+        config._set_option("theme.yellowTextColor", "#ffff7d", "test")
+        config._set_option("theme.blueTextColor", "#83c9ff", "test")
+        config._set_option("theme.greenTextColor", "#7defa1", "test")
+        config._set_option("theme.violetTextColor", "#c89dff", "test")
+        config._set_option("theme.grayTextColor", "#d5dae5", "test")
 
         expected = {
             "base": "dark",
@@ -797,6 +972,27 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
+            "redColor": "red",
+            "orangeColor": "orange",
+            "yellowColor": "yellow",
+            "blueColor": "blue",
+            "greenColor": "green",
+            "violetColor": "violet",
+            "grayColor": "gray",
+            "redBackgroundColor": "#ff8c8c",
+            "orangeBackgroundColor": "#ffd16a",
+            "yellowBackgroundColor": "#ffff59",
+            "blueBackgroundColor": "#60b4ff",
+            "greenBackgroundColor": "#5ce488",
+            "violetBackgroundColor": "#b27eff",
+            "grayBackgroundColor": "#bfc5d3",
+            "redTextColor": "#ffabab",
+            "orangeTextColor": "#ffe08e",
+            "yellowTextColor": "#ffff7d",
+            "blueTextColor": "#83c9ff",
+            "greenTextColor": "#7defa1",
+            "violetTextColor": "#c89dff",
+            "grayTextColor": "#d5dae5",
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -819,6 +1015,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
+        config._set_option("theme.sidebar.codeFontWeight", 600, "test")
         config._set_option(
             "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
         )
@@ -827,6 +1024,27 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
         )
+        config._set_option("theme.sidebar.redColor", "#7d353b", "test")
+        config._set_option("theme.sidebar.orangeColor", "#d95a00", "test")
+        config._set_option("theme.sidebar.yellowColor", "#916e10", "test")
+        config._set_option("theme.sidebar.blueColor", "#004280", "test")
+        config._set_option("theme.sidebar.greenColor", "#177233", "test")
+        config._set_option("theme.sidebar.violetColor", "#3f3163", "test")
+        config._set_option("theme.sidebar.grayColor", "#0e1117", "test")
+        config._set_option("theme.sidebar.redBackgroundColor", "#ff4b4b", "test")
+        config._set_option("theme.sidebar.orangeBackgroundColor", "#ffa421", "test")
+        config._set_option("theme.sidebar.yellowBackgroundColor", "#ffe312", "test")
+        config._set_option("theme.sidebar.blueBackgroundColor", "#1c83e1", "test")
+        config._set_option("theme.sidebar.greenBackgroundColor", "#21c354", "test")
+        config._set_option("theme.sidebar.violetBackgroundColor", "#803df5", "test")
+        config._set_option("theme.sidebar.grayBackgroundColor", "#808495", "test")
+        config._set_option("theme.sidebar.redTextColor", "#ff6c6c", "test")
+        config._set_option("theme.sidebar.orangeTextColor", "#ffbd45", "test")
+        config._set_option("theme.sidebar.yellowTextColor", "#fff835", "test")
+        config._set_option("theme.sidebar.blueTextColor", "#3d9df3", "test")
+        config._set_option("theme.sidebar.greenTextColor", "#3dd56d", "test")
+        config._set_option("theme.sidebar.violetTextColor", "#9a5dff", "test")
+        config._set_option("theme.sidebar.grayTextColor", "#a3a8b8", "test")
 
         expected = {
             "primaryColor": "#FFF000",
@@ -844,10 +1062,32 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
+            "codeFontWeight": 600,
             "headingFontSizes": ["2.875rem", "2.75rem"],
             "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "redColor": "#7d353b",
+            "orangeColor": "#d95a00",
+            "yellowColor": "#916e10",
+            "blueColor": "#004280",
+            "greenColor": "#177233",
+            "violetColor": "#3f3163",
+            "grayColor": "#0e1117",
+            "redBackgroundColor": "#ff4b4b",
+            "orangeBackgroundColor": "#ffa421",
+            "yellowBackgroundColor": "#ffe312",
+            "blueBackgroundColor": "#1c83e1",
+            "greenBackgroundColor": "#21c354",
+            "violetBackgroundColor": "#803df5",
+            "grayBackgroundColor": "#808495",
+            "redTextColor": "#ff6c6c",
+            "orangeTextColor": "#ffbd45",
+            "yellowTextColor": "#fff835",
+            "blueTextColor": "#3d9df3",
+            "greenTextColor": "#3dd56d",
+            "violetTextColor": "#9a5dff",
+            "grayTextColor": "#a3a8b8",
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 

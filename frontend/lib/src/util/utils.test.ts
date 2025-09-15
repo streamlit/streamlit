@@ -31,7 +31,6 @@ import {
   getLoadingScreenType,
   getSelectPlaceholder,
   getUrl,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,
@@ -80,7 +79,6 @@ describe("setCookie", () => {
 
 describe("embedParamValues", () => {
   const embedParamValuesShouldHave = [
-    "show_colored_line",
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
@@ -212,7 +210,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -228,7 +225,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -242,7 +238,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -275,7 +270,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(true)
@@ -290,7 +284,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(true)
     expect(isScrollingHidden()).toBe(false)
@@ -305,23 +298,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(true)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
-    expect(isLightThemeInQueryParams()).toBe(false)
-    expect(isDarkThemeInQueryParams()).toBe(false)
-  })
-
-  it("should show the colored line if in embed options", () => {
-    windowSpy.mockImplementation(() => ({
-      location: {
-        search: "?embed=true&embed_options=show_colored_line",
-      },
-    }))
-
-    expect(isColoredLineDisplayed()).toBe(true)
-    expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
     expect(isLightThemeInQueryParams()).toBe(false)
@@ -489,6 +466,30 @@ describe("keysToSnakeCase", () => {
 
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
+  })
+
+  it("should preserve null values inside arrays without throwing", () => {
+    const input = {
+      customdata: [1, null, { innerKey: 5, anotherNull: null }],
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      customdata: [1, null, { inner_key: 5, another_null: null }],
+    })
+  })
+
+  it("should not attempt to recurse into null values", () => {
+    const input = {
+      value: null,
+      array: [null],
+      nested: { child: null },
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      value: null,
+      array: [null],
+      nested: { child: null },
+    })
   })
 })
 

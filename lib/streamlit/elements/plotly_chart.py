@@ -112,8 +112,8 @@ class PlotlySelectionState(TypedDict, total=False):
     displays additional information. Try selecting points in the following
     example:
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
     >>> df = px.data.iris()
     >>> fig = px.scatter(
@@ -189,10 +189,10 @@ class PlotlyState(TypedDict, total=False):
     box, or lasso). The current selection state is available through Session
     State or as the output of the chart function.
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
-    >>> df = px.data.iris()  # iris is a pandas DataFrame
+    >>> df = px.data.iris()
     >>> fig = px.scatter(df, x="sepal_width", y="sepal_length")
     >>>
     >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
@@ -316,6 +316,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
+        config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
@@ -333,7 +334,9 @@ class PlotlyMixin:
             can install all charting dependencies (except Bokeh) as an extra
             with Streamlit:
 
-            >>> pip install streamlit[charts]
+            .. code-block:: shell
+
+               pip install streamlit[charts]
 
         Parameters
         ----------
@@ -413,6 +416,12 @@ class PlotlyMixin:
 
             All selections modes are activated by default.
 
+        config : dict or None
+            A dictionary of Plotly configuration options. This is passed to
+            Plotly's ``show()`` function. For more information about Plotly
+            configuration options, see Plotly's documentation on `Configuration
+            in Python <https://plotly.com/python/configuration-options/>`_.
+
         **kwargs
             Additional arguments accepted by Plotly's ``plot()`` function.
 
@@ -420,6 +429,9 @@ class PlotlyMixin:
             options. For more information about Plotly configuration options,
             see Plotly's documentation on `Configuration in Python
             <https://plotly.com/python/configuration-options/>`_.
+
+            .. deprecated:: 1.48.2
+               The keyword arguments are deprecated. use ``config`` instead.
 
         Returns
         -------
@@ -432,30 +444,26 @@ class PlotlyMixin:
 
         Examples
         --------
-        **Example 1: Basic Plotly Chart**
+        **Example 1: Basic Plotly chart**
 
         The example below comes from the examples at https://plot.ly/python.
         Note that ``plotly.figure_factory`` requires ``scipy`` to run.
 
-        >>> import streamlit as st
-        >>> import numpy as np
         >>> import plotly.figure_factory as ff
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> # Add histogram data
-        >>> x1 = np.random.randn(200) - 2
-        >>> x2 = np.random.randn(200)
-        >>> x3 = np.random.randn(200) + 2
+        >>> hist_data = [
+        ...     rng(0).standard_normal(200) - 2,
+        ...     rng(1).standard_normal(200),
+        ...     rng(2).standard_normal(200) + 2,
+        ... ]
+        >>> group_labels = ["Group 1", "Group 2", "Group 3"]
         >>>
-        >>> # Group data together
-        >>> hist_data = [x1, x2, x3]
-        >>>
-        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
-        >>>
-        >>> # Create distplot with custom bin_size
         >>> fig = ff.create_distplot(
-        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
+        ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
+        ... )
         >>>
-        >>> # Plot!
         >>> st.plotly_chart(fig)
 
         .. output::
@@ -470,8 +478,8 @@ class PlotlyMixin:
         zoom. In the following example, scroll zoom is disabled, but the zoom
         buttons are still enabled in the modebar.
 
-        >>> import streamlit as st
         >>> import plotly.graph_objects as go
+        >>> import streamlit as st
         >>>
         >>> fig = go.Figure()
         >>> fig.add_trace(
@@ -495,11 +503,11 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
-        if "sharing" in kwargs:
+        if kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed "
-                "in a future release. Plotly charts will always be rendered using "
-                "Streamlit's offline mode."
+                "The keyword arguments have been deprecated and will be removed "
+                "in a future release. Use `config` instead to specify Plotly "
+                "configuration options."
             )
 
         if theme not in ["streamlit", None]:
@@ -544,11 +552,7 @@ class PlotlyMixin:
         plotly_chart_proto.theme = theme or ""
         plotly_chart_proto.form_id = current_form_id(self.dg)
 
-        config = dict(kwargs.get("config", {}))
-        # Copy over some kwargs to config dict. Plotly does the same in plot().
-        config.setdefault("showLink", kwargs.get("show_link", False))
-        config.setdefault("linkText", kwargs.get("link_text", False))
-
+        config = config or {}
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
 
@@ -560,7 +564,7 @@ class PlotlyMixin:
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            form_id=plotly_chart_proto.form_id,
+            key_as_main_identity=False,
             dg=self.dg,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,

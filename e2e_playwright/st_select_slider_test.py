@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -19,30 +21,55 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     expect_help_tooltip,
+    expect_prefixed_markdown,
     get_element_by_key,
+    get_expander,
+    get_slider,
 )
+
+NUM_SELECT_SLIDERS = 14
 
 
 def test_select_slider_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    st_select_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_select_sliders).to_have_count(14)
+    expect(themed_app.get_by_test_id("stSlider")).to_have_count(NUM_SELECT_SLIDERS)
 
     assert_snapshot(
-        st_select_sliders.nth(0),
+        get_element_by_key(themed_app, "first_select_slider"),
         name="st_select_slider-regular_with_help_and_format_func",
     )
-    assert_snapshot(st_select_sliders.nth(4), name="st_select_slider-disabled")
-    assert_snapshot(st_select_sliders.nth(5), name="st_select_slider-hidden_label")
-    assert_snapshot(st_select_sliders.nth(6), name="st_select_slider-label_collapsed")
-    assert_snapshot(st_select_sliders.nth(11), name="st_select_slider-markdown_label")
-    assert_snapshot(st_select_sliders.nth(12), name="st_select_slider-width_300px")
-    assert_snapshot(st_select_sliders.nth(13), name="st_select_slider-width_stretch")
+    assert_snapshot(
+        get_slider(themed_app, "Label 5 (disabled)"),
+        name="st_select_slider-disabled",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "select_slider_hidden"),
+        name="st_select_slider-hidden_label",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "select_slider_collapsed"),
+        name="st_select_slider-label_collapsed",
+    )
+    assert_snapshot(
+        # The label for this slider contains Markdown formatting and dynamic content,
+        # making it difficult to match with a simple string. Use a regex pattern to
+        # reliably select the slider by matching the beginning of the label.
+        get_slider(themed_app, re.compile(r"^Label 12")),
+        name="st_select_slider-markdown_label",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Label 13 - Width 300px"),
+        name="st_select_slider-width_300px",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Label 14 - Width Stretch"),
+        name="st_select_slider-width_stretch",
+    )
 
 
 def test_help_tooltip_works(app: Page):
-    element_with_help = app.get_by_test_id("stSlider").nth(0)
+    element_with_help = get_element_by_key(app, "first_select_slider")
     expect_help_tooltip(app, element_with_help, "Help in a select slider")
 
 
@@ -50,7 +77,7 @@ def test_select_slider_contains_correct_format_func_value_and_in_session_state(
     app: Page,
 ):
     expect(app.get_by_text("Value 1: ('orange', 'blue')")).to_have_count(2)
-    first_slider = app.get_by_test_id("stSlider").nth(0)
+    first_slider = get_element_by_key(app, "first_select_slider")
     first_slider.hover()
     # click in middle
     app.mouse.down()
@@ -65,7 +92,7 @@ def test_select_slider_contains_correct_format_func_value_and_in_session_state(
 
 def test_using_arrow_keys_on_select_slider_produces_correct_values(app: Page):
     expect(app.get_by_text("Value 1: ('orange', 'blue')")).to_have_count(2)
-    first_slider = app.get_by_test_id("stSlider").nth(0)
+    first_slider = get_element_by_key(app, "first_select_slider")
     first_slider.hover()
     # click in middle
     app.mouse.down()
@@ -85,53 +112,67 @@ def test_using_arrow_keys_on_select_slider_produces_correct_values(app: Page):
 def test_select_slider_calls_callback(app: Page):
     expect(app.get_by_text("Value 8: 1")).to_be_visible()
     expect(app.get_by_text("Select slider changed: False")).to_be_visible()
-    slider = app.get_by_test_id("stSlider").nth(7)
-    slider.hover()
+    slider = get_element_by_key(app, "select_slider8")
     # click in middle
-    app.mouse.down()
-
+    slider.click()
     wait_for_app_run(app)
     expect(app.get_by_text("Hello world")).to_be_visible()
-    expect(app.get_by_text("Value 8: 3")).to_be_visible()
-    expect(app.get_by_text("Select slider changed: True")).to_be_visible()
+    expect_prefixed_markdown(app, "Value 8:", "3")
+    expect_prefixed_markdown(app, "Select slider changed:", "True")
 
 
 def test_select_slider_label_realigns_when_expander_opens(app: Page):
-    app.get_by_test_id("stExpander").locator("summary").click()
-    app.get_by_test_id("stExpander").locator("summary").click()
-    expect(app.get_by_test_id("stSliderThumbValue").nth(11)).not_to_have_css(
-        "left", "0px"
-    )
+    expander = get_expander(app, "Expander")
+    expander.locator("summary").click()
+    expander.locator("summary").click()
+
+    slider_in_expander = get_slider(app, "Label 9 (expander)")
+    expect(
+        slider_in_expander.get_by_test_id("stSliderThumbValue").first
+    ).not_to_have_css("left", "0px")
 
 
 def test_select_slider_works_in_forms(app: Page):
     expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
-    slider = app.get_by_test_id("stSlider").nth(9)
-    slider.hover()
+    slider = get_slider(app, "Label 10 (form)")
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     # The value is not submitted so the value should not have changed yet
-    expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-form selection:", "1")
 
     # need to wait for the actual component value to update and then submit
     app.wait_for_timeout(200)
     click_form_button(app, "Submit")
 
-    expect(app.get_by_text("select_slider-in-form selection: 3")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-form selection:", "3")
 
 
 def test_select_slider_works_with_fragments(app: Page):
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
-    expect(app.get_by_text("select_slider-in-fragment selection: 1")).to_be_visible()
-    slider = app.get_by_test_id("stSlider").nth(10)
-    slider.hover()
+    expect_prefixed_markdown(app, "Runs:", "1")
+    expect_prefixed_markdown(app, "select_slider-in-fragment selection:", "1")
+    slider = get_slider(app, "Label 11 (fragment)")
     # click in middle
-    app.mouse.down()
-
+    slider.click()
     wait_for_app_run(app)
-    expect(app.get_by_text("select_slider-in-fragment selection: 3")).to_be_visible()
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "select_slider-in-fragment selection:", "3")
+    expect_prefixed_markdown(app, "Runs:", "1")
+
+
+def test_no_rerun_on_drag(app: Page):
+    """Test that moving the slider does not trigger a rerun."""
+    runs_text = app.get_by_text("Runs: 1")
+    expect(runs_text).to_be_visible()
+
+    slider = get_element_by_key(app, "select_slider8")
+    slider.hover()
+    # click in middle and drag
+    app.mouse.down()
+    app.mouse.move(0, 0)
+    wait_for_app_run(app)
+
+    # The number of runs should not have changed
+    expect(runs_text).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
