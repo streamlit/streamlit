@@ -147,7 +147,6 @@ jobs:
 
       - name: Slack notification - failure
         if: ${{ steps.cp.outputs.status != 'success' && inputs.dry_run != true }}
-
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
@@ -156,7 +155,6 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
-
         run: |
           python scripts/slack_notifications.py release_automation patch_cherry_pick_failed
 
