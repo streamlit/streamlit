@@ -401,7 +401,7 @@ const NumberInput: React.FC<Props> = ({
                 overrides: {
                   Svg: {
                     style: {
-                      color: theme.colors.darkGray,
+                      color: theme.colors.grayTextColor,
                       // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                       padding: theme.spacing.threeXS,
                       height: theme.sizes.clearIconSize,
@@ -484,7 +484,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Minus}
                 size="xs"
-                color={canDec ? "inherit" : theme.colors.disabled}
+                color={canDec ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
             <StyledInputControl
@@ -496,7 +496,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Plus}
                 size="xs"
-                color={canInc ? "inherit" : theme.colors.disabled}
+                color={canInc ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
           </StyledInputControls>

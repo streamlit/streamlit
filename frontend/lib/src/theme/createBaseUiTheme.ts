@@ -62,11 +62,11 @@ const createBaseUiThemePrimitives = (
     // way we want it to match our theme originating from Bootstrap.
     mono100: colors.bgColor, // Popup menu
     mono200: colors.secondaryBg, // Text input, text area, selectbox
-    mono300: colors.lightGray, // Disabled widget background
-    mono400: colors.lightGray, // Slider track
-    mono500: colors.gray, // Clicked checkbox and radio
+    mono300: colors.gray30, // Disabled widget background
+    mono400: colors.gray30, // Slider track
+    mono500: colors.gray60, // Clicked checkbox and radio
     mono600: colors.fadedText40, // Disabled widget text
-    mono700: colors.gray, // Unselected checkbox and radio
+    mono700: colors.gray60, // Unselected checkbox and radio
     mono800: colors.bodyText, // Selectbox text
     mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,
@@ -175,7 +175,7 @@ const createBaseUiThemeOverrides = (
       contentPrimary: colors.bodyText,
       inputPlaceholder: colors.fadedText60,
       tickFillDisabled: colors.fadedText40,
-      tickMarkFill: colors.lightestGray,
+      tickMarkFill: colors.gray20,
       tickFillSelected: colors.primary,
       datepickerBackground: mainPaneBgColor,
       calendarBackground: mainPaneBgColor,
