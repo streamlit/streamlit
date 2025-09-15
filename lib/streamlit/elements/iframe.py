@@ -99,7 +99,6 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        # When no width is specified, we want the iframe to stretch to fill the container.
         layout_config = LayoutConfig(
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
@@ -184,7 +183,6 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        # When no width is specified, we want the html to stretch to fill the container.
         layout_config = LayoutConfig(
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,

@@ -43,6 +43,9 @@ export type UseLayoutStylesArgs = {
   minStretchBehavior?: MinFlexElementWidth
 }
 
+const isPositiveNumber = (value: unknown): value is number =>
+  typeof value === "number" && value >= 0 && !isNaN(value)
+
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
   typeof value === "number" && value > 0 && !isNaN(value)
 
@@ -74,21 +77,20 @@ const getWidth = (
   const isContent =
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
-    element?.widthConfig?.pixelWidth || subElement?.widthConfig?.pixelWidth
+    element?.widthConfig?.pixelWidth ||
+    subElement?.widthConfig?.pixelWidth ||
+    element.widthConfig?.pixelWidth === 0
 
   if (isStretch) {
     type = DimensionType.STRETCH
   } else if (isContent) {
     type = DimensionType.CONTENT
-  } else if (
-    isPixel &&
-    isNonZeroPositiveNumber(element.widthConfig?.pixelWidth)
-  ) {
+  } else if (isPixel && isPositiveNumber(element.widthConfig?.pixelWidth)) {
     type = DimensionType.PIXEL
     pixels = element.widthConfig?.pixelWidth
   } else if (
     isPixel &&
-    isNonZeroPositiveNumber(subElement?.widthConfig?.pixelWidth)
+    isPositiveNumber(subElement?.widthConfig?.pixelWidth)
   ) {
     type = DimensionType.PIXEL
     pixels = subElement?.widthConfig?.pixelWidth
@@ -121,16 +123,15 @@ const getHeight = (
 
   const isStretch = !!element.heightConfig?.useStretch
   const isContent = !!element.heightConfig?.useContent
-  const isPixel = !!element.heightConfig?.pixelHeight
+  const isPixel =
+    !!element.heightConfig?.pixelHeight ||
+    element.heightConfig?.pixelHeight === 0
 
   if (isStretch) {
     type = DimensionType.STRETCH
   } else if (isContent) {
     type = DimensionType.CONTENT
-  } else if (
-    isPixel &&
-    isNonZeroPositiveNumber(element.heightConfig?.pixelHeight)
-  ) {
+  } else if (isPixel && isPositiveNumber(element.heightConfig?.pixelHeight)) {
     type = DimensionType.PIXEL
     pixels = element.heightConfig?.pixelHeight
   } else if (
