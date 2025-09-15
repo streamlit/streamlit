@@ -24,6 +24,7 @@ import requests
 
 
 def _build_patch_cherry_pick_text(
+    *,
     repo: str,
     release_version: str,
     commit_sha: str,
