@@ -1,0 +1,150 @@
+name: Release Branch Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version in full semver (i.j.k)"
+        required: true
+        type: string
+      nightly_tag:
+        description: "Nightly tag to base the release on (e.g. 1.49.2.dev20250910)"
+        required: true
+        type: string
+      dry_run:
+        description: "Run without pushing or creating PR/tag"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-branch-${{ inputs.release_version || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  create-branch:
+    name: Create Release Branch ${{ inputs.release_version }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Python deps for release automation
+        run: |
+          uv pip install --system packaging semver requests
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Define variables
+        id: vars
+        run: |
+          set -euo pipefail
+          REL_VER='${{ inputs.release_version }}'
+          REL_BRANCH="release/${REL_VER}"
+          echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          if ! echo "${{ inputs.release_version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::release_version must be full semver (i.j.k). Got '${{ inputs.release_version }}'" >&2
+            exit 1
+          fi
+          if [ -z "${{ inputs.nightly_tag }}" ]; then
+            echo "::error::nightly_tag is required" >&2
+            exit 1
+          fi
+          # Ensure the tag doesn't already exist remotely
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.release_version }}$"; then
+            echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
+            exit 1
+          fi
+          # Ensure the release branch doesn't already exist remotely
+          if git ls-remote --heads origin | grep -q "refs/heads/release/${{ inputs.release_version }}$"; then
+            echo "::error::Branch release/${{ inputs.release_version }} already exists on origin" >&2
+            exit 1
+          fi
+
+      - name: Fetch all tags and branches
+        run: |
+          git fetch --prune --tags --force origin
+
+      - name: Checkout nightly tag (detached HEAD)
+        run: |
+          set -euo pipefail
+          if [[ ! "${{ inputs.nightly_tag }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "Error: nightly_tag contains invalid characters"
+            exit 1
+          fi
+          git checkout "${{ inputs.nightly_tag }}"
+          echo "Checked out nightly ref: ${{ inputs.nightly_tag }}"
+          LAST_MSG=$(git log -1 --pretty=%B | sed -e 's/\r$//')
+          EXPECTED_MSG="Update version and project name in files"
+          if [ "$LAST_MSG" != "$EXPECTED_MSG" ]; then
+            echo "::error::The last commit message is not the expected nightly marker."
+            echo "Expected: '$EXPECTED_MSG'"
+            echo "Actual:   '$LAST_MSG'"
+            echo "Aborting to avoid resetting the wrong commit."
+            exit 1
+          fi
+
+      - name: Remove the nightly commit (reset HEAD~1)
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD~1
+          echo "After reset, HEAD is at: $(git rev-parse --short HEAD)"
+
+      - name: Create release branch via script
+        run: |
+          set -euo pipefail
+          chmod +x scripts/create_release_branch.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh ${{ inputs.release_version }}"
+          else
+            bash scripts/create_release_branch.sh "${{ inputs.release_version }}"
+          fi
+
+      - name: Write step summary
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## Release Branch Creation Summary";
+            echo "- Release version: ${RELEASE_VERSION}";
+            echo "- Release branch: \`${RELEASE_BRANCH}\`";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no branch created)";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification - branch created
+        if: ${{ success() && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          RUN_ID: ${{ github.run_id }}
+          NIGHTLY_TAG: ${{ inputs.nightly_tag }}
+        run: |
+          python scripts/slack_notifications.py release_automation branch_created
