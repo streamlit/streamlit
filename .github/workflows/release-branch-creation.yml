@@ -90,6 +90,10 @@ jobs:
       - name: Checkout nightly tag (detached HEAD)
         run: |
           set -euo pipefail
+          if [[ ! "${{ inputs.nightly_tag }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "Error: nightly_tag contains invalid characters"
+            exit 1
+          fi
           git checkout "${{ inputs.nightly_tag }}"
           echo "Checked out nightly ref: ${{ inputs.nightly_tag }}"
           LAST_MSG=$(git log -1 --pretty=%B | sed -e 's/\r$//')
