@@ -146,7 +146,7 @@ jobs:
           python scripts/slack_notifications.py release_automation patch_cherry_pick_success
 
       - name: Slack notification - failure
-        if: ${{ steps.cp.outputs.status != 'success' && inputs.dry_run != true }}
+        if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
@@ -159,7 +159,7 @@ jobs:
           python scripts/slack_notifications.py release_automation patch_cherry_pick_failed
 
       - name: Fail job if cherry-pick failed
-        if: ${{ steps.cp.outputs.status != 'success' }}
+        if: ${{ steps.cp.outputs.status == 'failed' }}
         run: |
           echo "Cherry-pick failed: ${{ steps.cp.outputs.error_reason }}" >&2
           exit 1
