@@ -24,7 +24,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_IFRAMES = 11
+NUM_IFRAMES = 13
 
 
 def test_components_iframe_rendering(
@@ -126,7 +126,9 @@ def test_declare_component_correctly_sets_attr(app: Page):
     checkbox_element = get_checkbox(app, "Show custom component")
     checkbox_element.locator("label").click()
 
-    declare_component = app.locator("iframe").nth(11)
+    iframes = app.locator("iframe")
+    expect(iframes).to_have_count(NUM_IFRAMES + 1)
+    declare_component = iframes.nth(11)
 
     expect(declare_component).to_have_attribute(
         "title", "st_components_v1.test_component"
@@ -153,6 +155,29 @@ def test_custom_css_class_via_key(app: Page):
     checkbox_element.locator("label").click()
 
     expect(get_element_by_key(app, "component_1")).to_be_visible()
+
+
+def test_components_zero_dimensions(app: Page):
+    """Test that components.html and components.iframe with width=0 and height=0."""
+
+    iframes = app.locator("iframe")
+    expect(iframes).to_have_count(NUM_IFRAMES)
+
+    zero_html_iframe = iframes.nth(11)
+    expect(zero_html_iframe).to_be_attached()
+
+    zero_html_container = zero_html_iframe.locator("..")
+    expect(zero_html_container).to_be_attached()
+    expect(zero_html_container).to_have_css("width", "0px")
+    expect(zero_html_container).to_have_css("height", "0px")
+
+    zero_iframe_iframe = iframes.nth(12)
+    expect(zero_iframe_iframe).to_be_attached()
+
+    zero_iframe_container = zero_iframe_iframe.locator("..")
+    expect(zero_iframe_container).to_be_attached()
+    expect(zero_iframe_container).to_have_css("width", "0px")
+    expect(zero_iframe_container).to_have_css("height", "0px")
 
 
 # TODO(willhuang1997): Add tests for handling bytes, JSON, DFs, theme

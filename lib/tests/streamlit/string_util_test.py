@@ -14,8 +14,11 @@
 
 from __future__ import annotations
 
+import decimal
 import unittest
+from fractions import Fraction
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -149,3 +152,26 @@ class StringUtilTest(unittest.TestCase):
             string_util.validate_material_icon(icon_name)
 
         assert "not a valid Material icon." in str(e.value)
+
+    @parameterized.expand(
+        [
+            (1, "1"),
+            (1.0, "1.0"),
+            (decimal.Decimal("1.0"), "1.0"),
+            (Fraction(1, 1), "1"),
+            (np.int16(1), "1"),
+            (np.float16(1.0), "1.0"),
+            (np.float32(1.0), "1.0"),
+            (np.float64(1.0), "1.0"),
+            (np.int32(1), "1"),
+            (np.int64(1), "1"),
+        ]
+    )
+    def test_from_number(self, value: object, expected: str):
+        """Test that from_number returns correct string representations for numeric types."""
+        assert string_util.from_number(value) == expected
+
+    def test_from_number_invalid_object_exception(self):
+        """Test that from_number raises TypeError for invalid objects."""
+        with pytest.raises(TypeError):
+            string_util.from_number(None)
