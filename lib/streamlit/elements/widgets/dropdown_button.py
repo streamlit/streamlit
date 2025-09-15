@@ -206,7 +206,7 @@ class DropdownButtonMixin:
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
             raise StreamlitAPIException(
-                'The type argument to st.button must be "primary", "secondary", or "tertiary". '
+                'The type argument to st.dropdown_button must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'
             )
 
