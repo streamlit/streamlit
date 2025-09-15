@@ -109,6 +109,27 @@ def send_notification() -> None:
             text = "\n".join([ln for ln in lines if ln])
             payload = {"text": text}
 
+        elif message_key == "tag_pr_created":
+            pr_url = os.getenv("PR_URL", "")
+            tag_url = (
+                f"https://github.com/{repo}/tree/{release_version}"
+                if repo and release_version
+                else ""
+            )
+            lines = [
+                ":label: Release tag and PR created",
+                f"- Version: {release_version}" if release_version else None,
+                f"- Tag: {tag_url}" if tag_url else None,
+                f"- PR: {pr_url}" if pr_url else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
     if payload:
         response = requests.post(webhook, json=payload)
 
