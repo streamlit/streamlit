@@ -157,7 +157,7 @@ def send_notification() -> None:
             )
             payload = {"text": text}
 
-        if message_key == "patch_cherry_pick_failed":
+        elif message_key == "patch_cherry_pick_failed":
             error_reason = os.getenv("ERROR_REASON", "")
             text = _build_patch_cherry_pick_text(
                 repo=repo,
