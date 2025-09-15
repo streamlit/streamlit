@@ -29,6 +29,7 @@ import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/DownloadButton.proto";
+import "streamlit/proto/DropdownButton.proto";
 import "streamlit/proto/CameraInput.proto";
 import "streamlit/proto/ChatInput.proto";
 import "streamlit/proto/Checkbox.proto";
@@ -93,6 +94,7 @@ message Element {
     Button button = 19;
     ButtonGroup button_group = 55;
     DownloadButton download_button = 43;
+    DropdownButton dropdown_button = 59;
     CameraInput camera_input = 45;
     ChatInput chat_input = 49;
     Checkbox checkbox = 20;

@@ -240,6 +240,7 @@ write = _main.write
 write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
+dropdown_button = _main.dropdown_button
 
 # Events - Note: these methods cannot be called directly on sidebar
 # (ex: st.sidebar.toast)

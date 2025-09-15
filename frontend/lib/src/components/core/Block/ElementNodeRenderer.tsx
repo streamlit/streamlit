@@ -37,6 +37,7 @@ import {
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
+  DropdownButton as DropdownButtonProto,
   Exception as ExceptionProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
@@ -139,6 +140,9 @@ const Button = lazy(() => import("~lib/components/widgets/Button"))
 const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
 const DownloadButton = lazy(
   () => import("~lib/components/widgets/DownloadButton")
+)
+const DropdownButton = lazy(
+  () => import("~lib/components/widgets/DropdownButton")
 )
 const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
 const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
@@ -481,6 +485,20 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "dropdownButton": {
+      const dropdownButtonProto = node.element
+        .dropdownButton as DropdownButtonProto
+      widgetProps.disabled =
+        widgetProps.disabled || dropdownButtonProto.disabled
+      return (
+        <DropdownButton
+          key={dropdownButtonProto.id}
+          element={dropdownButtonProto}
           {...widgetProps}
         />
       )
