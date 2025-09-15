@@ -472,15 +472,19 @@ const AudioInput: React.FC<Props> = ({
     if (!hasRequestedMicPermissions) {
       setHasRequestedMicPermissions(true)
 
+      let stream: MediaStream | null = null
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         })
-
-        stream.getTracks().forEach(track => track.stop())
       } catch {
         setHasNoMicPermissions(true)
         return
+      } finally {
+        // Always stop tracks if we got a stream, even if an error occurred
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop())
+        }
       }
     }
 
