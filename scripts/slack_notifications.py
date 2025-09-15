@@ -87,9 +87,9 @@ def send_notification() -> None:
     if workflow == "release_automation":
         repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
         release_version = os.getenv("RELEASE_VERSION", "")
-        release_branch = os.getenv("RELEASE_BRANCH", "")
 
         if message_key == "branch_created":
+            release_branch = os.getenv("RELEASE_BRANCH", "")
             nightly_tag = os.getenv("NIGHTLY_TAG", "")
             lines = [
                 ":evergreen_tree: Release branch created",

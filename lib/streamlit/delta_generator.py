@@ -485,12 +485,11 @@ class DeltaGenerator(
         msg_el_proto.CopyFrom(element_proto)
 
         if layout_config:
-            if layout_config.height:
+            if layout_config.height is not None:
                 msg.delta.new_element.height_config.CopyFrom(
                     get_height_config(layout_config.height)
                 )
-
-            if layout_config.width:
+            if layout_config.width is not None:
                 msg.delta.new_element.width_config.CopyFrom(
                     get_width_config(layout_config.width)
                 )
