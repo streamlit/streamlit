@@ -352,13 +352,17 @@ const AudioInput: React.FC<Props> = ({
       interact: true,
     })
 
-    ws.on("timeupdate", time => {
+    // Store event handlers for cleanup
+    const handleTimeUpdate = (time: number): void => {
       setProgressTime(formatTime(time * 1000)) // get from seconds to milliseconds
-    })
+    }
 
-    ws.on("pause", () => {
+    const handlePause = (): void => {
       forceRerender()
-    })
+    }
+
+    ws.on("timeupdate", handleTimeUpdate)
+    ws.on("pause", handlePause)
 
     setWavesurfer(ws)
 
@@ -414,7 +418,12 @@ const AudioInput: React.FC<Props> = ({
         recordPluginRef.current = null
         recordPluginHandlersRef.current = {}
       }
-      if (ws) ws.destroy()
+      if (ws) {
+        // Remove WaveSurfer event listeners before destroying
+        ws.un("timeupdate", handleTimeUpdate)
+        ws.un("pause", handlePause)
+        ws.destroy()
+      }
     }
   }, [
     theme,
