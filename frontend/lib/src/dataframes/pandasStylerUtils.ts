@@ -107,7 +107,7 @@ export function getStyledCell(
   rowIndex: number,
   columnIndex: number
 ): StyledCell | undefined {
-  if (!data.styler || !data.styler.cssId) {
+  if (!data.styler?.cssId) {
     return undefined
   }
 

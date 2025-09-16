@@ -32,6 +32,18 @@ vi.mock("~lib/util/isMobile", () => {
   }
 })
 
+// Use fake timers to control debounced functions
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+
+// Clean up timers after each test to prevent memory leaks
+afterEach(() => {
+  vi.runOnlyPendingTimers() // Execute pending timers first
+  vi.clearAllTimers() // Then clear any remaining timers
+  vi.useRealTimers() // Finally restore real timers
+})
+
 const getProps = (props: Partial<Props> = {}): Props => {
   return {
     handleCapture: vi.fn(),
@@ -50,6 +62,9 @@ describe("Test Webcam Component", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -58,6 +73,9 @@ describe("Test Webcam Component", () => {
   it("renders ask permission screen when pending state", () => {
     const props = getProps()
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -76,6 +94,9 @@ describe("Test Webcam Component", () => {
   it("renders ask permission screen when error state", () => {
     const props = getProps({ testOverride: WebcamPermission.ERROR })
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -95,6 +116,9 @@ describe("Test Webcam Component", () => {
   it("does not render ask permission screen in success state", () => {
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -108,6 +132,9 @@ describe("Test Webcam Component", () => {
   it("shows a SwitchFacingMode button", () => {
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -115,9 +142,12 @@ describe("Test Webcam Component", () => {
   })
 
   it("changes `facingMode` when SwitchFacingMode button clicked", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
 
     expect(screen.getByTestId("stCameraInputSwitchButton")).toBeInTheDocument()
 
@@ -131,9 +161,12 @@ describe("Test Webcam Component", () => {
   })
 
   it("test handle capture function", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
+
+    // Advance timers to complete debounced update
+    vi.advanceTimersByTime(1000)
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()

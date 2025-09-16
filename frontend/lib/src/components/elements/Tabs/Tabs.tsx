@@ -78,6 +78,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   useEffect(() => {
     if (tabListRef.current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const { scrollWidth, clientWidth } = tabListRef.current
       setIsOverflowing(scrollWidth > clientWidth)
     }

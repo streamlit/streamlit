@@ -14,25 +14,13 @@
  * limitations under the License.
  */
 
-const { RuleTester } = require("eslint")
-const enforceMemo = require("./enforce-memo")
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    ecmaVersion: 2018,
-    sourceType: "module",
-    parserOptions: {
-      ecmaFeatures: {
-        jsx: true,
-      },
-    },
-  },
-})
+import enforceMemo from "./enforce-memo"
+import { ruleTester } from "./utils/ruleTester"
 
 ruleTester.run("enforce-memo", enforceMemo, {
   valid: [
-    // Already wrapped with React.memo as function declaration
     {
+      name: "function declaration component already wrapped with React.memo",
       code: `
         function MyComponent() {
           return <div>Hello</div>;
@@ -40,8 +28,8 @@ ruleTester.run("enforce-memo", enforceMemo, {
         export default React.memo(MyComponent);
       `,
     },
-    // Already wrapped with memo as function declaration
     {
+      name: "function declaration component already wrapped with imported memo",
       code: `
         import { memo } from 'react';
         function MyComponent() {
@@ -50,8 +38,8 @@ ruleTester.run("enforce-memo", enforceMemo, {
         export default memo(MyComponent);
       `,
     },
-    // Already wrapped with React.memo as arrow function
     {
+      name: "arrow function component already wrapped with React.memo",
       code: `
         const MyComponent = (props) => {
           return <div>Hello {props.name}</div>;
@@ -59,16 +47,16 @@ ruleTester.run("enforce-memo", enforceMemo, {
         export default React.memo(MyComponent);
       `,
     },
-    // Direct memo usage
     {
+      name: "component defined directly with React.memo",
       code: `
         const MyComponent = React.memo((props) => {
           return <div>Hello {props.name}</div>;
         });
       `,
     },
-    // Using imported memo
     {
+      name: "component defined directly with imported memo",
       code: `
         import { memo } from 'react';
         const MyComponent = memo((props) => {
@@ -76,25 +64,24 @@ ruleTester.run("enforce-memo", enforceMemo, {
         });
       `,
     },
-    // Non-component functions (not PascalCase) should not trigger the rule
     {
+      name: "non-component function (camelCase) should not trigger rule",
       code: `
         function calculateTotal(a, b) {
           return a + b;
         }
       `,
     },
-    // Non-component arrow functions should not trigger the rule
     {
+      name: "non-component arrow function (camelCase) should not trigger rule",
       code: `
         const formatName = (user) => {
           return user.firstName + ' ' + user.lastName;
         };
       `,
     },
-    // If the component is wrapped in a HOC, and the enhanced component is
-    // memoized, then we should not trigger the rule.
     {
+      name: "HOC-wrapped component with memo on enhanced component (inline)",
       code: `import { memo } from 'react'
       import { someOtherHOC } from 'some-other-library'
 
@@ -105,9 +92,8 @@ ruleTester.run("enforce-memo", enforceMemo, {
       export default memo(someOtherHOC(MyComponent))
       `,
     },
-    // If the component is wrapped in a HOC, and the enhanced component is
-    // memoized, then we should not trigger the rule.
     {
+      name: "HOC-wrapped component with memo on enhanced component (separate variable)",
       code: `import { memo } from 'react'
       import { someOtherHOC } from 'some-other-library'
 
@@ -119,8 +105,8 @@ ruleTester.run("enforce-memo", enforceMemo, {
       export default memo(EnhancedComponent)
       `,
     },
-    // Only check for memo on components that are exported
     {
+      name: "internal component without memo should not trigger rule (only exported components checked)",
       code: `import { memo } from 'react'
       import { someOtherHOC } from 'some-other-library'
 
@@ -135,34 +121,32 @@ ruleTester.run("enforce-memo", enforceMemo, {
       export default memo(MyComponent)
       `,
     },
-    // For functions that are not components, we should not trigger the rule
     {
+      name: "exported function that returns string should not trigger rule",
       code: `
         export function MyFunction() {
           return 'Hello'
         }
       `,
     },
-    // For arrow functions that are not components, we should not trigger the rule
     {
+      name: "exported arrow function that returns string should not trigger rule",
       code: `
         export const MyArrowFunction = () => {
           return 'Hello'
         }
       `,
     },
-    // For arrow functions that are not components but take in a props-style
-    // argument, we should not trigger the rule
     {
+      name: "exported arrow function with props-style argument that returns string should not trigger rule",
       code: `
         export const MyArrowFunction = (props) => {
           return 'Hello'
         }
       `,
     },
-    // For functions that are not components but take in a props-style
-    // argument, we should not trigger the rule
     {
+      name: "exported function with props-style argument that returns object should not trigger rule",
       code: `
         function JsonColumn(props) {
           return {
@@ -176,8 +160,8 @@ ruleTester.run("enforce-memo", enforceMemo, {
     },
   ],
   invalid: [
-    // Function declaration component with export -> should fix the export
     {
+      name: "function declaration component without memo should be wrapped",
       code: `
         function MyComponent() {
           return <div>Hello</div>;
@@ -186,7 +170,7 @@ ruleTester.run("enforce-memo", enforceMemo, {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -198,8 +182,8 @@ function MyComponent() {
         export default memo(MyComponent);
       `,
     },
-    // Arrow function component with export -> should fix the export
     {
+      name: "arrow function component without memo should be wrapped",
       code: `
         import React from 'react';
         const MyComponent = (props) => {
@@ -209,7 +193,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -220,8 +204,8 @@ function MyComponent() {
         export default memo(MyComponent);
       `,
     },
-    // Test case for component with complex props and export -> should fix only the export
     {
+      name: "complex component with multiple imports without memo should be wrapped",
       code: `
         import 'some-styles.css';
         import React from 'react';
@@ -242,7 +226,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -264,8 +248,8 @@ function MyComponent() {
         export default memo(ComplexComponent);
       `,
     },
-    // Components that are enhanced with a HOC should be wrapped with memo
     {
+      name: "HOC-wrapped component without memo should be wrapped",
       code: `import { memo } from 'react'
       import { someOtherHOC } from 'some-other-library'
 
@@ -278,7 +262,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `import { memo } from 'react'
@@ -294,5 +278,3 @@ function MyComponent() {
     },
   ],
 })
-
-console.log("All 'enforce-memo' tests passed!")

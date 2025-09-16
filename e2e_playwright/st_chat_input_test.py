@@ -382,19 +382,24 @@ def test_file_upload_error_message_file_too_large(app: Page):
     )
 
     expect(app.get_by_text(file_name1)).not_to_be_attached()
-
-    file_upload_helper(app, app.get_by_test_id("stChatInput").nth(3), [file1])
-
-    # Reset hovering to not cause issues with the upload tooltip being
-    # shown over the uploaded file tooltip hover target:
-    reset_hovering(app)
-    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
+    chat_input = app.get_by_test_id("stChatInput").nth(3)
+    expect(chat_input).to_be_visible()
+    file_upload_helper(app, chat_input, [file1])
 
     expect(app.get_by_text(file_name1)).to_be_visible()
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(1)
     expect(uploaded_files).to_be_visible()
-    tooltip_hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget").nth(0)
+    uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(uploaded_file).to_be_visible()
+
+    uploaded_files.scroll_into_view_if_needed()
+
+    # Reset hovering to not cause issues with the upload tooltip being
+    # shown over the uploaded file tooltip hover target:
+    reset_hovering(app)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
+    tooltip_hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget").first
     expect(tooltip_hover_target).to_be_visible()
     tooltip_hover_target.hover()
     expect(app.get_by_text("File must be 1.0MB or smaller.")).to_be_visible()

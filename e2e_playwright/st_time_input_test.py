@@ -21,12 +21,16 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_time_input,
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
+
+NUM_TIME_INPUTS = 13
 
 
 def test_time_input_widget_rendering(
@@ -34,7 +38,7 @@ def test_time_input_widget_rendering(
 ):
     """Test that the time input widgets are correctly rendered via screenshot matching."""
     time_input_widgets = themed_app.get_by_test_id("stTimeInput")
-    expect(time_input_widgets).to_have_count(12)
+    expect(time_input_widgets).to_have_count(NUM_TIME_INPUTS)
 
     assert_snapshot(
         get_time_input(themed_app, "Time input 1 (8:45)"), name="st_time_input-8_45"
@@ -242,6 +246,43 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "time_input_6")).to_be_visible()
 
 
+def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the time input can be updated dynamically while keeping the state."""
+    dynamic_time_input = get_element_by_key(app, "dynamic_time_input_with_key")
+    expect(dynamic_time_input).to_be_visible()
+
+    expect(dynamic_time_input).to_contain_text("Initial dynamic time input")
+
+    expect_prefixed_markdown(app, "Initial time input value:", "08:45:00")
+    assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_time_input, "initial help")
+
+    # Type something and submit
+    input_field = dynamic_time_input.locator("input")
+    input_field.type("00:15")
+    input_field.press("Enter")
+    wait_for_app_loaded(app)
+
+    expect_prefixed_markdown(app, "Initial time input value:", "00:15:00")
+
+    # Click the toggle to update the time input props
+    click_toggle(app, "Update time input props")
+
+    # new time input is visible:
+    expect(dynamic_time_input).to_contain_text("Updated dynamic time input")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated time input value:", "00:15:00")
+
+    dynamic_time_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_time_input, "updated help")
+
+
 def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that time input adjusts for custom theme."""
     # Apply custom theme using window injection
@@ -258,7 +299,7 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     wait_for_app_loaded(app)
 
     time_input_widgets = app.get_by_test_id("stTimeInput")
-    expect(time_input_widgets).to_have_count(12)
+    expect(time_input_widgets).to_have_count(NUM_TIME_INPUTS)
 
     # Click on the first time input to open the dropdown
     get_time_input(app, "Time input 1 (8:45)").locator("input").click()

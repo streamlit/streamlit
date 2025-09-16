@@ -14,35 +14,53 @@
  * limitations under the License.
  */
 
+import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
+import { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
+
+import { createRule } from "./utils/createRule"
+
+type MessageIds = "enforceMemo"
+
+/**
+ * Checks if a name follows PascalCase convention (used to identify components)
+ */
+const isPascalCase = (name: string): boolean =>
+  name?.[0] === name?.[0].toUpperCase() && name?.length > 1
+
 /**
  * This rule enforces the use of React.memo for React components.
  * It detects exported components and ensures they are wrapped with memo
  * for performance optimization.
  */
-module.exports = {
+const enforceMemo = createRule<[], MessageIds>({
+  name: "enforce-memo",
   meta: {
-    name: "enforce-memo",
-    type: "error",
+    type: "problem",
     docs: {
       description: "Enforce use of React.memo for exported React components",
-      category: "Best Practices",
-      recommended: false,
     },
     fixable: "code",
     schema: [],
+    messages: {
+      enforceMemo: "React components should be wrapped with memo",
+    },
   },
+  defaultOptions: [],
   create(context) {
     // Track state for components used in various contexts
-    const componentsUsedInHOCs = new Map() // Maps component name to HOC variable name or true if memoized
-    const hocWrappedComponents = new Set() // Set of HOC-wrapped component variable names
-    const exportedComponents = new Set() // Set of component names that are exported
+    const componentsUsedInHOCs = new Map<string, string | boolean>() // Maps component name to HOC variable name or true if memoized
+    const hocWrappedComponents = new Set<string>() // Set of HOC-wrapped component variable names
+    const exportedComponents = new Set<string>() // Set of component names that are exported
     const sourceCode = context.getSourceCode()
     const sourceText = sourceCode.getText()
+
+    // Cache for HOC pattern matching to avoid recompiling regex on every call
+    const hocPatternCache = new Map<string, string[]>() // Maps component name to array of HOC variable names
 
     /**
      * Checks if a component is already wrapped with React.memo in an export statement
      */
-    const isWrappedInExport = componentName => {
+    const isWrappedInExport = (componentName: string): boolean => {
       const exportPatterns = [
         `export\\s+default\\s+React\\.memo\\(\\s*${componentName}\\s*\\)`,
         `export\\s+default\\s+memo\\(\\s*${componentName}\\s*\\)`,
@@ -56,7 +74,8 @@ module.exports = {
     /**
      * Checks if the node is part of an export declaration
      */
-    const isExported = node => node.parent?.type === "ExportDefaultDeclaration"
+    const isExported = (node: TSESTree.Node): boolean =>
+      node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration
 
     /**
      * Checks if a component is used in a HOC and the result is memoized
@@ -64,23 +83,35 @@ module.exports = {
      * const EnhancedComponent = someOtherHOC(MyComponent)
      * export default memo(EnhancedComponent)
      */
-    const isComponentUsedInMemoizedHOC = componentName => {
-      const hocPattern = new RegExp(
-        `const\\s+(\\w+)\\s*=\\s*\\w+\\(\\s*${componentName}\\s*\\)`,
-        "g"
-      )
+    const isComponentUsedInMemoizedHOC = (componentName: string): boolean => {
+      // Check cache first
+      if (!hocPatternCache.has(componentName)) {
+        const hocVarNames: string[] = []
+        const hocPattern = new RegExp(
+          `const\\s+(\\w+)\\s*=\\s*\\w+\\(\\s*${componentName}\\s*\\)`,
+          "g"
+        )
 
-      let match
-      while ((match = hocPattern.exec(sourceText)) !== null) {
-        if (match?.[1]) {
-          const hocVarName = match[1]
-          const memoExportPattern = new RegExp(
-            `export\\s+default\\s+(React\\.memo|memo)\\(\\s*${hocVarName}\\s*\\)`
-          )
-
-          if (memoExportPattern.test(sourceText)) {
-            return true
+        let match
+        while ((match = hocPattern.exec(sourceText)) !== null) {
+          if (match?.[1]) {
+            hocVarNames.push(match[1])
           }
+        }
+
+        hocPatternCache.set(componentName, hocVarNames)
+      }
+
+      const hocVarNames = hocPatternCache.get(componentName) || []
+
+      // Check if any of the HOC variables are exported with memo
+      for (const hocVarName of hocVarNames) {
+        const memoExportPattern = new RegExp(
+          `export\\s+default\\s+(React\\.memo|memo)\\(\\s*${hocVarName}\\s*\\)`
+        )
+
+        if (memoExportPattern.test(sourceText)) {
+          return true
         }
       }
 
@@ -93,7 +124,10 @@ module.exports = {
     /**
      * Checks if a variable is exported somewhere in the file
      */
-    const isVariableExported = (_, componentName) => {
+    const isVariableExported = (
+      _: TSESTree.Node,
+      componentName: string
+    ): boolean => {
       // Return early if we already know this component is exported
       if (exportedComponents.has(componentName)) {
         return true
@@ -128,10 +162,11 @@ module.exports = {
      * - import React, { memo } from 'react'
      * - import * as React from 'react' (+ React.memo usage)
      */
-    const hasMemoImport = () => {
+    const hasMemoImport = (): boolean => {
       const imports = sourceCode.ast.body.filter(
-        node =>
-          node.type === "ImportDeclaration" && node.source.value === "react"
+        (node): node is TSESTree.ImportDeclaration =>
+          node.type === AST_NODE_TYPES.ImportDeclaration &&
+          node.source.value === "react"
       )
 
       // Check for named imports like: import { memo } from 'react'
@@ -139,7 +174,8 @@ module.exports = {
       const hasNamedMemoImport = imports.some(importDecl =>
         importDecl.specifiers.some(
           specifier =>
-            specifier.type === "ImportSpecifier" &&
+            specifier.type === AST_NODE_TYPES.ImportSpecifier &&
+            specifier.imported.type === AST_NODE_TYPES.Identifier &&
             specifier.imported.name === "memo"
         )
       )
@@ -149,7 +185,8 @@ module.exports = {
       // we'll check if React is imported as a namespace and if React.memo is used in the code
       const hasNamespaceImport = imports.some(importDecl =>
         importDecl.specifiers.some(
-          specifier => specifier.type === "ImportNamespaceSpecifier"
+          specifier =>
+            specifier.type === AST_NODE_TYPES.ImportNamespaceSpecifier
         )
       )
 
@@ -160,11 +197,12 @@ module.exports = {
      * Adds the memo import if not already present in the file
      * Returns a fixer or null if import already exists
      */
-    const ensureMemoImport = fixer => {
+    const ensureMemoImport = (fixer: RuleFixer): RuleFix | null => {
       if (hasMemoImport()) return null
 
       const allImports = sourceCode.ast.body.filter(
-        node => node.type === "ImportDeclaration"
+        (node): node is TSESTree.ImportDeclaration =>
+          node.type === AST_NODE_TYPES.ImportDeclaration
       )
 
       // Try to add to existing React import
@@ -173,13 +211,15 @@ module.exports = {
           node.source.value === "react" &&
           node.specifiers.every(
             spec =>
-              spec.type !== "ImportSpecifier" || spec.imported.name !== "memo"
+              spec.type !== AST_NODE_TYPES.ImportSpecifier ||
+              (spec.imported.type === AST_NODE_TYPES.Identifier &&
+                spec.imported.name !== "memo")
           )
       )
 
       if (reactImport) {
         const hasNamedImports = reactImport.specifiers.some(
-          spec => spec.type === "ImportSpecifier"
+          spec => spec.type === AST_NODE_TYPES.ImportSpecifier
         )
 
         if (hasNamedImports) {
@@ -187,10 +227,23 @@ module.exports = {
           const lastSpecifier =
             reactImport.specifiers[reactImport.specifiers.length - 1]
           return fixer.insertTextAfter(lastSpecifier, ", memo")
-        } else {
-          // Add as new named import alongside default import
-          return fixer.insertTextAfter(reactImport.specifiers[0], ", { memo }")
         }
+        // Add as new named import alongside default import
+        // Check if we have a default import to add named imports after
+        const defaultImport = reactImport.specifiers.find(
+          spec => spec.type === AST_NODE_TYPES.ImportDefaultSpecifier
+        )
+        if (defaultImport) {
+          return fixer.insertTextAfter(defaultImport, ", { memo }")
+        }
+        // If no default import, add at the end of specifiers
+        if (reactImport.specifiers.length === 0) {
+          // Handle the case where there are no specifiers
+          return fixer.insertTextAfter(reactImport.source, " { memo }")
+        }
+        const lastSpecifier =
+          reactImport.specifiers[reactImport.specifiers.length - 1]
+        return fixer.insertTextAfter(lastSpecifier, ", memo")
       } else if (allImports.length > 0) {
         // Add after the last import
         const lastImport = allImports[allImports.length - 1]
@@ -198,35 +251,61 @@ module.exports = {
           lastImport,
           "\nimport { memo } from 'react';"
         )
-      } else {
-        // Add at the beginning of the file
-        return fixer.insertTextBefore(
-          sourceCode.ast,
-          "import { memo } from 'react';\n\n"
-        )
       }
+      // Add at the beginning of the file
+      return fixer.insertTextBefore(
+        sourceCode.ast,
+        "import { memo } from 'react';\n\n"
+      )
     }
 
     /**
      * Recursively finds all return statements in a node
      */
-    const findReturnStatements = (node, results = []) => {
+    const findReturnStatements = (
+      node: TSESTree.Node,
+      results: TSESTree.ReturnStatement[] = []
+    ): TSESTree.ReturnStatement[] => {
       if (!node) return results
 
-      if (node.type === "ReturnStatement") {
+      if (node.type === AST_NODE_TYPES.ReturnStatement) {
         results.push(node)
-      } else if (node.body) {
+      } else if ("body" in node && node.body) {
         if (Array.isArray(node.body)) {
-          node.body.forEach(child => findReturnStatements(child, results))
-        } else {
-          findReturnStatements(node.body, results)
+          node.body.forEach(child => {
+            if (child && typeof child === "object" && "type" in child) {
+              findReturnStatements(child as TSESTree.Node, results)
+            }
+          })
+        } else if (typeof node.body === "object" && "type" in node.body) {
+          findReturnStatements(node.body as TSESTree.Node, results)
         }
       }
 
       // Handle conditionals and switch statements
-      if (node.consequent) findReturnStatements(node.consequent, results)
-      if (node.alternate) findReturnStatements(node.alternate, results)
-      if (node.cases) node.cases.forEach(c => findReturnStatements(c, results))
+      if (
+        "consequent" in node &&
+        node.consequent &&
+        typeof node.consequent === "object" &&
+        "type" in node.consequent
+      ) {
+        findReturnStatements(node.consequent as TSESTree.Node, results)
+      }
+      if (
+        "alternate" in node &&
+        node.alternate &&
+        typeof node.alternate === "object" &&
+        "type" in node.alternate
+      ) {
+        findReturnStatements(node.alternate as TSESTree.Node, results)
+      }
+      if ("cases" in node && node.cases && Array.isArray(node.cases)) {
+        node.cases.forEach(c => {
+          if (c && typeof c === "object" && "type" in c) {
+            findReturnStatements(c as TSESTree.Node, results)
+          }
+        })
+      }
 
       return results
     }
@@ -234,23 +313,32 @@ module.exports = {
     /**
      * Determines if a node is likely a React component by checking if it returns JSX
      */
-    const isLikelyReactComponent = node => {
-      if (!node?.body) return false
+    const isLikelyReactComponent = (node: TSESTree.Node): boolean => {
+      if (!("body" in node) || !node.body) return false
 
-      if (node.body.type === "BlockStatement") {
+      if (
+        typeof node.body === "object" &&
+        "type" in node.body &&
+        node.body.type === AST_NODE_TYPES.BlockStatement
+      ) {
         // Check function body for JSX in return statements
-        const returnStatements = findReturnStatements(node.body)
+        const returnStatements = findReturnStatements(
+          node.body as TSESTree.Node
+        )
         return returnStatements.some(
           stmt =>
-            stmt.argument?.type === "JSXElement" ||
-            stmt.argument?.type === "JSXFragment"
+            stmt.argument?.type === AST_NODE_TYPES.JSXElement ||
+            stmt.argument?.type === AST_NODE_TYPES.JSXFragment
         )
       }
 
       // Check for arrow functions with implicit JSX returns
       return (
-        node.type === "ArrowFunctionExpression" &&
-        (node.body.type === "JSXElement" || node.body.type === "JSXFragment")
+        node.type === AST_NODE_TYPES.ArrowFunctionExpression &&
+        typeof node.body === "object" &&
+        "type" in node.body &&
+        (node.body.type === AST_NODE_TYPES.JSXElement ||
+          node.body.type === AST_NODE_TYPES.JSXFragment)
       )
     }
 
@@ -258,25 +346,36 @@ module.exports = {
      * Checks if a component is already wrapped with memo directly, in exports,
      * or used in an HOC that is memoized
      */
-    const isMemoWrapped = (node, componentName) =>
-      (node.parent?.type === "CallExpression" &&
+    const isMemoWrapped = (
+      node: TSESTree.Node,
+      componentName: string
+    ): boolean =>
+      (node.parent?.type === AST_NODE_TYPES.CallExpression &&
         node.parent.callee &&
-        (node.parent.callee.name === "memo" ||
-          (node.parent.callee.object?.name === "React" &&
-            node.parent.callee.property?.name === "memo"))) ||
+        ((node.parent.callee.type === AST_NODE_TYPES.Identifier &&
+          node.parent.callee.name === "memo") ||
+          (node.parent.callee.type === AST_NODE_TYPES.MemberExpression &&
+            node.parent.callee.object?.type === AST_NODE_TYPES.Identifier &&
+            node.parent.callee.object.name === "React" &&
+            node.parent.callee.property?.type === AST_NODE_TYPES.Identifier &&
+            node.parent.callee.property.name === "memo"))) ||
       isWrappedInExport(componentName) ||
       isComponentUsedInMemoizedHOC(componentName)
 
     /**
      * Creates fixes for all export statements that reference a component
      */
-    const fixExportStatements = (fixer, componentName) => {
+
+    const fixExportStatements = (
+      fixer: RuleFixer,
+      componentName: string
+    ): RuleFix[] => {
       const regex = new RegExp(
         `(export\\s+default\\s+)(${componentName})([^\\w]|$)`,
         "g"
       )
       let match
-      const exportMatches = []
+      const exportMatches: Array<{ start: number; end: number }> = []
 
       // Find all exports of this component
       while ((match = regex.exec(sourceText)) !== null) {
@@ -298,14 +397,14 @@ module.exports = {
     return {
       // Handle direct exports like: export default MyComponent
       ExportDefaultDeclaration(node) {
-        if (node.declaration?.type === "Identifier") {
+        if (node.declaration?.type === AST_NODE_TYPES.Identifier) {
           const exportedName = node.declaration.name
           exportedComponents.add(exportedName)
 
           if (hocWrappedComponents.has(exportedName)) {
             context.report({
               node,
-              message: "React components should be wrapped with memo",
+              messageId: "enforceMemo",
               fix(fixer) {
                 const fixes = []
                 const importFix = ensureMemoImport(fixer)
@@ -324,15 +423,15 @@ module.exports = {
       CallExpression(node) {
         // Capture component used in HOC call: someHOC(MyComponent)
         if (
-          node.arguments?.[0]?.type === "Identifier" &&
+          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
           isPascalCase(node.arguments[0].name)
         ) {
           const componentName = node.arguments[0].name
 
           // If part of a variable declaration: const Enhanced = someHOC(MyComponent)
           if (
-            node.parent?.type === "VariableDeclarator" &&
-            node.parent.id?.type === "Identifier"
+            node.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+            node.parent.id?.type === AST_NODE_TYPES.Identifier
           ) {
             const hocVarName = node.parent.id.name
             hocWrappedComponents.add(hocVarName)
@@ -340,18 +439,22 @@ module.exports = {
           }
 
           // If directly exported: export default someHOC(MyComponent)
-          if (node.parent?.type === "ExportDefaultDeclaration") {
+          if (node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
             exportedComponents.add(componentName)
           }
         }
 
         // Capture export default memo(Component)
         if (
-          (node.callee?.name === "memo" ||
-            (node.callee?.object?.name === "React" &&
-              node.callee?.property?.name === "memo")) &&
-          node.arguments?.[0]?.type === "Identifier" &&
-          node.parent?.type === "ExportDefaultDeclaration"
+          ((node.callee?.type === AST_NODE_TYPES.Identifier &&
+            node.callee.name === "memo") ||
+            (node.callee?.type === AST_NODE_TYPES.MemberExpression &&
+              node.callee.object?.type === AST_NODE_TYPES.Identifier &&
+              node.callee.object.name === "React" &&
+              node.callee.property?.type === AST_NODE_TYPES.Identifier &&
+              node.callee.property.name === "memo")) &&
+          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
+          node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration
         ) {
           exportedComponents.add(node.arguments[0].name)
         }
@@ -359,10 +462,10 @@ module.exports = {
 
       // Handle memo call expressions specifically
       "CallExpression[callee.name='memo'], CallExpression[callee.property.name='memo']"(
-        node
+        node: TSESTree.CallExpression
       ) {
         if (
-          node.arguments?.[0]?.type === "Identifier" &&
+          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
           hocWrappedComponents.has(node.arguments[0].name)
         ) {
           // When a memo wraps an HOC variable, mark any components used in that HOC as memoized
@@ -373,7 +476,9 @@ module.exports = {
             if (hocName === node.arguments[0].name) {
               componentsUsedInHOCs.set(componentName, true)
 
-              if (node.parent?.type === "ExportDefaultDeclaration") {
+              if (
+                node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration
+              ) {
                 exportedComponents.add(componentName)
               }
             }
@@ -384,7 +489,11 @@ module.exports = {
       // Handle function declarations for components
       FunctionDeclaration(node) {
         // Skip if not a PascalCase React component
-        if (!isPascalCase(node.id.name) || !isLikelyReactComponent(node)) {
+        if (
+          !node.id ||
+          !isPascalCase(node.id.name) ||
+          !isLikelyReactComponent(node)
+        ) {
           return
         }
 
@@ -403,7 +512,7 @@ module.exports = {
         // Report and fix the issue
         context.report({
           node,
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
           fix(fixer) {
             const fixes = []
             const importFix = ensureMemoImport(fixer)
@@ -421,14 +530,17 @@ module.exports = {
       // Handle variable declarations for components (arrow functions)
       VariableDeclarator(node) {
         // Skip if not a PascalCase component name
-        if (!node.id?.type === "Identifier" || !isPascalCase(node.id.name))
+        if (
+          node.id?.type !== AST_NODE_TYPES.Identifier ||
+          !isPascalCase(node.id.name)
+        )
           return
 
         // Skip if not a function expression
         if (
           !node.init ||
-          (node.init.type !== "ArrowFunctionExpression" &&
-            node.init.type !== "FunctionExpression")
+          (node.init.type !== AST_NODE_TYPES.ArrowFunctionExpression &&
+            node.init.type !== AST_NODE_TYPES.FunctionExpression)
         ) {
           return
         }
@@ -449,7 +561,7 @@ module.exports = {
         // Report and fix the issue
         context.report({
           node,
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
           fix(fixer) {
             const fixes = []
             const importFix = ensureMemoImport(fixer)
@@ -459,8 +571,10 @@ module.exports = {
               fixes.push(...fixExportStatements(fixer, componentName))
             } else {
               // Wrap the function definition with memo
-              const nodeText = sourceCode.getText(node.init)
-              fixes.push(fixer.replaceText(node.init, `memo(${nodeText})`))
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              const nodeText = sourceCode.getText(node.init!)
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              fixes.push(fixer.replaceText(node.init!, `memo(${nodeText})`))
             }
 
             return fixes.length > 0 ? fixes : null
@@ -469,10 +583,6 @@ module.exports = {
       },
     }
   },
-}
+})
 
-/**
- * Checks if a name follows PascalCase convention (used to identify components)
- */
-const isPascalCase = name =>
-  name?.[0] === name?.[0].toUpperCase() && name?.length > 1
+export default enforceMemo

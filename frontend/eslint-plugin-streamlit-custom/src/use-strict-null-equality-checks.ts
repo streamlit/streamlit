@@ -14,31 +14,44 @@
  * limitations under the License.
  */
 
-module.exports = {
+import { AST_NODE_TYPES } from "@typescript-eslint/utils"
+
+import { createRule } from "./utils/createRule"
+
+type MessageIds = "useStrictEquality"
+
+const useStrictNullEqualityChecks = createRule<[], MessageIds>({
+  name: "use-strict-null-equality-checks",
   meta: {
-    name: "use-strict-null-equality-checks",
     type: "suggestion",
     docs: {
       description: "Disallow == null and != null comparisons",
-      category: "Best Practices",
-      recommended: true,
     },
     fixable: "code",
     schema: [],
+    messages: {
+      useStrictEquality:
+        "Use isNullOrUndefined or notNullOrUndefined instead of == null or != null",
+    },
   },
+  defaultOptions: [],
   create(context) {
     return {
       BinaryExpression(node) {
         if (node.operator === "==" || node.operator === "!=") {
           if (
-            (node.right.type === "Literal" && node.right.value === null) ||
-            (node.right.type === "Identifier" &&
-              node.right.name === "undefined")
+            (node.right.type === AST_NODE_TYPES.Literal &&
+              node.right.value === null) ||
+            (node.right.type === AST_NODE_TYPES.Identifier &&
+              node.right.name === "undefined") ||
+            (node.left.type === AST_NODE_TYPES.Literal &&
+              node.left.value === null) ||
+            (node.left.type === AST_NODE_TYPES.Identifier &&
+              node.left.name === "undefined")
           ) {
             context.report({
               node,
-              message:
-                "Use isNullOrUndefined or notNullOrUndefined instead of == null or != null",
+              messageId: "useStrictEquality",
               fix(fixer) {
                 const isNegated = node.operator === "!="
                 const replacement = isNegated
@@ -54,4 +67,6 @@ module.exports = {
       },
     }
   },
-}
+})
+
+export default useStrictNullEqualityChecks

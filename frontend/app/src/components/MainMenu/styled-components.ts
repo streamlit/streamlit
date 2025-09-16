@@ -23,13 +23,13 @@ import { EmotionTheme } from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {
-  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }
 50% {
-  box-shadow: 0 0 ${theme.spacing.sm} ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.sm} ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }
 100% {
-  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }`
 
 export const StyledRecordingIndicator = styled.div(({ theme }) => ({
@@ -38,9 +38,9 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
   right: theme.spacing.sm,
   width: theme.spacing.sm,
   height: theme.spacing.sm,
-  backgroundColor: theme.colors.red,
+  backgroundColor: theme.colors.redTextColor,
   borderRadius: theme.radii.full,
-  boxShadow: `0 0 ${theme.spacing.twoXS} ${theme.colors.red}`,
+  boxShadow: `0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor}`,
   animation: `${recordingIndicatorPulse(theme)} 2s linear infinite`,
 }))
 
@@ -62,7 +62,9 @@ export interface ItemStyleProps {
 export const StyledMenuItemShortcut = styled.span<ItemProps>(
   ({ isRecording, theme }) => {
     return {
-      color: isRecording ? theme.colors.red : theme.colors.fadedText60,
+      color: isRecording
+        ? theme.colors.redTextColor
+        : theme.colors.fadedText60,
       fontSize: theme.fontSizes.sm,
       marginTop: theme.spacing.twoXS,
       fontVariant: "small-caps",
@@ -87,7 +89,7 @@ export const StyledMenuItem = styled.ul<ItemProps>(
         }
 
     const recordingStyles = isRecording && {
-      color: theme.colors.red,
+      color: theme.colors.redTextColor,
       fontWeight: theme.fontWeights.bold,
     }
 

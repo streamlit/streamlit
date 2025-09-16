@@ -34,6 +34,7 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "concurrently": "^9.2.1",
+    "jiti": "^2.5.1",
     "vitest": "^3.2.4"
   }
 }

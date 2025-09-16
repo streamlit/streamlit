@@ -93,7 +93,7 @@ if st.checkbox("Show code", True):
 
 @st.cache_data
 def image():
-    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img, caption="A black square", width=200)
 
 
