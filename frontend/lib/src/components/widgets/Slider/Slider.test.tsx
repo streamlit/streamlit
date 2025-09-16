@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -242,10 +242,11 @@ describe("Slider widget", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const sliderContainer = screen.getByTestId("stSlider")
       await user.hover(sliderContainer)
-      expect(tickBar).toBeVisible()
+      // Use waitFor since the tickbar has an animation:
+      waitFor(() => expect(tickBar).toBeVisible())
 
       await user.unhover(sliderContainer)
-      expect(tickBar).not.toBeVisible()
+      waitFor(() => expect(tickBar).not.toBeVisible())
     })
 
     it("becomes visible while dragging via keyboard and hides after release", async () => {
@@ -260,10 +261,11 @@ describe("Slider widget", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       slider.focus()
       await user.keyboard("{ArrowRight>}")
-      expect(tickBar).toBeVisible()
+      // Use waitFor since the tickbar has an animation:
+      waitFor(() => expect(tickBar).toBeVisible())
 
       await user.keyboard("{/ArrowRight}")
-      expect(tickBar).not.toBeVisible()
+      waitFor(() => expect(tickBar).not.toBeVisible())
     })
   })
 
