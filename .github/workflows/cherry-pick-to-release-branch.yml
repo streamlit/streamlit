@@ -39,7 +39,7 @@ jobs:
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v4
