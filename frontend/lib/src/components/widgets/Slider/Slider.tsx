@@ -48,9 +48,9 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledSliderTickBar,
   StyledThumb,
   StyledThumbValue,
-  StyledSliderTickBar,
 } from "./styled-components"
 
 interface SliderTickBarProps {
