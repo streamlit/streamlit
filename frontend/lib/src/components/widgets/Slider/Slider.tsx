@@ -296,7 +296,7 @@ function Slider({
           InnerTrack: {
             style: innerTrackStyle,
           },
-          // Hover-only min/max labels rendered below the slider
+          // Show min/max labels when hovering the slider or dragging it
           TickBar: {
             component: SliderTickBar,
             props: {
