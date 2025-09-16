@@ -31,10 +31,12 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def stop_recording(audio_input: Locator, app: Page):
+def stop_recording(audio_input: Locator, app: Page, wait_for_run: bool = True):
     """Stop recording audio and wait for the recording to complete."""
     audio_input.get_by_role("button", name="Stop recording").click()
-    app.wait_for_timeout(5000)  # ci seems to be very slow so adding wait here
+    # Wait for the recording to be processed and the UI to update
+    if wait_for_run:
+        wait_for_app_run(app)
 
 
 def ensure_waveform_is_not_rendered(audio_input: Locator):
@@ -188,7 +190,12 @@ def _test_download_audio_file(app: Page, locator: FrameLocator | Locator):
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
 
-    stop_recording(audio_input, app)
+    # Don't wait for app run in iframe context
+    is_iframe = isinstance(locator, FrameLocator)
+    stop_recording(audio_input, app, wait_for_run=not is_iframe)
+    if is_iframe:
+        # Give iframe time to process the recording
+        app.wait_for_timeout(2000)
 
     with app.expect_download() as download_info:
         download_button = audio_input.get_by_role("button", name="Download as WAV")
@@ -213,6 +220,7 @@ def test_audio_input_file_download_in_iframe(iframed_app: IframedPage):
     """Test that the audio input file can be downloaded within an iframe."""
 
     page: Page = iframed_app.page
+    page.context.grant_permissions(["microphone"])
     frame_locator: FrameLocator = iframed_app.open_app(None)
 
     _test_download_audio_file(page, frame_locator)
