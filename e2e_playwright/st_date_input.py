@@ -119,3 +119,40 @@ st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretc
 
 st.write("""This is a block of text. We can click on it to
          trigger a click outside of the element to submit the value.""")
+
+if st.toggle("Update date input props"):
+    dval = st.date_input(
+        "Updated dynamic date input",
+        value=date(2023, 9, 10),
+        width=300,
+        help="updated help",
+        on_change=lambda a, param: print(
+            f"Updated date input - callback triggered: {a} {param}"
+        ),
+        args=("Updated date arg",),
+        kwargs={"param": "updated kwarg param"},
+        key="dynamic_date_input_with_key",
+        # min_value, max_value, & format are not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        min_value=date(2010, 1, 1),
+        max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
+    )
+    st.write("Updated date input value:", dval)
+else:
+    dval = st.date_input(
+        "Initial dynamic date input",
+        value=date(2020, 1, 1),
+        width="stretch",
+        help="initial help",
+        on_change=lambda a, param: print(
+            f"Initial date input - callback triggered: {a} {param}"
+        ),
+        args=("Initial date arg",),
+        kwargs={"param": "initial kwarg param"},
+        key="dynamic_date_input_with_key",
+        min_value=date(2010, 1, 1),
+        max_value=date(2030, 1, 1),
+        format="YYYY/MM/DD",
+    )
+    st.write("Initial date input value:", dval)

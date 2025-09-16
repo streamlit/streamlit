@@ -178,7 +178,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // We only show data if its provided via data or if there
     // is one data set in the datasets array. In this case,
     // only the first dataset is shown:
-    if (data || (datasets && datasets[0]?.data)) {
+    if (data || datasets?.[0]?.data) {
       setEnableShowData(true)
     } else {
       setEnableShowData(false)

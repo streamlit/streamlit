@@ -501,7 +501,10 @@ class DataframeUtilTest(unittest.TestCase):
 
         items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
         db_relation = duckdb.sql("SELECT * from items")
-        assert dataframe_util.is_duckdb_relation(db_relation) is True
+
+        assert dataframe_util.is_duckdb_relation(db_relation) is True, (
+            "Object is not a known DuckDB relation: " + get_fqn_type(db_relation)
+        )
         assert (
             dataframe_util.determine_data_format(db_relation)
             is dataframe_util.DataFormat.DUCKDB_RELATION

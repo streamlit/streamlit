@@ -139,6 +139,13 @@ class LayoutUtilsTest(unittest.TestCase):
         assert not config.use_content
         assert not config.use_stretch
 
+    def test_get_width_config_zero(self):
+        """get_width_config produces pixel_width=0 for zero input."""
+        config = get_width_config(0)
+        assert config.pixel_width == 0
+        assert not config.use_content
+        assert not config.use_stretch
+
     @parameterized.expand(
         [
             ("content", True, False),
@@ -166,6 +173,13 @@ class LayoutUtilsTest(unittest.TestCase):
 
         config = get_height_config(height)
         assert config.pixel_height == expected_px
+        assert not config.use_content
+        assert not config.use_stretch
+
+    def test_get_height_config_zero(self):
+        """get_height_config produces pixel_height=0 for zero input."""
+        config = get_height_config(0)
+        assert config.pixel_height == 0
         assert not config.use_content
         assert not config.use_stretch
 

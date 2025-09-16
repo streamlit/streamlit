@@ -267,7 +267,7 @@ export class ElementNode implements AppNode {
     fragmentIdsThisRun?: Array<string>,
     fragmentIdOfBlock?: string
   ): ElementNode | undefined {
-    if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+    if (fragmentIdsThisRun?.length) {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
       //   1. This element doesn't correspond to a fragment at all.
@@ -500,7 +500,7 @@ export class BlockNode implements AppNode {
     fragmentIdsThisRun?: Array<string>,
     fragmentIdOfBlock?: string
   ): BlockNode | undefined {
-    if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
+    if (!fragmentIdsThisRun?.length) {
       // If we're not currently running a fragment, then we can remove any blocks
       // that don't correspond to currentScriptRunId.
       if (this.scriptRunId !== currentScriptRunId) {

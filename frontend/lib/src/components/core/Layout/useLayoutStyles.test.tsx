@@ -146,13 +146,30 @@ describe("#useLayoutStyles", () => {
       )
     })
 
+    describe("that has widthConfig set to zero pixelWidth values", () => {
+      it.each([
+        [0, false, getDefaultStyles({ width: "0px" })],
+        [0, true, getDefaultStyles({ width: "100%" })],
+      ])(
+        "and with a pixelWidth value of %s and useContainerWidth %s, returns %o",
+        (pixelWidth, useContainerWidth, expected) => {
+          const element = new MockElement({
+            widthConfig: new streamlit.WidthConfig({ pixelWidth }),
+          })
+          const subElement = { useContainerWidth }
+          const { result } = renderHook(() =>
+            useLayoutStyles({ element, subElement })
+          )
+          expect(result.current).toEqual(expected)
+        }
+      )
+    })
+
     describe("that has widthConfig set to invalid pixelWidth values", () => {
       it.each([
-        [0, false, getDefaultStyles({})],
         [-100, false, getDefaultStyles({})],
         [NaN, false, getDefaultStyles({})],
         [100, false, getDefaultStyles({ width: "100px" })],
-        [0, true, getDefaultStyles({ width: "100%" })],
         [-100, true, getDefaultStyles({ width: "100%" })],
         [NaN, true, getDefaultStyles({ width: "100%" })],
         [100, true, getDefaultStyles({ width: "100%" })],
@@ -233,7 +250,7 @@ describe("#useLayoutStyles", () => {
             width: 100,
           },
           false,
-          getDefaultStyles({}),
+          getDefaultStyles({ width: "0px" }),
         ],
         [
           {
@@ -272,35 +289,59 @@ describe("#useLayoutStyles", () => {
     })
 
     describe("with width defined on subElement but element.widthConfig is null or undefined", () => {
-      it.each([
-        [100, false, null, getDefaultStyles({ width: "100px" })],
-        [200, false, null, getDefaultStyles({ width: "200px" })],
-        [100, true, null, getDefaultStyles({ width: "100%" })],
-        [0, false, null, getDefaultStyles({})],
-        [-100, false, null, getDefaultStyles({})],
-        [100, false, undefined, getDefaultStyles({ width: "100px" })],
-        [200, false, undefined, getDefaultStyles({ width: "200px" })],
-        [100, true, undefined, getDefaultStyles({ width: "100%" })],
-        [0, false, undefined, getDefaultStyles({})],
-        [-100, false, undefined, getDefaultStyles({})],
-      ])(
-        "and with a width value of %s, useContainerWidth %s, and widthConfig %s, returns %o",
-        (width, useContainerWidth, widthConfig, expected) => {
-          const element = new MockElement({
-            widthConfig,
-          })
+      describe("with valid width values", () => {
+        it.each([
+          [100, false, null, getDefaultStyles({ width: "100px" })],
+          [200, false, null, getDefaultStyles({ width: "200px" })],
+          [100, true, null, getDefaultStyles({ width: "100%" })],
+          [100, false, undefined, getDefaultStyles({ width: "100px" })],
+          [200, false, undefined, getDefaultStyles({ width: "200px" })],
+          [100, true, undefined, getDefaultStyles({ width: "100%" })],
+        ])(
+          "and with a width value of %s, useContainerWidth %s, and widthConfig %s, returns %o",
+          (width, useContainerWidth, widthConfig, expected) => {
+            const element = new MockElement({
+              widthConfig,
+            })
 
-          const subElement = {
-            width,
-            useContainerWidth,
+            const subElement = {
+              width,
+              useContainerWidth,
+            }
+
+            const { result } = renderHook(() =>
+              useLayoutStyles({ element, subElement })
+            )
+            expect(result.current).toEqual(expected)
           }
+        )
+      })
 
-          const { result } = renderHook(() =>
-            useLayoutStyles({ element, subElement })
-          )
-          expect(result.current).toEqual(expected)
-        }
-      )
+      describe("with invalid width values", () => {
+        it.each([
+          [0, false, null, getDefaultStyles({})],
+          [0, false, undefined, getDefaultStyles({})],
+          [-100, false, null, getDefaultStyles({})],
+          [-100, false, undefined, getDefaultStyles({})],
+        ])(
+          "and with a width value of %s, useContainerWidth %s, and widthConfig %s, returns %o",
+          (width, useContainerWidth, widthConfig, expected) => {
+            const element = new MockElement({
+              widthConfig,
+            })
+
+            const subElement = {
+              width,
+              useContainerWidth,
+            }
+
+            const { result } = renderHook(() =>
+              useLayoutStyles({ element, subElement })
+            )
+            expect(result.current).toEqual(expected)
+          }
+        )
+      })
     })
 
     describe("that has heightConfig set", () => {
@@ -333,9 +374,21 @@ describe("#useLayoutStyles", () => {
       )
     })
 
+    describe("that has heightConfig set to zero pixelHeight values", () => {
+      it.each([[0, getDefaultStyles({ height: "0px", overflow: "auto" })]])(
+        "and with a pixelHeight value of %s, returns %o",
+        (pixelHeight, expected) => {
+          const element = new MockElement({
+            heightConfig: new streamlit.HeightConfig({ pixelHeight }),
+          })
+          const { result } = renderHook(() => useLayoutStyles({ element }))
+          expect(result.current).toEqual(expected)
+        }
+      )
+    })
+
     describe("that has heightConfig set to invalid pixelHeight values", () => {
       it.each([
-        [0, getDefaultStyles({})],
         [-100, getDefaultStyles({})],
         [NaN, getDefaultStyles({})],
       ])(
@@ -411,90 +464,128 @@ describe("#useLayoutStyles", () => {
     })
 
     describe("with height included in subElement", () => {
-      it.each([
-        [undefined, getDefaultStyles({})],
-        [0, getDefaultStyles({})],
-        [-100, getDefaultStyles({})],
-        [NaN, getDefaultStyles({})],
-        [
-          100,
-          getDefaultStyles({
-            height: "100px",
-            overflow: "auto",
-            flex: "0 0 100px",
-          }),
-        ],
-      ])("and with a height value of %s, returns %o", (height, expected) => {
-        const element = new MockElement()
-        const subElement = { height }
-        const { result } = renderHook(
-          () => useLayoutStyles({ element, subElement }),
-          {
-            wrapper: withFlexContextProvider(Direction.VERTICAL),
-          }
-        )
-        expect(result.current).toEqual(expected)
+      describe("with valid height values", () => {
+        it.each([
+          [undefined, getDefaultStyles({})],
+          [
+            100,
+            getDefaultStyles({
+              height: "100px",
+              overflow: "auto",
+              flex: "0 0 100px",
+            }),
+          ],
+        ])("and with a height value of %s, returns %o", (height, expected) => {
+          const element = new MockElement()
+          const subElement = { height }
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
+          )
+          expect(result.current).toEqual(expected)
+        })
+      })
+
+      describe("with invalid height values", () => {
+        it.each([
+          [0, getDefaultStyles({})],
+          [-100, getDefaultStyles({})],
+          [NaN, getDefaultStyles({})],
+        ])("and with a height value of %s, returns %o", (height, expected) => {
+          const element = new MockElement()
+          const subElement = { height }
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
+          )
+          expect(result.current).toEqual(expected)
+        })
       })
     })
 
     describe("with height included along with heightConfig", () => {
-      it.each([
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ useStretch: true }),
-            height: 100,
-          },
-          getDefaultStyles({ height: "100%" }),
-        ],
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ useContent: true }),
-            height: 100,
-          },
-          getDefaultStyles({}),
-        ],
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ pixelHeight: 200 }),
-            height: 100,
-          },
-          getDefaultStyles({
-            height: "200px",
-            overflow: "auto",
-            flex: "0 0 200px",
-          }),
-        ],
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ pixelHeight: 0 }),
-            height: 100,
-          },
-          getDefaultStyles({}),
-        ],
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ pixelHeight: -100 }),
-            height: 100,
-          },
-          getDefaultStyles({}),
-        ],
-        [
-          {
-            heightConfig: new streamlit.HeightConfig({ pixelHeight: NaN }),
-            height: 100,
-          },
-          getDefaultStyles({}),
-        ],
-      ])("and with element props %o, returns %o", (props, expected) => {
-        const element = new MockElement({ heightConfig: props.heightConfig })
-        const subElement = { height: props.height }
-        const { result } = renderHook(
-          () => useLayoutStyles({ element, subElement }),
-          {
-            wrapper: withFlexContextProvider(Direction.VERTICAL),
-          }
-        )
-        expect(result.current).toEqual(expected)
+      describe("with valid heightConfig values", () => {
+        it.each([
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+              height: 100,
+            },
+            getDefaultStyles({ height: "100%" }),
+          ],
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ useContent: true }),
+              height: 100,
+            },
+            getDefaultStyles({}),
+          ],
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ pixelHeight: 200 }),
+              height: 100,
+            },
+            getDefaultStyles({
+              height: "200px",
+              overflow: "auto",
+              flex: "0 0 200px",
+            }),
+          ],
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ pixelHeight: 0 }),
+              height: 100,
+            },
+            getDefaultStyles({
+              height: "0px",
+              overflow: "auto",
+              flex: "0 0 0px",
+            }),
+          ],
+        ])("and with element props %o, returns %o", (props, expected) => {
+          const element = new MockElement({ heightConfig: props.heightConfig })
+          const subElement = { height: props.height }
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
+          )
+          expect(result.current).toEqual(expected)
+        })
+      })
+
+      describe("with invalid heightConfig values", () => {
+        it.each([
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ pixelHeight: -100 }),
+              height: 100,
+            },
+            getDefaultStyles({}),
+          ],
+          [
+            {
+              heightConfig: new streamlit.HeightConfig({ pixelHeight: NaN }),
+              height: 100,
+            },
+            getDefaultStyles({}),
+          ],
+        ])("and with element props %o, returns %o", (props, expected) => {
+          const element = new MockElement({ heightConfig: props.heightConfig })
+          const subElement = { height: props.height }
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
+          )
+          expect(result.current).toEqual(expected)
+        })
       })
     })
 
@@ -549,7 +640,6 @@ describe("#useLayoutStyles", () => {
         [
           { width: 0, height: 100 },
           getDefaultStyles({
-            width: "auto",
             height: "100px",
             overflow: "auto",
             flex: "0 0 100px",
@@ -557,7 +647,9 @@ describe("#useLayoutStyles", () => {
         ],
         [
           { width: 100, height: 0 },
-          getDefaultStyles({ width: "100px", height: "auto" }),
+          getDefaultStyles({
+            width: "100px",
+          }),
         ],
       ])(
         "and with subElement props %o, returns %o",

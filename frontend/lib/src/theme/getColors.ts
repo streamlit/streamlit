@@ -16,6 +16,8 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
+import { Metric as MetricProto } from "@streamlit/protobuf"
+
 import {
   DerivedColors,
   EmotionTheme,
@@ -80,14 +82,10 @@ export const createEmotionColors = (
     ...genericColors,
     ...derivedColors,
 
-    codeTextColor: genericColors.green,
-    codeBackgroundColor: derivedColors.bgMix,
+    link: genericColors.blueTextColor,
 
-    // TODO (mgbarnes): These currently control both the metric delta text and chart
-    // line/bar/area top line color. Dislocate these with text color updates.
-    metricPositiveDeltaColor: genericColors.greenColor,
-    metricNegativeDeltaColor: genericColors.redColor,
-    metricNeutralDeltaColor: genericColors.grayColor,
+    codeTextColor: genericColors.greenTextColor,
+    codeBackgroundColor: derivedColors.bgMix,
 
     borderColor: derivedColors.fadedText10,
     borderColorLight: derivedColors.fadedText05,
@@ -139,18 +137,96 @@ export function getDividerColors(theme: EmotionTheme): DividerColors {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getMarkdownTextColors(theme: EmotionTheme): any {
+export function getMetricColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenColor
+    // this must be grey
+    default:
+      return theme.colors.grayColor
+  }
+}
+
+type MarkdownBgColors = {
+  redbg: string
+  orangebg: string
+  yellowbg: string
+  bluebg: string
+  greenbg: string
+  violetbg: string
+  purplebg: string
+  graybg: string
+  primarybg: string
+}
+
+export function getMarkdownBgColors(theme: EmotionTheme): MarkdownBgColors {
   const lightTheme = hasLightBackgroundColor(theme)
-  const primary = theme.colors.primary
-  const red = theme.colors.red
-  const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
-  const yellow = lightTheme ? theme.colors.yellow80 : theme.colors.yellow70
-  const blue = theme.colors.blue
-  const green = theme.colors.green
-  const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
-  const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
-  const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
+  const colors = theme.colors
+
+  return {
+    redbg: colors.redBackgroundColor,
+    orangebg: colors.orangeBackgroundColor,
+    yellowbg: colors.yellowBackgroundColor,
+    bluebg: colors.blueBackgroundColor,
+    greenbg: colors.greenBackgroundColor,
+    violetbg: colors.violetBackgroundColor,
+    purplebg: transparentize(
+      colors[lightTheme ? "purple90" : "purple80"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    graybg: colors.grayBackgroundColor,
+    primarybg: transparentize(colors.primary, lightTheme ? 0.9 : 0.7),
+  }
+}
+
+// Metric delta uses the same background colors as Markdown bg colors.
+export function getMetricBackgroundColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redBackgroundColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenBackgroundColor
+    // this must be grey
+    default:
+      return theme.colors.grayBackgroundColor
+  }
+}
+
+type MarkdownTextColors = {
+  red: string
+  orange: string
+  yellow: string
+  blue: string
+  green: string
+  violet: string
+  purple: string
+  gray: string
+  primary: string
+}
+
+export function getMarkdownTextColors(
+  theme: EmotionTheme
+): MarkdownTextColors {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const colors = theme.colors
+
+  const primary = colors.primary
+  const red = colors.redTextColor
+  const orange = colors.orangeTextColor
+  const yellow = colors.yellowTextColor
+  const blue = colors.blueTextColor
+  const green = colors.greenTextColor
+  const violet = colors.violetTextColor
+  const purple = lightTheme ? colors.purple100 : colors.purple80
+  const gray = colors.grayTextColor
 
   return {
     red: red,
@@ -165,41 +241,19 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getMarkdownBgColors(theme: EmotionTheme): any {
-  const lightTheme = hasLightBackgroundColor(theme)
-
-  return {
-    redbg: transparentize(
-      theme.colors[lightTheme ? "red80" : "red60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
-    yellowbg: transparentize(
-      theme.colors[lightTheme ? "yellow80" : "yellow70"],
-      0.9
-    ),
-    bluebg: transparentize(
-      theme.colors[lightTheme ? "blue70" : "blue60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    greenbg: transparentize(
-      theme.colors[lightTheme ? "green70" : "green60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    violetbg: transparentize(
-      theme.colors[lightTheme ? "purple70" : "purple60"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    purplebg: transparentize(
-      theme.colors[lightTheme ? "purple90" : "purple80"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    graybg: transparentize(
-      theme.colors[lightTheme ? "gray70" : "gray50"],
-      lightTheme ? 0.9 : 0.7
-    ),
-    primarybg: transparentize(theme.colors.primary, lightTheme ? 0.9 : 0.7),
+// Metric delta text uses the same text colors as Markdown.
+export function getMetricTextColor(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor
+): string {
+  switch (color) {
+    case MetricProto.MetricColor.RED:
+      return theme.colors.redTextColor
+    case MetricProto.MetricColor.GREEN:
+      return theme.colors.greenTextColor
+    // this must be grey
+    default:
+      return theme.colors.grayTextColor
   }
 }
 

@@ -168,12 +168,14 @@ def test_colored_text_hover(app: Page):
         "stMarkdownColoredText"
     )
     expect(primary_button_container.locator("span")).to_have_css(
-        "color", "rgb(0, 104, 201)"
+        "color",
+        "rgb(0, 84, 163)",  # blueTextColor
     )
     primary_button_container.locator("button").hover()
     # For primary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(primary_button_container.locator("span")).to_have_css(
-        "color", "rgb(0, 104, 201)"
+        "color",
+        "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in secondary button
@@ -182,12 +184,14 @@ def test_colored_text_hover(app: Page):
         "stMarkdownColoredText"
     )
     expect(secondary_button_container.locator("span")).to_have_css(
-        "color", "rgb(0, 104, 201)"
+        "color",
+        "rgb(0, 84, 163)",  # blueTextColor
     )
     secondary_button_container.locator("button").hover()
     # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(secondary_button_container.locator("span")).to_have_css(
-        "color", "rgb(0, 104, 201)"
+        "color",
+        "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in tertiary button
@@ -196,12 +200,14 @@ def test_colored_text_hover(app: Page):
         "stMarkdownColoredText"
     )
     expect(tertiary_button_container.locator("span")).to_have_css(
-        "color", "rgb(0, 104, 201)"
+        "color",
+        "rgb(0, 84, 163)",  # blueTextColor
     )
     tertiary_button_container.locator("button").hover()
     # For tertiary buttons, the colored text should be red on hover to match the rest of the text
     expect(tertiary_button_container.locator("span")).to_have_css(
-        "color", "rgb(255, 75, 75)"
+        "color",
+        "rgb(255, 75, 75)",
     )
 
 

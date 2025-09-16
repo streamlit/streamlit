@@ -36,16 +36,14 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import AnyNumber, clean_text, from_number
 
 if TYPE_CHECKING:
-    import numpy as np
-
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", float, int, str, None]
-Delta: TypeAlias = Union[float, int, str, None]
+Value: TypeAlias = Union[AnyNumber, str, None]
+Delta: TypeAlias = Union[AnyNumber, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
@@ -98,10 +96,10 @@ class MetricMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        value : int, float, str, or None
-             Value of the metric. None is rendered as a long dash.
+        value : int, float, decimal.Decimal, str, or None
+             Value of the metric. ``None`` is rendered as a long dash.
 
-        delta : int, float, str, or None
+        delta : int, float, decimal.Decimal, str, or None
             Indicator of how the metric changed, rendered with an arrow below
             the metric. If delta is negative (int/float) or starts with a minus
             sign (str), the arrow points down and the text is red; else the
@@ -338,23 +336,9 @@ def _parse_label(label: str) -> str:
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
-    if isinstance(value, (int, float, str)):
-        return str(value)
-    if hasattr(value, "item"):
-        # Add support for numpy values (e.g. int16, float64, etc.)
-        try:
-            # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), (float, int)):
-                return str(value.item())
-        except Exception:  # noqa: S110
-            # If the numpy item is not a valid value, the TypeError below will be raised.
-            pass
-
-    raise TypeError(
-        f"'{value}' is of type {type(value)}, which is not an accepted type."
-        " value only accepts: int, float, str, or None."
-        " Please convert the value to an accepted type."
-    )
+    if isinstance(value, str):
+        return value
+    return from_number(value)
 
 
 def _parse_delta(delta: Delta) -> str:
@@ -362,13 +346,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    if isinstance(delta, (int, float)):
-        return str(delta)
-    raise TypeError(
-        f"'{delta}' is of type {type(delta)}, which is not an accepted type."
-        " delta only accepts: int, float, str, or None."
-        " Please convert the value to an accepted type."
-    )
+    return from_number(delta)
 
 
 def _determine_delta_color_and_direction(

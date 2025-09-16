@@ -383,7 +383,7 @@ export function isEditableArrayValue(data: unknown): boolean {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function isMaybeJson(data: any): boolean {
-  return data && data.startsWith("{") && data.endsWith("}")
+  return data?.startsWith("{") && data.endsWith("}")
 }
 
 /**
@@ -944,7 +944,7 @@ export function getLinkDisplayValueFromRegex(
   try {
     // apply the regex pattern to display the value
     const patternMatch = href.match(displayTextRegex)
-    if (patternMatch && patternMatch[1] !== undefined) {
+    if (patternMatch?.[1] !== undefined) {
       // return the first matching group
       // Since this might be a URI encoded value, we decode it.
       // Note: we replace + with %20 to correctly convert + to whitespaces.

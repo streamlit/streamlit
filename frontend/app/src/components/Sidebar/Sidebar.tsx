@@ -288,7 +288,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             appPages={appPages}
             collapseSidebar={toggleCollapse}
             currentPageScriptHash={currentPageScriptHash}
-            navSections={navSections}
             hasSidebarElements={hasElements}
             expandSidebarNav={expandSidebarNav}
             onPageChange={onPageChange}

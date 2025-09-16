@@ -67,3 +67,7 @@ if st.toggle("Show custom component"):
     test_component = components.declare_component("test_component", url=url)
 
     test_component(key="component_1")
+
+st.markdown("### Zero dimension tests")
+components.html("<p>Zero width and height HTML</p>", width=0, height=0)
+components.iframe(data_url, width=0, height=0)

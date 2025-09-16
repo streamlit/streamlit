@@ -15,6 +15,7 @@
 """date_input unit test."""
 
 from datetime import date, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -379,6 +380,119 @@ class DateInputTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.date_input("the label", width=width)
+
+    def test_stable_id_with_key_single(self):
+        """Test that the widget ID is stable for single date when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.date_input(
+                label="Label 1",
+                key="date_input_key",
+                value=date(2020, 1, 1),
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                # Whitelisted kwargs:
+                min_value=date(2010, 1, 1),
+                max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
+            )
+            c1 = self.get_delta_from_queue().new_element.date_input
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.date_input(
+                label="Label 2",
+                key="date_input_key",
+                value=date(2021, 1, 1),
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                # Keep whitelisted the same to ensure ID stability
+                min_value=date(2010, 1, 1),
+                max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
+            )
+            c2 = self.get_delta_from_queue().new_element.date_input
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("min_value", date(2010, 1, 1), date(2011, 1, 1)),
+            ("max_value", date(2030, 1, 1), date(2031, 1, 1)),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_single(self, kwarg_name, value1, value2):
+        """Test that the widget ID changes for single mode when a whitelisted kwarg changes even
+        when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "date_input_key_1",
+                "value": date(2020, 1, 1),
+                "min_value": date(2010, 1, 1),
+                "max_value": date(2030, 1, 1),
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.date_input(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.date_input
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.date_input(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.date_input
+            id2 = c2.id
+            assert id1 != id2
+
+    @parameterized.expand(
+        [
+            ("min_value", date(2009, 7, 6), date(2010, 7, 6)),
+            ("max_value", date(2029, 7, 8), date(2030, 7, 8)),
+            ("format", "YYYY/MM/DD", "DD/MM/YYYY"),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_range(self, kwarg_name, value1, value2):
+        """Test that the widget ID changes for range mode when a whitelisted kwarg changes
+        even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "date_input_key_2",
+                "value": (date(2019, 7, 6), date(2019, 7, 8)),
+                "min_value": date(2009, 7, 6),
+                "max_value": date(2029, 7, 8),
+                "format": "YYYY/MM/DD",
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.date_input(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.date_input
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.date_input(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.date_input
+            id2 = c2.id
+            assert id1 != id2
 
 
 def test_date_input_interaction():

@@ -16,21 +16,50 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit import util
+from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
     from git import Commit, Remote, RemoteReference, Repo
 
-# Github has two URLs, one that is https and one that is ssh
-GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+)(?:.git)?$"
-GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+)(?:.git)?$"
+_LOGGER: Final = get_logger(__name__)
+
+# Github repo extractor: match owner/repo for https/ssh/scp forms, with optional
+# userinfo/port/trailing slash. This is just to extract the repo name, not validate the URL.
+_GITHUB_URL_PATTERN: Final = re.compile(
+    r"github\.com(?::\d+)?[/:]([^/]+)/([^/]+?)(?:\.git)?/?$"
+)
 
 # We don't support git < 2.7, because we can't get repo info without
 # talking to the remote server, which results in the user being prompted
 # for credentials.
-MIN_GIT_VERSION = (2, 7, 0)
+_MIN_GIT_VERSION: Final = (2, 7, 0)
+
+
+def _extract_github_repo_from_url(url: str) -> str | None:
+    """Extract the ``owner/repo`` from a GitHub remote URL.
+
+    This supports HTTPS and SSH URL forms including optional user info, port,
+    trailing slash, and ``.git`` suffix. Validation of the scheme is not
+    performed; we only extract if the URL contains ``github.com`` and ends with
+    a path of the shape ``owner/repo``.
+
+    Parameters
+    ----------
+    url
+        The remote URL string.
+
+    Returns
+    -------
+    str | None
+        The extracted ``owner/repo`` if found; otherwise ``None``.
+    """
+    match = _GITHUB_URL_PATTERN.search(url.strip())
+    if match is None:
+        return None
+    return f"{match.group(1)}/{match.group(2)}"
 
 
 class GitRepo:
@@ -40,6 +69,7 @@ class GitRepo:
         # If we have a valid repo, git_version will be a tuple
         # of 3+ ints: (major, minor, patch, possible_additional_patch_number)
         self.git_version: tuple[int, ...] | None = None
+        self.module: str = ""
 
         try:
             import git
@@ -47,26 +77,31 @@ class GitRepo:
             self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
 
-            if self.git_version is not None and self.git_version >= MIN_GIT_VERSION:
+            if self.git_version is not None and self.git_version >= _MIN_GIT_VERSION:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
                 self.module = os.path.relpath(path, git_root)
         except Exception:
-            # The git repo must be invalid for the following reasons:
-            #  * git binary or GitPython not installed
-            #  * No .git folder
-            #  * Corrupted .git folder
-            #  * Path is invalid
+            _LOGGER.debug(
+                "Did not find a git repo at %s. This is expected if this isn't a git repo, but could "
+                "also fail for other reasons: "
+                "1) git binary or GitPython not installed "
+                "2) No .git folder "
+                "3) Corrupted .git folder "
+                "4) Path is invalid.",
+                path,
+                exc_info=True,
+            )
             self.repo = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def is_valid(self) -> bool:
-        """True if there's a git repo here, and git.version >= MIN_GIT_VERSION."""
+        """True if there's a git repo here, and git.version >= _MIN_GIT_VERSION."""
         return (
             self.repo is not None
             and self.git_version is not None
-            and self.git_version >= MIN_GIT_VERSION
+            and self.git_version >= _MIN_GIT_VERSION
         )
 
     @property
@@ -129,50 +164,37 @@ class GitRepo:
         remote_name, *branch = tracking_branch.name.split("/")
         branch_name = "/".join(branch)
 
-        return self.repo.remote(remote_name), branch_name
-
-    def is_github_repo(self) -> bool:
-        if not self.is_valid():
-            return False
-
-        remote_info = self.get_tracking_branch_remote()
-        if remote_info is None:
-            return False
-
-        remote, _branch = remote_info
-
-        for url in remote.urls:
-            if (
-                re.match(GITHUB_HTTP_URL, url) is not None
-                or re.match(GITHUB_SSH_URL, url) is not None
-            ):
-                return True
-
-        return False
+        try:
+            return self.repo.remote(remote_name), branch_name
+        except Exception:
+            _LOGGER.debug("Failed to resolve remote %s", remote_name, exc_info=True)
+            return None
 
     def get_repo_info(self) -> tuple[str, str, str] | None:
         if not self.is_valid():
+            _LOGGER.debug(
+                "No valid git information found. Git version: %s", self.git_version
+            )
             return None
 
         remote_info = self.get_tracking_branch_remote()
         if remote_info is None:
+            _LOGGER.debug("No tracking remote branch found for the git repo.")
             return None
 
         remote, branch = remote_info
-
+        remote_urls = list(remote.urls)
         repo = None
-        for url in remote.urls:
-            https_matches = re.match(GITHUB_HTTP_URL, url)
-            ssh_matches = re.match(GITHUB_SSH_URL, url)
-            if https_matches is not None:
-                repo = f"{https_matches.group(2)}/{https_matches.group(3)}"
-                break
-
-            if ssh_matches is not None:
-                repo = f"{ssh_matches.group(1)}/{ssh_matches.group(2)}"
+        for url in remote_urls:
+            repo = _extract_github_repo_from_url(url)
+            if repo is not None:
                 break
 
         if repo is None:
+            _LOGGER.debug(
+                "Unable to determine repo name from configured remote URLs. URLs: %s",
+                remote_urls,
+            )
             return None
 
         return repo, branch, self.module

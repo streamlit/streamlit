@@ -17,17 +17,21 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_date_input,
     get_element_by_key,
     reset_focus,
 )
 
+NUM_DATE_INPUTS = 18
+
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.date_input renders correctly via screenshots matching."""
-    expect(themed_app.get_by_test_id("stDateInput")).to_have_count(17)
+    expect(themed_app.get_by_test_id("stDateInput")).to_have_count(NUM_DATE_INPUTS)
 
     assert_snapshot(
         get_date_input(themed_app, "Single date"), name="st_date_input-single_date"
@@ -432,6 +436,44 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "date_input_12")).to_be_visible()
+
+
+def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the date input can be updated dynamically while keeping the state."""
+    dynamic_date_input = get_element_by_key(app, "dynamic_date_input_with_key")
+    expect(dynamic_date_input).to_be_visible()
+
+    expect(dynamic_date_input).to_contain_text("Initial dynamic date input")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-01")
+    assert_snapshot(dynamic_date_input, name="st_date_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_date_input, "initial help")
+
+    # Type something and submit (select same date via typing)
+    input_field = dynamic_date_input.locator("input")
+    input_field.type("2020/01/02", delay=50)
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
+
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-02")
+
+    # Click the toggle to update the date input props
+    click_toggle(app, "Update date input props")
+
+    # new date input is visible:
+    expect(dynamic_date_input).to_contain_text("Updated dynamic date input")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated date input value:", "2020-01-02")
+
+    dynamic_date_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_date_input, name="st_date_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_date_input, "updated help")
 
 
 def test_quick_select_feature_visibility(app: Page):

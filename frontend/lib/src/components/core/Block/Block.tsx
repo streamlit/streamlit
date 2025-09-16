@@ -76,56 +76,55 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
   return (
     <>
-      {props.node.children &&
-        props.node.children.map((node: AppNode, index: number): ReactNode => {
-          const disableFullscreenMode =
-            libConfig.disableFullscreenMode || props.disableFullscreenMode
+      {props.node.children?.map((node: AppNode, index: number): ReactNode => {
+        const disableFullscreenMode =
+          libConfig.disableFullscreenMode || props.disableFullscreenMode
 
-          // Base case: render a leaf node.
-          if (node instanceof ElementNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
-
-            const key = getElementId(node.element) || index.toString()
-            // Avoid rendering the same element twice. We assume the first one is the one we want
-            // because the page is rendered top to bottom, so a valid widget would be rendered
-            // correctly and we assume the second one is therefore stale (or throw an error).
-            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
-            // most recent one should always come first.
-            if (elementKeySet.has(key)) {
-              return null
-            }
-
-            elementKeySet.add(key)
-
-            return <ElementNodeRenderer key={key} {...childProps} />
+        // Base case: render a leaf node.
+        if (node instanceof ElementNode) {
+          // Put node in childProps instead of passing as a node={node} prop in React to
+          // guarantee it doesn't get overwritten by {...childProps}.
+          const childProps = {
+            ...props,
+            disableFullscreenMode,
+            node,
           }
 
-          // Recursive case: render a block, which can contain other blocks
-          // and elements.
-          if (node instanceof BlockNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
-
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
-            return <BlockNodeRenderer key={index} {...childProps} />
+          const key = getElementId(node.element) || index.toString()
+          // Avoid rendering the same element twice. We assume the first one is the one we want
+          // because the page is rendered top to bottom, so a valid widget would be rendered
+          // correctly and we assume the second one is therefore stale (or throw an error).
+          // Also, our setIn logic pushes stale widgets down in the list of elements, so the
+          // most recent one should always come first.
+          if (elementKeySet.has(key)) {
+            return null
           }
 
-          // We don't have any other node types!
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-          throw new Error(`Unrecognized AppNode: ${node}`)
-        })}
+          elementKeySet.add(key)
+
+          return <ElementNodeRenderer key={key} {...childProps} />
+        }
+
+        // Recursive case: render a block, which can contain other blocks
+        // and elements.
+        if (node instanceof BlockNode) {
+          // Put node in childProps instead of passing as a node={node} prop in React to
+          // guarantee it doesn't get overwritten by {...childProps}.
+          const childProps = {
+            ...props,
+            disableFullscreenMode,
+            node,
+          }
+
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
+          return <BlockNodeRenderer key={index} {...childProps} />
+        }
+
+        // We don't have any other node types!
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
+        throw new Error(`Unrecognized AppNode: ${node}`)
+      })}
     </>
   )
 }

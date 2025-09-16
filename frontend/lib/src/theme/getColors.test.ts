@@ -14,9 +14,21 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
+
+import { Metric as MetricProto } from "@streamlit/protobuf"
+
 import { darkTheme, lightTheme } from "~lib/theme/index"
 
-import { getDividerColors, hasLightBackgroundColor } from "./getColors"
+import {
+  getDividerColors,
+  getMarkdownBgColors,
+  getMarkdownTextColors,
+  getMetricBackgroundColor,
+  getMetricColor,
+  getMetricTextColor,
+  hasLightBackgroundColor,
+} from "./getColors"
 
 describe("getDividerColors", () => {
   describe("light theme", () => {
@@ -36,9 +48,9 @@ describe("getDividerColors", () => {
       expect(result.green).toBe("#21c354")
       // colors.purple70
       expect(result.violet).toBe("#803df5")
-      // colors.gray40
+      // colors.gray60
       expect(result.gray).toBe("#a3a8b8")
-      // colors.gray40
+      // colors.gray60
       expect(result.grey).toBe("#a3a8b8")
       expect(result.rainbow).toBe(
         "linear-gradient(to right, #ff4b4b, #ffa421, #faca2b, #21c354, #1c83e1, #803df5)"
@@ -165,5 +177,198 @@ describe("getDividerColors", () => {
       const gradientColors = result.rainbow.match(/#[0-9a-fA-F]{6}/g)
       expect(gradientColors).toEqual(expectedOrder)
     })
+  })
+})
+
+describe("getMarkdownBgColors", () => {
+  it("returns correct background colors for light theme", () => {
+    const result = getMarkdownBgColors(lightTheme.emotion)
+    const colors = lightTheme.emotion.colors
+
+    expect(result.redbg).toBe(colors.redBackgroundColor)
+    expect(result.orangebg).toBe(colors.orangeBackgroundColor)
+    expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
+    expect(result.bluebg).toBe(colors.blueBackgroundColor)
+    expect(result.greenbg).toBe(colors.greenBackgroundColor)
+    expect(result.violetbg).toBe(colors.violetBackgroundColor)
+    expect(result.graybg).toBe(colors.grayBackgroundColor)
+    expect(result.purplebg).toBe(transparentize(colors.purple90, 0.9))
+    expect(result.primarybg).toBe(transparentize(colors.primary, 0.9))
+  })
+
+  it("returns correct background colors for dark theme", () => {
+    const result = getMarkdownBgColors(darkTheme.emotion)
+    const colors = darkTheme.emotion.colors
+
+    expect(result.redbg).toBe(colors.redBackgroundColor)
+    expect(result.orangebg).toBe(colors.orangeBackgroundColor)
+    expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
+    expect(result.bluebg).toBe(colors.blueBackgroundColor)
+    expect(result.greenbg).toBe(colors.greenBackgroundColor)
+    expect(result.violetbg).toBe(colors.violetBackgroundColor)
+    expect(result.graybg).toBe(colors.grayBackgroundColor)
+    expect(result.purplebg).toBe(transparentize(colors.purple80, 0.7))
+    expect(result.primarybg).toBe(transparentize(colors.primary, 0.7))
+  })
+})
+
+describe("getMarkdownTextColors", () => {
+  it("returns correct text colors for light theme", () => {
+    const result = getMarkdownTextColors(lightTheme.emotion)
+    const colors = lightTheme.emotion.colors
+
+    expect(result.red).toBe(colors.redTextColor)
+    expect(result.orange).toBe(colors.orangeTextColor)
+    expect(result.yellow).toBe(colors.yellowTextColor)
+    expect(result.blue).toBe(colors.blueTextColor)
+    expect(result.green).toBe(colors.greenTextColor)
+    expect(result.violet).toBe(colors.violetTextColor)
+    expect(result.purple).toBe(colors.purple100)
+    expect(result.gray).toBe(colors.grayTextColor)
+    expect(result.primary).toBe(colors.primary)
+  })
+
+  it("returns correct text colors for dark theme", () => {
+    const result = getMarkdownTextColors(darkTheme.emotion)
+    const colors = darkTheme.emotion.colors
+
+    expect(result.red).toBe(colors.redTextColor)
+    expect(result.orange).toBe(colors.orangeTextColor)
+    expect(result.yellow).toBe(colors.yellowTextColor)
+    expect(result.blue).toBe(colors.blueTextColor)
+    expect(result.green).toBe(colors.greenTextColor)
+    expect(result.violet).toBe(colors.violetTextColor)
+    expect(result.purple).toBe(colors.purple80)
+    expect(result.gray).toBe(colors.grayTextColor)
+    expect(result.primary).toBe(colors.primary)
+  })
+})
+
+describe("getMetricColor", () => {
+  it("returns correct metric color for light theme", () => {
+    const colors = lightTheme.emotion.colors
+
+    const result1 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redColor)
+    expect(result2).toBe(colors.greenColor)
+    expect(result3).toBe(colors.grayColor)
+  })
+
+  it("returns correct metric color for dark theme", () => {
+    const colors = darkTheme.emotion.colors
+    const result1 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redColor)
+    expect(result2).toBe(colors.greenColor)
+    expect(result3).toBe(colors.grayColor)
+  })
+})
+
+describe("getMetricBackgroundColor", () => {
+  it("returns correct metric background colors for light theme", () => {
+    const colors = lightTheme.emotion.colors
+    const result1 = getMetricBackgroundColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricBackgroundColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricBackgroundColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redBackgroundColor)
+    expect(result2).toBe(colors.greenBackgroundColor)
+    expect(result3).toBe(colors.grayBackgroundColor)
+  })
+
+  it("returns correct metric background colors for dark theme", () => {
+    const colors = darkTheme.emotion.colors
+    const result1 = getMetricBackgroundColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricBackgroundColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricBackgroundColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redBackgroundColor)
+    expect(result2).toBe(colors.greenBackgroundColor)
+    expect(result3).toBe(colors.grayBackgroundColor)
+  })
+})
+
+describe("getMetricTextColor", () => {
+  it("returns correct metric text color for light theme", () => {
+    const colors = lightTheme.emotion.colors
+
+    const result1 = getMetricTextColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricTextColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricTextColor(
+      lightTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redTextColor)
+    expect(result2).toBe(colors.greenTextColor)
+    expect(result3).toBe(colors.grayTextColor)
+  })
+
+  it("returns correct metric text color for dark theme", () => {
+    const colors = darkTheme.emotion.colors
+
+    const result1 = getMetricTextColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.RED
+    )
+    const result2 = getMetricTextColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GREEN
+    )
+    const result3 = getMetricTextColor(
+      darkTheme.emotion,
+      MetricProto.MetricColor.GRAY
+    )
+
+    expect(result1).toBe(colors.redTextColor)
+    expect(result2).toBe(colors.greenTextColor)
+    expect(result3).toBe(colors.grayTextColor)
   })
 })
