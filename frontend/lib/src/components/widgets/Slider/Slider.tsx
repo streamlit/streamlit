@@ -237,8 +237,6 @@ function Slider({
     [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
   )
 
-  // No nested component definitions per lint rules; use a top-level component via overrides props
-
   return (
     <div
       ref={sliderRef}
