@@ -96,28 +96,12 @@ const NumberInput: React.FC<Props> = ({
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
+  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
+    formatValue({ value: initialValue, ...element, step })
+  )
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const id = useRef(uniqueId("number_input_"))
-
-  const formattedValue = useMemo(() => {
-    return formatValue({
-      value,
-      dataType: elementDataType,
-      format: elementFormat,
-      step,
-    })
-  }, [value, elementDataType, elementFormat, step])
-
-  // While the input is focused, avoid applying formatting that enforces
-  // fixed decimal places. This prevents keystrokes (including backspace)
-  // from being immediately overridden by formatted output.
-  const displayValue = useMemo(() => {
-    if (isFocused) {
-      return isNullOrUndefined(value) ? "" : value.toString()
-    }
-    return formattedValue ?? ""
-  }, [isFocused, value, formattedValue])
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -172,6 +156,14 @@ const NumberInput: React.FC<Props> = ({
 
         setDirty(false)
         setValue(newValue)
+        setFormattedValue(
+          formatValue({
+            value: newValue,
+            dataType: elementDataType,
+            format: elementFormat,
+            step,
+          })
+        )
       }
     },
     [
@@ -180,10 +172,12 @@ const NumberInput: React.FC<Props> = ({
       inputRef,
       widgetMgr,
       fragmentId,
+      step,
       elementDataType,
       elementId,
       elementFormId,
       elementDefault,
+      elementFormat,
     ]
   )
 
@@ -202,8 +196,11 @@ const NumberInput: React.FC<Props> = ({
     const { value: elementValue } = element
     element.setValue = false
     setValue(elementValue ?? null)
+    setFormattedValue(
+      formatValue({ value: elementValue ?? null, ...element, step })
+    )
     commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, commitValue])
+  }, [element, step, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
@@ -263,6 +260,7 @@ const NumberInput: React.FC<Props> = ({
     if (targetValue === "") {
       setDirty(true)
       setValue(null)
+      setFormattedValue(null)
     } else {
       let numValue: number
 
@@ -274,6 +272,7 @@ const NumberInput: React.FC<Props> = ({
 
       setDirty(true)
       setValue(numValue)
+      setFormattedValue(targetValue)
     }
   }
 
@@ -369,7 +368,7 @@ const NumberInput: React.FC<Props> = ({
         <UIInput
           type="number"
           inputRef={inputRef}
-          value={displayValue}
+          value={formattedValue ?? ""}
           placeholder={element.placeholder}
           onBlur={onBlur}
           onFocus={onFocus}
