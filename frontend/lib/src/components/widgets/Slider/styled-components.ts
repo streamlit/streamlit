@@ -73,10 +73,11 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
 
 export interface StyledSliderTickBarProps {
   isHovered: boolean
+  isDisabled: boolean
 }
 
 export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
-  ({ isHovered, theme }) => ({
+  ({ theme, isHovered, isDisabled }) => ({
     position: "absolute",
     left: 0,
     right: 0,
@@ -86,7 +87,9 @@ export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
     pointerEvents: "none",
     marginTop: `-${theme.spacing.md}`,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.fadedText60,
+    lineHeight: theme.lineHeights.base,
+    fontWeight: theme.fontWeights.normal,
+    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
     opacity: isHovered ? 1 : 0,
     transition: "opacity 70ms ease-in-out",
   })

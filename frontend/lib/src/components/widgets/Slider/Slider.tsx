@@ -57,15 +57,21 @@ interface SliderTickBarProps {
   minLabel: string
   maxLabel: string
   isHovered: boolean
+  isDisabled: boolean
 }
 
 function SliderTickBar({
   minLabel,
   maxLabel,
   isHovered,
+  isDisabled,
 }: SliderTickBarProps): ReactElement {
   return (
-    <StyledSliderTickBar data-testid="stSliderTickBar" isHovered={isHovered}>
+    <StyledSliderTickBar
+      data-testid="stSliderTickBar"
+      isHovered={isHovered}
+      isDisabled={isDisabled}
+    >
       <span>{minLabel}</span>
       <span>{maxLabel}</span>
     </StyledSliderTickBar>
@@ -105,6 +111,7 @@ function Slider({
   // interacting. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
   const [isHovered, setIsHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   const [thumbRefs] = useState<
@@ -117,9 +124,10 @@ function Slider({
   const theme = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
+  const formattedMinValue = formatValue(element.min, element)
+  const formattedMaxValue = formatValue(element.max, element)
+
   const thumbAriaLabel = element.label
-  const minFormatted = formatValue(element.min, element)
-  const maxFormatted = formatValue(element.max, element)
 
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
@@ -130,6 +138,7 @@ function Slider({
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setValueWithSource({ value: valueArg, fromUi: true })
+      setIsDragging(false)
     },
     [setValueWithSource]
   )
@@ -137,6 +146,7 @@ function Slider({
   const handleChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setUiValue(valueArg)
+      setIsDragging(true)
     },
     []
   )
@@ -290,9 +300,10 @@ function Slider({
           TickBar: {
             component: SliderTickBar,
             props: {
-              minLabel: minFormatted,
-              maxLabel: maxFormatted,
-              isHovered,
+              minLabel: formattedMinValue,
+              maxLabel: formattedMaxValue,
+              isHovered: isHovered || isDragging,
+              isDisabled: disabled,
             },
           },
         }}
