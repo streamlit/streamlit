@@ -261,9 +261,7 @@ const StyledButtonGroupBaseButton = styled(
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText20,
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.bgColor,
+      opacity: 0.6,
       cursor: "not-allowed",
     },
 
