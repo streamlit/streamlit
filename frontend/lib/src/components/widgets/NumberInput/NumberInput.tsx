@@ -196,7 +196,12 @@ const NumberInput: React.FC<Props> = ({
     element.setValue = false
     setValue(elementValue ?? null)
     setFormattedValue(
-      formatValue({ value: elementValue ?? null, ...element, step })
+      formatValue({
+        value: elementValue ?? null,
+        dataType: element.dataType,
+        format: element.format,
+        step,
+      })
     )
     commitValue({ value: elementValue ?? null, source: { fromUi: false } })
   }, [element, step, commitValue])
