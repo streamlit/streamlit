@@ -3767,7 +3767,7 @@ __metadata:
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^3.6.2"
     protobufjs: "npm:^7.5.4"
-    query-string: "npm:^9.2.2"
+    query-string: "npm:^9.3.0"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
     react-debounce-render: "npm:^8.0.2"
@@ -16557,14 +16557,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.2.2":
-  version: 9.2.2
-  resolution: "query-string@npm:9.2.2"
+"query-string@npm:^9.3.0":
+  version: 9.3.0
+  resolution: "query-string@npm:9.3.0"
   dependencies:
     decode-uri-component: "npm:^0.4.1"
     filter-obj: "npm:^5.1.0"
     split-on-first: "npm:^3.0.0"
-  checksum: 10c0/2e3cbee52622ac9dd299237d617c922cb2a238e70d58a08eb3ad0be814642578948f58e85376b10bef1c64df04bdde94ca8aad3f319451ee3aba2f553278ed2b
+  checksum: 10c0/8ec69fb710ca12949de53dd2f1660609d452e99786fe7f8473f6177de72dc75d4db9d411c527c3c6a312bd456fda60530e8de0d4fa2ad274a780254c9bd7b619
   languageName: node
   linkType: hard
 
