@@ -167,18 +167,18 @@ def send_notification() -> None:
             payload = {"text": text}
 
         # OSS patch cherry-pick notifications
-        elif message_key == "patch_cherry_pick_success":
+        elif message_key == "cherry_pick_to_release_branch_success":
             text = _build_patch_cherry_pick_text(
                 repo=repo,
                 release_version=release_version,
                 commit_sha=commit_sha,
                 release_branch=release_branch,
                 run_id=run_id,
-                header=":cherries: Patch cherry-pick succeeded",
+                header=":cherries: Cherry-pick succeeded",
             )
             payload = {"text": text}
 
-        elif message_key == "patch_cherry_pick_failed":
+        elif message_key == "cherry_pick_to_release_branch_failed":
             error_reason = os.getenv("ERROR_REASON", "")
             text = _build_patch_cherry_pick_text(
                 repo=repo,
@@ -186,7 +186,7 @@ def send_notification() -> None:
                 commit_sha=commit_sha,
                 release_branch=release_branch,
                 run_id=run_id,
-                header=":x: Patch cherry-pick failed",
+                header=":x: Cherry-pick failed",
                 error_reason=error_reason or None,
             )
             payload = {"text": text}
