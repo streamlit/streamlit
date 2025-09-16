@@ -243,10 +243,10 @@ describe("Slider widget", () => {
       const sliderContainer = screen.getByTestId("stSlider")
       await user.hover(sliderContainer)
       // Use waitFor since the tickbar has an animation:
-      waitFor(() => expect(tickBar).toBeVisible())
+      await waitFor(() => expect(tickBar).toBeVisible())
 
       await user.unhover(sliderContainer)
-      waitFor(() => expect(tickBar).not.toBeVisible())
+      await waitFor(() => expect(tickBar).not.toBeVisible())
     })
 
     it("becomes visible while dragging via keyboard and hides after release", async () => {
@@ -262,10 +262,10 @@ describe("Slider widget", () => {
       slider.focus()
       await user.keyboard("{ArrowRight>}")
       // Use waitFor since the tickbar has an animation:
-      waitFor(() => expect(tickBar).toBeVisible())
+      await waitFor(() => expect(tickBar).toBeVisible())
 
       await user.keyboard("{/ArrowRight}")
-      waitFor(() => expect(tickBar).not.toBeVisible())
+      await waitFor(() => expect(tickBar).not.toBeVisible())
     })
   })
 
