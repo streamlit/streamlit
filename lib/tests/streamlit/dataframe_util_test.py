@@ -491,6 +491,7 @@ class DataframeUtilTest(unittest.TestCase):
         assert converted_df.shape == (2, 3)
         con.close()
 
+    @pytest.mark.require_integration
     def test_verify_duckdb_relational_api_integration(self):
         """Test that duckdb relational API can be used as a data source.
 
