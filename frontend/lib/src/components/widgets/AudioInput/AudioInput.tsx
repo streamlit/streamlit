@@ -142,9 +142,19 @@ const AudioInput: React.FC<Props> = ({
   const recordPluginHandlersRef = useRef<{
     handleRecordProgress?: (time: number) => void
   }>({})
+  const uploadAbortControllerRef = useRef<AbortController | null>(null)
 
   const transcodeAndUploadFile = useCallback(
     async (blob: Blob) => {
+      // Cancel any previous upload
+      if (uploadAbortControllerRef.current) {
+        uploadAbortControllerRef.current.abort()
+      }
+
+      // Create new abort controller for this upload
+      const abortController = new AbortController()
+      uploadAbortControllerRef.current = abortController
+
       try {
         setIsUploading(true)
         if (notNullOrUndefined(widgetFormId))
@@ -169,6 +179,11 @@ const AudioInput: React.FC<Props> = ({
           return
         }
 
+        // Check if aborted before continuing
+        if (abortController.signal.aborted) {
+          return
+        }
+
         let blobUrl: string
         try {
           blobUrl = URL.createObjectURL(wavBlob)
@@ -185,6 +200,13 @@ const AudioInput: React.FC<Props> = ({
           setIsUploading(false)
           if (notNullOrUndefined(widgetFormId))
             widgetMgr.setFormsWithUploadsInProgress(new Set())
+          return
+        }
+
+        // Check if aborted before updating state
+        if (abortController.signal.aborted) {
+          URL.revokeObjectURL(blobUrl)
+          currentBlobUrlRef.current = null
           return
         }
 
@@ -219,6 +241,11 @@ const AudioInput: React.FC<Props> = ({
             fragmentId,
           })
 
+          // Check if aborted before processing results
+          if (abortController.signal.aborted) {
+            return
+          }
+
           if (failedUploads.length > 0) {
             setIsError(true)
             return
@@ -230,15 +257,21 @@ const AudioInput: React.FC<Props> = ({
             setDeleteFileUrl(upload.fileUrl.deleteUrl)
           }
         } catch {
-          setIsError(true)
+          if (!abortController.signal.aborted) {
+            setIsError(true)
+          }
         } finally {
           if (notNullOrUndefined(widgetFormId))
             widgetMgr.setFormsWithUploadsInProgress(new Set())
-          setIsUploading(false)
+          if (!abortController.signal.aborted) {
+            setIsUploading(false)
+          }
         }
       } catch {
-        setIsError(true)
-        setIsUploading(false)
+        if (!abortController.signal.aborted) {
+          setIsError(true)
+          setIsUploading(false)
+        }
         if (notNullOrUndefined(widgetFormId))
           widgetMgr.setFormsWithUploadsInProgress(new Set())
       }
@@ -438,6 +471,16 @@ const AudioInput: React.FC<Props> = ({
     const cleanup = initializeWaveSurfer()
     return cleanup
   }, [initializeWaveSurfer])
+
+  // Cleanup: abort any ongoing uploads on unmount
+  useEffect(() => {
+    return () => {
+      if (uploadAbortControllerRef.current) {
+        uploadAbortControllerRef.current.abort()
+        uploadAbortControllerRef.current = null
+      }
+    }
+  }, [])
 
   // Note: We don't revoke blob URLs on unmount because they need to persist
   // across component remounts. They'll be cleaned up when:
