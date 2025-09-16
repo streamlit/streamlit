@@ -96,7 +96,7 @@ const NumberInput: React.FC<Props> = ({
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
   const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({ value: initialValue, ...element, step })
+    formatValue({ value: initialValue, dataType: element.dataType, format: element.format, step })
   )
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
