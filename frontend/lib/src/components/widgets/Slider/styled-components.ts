@@ -17,9 +17,9 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export const StyledSlider = styled.div(({}) => ({
+export const StyledSlider = styled.div({
   position: "relative",
-}))
+})
 
 export interface StyledThumbProps {
   disabled: boolean
