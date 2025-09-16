@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_slider,
+    reset_hovering,
 )
 
 
@@ -221,6 +222,7 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     # Move slider once to right
     app.keyboard.press("ArrowRight")
     wait_for_app_run(app)
+    reset_hovering(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
     assert_snapshot(slider, name="st_slider-float_formatting")
 
@@ -274,6 +276,6 @@ def test_slider_tick_bar_visibility(app: Page, assert_snapshot: ImageCompareFunc
     """Test that the tick bar is visible when the slider is hovered."""
     slider = get_slider(app, "Label 1")
     slider.hover()
-    expect(app.get_by_test_id("stSliderTickBar")).to_be_visible()
+    expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
 
     assert_snapshot(slider, name="st_slider-tick_bar_visibility")

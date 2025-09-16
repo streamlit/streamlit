@@ -192,5 +192,5 @@ def test_select_slider_tick_bar_visibility(
     slider = get_element_by_key(app, "first_select_slider")
     expect(slider).to_be_visible()
     slider.hover()
-    expect(app.get_by_test_id("stSliderTickBar")).to_be_visible()
+    expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
