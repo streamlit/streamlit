@@ -268,3 +268,12 @@ def test_slider_interaction_performance(app: Page):
     app.mouse.up()
     wait_for_app_run(app)
     expect(app.get_by_text("Value 5: 0")).to_be_visible()
+
+
+def test_slider_tick_bar_visibility(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the tick bar is visible when the slider is hovered."""
+    slider = get_slider(app, "Label 1")
+    slider.hover()
+    expect(app.get_by_test_id("stSliderTickBar")).to_be_visible()
+
+    assert_snapshot(slider, name="st_slider-tick_bar_visibility")
