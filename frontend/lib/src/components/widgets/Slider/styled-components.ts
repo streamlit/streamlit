@@ -70,3 +70,24 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     pointerEvents: "none",
   })
 )
+
+export interface StyledSliderTickBarProps {
+  isHovered: boolean
+}
+
+export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
+  ({ isHovered, theme }) => ({
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    pointerEvents: "none",
+    marginTop: `-${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.fadedText60,
+    opacity: isHovered ? 1 : 0,
+    transition: "opacity 100ms ease-in-out",
+  })
+)

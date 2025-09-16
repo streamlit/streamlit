@@ -47,47 +47,28 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledThumb, StyledThumbValue } from "./styled-components"
+import {
+  StyledThumb,
+  StyledThumbValue,
+  StyledSliderTickBar,
+} from "./styled-components"
 
 interface SliderTickBarProps {
   minLabel: string
   maxLabel: string
   isHovered: boolean
-  // Pass through theme pieces we need to avoid hook usage
-  spacingMd: string
-  fontSizeSm: string
-  color: string
 }
 
 function SliderTickBar({
   minLabel,
   maxLabel,
   isHovered,
-  spacingMd,
-  fontSizeSm,
-  color,
 }: SliderTickBarProps): ReactElement {
   return (
-    <div
-      data-testid="stSliderTickBar"
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: "100%",
-        display: "flex",
-        justifyContent: "space-between",
-        pointerEvents: "none",
-        marginTop: `-${spacingMd}`,
-        fontSize: fontSizeSm,
-        color,
-        opacity: isHovered ? 1 : 0,
-        transition: "opacity 150ms ease-in-out",
-      }}
-    >
+    <StyledSliderTickBar data-testid="stSliderTickBar" isHovered={isHovered}>
       <span>{minLabel}</span>
       <span>{maxLabel}</span>
-    </div>
+    </StyledSliderTickBar>
   )
 }
 
@@ -314,9 +295,6 @@ function Slider({
               minLabel: minFormatted,
               maxLabel: maxFormatted,
               isHovered,
-              spacingMd: theme.spacing.md,
-              fontSizeSm: theme.fontSizes.sm,
-              color: theme.colors.fadedText60,
             },
           },
         }}
