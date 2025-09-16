@@ -644,7 +644,7 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match="Unsupported input data format: DataFormat.UNKNOWN"
+                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -679,7 +679,7 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match="Unsupported input data format: DataFormat.UNKNOWN"
+            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
