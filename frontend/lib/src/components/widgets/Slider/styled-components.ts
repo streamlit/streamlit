@@ -17,6 +17,10 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+export const StyledSlider = styled.div(({}) => ({
+  position: "relative",
+}))
+
 export interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
@@ -50,11 +54,11 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export interface StyledSliderProps {
+export interface StyledThumbValueProps {
   disabled: boolean
 }
 
-export const StyledThumbValue = styled.div<StyledSliderProps>(
+export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,

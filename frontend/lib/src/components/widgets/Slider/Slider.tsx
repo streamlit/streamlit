@@ -48,6 +48,7 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledSlider,
   StyledSliderTickBar,
   StyledThumb,
   StyledThumbValue,
@@ -112,6 +113,9 @@ function Slider({
   const [uiValue, setUiValue] = useState(value)
   const [isHovered, setIsHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+
+  const handleMouseEnter = useCallback(() => setIsHovered(true), [])
+  const handleMouseLeave = useCallback(() => setIsHovered(false), [])
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   const [thumbRefs] = useState<
@@ -248,13 +252,12 @@ function Slider({
   )
 
   return (
-    <div
+    <StyledSlider
       ref={sliderRef}
       className="stSlider"
       data-testid="stSlider"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{ position: "relative" }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <WidgetLabel
         label={element.label}
@@ -308,7 +311,7 @@ function Slider({
           },
         }}
       />
-    </div>
+    </StyledSlider>
   )
 }
 
