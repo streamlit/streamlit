@@ -491,7 +491,6 @@ class DataframeUtilTest(unittest.TestCase):
         assert converted_df.shape == (2, 3)
         con.close()
 
-    @pytest.mark.require_integration
     def test_verify_duckdb_relational_api_integration(self):
         """Test that duckdb relational API can be used as a data source.
 
@@ -501,7 +500,10 @@ class DataframeUtilTest(unittest.TestCase):
 
         items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
         db_relation = duckdb.sql("SELECT * from items")
-        assert dataframe_util.is_duckdb_relation(db_relation) is True
+
+        assert dataframe_util.is_duckdb_relation(db_relation) is True, (
+            "Object is not a known DuckDB relation: " + get_fqn_type(db_relation)
+        )
         assert (
             dataframe_util.determine_data_format(db_relation)
             is dataframe_util.DataFormat.DUCKDB_RELATION
