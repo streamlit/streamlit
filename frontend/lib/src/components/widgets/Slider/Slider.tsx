@@ -47,7 +47,12 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledThumb, StyledThumbValue } from "./styled-components"
+import {
+  StyledRoot,
+  StyledThumb,
+  StyledThumbValue,
+  StyledTickBar,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -253,8 +258,14 @@ function Slider({
           InnerTrack: {
             style: innerTrackStyle,
           },
-          // Hide min and max tick values
-          TickBar: () => null,
+          Root: StyledRoot,
+          TickBar: StyledTickBar,
+          Tick: {
+            style: $disabled => ({
+              fontSize: theme.fontSizes.sm,
+              color: $disabled ? theme.colors.gray60 : null,
+            }),
+          },
         }}
       />
     </div>

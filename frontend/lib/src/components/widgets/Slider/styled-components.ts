@@ -70,3 +70,22 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     pointerEvents: "none",
   })
 )
+
+export const StyledTickBar = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  marginTop: `calc(-1 * ${theme.spacing.lg})`,
+  opacity: 0,
+  transition: `opacity 300ms`,
+  pointerEvents: "none",
+}))
+
+export const StyledRoot = styled.div({
+  position: "relative",
+  width: "100%",
+  "&:hover": {
+    [StyledTickBar]: {
+      opacity: 1,
+    },
+  },
+})
