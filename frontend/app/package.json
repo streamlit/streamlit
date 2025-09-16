@@ -58,7 +58,7 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^3.0.0",
     "ua-parser-js": "^1.0.41",
-    "uuid": "^12.0.0"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^1.53.0",

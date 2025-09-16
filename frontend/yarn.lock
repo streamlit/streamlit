@@ -3645,7 +3645,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     ua-parser-js: "npm:^1.0.41"
     util: "npm:^0.12.5"
-    uuid: "npm:^12.0.0"
+    uuid: "npm:^13.0.0"
     vite: "npm:^7.1.5"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3767,7 +3767,7 @@ __metadata:
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^3.6.2"
     protobufjs: "npm:^7.5.4"
-    query-string: "npm:^9.2.2"
+    query-string: "npm:^9.3.0"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
     react-debounce-render: "npm:^8.0.2"
@@ -3797,7 +3797,7 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.0.0"
     urlpattern-polyfill: "npm:^10.1.0"
-    uuid: "npm:^12.0.0"
+    uuid: "npm:^13.0.0"
     vega: "npm:^6.1.2"
     vega-embed: "npm:^7.0.2"
     vega-interpreter: "npm:^2.0.0"
@@ -16557,14 +16557,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.2.2":
-  version: 9.2.2
-  resolution: "query-string@npm:9.2.2"
+"query-string@npm:^9.3.0":
+  version: 9.3.0
+  resolution: "query-string@npm:9.3.0"
   dependencies:
     decode-uri-component: "npm:^0.4.1"
     filter-obj: "npm:^5.1.0"
     split-on-first: "npm:^3.0.0"
-  checksum: 10c0/2e3cbee52622ac9dd299237d617c922cb2a238e70d58a08eb3ad0be814642578948f58e85376b10bef1c64df04bdde94ca8aad3f319451ee3aba2f553278ed2b
+  checksum: 10c0/8ec69fb710ca12949de53dd2f1660609d452e99786fe7f8473f6177de72dc75d4db9d411c527c3c6a312bd456fda60530e8de0d4fa2ad274a780254c9bd7b619
   languageName: node
   linkType: hard
 
@@ -20058,12 +20058,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^12.0.0":
-  version: 12.0.0
-  resolution: "uuid@npm:12.0.0"
+"uuid@npm:^13.0.0":
+  version: 13.0.0
+  resolution: "uuid@npm:13.0.0"
   bin:
-    uuid: dist/bin/uuid
-  checksum: 10c0/242db6735d15a187a0d7f22576db02668f974ffc65d0806b23fe4237cbb0db3153442cb3082c7550784acb6272e5c6c931532916f9604bd814dfab1edf2dac40
+    uuid: dist-node/bin/uuid
+  checksum: 10c0/950e4c18d57fef6c69675344f5700a08af21e26b9eff2bf2180427564297368c538ea11ac9fb2e6528b17fc3966a9fd2c5049361b0b63c7d654f3c550c9b3d67
   languageName: node
   linkType: hard
 

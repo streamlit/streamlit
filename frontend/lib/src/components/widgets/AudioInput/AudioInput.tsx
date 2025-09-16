@@ -90,6 +90,8 @@ const AudioInput: React.FC<Props> = ({
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = useRef<HTMLDivElement | null>(null)
+  // Track current blob URL for cleanup
+  const currentBlobUrlRef = useRef<string | null>(null)
   const [deleteFileUrl, setDeleteFileUrl] = useWidgetManagerElementState<
     string | null
   >({
@@ -170,6 +172,14 @@ const AudioInput: React.FC<Props> = ({
         let blobUrl: string
         try {
           blobUrl = URL.createObjectURL(wavBlob)
+          // Track the new blob URL and revoke the old one if it exists
+          if (
+            currentBlobUrlRef.current &&
+            currentBlobUrlRef.current !== blobUrl
+          ) {
+            URL.revokeObjectURL(currentBlobUrlRef.current)
+          }
+          currentBlobUrlRef.current = blobUrl
         } catch {
           setIsError(true)
           setIsUploading(false)
@@ -263,6 +273,12 @@ const AudioInput: React.FC<Props> = ({
 
       const urlToRevoke = recordingUrl
 
+      // Clean up the blob URL when clearing
+      if (urlToRevoke && currentBlobUrlRef.current === urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke)
+        currentBlobUrlRef.current = null
+      }
+
       setRecordingUrl(null)
       setDeleteFileUrl(null)
       setProgressTime(STARTING_TIME_STRING)
@@ -336,13 +352,17 @@ const AudioInput: React.FC<Props> = ({
       interact: true,
     })
 
-    ws.on("timeupdate", time => {
+    // Store event handlers for cleanup
+    const handleTimeUpdate = (time: number): void => {
       setProgressTime(formatTime(time * 1000)) // get from seconds to milliseconds
-    })
+    }
 
-    ws.on("pause", () => {
+    const handlePause = (): void => {
       forceRerender()
-    })
+    }
+
+    ws.on("timeupdate", handleTimeUpdate)
+    ws.on("pause", handlePause)
 
     setWavesurfer(ws)
 
@@ -398,7 +418,12 @@ const AudioInput: React.FC<Props> = ({
         recordPluginRef.current = null
         recordPluginHandlersRef.current = {}
       }
-      if (ws) ws.destroy()
+      if (ws) {
+        // Remove WaveSurfer event listeners before destroying
+        ws.un("timeupdate", handleTimeUpdate)
+        ws.un("pause", handlePause)
+        ws.destroy()
+      }
     }
   }, [
     theme,
@@ -414,9 +439,11 @@ const AudioInput: React.FC<Props> = ({
     return cleanup
   }, [initializeWaveSurfer])
 
-  // Note: We don't revoke blob URLs here because they need to persist
-  // across component remounts. They'll be cleaned up when the page unloads
-  // or when the user explicitly clears the recording.
+  // Note: We don't revoke blob URLs on unmount because they need to persist
+  // across component remounts. They'll be cleaned up when:
+  // 1. User records a new audio (old one is revoked)
+  // 2. User explicitly clears the recording
+  // 3. Page unloads (browser handles this)
 
   useEffect(() => {
     if (!isEqual(previousTheme, theme)) {
@@ -454,15 +481,19 @@ const AudioInput: React.FC<Props> = ({
     if (!hasRequestedMicPermissions) {
       setHasRequestedMicPermissions(true)
 
+      let stream: MediaStream | null = null
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         })
-
-        stream.getTracks().forEach(track => track.stop())
       } catch {
         setHasNoMicPermissions(true)
         return
+      } finally {
+        // Always stop tracks if we got a stream, even if an error occurred
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop())
+        }
       }
     }
 
