@@ -114,7 +114,7 @@
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
     "urlpattern-polyfill": "^10.1.0",
-    "uuid": "^12.0.0",
+    "uuid": "^13.0.0",
     "vega": "^6.1.2",
     "vega-embed": "^7.0.2",
     "vega-interpreter": "^2.0.0",
