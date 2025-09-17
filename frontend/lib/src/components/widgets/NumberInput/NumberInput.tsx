@@ -95,6 +95,10 @@ const NumberInput: React.FC<Props> = ({
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
+  const [isFocused, setIsFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const id = useRef(uniqueId("number_input_"))
+
   const [formattedValue, setFormattedValue] = useState<string | null>(() =>
     formatValue({
       value: initialValue,
@@ -103,9 +107,6 @@ const NumberInput: React.FC<Props> = ({
       step,
     })
   )
-  const [isFocused, setIsFocused] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const id = useRef(uniqueId("number_input_"))
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -123,6 +124,21 @@ const NumberInput: React.FC<Props> = ({
   useEffect(() => {
     setStep(getStep({ step: element.step, dataType: element.dataType }))
   }, [element.dataType, element.step])
+
+  // Update the formatted value if format related props changes
+  useEffect(() => {
+    // Only update if the user isn't currently actively editing:
+    if (!dirty) {
+      setFormattedValue(
+        formatValue({
+          value,
+          dataType: elementDataType,
+          format: elementFormat,
+          step,
+        })
+      )
+    }
+  }, [elementDataType, elementFormat, step])
 
   const commitValue = useCallback(
     ({
