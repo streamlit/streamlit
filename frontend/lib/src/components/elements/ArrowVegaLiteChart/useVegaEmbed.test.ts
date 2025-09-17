@@ -354,15 +354,18 @@ describe("useVegaEmbed hook", () => {
         {
           name: "old",
           hasName: true,
-          data: { dimensions: { numDataRows: 1 } },
+          data: { dimensions: { numDataRows: 1 } } as Quiver,
         },
       ],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    } as VegaLiteChartElement
 
     const { result, rerender } = renderHook(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      ({ element }: any) => useVegaEmbed(element, mockWidgetMgr),
+      ({ element }) => useVegaEmbed(element, mockWidgetMgr),
       { initialProps: { element: initialElement } }
     )
 
