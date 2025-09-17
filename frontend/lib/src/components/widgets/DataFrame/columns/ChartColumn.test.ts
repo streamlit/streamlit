@@ -19,6 +19,7 @@ import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, List } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import {
   AREA_CHART_TYPE,
@@ -61,28 +62,37 @@ const CHART_COLUMN_TEMPLATE = {
 function getLineChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof LineChartColumn> {
-  return LineChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return LineChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getBarChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof BarChartColumn> {
-  return BarChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return BarChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getAreaChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof AreaChartColumn> {
-  return AreaChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return AreaChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 describe("ChartColumn", () => {
@@ -250,6 +260,45 @@ describe("ChartColumn", () => {
     const mockCell3 = mockColumn.getCell([-1, -1])
     // All values should be normalized to 0:
     expect((mockCell3 as SparklineCellType).data?.values).toEqual([0, 0])
+  })
+
+  it("supports named color mapping and custom colors", () => {
+    const blueColumn = getLineChartColumn({ color: "blue" })
+    const blueCell = blueColumn.getCell([0, 1]) as SparklineCellType
+    expect(blueCell.data?.color).toEqual(mockTheme.emotion.colors.blueColor)
+
+    const greyColumn = getBarChartColumn({ color: "grey" })
+    const greyCell = greyColumn.getCell([0, 1]) as SparklineCellType
+    expect(greyCell.data?.color).toEqual(mockTheme.emotion.colors.grayColor)
+
+    const customColor = "#123456"
+    const customColumn = getAreaChartColumn({ color: customColor })
+    const customCell = customColumn.getCell([0, 1]) as SparklineCellType
+    expect(customCell.data?.color).toEqual(customColor)
+  })
+
+  it("applies auto color based on trend", () => {
+    // auto: default is green; red if trend down
+    const autoUp = getLineChartColumn({ color: "auto" })
+    const cellUp = autoUp.getCell([0, 1]) as SparklineCellType
+    expect(cellUp.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
+
+    const autoDown = getLineChartColumn({ color: "auto" })
+    const cellDown = autoDown.getCell([1, 0]) as SparklineCellType
+    expect(cellDown.data?.color).toEqual(mockTheme.emotion.colors.redColor)
+  })
+
+  it("applies auto-inverse color based on trend", () => {
+    // auto-inverse: default is green; red if trend up
+    const autoInvDown = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvDown = autoInvDown.getCell([1, 0]) as SparklineCellType
+    expect(cellInvDown.data?.color).toEqual(
+      mockTheme.emotion.colors.greenColor
+    )
+
+    const autoInvUp = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvUp = autoInvUp.getCell([0, 1]) as SparklineCellType
+    expect(cellInvUp.data?.color).toEqual(mockTheme.emotion.colors.redColor)
   })
 
   it.each([
