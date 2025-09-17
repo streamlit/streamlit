@@ -127,9 +127,8 @@ function GraphVizChart({
         className="stGraphVizChart"
         data-testid="stGraphVizChart"
         id={chartId}
-        isFullScreen={isFullScreen}
-        useContainerWidth={shouldUseContainerWidth}
-        useContainerHeight={shouldUseContainerHeight}
+        shouldUseFullWidth={isFullScreen || shouldUseContainerWidth}
+        shouldUseFullHeight={isFullScreen || shouldUseContainerHeight}
         ref={elementRef}
       />
     </StyledToolbarElementContainer>
