@@ -41,7 +41,7 @@ help:
 	@# Magic line used to create self-documenting makefiles.
 	@# Note that this means the documenting comment just before the command (but after the .PHONY) must be all one line, and should begin with a capital letter and end with a period.
 	@# See https://stackoverflow.com/a/35730928
-	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
+	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")-1) ";" c}1{c=0}' Makefile | column -s';' -t
 
 .PHONY: all
 # Install all dependencies, build frontend, and install editable Streamlit.
