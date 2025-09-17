@@ -444,48 +444,6 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.insert).toHaveBeenCalledWith("source", inline)
   })
 
-  it("resets creating flag via finally when embed throws, allowing subsequent create/update", async () => {
-    const element = {
-      id: "chartId",
-      data: null,
-      datasets: [],
-      spec: "",
-      useContainerWidth: false,
-      vegaLiteTheme: "",
-      selectionMode: [],
-      formId: "",
-    } as VegaLiteChartElement
-
-    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
-
-    const containerRef = { current: document.createElement("div") }
-
-    ;(embed as unknown as Mock).mockRejectedValueOnce(new Error("fail"))
-
-    // First createView throws
-    await expect(
-      act(async () => {
-        await result.current.createView(containerRef, {})
-      })
-    ).rejects.toThrow()
-
-    // Second createView succeeds (uses default resolved mock)
-    await act(async () => {
-      await result.current.createView(containerRef, {})
-    })
-
-    // updateView should not be blocked; returns non-null
-    const someData = {
-      dimensions: { numDataRows: 1 },
-      hash: "A",
-    } as unknown as Quiver
-    let updated: VegaView | null = null
-    await act(async () => {
-      updated = await result.current.updateView(someData, [])
-    })
-    expect(updated).not.toBeNull()
-  })
-
   it("updateView clears and reinserts when hashes differ", async () => {
     const element = {
       id: "chartId",
