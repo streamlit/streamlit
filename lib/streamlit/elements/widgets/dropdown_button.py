@@ -258,6 +258,7 @@ class DropdownButtonMixin:
         element_id = compute_and_register_element_id(
             "dropdown_button",
             user_key=key,
+            key_as_main_identity=True,
             form_id=form_id,
             dg=self.dg,
             label=label,
