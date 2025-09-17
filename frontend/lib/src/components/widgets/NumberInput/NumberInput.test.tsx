@@ -1012,6 +1012,7 @@ describe("NumberInput widget", () => {
         const input = screen.getByTestId("stNumberInputField")
         await user.clear(input)
         await user.type(input, inputValue)
+        await user.type(input, "{enter}")
 
         expect(input).toHaveDisplayValue(expected)
       })

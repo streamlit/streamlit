@@ -22,13 +22,15 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    click_toggle,
     expect_help_tooltip,
+    expect_prefixed_markdown,
     expect_text,
     get_element_by_key,
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 19
+MULTISELECT_COUNT = 20
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -285,6 +287,53 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "multiselect 9")).to_be_visible()
+
+
+def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the multiselect can be updated dynamically while keeping the state."""
+    dynamic_ms = get_element_by_key(app, "dynamic_multiselect_with_key")
+    expect(dynamic_ms).to_be_visible()
+
+    # Initial state and selection
+    expect(dynamic_ms).to_contain_text("Initial dynamic multiselect")
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple']")
+    assert_snapshot(dynamic_ms, name="st_multiselect-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_ms, "initial help")
+
+    # Add an item to ensure state exists
+    input_el = dynamic_ms.locator("input").first
+    input_el.type("banana")
+    app.keyboard.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'banana']")
+
+    # Click the toggle to update the multiselect props
+    click_toggle(app, "Update multiselect props")
+
+    # new multiselect is visible:
+    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
+
+    # Ensure updated widget shows and state is preserved
+    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'banana']")
+
+    dynamic_ms.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_ms, name="st_multiselect-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_ms, "updated help")
+
+    # Type something different and submit
+    input_el.type("orange")
+    input_el.press("Enter")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Updated multiselect value:", "['apple', 'banana', 'orange']"
+    )
 
 
 def test_multiselect_accept_new_options(app: Page):

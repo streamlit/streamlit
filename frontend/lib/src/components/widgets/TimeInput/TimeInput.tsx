@@ -225,7 +225,7 @@ function TimeInput({
             overrides={{
               Svg: {
                 style: {
-                  color: theme.colors.darkGray,
+                  color: theme.colors.grayTextColor,
                   // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                   padding: theme.spacing.threeXS,
                   height: theme.sizes.clearIconSize,

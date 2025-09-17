@@ -26,18 +26,7 @@ const requiredThemeColors = {
   bodyText: colors.gray85,
 
   primary: colors.red70,
-  secondary: colors.blue70, // Used in progress bar and spinners
-  disabled: colors.gray40,
-  lightestGray: colors.gray20,
-  lightGray: colors.gray30,
-  gray: colors.gray60,
-  darkGray: colors.gray70,
-
-  // TODO (mgbarnes): Reduce/remove these colors to avoid
-  // confusion with the default main/text/bg theme colors
-  red: colors.red80,
-  blue: colors.blue80,
-  green: colors.green90,
+  secondary: colors.blue70, // Used in progress bar
 
   // Default main theme colors (light theme)
   redColor: colors.red70,

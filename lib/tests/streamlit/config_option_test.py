@@ -80,7 +80,7 @@ class ConfigOptionTest(unittest.TestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="Complex config options require doc strings for their description.",
+            match=r"Complex config options require doc strings for their description.",
         ):
 
             @c

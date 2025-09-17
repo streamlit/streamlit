@@ -1059,8 +1059,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             ),
             pytest.raises(
                 RuntimeError,
-                match="This function must only be called on the eventloop thread "
-                "the AppSession was created on. This should never happen.",
+                match=r"This function must only be called on the eventloop thread "
+                r"the AppSession was created on. This should never happen.",
             ),
         ):
             session._handle_scriptrunner_event_on_event_loop(
@@ -1201,7 +1201,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
+            match=r"page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1221,7 +1221,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
+            match=r"exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1241,7 +1241,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="client_state must be set for the SHUTDOWN event. This should never happen.",
+            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1261,7 +1261,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
+            match=r"null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,

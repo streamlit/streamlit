@@ -423,7 +423,7 @@ function DateInput({
                     overrides: {
                       Svg: {
                         style: {
-                          color: colors.darkGray,
+                          color: colors.grayTextColor,
                           // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                           padding: spacing.threeXS,
                           height: sizes.clearIconSize,
