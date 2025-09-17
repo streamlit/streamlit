@@ -40,6 +40,7 @@ update-headers            Update all license headers.
 update-min-deps           Update minimum dependency constraints file.
 debug-e2e-test            Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
 run-e2e-test              Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
+trace-e2e-test            Run a single playwright e2e test with tracing enabled and view the trace. Use it via `make trace-e2e-test st_audio_input_test.py::test_audio_input_renders`.
 lighthouse-tests          Run Lighthouse performance tests.
 bare-execution-tests      Run all e2e tests in bare mode.
 cli-smoke-tests           Run CLI smoke tests.
