@@ -96,7 +96,12 @@ const NumberInput: React.FC<Props> = ({
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
   const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({ value: initialValue, dataType: element.dataType, format: element.format, step })
+    formatValue({
+      value: initialValue,
+      dataType: elementDataType,
+      format: elementFormat,
+      step,
+    })
   )
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
@@ -198,13 +203,13 @@ const NumberInput: React.FC<Props> = ({
     setFormattedValue(
       formatValue({
         value: elementValue ?? null,
-        dataType: element.dataType,
-        format: element.format,
+        dataType: elementDataType,
+        format: elementFormat,
         step,
       })
     )
     commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, step, commitValue])
+  }, [element, step, commitValue, elementDataType, elementFormat])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
