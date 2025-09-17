@@ -353,7 +353,7 @@ run-e2e-test:
 	)
 
 .PHONY: trace-e2e-test
-# Run a single playwright e2e test with tracing enabled and view the trace. Use it via `make trace-e2e-test st_audio_input_test.py::test_audio_input_renders`.
+# Run e2e test with tracing and view it. Use via `make trace-e2e-test <test_file.py>::<test_func>`.
 trace-e2e-test:
 	@if [[ -z "$(filter-out $@,$(MAKECMDGOALS))" ]]; then \
 		echo "Error: Please specify a single test to run"; \
