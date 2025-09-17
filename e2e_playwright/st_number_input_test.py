@@ -150,7 +150,7 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
 
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
-    """Test that st.number_input has the correct value on   increment click."""
+    """Test that st.number_input has the correct value on increment click."""
 
     def click_step_up(label: str) -> None:
         el = get_number_input(app, label)
