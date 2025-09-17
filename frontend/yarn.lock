@@ -3532,22 +3532,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sindresorhus/slugify@npm:^2.2.1":
-  version: 2.2.1
-  resolution: "@sindresorhus/slugify@npm:2.2.1"
+"@sindresorhus/slugify@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@sindresorhus/slugify@npm:3.0.0"
   dependencies:
-    "@sindresorhus/transliterate": "npm:^1.0.0"
+    "@sindresorhus/transliterate": "npm:^2.0.0"
     escape-string-regexp: "npm:^5.0.0"
-  checksum: 10c0/c3fe41d917347f0e2a1e25a48225afffde8ef379a26217e749d5267e965f564c6a555fa17475b637d6fd84645f42e1e4b530477b57110fa80428024a0fadba25
+  checksum: 10c0/e149fcaf81828f137061646970a8c04a00f4730483ae98c17542fc0edc100ec4ee8958311eb22703f1575d14eeffd216a8f47fd30886a893384e4c3faf9f895b
   languageName: node
   linkType: hard
 
-"@sindresorhus/transliterate@npm:^1.0.0":
-  version: 1.6.0
-  resolution: "@sindresorhus/transliterate@npm:1.6.0"
-  dependencies:
-    escape-string-regexp: "npm:^5.0.0"
-  checksum: 10c0/c5552abd98eb4ab3a8653ccb7addf24e0b6f2aa2a4c420689033f8c9d292abb2222fc08e330adf4055580ac78fe810b7467ed012cdf38f4d64175c42571b8b15
+"@sindresorhus/transliterate@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@sindresorhus/transliterate@npm:2.0.0"
+  checksum: 10c0/82e98bf49f3520834b434f4c26d7c252ef1477ae3e32dc6be6fa2d5e40125f2e2fc7a72303a5e693521e2253b5a4370bbdae11aee91d15c9cca273762338d58f
   languageName: node
   linkType: hard
 
@@ -3705,7 +3703,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.3.4"
     "@loaders.gl/csv": "npm:^4.3.4"
     "@loaders.gl/gltf": "npm:^4.3.4"
-    "@sindresorhus/slugify": "npm:^2.2.1"
+    "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@swc/plugin-emotion": "npm:^11.1.0"
