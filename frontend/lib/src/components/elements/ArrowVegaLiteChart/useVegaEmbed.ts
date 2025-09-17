@@ -140,7 +140,7 @@ export function useVegaEmbed(
       vegaFinalizer.current = finalize
 
       // Load the initial set of data into the chart.
-      const dataArrays = getDataArrays(datasetsRef.current)
+      const dataArrays = getDataArrays(datasets)
 
       // Heuristic to determine the default dataset name.
       const datasetNames = dataArrays ? Object.keys(dataArrays) : []
@@ -151,7 +151,7 @@ export function useVegaEmbed(
         defaultDataName.current = DEFAULT_DATA_NAME
       }
 
-      const dataObj = getInlineData(dataRef.current)
+      const dataObj = getInlineData(data)
       if (dataObj) {
         vegaView.current.insert(defaultDataName.current, dataObj)
       }
@@ -167,10 +167,15 @@ export function useVegaEmbed(
       // set to -1 on first load.
       await vegaView.current.resize().runAsync()
 
+      // Record the data used to initialize this view so subsequent updates
+      // have an accurate previous state to diff against.
+      dataRef.current = data
+      datasetsRef.current = datasets
+
       setIsCreatingView(false)
       return vegaView.current
     },
-    [finalizeView, maybeConfigureSelections]
+    [finalizeView, maybeConfigureSelections, data, datasets]
   )
 
   const updateData = useCallback(
