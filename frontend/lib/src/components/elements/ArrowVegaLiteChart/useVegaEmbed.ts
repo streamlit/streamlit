@@ -69,7 +69,7 @@ export function useVegaEmbed(
   const defaultDataName = useRef<string>(DEFAULT_DATA_NAME)
   const prevDataRef = useRef<Quiver | null>(null)
   const prevDatasetsRef = useRef<WrappedNamedDataset[]>([])
-  // Always-up-to-date props for safe access inside stable callbacks
+  // Always-up-to-date props for safe access inside stable callbacks to avoid stale closure issues
   const latestDataRef = useRef<Quiver | null>(null)
   const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
   // This is used to prevent the view from being updated while it is being created
