@@ -67,8 +67,11 @@ export function useVegaEmbed(
   const vegaView = useRef<VegaView | null>(null)
   const vegaFinalizer = useRef<(() => void) | null>(null)
   const defaultDataName = useRef<string>(DEFAULT_DATA_NAME)
-  const dataRef = useRef<Quiver | null>(null)
-  const datasetsRef = useRef<WrappedNamedDataset[]>([])
+  const prevDataRef = useRef<Quiver | null>(null)
+  const prevDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // Always-up-to-date props for safe access inside stable callbacks
+  const latestDataRef = useRef<Quiver | null>(null)
+  const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
   // This is used to prevent the view from being updated while it is being created
   const [isCreatingView, setIsCreatingView] = useState(false)
 
@@ -83,13 +86,17 @@ export function useVegaEmbed(
 
   const { data, datasets } = inputElement
 
-  // Initialize the data and datasets refs with the current data and datasets
-  // This is predominantly used to handle the case where we want to reference
-  // these in createView before the first render.
+  // Keep latest refs in sync and initialize previous refs before first view
   useEffect(() => {
+    latestDataRef.current = data
+    latestDatasetsRef.current = datasets
+
+    // Initialize the data and datasets refs with the current data and datasets
+    // This is predominantly used to handle the case where we want to reference
+    // these in createView before the first render.
     if (vegaView.current === null) {
-      dataRef.current = data
-      datasetsRef.current = datasets
+      prevDataRef.current = data
+      prevDatasetsRef.current = datasets
     }
   }, [data, datasets])
 
@@ -112,70 +119,72 @@ export function useVegaEmbed(
         throw new Error("Element missing.")
       }
       setIsCreatingView(true)
+      try {
+        // Finalize the previous view so it can be garbage collected.
+        finalizeView()
 
-      // Finalize the previous view so it can be garbage collected.
-      finalizeView()
+        const options = {
+          // Adds interpreter support for Vega expressions that is compliant with CSP
+          ast: true,
+          expr: expressionInterpreter,
 
-      const options = {
-        // Adds interpreter support for Vega expressions that is compliant with CSP
-        ast: true,
-        expr: expressionInterpreter,
-
-        // Disable default styles so that vega doesn't inject <style> tags in the
-        // DOM. We set these styles manually for finer control over them and to
-        // avoid inlining styles.
-        tooltip: { disableDefaultStyle: true },
-        defaultStyle: false,
-        forceActionsMenu: true,
-      }
-
-      const { vgSpec, view, finalize } = await embed(
-        containerRef.current,
-        spec,
-        options
-      )
-
-      vegaView.current = maybeConfigureSelections(view)
-
-      vegaFinalizer.current = finalize
-
-      // Load the initial set of data into the chart.
-      const dataArrays = getDataArrays(datasets)
-
-      // Heuristic to determine the default dataset name.
-      const datasetNames = dataArrays ? Object.keys(dataArrays) : []
-      if (datasetNames.length === 1) {
-        const [datasetName] = datasetNames
-        defaultDataName.current = datasetName
-      } else if (datasetNames.length === 0 && vgSpec.data) {
-        defaultDataName.current = DEFAULT_DATA_NAME
-      }
-
-      const dataObj = getInlineData(data)
-      if (dataObj) {
-        vegaView.current.insert(defaultDataName.current, dataObj)
-      }
-      if (dataArrays) {
-        for (const [name, dataArg] of Object.entries(dataArrays)) {
-          vegaView.current.insert(name, dataArg)
+          // Disable default styles so that vega doesn't inject <style> tags in the
+          // DOM. We set these styles manually for finer control over them and to
+          // avoid inlining styles.
+          tooltip: { disableDefaultStyle: true },
+          defaultStyle: false,
+          forceActionsMenu: true,
         }
+
+        const { vgSpec, view, finalize } = await embed(
+          containerRef.current,
+          spec,
+          options
+        )
+
+        vegaView.current = maybeConfigureSelections(view)
+
+        vegaFinalizer.current = finalize
+
+        // Load the initial set of data into the chart.
+        const dataArrays = getDataArrays(latestDatasetsRef.current)
+
+        // Heuristic to determine the default dataset name.
+        const datasetNames = dataArrays ? Object.keys(dataArrays) : []
+        if (datasetNames.length === 1) {
+          const [datasetName] = datasetNames
+          defaultDataName.current = datasetName
+        } else if (datasetNames.length === 0 && vgSpec.data) {
+          defaultDataName.current = DEFAULT_DATA_NAME
+        }
+
+        const dataObj = getInlineData(latestDataRef.current)
+        if (dataObj) {
+          vegaView.current.insert(defaultDataName.current, dataObj)
+        }
+        if (dataArrays) {
+          for (const [name, dataArg] of Object.entries(dataArrays)) {
+            vegaView.current.insert(name, dataArg)
+          }
+        }
+
+        await vegaView.current.runAsync()
+
+        // Fix bug where the "..." menu button overlaps with charts where width is
+        // set to -1 on first load.
+        await vegaView.current.resize().runAsync()
+
+        // Record the data used to initialize this view so subsequent updates
+        // have an accurate previous state to diff against.
+        prevDataRef.current = latestDataRef.current
+        prevDatasetsRef.current = latestDatasetsRef.current
+
+        return vegaView.current
+      } finally {
+        setIsCreatingView(false)
       }
-
-      await vegaView.current.runAsync()
-
-      // Fix bug where the "..." menu button overlaps with charts where width is
-      // set to -1 on first load.
-      await vegaView.current.resize().runAsync()
-
-      // Record the data used to initialize this view so subsequent updates
-      // have an accurate previous state to diff against.
-      dataRef.current = data
-      datasetsRef.current = datasets
-
-      setIsCreatingView(false)
-      return vegaView.current
     },
-    [finalizeView, maybeConfigureSelections, data, datasets]
+    [finalizeView, maybeConfigureSelections]
   )
 
   const updateData = useCallback(
@@ -227,8 +236,8 @@ export function useVegaEmbed(
       }
 
       // At this point the previous data should be updated
-      const prevData = dataRef.current
-      const prevDatasets = datasetsRef.current
+      const prevData = prevDataRef.current
+      const prevDatasets = prevDatasetsRef.current
 
       if (prevData || inputData) {
         updateData(
@@ -261,8 +270,8 @@ export function useVegaEmbed(
 
       await vegaView.current?.resize().runAsync()
 
-      dataRef.current = inputData
-      datasetsRef.current = inputDatasets
+      prevDataRef.current = inputData
+      prevDatasetsRef.current = inputDatasets
 
       return vegaView.current
     },
