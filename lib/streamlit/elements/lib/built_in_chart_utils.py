@@ -1065,7 +1065,7 @@ def _get_color_encoding(
                 title=" ",
             )
 
-        raise StreamlitInvalidVegaColorError(color_from_user)
+        raise StreamlitInvalidColorError(color_from_user)
 
     if color_column is not None:
         column_type: VegaLiteType
@@ -1231,7 +1231,7 @@ class StreamlitColumnNotFoundError(StreamlitAPIException):
         super().__init__(message, *args)
 
 
-class StreamlitInvalidVegaColorError(StreamlitAPIException):
+class StreamlitInvalidColorError(StreamlitAPIException):
     def __init__(self, color_from_user: str | Color | list[Color] | None) -> None:
         message = f"""
 This does not look like a valid color argument: `{color_from_user}`.
