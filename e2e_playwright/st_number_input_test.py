@@ -327,3 +327,23 @@ def test_dynamic_number_input_props(app: Page, assert_snapshot: ImageCompareFunc
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_number_input, "updated help")
+
+
+def test_number_input_tab_focus_behavior(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.number_input tab focus behavior works correctly.
+
+    Regression test for issue #12526: tab selects full existing value
+    with non-integer values
+    """
+    # Need to tab to a number input with a non-integer value, like the sixth one,
+    # so starting at the fifth one
+    fifth_number_input_field = (
+        get_number_input(app, "number input 5 (max=10)").locator("input").first
+    )
+    fifth_number_input_field.click()
+    fifth_number_input_field.press("Tab")
+
+    seventh_number_input = get_number_input(app, "number input 7 (label=hidden)")
+    assert_snapshot(seventh_number_input, name="st_number_input-tab_focus")
