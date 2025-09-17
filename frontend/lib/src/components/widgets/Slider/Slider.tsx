@@ -339,12 +339,6 @@ function Slider({
             },
           },
           InnerTrack: renderInnerTrack,
-          Tick: {
-            style: $disabled => ({
-              fontSize: theme.fontSizes.sm,
-              color: $disabled ? theme.colors.gray60 : null,
-            }),
-          },
           // Show min/max labels when hovering the slider or dragging it
           TickBar: {
             component: SliderTickBar,
