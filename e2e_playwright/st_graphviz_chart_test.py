@@ -198,8 +198,8 @@ def test_height_content(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
-# Test that it renders correctly with height='stretch'. Note: Verified manually in Safari but webkit 
-# headless seems to handle width calculation incorrectly.
+# Test that it renders correctly with height='stretch'.
+# Note: Verified manually in Safari but webkit headless seems to handle width calculation incorrectly.
 @pytest.mark.skip_browser("webkit")
 def test_height_stretch(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that it renders correctly with height='stretch'."""
