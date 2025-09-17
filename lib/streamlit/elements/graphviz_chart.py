@@ -26,8 +26,10 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
+    validate_height,
     validate_width,
 )
 from streamlit.errors import StreamlitAPIException
@@ -53,6 +55,7 @@ class GraphvizMixin:
         use_container_width: bool | None = None,
         *,  # keyword-only arguments:
         width: Width = "content",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.
 
@@ -90,6 +93,16 @@ class GraphvizMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of the
+              parent container.
+            - An integer specifying the height in pixels: The element has a
+              fixed height.
 
         .. deprecated::
             ``use_container_width`` is deprecated and will be removed in a
@@ -170,7 +183,8 @@ class GraphvizMixin:
 
         # Validate and set layout configuration
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        validate_height(height, allow_content=True)
+        layout_config = LayoutConfig(width=width, height=height)
 
         return self.dg._enqueue(
             "graphviz_chart", graphviz_chart_proto, layout_config=layout_config
