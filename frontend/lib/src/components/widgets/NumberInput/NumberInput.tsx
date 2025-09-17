@@ -138,6 +138,10 @@ const NumberInput: React.FC<Props> = ({
         })
       )
     }
+    // We only want to reformat the value if any of the formatting
+    // related parameters change.
+    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementDataType, elementFormat, step])
 
   const commitValue = useCallback(
