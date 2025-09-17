@@ -183,3 +183,14 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "select_slider8")).to_be_visible()
+
+
+def test_select_slider_tick_bar_visibility(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the tick bar is visible when the slider is hovered."""
+    slider = get_element_by_key(app, "first_select_slider")
+    expect(slider).to_be_visible()
+    slider.hover()
+    expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
+    assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")

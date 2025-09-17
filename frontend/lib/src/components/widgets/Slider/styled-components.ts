@@ -17,6 +17,10 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+export const StyledSlider = styled.div({
+  position: "relative",
+})
+
 export interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
@@ -25,7 +29,7 @@ export interface StyledThumbProps {
 export const StyledThumb = styled.div<StyledThumbProps>(
   ({ disabled, theme, isDragged }) => ({
     alignItems: "center",
-    backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
+    backgroundColor: disabled ? theme.colors.gray60 : theme.colors.primary,
     borderTopLeftRadius: "100%",
     borderTopRightRadius: "100%",
     borderBottomLeftRadius: "100%",
@@ -50,15 +54,15 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export interface StyledSliderProps {
+export interface StyledThumbValueProps {
   disabled: boolean
 }
 
-export const StyledThumbValue = styled.div<StyledSliderProps>(
+export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,
-    color: disabled ? theme.colors.gray : theme.colors.primary,
+    color: disabled ? theme.colors.gray60 : theme.colors.primary,
     top: "-1.6em",
     position: "absolute",
     whiteSpace: "nowrap",
@@ -68,5 +72,29 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     // If values are clickable, it's hard to move the right thumb when they're
     // very close. So make them unclickable:
     pointerEvents: "none",
+  })
+)
+
+export interface StyledSliderTickBarProps {
+  isHovered: boolean
+  isDisabled: boolean
+}
+
+export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
+  ({ theme, isHovered, isDisabled }) => ({
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    pointerEvents: "none",
+    marginTop: `-${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.base,
+    fontWeight: theme.fontWeights.normal,
+    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    opacity: isHovered ? 1 : 0,
+    transition: "opacity 70ms ease-in-out",
   })
 )
