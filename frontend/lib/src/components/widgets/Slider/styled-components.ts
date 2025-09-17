@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { type StyleProps } from "baseui/slider"
 import { transparentize } from "color2k"
 
 export const StyledSlider = styled.div({
