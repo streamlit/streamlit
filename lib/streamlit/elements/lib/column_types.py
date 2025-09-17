@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
+from streamlit.elements.lib.color_util import is_css_color_like
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
@@ -86,6 +88,33 @@ ChartColor: TypeAlias = Union[
     ThemeColor,
     str,
 ]
+
+
+def _validate_chart_color(maybe_color: str) -> None:
+    """Validate a color for a chart column."""
+
+    supported_colors = [
+        "auto",
+        "auto-inverse",
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "orange",
+        "gray",
+        "grey",
+        "primary",
+    ]
+    if maybe_color not in supported_colors and not is_css_color_like(maybe_color):
+        raise StreamlitValueError(
+            "color",
+            [
+                *supported_colors,
+                "a valid hex color",
+                "an rgb() or rgba() color",
+            ],
+        )
 
 
 class NumberColumnConfig(TypedDict):
@@ -1193,6 +1222,9 @@ def BarChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -1305,7 +1337,8 @@ def LineChartColumn(
         https://doc-linechart-column.streamlit.app/
         height: 300px
     """
-
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
@@ -1419,6 +1452,8 @@ def AreaChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
