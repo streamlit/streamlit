@@ -36,14 +36,14 @@ export const StyledMessage = styled.span<StyledMessageProps>(
             opacity: 1,
             content: '"•"',
             animation: "none",
-            color: theme.colors.gray,
+            color: theme.colors.grayTextColor,
             margin: `0 ${theme.spacing.twoXS}`,
           },
         }
       : {}),
     ...(shouldBlink
       ? {
-          color: theme.colors.red,
+          color: theme.colors.redTextColor,
           animationName: `${blink}`,
           animationDuration: "0.5s",
           animationIterationCount: 5,

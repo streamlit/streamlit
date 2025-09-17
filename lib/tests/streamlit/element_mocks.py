@@ -195,6 +195,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         "logo",
         lambda: st.logo("https://streamlit.io/images/brand/streamlit-mark-color.png"),
     ),
+    ("pdf", lambda: st.pdf(b"%PDF-1.4")),  # Minimal PDF bytes
     # data elements
     ("json", lambda: st.json({})),
     ("metric", lambda: st.metric("Metric", 100)),
@@ -267,5 +268,4 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("form", lambda: st.form("Form")),
     ("empty", lambda: st.empty()),
     ("dialog", lambda: st.dialog("Dialog")),
-    ("experimental_dialog", lambda: st.experimental_dialog("Dialog")),
 ]

@@ -125,6 +125,7 @@ export interface StyledAppViewBlockContainerProps {
   hasHeader: boolean
   showToolbar: boolean
   hasTopNav: boolean
+  hasSidebar: boolean
   embedded: boolean
 }
 
@@ -137,6 +138,7 @@ export const StyledAppViewBlockContainer =
       hasHeader,
       showToolbar,
       hasTopNav,
+      hasSidebar,
       embedded,
       theme,
     }) => {
@@ -151,7 +153,7 @@ export const StyledAppViewBlockContainer =
       } else if (showPadding || showToolbar) {
         // 6rem if embedded with show_padding or show_toolbar
         topPadding = "6rem"
-      } else if (hasHeader) {
+      } else if (hasHeader || hasSidebar) {
         // 4.5rem if embedded with header but no padding/toolbar
         topPadding = "4.5rem"
       }

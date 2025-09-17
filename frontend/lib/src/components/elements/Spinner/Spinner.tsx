@@ -20,13 +20,14 @@ import classNames from "classnames"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
+import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import {
   StyledSpinner,
   StyledSpinnerContainer,
-  StyledSpinnerTimer,
-  ThemedStyledSpinner,
+  StyledSpinnerText,
+  StyledSpinnerTimeText,
 } from "./styled-components"
 import { formatTime } from "./utils"
 
@@ -69,11 +70,15 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
       cache={cache}
     >
       <StyledSpinnerContainer>
-        <ThemedStyledSpinner />
-        <StreamlitMarkdown source={element.text} allowHTML={false} />
-        {showTime && (
-          <StyledSpinnerTimer>{formatTime(elapsedTime)}</StyledSpinnerTimer>
-        )}
+        <StyledSpinnerIcon size="base" margin="0 md 0 0" padding="0" />
+        <StyledSpinnerText>
+          <StreamlitMarkdown source={element.text} allowHTML={false} />
+          {showTime && (
+            <StyledSpinnerTimeText>
+              {formatTime(elapsedTime)}
+            </StyledSpinnerTimeText>
+          )}
+        </StyledSpinnerText>
       </StyledSpinnerContainer>
     </StyledSpinner>
   )

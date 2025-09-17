@@ -16,8 +16,8 @@
 
 import React from "react"
 
-import { Mock, MockInstance } from "vitest"
 import { act, fireEvent, screen } from "@testing-library/react"
+import { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,
@@ -25,25 +25,25 @@ import {
   SpecialArg,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { renderWithContexts } from "~lib/test_util"
+import { bgColorToBaseString, toExportedTheme } from "~lib/theme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { bgColorToBaseString, toExportedTheme } from "~lib/theme"
-import { mockEndpoints } from "~lib/mocks/mocks"
-import { mockTheme } from "~lib/mocks/mockTheme"
-import { renderWithContexts } from "~lib/test_util"
-import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import ComponentInstance, {
   COMPONENT_READY_WARNING_TIME_MS,
 } from "./ComponentInstance"
+import { ComponentRegistry } from "./ComponentRegistry"
 import {
   LOG as componentUtilsLog,
   CUSTOM_COMPONENT_API_VERSION,
 } from "./componentUtils"
-import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // We have some timeouts that we want to use fake timers for.

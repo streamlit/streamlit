@@ -16,8 +16,8 @@
 
 import { useCallback } from "react"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type SubmitFormKeyboardEvent = Pick<
   React.KeyboardEvent<HTMLElement>,

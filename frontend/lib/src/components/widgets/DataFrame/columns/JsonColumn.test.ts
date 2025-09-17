@@ -19,8 +19,8 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import JsonColumn from "./JsonColumn"
 import { JsonCell } from "./cells/JsonCell"
+import JsonColumn from "./JsonColumn"
 import { isMissingValueCell } from "./utils"
 
 const MOCK_JSON_COLUMN_PROPS = {

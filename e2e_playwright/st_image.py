@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 from pathlib import Path
 from typing import Any
@@ -26,8 +28,8 @@ import streamlit as st
 # allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
-img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
-img800: npt.NDArray[np.int_] = np.repeat(0, 640000).reshape(800, 800)
+img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
+img800: npt.NDArray[np.int64] = np.repeat(0, 640000).reshape(800, 800)
 
 
 st.header("Images from numpy arrays")
@@ -38,7 +40,7 @@ st.image(img, caption="Black Square as PNG.", output_format="PNG", width=100)
 
 st.image(img, caption="Black Square with no output format specified.", width=100)
 
-transparent_img: "npt.NDArray[Any]" = np.zeros((100, 100, 4), dtype=np.uint8)
+transparent_img: npt.NDArray[Any] = np.zeros((100, 100, 4), dtype=np.uint8)
 st.image(transparent_img, caption="Transparent Black Square.", width=100)
 
 st.header("GIF images")
@@ -208,7 +210,7 @@ st.image(
     caption=[f"Image list {i}" for i in range(3)],
 )
 
-st.header("use_container_width parameter")
+st.header("use_container_width parameter (deprecated)")
 
 with st.container(key="use_container_width"):
     col5, col6, col7, col8 = st.columns(4)
@@ -248,3 +250,13 @@ st.image(
 st.container(key="image_with_markdown_caption").image(
     img, caption="-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.header("width parameter")
+
+# Content width (default) - image's native width, up to container width
+st.image(img, width="content", caption="Small image with width='content' (default)")
+st.image(img800, width="content", caption="Large image with width='content'")
+
+# Stretch width - full container width
+st.image(img, width="stretch", caption="Small image with width='stretch'")
+st.image(img800, width="stretch", caption="Large image with width='stretch'")

@@ -16,7 +16,8 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
@@ -25,8 +26,8 @@ import {
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { withTimezones } from "~lib/util/withTimezones"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Slider, { Props } from "./Slider"
 
@@ -116,9 +117,6 @@ describe("Slider widget", () => {
 
     render(<Slider {...props} />)
 
-    // We need to do this as we are using a debounce when the widget value is set
-    vi.runAllTimers()
-
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
       [5],
@@ -133,25 +131,12 @@ describe("Slider widget", () => {
 
     render(<Slider {...props} />)
 
-    // We need to do this as we are using a debounce when the widget value is set
-    vi.runAllTimers()
-
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
       [5],
       { fromUi: false },
       "myFragmentId"
     )
-  })
-
-  it("renders tick bar with min and max", () => {
-    const props = getProps()
-    render(<Slider {...props} />)
-
-    const min = screen.getByTestId("stSliderTickBarMin")
-    const max = screen.getByTestId("stSliderTickBarMax")
-    expect(min).toHaveTextContent("0")
-    expect(max).toHaveTextContent("10")
   })
 
   describe("Single value", () => {
@@ -193,12 +178,7 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
 
-      act(() => {
-        triggerChangeEvent(slider, "ArrowRight")
-
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
-      })
+      triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -222,10 +202,6 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
 
       triggerChangeEvent(slider, "ArrowRight")
-
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
         props.element,
@@ -252,6 +228,44 @@ describe("Slider widget", () => {
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "5")
+    })
+  })
+
+  describe("Tick bar visibility", () => {
+    it("is hidden by default and becomes visible on hover", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      expect(tickBar).not.toBeVisible()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const sliderContainer = screen.getByTestId("stSlider")
+      await user.hover(sliderContainer)
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.unhover(sliderContainer)
+      await waitFor(() => expect(tickBar).not.toBeVisible())
+    })
+
+    it("becomes visible while dragging via keyboard and hides after release", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      const slider = screen.getByRole("slider")
+
+      expect(tickBar).not.toBeVisible()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      slider.focus()
+      await user.keyboard("{ArrowRight>}")
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.keyboard("{/ArrowRight}")
+      await waitFor(() => expect(tickBar).not.toBeVisible())
     })
   })
 
@@ -370,11 +384,6 @@ describe("Slider widget", () => {
 
       triggerChangeEvent(sliders[1], "ArrowRight")
 
-      act(() => {
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
-      })
-
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
         [1, 10],
@@ -390,7 +399,7 @@ describe("Slider widget", () => {
 
   describe("Datetime slider", () => {
     withTimezones(() => {
-      it("formats min and max as dates", () => {
+      it("formats datetime values correctly", () => {
         const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
         const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
 
@@ -406,11 +415,9 @@ describe("Slider widget", () => {
         })
         render(<Slider {...props} />)
 
-        const min = screen.getByTestId("stSliderTickBarMin")
-        const max = screen.getByTestId("stSliderTickBarMax")
-
-        expect(min).toHaveTextContent("1970-01-01")
-        expect(max).toHaveTextContent("1970-01-29")
+        // Test that the thumb value shows formatted datetime
+        const thumbValue = screen.getByTestId("stSliderThumbValue")
+        expect(thumbValue).toHaveTextContent("1970-01-01")
       })
     })
   })
@@ -479,11 +486,6 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
       triggerChangeEvent(slider, "ArrowRight")
-
-      act(() => {
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
-      })
 
       expect(slider).toHaveAttribute("aria-valuetext", "yellow")
     })

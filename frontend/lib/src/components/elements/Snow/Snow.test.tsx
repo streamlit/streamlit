@@ -18,11 +18,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
 import Snow, {
   NUM_FLAKES,
   SnowProps,
 } from "~lib/components/elements/Snow/index"
+import { render, renderWithContexts } from "~lib/test_util"
 
 const getProps = (): SnowProps => ({
   scriptRunId: "51522269",
@@ -57,5 +57,71 @@ describe("Snow element", () => {
 
     const snowElement = screen.getByTestId("stSnow")
     expect(snowElement).toHaveClass("stSnow")
+  })
+
+  describe("crossOrigin attribute", () => {
+    const scenarios = [
+      {
+        backendBaseUrl: undefined,
+        description: "without BACKEND_BASE_URL",
+      },
+      {
+        backendBaseUrl: "http://localhost:8501",
+        description: "with BACKEND_BASE_URL",
+      },
+    ]
+
+    afterEach(() => {
+      // Clean up window.__streamlit after each test
+      if (window.__streamlit) {
+        delete window.__streamlit.BACKEND_BASE_URL
+      }
+    })
+
+    it.each(scenarios)(
+      "sets crossOrigin attribute when resourceCrossOriginMode is configured ($description)",
+      ({ backendBaseUrl }) => {
+        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        if (backendBaseUrl) {
+          window.__streamlit = window.__streamlit || {}
+          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+        }
+
+        renderWithContexts(<Snow scriptRunId="51522269" />, {
+          libConfig: { resourceCrossOriginMode: "anonymous" },
+        })
+
+        const snowImages = screen.getAllByRole("img")
+        snowImages.forEach(node => {
+          if (backendBaseUrl) {
+            // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
+            expect(node).toHaveAttribute("crossOrigin", "anonymous")
+          } else {
+            // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
+            expect(node).not.toHaveAttribute("crossOrigin")
+          }
+        })
+      }
+    )
+
+    it.each(scenarios)(
+      "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
+      ({ backendBaseUrl }) => {
+        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        if (backendBaseUrl) {
+          window.__streamlit = window.__streamlit || {}
+          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+        }
+
+        renderWithContexts(<Snow scriptRunId="51522269" />, {
+          libConfig: { resourceCrossOriginMode: undefined },
+        })
+
+        const snowImages = screen.getAllByRole("img")
+        snowImages.forEach(node => {
+          expect(node).not.toHaveAttribute("crossOrigin")
+        })
+      }
+    )
   })
 })

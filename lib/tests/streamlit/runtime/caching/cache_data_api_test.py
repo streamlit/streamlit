@@ -168,17 +168,6 @@ class CacheDataTest(unittest.TestCase):
         foo("ahoy")
         str_hash_func.assert_called_once_with("ahoy")
 
-    @patch("streamlit.runtime.caching.cache_data_api.show_widget_replay_deprecation")
-    def test_widget_replay_deprecation(self, show_warning_mock: Mock):
-        """We show deprecation warnings when using the `experimental_allow_widgets` parameter."""
-
-        # We show the deprecation warning at declaration time:
-        @st.cache_data(experimental_allow_widgets=True)
-        def foo():
-            return 42
-
-        show_warning_mock.assert_called_once()
-
     def test_user_hash_error(self):
         class MyObj:
             # we specify __repr__ here, to avoid `MyObj object at 0x1347a3f70`
@@ -783,6 +772,78 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
             assert self.get_delta_from_queue().HasField("new_element") is True
             # The third time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called()
+
+    def _assert_layout_config(
+        self, element, expected_width: int, expected_height: int, description: str
+    ):
+        """Helper to assert both width and height config are set correctly."""
+        assert element.HasField("width_config"), (
+            f"{description} should have width_config"
+        )
+        assert element.width_config.HasField("pixel_width"), (
+            "Should have pixel_width set"
+        )
+        actual_width = element.width_config.pixel_width
+        expected_msg = (
+            f"Expected {description.lower()} width {expected_width}, got {actual_width}"
+        )
+        assert actual_width == expected_width, expected_msg
+
+        assert element.HasField("height_config"), (
+            f"{description} should have height_config"
+        )
+        assert element.height_config.HasField("pixel_height"), (
+            "Should have pixel_height set"
+        )
+        actual_height = element.height_config.pixel_height
+        expected_msg = f"Expected {description.lower()} height {expected_height}, got {actual_height}"
+        assert actual_height == expected_height, expected_msg
+
+    def test_layout_config_preserved_during_replay(self):
+        """Test that width_config and height_config are preserved during cache replay."""
+        expected_width = 400
+        expected_height = 200
+
+        @st.cache_data
+        def cache_code_with_layout():
+            st.code(
+                "print('Hello, World!')", width=expected_width, height=expected_height
+            )
+
+        # Call first time to cache the element
+        cache_code_with_layout()
+        first_delta = self.get_delta_from_queue()
+
+        assert first_delta.HasField("new_element"), (
+            "First call should create new_element"
+        )
+        first_element = first_delta.new_element
+        self._assert_layout_config(
+            first_element, expected_width, expected_height, "First element"
+        )
+
+        # Call second time to trigger cache replay
+        cache_code_with_layout()
+        second_delta = self.get_delta_from_queue()
+
+        assert second_delta.HasField("new_element"), (
+            "Replayed call should create new_element"
+        )
+        second_element = second_delta.new_element
+        self._assert_layout_config(
+            second_element, expected_width, expected_height, "Replayed element"
+        )
+
+        # Verify both are identical
+        assert (
+            first_element.width_config.pixel_width
+            == second_element.width_config.pixel_width
+        ), "Width config should be identical between original and replayed elements"
+
+        assert (
+            first_element.height_config.pixel_height
+            == second_element.height_config.pixel_height
+        ), "Height config should be identical between original and replayed elements"
 
 
 def get_byte_length(value):

@@ -16,11 +16,10 @@
 
 import React, { useCallback, useMemo } from "react"
 
-import groupBy from "lodash/groupBy"
 import Overflow from "rc-overflow"
 
-import { IAppPage } from "@streamlit/protobuf"
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
@@ -28,6 +27,7 @@ import {
   StyledTopNavLinkContainer,
 } from "./styled-components"
 import TopNavSection from "./TopNavSection"
+import { groupPagesBySection, processNavigationStructure } from "./utils"
 
 import { SidebarNavLink } from "./index"
 
@@ -46,22 +46,27 @@ const TopNav: React.FC<Props> = ({
   appPages,
   onPageChange,
 }) => {
-  const navSections = useMemo(() => {
-    return groupBy(appPages, p => p.sectionHeader)
+  const { data, itemKey } = useMemo((): {
+    data: (IAppPage | IAppPage[])[]
+    itemKey: (item: IAppPage | IAppPage[]) => string
+  } => {
+    const navSections = groupPagesBySection(appPages)
+    const processed = processNavigationStructure(navSections)
+
+    // Combine individual pages and sections for the overflow component
+    // Each section's pages should be kept as an array
+    const combinedData: (IAppPage | IAppPage[])[] = [
+      ...processed.individualPages,
+      ...Object.entries(processed.sections).map(([_, pages]) => pages),
+    ]
+
+    const keyFn = (item: IAppPage | IAppPage[]): string =>
+      Array.isArray(item)
+        ? (item[0]?.sectionHeader ?? "")
+        : (item.pageScriptHash ?? "")
+
+    return { data: combinedData, itemKey: keyFn }
   }, [appPages])
-
-  // NOTE: this is > 1, not > 0 which is why the line 56-58 ternary is needed
-  const hasSections = Object.keys(navSections).length > 1
-
-  const data = hasSections
-    ? Object.values(navSections)
-    : Object.values(navSections).flat()
-
-  const itemKey = useCallback((item: IAppPage | IAppPage[]) => {
-    return Array.isArray(item)
-      ? (item[0]?.sectionHeader ?? "")
-      : (item.pageScriptHash ?? "")
-  }, [])
 
   const renderItem = useCallback(
     (item: IAppPage | IAppPage[], _info: unknown) => {
@@ -81,6 +86,7 @@ const TopNav: React.FC<Props> = ({
         <StyledTopNavLinkContainer>
           <SidebarNavLink
             isTopNav={true}
+            isInDropdown={false}
             isActive={currentPageScriptHash === item.pageScriptHash}
             icon={item.icon}
             pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
@@ -108,23 +114,15 @@ const TopNav: React.FC<Props> = ({
       const totalNumPages = items.flat().length
       const title = `${totalNumPages} more`
 
-      if (Array.isArray(items[0])) {
-        return (
-          <TopNavSection
-            hideChevron={true}
-            sections={items as IAppPage[][]}
-            title={title}
-            handlePageChange={onPageChange}
-            endpoints={endpoints}
-            pageLinkBaseUrl={pageLinkBaseUrl}
-            currentPageScriptHash={currentPageScriptHash}
-          />
-        )
-      }
+      // Convert all items to sections format for the overflow menu
+      const sections: IAppPage[][] = items.map(item =>
+        Array.isArray(item) ? item : [item]
+      )
+
       return (
         <TopNavSection
           hideChevron={true}
-          sections={[items as IAppPage[]]}
+          sections={sections}
           title={title}
           handlePageChange={onPageChange}
           endpoints={endpoints}

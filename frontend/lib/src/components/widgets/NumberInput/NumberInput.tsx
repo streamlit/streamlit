@@ -19,6 +19,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -29,26 +30,32 @@ import uniqueId from "lodash/uniqueId"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "~lib/components/widgets/BaseWidget"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 import {
   isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx } from "~lib/theme"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
+import {
+  StyledInputContainer,
+  StyledInputControl,
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "./styled-components"
 import {
   canDecrement,
   canIncrement,
@@ -56,12 +63,6 @@ import {
   getInitialValue,
   getStep,
 } from "./utils"
-import {
-  StyledInputContainer,
-  StyledInputControl,
-  StyledInputControls,
-  StyledInstructionsContainer,
-} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -89,18 +90,34 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
-  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({ value: initialValue, ...element, step })
-  )
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const id = useRef(uniqueId("number_input_"))
+
+  const formattedValue = useMemo(() => {
+    return formatValue({
+      value,
+      dataType: elementDataType,
+      format: elementFormat,
+      step,
+    })
+  }, [value, elementDataType, elementFormat, step])
+
+  // While the input is focused, avoid applying formatting that enforces
+  // fixed decimal places. This prevents keystrokes (including backspace)
+  // from being immediately overridden by formatted output.
+  const displayValue = useMemo(() => {
+    if (isFocused) {
+      return isNullOrUndefined(value) ? "" : value.toString()
+    }
+    return formattedValue ?? ""
+  }, [isFocused, value, formattedValue])
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -155,14 +172,6 @@ const NumberInput: React.FC<Props> = ({
 
         setDirty(false)
         setValue(newValue)
-        setFormattedValue(
-          formatValue({
-            value: newValue,
-            dataType: elementDataType,
-            format: elementFormat,
-            step,
-          })
-        )
       }
     },
     [
@@ -171,12 +180,10 @@ const NumberInput: React.FC<Props> = ({
       inputRef,
       widgetMgr,
       fragmentId,
-      step,
       elementDataType,
       elementId,
       elementFormId,
       elementDefault,
-      elementFormat,
     ]
   )
 
@@ -195,11 +202,8 @@ const NumberInput: React.FC<Props> = ({
     const { value: elementValue } = element
     element.setValue = false
     setValue(elementValue ?? null)
-    setFormattedValue(
-      formatValue({ value: elementValue ?? null, ...element, step })
-    )
     commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, step, commitValue])
+  }, [element, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
@@ -259,7 +263,6 @@ const NumberInput: React.FC<Props> = ({
     if (targetValue === "") {
       setDirty(true)
       setValue(null)
-      setFormattedValue(null)
     } else {
       let numValue: number
 
@@ -271,7 +274,6 @@ const NumberInput: React.FC<Props> = ({
 
       setDirty(true)
       setValue(numValue)
-      setFormattedValue(targetValue)
     }
   }
 
@@ -367,7 +369,7 @@ const NumberInput: React.FC<Props> = ({
         <UIInput
           type="number"
           inputRef={inputRef}
-          value={formattedValue ?? ""}
+          value={displayValue}
           placeholder={element.placeholder}
           onBlur={onBlur}
           onFocus={onFocus}
@@ -399,7 +401,7 @@ const NumberInput: React.FC<Props> = ({
                 overrides: {
                   Svg: {
                     style: {
-                      color: theme.colors.darkGray,
+                      color: theme.colors.grayTextColor,
                       // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                       padding: theme.spacing.threeXS,
                       height: theme.sizes.clearIconSize,
@@ -482,7 +484,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Minus}
                 size="xs"
-                color={canDec ? "inherit" : theme.colors.disabled}
+                color={canDec ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
             <StyledInputControl
@@ -494,7 +496,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Plus}
                 size="xs"
-                color={canInc ? "inherit" : theme.colors.disabled}
+                color={canInc ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
           </StyledInputControls>

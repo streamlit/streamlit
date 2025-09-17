@@ -20,7 +20,10 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+    get_element_by_key,
+)
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     click_on_cell,
@@ -376,9 +379,7 @@ def _test_csv_download(
     download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"
     ).get_by_label("Download as CSV")
-
-    # Check that the toolbar is currently not visible:
-    expect(dataframe_toolbar).to_have_css("opacity", "0")
+    expect(download_csv_toolbar_button).to_be_visible()
 
     # Activate toolbar:
     dataframe_element.scroll_into_view_if_needed()
@@ -442,7 +443,7 @@ def test_csv_download_button(
     _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
 
 
-@pytest.mark.flaky(reruns=4)
+@pytest.mark.flaky(reruns=3)
 def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     """Test that the csv download button works in an iframe.
 
@@ -457,6 +458,7 @@ def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     _test_csv_download(page, frame_locator)
 
 
+@pytest.mark.flaky(reruns=3)
 def test_csv_download_button_in_iframe_with_new_tab_host_config(
     iframed_app: IframedPage,
 ):
@@ -593,6 +595,30 @@ def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFuncti
     expect_prefixed_markdown(
         themed_app, "Edited DF:", "edited value", exact_match=False
     )
+
+
+def test_list_cell_editing(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the list cell can be edited."""
+    cell_overlay_test_df = app.get_by_test_id("stDataFrame").nth(3)
+    expect_canvas_to_be_visible(cell_overlay_test_df)
+
+    # Click on the first cell of the list column
+    click_on_cell(cell_overlay_test_df, 1, 2, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    expect(cell_overlay).to_contain_text("hello")
+    assert_snapshot(cell_overlay, name="st_data_editor-list_col_editor")
+
+    # Change the value
+    cell_overlay.locator("input").fill("new val")
+    # Press Enter to insert the text as list value:
+    app.keyboard.press("Enter")
+    # Press Enter again to apply the change to the dataframe:
+    app.keyboard.press("Enter")
+    wait_for_app_run(app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(app, "Edited DF:", "new val", exact_match=False)
 
 
 def test_custom_css_class_via_key(app: Page):

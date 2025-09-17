@@ -62,7 +62,6 @@ export function debounce(delay: number, fn: any): any {
  */
 export const EMBED_QUERY_PARAM_KEY = "embed"
 export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
-export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
 export const EMBED_SHOW_TOOLBAR = "show_toolbar"
 export const EMBED_SHOW_PADDING = "show_padding"
 export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
@@ -73,7 +72,6 @@ export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
 export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
 export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
-  EMBED_SHOW_COLORED_LINE,
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
   EMBED_DISABLE_SCROLLING,
@@ -141,18 +139,6 @@ export function preserveEmbedQueryParams(): string {
  */
 export function isEmbed(): boolean {
   return getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has(EMBED_TRUE)
-}
-
-/**
- * Returns true if the URL parameters contain ?embed=true&embed_options=show_colored_line (case insensitive).
- */
-export function isColoredLineDisplayed(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-      EMBED_SHOW_COLORED_LINE
-    )
-  )
 }
 
 /**
@@ -473,6 +459,7 @@ export enum AcceptFileValue {
   None,
   Single,
   Multiple,
+  Directory,
 }
 
 export function chatInputAcceptFileProtoValueToEnum(
@@ -485,6 +472,8 @@ export function chatInputAcceptFileProtoValueToEnum(
       return AcceptFileValue.Single
     case ChatInputProto.AcceptFile.MULTIPLE:
       return AcceptFileValue.Multiple
+    case ChatInputProto.AcceptFile.DIRECTORY:
+      return AcceptFileValue.Directory
     default:
       assertNever(value)
       return AcceptFileValue.None
@@ -652,7 +641,9 @@ export function keysToSnakeCase(
 
       if (Array.isArray(value)) {
         value = value.map(item =>
-          typeof item === "object" ? keysToSnakeCase(item) : item
+          item !== null && typeof item === "object"
+            ? keysToSnakeCase(item)
+            : item
         )
       }
 

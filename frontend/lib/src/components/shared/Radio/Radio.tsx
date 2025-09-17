@@ -24,16 +24,16 @@ import React, {
 
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import { Placement } from "~lib/components/shared/Tooltip"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   disabled: boolean

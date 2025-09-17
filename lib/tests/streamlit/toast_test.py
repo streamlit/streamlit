@@ -16,10 +16,13 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -31,6 +34,7 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
         assert c.icon == ""
+        assert c.duration == 4.0
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
@@ -45,6 +49,7 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
         assert c.icon == "🦄"
+        assert c.duration == 4.0
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
@@ -53,4 +58,29 @@ class ToastTest(DeltaGeneratorTestCase):
         assert str(e.value) == (
             'The value "invalid" is not a valid emoji. Shortcodes '
             "are not allowed, please use a single character instead."
+        )
+
+    @parameterized.expand([("short", 4), ("long", 10), ("infinite", 0), (10, 10)])
+    def test_duration_variants(
+        self: ToastTest,
+        duration: Literal["short", "long", "infinite"] | int,
+        expected_duration: float,
+    ) -> None:
+        """Test all supported duration values, including default and None."""
+
+        st.toast("toast text", duration=duration)
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+
+        assert c.HasField("duration")
+        assert c.duration == expected_duration
+
+    def test_invalid_duration(self):
+        """Test that an error is raised if an invalid duration is provided."""
+        with pytest.raises(StreamlitValueError) as e:
+            st.toast("toast text", duration="invalid")
+        assert (
+            str(e.value)
+            == "Invalid `duration` value. Supported values: short, long, infinite, a positive integer."
         )

@@ -16,6 +16,7 @@
 
 import React, { ReactElement, ReactNode } from "react"
 
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {
   BaseButtonKind,
   Modal,
@@ -28,14 +29,13 @@ import {
   StreamlitSyntaxHighlighter,
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 
+import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
+import { StyledDeployErrorContent } from "./styled-components"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
-import { DeployDialog, DeployDialogProps } from "./DeployDialog"
-import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void
 

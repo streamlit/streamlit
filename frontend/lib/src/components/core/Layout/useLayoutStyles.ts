@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+
+import { FlexContext, IFlexContext } from "./FlexContext"
+import { Direction, MinFlexElementWidth } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -37,7 +40,11 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
+  minStretchBehavior?: MinFlexElementWidth
 }
+
+const isPositiveNumber = (value: unknown): value is number =>
+  typeof value === "number" && value >= 0 && !isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
   typeof value === "number" && value > 0 && !isNaN(value)
@@ -70,21 +77,20 @@ const getWidth = (
   const isContent =
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
-    element?.widthConfig?.pixelWidth || subElement?.widthConfig?.pixelWidth
+    element?.widthConfig?.pixelWidth ||
+    subElement?.widthConfig?.pixelWidth ||
+    element.widthConfig?.pixelWidth === 0
 
   if (isStretch) {
     type = DimensionType.STRETCH
   } else if (isContent) {
     type = DimensionType.CONTENT
-  } else if (
-    isPixel &&
-    isNonZeroPositiveNumber(element.widthConfig?.pixelWidth)
-  ) {
+  } else if (isPixel && isPositiveNumber(element.widthConfig?.pixelWidth)) {
     type = DimensionType.PIXEL
     pixels = element.widthConfig?.pixelWidth
   } else if (
     isPixel &&
-    isNonZeroPositiveNumber(subElement?.widthConfig?.pixelWidth)
+    isPositiveNumber(subElement?.widthConfig?.pixelWidth)
   ) {
     type = DimensionType.PIXEL
     pixels = subElement?.widthConfig?.pixelWidth
@@ -117,16 +123,15 @@ const getHeight = (
 
   const isStretch = !!element.heightConfig?.useStretch
   const isContent = !!element.heightConfig?.useContent
-  const isPixel = !!element.heightConfig?.pixelHeight
+  const isPixel =
+    !!element.heightConfig?.pixelHeight ||
+    element.heightConfig?.pixelHeight === 0
 
   if (isStretch) {
     type = DimensionType.STRETCH
   } else if (isContent) {
     type = DimensionType.CONTENT
-  } else if (
-    isPixel &&
-    isNonZeroPositiveNumber(element.heightConfig?.pixelHeight)
-  ) {
+  } else if (isPixel && isPositiveNumber(element.heightConfig?.pixelHeight)) {
     type = DimensionType.PIXEL
     pixels = element.heightConfig?.pixelHeight
   } else if (
@@ -138,6 +143,43 @@ const getHeight = (
   }
 
   return { pixels, type }
+}
+
+const getFlex = (
+  widthType: DimensionType | undefined,
+  widthPixels: number | undefined,
+  heightType: DimensionType | undefined,
+  heightPixels: number | undefined,
+  direction: Direction | undefined,
+  minStretchBehavior?: MinFlexElementWidth
+): string | undefined => {
+  if (
+    widthType === DimensionType.PIXEL &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return `0 0 ${widthPixels}px`
+  } else if (
+    heightType === DimensionType.PIXEL &&
+    direction === Direction.VERTICAL
+  ) {
+    return `0 0 ${heightPixels}px`
+  } else if (
+    widthType === DimensionType.CONTENT &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return "0 0 fit-content"
+  } else if (
+    widthType === DimensionType.STRETCH &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return `1 1 ${minStretchBehavior ?? "fit-content"}`
+  }
+}
+
+const getDirection = (
+  flexContext: IFlexContext | null
+): Direction | undefined => {
+  return flexContext?.direction
 }
 
 export type UseLayoutStylesShape = {
@@ -154,9 +196,9 @@ export const useLayoutStyles = ({
   element,
   subElement,
   styleOverrides,
+  minStretchBehavior,
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
-  // Note: Consider rounding the width to the nearest pixel so we don't have
-  // subpixel widths, which leads to blurriness on screen
+  const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
     if (!element) {
       return {
@@ -165,7 +207,6 @@ export const useLayoutStyles = ({
         overflow: "visible",
       }
     }
-    let flex: React.CSSProperties["flex"] = undefined
 
     const { pixels: commandWidth, type: widthType } = getWidth(
       element,
@@ -194,10 +235,16 @@ export const useLayoutStyles = ({
     } else if (heightType === DimensionType.PIXEL) {
       height = `${commandHeight}px`
       overflow = "auto"
-      // TODO (lawilby): We only have vertical containers currently, but this will be
-      // modified to handle horizontal containers when direction on containers is implemented.
-      flex = `0 0 ${commandHeight}px`
     }
+
+    const flex = getFlex(
+      widthType,
+      commandWidth,
+      heightType,
+      commandHeight,
+      getDirection(flexContext),
+      minStretchBehavior
+    )
 
     const calculatedStyles = {
       width,
@@ -210,7 +257,7 @@ export const useLayoutStyles = ({
       ...calculatedStyles,
       ...styleOverrides,
     }
-  }, [element, subElement, styleOverrides])
+  }, [element, subElement, styleOverrides, flexContext, minStretchBehavior])
 
   return layoutStyles
 }

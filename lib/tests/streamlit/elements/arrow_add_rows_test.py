@@ -19,6 +19,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
+from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
@@ -44,8 +45,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     def test_charts_with_implict_x_and_y(self, chart_command):
         expected = pd.DataFrame(
             {
-                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3, 1, 2, 3, 1, 2, 3],
-                "color--p5bJXXpQgvPz6yvQMFiy": [
+                f"index{_PROTECTION_SUFFIX}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+                f"color{_PROTECTION_SUFFIX}": [
                     "a",
                     "a",
                     "a",
@@ -56,7 +57,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
                     "c",
                     "c",
                 ],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 21, 22, 23, 31, 32, 33],
+                f"value{_PROTECTION_SUFFIX}": [11, 12, 13, 21, 22, 23, 31, 32, 33],
             }
         )
 
@@ -92,7 +93,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     def test_charts_with_implict_x_and_explicit_y(self, chart_command):
         expected = pd.DataFrame(
             {
-                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3],
+                f"index{_PROTECTION_SUFFIX}": [1, 2, 3],
                 "b": [21, 22, 23],
             }
         )
@@ -111,8 +112,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                f"color{_PROTECTION_SUFFIX}": ["a", "a", "a", "c", "c", "c"],
+                f"value{_PROTECTION_SUFFIX}": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -130,8 +131,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                f"color{_PROTECTION_SUFFIX}": ["a", "a", "a", "c", "c", "c"],
+                f"value{_PROTECTION_SUFFIX}": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -151,8 +152,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         expected = pd.DataFrame(
             {
                 "b": [21, 22, 23, 21, 22, 23],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                f"color{_PROTECTION_SUFFIX}": ["a", "a", "a", "c", "c", "c"],
+                f"value{_PROTECTION_SUFFIX}": [11, 12, 13, 31, 32, 33],
             }
         )
 
@@ -170,8 +171,8 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             {
                 "b": [21, 22, 23, 21, 22, 23],
                 "d": [41, 42, 43, 41, 42, 43],
-                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
-                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+                f"color{_PROTECTION_SUFFIX}": ["a", "a", "a", "c", "c", "c"],
+                f"value{_PROTECTION_SUFFIX}": [11, 12, 13, 31, 32, 33],
             }
         )
 

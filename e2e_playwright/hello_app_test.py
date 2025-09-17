@@ -18,6 +18,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
 )
+from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
 def navigate_to_page(app: Page, index: int):
@@ -75,9 +76,7 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     # and additional timeout
     expect(app.get_by_test_id("stText")).to_contain_text("100% complete", timeout=15000)
     expect(app.get_by_test_id("stProgress")).not_to_be_visible()
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
-        "height", "350"
-    )
+    assert_vega_chart_height(app.get_by_test_id("stVegaLiteChart"), 350)
 
     assert_snapshot(app, name="hello_app-plotting_demo_page")
 
@@ -106,9 +105,7 @@ def _load_dataframe_demo_page(app: Page):
     check_page_icon(app, "table", 1)
     expect(app.get_by_test_id("stMultiSelect")).to_be_visible()
     expect(app.get_by_test_id("stDataFrame")).to_be_visible()
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
-        "height", "350"
-    )
+    assert_vega_chart_height(app.get_by_test_id("stVegaLiteChart"), 350)
 
 
 def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
@@ -157,6 +154,7 @@ def test_app_print_mode_portrait_with_sidebar_open(
     _evaluate_match_media_print(app)
 
     # ensure that the sidebar is visible
+    expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_open")
@@ -177,8 +175,8 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button
     # when printing
-    app.get_by_test_id("stSidebar").hover()
-    sidebar_element = app.get_by_test_id("stSidebarContent")
+    sidebar_element = app.get_by_test_id("stSidebar")
+    sidebar_element.hover()
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
@@ -201,6 +199,7 @@ def test_app_print_mode_landscape_with_sidebar_open(
     _set_landscape_dimensions(app)
     _evaluate_match_media_print(app)
     # ensure that the sidebar is visible
+    expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_open")
@@ -221,8 +220,8 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button
     # when printing
-    app.get_by_test_id("stSidebar").hover()
-    sidebar_element = app.get_by_test_id("stSidebarContent")
+    sidebar_element = app.get_by_test_id("stSidebar")
+    sidebar_element.hover()
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 

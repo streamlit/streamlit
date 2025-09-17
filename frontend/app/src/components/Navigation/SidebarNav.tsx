@@ -24,14 +24,13 @@ import React, {
   useState,
 } from "react"
 
-import groupBy from "lodash/groupBy"
 import { getLogger } from "loglevel"
 
-import { isMobile } from "@streamlit/lib"
-import { localStorageAvailable } from "@streamlit/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
-import { IAppPage } from "@streamlit/protobuf"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
+import { StreamlitEndpoints } from "@streamlit/connection"
+import { isMobile } from "@streamlit/lib"
+import { IAppPage } from "@streamlit/protobuf"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"
@@ -42,6 +41,7 @@ import {
   StyledSidebarNavSeparator,
   StyledViewButton,
 } from "./styled-components"
+import { groupPagesBySection, processNavigationStructure } from "./utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -49,7 +49,6 @@ export interface Props {
   collapseSidebar: () => void
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
-  navSections: string[]
   currentPageScriptHash: string
   expandSidebarNav: boolean
 }
@@ -91,29 +90,25 @@ function NavLink({
 }
 
 function generateNavSections(
-  navSections: string[],
-  appPages: IAppPage[],
+  sections: Record<string, IAppPage[]>,
   needsCollapse: boolean,
   generateNavLink: (page: IAppPage, index: number) => ReactElement,
   expandedSections: Record<string, boolean>,
-  toggleSection: (section: string) => void
-): ReactNode[] {
+  toggleSection: (section: string) => void,
+  currentPageCount: number
+): { sections: ReactNode[]; updatedPageCount: number } {
   const contents: ReactNode[] = []
-  const pagesBySectionHeader = groupBy(
-    appPages,
-    page => page.sectionHeader || ""
-  )
-  let currentPageCount = 0
-  navSections.forEach(header => {
+  let pageCount = currentPageCount
+
+  Object.entries(sections).forEach(([header, pages]) => {
     // Create a shallow copy to prevent mutations below from affecting
     // the original array.
-    const sectionPages = [...(pagesBySectionHeader[header] ?? [])]
+    const sectionPages = [...pages]
     let viewablePages = sectionPages
     const isExpanded = expandedSections[header]
 
     if (needsCollapse) {
-      const availableSlots =
-        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+      const availableSlots = NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - pageCount
       if (availableSlots <= 0) {
         viewablePages = []
       } else if (sectionPages.length > availableSlots) {
@@ -123,7 +118,7 @@ function generateNavSections(
     }
 
     if (isExpanded) {
-      currentPageCount += viewablePages.length
+      pageCount += viewablePages.length
     }
 
     if (viewablePages.length > 0) {
@@ -140,7 +135,7 @@ function generateNavSections(
     }
   })
 
-  return contents
+  return { sections: contents, updatedPageCount: pageCount }
 }
 
 /** Displays a list of navigable app page links for multi-page apps. */
@@ -150,7 +145,6 @@ const SidebarNav = ({
   collapseSidebar,
   hasSidebarElements,
   onPageChange,
-  navSections,
   currentPageScriptHash,
   expandSidebarNav,
 }: Props): ReactElement | null => {
@@ -163,24 +157,30 @@ const SidebarNav = ({
     boolean
   > | null>(null)
 
-  const pagesBySectionHeader = useMemo(
-    () => groupBy(appPages, page => page.sectionHeader || ""),
-    [appPages]
-  )
+  const navigationStructure = useMemo(() => {
+    return processNavigationStructure(groupPagesBySection(appPages))
+  }, [appPages])
 
   const numVisiblePages = useMemo(() => {
-    if (navSections.length === 0) {
+    const hasSections = Object.keys(navigationStructure.sections).length > 0
+
+    if (!hasSections) {
       return appPages.length
     }
 
+    let count = navigationStructure.individualPages.length
+
     // Only count pages in expanded sections
-    return navSections.reduce((count, sectionName) => {
-      if (expandedSections && expandedSections[sectionName]) {
-        return count + (pagesBySectionHeader[sectionName]?.length || 0)
+    Object.entries(navigationStructure.sections).forEach(
+      ([sectionName, pages]) => {
+        if (expandedSections?.[sectionName]) {
+          count += pages.length
+        }
       }
-      return count
-    }, 0)
-  }, [appPages.length, navSections, expandedSections, pagesBySectionHeader])
+    )
+
+    return count
+  }, [appPages.length, expandedSections, navigationStructure])
 
   useEffect(() => {
     const cachedSidebarNavExpanded =
@@ -207,7 +207,7 @@ const SidebarNav = ({
         }
       }
 
-      const allSections = navSections.reduce(
+      const allSections = Object.keys(navigationStructure.sections).reduce(
         (acc, sectionName) => {
           // Default to expanded
           acc[sectionName] = initialState[sectionName] ?? true
@@ -218,7 +218,7 @@ const SidebarNav = ({
       setExpandedSections(allSections)
     } else {
       // If localStorage is not available, default to all expanded.
-      const allSections = navSections.reduce(
+      const allSections = Object.keys(navigationStructure.sections).reduce(
         (acc, sectionName) => {
           acc[sectionName] = true
           return acc
@@ -227,7 +227,7 @@ const SidebarNav = ({
       )
       setExpandedSections(allSections)
     }
-  }, [navSections, localStorageKey])
+  }, [navigationStructure.sections, localStorageKey])
 
   // Store the current expanded sections state in localStorage:
   useEffect(() => {
@@ -299,28 +299,37 @@ const SidebarNav = ({
     return null
   }
 
-  let contents: ReactNode[] = []
+  const contents: ReactNode[] = []
   const shouldShowViewButton =
     hasSidebarElements &&
     numVisiblePages > COLLAPSE_THRESHOLD &&
     !expandSidebarNav
   const needsCollapse = shouldShowViewButton && !expanded
-  if (navSections.length > 0) {
-    // For MPAv2 with headers: renders a NavSection for each header with its respective pages
-    contents = generateNavSections(
-      navSections,
-      appPages,
+
+  // First, render individual pages (those with empty section headers)
+  let currentPageCount = 0
+  if (navigationStructure.individualPages.length > 0) {
+    const individualPages = needsCollapse
+      ? navigationStructure.individualPages.slice(
+          0,
+          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+        )
+      : navigationStructure.individualPages
+    contents.push(...individualPages.map(generateNavLink))
+    currentPageCount += individualPages.length
+  }
+
+  // Then, render sections if there are any
+  if (Object.keys(navigationStructure.sections).length > 0) {
+    const result = generateNavSections(
+      navigationStructure.sections,
       needsCollapse,
       generateNavLink,
       expandedSections,
-      toggleSection
+      toggleSection,
+      currentPageCount
     )
-  } else {
-    const viewablePages = needsCollapse
-      ? appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
-      : appPages
-    // For MPAv1 / MPAv2 with no section headers, single NavSection with all pages
-    contents = viewablePages.map(generateNavLink)
+    contents.push(...result.sections)
   }
 
   return (

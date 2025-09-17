@@ -24,9 +24,9 @@ import {
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import TextInput, { Props } from "./TextInput"
 

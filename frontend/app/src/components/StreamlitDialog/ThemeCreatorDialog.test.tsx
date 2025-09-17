@@ -19,6 +19,7 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   darkTheme,
   LibContextProps,
@@ -26,7 +27,6 @@ import {
   mockSessionInfo,
   renderWithContexts,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
@@ -130,6 +130,7 @@ describe("Opened ThemeCreatorDialog", () => {
 
   it("should copy to clipboard", async () => {
     const user = userEvent.setup()
+    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText")
 
     const props = getProps()

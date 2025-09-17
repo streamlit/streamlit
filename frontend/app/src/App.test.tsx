@@ -27,13 +27,22 @@ import {
 import cloneDeep from "lodash/cloneDeep"
 
 import {
+  getMenuStructure,
+  openMenu,
+} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
+  ConnectionManager,
+  ConnectionState,
+  mockEndpoints,
+} from "@streamlit/connection"
+import {
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
   HOST_COMM_VERSION,
   HostCommunicationManager,
-  isColoredLineDisplayed,
   isEmbed,
   isToolbarDisplayed,
   lightTheme,
@@ -70,19 +79,9 @@ import {
   SessionStatus,
   TextInput,
 } from "@streamlit/protobuf"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  ConnectionManager,
-  ConnectionState,
-  mockEndpoints,
-} from "@streamlit/connection"
-import {
-  getMenuStructure,
-  openMenu,
-} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 
-import { showDevelopmentOptions } from "./showDevelopmentOptions"
 import { App, LOG, Props } from "./App"
+import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 vi.mock("~lib/baseconsts", async () => {
   return {
@@ -96,7 +95,6 @@ vi.mock("@streamlit/lib", async () => {
     ...actualLib,
     isEmbed: vi.fn(),
     isToolbarDisplayed: vi.fn(),
-    isColoredLineDisplayed: vi.fn(),
   }
 })
 
@@ -1252,7 +1250,6 @@ describe("App", () => {
     afterEach(() => {
       vi.mocked(isEmbed).mockReset()
       vi.mocked(isToolbarDisplayed).mockReset()
-      vi.mocked(isColoredLineDisplayed).mockReset()
 
       vi.clearAllMocks()
     })
@@ -1284,11 +1281,10 @@ describe("App", () => {
       expect(screen.getByTestId("stToolbarActions")).toBeVisible()
     })
 
-    it("does not render when app embedded & both showToolbar and showColoredLine false", () => {
+    it("does not render when app embedded & showToolbar is false", () => {
       // Mock returns of util functions
       vi.mocked(isEmbed).mockReturnValue(true)
       vi.mocked(isToolbarDisplayed).mockReturnValue(false)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(false)
 
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -1297,11 +1293,10 @@ describe("App", () => {
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 
-    it("renders when app embedded & only showToolbar is true", () => {
+    it("renders when app embedded & showToolbar is true", () => {
       // Mock returns of util functions
       vi.mocked(isEmbed).mockReturnValue(true)
       vi.mocked(isToolbarDisplayed).mockReturnValue(true)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(false)
 
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -1309,22 +1304,6 @@ describe("App", () => {
       // Header/main menu should render
       expect(screen.getByTestId("stHeader")).toBeVisible()
       expect(screen.getByTestId("stMainMenu")).toBeVisible()
-    })
-
-    it("renders when app embedded & only showColoredLine is true", () => {
-      // Mock returns of util functions
-      vi.mocked(isEmbed).mockReturnValue(true)
-      vi.mocked(isToolbarDisplayed).mockReturnValue(false)
-      vi.mocked(isColoredLineDisplayed).mockReturnValue(true)
-
-      renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-
-      // Header and decoration should render, but not MainMenu since toolbar is not visible
-      expect(screen.getByTestId("stHeader")).toBeVisible()
-      expect(screen.getByTestId("stDecoration")).toBeVisible()
-      // MainMenu should not exist since showToolbar is false
-      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
     })
   })
 
@@ -1973,6 +1952,49 @@ describe("App", () => {
       // Should not have called setImportedTheme
       expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
     })
+
+    it("calls setImportedTheme when a fontSource is provided", () => {
+      const fontSources = [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+      ]
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources,
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should have called setImportedTheme
+      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+    })
+
+    it("doesn't call setImportedTheme when fontSources is empty", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources: [],
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should not have called setImportedTheme
+      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+    })
   })
 
   describe("App.handleScriptFinished", () => {
@@ -2479,6 +2501,161 @@ describe("App", () => {
       // Delta Messages handle on a timer, so we make it async
       await waitFor(() => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe("AppSkeleton rendering and styling", () => {
+    let originalLocation: Location
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      originalLocation = window.location
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    it("renders AppSkeleton with correct container width styling during initial load", async () => {
+      renderApp(getProps())
+
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+
+      const skeletonElement = screen.getByTestId("stAppSkeleton")
+      const elementContainer = skeletonElement.closest(
+        '[data-testid="stElementContainer"]'
+      )
+
+      expect(elementContainer).toBeInTheDocument()
+      expect(elementContainer).toHaveStyle("width: 100%")
+    })
+
+    it("shows skeleton with default V2 loading screen behavior", async () => {
+      renderApp(getProps())
+
+      // Skeleton should not be visible initially due to 500ms delay
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+    })
+
+    it("does not show skeleton when embedded with hide_loading_screen option", () => {
+      // This tests the embedding use case where the host wants to hide loading screens
+      Object.defineProperty(window, "location", {
+        value: { search: "?embed_options=hide_loading_screen" },
+        writable: true,
+        configurable: true,
+      })
+
+      renderApp(getProps())
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      // Skeleton should never appear when loading screen is hidden
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("shows 'Please wait...' text when embedded with V1 loading screen", async () => {
+      // This tests backwards compatibility for older embedding integrations
+      Object.defineProperty(window, "location", {
+        value: { search: "?embed_options=show_loading_screen_v1" },
+        writable: true,
+        configurable: true,
+      })
+
+      renderApp(getProps())
+
+      // Should show "Please wait..." instead of skeleton for V1 compatibility
+      await waitFor(() => {
+        expect(screen.getByText("Please wait...")).toBeInTheDocument()
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("replaces skeleton with real content when app loads", async () => {
+      renderApp(getProps())
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+      })
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Real app content",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("Real app content")).toBeVisible()
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+    })
+
+    it("skeleton timing works correctly with multiple renders", async () => {
+      const { unmount } = renderApp(getProps())
+
+      // First render - advance time but not enough
+      act(() => {
+        vi.advanceTimersByTime(300)
+      })
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      unmount()
+      renderApp(getProps())
+
+      expect(screen.queryByTestId("stAppSkeleton")).not.toBeInTheDocument()
+
+      // Now advance past the full delay
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
     })
   })
@@ -3611,7 +3788,7 @@ describe("App", () => {
         ],
       })
 
-      expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeVisible()
     })
 
     it("sets hideSidebarNav based on the server config option and host setting", () => {
@@ -3670,6 +3847,62 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+    })
+
+    it("shows toolbar in minimal mode when host menu items exist", () => {
+      prepareHostCommunicationManager()
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Initially no toolbar in minimal mode
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+
+      // Add host menu items
+      fireWindowPostMessage({
+        type: "SET_MENU_ITEMS",
+        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
+      })
+
+      // Toolbar should now be visible
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when host toolbar items exist", () => {
+      prepareHostCommunicationManager()
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Initially no toolbar actions in minimal mode
+      expect(screen.queryByTestId("stToolbarActions")).not.toBeInTheDocument()
+
+      // Add host toolbar items
+      fireWindowPostMessage({
+        type: "SET_TOOLBAR_ITEMS",
+        items: [
+          {
+            key: "favorite",
+            icon: "star.svg",
+          },
+        ],
+      })
+
+      // Toolbar actions should now be visible
+      expect(screen.getByTestId("stToolbarActions")).toBeVisible()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeVisible()
     })
 
     it("does not relay custom parent messages by default", () => {
@@ -3927,7 +4160,7 @@ describe("App", () => {
 
     it("retains embed query params even if the page hash is different", () => {
       const embedParams =
-        "embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
+        "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
       renderApp(getProps())
 
@@ -4286,5 +4519,530 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     expect(
       connectionManager.incrementMessageCacheRunCount
     ).not.toHaveBeenCalled()
+  })
+
+  describe("Toolbar visibility in minimal mode", () => {
+    beforeEach(() => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isToolbarDisplayed).mockReturnValue(false)
+    })
+
+    it("shows toolbar in minimal mode when app-defined About menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set About menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          aboutSectionMd: "Version X",
+        },
+      })
+
+      // The toolbar should be visible because there's an About menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Get Help menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Get Help menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Get Help menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Report a Bug menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Report a Bug menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Report a Bug menu item
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+
+    it("hides toolbar in minimal mode when no menu items exist", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal with no menu items
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // The toolbar should not be visible because there are no menu items
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("hides toolbar in minimal mode when menu items are hidden", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set menu items but hide them
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: true,
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: true,
+        },
+      })
+
+      // The toolbar should not be visible because all menu items are hidden
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("shows toolbar in non-minimal modes regardless of menu items", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to VIEWER (non-minimal)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.VIEWER,
+        },
+      })
+
+      // The toolbar should be visible even without menu items
+      expect(screen.getByTestId("stMainMenu")).toBeVisible()
+    })
+  })
+
+  describe("Connection Error Handling", () => {
+    const triggerConnectionError = (
+      connectionManager: ConnectionManager,
+      errorMessage: string
+    ): void => {
+      act(() => {
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.onConnectionError(errorMessage)
+      })
+    }
+
+    describe("handleConnectionError", () => {
+      it("displays connection error dialog when connection error occurs", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        triggerConnectionError(
+          connectionManager,
+          "Network error: Unable to connect"
+        )
+
+        // Verify error dialog and message are displayed
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(
+          screen.getByText(/Network error: Unable to connect/)
+        ).toBeVisible()
+      })
+
+      it("does not display error dialog if already dismissed", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First error
+        triggerConnectionError(connectionManager, "Connection lost")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+          fireEvent.click(closeButton)
+        })
+
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // Second error should not display
+        triggerConnectionError(connectionManager, "Another connection error")
+
+        expect(screen.queryByText("Connection error")).toBeNull()
+      })
+
+      it("sends error info to host when blockErrorDialogs is true", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+
+        // Set blockErrorDialogs config
+        act(() => {
+          getMockConnectionManagerProp("onHostConfigResp")({
+            blockErrorDialogs: true,
+            allowedOrigins: [],
+            useExternalAuthToken: false,
+            enableCustomParentMessages: false,
+          })
+        })
+
+        // Trigger error
+        triggerConnectionError(connectionManager, "Connection lost")
+
+        // Dialog should not be displayed
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // But error should be sent to host
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "CLIENT_ERROR_DIALOG",
+            error: "Connection error",
+            message: expect.stringContaining("Connection lost"),
+          })
+        )
+      })
+
+      it("displays error with StreamlitMarkdown formatting", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        triggerConnectionError(
+          connectionManager,
+          "**Network Error**: Unable to connect to server"
+        )
+
+        // Verify both error dialog and markdown content are displayed
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/Network Error/)).toBeVisible()
+      })
+    })
+
+    describe("connection state transitions with error dismissal", () => {
+      it("resets dismissal state when reconnected", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Trigger connection error
+        triggerConnectionError(connectionManager, "Connection lost")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+          fireEvent.click(closeButton)
+        })
+
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // Simulate reconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // New error should be displayed after reconnection
+        triggerConnectionError(connectionManager, "New connection error")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/New connection error/)).toBeVisible()
+      })
+
+      it("automatically rescinds error dialog on successful reconnection", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Set initial state to connected
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+        // Trigger disconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.PINGING_SERVER
+          )
+        })
+
+        // Trigger connection error
+        triggerConnectionError(connectionManager, "Connection lost")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Reconnect (without dismissing dialog)
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Dialog should be automatically closed
+        expect(screen.queryByText("Connection error")).toBeNull()
+      })
+
+      it("only rescinds CONNECTION_ERROR type dialogs on reconnection", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First, show a connection error dialog
+        triggerConnectionError(connectionManager, "Connection lost")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Simulate reconnection - should close the CONNECTION_ERROR dialog
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Connection error dialog should be closed
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // Now test that other dialog types are not affected
+        // This validates that only CONNECTION_ERROR dialogs are auto-closed
+      })
+    })
+
+    describe("reconnection behavior", () => {
+      it("requests script rerun on reconnection after interruption", () => {
+        renderApp(getProps())
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        // Start with connected state
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+        // Set script to running
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+
+        // Disconnect during script run
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.PINGING_SERVER
+          )
+        })
+
+        const sendUpdateWidgetsMessageSpy = vi.spyOn(
+          widgetStateManager,
+          "sendUpdateWidgetsMessage"
+        )
+        sendUpdateWidgetsMessageSpy.mockClear()
+
+        // Reconnect
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        // Should request rerun
+        expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalledWith(undefined)
+      })
+
+      it("handles multiple connection errors gracefully", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Trigger multiple errors
+        triggerConnectionError(connectionManager, "Error 1")
+
+        triggerConnectionError(connectionManager, "Error 2")
+
+        triggerConnectionError(connectionManager, "Error 3")
+
+        // Should only show the latest error
+        expect(screen.getByText("Connection error")).toBeVisible()
+        expect(screen.getByText(/Error 3/)).toBeVisible()
+        expect(screen.queryByText(/Error 1/)).toBeNull()
+        expect(screen.queryByText(/Error 2/)).toBeNull()
+      })
+
+      it("maintains dismissal state across multiple disconnections", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // First error
+        triggerConnectionError(connectionManager, "First error")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Dismiss the dialog
+        const closeButton = screen.getByRole("button", { name: /close/i })
+        act(() => {
+          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+          fireEvent.click(closeButton)
+        })
+
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // Simulate multiple state changes without full reconnection
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.PINGING_SERVER
+          )
+        })
+
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTING
+          )
+        })
+
+        // Error should still not display (dismissal persists)
+        triggerConnectionError(connectionManager, "Another error")
+
+        expect(screen.queryByText("Connection error")).toBeNull()
+
+        // Only full reconnection should reset dismissal
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        triggerConnectionError(connectionManager, "Error after reconnect")
+
+        expect(screen.getByText("Connection error")).toBeVisible()
+      })
+    })
+
+    describe("host communication integration", () => {
+      it("handles host-requested reconnection", () => {
+        renderApp(getProps())
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+
+        const restartWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
+          hostCommunicationMgr.props.restartWebsocketConnection
+
+        const terminateWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
+          hostCommunicationMgr.props.terminateWebsocketConnection
+
+        // First disconnect to set connectionManager to null
+        act(() => {
+          terminateWebsocketConnection()
+        })
+
+        // Clear the mock to count from zero
+        vi.mocked(ConnectionManager).mockClear()
+
+        // Now request reconnection
+        act(() => {
+          restartWebsocketConnection()
+        })
+
+        // Should have created a new ConnectionManager instance
+        expect(ConnectionManager).toHaveBeenCalledTimes(1)
+      })
+
+      it("handles host-requested disconnection", () => {
+        renderApp(getProps())
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+        const connectionManager = getMockConnectionManager(false)
+
+        const terminateWebsocketConnection =
+          // @ts-expect-error - accessing private property for testing
+          hostCommunicationMgr.props.terminateWebsocketConnection
+
+        // Simulate host requesting disconnection
+        act(() => {
+          terminateWebsocketConnection()
+        })
+
+        // Should disconnect
+        expect(connectionManager.disconnect).toHaveBeenCalled()
+      })
+
+      it("logs error when not connected but trying to handle errors", () => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        // Mock console.error to verify logging
+        const logSpy = vi.spyOn(LOG, "error")
+
+        // Mock isConnected to return false
+        // @ts-expect-error
+        connectionManager.isConnected.mockReturnValue(false)
+
+        // Set connectionManager to null to simulate disconnected state
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.DISCONNECTED_FOREVER
+          )
+        })
+
+        // Try to trigger connection error
+        triggerConnectionError(connectionManager, "Error while disconnected")
+
+        // Should still show error dialog even when disconnected
+        expect(screen.getByText("Connection error")).toBeVisible()
+
+        // Verify error was logged
+        expect(logSpy).toHaveBeenCalledWith("Error while disconnected")
+
+        logSpy.mockRestore()
+      })
+    })
   })
 })

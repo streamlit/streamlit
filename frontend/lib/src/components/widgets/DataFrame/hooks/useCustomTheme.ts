@@ -16,7 +16,7 @@
 import { useMemo } from "react"
 
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
-import { mix, transparentize } from "color2k"
+import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
@@ -98,7 +98,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Special cells:
       textBubble: theme.colors.fadedText60,
       bgBubble: theme.colors.secondaryBg,
-      bgBubbleSelected: theme.colors.secondaryBg,
+      bgBubbleSelected: lighten(theme.colors.secondaryBg, 0.1),
       bubbleHeight: Math.round(convertRemToPx("1.25rem")),
       bubblePadding: Math.round(convertRemToPx(theme.spacing.sm)),
       bubbleMargin: Math.round(convertRemToPx(theme.spacing.twoXS)),

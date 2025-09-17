@@ -16,6 +16,7 @@
 
 import path from "path"
 import { fileURLToPath } from "url"
+import { createJiti } from "jiti"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
@@ -29,7 +30,6 @@ import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
-import streamlitCustom from "eslint-plugin-streamlit-custom"
 import globals from "globals"
 import { globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
@@ -39,6 +39,14 @@ import jsxA11y from "eslint-plugin-jsx-a11y"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// This is to support our custom rules, which are written in TypeScript,
+// but need to be imported as JS to work in ESLint.
+const jiti = createJiti(import.meta.url)
+const streamlitCustom = await jiti.import(
+  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
+  { default: true }
+)
 
 export default tseslint.config([
   // Base recommended configs
@@ -162,6 +170,8 @@ export default tseslint.config([
       ],
       // We want this on
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Prefer optional chaining over && chains
+      "@typescript-eslint/prefer-optional-chain": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -204,6 +214,11 @@ export default tseslint.config([
           property: "innerHeight",
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -245,7 +260,7 @@ export default tseslint.config([
         },
       ],
       "import/order": [
-        1,
+        "error",
         {
           pathGroups: [
             {
@@ -255,6 +270,11 @@ export default tseslint.config([
             },
             {
               pattern: "@streamlit/**",
+              group: "internal",
+              position: "before",
+            },
+            {
+              pattern: "~lib/**",
               group: "internal",
               position: "before",
             },
@@ -269,6 +289,10 @@ export default tseslint.config([
             "index",
           ],
           "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
         },
       ],
       "streamlit-custom/no-hardcoded-theme-values": "error",
@@ -289,6 +313,12 @@ export default tseslint.config([
               message:
                 "Please use the useEmotionTheme hook instead of useTheme for type-safety",
               importNames: ["useTheme"],
+            },
+            {
+              name: "axios",
+              importNames: ["CancelToken"],
+              message:
+                "Please use the `AbortController` API instead of `CancelToken`",
             },
           ],
         },

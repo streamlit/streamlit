@@ -32,6 +32,10 @@ if st.button("Set Value"):
     st.session_state["chat_input_3"] = "Hello, world!"
 
 if runtime.exists():
+    st.write(
+        "Chat input 3 - session state value before execution:",
+        st.session_state.get("chat_input_3"),
+    )
 
     def on_submit():
         st.markdown("chat input submitted")
@@ -66,3 +70,14 @@ v8 = st.chat_input(
     max_chars=200,
 )
 st.write("Chat input 8 (bottom, max_chars) - value:", v8)
+
+# Directory upload tests
+v9 = st.container().chat_input(
+    "Chat input 9 (directory upload)", accept_file="directory"
+)
+st.write("Chat input 9 (directory upload) - value:", v9)
+
+v10 = st.container().chat_input(
+    "Chat input 10 (directory upload disabled)", accept_file="directory", disabled=True
+)
+st.write("Chat input 10 (directory upload disabled) - value:", v10)

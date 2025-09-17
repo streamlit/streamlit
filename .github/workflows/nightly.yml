@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: "recursive"
           # Save the access token to the local git config, so
@@ -34,7 +34,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
@@ -111,7 +111,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
@@ -147,7 +147,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           # Save the access token to the local git config, so
@@ -157,7 +157,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
@@ -202,7 +202,7 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           packages-dir: lib/dist/
       - if: ${{ failure() }}
@@ -224,7 +224,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.

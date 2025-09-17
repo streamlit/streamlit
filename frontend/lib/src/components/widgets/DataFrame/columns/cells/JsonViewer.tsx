@@ -16,11 +16,11 @@
 
 import React, { memo } from "react"
 
-import JSON5 from "json5"
-import { getLuminance } from "color2k"
-import { TextCellEntry } from "@glideapps/glide-data-grid"
-import ReactJson from "react-json-view"
 import styled from "@emotion/styled"
+import { TextCellEntry } from "@glideapps/glide-data-grid"
+import { getLuminance } from "color2k"
+import JSON5 from "json5"
+import ReactJson from "react-json-view"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 

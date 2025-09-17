@@ -17,6 +17,10 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
+  AppContext,
+  AppContextProps,
+} from "@streamlit/app/src/components/AppContext"
+import {
   ComponentRegistry,
   FormsContext,
   FormsContextProps,
@@ -29,10 +33,6 @@ import {
   useRequiredContext,
 } from "@streamlit/lib"
 import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
-import {
-  AppContext,
-  AppContextProps,
-} from "@streamlit/app/src/components/AppContext"
 
 // Type for AppContext props
 type AppContextValues = {
@@ -49,7 +49,6 @@ type AppContextValues = {
   widgetsDisabled: boolean
   gitInfo: IGitInfo | null
   showToolbar: boolean
-  showColoredLine: boolean
 }
 
 // Type for LibContext props
@@ -97,7 +96,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   widgetsDisabled,
   gitInfo,
   showToolbar,
-  showColoredLine,
   // LibContext
   isFullScreen,
   setFullScreen,
@@ -137,7 +135,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       widgetsDisabled,
       gitInfo,
       showToolbar,
-      showColoredLine,
     }),
     [
       initialSidebarState,
@@ -153,7 +150,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       widgetsDisabled,
       gitInfo,
       showToolbar,
-      showColoredLine,
     ]
   )
 

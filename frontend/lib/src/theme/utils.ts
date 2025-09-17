@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { getLuminance, parseToRgba, toHex, transparentize } from "color2k"
+import {
+  darken,
+  getLuminance,
+  lighten,
+  parseToRgba,
+  toHex,
+  transparentize,
+} from "color2k"
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
 import merge from "lodash/merge"
@@ -22,8 +29,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
 import type { StreamlitWindowObject } from "@streamlit/utils"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -43,12 +50,9 @@ import {
 } from "~lib/util/utils"
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
-import {
-  computeDerivedColors,
-  createEmotionColors,
-  DerivedColors,
-} from "./getColors"
+import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
+import { DerivedColors, EmotionThemeColors } from "./types"
 
 // Extended theme config type to include properties not in the protobuf definition
 export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
@@ -137,7 +141,8 @@ export const isColor = (strColor: string): boolean => {
 
 /**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
- * This is generally used to keep configured font sizes to round values.
+ * This is used to keep configured font sizes to (generally) round values for dialogs.
+ * See `convertFontSizes` in `StreamlitMarkdown/styled-components.ts`
  * (ex: 0.78 -> 0.75)
  */
 export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
@@ -196,6 +201,170 @@ const parseColor = (
   }
 
   return undefined
+}
+
+/**
+ * Helper function for theme background colors
+ * If the background color is configured, use it.
+ * If the main color is configured, derive background color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveBgColor = (
+  configBackgroundColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultBackgroundColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configBackgroundColor) return configBackgroundColor
+  if (configMainColor) {
+    const transparency = isLightTheme ? 0.9 : 0.8
+    return transparentize(configMainColor, transparency)
+  }
+  return defaultBackgroundColor
+}
+
+/**
+ * Helper function for theme text colors
+ * If the text color is configured, use it.
+ * If the main color is configured, derive text color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveTextColor = (
+  configTextColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultTextColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configTextColor) return configTextColor
+  if (configMainColor) {
+    const adjustmentAmount = 0.15
+    return isLightTheme
+      ? darken(configMainColor, adjustmentAmount)
+      : lighten(configMainColor, adjustmentAmount)
+  }
+  return defaultTextColor
+}
+
+/**
+ * Applies background color overrides to theme colors using smart fallback logic.
+ * For each background color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with background colors applied
+ */
+const setBackgroundColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const backgroundColorMap = {
+    redBackgroundColor: {
+      main: parsedColors.redColor,
+      background: parsedColors.redBackgroundColor,
+    },
+    orangeBackgroundColor: {
+      main: parsedColors.orangeColor,
+      background: parsedColors.orangeBackgroundColor,
+    },
+    yellowBackgroundColor: {
+      main: parsedColors.yellowColor,
+      background: parsedColors.yellowBackgroundColor,
+    },
+    blueBackgroundColor: {
+      main: parsedColors.blueColor,
+      background: parsedColors.blueBackgroundColor,
+    },
+    greenBackgroundColor: {
+      main: parsedColors.greenColor,
+      background: parsedColors.greenBackgroundColor,
+    },
+    violetBackgroundColor: {
+      main: parsedColors.violetColor,
+      background: parsedColors.violetBackgroundColor,
+    },
+    grayBackgroundColor: {
+      main: parsedColors.grayColor,
+      background: parsedColors.grayBackgroundColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(backgroundColorMap).forEach(([key, { main, background }]) => {
+    const typedKey = key as keyof typeof backgroundColorMap
+    updatedColors[typedKey] = resolveBgColor(
+      background,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
+}
+
+/**
+ * Applies text color overrides to theme colors using smart fallback logic.
+ * For each text color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with text colors applied
+ */
+const setTextColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const textColorMap = {
+    redTextColor: {
+      main: parsedColors.redColor,
+      text: parsedColors.redTextColor,
+    },
+    orangeTextColor: {
+      main: parsedColors.orangeColor,
+      text: parsedColors.orangeTextColor,
+    },
+    yellowTextColor: {
+      main: parsedColors.yellowColor,
+      text: parsedColors.yellowTextColor,
+    },
+    blueTextColor: {
+      main: parsedColors.blueColor,
+      text: parsedColors.blueTextColor,
+    },
+    greenTextColor: {
+      main: parsedColors.greenColor,
+      text: parsedColors.greenTextColor,
+    },
+    violetTextColor: {
+      main: parsedColors.violetColor,
+      text: parsedColors.violetTextColor,
+    },
+    grayTextColor: {
+      main: parsedColors.grayColor,
+      text: parsedColors.grayTextColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(textColorMap).forEach(([key, { main, text }]) => {
+    const typedKey = key as keyof typeof textColorMap
+    updatedColors[typedKey] = resolveTextColor(
+      text,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
 }
 
 /**
@@ -320,13 +489,12 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize && validatedSize.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem")) {
     return validatedSize
-  } else if (validatedSize && validatedSize.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseFloat(validatedSize) / baseFontSize
-    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
-    return `${roundedRemValue}rem`
+    return `${remValue}rem`
   }
 
   // If invalid, return undefined
@@ -412,15 +580,22 @@ const setFontWeights = (
     // The extrabold weight is set to the baseFontWeight + 300
     fontWeightOverrides.extrabold = baseFontWeight + 300
 
-    // Set fallback for code's font weight based on configured baseFontWeight
+    // Set fallback for code font weights based on configured baseFontWeight
     fontWeightOverrides.code = baseFontWeight
+    fontWeightOverrides.codeBold = baseFontWeight + 200
+    fontWeightOverrides.codeExtraBold = baseFontWeight + 300
   }
 
   if (
     codeFontWeight &&
-    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 900)
+    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 600)
   ) {
+    // Set each of the code weights based on the base code font weight provided
     fontWeightOverrides.code = codeFontWeight
+    // The bold weight is set to the codeFontWeight + 200
+    fontWeightOverrides.codeBold = codeFontWeight + 200
+    // The extrabold weight is set to the codeFontWeight + 300
+    fontWeightOverrides.codeExtraBold = codeFontWeight + 300
   }
 
   if (headingFontWeights) {
@@ -503,9 +678,7 @@ export const createEmotionTheme = (
     {}
   )
 
-  // TODO: create an enum for this. Updating everything if a
-  // config option changes is a pain
-  // Mapping from CustomThemeConfig to color primitives
+  // Extract configured color values from parsedColors and map them to the correct theme color primitive
   const {
     secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
@@ -517,28 +690,68 @@ export const createEmotionTheme = (
     borderColor,
     linkColor,
     codeBackgroundColor,
+    redColor,
+    orangeColor,
+    yellowColor,
+    blueColor,
+    greenColor,
+    violetColor,
+    grayColor,
   } = parsedColors
 
-  const newGenericColors = { ...colors }
-
-  if (primary) newGenericColors.primary = primary
-  if (bodyText) newGenericColors.bodyText = bodyText
-  if (secondaryBg) newGenericColors.secondaryBg = secondaryBg
-  if (bgColor) newGenericColors.bgColor = bgColor
-  if (linkColor) newGenericColors.link = linkColor
-
-  // Secondary color is not yet configurable. Set secondary color to primary color
-  // by default for all custom themes.
-  newGenericColors.secondary = newGenericColors.primary
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const conditionalOverrides: any = {}
-
-  conditionalOverrides.colors = createEmotionColors(newGenericColors)
-
-  if (notNullOrUndefined(codeBackgroundColor)) {
-    conditionalOverrides.colors.codeBackgroundColor = codeBackgroundColor
+  // Create a new generic colors object with configured colors, if they exist.
+  // Fallback to the default colors if they are not set. Necessary as createEmotionColors
+  // calculates some colors based on the generic colors.
+  const newGenericColors = {
+    ...colors,
+    primary: primary ?? colors.primary,
+    bodyText: bodyText ?? colors.bodyText,
+    secondaryBg: secondaryBg ?? colors.secondaryBg,
+    bgColor: bgColor ?? colors.bgColor,
+    // Main theme colors
+    redColor: redColor ?? colors.redColor,
+    orangeColor: orangeColor ?? colors.orangeColor,
+    yellowColor: yellowColor ?? colors.yellowColor,
+    blueColor: blueColor ?? colors.blueColor,
+    greenColor: greenColor ?? colors.greenColor,
+    violetColor: violetColor ?? colors.violetColor,
+    grayColor: grayColor ?? colors.grayColor,
+    // Secondary color is not yet configurable. Set secondary color to primary color
+    // by default for all custom themes.
+    secondary: primary ?? colors.primary,
   }
+
+  type ConditionalOverrides = {
+    colors: ReturnType<typeof createEmotionColors>
+    showSidebarBorder: boolean
+    linkUnderline: boolean
+    radii: EmotionTheme["radii"]
+    fontSizes: EmotionTheme["fontSizes"]
+    fontWeights: EmotionTheme["fontWeights"]
+  }
+
+  const conditionalOverrides: ConditionalOverrides = {
+    colors: {
+      ...createEmotionColors(newGenericColors),
+    },
+    showSidebarBorder:
+      showSidebarBorder ?? baseThemeConfig.emotion.showSidebarBorder,
+    linkUnderline: linkUnderline ?? baseThemeConfig.emotion.linkUnderline,
+    // Copy over the default values for the other configurable theme properties
+    radii: { ...baseThemeConfig.emotion.radii },
+    fontSizes: { ...baseThemeConfig.emotion.fontSizes },
+    fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+  }
+
+  // Conditional Overrides - Colors
+
+  conditionalOverrides.colors.link = linkColor ?? colors.link
+
+  conditionalOverrides.colors.codeBackgroundColor =
+    codeBackgroundColor ?? colors.codeBackgroundColor
+
+  conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -555,11 +768,6 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (notNullOrUndefined(dataframeHeaderBackgroundColor)) {
-    conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-      dataframeHeaderBackgroundColor
-  }
-
   if (showWidgetBorder || widgetBorderColor) {
     // widgetBorderColor from the themeInput is deprecated. For compatibility
     // with older SiS theming, we still apply it here if provided, but we should
@@ -567,6 +775,18 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.widgetBorderColor =
       widgetBorderColor || conditionalOverrides.colors.borderColor
   }
+
+  // Apply background color overrides based on configured background color or main color as fallback
+  conditionalOverrides.colors = setBackgroundColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
+
+  // Apply text color overrides based on configured text color or main color as fallback
+  conditionalOverrides.colors = setTextColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&
@@ -605,11 +825,9 @@ export const createEmotionTheme = (
     }
   }
 
-  if (notNullOrUndefined(baseRadius)) {
-    conditionalOverrides.radii = {
-      ...baseThemeConfig.emotion.radii,
-    }
+  // Conditional Overrides - Radii
 
+  if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
@@ -642,13 +860,6 @@ export const createEmotionTheme = (
   }
 
   if (notNullOrUndefined(buttonRadius)) {
-    // Handles case where buttonRadius is the only radius set in the themeInput
-    if (!conditionalOverrides.radii) {
-      conditionalOverrides.radii = {
-        ...baseThemeConfig.emotion.radii,
-      }
-    }
-
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
@@ -661,9 +872,7 @@ export const createEmotionTheme = (
     }
   }
 
-  conditionalOverrides.fontSizes = {
-    ...baseThemeConfig.emotion.fontSizes,
-  }
+  // Conditional Overrides - Font Sizes
 
   if (baseFontSize && baseFontSize > 0) {
     // Set the root font size to the configured value (used on global styles):
@@ -692,6 +901,8 @@ export const createEmotionTheme = (
     headingFontSizes
   )
 
+  // Conditional Overrides - Font Weights
+
   // Set the font weights based on the font weight configs provided
   conditionalOverrides.fontWeights = setFontWeights(
     baseThemeConfig.emotion.fontWeights,
@@ -701,35 +912,36 @@ export const createEmotionTheme = (
     headingFontWeights
   )
 
-  if (notNullOrUndefined(showSidebarBorder)) {
-    conditionalOverrides.showSidebarBorder = showSidebarBorder
+  // Font Overrides
+
+  // Type for font overrides - represents genericFonts properties that can be overridden
+  type GenericFontOverride = {
+    bodyFont: string
+    codeFont: string
+    headingFont: string
+    // Not configurable through custom themes
+    iconFont: string
   }
 
-  if (notNullOrUndefined(linkUnderline)) {
-    conditionalOverrides.linkUnderline = linkUnderline
+  const fontsOverride: GenericFontOverride = {
+    // Default values for the generic fonts
+    ...genericFonts,
+    // Override properties if configured
+    bodyFont: bodyFont ? parseFont(bodyFont) : genericFonts.bodyFont,
+    codeFont: codeFont ? parseFont(codeFont) : genericFonts.codeFont,
+    headingFont: headingFont
+      ? parseFont(headingFont)
+      : genericFonts.headingFont,
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const fontOverrides: any = {}
-  if (headingFont) {
-    fontOverrides.headingFont = parseFont(headingFont)
-  } else if (bodyFont) {
-    fontOverrides.headingFont = parseFont(bodyFont)
+  // Handle headingFont fallback
+  if (bodyFont && !headingFont) {
+    fontsOverride.headingFont = parseFont(bodyFont)
   }
 
   return {
     ...baseThemeConfig.emotion,
-    colors: createEmotionColors(newGenericColors),
-    genericFonts: {
-      ...genericFonts,
-      ...(bodyFont && {
-        bodyFont: parseFont(bodyFont),
-      }),
-      ...(codeFont && {
-        codeFont: parseFont(codeFont),
-      }),
-      ...fontOverrides,
-    },
+    genericFonts: fontsOverride,
     ...conditionalOverrides,
   }
 }

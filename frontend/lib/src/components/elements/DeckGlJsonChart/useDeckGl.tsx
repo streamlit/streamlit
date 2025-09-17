@@ -16,24 +16,26 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import JSON5 from "json5"
-import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
-// eslint-disable-next-line import/no-unresolved
-import { TooltipContent } from "@deck.gl/core/dist/lib/tooltip"
-import isEqual from "lodash/isEqual"
+import {
+  type DeckProps,
+  PickingInfo,
+  ViewStateChangeParameters,
+} from "@deck.gl/core"
 import { parseToRgba } from "color2k"
+import JSON5 from "json5"
+import isEqual from "lodash/isEqual"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
-import { EmotionTheme } from "~lib/theme"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
+import { EmotionTheme } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
   DeckGlElementState,
@@ -41,12 +43,20 @@ import type {
   DeckObject,
   ParsedDeckGlConfig,
 } from "./types"
-import { jsonConverter } from "./utils/jsonConverter"
 import {
   FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
+import { jsonConverter } from "./utils/jsonConverter"
+
+/**
+ * Extracted type from the DeckGL library since it is not exported correctly.
+ */
+type TooltipContent =
+  NonNullable<DeckProps["getTooltip"]> extends (info: PickingInfo) => infer R
+    ? R
+    : never
 
 type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
@@ -156,7 +166,7 @@ function updateWidgetMgrState(
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
-    height: propsHeight,
+    height: fullScreenHeight,
     width: propsWidth,
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
@@ -189,7 +199,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     element,
     isFullScreen,
     shouldUseContainerWidth,
-    container: { height: propsHeight, width: propsWidth },
+    container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
         ?.height || theme.sizes.defaultMapHeight,
@@ -381,7 +391,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
-      if (!info || !info.object || !tooltip) {
+      if (!info?.object || !tooltip) {
         return null
       }
 

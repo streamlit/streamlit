@@ -19,6 +19,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     click_button,
+    expect_markdown,
     expect_no_exception,
     get_expander,
 )
@@ -232,3 +233,32 @@ def test_nesting_columns_is_allowed(app: Page):
 
     click_button(app, "Nested columns - in sidebar")
     expect_no_exception(app)
+
+
+def test_width_is_correctly_applied(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.columns dimensions are correctly applied."""
+    column_fixed_width_container = (
+        get_expander(app, "Columns with width configuration")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
+    )
+
+    expect_markdown(
+        app,
+        "column three",
+    )
+    assert_snapshot(
+        column_fixed_width_container, name="st_columns-width_configuration_fixed"
+    )
+
+    column_stretch_width_container = (
+        get_expander(app, "Columns with width configuration")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(1)
+    )
+    expect(
+        column_stretch_width_container.get_by_test_id("stMarkdownContainer").last
+    ).to_be_visible()
+    assert_snapshot(
+        column_stretch_width_container, name="st_columns-width_configuration_stretch"
+    )

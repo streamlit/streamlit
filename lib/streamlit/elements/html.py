@@ -77,10 +77,17 @@ class HtmlMixin:
             to the event container instead of the main container to avoid
             taking up space in the app.
 
-        width : int or "stretch" or "content"
-            The width of the HTML element. Can be an integer (pixels),
-            "stretch" (default) to use the full width of the container, or "content"
-            to size based on the content.
+        width : "stretch", "content", or int
+            The width of the HTML element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------

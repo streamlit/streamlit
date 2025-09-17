@@ -41,6 +41,7 @@ describe("FileUploadClient Upload", () => {
         checkSourceUrlResponse: vi.fn(),
         buildComponentURL: vi.fn(),
         buildMediaURL: vi.fn(),
+        buildDownloadUrl: vi.fn(),
         buildFileUploadURL: vi.fn(),
         buildAppPageURL: vi.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,

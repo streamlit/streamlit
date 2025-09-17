@@ -31,7 +31,6 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
@@ -409,16 +408,6 @@ class StreamlitWriteTest(unittest.TestCase):
 
             with pytest.raises(Exception, match="some exception"):
                 st.write("some text")
-
-    def test_unknown_arguments(self):
-        """Test st.write that raises an exception."""
-        with self.assertLogs(write._LOGGER) as logs:
-            st.write("some text", unknown_keyword_arg=123)
-
-        assert (
-            'Invalid arguments were passed to "st.write" function.'
-            in logs.records[0].msg
-        )
 
     def test_spinner(self):
         """Test st.spinner."""

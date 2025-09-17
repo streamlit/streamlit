@@ -38,11 +38,7 @@ from typing_extensions import Self, TypeAlias
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
-from streamlit.elements.widgets.slider import (
-    SliderSerde,
-    SliderStep,
-    SliderValueT,
-)
+from streamlit.elements.widgets.slider import SliderSerde, SliderStep
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
     DateWidgetReturn,
@@ -1117,6 +1113,9 @@ class SelectSlider(Widget, Generic[T]):
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         """Set the ranged selection by values."""
         return self.set_value([lower, upper])
+
+
+SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 
 
 @dataclass(repr=False)

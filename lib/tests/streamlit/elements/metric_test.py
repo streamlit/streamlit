@@ -82,7 +82,7 @@ class MetricTest(DeltaGeneratorTestCase):
     def test_label_and_value_and_delta_and_delta_color(self):
         """Test that metric can be called with label, value, delta, and delta
         colors passed in."""
-        st.metric("label_test", "123", -321, "normal")
+        st.metric("label_test", "123", -321, delta_color="normal")
         c = self.get_delta_from_queue().new_element.metric
         assert c.label == "label_test"
         assert c.body == "123"
@@ -161,7 +161,9 @@ class MetricTest(DeltaGeneratorTestCase):
         ) in zip(
             arg_delta_values, arg_delta_color_values, color_values, direction_values
         ):
-            st.metric("label_test", "4312", arg_delta_value, arg_delta_color_value)
+            st.metric(
+                "label_test", "4312", arg_delta_value, delta_color=arg_delta_color_value
+            )
 
             c = self.get_delta_from_queue().new_element.metric
             assert c.label == "label_test"
@@ -223,8 +225,7 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert str(exc.value) == (
             "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. "
-            "value only accepts: int, float, str, or None. "
-            "Please convert the value to an accepted type."
+            "Please convert the value to an accepted number type."
         )
 
     def test_invalid_delta(self):
@@ -233,13 +234,12 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert str(exc.value) == (
             "'[123]' is of type <class 'list'>, which is not an accepted type. "
-            "delta only accepts: int, float, str, or None. "
-            "Please convert the value to an accepted type."
+            "Please convert the value to an accepted number type."
         )
 
     def test_invalid_delta_color(self):
         with pytest.raises(StreamlitAPIException) as exc:
-            st.metric("Hello World.", 123, 0, "Invalid")
+            st.metric("Hello World.", 123, 0, delta_color="Invalid")
 
         assert (
             str(exc.value)
@@ -359,3 +359,111 @@ class MetricTest(DeltaGeneratorTestCase):
                     st.metric("label_test", "123", width=width_value)
 
                 assert str(exc.value) == expected_error_message
+
+    def test_chart_data_none(self):
+        """Test that metric works with default chart_data=None."""
+        st.metric("label_test", "123")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert len(c.chart_data) == 0
+
+    def test_chart_data_valid_list(self):
+        """Test that metric can be called with valid chart_data list."""
+        chart_data = [1, 2, 3, 4, 5]
+        st.metric("label_test", "123", chart_data=chart_data)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert list(c.chart_data) == [1.0, 2.0, 3.0, 4.0, 5.0]
+
+    def test_chart_data_valid_mixed_numeric(self):
+        """Test that metric can be called with mixed numeric types in chart_data."""
+        chart_data = [1, 2.5, -3, 0, 10.7]
+        st.metric("label_test", "123", chart_data=chart_data)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert list(c.chart_data) == [1.0, 2.5, -3.0, 0.0, 10.7]
+
+    def test_chart_data_string_numbers(self):
+        """Test that metric can convert string numbers in chart_data."""
+        chart_data = ["1", "2.5", "-3", "0"]
+        st.metric("label_test", "123", chart_data=chart_data)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert list(c.chart_data) == [1.0, 2.5, -3.0, 0.0]
+
+    def test_chart_data_empty_list(self):
+        """Test that metric works with empty chart_data list."""
+        st.metric("label_test", "123", chart_data=[])
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert len(c.chart_data) == 0
+
+    def test_chart_data_invalid_values(self):
+        """Test that metric raises error with invalid chart_data values."""
+        chart_data = [1, 2, "invalid", 4]
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.metric("label_test", "123", chart_data=chart_data)
+
+        assert "Only numeric values are supported for chart data sequence" in str(
+            exc.value
+        )
+        assert "'invalid' is of type <class 'str'>" in str(exc.value)
+        assert "cannot be converted to float" in str(exc.value)
+
+    def test_chart_data_invalid_non_sequence(self):
+        """Test that metric raises error with invalid chart_data non-sequence values."""
+        chart_data = [1, 2, {"invalid": "dict"}, 4]
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.metric("label_test", "123", chart_data=chart_data)
+
+        assert "Only numeric values are supported for chart data sequence" in str(
+            exc.value
+        )
+
+    @parameterized.expand(
+        [
+            ("line", MetricProto.ChartType.LINE),
+            ("bar", MetricProto.ChartType.BAR),
+            ("area", MetricProto.ChartType.AREA),
+        ]
+    )
+    def test_chart_type_valid_values(self, chart_type_value, expected_proto_value):
+        """Test that metric can be called with valid chart_type values."""
+        st.metric("label_test", "123", chart_type=chart_type_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.chart_type == expected_proto_value
+
+    def test_chart_type_default(self):
+        """Test that chart_type defaults to line."""
+        st.metric("label_test", "123")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.chart_type == MetricProto.ChartType.LINE
+
+    def test_chart_data_and_chart_type_together(self):
+        """Test that metric can be called with both chart_data and chart_type."""
+        chart_data = [10, 20, 15, 25, 30]
+        st.metric("label_test", "123", chart_data=chart_data, chart_type="bar")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert list(c.chart_data) == [10.0, 20.0, 15.0, 25.0, 30.0]
+        assert c.chart_type == MetricProto.ChartType.BAR

@@ -73,7 +73,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a spinner icon", () => {
-    const props = getProps({ icon: "spinner" })
+    const props = getProps({ icon: "spinner", expanded: false })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -83,7 +83,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a check icon", () => {
-    const props = getProps({ icon: ":material/check:" })
+    const props = getProps({ icon: ":material/check:", expanded: false })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -93,7 +93,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a error icon", () => {
-    const props = getProps({ icon: ":material/error:" })
+    const props = getProps({ icon: ":material/error:", expanded: false })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -103,7 +103,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with an emoji icon", () => {
-    const props = getProps({ icon: "🚀" })
+    const props = getProps({ icon: "🚀", expanded: false })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -114,7 +114,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a material icon", () => {
-    const props = getProps({ icon: ":material/add_circle:" })
+    const props = getProps({ icon: ":material/add_circle:", expanded: false })
     render(
       <Expander {...props}>
         <div>test</div>

@@ -85,30 +85,6 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.external
         assert c.help == "Some help text"
 
-    def test_use_container_width_can_be_set_to_true(self):
-        """Test use_container_width can be set to true."""
-        st.page_link(
-            page="https://streamlit.io", label="the label", use_container_width=True
-        )
-
-        c = self.get_delta_from_queue().new_element.page_link
-        assert c.label == "the label"
-        assert c.page == "https://streamlit.io"
-        assert c.external
-        assert c.use_container_width is True
-
-    def test_use_container_width_can_be_set_to_false(self):
-        """Test use_container_width can be set to false."""
-        st.page_link(
-            page="https://streamlit.io", label="the label", use_container_width=False
-        )
-
-        c = self.get_delta_from_queue().new_element.page_link
-        assert c.label == "the label"
-        assert c.page == "https://streamlit.io"
-        assert c.external
-        assert c.use_container_width is False
-
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_label(self):
         """Test that st.page_link accepts an st.Page, but does not uses its title"""

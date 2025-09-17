@@ -43,7 +43,7 @@ export const sizes = {
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
   spinnerSize: "1.375rem",
-  spinnerThickness: "0.2rem",
+  spinnerThickness: "0.125rem",
   tabHeight: "2.5rem",
   // Min width used for popover and dialog:
   minPopupWidth: "20rem",

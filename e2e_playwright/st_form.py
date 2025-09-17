@@ -32,7 +32,7 @@ with st.form("form_1"):
     text_input = st.text_input("Text Input", value="foo")
     time_input = st.time_input("Time Input", time(8, 45))
     toggle_input = st.toggle("Toggle Input", value=False)
-    st.form_submit_button("Submit")
+    st.form_submit_button("Submit", key="submit_button_form_1")
 
 st.write("Checkbox:", checkbox)
 st.write("Date Input:", date_input)
@@ -46,27 +46,26 @@ st.write("Text Area:", text_area)
 st.write("Text Input:", text_input)
 st.write("Time Input:", time_input)
 st.write("Toggle Input:", toggle_input)
+st.write("Submit button session state:", st.session_state.get("submit_button_form_1"))
 
 with st.form("form_2"):
     st.write("Inside form 2")
     text_input = st.text_input("Form 2 - Text Input")
     col1, col2 = st.columns(2)
     col1.form_submit_button(
-        "Form 2 - Submit (use_container_width, help)",
-        use_container_width=True,
+        "Form 2 - Submit (width=stretch, help)",
+        width="stretch",
         help="Submit by clicking",
     )
-    col2.form_submit_button(
-        "Form 2 - Submit 2 (use_container_width)", use_container_width=True
-    )
+    col2.form_submit_button("Form 2 - Submit 2 (width=stretch)", width="stretch")
 
 
 with st.form("form_3", border=False):
     st.write("Inside form 3 (border=False)")
     text_input = st.text_input("Form 3 - Text Input")
     st.form_submit_button(
-        "Form 3 - Submit (use_container_width)",
-        use_container_width=True,
+        "Form 3 - Submit (width=stretch)",
+        width="stretch",
     )
 
 with st.form("form_4"):
@@ -74,7 +73,7 @@ with st.form("form_4"):
     text_input = st.text_input("Form 4 - Text Input")
     st.form_submit_button(
         "Form 4 - Submit with emoji icon",
-        use_container_width=True,
+        width="stretch",
         icon="🔍",
     )
 
@@ -83,7 +82,7 @@ with st.form("form_5"):
     text_input = st.text_input("Form 5 - Text Input")
     st.form_submit_button(
         "Form 5 - Submit with material icon",
-        use_container_width=True,
+        width="stretch",
         icon=":material/key:",
     )
 
@@ -92,12 +91,12 @@ with st.form("form_6"):
     text_input = st.text_input("Form 6 - Text Input")
     submitted_6 = st.form_submit_button(
         "Form 6 - First Submit",
-        use_container_width=True,
+        width="stretch",
     )
     submitted_6b = st.form_submit_button(
         "Form 6 - Second Submit",
         disabled=True,
-        use_container_width=True,
+        width="stretch",
     )
     if submitted_6 or submitted_6b:
         st.write("Form submitted")
@@ -107,12 +106,12 @@ with st.form("form_7"):
     text_input = st.text_input("Form 7 - Text Input")
     submitted_7 = st.form_submit_button(
         "Form 7 - Disables Submit on Enter",
-        use_container_width=True,
+        width="stretch",
         disabled=True,
     )
     submitted_7b = st.form_submit_button(
         "Form 7 - Second Submit",
-        use_container_width=True,
+        width="stretch",
     )
     if submitted_7 or submitted_7b:
         st.write("Form submitted")
@@ -122,7 +121,7 @@ with st.form("form_8", enter_to_submit=False):
     number_input = st.number_input("Form 8 - Number Input", 0, 100, step=1)
     submitted_8 = st.form_submit_button(
         "Form 8 - Submit",
-        use_container_width=True,
+        width="stretch",
     )
     if submitted_8:
         st.write("Form submitted")
@@ -133,7 +132,7 @@ with st.form("form_9", enter_to_submit=False):
     submitted_9 = st.form_submit_button(
         "Form 9 - Submit",
         type="primary",
-        use_container_width=True,
+        width="stretch",
     )
     if submitted_9:
         st.write("Form submitted")
@@ -144,7 +143,7 @@ with st.form("form_10"):
     submitted_10 = st.form_submit_button(
         "Form 10 - Submit",
         type="tertiary",
-        use_container_width=True,
+        width="stretch",
     )
     if submitted_10:
         st.write("Form submitted")
@@ -253,8 +252,43 @@ with st.container(height=600, border=True):
         st.form_submit_button(
             help="Submit by clicking",
         )
+
 with st.container(border=True):
     st.write("")
     with st.form("form_22"):
         st.dataframe([1, 2, 3])
         st.form_submit_button("Submit")
+
+with st.container(key="width_tests"):
+    with st.form("width_form"):
+        st.write("Form Submit Button Width Examples:")
+        st.form_submit_button("Content Width (Default)", width="content")
+        st.form_submit_button("Stretch Width", width="stretch")
+        st.form_submit_button("250px Width", width=250)
+
+
+update_button_props = st.toggle("Update button props")
+
+with st.form("form_with_dynamic_button"):
+    st.write("Form with dynamic button")
+
+    if update_button_props:
+        clicked = st.form_submit_button(
+            "Updated dynamic button",
+            type="secondary",
+            icon=":material/looks_two:",
+            width="stretch",
+            help="updated help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked updated button:", clicked)
+    else:
+        clicked = st.form_submit_button(
+            "Initial dynamic button",
+            type="primary",
+            icon=":material/looks_one:",
+            width="content",
+            help="initial help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked initial button:", clicked)

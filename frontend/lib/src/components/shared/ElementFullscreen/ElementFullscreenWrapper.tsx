@@ -16,35 +16,31 @@
 
 import React, { FC, PropsWithChildren, useMemo } from "react"
 
-import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { useFullscreen } from "./useFullscreen"
 
-type ElementFullscreenWrapperProps = PropsWithChildren<{
-  height?: number
-  width?: number
-}>
+type ElementFullscreenWrapperProps = PropsWithChildren
 
 const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
   children,
-  height,
 }) => {
   const theme = useEmotionTheme()
   const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const fullscreenContextValue = useMemo(() => {
     return {
       width: expanded ? fullWidth : width,
-      height: expanded ? fullHeight : height,
+      height: expanded ? fullHeight : undefined,
       expanded,
       expand: zoomIn,
       collapse: zoomOut,
     }
-  }, [expanded, fullHeight, fullWidth, height, width, zoomIn, zoomOut])
+  }, [expanded, fullHeight, fullWidth, width, zoomIn, zoomOut])
 
   return (
     <ElementFullscreenContext.Provider value={fullscreenContextValue}>

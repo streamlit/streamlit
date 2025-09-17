@@ -2,8 +2,34 @@
   "name": "eslint-plugin-streamlit-custom",
   "license": "Apache-2.0",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
   "scripts": {
-    "test": "node use-strict-null-equality-checks.test.js && node no-hardcoded-theme-values.test.js && node enforce-memo.test.js && node no-force-reflow-access.test.js"
+    "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "lint": "eslint --max-warnings 0 src",
+    "test": "vitest run",
+    "testWatch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "typesync:ci": "typesync --dry=fail",
+    "typesync": "typesync"
+  },
+  "devDependencies": {
+    "@typescript-eslint/rule-tester": "^8.42.0",
+    "@typescript-eslint/types": "^8.43.0",
+    "@typescript-eslint/utils": "^8.42.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typesync": "^0.14.3",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/utils": "^8.42.0",
+    "eslint": "^9.0.0"
   }
 }

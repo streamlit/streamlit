@@ -16,12 +16,12 @@
 
 import { useMemo } from "react"
 
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { VegaLiteChartElement } from "./arrowUtils"
+import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
@@ -83,12 +83,12 @@ export function prepareSpecForSelections(spec: any): void {
 const generateSpec = (
   inputSpec: string,
   useContainerWidth: boolean,
+  useContainerHeight: boolean,
   vegaLiteTheme: string,
   selectionMode: string[],
   theme: EmotionTheme,
-  isFullScreen: boolean,
-  width: number,
-  height?: number
+  containerWidth: number,
+  containerHeight?: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any => {
   const spec = JSON.parse(inputSpec)
@@ -114,26 +114,20 @@ const generateSpec = (
       // Otherwise, calculate the width - 40px to give some padding, especially
       // for the ... menu button. If the width is less than 40px, we set it to
       // 0 to avoid negative values.
-      Math.max(width - 40, 0)
+      Math.max(containerWidth - 40, 0)
   }
 
-  if (isFullScreen) {
-    spec.width = width
-    spec.height = height
+  if (useContainerHeight) {
+    spec.height = containerHeight
+  }
+
+  if (useContainerWidth) {
+    spec.width = containerWidth
 
     if ("vconcat" in spec) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       spec.vconcat.forEach((child: any) => {
-        child.width = width
-      })
-    }
-  } else if (useContainerWidth) {
-    spec.width = width
-
-    if ("vconcat" in spec) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      spec.vconcat.forEach((child: any) => {
-        child.width = width
+        child.width = containerWidth
       })
     }
   }
@@ -163,9 +157,10 @@ const generateSpec = (
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
-  isFullScreen: boolean,
-  width: number,
-  height: number
+  containerWidth: number,
+  containerHeight: number,
+  useContainerWidth: boolean,
+  useContainerHeight: boolean
 ): VegaLiteChartElement => {
   const theme = useEmotionTheme()
 
@@ -175,7 +170,6 @@ export const useVegaElementPreprocessor = (
     spec: inputSpec,
     data,
     datasets,
-    useContainerWidth,
     vegaLiteTheme,
     selectionMode: inputSelectionMode,
   } = element
@@ -194,22 +188,22 @@ export const useVegaElementPreprocessor = (
       generateSpec(
         inputSpec,
         useContainerWidth,
+        useContainerHeight,
         vegaLiteTheme,
         selectionMode,
         theme,
-        isFullScreen,
-        width || 0,
-        height
+        containerWidth,
+        containerHeight
       ),
     [
       inputSpec,
       useContainerWidth,
+      useContainerHeight,
       vegaLiteTheme,
       selectionMode,
       theme,
-      isFullScreen,
-      width,
-      height,
+      containerWidth,
+      containerHeight,
     ]
   )
 

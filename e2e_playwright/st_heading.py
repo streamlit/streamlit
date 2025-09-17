@@ -46,7 +46,17 @@ st.subheader(
 )
 
 # Test dividers
-colors = ["blue", "gray", "green", "grey", "orange", "rainbow", "red", "violet"]
+colors = [
+    "blue",
+    "gray",
+    "green",
+    "grey",
+    "orange",
+    "rainbow",
+    "red",
+    "violet",
+    "yellow",
+]
 lorem_ipsum_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
 # Headers with specified color
 for color in colors:

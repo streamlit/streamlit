@@ -317,8 +317,8 @@ class NumberInputMixin:
         on_change : callable
             An optional callback invoked when this number_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -452,7 +452,9 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; explicitly whitelist parameters
+            # that might invalidate the current widget state.
+            key_as_main_identity={"min_value", "max_value", "step"},
             dg=self.dg,
             label=label,
             min_value=min_value,

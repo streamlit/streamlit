@@ -86,6 +86,12 @@ function BaseChartColumn(
   return {
     ...props,
     kind,
+    typeIcon:
+      kind === LINE_CHART_TYPE
+        ? ":material/show_chart:"
+        : kind === BAR_CHART_TYPE
+          ? ":material/bar_chart:"
+          : ":material/area_chart:",
     sortMode: "default",
     isEditable: false, // Chart column is always read-only
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

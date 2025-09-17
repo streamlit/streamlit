@@ -53,6 +53,8 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
+    import types
+
     from streamlit.runtime.caching.cache_type import CacheType
 
 _LOGGER: Final = get_logger(__name__)
@@ -122,7 +124,7 @@ class Cache(Generic[R]):
         raise NotImplementedError
 
 
-class CachedFuncInfo(Generic[P, R]):
+class CachedFuncInfo(Generic[P, R]):  # ty: ignore[invalid-argument-type]
     """Encapsulates data for a cached function instance.
 
     CachedFuncInfo instances are scoped to a single script run - they're not
@@ -168,7 +170,7 @@ def make_cached_func_wrapper(info: CachedFuncInfo[P, R]) -> CachedFunc[P, R]:
     return cast("CachedFunc[P, R]", functools.update_wrapper(cached_func, info.func))
 
 
-class BoundCachedFunc(Generic[P, R]):
+class BoundCachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
     """A wrapper around a CachedFunc that binds it to a specific instance in case of
     decorated function is a class method.
     """
@@ -194,7 +196,7 @@ class BoundCachedFunc(Generic[P, R]):
             self._cached_func.clear()
 
 
-class CachedFunc(Generic[P, R]):
+class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
     def __init__(self, info: CachedFuncInfo[P, R]) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
@@ -485,6 +487,7 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     the function's source code changes.
     """
     func_hasher = hashlib.new("md5", usedforsecurity=False)
+    func = cast("types.FunctionType", func)
 
     # Include the function's __module__ and __qualname__ strings in the hash.
     # This means that two identical functions in different modules

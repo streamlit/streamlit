@@ -16,8 +16,8 @@
 
 import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
-import debounceRender from "react-debounce-render"
 import classNames from "classnames"
+import debounceRender from "react-debounce-render"
 
 import {
   Alert as AlertProto,
@@ -68,26 +68,27 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { LibContext } from "~lib/components/core/LibContext"
+import Maybe from "~lib/components/core/Maybe"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
 import ArrowTable from "~lib/components/elements/ArrowTable"
 import DocString from "~lib/components/elements/DocString"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
 import Json from "~lib/components/elements/Json"
 import Markdown from "~lib/components/elements/Markdown"
 import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
-import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import Maybe from "~lib/components/core/Maybe"
-import { FormSubmitContent } from "~lib/components/widgets/Form"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
-import { LibContext } from "~lib/components/core/LibContext"
+import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
+import { FormSubmitContent } from "~lib/components/widgets/Form"
 import { getElementId } from "~lib/util/utils"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 
+import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import {
   BaseBlockProps,
   convertKeyToClassName,
@@ -95,7 +96,6 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 
 // Lazy-load elements.
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
@@ -186,6 +186,7 @@ const RawElementNodeRenderer = (
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
     widthConfig: node.element.widthConfig,
+    heightConfig: node.element.heightConfig,
   }
 
   const widgetProps = {
@@ -208,8 +209,16 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowTable":
-      return <ArrowTable element={node.quiverElement} {...elementProps} />
+    case "arrowTable": {
+      const arrowProto = node.element.arrowTable as ArrowProto
+      return (
+        <ArrowTable
+          element={arrowProto}
+          data={node.quiverElement}
+          {...elementProps}
+        />
+      )
+    }
 
     case "audio":
       return (
@@ -324,7 +333,12 @@ const RawElementNodeRenderer = (
       )
 
     case "metric":
-      return <Metric element={node.element.metric as MetricProto} />
+      return (
+        <Metric
+          element={node.element.metric as MetricProto}
+          {...elementProps}
+        />
+      )
 
     case "html":
       return (
@@ -396,8 +410,7 @@ const RawElementNodeRenderer = (
         <Toast
           // React key needed so toasts triggered on re-run
           key={node.scriptRunId}
-          body={toastProto.body}
-          icon={toastProto.icon}
+          element={toastProto}
           {...elementProps}
         />
       )

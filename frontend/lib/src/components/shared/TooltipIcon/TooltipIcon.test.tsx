@@ -18,9 +18,9 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
 import ThemeProvider from "~lib/components/core/ThemeProvider"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import TooltipIcon from "./TooltipIcon"
 

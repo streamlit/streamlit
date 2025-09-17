@@ -32,15 +32,15 @@ df = pd.DataFrame(
 )
 
 st.header("Disabled parameter:")
-st.data_editor(df, disabled=True, use_container_width=False)
-st.data_editor(df, disabled=["col_4", "col_1"], use_container_width=False)
+st.data_editor(df, disabled=True, width="content")
+st.data_editor(df, disabled=["col_4", "col_1"], width="content")
 
 st.header("Hide index parameter:")
-st.data_editor(df, hide_index=True, use_container_width=False)
-st.data_editor(df, hide_index=False, use_container_width=False)
+st.data_editor(df, hide_index=True, width="content")
+st.data_editor(df, hide_index=False, width="content")
 
 st.header("Column order parameter:")
-st.data_editor(df, column_order=["col_4", "col_3", "col_0"], use_container_width=False)
+st.data_editor(df, column_order=["col_4", "col_3", "col_0"], width="content")
 
 st.header("Set column labels:")
 st.data_editor(
@@ -50,14 +50,14 @@ st.data_editor(
         "col_0": "Column 0",
         "col_2": st.column_config.Column("Column 1"),
     },
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Hide columns:")
 st.data_editor(
     df,
     column_config={"col_1": None, "col_3": {"hidden": True}},
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set column width:")
@@ -68,7 +68,7 @@ st.data_editor(
         "col_1": st.column_config.Column(width="medium"),
         "col_4": {"width": "large"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Set help tooltips:")
@@ -83,7 +83,7 @@ st.data_editor(
         "col_0": st.column_config.Column(help="This :red[is] a **tooltip** 🌟"),
         "_index": {"help": "Index tooltip!"},
     },
-    use_container_width=False,
+    width="content",
 )
 
 st.header("Text column:")
@@ -112,7 +112,7 @@ st.data_editor(
             validate="^[0-9]+$",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -144,7 +144,7 @@ st.data_editor(
             format="%.2f%%",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -167,7 +167,7 @@ st.data_editor(
         ),
         "col_1": st.column_config.CheckboxColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -189,10 +189,11 @@ st.data_editor(
             disabled=False,
             default=True,
             options=[1, 2, 3, 4, 5],
+            format_func=lambda x: f"Option {x}",
         ),
         "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -237,7 +238,7 @@ st.data_editor(
             display_text=r"https://(.*?)\.streamlit\.app",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -271,7 +272,7 @@ st.data_editor(
             format="YYYY-MM-DD HH:mm:ss.SSS",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -304,7 +305,7 @@ st.data_editor(
             step=2,
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -337,7 +338,7 @@ st.data_editor(
             step=datetime.timedelta(milliseconds=1),
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -360,7 +361,7 @@ st.data_editor(
             format="$%f", min_value=0, max_value=1000
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -379,9 +380,13 @@ st.data_editor(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(
+            disabled=False,
+            required=True,
+            default=["a", "b", "c"],
+        ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -404,7 +409,7 @@ st.data_editor(
         ),
         "col_1": st.column_config.BarChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -428,7 +433,7 @@ st.data_editor(
         ),
         "col_1": st.column_config.LineChartColumn(),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
 
@@ -452,6 +457,49 @@ st.data_editor(
             help="This is a image column",
         ),
     },
-    use_container_width=False,
+    width="content",
     hide_index=True,
 )
+
+st.header("Multiselect column:")
+
+result = st.data_editor(
+    pd.DataFrame(
+        {
+            "col_0": [
+                ["exploration", "visualization"],
+                ["llm", "visualization", "finance"],
+                [],
+                None,
+            ],
+            "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [[1], [2, 3], [], None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MultiselectColumn(
+            "Multiselect column",
+            width="medium",
+            help="This is a multi-select column",
+            required=True,
+            disabled=False,
+            default=["exploration", "visualization"],
+            accept_new_options=False,
+            options=["exploration", "visualization", "llm", "finance", "geography"],
+            color=["green", "blue", "red", "#19747E", "orange"],
+            format_func=lambda x: x.capitalize(),
+        ),
+        "col_1": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["a", "b", "c", "d", "e"],
+            color="primary",
+            accept_new_options=True,
+            format_func=lambda x: f"Option {x}",
+        ),
+        "col_2": st.column_config.MultiselectColumn("Unsupported values"),
+    },
+    width="content",
+    hide_index=True,
+)
+
+st.write("Multiselect column return:", str(result))

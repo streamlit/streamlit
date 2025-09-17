@@ -41,6 +41,8 @@ export interface StreamlitWindowObject {
   BACKEND_BASE_URL?: string
   // URL pointing to where the _stcore/host-config endpoint is being served.
   HOST_CONFIG_BASE_URL?: string
+  // URL pointing to where the /media assets are being served from for download only.
+  DOWNLOAD_ASSETS_BASE_URL?: string
   // URL pointing to the main page of this Streamlit app. Setting this is needed
   // when setting BACKEND_BASE_URL so that handling page URLs in multipage apps
   // works.

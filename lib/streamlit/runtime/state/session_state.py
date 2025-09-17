@@ -121,7 +121,7 @@ class WStates(MutableMapping[str, Any]):
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
-            value = value.data
+            value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
 
@@ -441,6 +441,12 @@ class SessionState:
     def is_new_state_value(self, user_key: str) -> bool:
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
+
+    def reset_state_value(self, user_key: str, value: Any | None) -> None:
+        """Reset a new session state value to a given value
+        without triggering the "state value cannot be modified" error.
+        """
+        self._new_session_state[user_key] = value
 
     def __iter__(self) -> Iterator[Any]:
         """Return an iterator over the keys of the SessionState.

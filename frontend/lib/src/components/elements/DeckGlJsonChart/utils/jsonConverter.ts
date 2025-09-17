@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import {
   CARTO_LAYERS,
   colorBins,
   colorCategories,
   colorContinuous,
 } from "@deck.gl/carto"
-import * as layers from "@deck.gl/layers"
-import { JSONConverter } from "@deck.gl/json"
 import * as geoLayers from "@deck.gl/geo-layers"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
+import { JSONConverter } from "@deck.gl/json"
+import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
 
 const configuration = {
