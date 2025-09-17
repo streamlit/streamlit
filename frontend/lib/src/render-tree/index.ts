@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
-// Re-export all classes and interfaces from the render-tree folder
-export type { AppNode } from "./render-tree"
-export { AppRoot, BlockNode, ElementNode } from "./render-tree"
+export type { AppNode } from "./AppNode.interface"
+export { AppRoot } from "./AppRoot"
+export { BlockNode } from "./BlockNode"
+export { ElementNode } from "./ElementNode"
