@@ -110,6 +110,6 @@ export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
     fontWeight: theme.fontWeights.normal,
     color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
     opacity: isHovered ? 1 : 0,
-    transition: "opacity 70ms ease-in-out",
+    transition: isHovered ? "none" : "opacity 300ms 200ms",
   })
 )
