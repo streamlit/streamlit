@@ -261,7 +261,7 @@ function Slider({
   )
 
   // Make thumbs not overshoot the slider's track boundaries.
-  // We do this by placing the thumbs in the DOM beside the track.
+  // We do this by placing the thumbs in the DOM beneath the track.
   // Then we can adjust the padding around the thumbs separately
   // from the dimensions of the track.
   //
