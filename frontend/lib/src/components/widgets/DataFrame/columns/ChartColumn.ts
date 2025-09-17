@@ -63,6 +63,23 @@ const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
   )
 }
 
+type ChartAutoColor = "auto" | "auto-inverse"
+type ChartNamedSwatch =
+  | "red"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "violet"
+  | "orange"
+  | "gray"
+  | "grey"
+  | "primary"
+
+declare const __cssColorBrand: unique symbol
+type CSSColorString = string & { readonly [__cssColorBrand]?: never }
+
+type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
+
 export interface ChartColumnParams {
   /**
    * The minimum value used for plotting the chart. Defaults to 0.
@@ -78,7 +95,7 @@ export interface ChartColumnParams {
    * - red, blue, green, yellow, orange, violet, gray/grey, primary
    * - a color value compatible with canvas rendering
    */
-  readonly color?: string
+  readonly color?: ChartColor
 }
 
 /**
