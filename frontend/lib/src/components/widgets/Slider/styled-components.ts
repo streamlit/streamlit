@@ -76,10 +76,8 @@ export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   })
 )
 
-export const StyledInnerTrackWrapper = styled.div<StyleProps>(({ theme }) => {
-  return {
-    flex: 1,
-  }
+export const StyledInnerTrackWrapper = styled.div({
+  flex: 1,
 })
 
 export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
