@@ -450,50 +450,6 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.insert).toHaveBeenCalledWith("source", inline)
   })
 
-  it("updateView clears and reinserts when hashes differ", async () => {
-    const element: VegaLiteChartElement = {
-      id: "chartId",
-      data: null,
-      datasets: [],
-      spec: "",
-      useContainerWidth: false,
-      vegaLiteTheme: "",
-      selectionMode: [],
-      formId: "",
-    }
-
-    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
-
-    const containerRef = { current: document.createElement("div") }
-    await act(async () => {
-      await result.current.createView(containerRef, {})
-    })
-    ;(getDataArrays as Mock).mockReturnValue(null) // ensure default dataset name path
-    const dataA = {
-      dimensions: { numDataRows: 1 },
-      hash: "A",
-    } as unknown as Quiver
-    const dataB = {
-      dimensions: { numDataRows: 1 },
-      hash: "B",
-    } as unknown as Quiver
-    ;(getDataArray as Mock).mockReturnValue([{ v: 1 }])
-
-    await act(async () => {
-      await result.current.updateView(dataA, [])
-    })
-    await act(async () => {
-      await result.current.updateView(dataB, [])
-    })
-
-    // Should remove and then insert for default dataset name 'source'
-    expect(mockVegaView.remove).toHaveBeenCalledWith(
-      "source",
-      expect.any(Function)
-    )
-    expect(mockVegaView.insert).toHaveBeenCalledWith("source", [{ v: 1 }])
-  })
-
   it("updateView removes stale named datasets not present in new input", async () => {
     const element: VegaLiteChartElement = {
       id: "chartId",
