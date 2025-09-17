@@ -356,6 +356,94 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.multiselect(
+                label="Label",
+                default=["a"],
+                key="multiselect_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                placeholder="placeholder 1",
+                # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "cd"],
+                accept_new_options=True,
+                max_selections=3,
+            )
+            c1 = self.get_delta_from_queue().new_element.multiselect
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.multiselect(
+                label="Label 2",
+                default=["a", "b"],
+                key="multiselect_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                placeholder="placeholder 2",
+                # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "cd"],
+                accept_new_options=True,
+                max_selections=3,
+            )
+            c2 = self.get_delta_from_queue().new_element.multiselect
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "b"], ["a", "b", "c"]),
+            ("max_selections", 2, 3),
+            ("accept_new_options", True, False),
+            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "multiselect_key_whitelist",
+                "options": ["a", "b"],
+                "default": ["a"],
+                "max_selections": 2,
+                "accept_new_options": True,
+                "format_func": lambda x: x.lower(),
+            }
+
+            base_kwargs[kwarg_name] = value1
+            st.multiselect(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.multiselect
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.multiselect(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.multiselect
+            id2 = c2.id
+            assert id1 != id2
+
     def test_over_max_selections_initialization(self):
         with pytest.raises(StreamlitSelectionCountExceedsMaxError):
             st.multiselect(
