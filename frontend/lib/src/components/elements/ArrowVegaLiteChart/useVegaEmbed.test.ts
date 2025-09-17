@@ -347,7 +347,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("uses latest props data/datasets on createView after rerender", async () => {
-    const initialElement = {
+    const initialElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [
@@ -362,7 +362,7 @@ describe("useVegaEmbed hook", () => {
       vegaLiteTheme: "",
       selectionMode: [],
       formId: "",
-    } as VegaLiteChartElement
+    }
 
     const { result, rerender } = renderHook(
       ({ element }) => useVegaEmbed(element, mockWidgetMgr),
@@ -372,7 +372,10 @@ describe("useVegaEmbed hook", () => {
     const updatedDatasets = [
       { name: "new", hasName: true, data: { dimensions: { numDataRows: 1 } } },
     ] as unknown
-    const updatedElement = { ...initialElement, datasets: updatedDatasets }
+    const updatedElement = {
+      ...initialElement,
+      datasets: updatedDatasets,
+    } as VegaLiteChartElement
     ;(getInlineData as Mock).mockReturnValue(null)
     ;(getDataArrays as Mock).mockReturnValue({ new: [{ x: 1 }] })
 
@@ -392,7 +395,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("uses single dataset name as default for inline data insert", async () => {
-    const element = {
+    const element: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
@@ -401,7 +404,7 @@ describe("useVegaEmbed hook", () => {
       vegaLiteTheme: "",
       selectionMode: [],
       formId: "",
-    } as VegaLiteChartElement
+    }
 
     const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
 
@@ -421,7 +424,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("uses 'source' as default dataset name when no datasets but vgSpec.data present", async () => {
-    const element = {
+    const element: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
@@ -430,7 +433,7 @@ describe("useVegaEmbed hook", () => {
       vegaLiteTheme: "",
       selectionMode: [],
       formId: "",
-    } as VegaLiteChartElement
+    }
 
     const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
 
@@ -448,7 +451,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView clears and reinserts when hashes differ", async () => {
-    const element = {
+    const element: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
@@ -457,7 +460,7 @@ describe("useVegaEmbed hook", () => {
       vegaLiteTheme: "",
       selectionMode: [],
       formId: "",
-    } as VegaLiteChartElement
+    }
 
     const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
 
@@ -492,7 +495,7 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView removes stale named datasets not present in new input", async () => {
-    const element = {
+    const element: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
@@ -501,7 +504,7 @@ describe("useVegaEmbed hook", () => {
       vegaLiteTheme: "",
       selectionMode: [],
       formId: "",
-    } as VegaLiteChartElement
+    }
 
     const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
 
