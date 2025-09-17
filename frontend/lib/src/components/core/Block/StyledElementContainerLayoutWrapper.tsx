@@ -79,6 +79,7 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   "arrowDataFrame",
   "deckGlJsonChart",
   "arrowVegaLiteChart",
+  "graphvizChart",
 ]
 
 export const StyledElementContainerLayoutWrapper: FC<

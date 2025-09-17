@@ -17,6 +17,10 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+export const StyledSlider = styled.div({
+  position: "relative",
+})
+
 export interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
@@ -50,11 +54,11 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export interface StyledSliderProps {
+export interface StyledThumbValueProps {
   disabled: boolean
 }
 
-export const StyledThumbValue = styled.div<StyledSliderProps>(
+export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,
@@ -71,25 +75,6 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
   })
 )
 
-export const StyledTickBar = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  marginTop: `calc(-1 * ${theme.spacing.lg})`,
-  opacity: 0,
-  transition: `opacity 300ms`,
-  pointerEvents: "none",
-}))
-
-export const StyledRoot = styled.div({
-  position: "relative",
-  width: "100%",
-  "&:hover": {
-    [StyledTickBar]: {
-      opacity: 1,
-    },
-  },
-})
-
 export const StyledInnerTrackWrapper = styled.div<StyleProps>(({ theme }) => {
   return {
     flex: 1,
@@ -104,3 +89,27 @@ export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
     right: `calc(${theme.sizes.sliderThumb} / 2)`,
   }
 })
+
+export interface StyledSliderTickBarProps {
+  isHovered: boolean
+  isDisabled: boolean
+}
+
+export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
+  ({ theme, isHovered, isDisabled }) => ({
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    pointerEvents: "none",
+    marginTop: `-${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.base,
+    fontWeight: theme.fontWeights.normal,
+    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    opacity: isHovered ? 1 : 0,
+    transition: "opacity 70ms ease-in-out",
+  })
+)
