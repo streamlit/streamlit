@@ -89,3 +89,18 @@ export const StyledRoot = styled.div({
     },
   },
 })
+
+export const StyledInnerTrackWrapper = styled.div<StyleProps>(({ theme }) => {
+  return {
+    flex: 1,
+  }
+})
+
+export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
+  return {
+    position: "absolute",
+    height: theme.spacing.twoXS,
+    left: `calc(${theme.sizes.sliderThumb} / 2)`,
+    right: `calc(${theme.sizes.sliderThumb} / 2)`,
+  }
+})
