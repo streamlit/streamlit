@@ -237,7 +237,7 @@ describe("Slider widget", () => {
       render(<Slider {...props} />)
 
       const tickBar = screen.getByTestId("stSliderTickBar")
-      expect(tickBar).not.toBeVisible()
+      expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const sliderContainer = screen.getByTestId("stSlider")
@@ -246,7 +246,9 @@ describe("Slider widget", () => {
       await waitFor(() => expect(tickBar).toBeVisible())
 
       await user.unhover(sliderContainer)
-      await waitFor(() => expect(tickBar).not.toBeVisible())
+      await waitFor(() =>
+        expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+      )
     })
 
     it("becomes visible while dragging via keyboard and hides after release", async () => {
@@ -256,7 +258,7 @@ describe("Slider widget", () => {
       const tickBar = screen.getByTestId("stSliderTickBar")
       const slider = screen.getByRole("slider")
 
-      expect(tickBar).not.toBeVisible()
+      expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       slider.focus()
@@ -265,7 +267,9 @@ describe("Slider widget", () => {
       await waitFor(() => expect(tickBar).toBeVisible())
 
       await user.keyboard("{/ArrowRight}")
-      await waitFor(() => expect(tickBar).not.toBeVisible())
+      await waitFor(() =>
+        expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+      )
     })
   })
 
