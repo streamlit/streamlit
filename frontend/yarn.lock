@@ -3610,10 +3610,10 @@ __metadata:
     eslint-plugin-react: "npm:^7.37.5"
     eslint-plugin-react-hooks: "npm:^6.0.0-rc.2"
     eslint-plugin-streamlit-custom: "workspace:^"
-    eslint-plugin-testing-library: "npm:^7.6.8"
+    eslint-plugin-testing-library: "npm:^7.7.0"
     globals: "npm:^16.3.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    humanize-string: "npm:^3.0.0"
+    humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
     immer: "npm:^10.1.3"
     jsdom: "npm:24.1.3"
@@ -10608,15 +10608,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"eslint-plugin-testing-library@npm:^7.6.8":
-  version: 7.6.8
-  resolution: "eslint-plugin-testing-library@npm:7.6.8"
+"eslint-plugin-testing-library@npm:^7.7.0":
+  version: 7.8.0
+  resolution: "eslint-plugin-testing-library@npm:7.8.0"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.15.0"
     "@typescript-eslint/utils": "npm:^8.15.0"
   peerDependencies:
     eslint: ^8.57.0 || ^9.0.0
-  checksum: 10c0/aed46f94236f984b5a172a233d91b7c13a1b13258da816a4c0d0698b0103c6d98135081146c79d7d4cb9195ccd49baa26812893622c9e577f548fe7f9dcd91a9
+  checksum: 10c0/902a6d67fd5bab27e279ab51d6bdace524658bdda85b588f21d322f9249d7d5f1a738a7db2bd6562169b31bebb90db81c2eaae84dd8011f9e5462fef098c6c5a
   languageName: node
   linkType: hard
 
@@ -12421,12 +12421,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"humanize-string@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "humanize-string@npm:3.0.0"
+"humanize-string@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "humanize-string@npm:3.1.0"
   dependencies:
     decamelize: "npm:^6.0.0"
-  checksum: 10c0/700d337913151a2f96949aa7d6afda7ab8254e4fd8790f79255ddd90dc53d49d6bd45ece122afbf310f9ec6bae11d3c6ca8b1fcd9220eb310f337254e27baf07
+  checksum: 10c0/64c0a65d43727971fc14db0fc6d9caa469bc58fb6dbd6e1900d87d331de108454bee16c0a2cb41f7967e1c4c351609f3092f377d83ad1f3a619c8b6870619084
   languageName: node
   linkType: hard
 

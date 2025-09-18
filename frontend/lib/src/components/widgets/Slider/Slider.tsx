@@ -25,7 +25,11 @@ import React, {
   useState,
 } from "react"
 
-import { type StyleProps, Slider as UISlider } from "baseui/slider"
+import {
+  type StyleProps,
+  Slider as UISlider,
+  StyledInnerTrack as UIStyledInnerTrack,
+} from "baseui/slider"
 import pick from "lodash/pick"
 import moment from "moment"
 import { sprintf } from "sprintf-js"
@@ -48,10 +52,12 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledInnerTrackWrapper,
   StyledSlider,
   StyledSliderTickBar,
   StyledThumb,
   StyledThumbValue,
+  StyledThumbWrapper,
 } from "./styled-components"
 
 interface SliderTickBarProps {
@@ -159,51 +165,53 @@ function Slider({
   // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderThumb = useCallback(
-    forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
-      props: StyleProps,
-      ref
-    ): ReactElement {
-      const { $thumbIndex } = props
-      const thumbIndex = $thumbIndex || 0
-      thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
-      // eslint-disable-next-line @eslint-react/no-create-ref
-      thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
+    forwardRef<HTMLDivElement, StyleProps>(
+      function renderThumb(props, ref): ReactElement {
+        const { $thumbIndex } = props
+        const thumbIndex = $thumbIndex || 0
+        thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
+        // eslint-disable-next-line @eslint-react/no-create-ref
+        thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
 
-      const passThrough = pick(props, [
-        "role",
-        "style",
-        "aria-valuemax",
-        "aria-valuemin",
-        "aria-valuenow",
-        "tabIndex",
-        "onKeyUp",
-        "onKeyDown",
-        "onMouseEnter",
-        "onMouseLeave",
-        "draggable",
-      ])
+        // TODO: I forget why we don't just pass *all* props through.
+        // It seems to work fine, when I try it. But perhaps we need to do
+        // more extensive testing before simplifying...
+        const passThrough = pick(props, [
+          "role",
+          "style",
+          "aria-valuemax",
+          "aria-valuemin",
+          "aria-valuenow",
+          "tabIndex",
+          "onKeyUp",
+          "onKeyDown",
+          "onMouseEnter",
+          "onMouseLeave",
+          "draggable",
+        ])
 
-      const formattedValue = formattedValueArr[thumbIndex]
+        const formattedValue = formattedValueArr[thumbIndex]
 
-      return (
-        <StyledThumb
-          {...passThrough}
-          disabled={props.$disabled === true}
-          isDragged={props.$isDragged === true}
-          ref={thumbRefs[thumbIndex]}
-          aria-valuetext={formattedValue}
-          aria-label={thumbAriaLabel}
-        >
-          <StyledThumbValue
-            data-testid="stSliderThumbValue"
+        return (
+          <StyledThumb
+            {...passThrough}
             disabled={props.$disabled === true}
-            ref={thumbValueRefs[thumbIndex]}
+            isDragged={props.$isDragged === true}
+            ref={thumbRefs[thumbIndex]}
+            aria-valuetext={formattedValue}
+            aria-label={thumbAriaLabel}
           >
-            {formattedValue}
-          </StyledThumbValue>
-        </StyledThumb>
-      )
-    }),
+            <StyledThumbValue
+              data-testid="stSliderThumbValue"
+              disabled={props.$disabled === true}
+              ref={thumbValueRefs[thumbIndex]}
+            >
+              {formattedValue}
+            </StyledThumbValue>
+          </StyledThumb>
+        )
+      }
+    ),
     // Only run this on first render, to avoid losing the focus state.
     // Then, when the value written about the thumb needs to change, that
     // happens with the function below instead.
@@ -243,12 +251,44 @@ function Slider({
     )
   })
 
+  // Style that will be applied to BaseWeb's <InnerTrack>.
   const innerTrackStyle = useCallback(
     ({ $disabled }: StyleProps) => ({
       height: theme.spacing.twoXS,
       ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
     }),
     [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
+  )
+
+  // Make thumbs not overshoot the slider's track boundaries.
+  // We do this by placing the thumbs in the DOM beneath the track.
+  // Then we can adjust the padding around the thumbs separately
+  // from the dimensions of the track.
+  //
+  // TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/react-compiler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const renderInnerTrack = useCallback(
+    forwardRef<HTMLDivElement, StylePropsWithChildren>(
+      function renderInnerTrack(props, ref): ReactElement {
+        const { children: thumbs, ...newProps } = props
+
+        return (
+          <StyledInnerTrackWrapper>
+            {/* Place thumbs inside container with a bit of horiz padding. */}
+            <StyledThumbWrapper ref={ref}>{thumbs}</StyledThumbWrapper>
+            {/* Place track under thumb container, with no padding. */}
+            <UIStyledInnerTrack
+              {...newProps}
+              style={innerTrackStyle({ $disabled: props.$disabled })}
+            />
+          </StyledInnerTrackWrapper>
+        )
+      }
+    ),
+
+    // Only run this on first render.
+    []
   )
 
   return (
@@ -296,9 +336,7 @@ function Slider({
               paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
             },
           },
-          InnerTrack: {
-            style: innerTrackStyle,
-          },
+          InnerTrack: renderInnerTrack,
           // Show min/max labels when hovering the slider or dragging it
           TickBar: {
             component: SliderTickBar,
@@ -594,6 +632,10 @@ function fixLabelOverlap(
       thumb2MidPoint - thumb2ValueOverhang - labelGap - thumb1MidPoint
     )}px`
   }
+}
+
+interface StylePropsWithChildren extends StyleProps {
+  children: React.ReactNode
 }
 
 // Note: we shouldn't need `withCalculatedWidth` here, but there is some custom

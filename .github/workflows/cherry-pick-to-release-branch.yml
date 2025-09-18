@@ -36,6 +36,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v6
         with:

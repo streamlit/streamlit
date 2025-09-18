@@ -21,9 +21,16 @@ import { expressionInterpreter } from "vega-interpreter"
 import { Mock, Mocked } from "vitest"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { getDataArrays, getInlineData } from "./arrowUtils"
+import {
+  getDataArray,
+  getDataArrays,
+  getInlineData,
+  VegaLiteChartElement,
+  WrappedNamedDataset,
+} from "./arrowUtils"
 import { useVegaEmbed } from "./useVegaEmbed"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
@@ -54,6 +61,7 @@ vi.mock("./arrowUtils", async () => {
     ...actual,
     getDataArrays: vi.fn(),
     getInlineData: vi.fn(),
+    getDataArray: vi.fn(),
   }
 })
 
@@ -116,6 +124,7 @@ describe("useVegaEmbed hook", () => {
     ;(useFormClearHelper as Mock).mockImplementation(() => {})
     ;(getDataArrays as Mock).mockReturnValue({})
     ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArray as Mock).mockReturnValue([])
   })
 
   afterEach(() => {
@@ -335,5 +344,151 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.insert).toHaveBeenCalledTimes(1)
     // 2 from createView, 1 from updateView -> .resize().runAsync()
     expect(mockVegaView.runAsync).toHaveBeenCalledTimes(3)
+  })
+
+  it("uses latest props data/datasets on createView after rerender", async () => {
+    const initialElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [
+        {
+          name: "old",
+          hasName: true,
+          data: { dimensions: { numDataRows: 1 } } as Quiver,
+        },
+      ],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ element }) => useVegaEmbed(element, mockWidgetMgr),
+      { initialProps: { element: initialElement } }
+    )
+
+    const updatedDatasets = [
+      { name: "new", hasName: true, data: { dimensions: { numDataRows: 1 } } },
+    ] as unknown
+    const updatedElement = {
+      ...initialElement,
+      datasets: updatedDatasets,
+    } as VegaLiteChartElement
+    ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArrays as Mock).mockReturnValue({ new: [{ x: 1 }] })
+
+    rerender({ element: updatedElement })
+
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    // getDataArrays should have been called with the latest datasets
+    const lastCallArg = (getDataArrays as Mock).mock.calls.at(-1)?.[0]
+    expect(lastCallArg).toBe(updatedDatasets)
+    // Insert should use the dataset name returned by getDataArrays
+    expect(mockVegaView.insert).toHaveBeenCalledWith("new", [{ x: 1 }])
+  })
+
+  it("uses single dataset name as default for inline data insert", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+    const inline = [{ d: "inline" }]
+    ;(getInlineData as Mock).mockReturnValue(inline)
+    ;(getDataArrays as Mock).mockReturnValue({ only: [{ d: "ds" }] })
+
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    // First insert should be inline, and it should target the single dataset name
+    const firstInsertCall = (mockVegaView.insert as Mock).mock.calls[0]
+    expect(firstInsertCall[0]).toBe("only")
+    expect(firstInsertCall[1]).toBe(inline)
+  })
+
+  it("uses 'source' as default dataset name when no datasets but vgSpec.data present", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+    const inline = [{ d: "inline" }]
+    ;(getInlineData as Mock).mockReturnValue(inline)
+    ;(getDataArrays as Mock).mockReturnValue(null)
+
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    // Inline insert should target the default 'source' dataset
+    expect(mockVegaView.insert).toHaveBeenCalledWith("source", inline)
+  })
+
+  it("updateView removes stale named datasets not present in new input", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    const dsOld = {
+      name: "old",
+      hasName: true,
+      data: { dimensions: { numDataRows: 1 }, hash: "X" },
+    } as WrappedNamedDataset
+    ;(getDataArray as Mock).mockReturnValue([{ row: 1 }])
+
+    // First update with 'old' dataset present
+    await act(async () => {
+      await result.current.updateView(null, [dsOld])
+    })
+
+    // Next update with no datasets; 'old' should be removed
+    await act(async () => {
+      await result.current.updateView(null, [])
+    })
+
+    expect(mockVegaView.remove).toHaveBeenCalledWith(
+      "old",
+      expect.any(Function)
+    )
   })
 })
