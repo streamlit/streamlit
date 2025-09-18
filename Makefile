@@ -375,9 +375,9 @@ trace-e2e-test:
 	cd e2e_playwright && pytest $$TEST_ARG --tracing=on --output=test-traces || true; \
 	echo ""; \
 	echo "Launching trace viewer..."; \
-	TRACE_FILE=$$(find test-traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
+	TRACE_FILE=$$(find e2e_playwright/test-traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
 	if [[ -n "$$TRACE_FILE" ]]; then \
-		npx playwright show-trace "$$TRACE_FILE"; \
+		python -m playwright show-trace "$$TRACE_FILE"; \
 	else \
 		echo "No trace file found. Check e2e_playwright/test-traces/ directory."; \
 	fi
