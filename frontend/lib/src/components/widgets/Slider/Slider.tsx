@@ -271,9 +271,7 @@ function Slider({
   const renderInnerTrack = useCallback(
     forwardRef<HTMLDivElement, StylePropsWithChildren>(
       function renderInnerTrack(props, ref): ReactElement {
-        const thumbs = props.children
-        const newProps = { ...props }
-        delete newProps["children"]
+        const { children: thumbs, ...newProps } = props
 
         return (
           <StyledInnerTrackWrapper>
