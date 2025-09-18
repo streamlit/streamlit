@@ -199,9 +199,8 @@ export function useVegaEmbed(
         // chart view if the named dataset exists.
         try {
           view.remove(name, truthy)
-        } finally {
-          // The finally block ensures execution flow continues even if view.remove() fails
-          // This allows us to safely exit the function while still propagating any errors
+        } catch {
+          // The dataset was already removed, so we do nothing
         }
         return
       }
