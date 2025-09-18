@@ -352,6 +352,36 @@ run-e2e-test:
 		exit 1 \
 	)
 
+.PHONY: trace-e2e-test
+# Run e2e test with tracing and view it. Use via `make trace-e2e-test <test_file.py>::<test_func>`.
+trace-e2e-test:
+	@if [[ -z "$(filter-out $@,$(MAKECMDGOALS))" ]]; then \
+		echo "Error: Please specify a single test to run"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi
+	@TEST_ARG=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
+	if [[ ! "$$TEST_ARG" == *"::"* ]]; then \
+		echo "Error: You must specify a single test function, not an entire test file"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi; \
+	echo "Clearing previous traces..."; \
+	rm -rf e2e_playwright/test-results/traces; \
+	mkdir -p e2e_playwright/test-results/traces; \
+	echo "Running test with tracing: $$TEST_ARG"; \
+	(cd e2e_playwright && pytest $$TEST_ARG --tracing=on --output=test-results/traces || true); \
+	echo ""; \
+	echo "Launching trace viewer..."; \
+	TRACE_FILE=$$(find e2e_playwright/test-results/traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
+	if [[ -n "$$TRACE_FILE" ]]; then \
+		python -m playwright show-trace "$$TRACE_FILE"; \
+	else \
+		echo "No trace file found. Check e2e_playwright/test-results/traces/ directory."; \
+	fi
+
 .PHONY: lighthouse-tests
 # Run Lighthouse performance tests.
 lighthouse-tests:
