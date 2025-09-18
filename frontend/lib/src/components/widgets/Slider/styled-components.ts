@@ -20,6 +20,9 @@ import { transparentize } from "color2k"
 
 export const StyledSlider = styled.div({
   position: "relative",
+  ":focus-within:has(:focus-visible)": {
+    "--slider-focused": 1,
+  },
 })
 
 export interface StyledThumbProps {
@@ -108,7 +111,7 @@ export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
     color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-    opacity: isHovered ? 1 : 0,
+    opacity: isHovered ? 1 : "var(--slider-focused, 0)",
     transition: isHovered ? "none" : "opacity 300ms 200ms",
   })
 )
