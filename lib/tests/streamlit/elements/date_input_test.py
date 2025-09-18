@@ -246,7 +246,7 @@ class DateInputTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside a column."""
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
 
         with col1:
             st.date_input("foo")

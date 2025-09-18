@@ -202,7 +202,7 @@ class GitUtilTest(unittest.TestCase):
         with _mock_git_repo(tracking_branch_name="origin/feature/foo/bar") as gr:
             result = gr.get_tracking_branch_remote()
             assert result is not None
-            ret_remote, branch = result
+            _, branch = result
             assert branch == "feature/foo/bar"
 
     def test_get_tracking_branch_remote_missing_remote(self) -> None:

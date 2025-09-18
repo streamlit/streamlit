@@ -147,7 +147,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             RuntimeError,
-            match="Complex config options require doc strings for their description.",
+            match=r"Complex config options require doc strings for their description.",
         ):
 
             @ConfigOption("_test.noDocString")
@@ -158,7 +158,7 @@ class ConfigTest(unittest.TestCase):
         """Test setting an invalid config section."""
         with pytest.raises(
             ValueError,
-            match='Key "_test.myParam." has invalid format.',
+            match=r'Key "_test.myParam." has invalid format.',
         ):
             ConfigOption("_test.myParam.")
 
@@ -171,7 +171,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config section using _create_section."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define section "_test2" twice.',
+            match=r'Cannot define section "_test2" twice.',
         ):
             config._create_section("_test2", "A test section.")
             config._create_section("_test2", "A test section.")
@@ -180,7 +180,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config option using _create_option."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define option "_test.overwriteKey" twice.',
+            match=r'Cannot define option "_test.overwriteKey" twice.',
         ):
             config._create_option("_test.overwriteKey")
             config._create_option("_test.overwriteKey")
@@ -193,7 +193,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             ValueError,
-            match='Key "_test.snake_case" has invalid format.',
+            match=r'Key "_test.snake_case" has invalid format.',
         ):
             config._create_option("_test.snake_case")
 
@@ -657,7 +657,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.port", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="server.port does not work when global.developmentMode is true.",
+            match=r"server.port does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -674,7 +674,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("browser.serverPort", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="browser.serverPort does not work when global.developmentMode is true.",
+            match=r"browser.serverPort does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -732,7 +732,7 @@ class ConfigTest(unittest.TestCase):
         )
         with pytest.raises(
             RuntimeError,
-            match="had multiple mappings.*duplicate",
+            match=r"had multiple mappings.*duplicate",
         ):
             config._parse_trusted_user_headers()
 
