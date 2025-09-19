@@ -679,6 +679,7 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
+        has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
@@ -701,6 +702,7 @@ class ArrowMixin:
             data_df = dataframe_util.convert_anything_to_pandas_df(
                 data, ensure_copy=False
             )
+            has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
@@ -715,7 +717,7 @@ class ArrowMixin:
             # The range index usually does not add a lot of value.
             is_selection_activated
             and selection_mode in ["multi-row", "single-row"]
-            and dataframe_util.has_range_index(data_df)
+            and has_range_index
         ):
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
