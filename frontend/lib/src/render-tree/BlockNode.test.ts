@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { block, text, NO_SCRIPT_RUN_ID } from "./test-utils"
+import { block, NO_SCRIPT_RUN_ID, text } from "./test-utils"
 
 // prettier-ignore
 const BLOCK = block([
@@ -67,5 +67,59 @@ describe("AppNode.setIn", () => {
     expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
       "Bad 'setIn' index 2 (should be between [0, 1])"
     )
+  })
+})
+
+describe("BlockNode.visit", () => {
+  it("calls visitBlockNode on the visitor", () => {
+    const node = block([text("child1"), text("child2")])
+    const mockVisitor = {
+      visitElementNode: vi.fn().mockReturnValue("element-result"),
+      visitBlockNode: vi.fn().mockReturnValue("block-result"),
+    }
+
+    const result = node.accept(mockVisitor)
+
+    expect(mockVisitor.visitBlockNode).toHaveBeenCalledWith(node)
+    expect(mockVisitor.visitElementNode).not.toHaveBeenCalled()
+    expect(result).toEqual("block-result")
+  })
+
+  it("allows visitor to return the same node", () => {
+    const node = block([text("child")])
+    const identityVisitor = {
+      visitElementNode: vi.fn(),
+      visitBlockNode: vi.fn().mockReturnValue(node),
+    }
+
+    const result = node.accept(identityVisitor)
+
+    expect(result).toBe(node)
+  })
+
+  it("allows visitor to return undefined", () => {
+    const node = block([text("child")])
+    const nullVisitor = {
+      visitElementNode: vi.fn(),
+      visitBlockNode: vi.fn().mockReturnValue(undefined),
+    }
+
+    const result = node.accept(nullVisitor)
+
+    expect(result).toBeUndefined()
+  })
+
+  it("can return a modified BlockNode through visitor", () => {
+    const originalNode = block([text("child1"), text("child2")])
+    const transformVisitor = {
+      visitElementNode: vi.fn(),
+      visitBlockNode: vi.fn().mockReturnValue(block([text("transformed")])),
+    }
+
+    const result = originalNode.accept(transformVisitor)
+
+    expect(result).not.toBe(originalNode)
+    expect(result.children).toHaveLength(1)
+    expect(result.getIn([0])).toBeTextNode("transformed")
   })
 })

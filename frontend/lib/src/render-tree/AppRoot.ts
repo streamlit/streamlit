@@ -23,6 +23,7 @@ import {
   Logo,
 } from "@streamlit/protobuf"
 
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   getLoadingScreenType,
   isNullOrUndefined,
@@ -32,10 +33,10 @@ import {
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
-import { ensureError } from "../util/ErrorHandling"
 import { AppNode } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -298,18 +299,14 @@ export class AppRoot {
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>
   ): AppRoot {
-    const main =
-      this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const event =
-      this.event.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const bottom =
-      this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
+    const visitor = new ClearStaleNodeVisitor(
+      currentScriptRunId,
+      fragmentIdsThisRun
+    )
+    const newChildren = [this.main, this.sidebar, this.event, this.bottom].map(
+      node =>
+        this.ensureBlockNode(node.accept(visitor) as BlockNode | undefined)
+    )
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
     const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
@@ -322,7 +319,7 @@ export class AppRoot {
       this.mainScriptHash,
       new BlockNode(
         this.mainScriptHash,
-        [main, sidebar, event, bottom],
+        newChildren,
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),
@@ -416,5 +413,9 @@ export class AppRoot {
       this.root.setIn(deltaPath, elementNode, scriptRunId),
       this.appLogo
     )
+  }
+
+  private ensureBlockNode(node: BlockNode | undefined): BlockNode {
+    return node ?? new BlockNode(this.mainScriptHash)
   }
 }

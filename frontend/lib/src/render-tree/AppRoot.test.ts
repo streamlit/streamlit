@@ -16,21 +16,17 @@
 
 import { MockInstance } from "vitest"
 
-import {
-  Block as BlockProto,
-  Delta as DeltaProto,
-  Logo as LogoProto,
-} from "@streamlit/protobuf"
+import { Delta as DeltaProto, Logo as LogoProto } from "@streamlit/protobuf"
 
 import { AppRoot } from "./AppRoot"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import {
   block,
-  text,
+  FAKE_SCRIPT_HASH,
   forwardMsgMetadata,
   makeProto,
-  FAKE_SCRIPT_HASH,
+  text,
 } from "./test-utils"
 
 // prettier-ignore
@@ -153,6 +149,52 @@ describe("AppRoot.clearStaleNodes", () => {
 
     const newNewRoot = newRoot.clearStaleNodes("new_script_run_id", [])
     expect(newNewRoot.logo).toBeNull()
+  })
+
+  it("uses ClearStaleNodeVisitor internally", () => {
+    // Create a more complex tree with multiple nodes
+    const delta1 = makeProto(DeltaProto, {
+      newElement: { text: { body: "element1" } },
+    })
+    const delta2 = makeProto(DeltaProto, {
+      newElement: { text: { body: "element2" } },
+    })
+
+    // Add elements with different script run IDs
+    const rootWithElements = ROOT.applyDelta(
+      "run_id_1",
+      delta1,
+      forwardMsgMetadata([0, 0])
+    ).applyDelta("run_id_2", delta2, forwardMsgMetadata([0, 1]))
+
+    // Before clearing: should have both elements
+    expect(rootWithElements.getElements().size).toBe(2) // 2 new elements
+
+    // Clear stale nodes - only keep elements from run_id_2
+    const clearedRoot = rootWithElements.clearStaleNodes("run_id_2", [])
+
+    // After clearing: should only have element2 (from run_id_2)
+    expect(clearedRoot.getElements().size).toBe(1)
+    expect(clearedRoot.main.getIn([0])).toBeTextNode("element2")
+  })
+
+  it("preserves non-stale nodes during visitor traversal", () => {
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "current_element" } },
+    })
+    const currentRunId = "current_run"
+
+    const rootWithCurrent = ROOT.applyDelta(
+      currentRunId,
+      delta,
+      forwardMsgMetadata([0, 0])
+    )
+
+    // Clear stale nodes with same run ID - element should be preserved
+    const clearedRoot = rootWithCurrent.clearStaleNodes(currentRunId, [])
+
+    expect(clearedRoot.main.getIn([0])).toBeTextNode("current_element")
+    expect(clearedRoot.getElements().size).toBe(1)
   })
 })
 

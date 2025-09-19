@@ -16,6 +16,8 @@
 
 import { Element } from "@streamlit/protobuf"
 
+import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+
 /**
  * An immutable node of the "App Data Tree".
  *
@@ -99,19 +101,14 @@ export interface AppNode {
   filterMainScriptElements(mainScriptHash: string): AppNode | undefined
 
   /**
-   * Recursively remove children nodes whose scriptRunId is no longer current.
-   * If this node should no longer exist, return undefined.
-   */
-  clearStaleNodes(
-    currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
-  ): AppNode | undefined
-
-  /**
    * Return a Set of all the Elements contained in the tree.
    * If an existing Set is passed in, that Set will be mutated and returned.
    * Otherwise, a new Set will be created and will be returned.
    */
   getElements(elementSet?: Set<Element>): Set<Element>
+
+  /**
+   * Accept a visitor.
+   */
+  accept<T>(visitor: AppNodeVisitor<T>): T
 }

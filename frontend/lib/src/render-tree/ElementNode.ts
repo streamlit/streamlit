@@ -26,14 +26,15 @@ import {
   IArrowNamedDataSet,
 } from "@streamlit/protobuf"
 
-import { isNullOrUndefined } from "~lib/util/utils"
-
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "../components/elements/ArrowVegaLiteChart"
-import { Quiver } from "../dataframes/Quiver"
+} from "~lib/components/elements/ArrowVegaLiteChart"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { isNullOrUndefined } from "~lib/util/utils"
+
 import { AppNode } from "./AppNode.interface"
+import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
  * A leaf AppNode. Contains a single element to render.
@@ -138,28 +139,6 @@ export class ElementNode implements AppNode {
     return this
   }
 
-  public clearStaleNodes(
-    currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
-  ): ElementNode | undefined {
-    if (fragmentIdsThisRun?.length) {
-      // If we're currently running a fragment, nodes unrelated to the fragment
-      // shouldn't be cleared. This can happen when,
-      //   1. This element doesn't correspond to a fragment at all.
-      //   2. This element is a fragment but is in no path that was modified.
-      //   3. This element belongs to a path that was modified, but it was modified in the same run.
-      if (
-        !this.fragmentId ||
-        !fragmentIdOfBlock ||
-        this.scriptRunId === currentScriptRunId
-      ) {
-        return this
-      }
-    }
-    return this.scriptRunId === currentScriptRunId ? this : undefined
-  }
-
   public getElements(elements?: Set<Element>): Set<Element> {
     if (isNullOrUndefined(elements)) {
       elements = new Set<Element>()
@@ -240,6 +219,10 @@ export class ElementNode implements AppNode {
           : newDataSetQuiver
       }
     })
+  }
+
+  public accept<T>(visitor: AppNodeVisitor<T>): T {
+    return visitor.visitElementNode(this)
   }
 }
 

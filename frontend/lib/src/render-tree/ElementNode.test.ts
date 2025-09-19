@@ -16,14 +16,15 @@
 
 import { ArrowNamedDataSet } from "@streamlit/protobuf"
 
+import { UNICODE } from "~lib/mocks/arrow"
+
 import {
-  arrowTable,
   arrowDataFrame,
+  arrowTable,
   arrowVegaLiteChart,
-  text,
   NO_SCRIPT_RUN_ID,
+  text,
 } from "./test-utils"
-import { UNICODE } from "../mocks/arrow"
 
 describe("ElementNode.quiverElement", () => {
   it("returns a quiverElement (arrowTable)", () => {
@@ -144,5 +145,45 @@ describe("ElementNode.arrowAddRows", () => {
     expect(() =>
       node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
     ).toThrow("elementType 'text' is not a valid arrowAddRows target!")
+  })
+})
+
+describe("ElementNode.visit", () => {
+  it("calls visitElementNode on the visitor", () => {
+    const node = text("test")
+    const mockVisitor = {
+      visitElementNode: vi.fn().mockReturnValue("element-result"),
+      visitBlockNode: vi.fn().mockReturnValue("block-result"),
+    }
+
+    const result = node.accept(mockVisitor)
+
+    expect(mockVisitor.visitElementNode).toHaveBeenCalledWith(node)
+    expect(mockVisitor.visitBlockNode).not.toHaveBeenCalled()
+    expect(result).toEqual("element-result")
+  })
+
+  it("allows visitor to return the same node", () => {
+    const node = text("test")
+    const identityVisitor = {
+      visitElementNode: vi.fn().mockReturnValue(node),
+      visitBlockNode: vi.fn(),
+    }
+
+    const result = node.accept(identityVisitor)
+
+    expect(result).toBe(node)
+  })
+
+  it("allows visitor to return undefined", () => {
+    const node = text("test")
+    const nullVisitor = {
+      visitElementNode: vi.fn().mockReturnValue(undefined),
+      visitBlockNode: vi.fn(),
+    }
+
+    const result = node.accept(nullVisitor)
+
+    expect(result).toBeUndefined()
   })
 })

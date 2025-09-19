@@ -25,7 +25,8 @@ import {
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { UNICODE } from "../mocks/arrow"
+import { UNICODE } from "src/mocks/arrow"
+
 import { AppNode } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
