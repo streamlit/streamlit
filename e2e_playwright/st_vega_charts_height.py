@@ -61,7 +61,7 @@ with st.container(border=True, key="test_height_stretch_with_spec", height=400):
 st.write("Chart with height in spec (200) and height=100 parameter:")
 st.vega_lite_chart(simple_df, spec_with_height, height=100)
 
-st.write("Vertical concatenation chart):")
+st.write("Vertical concatenation chart:")
 vconcat_spec = {
     "vconcat": [
         {
