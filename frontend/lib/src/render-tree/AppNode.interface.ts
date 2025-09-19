@@ -87,12 +87,6 @@ export interface AppNode {
   getIn(path: number[]): AppNode | undefined
 
   /**
-   * Return a copy of this node with a new element set at the given index
-   * path. Throws an error if the path is invalid.
-   */
-  setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
-
-  /**
    * Accept a visitor.
    */
   accept<T>(visitor: AppNodeVisitor<T>): T

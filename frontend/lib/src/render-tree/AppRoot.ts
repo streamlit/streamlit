@@ -39,6 +39,7 @@ import { ElementNode } from "./ElementNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
+import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -346,7 +347,12 @@ export class AppRoot {
     return new AppRoot(
       this.mainScriptHash,
       this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        child.setIn(updatedDeltaPath, elementNode, scriptRunId)
+        SetNodeByDeltaPathVisitor.setNodeAtPath(
+          child,
+          updatedDeltaPath,
+          elementNode,
+          scriptRunId
+        )
       ),
       this.appLogo
     )
@@ -388,7 +394,12 @@ export class AppRoot {
     return new AppRoot(
       this.mainScriptHash,
       this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        child.setIn(updatedDeltaPath, blockNode, scriptRunId)
+        SetNodeByDeltaPathVisitor.setNodeAtPath(
+          child,
+          updatedDeltaPath,
+          blockNode,
+          scriptRunId
+        )
       ),
       this.appLogo
     )
@@ -415,7 +426,12 @@ export class AppRoot {
     return new AppRoot(
       this.mainScriptHash,
       this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        child.setIn(updatedDeltaPath, elementNode, scriptRunId)
+        SetNodeByDeltaPathVisitor.setNodeAtPath(
+          child,
+          updatedDeltaPath,
+          elementNode,
+          scriptRunId
+        )
       ),
       this.appLogo
     )

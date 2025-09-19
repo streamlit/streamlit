@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { block, NO_SCRIPT_RUN_ID, text } from "./test-utils"
+import { block, text } from "./test-utils"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 
 // prettier-ignore
@@ -39,35 +39,6 @@ describe("AppNode.getIn", () => {
   it("returns undefined for invalid paths", () => {
     const node = BLOCK.getIn([2, 3, 4])
     expect(node).toBeUndefined()
-  })
-})
-
-describe("AppNode.setIn", () => {
-  it("handles shallow paths", () => {
-    const newBlock = BLOCK.setIn([0], text("new"), NO_SCRIPT_RUN_ID)
-    expect(newBlock.getIn([0])).toBeTextNode("new")
-
-    // Check BLOCK..newBlock diff is as expected.
-    expect(newBlock).not.toStrictEqual(BLOCK)
-    expect(newBlock.getIn([1])).toStrictEqual(BLOCK.getIn([1]))
-  })
-
-  it("handles deep paths", () => {
-    const newBlock = BLOCK.setIn([1, 1], text("new"), NO_SCRIPT_RUN_ID)
-    expect(newBlock.getIn([1, 1])).toBeTextNode("new")
-
-    // Check BLOCK..newBlock diff is as expected
-    expect(newBlock).not.toStrictEqual(BLOCK)
-    expect(newBlock.getIn([0])).toStrictEqual(BLOCK.getIn([0]))
-    expect(newBlock.getIn([1])).not.toStrictEqual(BLOCK.getIn([1]))
-    expect(newBlock.getIn([1, 0])).toStrictEqual(BLOCK.getIn([1, 0]))
-    expect(newBlock.getIn([1, 1])).not.toStrictEqual(BLOCK.getIn([1, 1]))
-  })
-
-  it("throws an error for invalid paths", () => {
-    expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
-      "Bad 'setIn' index 2 (should be between [0, 1])"
-    )
   })
 })
 

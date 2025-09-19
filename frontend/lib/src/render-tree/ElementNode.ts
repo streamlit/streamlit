@@ -124,10 +124,6 @@ export class ElementNode implements AppNode {
     return undefined
   }
 
-  public setIn(): AppNode {
-    throw new Error("'setIn' cannot be called on an ElementNode")
-  }
-
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string

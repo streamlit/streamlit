@@ -76,41 +76,6 @@ export class BlockNode implements AppNode {
     return this.children[childIndex].getIn(path.slice(1))
   }
 
-  public setIn(path: number[], node: AppNode, scriptRunId: string): BlockNode {
-    if (path.length === 0) {
-      throw new Error(`empty path!`)
-    }
-
-    const childIndex = path[0]
-    if (childIndex < 0 || childIndex > this.children.length) {
-      throw new Error(
-        `Bad 'setIn' index ${childIndex} (should be between [0, ${this.children.length}])`
-      )
-    }
-
-    const newChildren = this.children.slice()
-    if (path.length === 1) {
-      // Base case
-      newChildren[childIndex] = node
-    } else {
-      // Pop the current element off our path, and recurse into our children
-      newChildren[childIndex] = newChildren[childIndex].setIn(
-        path.slice(1),
-        node,
-        scriptRunId
-      )
-    }
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      scriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
-  }
-
   public accept<T>(visitor: AppNodeVisitor<T>): T {
     return visitor.visitBlockNode(this)
   }
