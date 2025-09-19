@@ -712,7 +712,7 @@ class ArrowMixin:
 
         elif (
             # Hide index column if row selections are activated and the dataframe has a range index.
-            # The range index usualy does not add a lot of value.
+            # The range index usually does not add a lot of value.
             is_selection_activated
             and selection_mode in ["multi-row", "single-row"]
             and dataframe_util.has_range_index(data_df)
