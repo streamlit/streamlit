@@ -163,10 +163,12 @@ describe("AppView element", () => {
     )
 
     const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
+      elements: new AppRoot(FAKE_SCRIPT_HASH, {
+        main,
+        sidebar,
+        event,
+        bottom,
+      }),
     })
     render(<AppView {...props} />)
 
@@ -238,10 +240,12 @@ describe("AppView element", () => {
     )
 
     const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
+      elements: new AppRoot(FAKE_SCRIPT_HASH, {
+        main,
+        sidebar,
+        event,
+        bottom,
+      }),
       appPages: [
         { pageName: "streamlit_app", pageScriptHash: "page_hash" },
         { pageName: "page2", pageScriptHash: "page2_hash" },
@@ -290,10 +294,12 @@ describe("AppView element", () => {
     )
 
     const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
+      elements: new AppRoot(FAKE_SCRIPT_HASH, {
+        main,
+        sidebar,
+        event,
+        bottom,
+      }),
     })
     render(<AppView {...props} />)
 
@@ -410,10 +416,12 @@ describe("AppView element", () => {
         render(
           <AppView
             {...getProps({
-              elements: new AppRoot(
-                FAKE_SCRIPT_HASH,
-                new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-              ),
+              elements: new AppRoot(FAKE_SCRIPT_HASH, {
+                main: empty,
+                sidebar,
+                event: empty,
+                bottom: empty,
+              }),
               embedded: false, // Non-embedded
               appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
             })}
@@ -636,10 +644,12 @@ describe("AppView element", () => {
           )
 
           const props = getProps({
-            elements: new AppRoot(
-              FAKE_SCRIPT_HASH,
-              new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-            ),
+            elements: new AppRoot(FAKE_SCRIPT_HASH, {
+              main: empty,
+              sidebar,
+              event: empty,
+              bottom: empty,
+            }),
             embedded: true,
             showPadding: false,
           })
@@ -676,10 +686,12 @@ describe("AppView element", () => {
           ).mockReturnValue(getContextOutput({ showToolbar: false }))
 
           const props = getProps({
-            elements: new AppRoot(
-              FAKE_SCRIPT_HASH,
-              new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-            ),
+            elements: new AppRoot(FAKE_SCRIPT_HASH, {
+              main: empty,
+              sidebar,
+              event: empty,
+              bottom: empty,
+            }),
             embedded: true,
             showPadding: false,
             appLogo: null, // No header content, only sidebar
@@ -900,10 +912,12 @@ describe("AppView element", () => {
     )
 
     const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
+      elements: new AppRoot(FAKE_SCRIPT_HASH, {
+        main,
+        sidebar,
+        event,
+        bottom,
+      }),
     })
 
     render(<AppView {...props} />)
@@ -1113,10 +1127,12 @@ describe("AppView element", () => {
       )
 
       const props = getProps({
-        elements: new AppRoot(
-          FAKE_SCRIPT_HASH,
-          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-        ),
+        elements: new AppRoot(FAKE_SCRIPT_HASH, {
+          main: empty,
+          sidebar,
+          event: empty,
+          bottom: empty,
+        }),
         appLogo: logo,
         embedded: true,
       })
@@ -1252,10 +1268,12 @@ describe("AppView element", () => {
       )
 
       const props = getProps({
-        elements: new AppRoot(
-          FAKE_SCRIPT_HASH,
-          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-        ),
+        elements: new AppRoot(FAKE_SCRIPT_HASH, {
+          main: empty,
+          sidebar,
+          event: empty,
+          bottom: empty,
+        }),
       })
 
       const { rerender } = render(<AppView {...props} />)
@@ -1313,10 +1331,12 @@ describe("AppView element", () => {
       )
 
       const props = getProps({
-        elements: new AppRoot(
-          FAKE_SCRIPT_HASH,
-          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-        ),
+        elements: new AppRoot(FAKE_SCRIPT_HASH, {
+          main: empty,
+          sidebar,
+          event: empty,
+          bottom: empty,
+        }),
       })
 
       render(<AppView {...props} />)
@@ -1357,10 +1377,12 @@ describe("AppView element", () => {
       )
 
       const props = getProps({
-        elements: new AppRoot(
-          FAKE_SCRIPT_HASH,
-          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-        ),
+        elements: new AppRoot(FAKE_SCRIPT_HASH, {
+          main: empty,
+          sidebar,
+          event: empty,
+          bottom: empty,
+        }),
       })
 
       render(<AppView {...props} />)
@@ -1429,10 +1451,12 @@ describe("AppView element", () => {
       )
 
       const props = getProps({
-        elements: new AppRoot(
-          FAKE_SCRIPT_HASH,
-          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-        ),
+        elements: new AppRoot(FAKE_SCRIPT_HASH, {
+          main: empty,
+          sidebar,
+          event: empty,
+          bottom: empty,
+        }),
       })
 
       // Initially AUTO state, sidebar should be rendered and expanded
@@ -1486,10 +1510,12 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
-      elementsWithSidebar = new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      )
+      elementsWithSidebar = new AppRoot(FAKE_SCRIPT_HASH, {
+        main,
+        sidebar,
+        event,
+        bottom,
+      })
     })
 
     afterEach(() => {

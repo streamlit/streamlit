@@ -39,15 +39,12 @@ const BLOCK = block([
 ])
 
 // Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
-const ROOT = new AppRoot(
-  FAKE_SCRIPT_HASH,
-  new BlockNode(FAKE_SCRIPT_HASH, [
-    BLOCK,
-    new BlockNode(FAKE_SCRIPT_HASH),
-    new BlockNode(FAKE_SCRIPT_HASH),
-    new BlockNode(FAKE_SCRIPT_HASH),
-  ])
-)
+const ROOT = new AppRoot(FAKE_SCRIPT_HASH, {
+  main: BLOCK,
+  sidebar: new BlockNode(FAKE_SCRIPT_HASH),
+  event: new BlockNode(FAKE_SCRIPT_HASH),
+  bottom: new BlockNode(FAKE_SCRIPT_HASH),
+})
 
 describe("AppRoot.empty", () => {
   let windowSpy: MockInstance
@@ -88,7 +85,6 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(empty.event.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(empty.bottom.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
-    expect(empty.root.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
   })
 })
 

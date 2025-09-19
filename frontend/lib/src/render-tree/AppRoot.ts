@@ -52,11 +52,20 @@ interface AppLogo extends LogoMetadata {
   logo: Logo
 }
 
+type ChildName = "main" | "sidebar" | "event" | "bottom"
+
 /**
  * The root of our data tree. It contains the app's top-level BlockNodes.
  */
 export class AppRoot {
-  readonly root: BlockNode
+  readonly root: Record<ChildName, AppNode>
+
+  static readonly childOrder: ChildName[] = [
+    "main",
+    "sidebar",
+    "event",
+    "bottom",
+  ]
 
   /* The hash of the main script that creates this AppRoot. */
   readonly mainScriptHash: string
@@ -70,7 +79,6 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode,
     logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []
@@ -105,35 +113,16 @@ export class AppRoot {
       )
     }
 
-    const main = new BlockNode(
-      mainScriptHash,
-      mainNodes,
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
-
-    const sidebar =
-      sidebarElements ||
-      new BlockNode(
+    const children = {} as Record<ChildName, AppNode>
+    AppRoot.childOrder.forEach(childName => {
+      children[childName] = new BlockNode(
         mainScriptHash,
-        [],
+        // Preserve the main nodes for the main block
+        childName === "main" ? mainNodes : [],
         new BlockProto({ allowEmpty: true }),
         NO_SCRIPT_RUN_ID
       )
-
-    const event = new BlockNode(
-      mainScriptHash,
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
-
-    const bottom = new BlockNode(
-      mainScriptHash,
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
+    })
 
     // Persist logo between pages to avoid flicker (MPA V1 - Issue #8815)
     const appLogo = logo
@@ -144,16 +133,12 @@ export class AppRoot {
         }
       : null
 
-    return new AppRoot(
-      mainScriptHash,
-      new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
-      appLogo
-    )
+    return new AppRoot(mainScriptHash, children, appLogo)
   }
 
   public constructor(
     mainScriptHash: string,
-    root: BlockNode,
+    root: Record<ChildName, AppNode>,
     appLogo: AppLogo | null = null
   ) {
     this.mainScriptHash = mainScriptHash
@@ -163,11 +148,7 @@ export class AppRoot {
     // Verify that our root node has exactly 4 children: a 'main' block,
     // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
-      this.root.children.length !== 4 ||
-      isNullOrUndefined(this.main) ||
-      isNullOrUndefined(this.sidebar) ||
-      isNullOrUndefined(this.event) ||
-      isNullOrUndefined(this.bottom)
+      AppRoot.childOrder.some(childName => isNullOrUndefined(root[childName]))
     ) {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       throw new Error(`Invalid root node children! ${root}`)
@@ -175,23 +156,19 @@ export class AppRoot {
   }
 
   public get main(): BlockNode {
-    const [main] = this.root.children
-    return main as BlockNode
+    return this.root.main as BlockNode
   }
 
   public get sidebar(): BlockNode {
-    const [, sidebar] = this.root.children
-    return sidebar as BlockNode
+    return this.root.sidebar as BlockNode
   }
 
   public get event(): BlockNode {
-    const [, , event] = this.root.children
-    return event as BlockNode
+    return this.root.event as BlockNode
   }
 
   public get bottom(): BlockNode {
-    const [, , , bottom] = this.root.children
-    return bottom as BlockNode
+    return this.root.bottom as BlockNode
   }
 
   public get logo(): Logo | null {
@@ -203,6 +180,36 @@ export class AppRoot {
       logo,
       ...metadata,
     })
+  }
+
+  private getIndexedChild(index: number): AppNode {
+    return this.root[AppRoot.childOrder[index]]
+  }
+
+  private runActionOnChild<T extends AppNode>(
+    deltaPath: number[],
+    action: (child: T, deltaPath: number[]) => T | undefined
+  ): T | undefined {
+    if (deltaPath.length === 0) {
+      return undefined
+    }
+
+    return action(this.getIndexedChild(deltaPath[0]) as T, deltaPath.slice(1))
+  }
+
+  private runActionOnAllChildren(
+    deltaPath: number[],
+    action: (child: AppNode, deltaPath: number[]) => AppNode
+  ): Record<ChildName, AppNode> {
+    const children = {} as Record<ChildName, AppNode>
+    AppRoot.childOrder.forEach((childName, index) => {
+      if (deltaPath.length === 0 || deltaPath[0] !== index) {
+        children[childName] = this[childName]
+      } else {
+        children[childName] = action(this.root[childName], deltaPath.slice(1))
+      }
+    })
+    return children
   }
 
   public applyDelta(
@@ -268,7 +275,6 @@ export class AppRoot {
   filterMainScriptElements(mainScriptHash: string): AppRoot {
     // clears all nodes that are not associated with the mainScriptHash
     // Get the current script run id from one of the children
-    const currentScriptRunId = this.main.scriptRunId
     const main =
       this.main.filterMainScriptElements(mainScriptHash) ||
       new BlockNode(mainScriptHash)
@@ -286,12 +292,7 @@ export class AppRoot {
 
     return new AppRoot(
       mainScriptHash,
-      new BlockNode(
-        mainScriptHash,
-        [main, sidebar, event, bottom],
-        new BlockProto({ allowEmpty: true }),
-        currentScriptRunId
-      ),
+      { main, sidebar, event, bottom },
       appLogo
     )
   }
@@ -304,10 +305,12 @@ export class AppRoot {
       currentScriptRunId,
       fragmentIdsThisRun
     )
-    const newChildren = [this.main, this.sidebar, this.event, this.bottom].map(
-      node =>
-        this.ensureBlockNode(node.accept(visitor) as BlockNode | undefined)
-    )
+    const newChildren = {} as Record<ChildName, AppNode>
+    AppRoot.childOrder.forEach(childName => {
+      newChildren[childName] = this.ensureBlockNode(
+        this.root[childName].accept(visitor) as BlockNode | undefined
+      )
+    })
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
     const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
@@ -316,16 +319,7 @@ export class AppRoot {
         ? this.appLogo
         : null
 
-    return new AppRoot(
-      this.mainScriptHash,
-      new BlockNode(
-        this.mainScriptHash,
-        newChildren,
-        new BlockProto({ allowEmpty: true }),
-        currentScriptRunId
-      ),
-      appLogo
-    )
+    return new AppRoot(this.mainScriptHash, newChildren, appLogo)
   }
 
   /** Return a Set containing all Elements in the tree. */
@@ -358,7 +352,9 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
+        child.setIn(updatedDeltaPath, elementNode, scriptRunId)
+      ),
       this.appLogo
     )
   }
@@ -371,7 +367,10 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = this.root.getIn(deltaPath)
+    const existingNode = this.runActionOnChild(
+      deltaPath,
+      (child, updatedDeltaPath) => child.getIn(updatedDeltaPath)
+    )
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:
@@ -395,7 +394,9 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, blockNode, scriptRunId),
+      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
+        child.setIn(updatedDeltaPath, blockNode, scriptRunId)
+      ),
       this.appLogo
     )
   }
@@ -405,8 +406,14 @@ export class AppRoot {
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string
   ): AppRoot {
-    const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (isNullOrUndefined(existingNode)) {
+    const existingNode = this.runActionOnChild(
+      deltaPath,
+      (child, updatedDeltaPath) => child.getIn(updatedDeltaPath)
+    )
+    if (
+      isNullOrUndefined(existingNode) ||
+      !(existingNode instanceof ElementNode)
+    ) {
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
@@ -414,7 +421,9 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
+        child.setIn(updatedDeltaPath, elementNode, scriptRunId)
+      ),
       this.appLogo
     )
   }

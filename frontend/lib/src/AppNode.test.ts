@@ -43,15 +43,12 @@ const BLOCK = block([
 ])
 
 // Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
-const ROOT = new AppRoot(
-  FAKE_SCRIPT_HASH,
-  new BlockNode(FAKE_SCRIPT_HASH, [
-    BLOCK,
-    new BlockNode(FAKE_SCRIPT_HASH),
-    new BlockNode(FAKE_SCRIPT_HASH),
-    new BlockNode(FAKE_SCRIPT_HASH),
-  ])
-)
+const ROOT = new AppRoot(FAKE_SCRIPT_HASH, {
+  main: BLOCK,
+  sidebar: new BlockNode(FAKE_SCRIPT_HASH),
+  event: new BlockNode(FAKE_SCRIPT_HASH),
+  bottom: new BlockNode(FAKE_SCRIPT_HASH),
+})
 
 describe("AppNode.getIn", () => {
   it("handles shallow paths", () => {
@@ -505,7 +502,6 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(empty.event.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(empty.bottom.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
-    expect(empty.root.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
   })
 
   it("creates empty tree with no loading screen if query param is set", () => {
@@ -582,7 +578,7 @@ describe("AppRoot.empty", () => {
     expect(empty.logo).toBeNull()
 
     // Replicate .empty call in AppNav's clearPageElements for MPA V1
-    const empty2 = AppRoot.empty(FAKE_SCRIPT_HASH, false, undefined, logo)
+    const empty2 = AppRoot.empty(FAKE_SCRIPT_HASH, false, logo)
     expect(empty2.logo).not.toBeNull()
   })
 })
