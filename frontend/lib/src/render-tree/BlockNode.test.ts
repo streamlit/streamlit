@@ -16,6 +16,7 @@
 
 import { block, text } from "./test-utils"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
+import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -27,17 +28,17 @@ const BLOCK = block([
 
 describe("AppNode.getIn", () => {
   it("handles shallow paths", () => {
-    const node = BLOCK.getIn([0])
+    const node = GetNodeByDeltaPathVisitor.getNodeAtPath(BLOCK, [0])
     expect(node).toBeTextNode("1")
   })
 
   it("handles deep paths", () => {
-    const node = BLOCK.getIn([1, 0])
+    const node = GetNodeByDeltaPathVisitor.getNodeAtPath(BLOCK, [1, 0])
     expect(node).toBeTextNode("2")
   })
 
   it("returns undefined for invalid paths", () => {
-    const node = BLOCK.getIn([2, 3, 4])
+    const node = GetNodeByDeltaPathVisitor.getNodeAtPath(BLOCK, [2, 3, 4])
     expect(node).toBeUndefined()
   })
 })
@@ -92,7 +93,9 @@ describe("BlockNode.visit", () => {
 
     expect(result).not.toBe(originalNode)
     expect(result.children).toHaveLength(1)
-    expect(result.getIn([0])).toBeTextNode("transformed")
+    expect(GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])).toBeTextNode(
+      "transformed"
+    )
   })
 })
 

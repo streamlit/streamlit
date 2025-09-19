@@ -120,10 +120,6 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  public getIn(): AppNode | undefined {
-    return undefined
-  }
-
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string

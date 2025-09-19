@@ -81,12 +81,6 @@ export interface AppNode {
   readonly deltaMsgReceivedAt?: number
 
   /**
-   * Return the AppNode for the given index path, or undefined if the path
-   * is invalid.
-   */
-  getIn(path: number[]): AppNode | undefined
-
-  /**
    * Accept a visitor.
    */
   accept<T>(visitor: AppNodeVisitor<T>): T

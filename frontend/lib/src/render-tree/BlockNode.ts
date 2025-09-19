@@ -59,23 +59,6 @@ export class BlockNode implements AppNode {
     return this.children.length === 0
   }
 
-  public getIn(path: number[]): AppNode | undefined {
-    if (path.length === 0) {
-      return undefined
-    }
-
-    const childIndex = path[0]
-    if (childIndex < 0 || childIndex >= this.children.length) {
-      return undefined
-    }
-
-    if (path.length === 1) {
-      return this.children[childIndex]
-    }
-
-    return this.children[childIndex].getIn(path.slice(1))
-  }
-
   public accept<T>(visitor: AppNodeVisitor<T>): T {
     return visitor.visitBlockNode(this)
   }

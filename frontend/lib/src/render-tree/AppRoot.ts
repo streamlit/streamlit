@@ -39,6 +39,7 @@ import { ElementNode } from "./ElementNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
+import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
@@ -184,6 +185,16 @@ export class AppRoot {
     })
   }
 
+  private runActionOnAllChildren(
+    action: (child: AppNode) => AppNode
+  ): Record<ChildName, AppNode> {
+    const newChildren = {} as Record<ChildName, AppNode>
+    AppRoot.childOrder.forEach(childName => {
+      newChildren[childName] = action(this.root[childName])
+    })
+    return newChildren
+  }
+
   private getIndexedChild(index: number): AppNode {
     return this.root[AppRoot.childOrder[index]]
   }
@@ -199,7 +210,7 @@ export class AppRoot {
     return action(this.getIndexedChild(deltaPath[0]) as T, deltaPath.slice(1))
   }
 
-  private runActionOnAllChildren(
+  private runActionByDeltaPath(
     deltaPath: number[],
     action: (child: AppNode, deltaPath: number[]) => AppNode
   ): Record<ChildName, AppNode> {
@@ -212,6 +223,27 @@ export class AppRoot {
       }
     })
     return children
+  }
+
+  private findNodeByDeltaPath(deltaPath: number[]): AppNode | undefined {
+    return this.runActionOnChild(deltaPath, (child, updatedDeltaPath) =>
+      GetNodeByDeltaPathVisitor.getNodeAtPath(child, updatedDeltaPath)
+    )
+  }
+
+  private setNodeByDeltaPathForScriptRun(
+    deltaPath: number[],
+    node: AppNode,
+    scriptRunId: string
+  ): Record<ChildName, AppNode> {
+    return this.runActionByDeltaPath(deltaPath, (child, updatedDeltaPath) =>
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        child,
+        updatedDeltaPath,
+        node,
+        scriptRunId
+      )
+    )
   }
 
   public applyDelta(
@@ -278,12 +310,9 @@ export class AppRoot {
     // clears all nodes that are not associated with the mainScriptHash
     const visitor = new FilterMainScriptElementsVisitor(mainScriptHash)
 
-    const newChildren = {} as Record<ChildName, AppNode>
-    AppRoot.childOrder.forEach(childName => {
-      newChildren[childName] = this.ensureBlockNode(
-        this.root[childName].accept(visitor) as BlockNode | undefined
-      )
-    })
+    const newChildren = this.runActionOnAllChildren(child =>
+      this.ensureBlockNode(child.accept(visitor) as BlockNode | undefined)
+    )
 
     const appLogo =
       this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
@@ -299,12 +328,9 @@ export class AppRoot {
       currentScriptRunId,
       fragmentIdsThisRun
     )
-    const newChildren = {} as Record<ChildName, AppNode>
-    AppRoot.childOrder.forEach(childName => {
-      newChildren[childName] = this.ensureBlockNode(
-        this.root[childName].accept(visitor) as BlockNode | undefined
-      )
-    })
+    const newChildren = this.runActionOnAllChildren(child =>
+      this.ensureBlockNode(child.accept(visitor) as BlockNode | undefined)
+    )
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
     const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
@@ -346,14 +372,7 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        SetNodeByDeltaPathVisitor.setNodeAtPath(
-          child,
-          updatedDeltaPath,
-          elementNode,
-          scriptRunId
-        )
-      ),
+      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId),
       this.appLogo
     )
   }
@@ -366,10 +385,7 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = this.runActionOnChild(
-      deltaPath,
-      (child, updatedDeltaPath) => child.getIn(updatedDeltaPath)
-    )
+    const existingNode = this.findNodeByDeltaPath(deltaPath)
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:
@@ -393,14 +409,7 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        SetNodeByDeltaPathVisitor.setNodeAtPath(
-          child,
-          updatedDeltaPath,
-          blockNode,
-          scriptRunId
-        )
-      ),
+      this.setNodeByDeltaPathForScriptRun(deltaPath, blockNode, scriptRunId),
       this.appLogo
     )
   }
@@ -410,10 +419,7 @@ export class AppRoot {
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string
   ): AppRoot {
-    const existingNode = this.runActionOnChild(
-      deltaPath,
-      (child, updatedDeltaPath) => child.getIn(updatedDeltaPath)
-    )
+    const existingNode = this.findNodeByDeltaPath(deltaPath)
     if (
       isNullOrUndefined(existingNode) ||
       !(existingNode instanceof ElementNode)
@@ -425,14 +431,7 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.runActionOnAllChildren(deltaPath, (child, updatedDeltaPath) =>
-        SetNodeByDeltaPathVisitor.setNodeAtPath(
-          child,
-          updatedDeltaPath,
-          elementNode,
-          scriptRunId
-        )
-      ),
+      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId),
       this.appLogo
     )
   }
