@@ -145,11 +145,9 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
 @pytest.mark.skip_browser("firefox")
-def test_width_parameter(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-) -> None:
+def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Tests that width parameter works correctly."""
-    pydeck_charts = select_subtest(themed_app, "width_parameter_subtest")
+    pydeck_charts = select_subtest(app, "width_parameter_subtest")
 
     expect(pydeck_charts).to_have_count(2, timeout=15000)
 
