@@ -17,12 +17,12 @@
 import styled from "@emotion/styled"
 
 interface StyledGraphVizChartProps {
-  isFullScreen: boolean
-  useContainerWidth: boolean
+  shouldUseFullWidth: boolean
+  shouldUseFullHeight: boolean
 }
 
 export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
-  ({ theme, isFullScreen, useContainerWidth }) => ({
+  ({ theme, shouldUseFullWidth, shouldUseFullHeight }) => ({
     "& *": {
       fontFamily: theme.genericFonts.bodyFont,
       // Font sizes inside the SVG element are getting huge for some reason.
@@ -34,11 +34,11 @@ export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
     // Ensure SVG is allowed the full width/height in full screen mode
     "& svg": {
       maxWidth: "100%",
-      width: isFullScreen || useContainerWidth ? "100%" : "auto",
-      height: isFullScreen ? "100%" : "auto",
+      width: shouldUseFullWidth ? "100%" : "auto",
+      height: shouldUseFullHeight ? "100%" : "auto",
       borderRadius: theme.radii.default,
     },
-    width: isFullScreen || useContainerWidth ? "100%" : "auto",
-    height: isFullScreen ? "100%" : "auto",
+    width: shouldUseFullWidth ? "100%" : "auto",
+    height: shouldUseFullHeight ? "100%" : "auto",
   })
 )

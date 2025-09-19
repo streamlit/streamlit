@@ -1406,6 +1406,112 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "redTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for red-themed elements.
+
+        If this config is not provided, it will be derived from the redColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #BD4043 for light theme and #FF6C6C for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for orange-themed elements.
+
+        If this config is not provided, it will be derived from the orangeColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #E2660C for light theme and #FFBD45 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for yellow-themed elements.
+
+        If this config is not provided, it will be derived from the yellowColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #926C05 for light theme and #FFFFC2 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for blue-themed elements.
+
+        If this config is not provided, it will be derived from the blueColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #0054A3 for light theme and #3D9DF3 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for green-themed elements.
+
+        If this config is not provided, it will be derived from the greenColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #158237 for light theme and #5CE488 for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for violet-themed elements.
+
+        If this config is not provided, it will be derived from the violetColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #583F84 for light theme and #B27EFF for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "grayTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for gray-themed elements.
+
+        If this config is not provided, it will be derived from the grayColor config
+        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+
+        If neither is provided, it will fallback to the default value.
+
+        By default, this is #31333F with 60% opacity for light theme and #FAFAFA with
+        60% opacity for dark theme.
+    """,
+)
+
+_create_theme_options(
     "linkColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""

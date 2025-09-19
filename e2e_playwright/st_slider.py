@@ -66,11 +66,11 @@ w4 = st.slider("Label 4", 10000, 25000, 10000, disabled=True)
 st.write("Value 4:", w4)
 
 # Slider 8
-w5 = st.slider("Label 5", 0, 100, 25, 1, label_visibility="hidden")
+w5 = st.slider("Label 5", 0, 100, 25, 1, label_visibility="hidden", key="slider_5")
 st.write("Value 5:", w5)
 
 # Slider 9
-w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
+w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed", key="slider_6")
 st.write("Value 6:", w6)
 
 # Slider 10
@@ -160,7 +160,7 @@ st.slider(
     "Label 14 - Overlapping near the left",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 10, 1e6 + 14),
+    value=(1e6 + 6, 1e6 + 10),
 )
 
 # Slider 18
@@ -176,7 +176,7 @@ st.slider(
     "Label 16 - Overlapping near the right",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 86, 1e6 + 90),
+    value=(1e6 + 88, 1e6 + 92),
 )
 
 # Slider 20

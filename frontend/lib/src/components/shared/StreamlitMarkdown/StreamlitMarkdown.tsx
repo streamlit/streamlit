@@ -353,7 +353,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const codeText = String(children).replace(/^\n/, "").replace(/\n$/, "")
 
-  const language = (match && match[1]) || ""
+  const language = match?.[1] || ""
   return !inline ? (
     <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
       {codeText}
@@ -707,7 +707,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href && href.startsWith("#")) {
+  if (href?.startsWith("#")) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }

@@ -113,3 +113,20 @@ st.subheader("Width Parameters")
 st.graphviz_chart(dot_code, width="content")
 st.graphviz_chart(dot_code, width="stretch")
 st.graphviz_chart(dot_code, width=100)
+
+st.subheader("Height Parameters")
+
+st.write("height=content (default)")
+st.graphviz_chart(dot_code, height="content")
+
+st.write("height=stretch")
+with st.container(border=True, height=400):
+    st.graphviz_chart(dot_code, height="stretch")
+
+st.write("height=200")
+st.graphviz_chart(dot_code, height=200)
+
+st.subheader("Combined Width and Height")
+
+st.write("width=300, height=150")
+st.graphviz_chart(dot_code, width=300, height=150)

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import decimal
+
 import numpy as np
 
 import streamlit as st
@@ -78,7 +80,7 @@ with col1:
     st.metric(
         label="Example metric",
         help="Something should feel right",
-        value=150.59,
+        value=decimal.Decimal("150.59"),
         delta="Very high",
     )
 

@@ -180,10 +180,7 @@ function generateTableCell(
     textAlign: isNumericType(contentType) ? "right" : "left",
   }
 
-  if (
-    formattedContent &&
-    formattedContent.endsWith(`<span class="pd-t"></span>`)
-  ) {
+  if (formattedContent?.endsWith(`<span class="pd-t"></span>`)) {
     // This is a bit hacky, but to support the Pandas Styler's tooltip feature,
     // we need to convert the specific HTML element (used for tooltips) from
     // the display value into an actual span element.

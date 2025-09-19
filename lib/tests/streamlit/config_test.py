@@ -147,7 +147,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             RuntimeError,
-            match="Complex config options require doc strings for their description.",
+            match=r"Complex config options require doc strings for their description.",
         ):
 
             @ConfigOption("_test.noDocString")
@@ -158,7 +158,7 @@ class ConfigTest(unittest.TestCase):
         """Test setting an invalid config section."""
         with pytest.raises(
             ValueError,
-            match='Key "_test.myParam." has invalid format.',
+            match=r'Key "_test.myParam." has invalid format.',
         ):
             ConfigOption("_test.myParam.")
 
@@ -171,7 +171,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config section using _create_section."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define section "_test2" twice.',
+            match=r'Cannot define section "_test2" twice.',
         ):
             config._create_section("_test2", "A test section.")
             config._create_section("_test2", "A test section.")
@@ -180,7 +180,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config option using _create_option."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define option "_test.overwriteKey" twice.',
+            match=r'Cannot define option "_test.overwriteKey" twice.',
         ):
             config._create_option("_test.overwriteKey")
             config._create_option("_test.overwriteKey")
@@ -193,7 +193,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             ValueError,
-            match='Key "_test.snake_case" has invalid format.',
+            match=r'Key "_test.snake_case" has invalid format.',
         ):
             config._create_option("_test.snake_case")
 
@@ -551,6 +551,13 @@ class ConfigTest(unittest.TestCase):
                 "theme.greenBackgroundColor",
                 "theme.violetBackgroundColor",
                 "theme.grayBackgroundColor",
+                "theme.redTextColor",
+                "theme.orangeTextColor",
+                "theme.yellowTextColor",
+                "theme.blueTextColor",
+                "theme.greenTextColor",
+                "theme.violetTextColor",
+                "theme.grayTextColor",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -585,6 +592,13 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.greenBackgroundColor",
                 "theme.sidebar.violetBackgroundColor",
                 "theme.sidebar.grayBackgroundColor",
+                "theme.sidebar.redTextColor",
+                "theme.sidebar.orangeTextColor",
+                "theme.sidebar.yellowTextColor",
+                "theme.sidebar.blueTextColor",
+                "theme.sidebar.greenTextColor",
+                "theme.sidebar.violetTextColor",
+                "theme.sidebar.grayTextColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -643,7 +657,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.port", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="server.port does not work when global.developmentMode is true.",
+            match=r"server.port does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -660,7 +674,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("browser.serverPort", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="browser.serverPort does not work when global.developmentMode is true.",
+            match=r"browser.serverPort does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -718,7 +732,7 @@ class ConfigTest(unittest.TestCase):
         )
         with pytest.raises(
             RuntimeError,
-            match="had multiple mappings.*duplicate",
+            match=r"had multiple mappings.*duplicate",
         ):
             config._parse_trusted_user_headers()
 
@@ -836,6 +850,13 @@ class ConfigTest(unittest.TestCase):
             "greenBackgroundColor": None,
             "violetBackgroundColor": None,
             "grayBackgroundColor": None,
+            "redTextColor": None,
+            "orangeTextColor": None,
+            "yellowTextColor": None,
+            "blueTextColor": None,
+            "greenTextColor": None,
+            "violetTextColor": None,
+            "grayTextColor": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -902,6 +923,13 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.greenBackgroundColor", "#5ce488", "test")
         config._set_option("theme.violetBackgroundColor", "#b27eff", "test")
         config._set_option("theme.grayBackgroundColor", "#bfc5d3", "test")
+        config._set_option("theme.redTextColor", "#ffabab", "test")
+        config._set_option("theme.orangeTextColor", "#ffe08e", "test")
+        config._set_option("theme.yellowTextColor", "#ffff7d", "test")
+        config._set_option("theme.blueTextColor", "#83c9ff", "test")
+        config._set_option("theme.greenTextColor", "#7defa1", "test")
+        config._set_option("theme.violetTextColor", "#c89dff", "test")
+        config._set_option("theme.grayTextColor", "#d5dae5", "test")
 
         expected = {
             "base": "dark",
@@ -958,6 +986,13 @@ class ConfigTest(unittest.TestCase):
             "greenBackgroundColor": "#5ce488",
             "violetBackgroundColor": "#b27eff",
             "grayBackgroundColor": "#bfc5d3",
+            "redTextColor": "#ffabab",
+            "orangeTextColor": "#ffe08e",
+            "yellowTextColor": "#ffff7d",
+            "blueTextColor": "#83c9ff",
+            "greenTextColor": "#7defa1",
+            "violetTextColor": "#c89dff",
+            "grayTextColor": "#d5dae5",
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -1003,6 +1038,13 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.greenBackgroundColor", "#21c354", "test")
         config._set_option("theme.sidebar.violetBackgroundColor", "#803df5", "test")
         config._set_option("theme.sidebar.grayBackgroundColor", "#808495", "test")
+        config._set_option("theme.sidebar.redTextColor", "#ff6c6c", "test")
+        config._set_option("theme.sidebar.orangeTextColor", "#ffbd45", "test")
+        config._set_option("theme.sidebar.yellowTextColor", "#fff835", "test")
+        config._set_option("theme.sidebar.blueTextColor", "#3d9df3", "test")
+        config._set_option("theme.sidebar.greenTextColor", "#3dd56d", "test")
+        config._set_option("theme.sidebar.violetTextColor", "#9a5dff", "test")
+        config._set_option("theme.sidebar.grayTextColor", "#a3a8b8", "test")
 
         expected = {
             "primaryColor": "#FFF000",
@@ -1039,6 +1081,13 @@ class ConfigTest(unittest.TestCase):
             "greenBackgroundColor": "#21c354",
             "violetBackgroundColor": "#803df5",
             "grayBackgroundColor": "#808495",
+            "redTextColor": "#ff6c6c",
+            "orangeTextColor": "#ffbd45",
+            "yellowTextColor": "#fff835",
+            "blueTextColor": "#3d9df3",
+            "greenTextColor": "#3dd56d",
+            "violetTextColor": "#9a5dff",
+            "grayTextColor": "#a3a8b8",
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 
