@@ -780,6 +780,47 @@ class DataframeUtilTest(unittest.TestCase):
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
 
+    @parameterized.expand(
+        [
+            (
+                "default_range_index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"]),
+                True,
+            ),
+            (
+                "explicit_range_index",
+                pd.DataFrame(
+                    [[1, 2], [3, 4]], columns=["a", "b"], index=pd.RangeIndex(5, 7)
+                ),
+                True,
+            ),
+            (
+                "string_index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"], index=["x", "y"]),
+                False,
+            ),
+            (
+                "int64index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"], index=[0, 1]),
+                False,
+            ),
+            (
+                "multiindex",
+                pd.DataFrame(
+                    [[1, 2], [3, 4]],
+                    columns=["a", "b"],
+                    index=pd.MultiIndex.from_product([[0, 1], ["x", "y"]])[:2],
+                ),
+                False,
+            ),
+        ]
+    )
+    def test_has_range_index(
+        self, _name: str, df: pd.DataFrame, expected: bool
+    ) -> None:
+        """Test `has_range_index` correctly identifies RangeIndex vs others."""
+        assert dataframe_util.has_range_index(df) is expected
+
 
 class TestArrowTruncation(DeltaGeneratorTestCase):
     """Test class for the automatic arrow truncation feature."""
