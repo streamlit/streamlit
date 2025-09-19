@@ -25,6 +25,7 @@ import {
   NO_SCRIPT_RUN_ID,
   text,
 } from "./test-utils"
+import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 
 describe("ElementNode.quiverElement", () => {
   it("returns a quiverElement (arrowTable)", () => {
@@ -185,5 +186,28 @@ describe("ElementNode.visit", () => {
     const result = node.accept(nullVisitor)
 
     expect(result).toBeUndefined()
+  })
+})
+
+describe("ElementNode with ElementsSetVisitor", () => {
+  it("can be visited by ElementsSetVisitor to collect elements", () => {
+    const node = text("test")
+    const visitor = new ElementsSetVisitor()
+
+    const result = node.accept(visitor)
+
+    expect(result.size).toBe(1)
+    expect(result.has(node.element)).toBe(true)
+    expect(visitor.elements.size).toBe(1)
+    expect(visitor.elements.has(node.element)).toBe(true)
+  })
+
+  it("works with ElementsSetVisitor static method", () => {
+    const node = text("test")
+
+    const elements = ElementsSetVisitor.collectElements(node)
+
+    expect(elements.size).toBe(1)
+    expect(elements.has(node.element)).toBe(true)
   })
 })

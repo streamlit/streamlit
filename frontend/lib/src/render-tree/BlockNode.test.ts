@@ -15,6 +15,7 @@
  */
 
 import { block, NO_SCRIPT_RUN_ID, text } from "./test-utils"
+import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -121,5 +122,48 @@ describe("BlockNode.visit", () => {
     expect(result).not.toBe(originalNode)
     expect(result.children).toHaveLength(1)
     expect(result.getIn([0])).toBeTextNode("transformed")
+  })
+})
+
+describe("BlockNode with ElementsSetVisitor", () => {
+  it("can be visited by ElementsSetVisitor to collect elements", () => {
+    const child1 = text("child1")
+    const child2 = text("child2")
+    const node = block([child1, child2])
+    const visitor = new ElementsSetVisitor()
+
+    const result = node.accept(visitor)
+
+    expect(result.size).toBe(2)
+    expect(result.has(child1.element)).toBe(true)
+    expect(result.has(child2.element)).toBe(true)
+    expect(visitor.elements.size).toBe(2)
+    expect(visitor.elements.has(child1.element)).toBe(true)
+    expect(visitor.elements.has(child2.element)).toBe(true)
+  })
+
+  it("works with ElementsSetVisitor static method", () => {
+    const child1 = text("child1")
+    const child2 = text("child2")
+    const node = block([child1, child2])
+
+    const elements = ElementsSetVisitor.collectElements(node)
+
+    expect(elements.size).toBe(2)
+    expect(elements.has(child1.element)).toBe(true)
+    expect(elements.has(child2.element)).toBe(true)
+  })
+
+  it("handles nested blocks with ElementsSetVisitor", () => {
+    const innerElement = text("inner")
+    const outerElement = text("outer")
+    const innerBlock = block([innerElement])
+    const outerBlock = block([outerElement, innerBlock])
+
+    const elements = ElementsSetVisitor.collectElements(outerBlock)
+
+    expect(elements.size).toBe(2)
+    expect(elements.has(innerElement.element)).toBe(true)
+    expect(elements.has(outerElement.element)).toBe(true)
   })
 })

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { Element } from "@streamlit/protobuf"
-
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
@@ -99,13 +97,6 @@ export interface AppNode {
    * associated with the mainScriptHash.
    */
   filterMainScriptElements(mainScriptHash: string): AppNode | undefined
-
-  /**
-   * Return a Set of all the Elements contained in the tree.
-   * If an existing Set is passed in, that Set will be mutated and returned.
-   * Otherwise, a new Set will be created and will be returned.
-   */
-  getElements(elementSet?: Set<Element>): Set<Element>
 
   /**
    * Accept a visitor.
