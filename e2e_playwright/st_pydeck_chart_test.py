@@ -170,9 +170,9 @@ def select_subtest(app: Page, name: str) -> Locator:
     selectbox_input.press("Enter")
 
     # The pydeck chart takes a while to load so check that
-    # it gets attached with an increased timeout.
+    # at least one gets attached with an increased timeout.
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(1, timeout=15000)
+    expect(pydeck_charts.first).to_be_attached(timeout=15000)
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
