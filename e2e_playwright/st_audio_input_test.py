@@ -408,3 +408,93 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
         audio_input.get_by_text("An error has occurred, please try again.")
     ).to_be_visible()
     assert_snapshot(audio_input, name="st_audio_input-error_state")
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_rapid_re_recordings(app: Page):
+    """Test that rapid re-recordings work correctly without race conditions."""
+    grant_microphone_permissions(app)
+
+    audio_input = get_audio_input(app, MAIN)
+
+    # Do 3 rapid recordings - each new one should replace the previous
+    for i in range(3):
+        # Use the specific aria-label selector to avoid ambiguity
+        record_button = audio_input.locator('[aria-label="Record"]')
+        record_button.click()
+        app.wait_for_timeout(500)  # Record for 0.5 seconds
+
+        stop_button = audio_input.get_by_role("button", name="Stop recording")
+        stop_button.click()
+
+        if i < 2:  # Don't wait after last recording
+            # Start next recording immediately
+            app.wait_for_timeout(100)
+
+    # Wait for processing to complete
+    wait_for_app_run(app)
+    app.wait_for_timeout(2000)  # Allow time for uploads to finish
+
+    # Check that we have an audio recording (the last one)
+    # The test passes if rapid re-recordings don't cause errors or race conditions
+    expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
+    """Test that blob URLs are properly revoked when uploads are aborted to prevent memory leaks."""
+    grant_microphone_permissions(app)
+
+    # Inject tracking code for blob URL creation and revocation
+    app.evaluate("""
+        window.blobTracking = {created: [], revoked: []};
+        const origCreate = URL.createObjectURL;
+        const origRevoke = URL.revokeObjectURL;
+
+        URL.createObjectURL = function(blob) {
+            const url = origCreate.call(this, blob);
+            window.blobTracking.created.push(url);
+            console.log('Created blob URL:', url);
+            return url;
+        };
+
+        URL.revokeObjectURL = function(url) {
+            window.blobTracking.revoked.push(url);
+            console.log('Revoked blob URL:', url);
+            return origRevoke.call(this, url);
+        };
+    """)
+
+    audio_input = get_audio_input(app, MAIN)
+
+    # Create 3 recordings rapidly - each should clean up the previous blob URL
+    for i in range(3):
+        audio_input.locator('[aria-label="Record"]').click()
+        app.wait_for_timeout(300)  # Brief recording
+        audio_input.get_by_role("button", name="Stop recording").click()
+
+        if i < 2:
+            app.wait_for_timeout(100)  # Small gap before next recording
+
+    # Wait for processing
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    # Check cleanup
+    tracking = app.evaluate("window.blobTracking")
+
+    # Should have created at least 3 blob URLs (one per recording)
+    assert len(tracking["created"]) >= 3, (
+        f"Expected at least 3 blob URLs created, got {len(tracking['created'])}"
+    )
+
+    # Should have revoked at least the first 2 (keeping only the last)
+    # The exact number may vary due to internal WaveSurfer behavior
+    assert len(tracking["revoked"]) >= 2, (
+        f"Expected at least 2 blob URLs revoked, got {len(tracking['revoked'])}"
+    )
+
+    # Verify that earlier created URLs were revoked
+    for i in range(min(2, len(tracking["created"]) - 1)):
+        url = tracking["created"][i]
+        assert url in tracking["revoked"], f"Blob URL {url} should have been revoked"

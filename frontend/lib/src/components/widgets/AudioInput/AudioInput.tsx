@@ -239,6 +239,7 @@ const AudioInput: React.FC<Props> = ({
             widgetMgr,
             widgetInfo: { id: widgetId, formId: widgetFormId },
             fragmentId,
+            signal: abortController.signal,
           })
 
           // Check if aborted before processing results
