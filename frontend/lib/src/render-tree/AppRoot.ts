@@ -38,6 +38,7 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
+import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -274,27 +275,19 @@ export class AppRoot {
 
   filterMainScriptElements(mainScriptHash: string): AppRoot {
     // clears all nodes that are not associated with the mainScriptHash
-    // Get the current script run id from one of the children
-    const main =
-      this.main.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const sidebar =
-      this.sidebar.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const event =
-      this.event.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const bottom =
-      this.bottom.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
+    const visitor = new FilterMainScriptElementsVisitor(mainScriptHash)
+
+    const newChildren = {} as Record<ChildName, AppNode>
+    AppRoot.childOrder.forEach(childName => {
+      newChildren[childName] = this.ensureBlockNode(
+        this.root[childName].accept(visitor) as BlockNode | undefined
+      )
+    })
+
     const appLogo =
       this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
 
-    return new AppRoot(
-      mainScriptHash,
-      { main, sidebar, event, bottom },
-      appLogo
-    )
+    return new AppRoot(mainScriptHash, newChildren, appLogo)
   }
 
   public clearStaleNodes(

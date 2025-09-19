@@ -16,8 +16,6 @@
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { notUndefined } from "~lib/util/utils"
-
 import { AppNode } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
@@ -108,26 +106,6 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       scriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
-  }
-
-  filterMainScriptElements(mainScriptHash: string): AppNode | undefined {
-    if (this.activeScriptHash !== mainScriptHash) {
-      return undefined
-    }
-
-    // Recursively clear our children.
-    const newChildren = this.children
-      .map(child => child.filterMainScriptElements(mainScriptHash))
-      .filter(notUndefined)
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      this.scriptRunId,
       this.fragmentId,
       this.deltaMsgReceivedAt
     )
