@@ -2122,6 +2122,80 @@ class VegaLiteChartWidthTest(DeltaGeneratorTestCase):
         assert el.width_config.use_content is True
 
 
+class VegaLiteChartHeightTest(DeltaGeneratorTestCase):
+    """Test vega_lite_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (400, "pixel_height", 400),
+        ]
+    )
+    def test_vega_lite_chart_height_combinations(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test vega_lite_chart with various height combinations."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+
+        st.vega_lite_chart(df, spec, height=height)
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            ("height", "invalid_height"),
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_height_validation_errors(self, param_name: str, invalid_value: str | int):
+        """Test that invalid height values raise validation errors."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+
+        with pytest.raises(StreamlitAPIException):
+            st.vega_lite_chart(df, spec, height=invalid_value)
+
+    def test_default_height_content(self):
+        """Test that default height is 'content'."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+
+        st.vega_lite_chart(df, spec)  # No height specified
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.height_config.WhichOneof("height_spec") == "use_content"
+        assert el.height_config.use_content is True
+
+
 class VegaUtilitiesTest(unittest.TestCase):
     """Test vega chart utility methods."""
 

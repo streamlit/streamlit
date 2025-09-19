@@ -1798,6 +1798,7 @@ class VegaChartsMixin:
         spec: VegaLiteSpec | None = None,
         *,
         width: Width = "stretch",
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1814,6 +1815,7 @@ class VegaChartsMixin:
         spec: VegaLiteSpec | None = None,
         *,
         width: Width = "stretch",
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1829,6 +1831,7 @@ class VegaChartsMixin:
         spec: VegaLiteSpec | None = None,
         *,
         width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1946,6 +1949,13 @@ class VegaChartsMixin:
             in the encoding), horizontal concatenation charts (``"hconcat"``),
             and repeat charts (``"repeat"``).
 
+        height : "stretch", "content", or int
+            How to size the chart's height. Can be one of:
+
+            - ``"content"`` (default): Size the chart to fit its contents.
+            - ``"stretch"``: Expand to the height of the parent container.
+            - An integer: Set the chart height to this many pixels.
+
         **kwargs : any
             The Vega-Lite spec for the chart as keywords. This is an alternative
             to ``spec``.
@@ -2018,6 +2028,7 @@ class VegaChartsMixin:
             on_select=on_select,
             selection_mode=selection_mode,
             width=width,
+            height=height,
             **kwargs,
         )
 

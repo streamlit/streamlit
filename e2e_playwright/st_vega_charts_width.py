@@ -26,7 +26,7 @@ simple_spec = {
     },
 }
 
-st.header("Vega Charts Dimensions Tests")
+st.header("Vega Charts Width Tests")
 
 # Test default width behavior for different chart types
 st.subheader("Default Width Behavior Tests")

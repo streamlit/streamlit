@@ -78,7 +78,7 @@ def test_vega_chart_width_content_snapshot(
     expect(vega_lite_charts.nth(7)).to_be_visible()
     assert_snapshot(
         vega_lite_charts.nth(7),
-        name="st_vega_charts_dimensions-width_content",
+        name="st_vega_charts_width-width_content",
     )
 
 
@@ -92,7 +92,7 @@ def test_vega_chart_width_stretch_snapshot(
     expect(vega_lite_charts.nth(8)).to_be_visible()
     assert_snapshot(
         vega_lite_charts.nth(8),
-        name="st_vega_charts_dimensions-width_stretch",
+        name="st_vega_charts_width-width_stretch",
     )
 
 
@@ -106,7 +106,7 @@ def test_vega_chart_width_400px_snapshot(
     expect(vega_lite_charts.nth(9)).to_be_visible()
     assert_snapshot(
         vega_lite_charts.nth(9),
-        name="st_vega_charts_dimensions-width_400px",
+        name="st_vega_charts_width-width_400px",
     )
 
 
