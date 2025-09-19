@@ -297,9 +297,7 @@ export function PlotlyChart({
         // width in this case.
         plotlyFigure.layout?.width
       : Math.max(
-          element.useContainerWidth
-            ? width
-            : Math.min(initialFigureSpec.layout.width ?? width, width ?? 0),
+          width,
           // Apply a min width to prevent the chart running into issues with negative
           // width values if the browser window is too small:
           MIN_WIDTH

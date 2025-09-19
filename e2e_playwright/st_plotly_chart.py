@@ -42,11 +42,9 @@ st.plotly_chart(fig_bubble, theme=None)
 
 # Bubble Chart
 # Tests Discrete coloring with streamlit theme
-# uses container width when use_container_width flag is True
 fig_bubble.update_layout(height=300, width=300)
 st.plotly_chart(
     fig_bubble,
-    use_container_width=True,
     theme="streamlit",
     # Also test custom toolbar modification:
     config={"modeBarButtonsToRemove": ["zoom"], "modeBarButtonsToAdd": ["drawline"]},
@@ -132,8 +130,8 @@ fig_waterfall = go.Figure(
 fig_waterfall.update_layout(
     title="Profit and loss statement 2018", height=300, width=300, showlegend=True
 )
-# uses figure height and width when use_container_width is False
-st.plotly_chart(fig_waterfall, use_container_width=False, theme="streamlit")
+# uses figure height and width when width is "content"
+st.plotly_chart(fig_waterfall, width="content", theme="streamlit")
 
 # Ternary Chart
 df = px.data.election()
@@ -254,16 +252,29 @@ fig.update_layout(
 )
 st.plotly_chart(fig, theme="streamlit")
 
-data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
+# Width parameter tests
+st.write("## Width Parameter Tests")
 
-fig = px.line(data, height=100, width=300)
-fig.update_xaxes(visible=False, fixedrange=True)
-fig.update_yaxes(visible=False, fixedrange=True)
-fig.update_layout(annotations=[], overwrite=True)
-fig.update_layout(showlegend=False, margin={"t": 10, "l": 10, "b": 10, "r": 10})
+# Create a simple chart for width testing
+simple_fig = go.Figure()
+simple_fig.add_trace(
+    go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17], name="Simple Chart")
+)
+simple_fig.update_layout(height=200, width=500, title="Chart with width='content':")
 
-# uses figure height and width when use_container_width is False
-st.plotly_chart(fig, use_container_width=False, theme=None)
+st.plotly_chart(simple_fig, width="content", theme="streamlit")
 
-# uses container width when use_container_width flag is True
-st.plotly_chart(fig, use_container_width=True, theme=None)
+simple_fig.update_layout(title="Chart with width='stretch':")
+st.plotly_chart(simple_fig, width="stretch", theme="streamlit")
+
+simple_fig.update_layout(title="Chart with width=400:")
+st.plotly_chart(simple_fig, width=400, theme="streamlit")
+
+large_fig = go.Figure()
+large_fig.add_trace(
+    go.Scatter(x=[1, 2, 3, 4, 5, 6], y=[10, 15, 13, 17, 20, 18], name="Large Chart")
+)
+large_fig.update_layout(
+    height=400, width=1000, title="Chart with figure width=1000 and width='content':"
+)
+st.plotly_chart(large_fig, width="content", theme="streamlit")

@@ -60,11 +60,6 @@ const WIDTH_STRETCH_OVERRIDE = [
   // Because of how width is handled for custom components, we need the
   // element wrapper to be full width.
   "componentInstance",
-  // TODO (lawilby): This can probably be removed once width is
-  // implemented for plotly charts. But currently, it seems like when
-  // we have use_container_width=False and the minWidth change the image
-  // doesn't render large enough.
-  "plotlyChart",
   // Without this style, the skeleton width relies on the flex container that
   // wraps the page contents having align-items: stretch. There was a regression
   // where this default was changed. It is more robust to ensure that the skeleton
