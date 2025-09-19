@@ -741,6 +741,7 @@ def _mock_get_options_for_section(
         "greenTextColor": "#7defa1",
         "violetTextColor": "#c89dff",
         "grayTextColor": "#d5dae5",
+        "codeTextColor": "#7defa1",
     }
 
     if overrides.get("sidebar") is not None:
@@ -793,6 +794,7 @@ def _mock_get_options_for_section(
         "showWidgetBorder": True,
         "showSidebarBorder": True,
         "textColor": "black",
+        "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
         "chartCategoricalColors": [
@@ -1300,6 +1302,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1364,6 +1367,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1428,6 +1432,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showWidgetBorder": None,
                     "showSidebarBorder": None,
                     "textColor": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1472,6 +1477,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "secondaryBackgroundColor": None,
                         "showWidgetBorder": None,
                         "textColor": None,
+                        "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
                         "redColor": None,
@@ -1647,6 +1653,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.green_text_color == "#7defa1"
         assert new_session_msg.custom_theme.violet_text_color == "#c89dff"
         assert new_session_msg.custom_theme.gray_text_color == "#d5dae5"
+        assert new_session_msg.custom_theme.code_text_color == "#09ab3b"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",

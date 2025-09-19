@@ -1529,6 +1529,19 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "codeTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Text color used for code blocks.
+
+        By default, this is "#158237" for light theme and "#5ce488" for dark theme.
+
+        If this config is not provided, it will use the greenTextColor config value, or the
+        value derived from the greenColor config.
+    """,
+)
+
+_create_theme_options(
     "codeBackgroundColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""

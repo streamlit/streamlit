@@ -532,6 +532,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.showWidgetBorder",
                 "theme.linkColor",
                 "theme.linkUnderline",
+                "theme.codeTextColor",
                 "theme.codeBackgroundColor",
                 "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
@@ -576,6 +577,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.showWidgetBorder",
                 "theme.sidebar.linkColor",
                 "theme.sidebar.linkUnderline",
+                "theme.sidebar.codeTextColor",
                 "theme.sidebar.codeBackgroundColor",
                 "theme.sidebar.dataframeHeaderBackgroundColor",
                 "theme.sidebar.redColor",
@@ -829,6 +831,7 @@ class ConfigTest(unittest.TestCase):
             "fontFaces": None,
             "baseFontSize": None,
             "baseFontWeight": None,
+            "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
@@ -876,6 +879,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.showWidgetBorder", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
         config._set_option("theme.linkUnderline", False, "test")
+        config._set_option("theme.codeTextColor", "#158237", "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
         config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
         config._set_option("theme.font", "Inter", "test")
@@ -958,6 +962,7 @@ class ConfigTest(unittest.TestCase):
                 "1.25rem",
             ],
             "headingFontWeights": [700, 600, 500],
+            "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
             "fontFaces": [
@@ -1020,6 +1025,7 @@ class ConfigTest(unittest.TestCase):
             "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
         )
         config._set_option("theme.sidebar.headingFontWeights", [600, 500, 500], "test")
+        config._set_option("theme.sidebar.codeTextColor", "#158237", "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
@@ -1065,6 +1071,7 @@ class ConfigTest(unittest.TestCase):
             "codeFontWeight": 600,
             "headingFontSizes": ["2.875rem", "2.75rem"],
             "headingFontWeights": [600, 500, 500],
+            "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
             "redColor": "#7d353b",
