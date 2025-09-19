@@ -814,8 +814,6 @@ class VegaChartsMixin:
             use_container_width=(width == "stretch"),
         )
 
-        validate_width(width, allow_content=True)
-        validate_height(height, allow_content=True)
         return cast(
             "DeltaGenerator",
             self._altair_chart(
@@ -1799,6 +1797,7 @@ class VegaChartsMixin:
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
+        width: Width = "stretch",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1814,6 +1813,7 @@ class VegaChartsMixin:
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
+        width: Width = "stretch",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1828,6 +1828,7 @@ class VegaChartsMixin:
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
+        width: Width | None = None,
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1865,6 +1866,12 @@ class VegaChartsMixin:
             - ``False``: Streamlit sets the width of the chart to fit its
               contents according to the plotting library, up to the width of
               the parent container.
+
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and ``width="content"`` instead of ``use_container_width=False``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1923,6 +1930,22 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
+        width : "stretch", "content", or int
+            How to size the chart's width. Can be one of:
+
+            - ``"stretch"``: Expand to the width of the parent container.
+              This is the default for most charts.
+            - ``"content"``: Size the chart to fit its contents, up to the width
+              of the parent container. This is the default for facet charts,
+              horizontal concatenation charts, and repeat charts.
+            - An integer: Set the chart width to this many pixels.
+
+            If not specified, Streamlit automatically chooses ``"stretch"`` for
+            regular charts and ``"content"`` for facet charts (charts with
+            ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
+            in the encoding), horizontal concatenation charts (``"hconcat"``),
+            and repeat charts (``"repeat"``).
+
         **kwargs : any
             The Vega-Lite spec for the chart as keywords. This is an alternative
             to ``spec``.
@@ -1967,6 +1990,25 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                # This preserves the existing behavior of setting use_container_width
+                # to False combined with an integer width (consistent with line_chart etc).
+                width = "content"
+
         return self._vega_lite_chart(
             data=data,
             spec=spec,
@@ -1975,6 +2017,7 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            width=width,
             **kwargs,
         )
 
@@ -2035,7 +2078,6 @@ class VegaChartsMixin:
 
         See the `vega_lite_chart` method docstring for more information.
         """
-
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
@@ -2074,20 +2116,22 @@ class VegaChartsMixin:
         if spec is None:
             spec = {}
 
-        # Set the default value for `use_container_width`.
+        # Set the default value for width.
         if use_container_width is None and width is None:
             # Some multi-view charts (facet, horizontal concatenation, and repeat;
             # see https://altair-viz.github.io/user_guide/compound_charts.html)
-            # don't work well with `use_container_width=True`, so we disable it for
+            # don't work well with `width=stretch`, so we disable it for
             # those charts (see https://github.com/streamlit/streamlit/issues/9091).
             # All other charts (including vertical concatenation) default to
-            # `use_container_width=True` unless width is provided.
+            # `width=stretch` unless width is provided.
             is_facet_chart = "facet" in spec or (
                 "encoding" in spec
                 and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
             )
-            use_container_width = not (
-                is_facet_chart or "hconcat" in spec or "repeat" in spec
+            width = (
+                "stretch"
+                if not (is_facet_chart or "hconcat" in spec or "repeat" in spec)
+                else "content"
             )
 
         vega_lite_proto = ArrowVegaLiteChartProto()
@@ -2105,6 +2149,11 @@ class VegaChartsMixin:
         if use_container_width is not None:
             vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
+
+        if width is not None:
+            validate_width(width, allow_content=True)
+        if height is not None:
+            validate_height(height, allow_content=True)
 
         if is_selection_activated:
             # Load the stabilized spec again as a dict:
@@ -2147,11 +2196,20 @@ class VegaChartsMixin:
                 value_type="string_value",
             )
 
-            self.dg._enqueue(
-                "arrow_vega_lite_chart",
-                vega_lite_proto,
-                add_rows_metadata=add_rows_metadata,
-            )
+            if width is not None or height is not None:
+                layout_config = LayoutConfig(width=width, height=height)
+                self.dg._enqueue(
+                    "arrow_vega_lite_chart",
+                    vega_lite_proto,
+                    add_rows_metadata=add_rows_metadata,
+                    layout_config=layout_config,
+                )
+            else:
+                self.dg._enqueue(
+                    "arrow_vega_lite_chart",
+                    vega_lite_proto,
+                    add_rows_metadata=add_rows_metadata,
+                )
             return widget_state.value
 
         # Handle layout config for width/height parameters
