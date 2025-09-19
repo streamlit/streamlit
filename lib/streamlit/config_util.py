@@ -596,15 +596,20 @@ def process_theme_inheritance(
 
         # Set the merged theme options
         theme_section = merged_theme.get("theme", {})
+
+        # Handle theme.base - always set it to a valid value ("light" or "dark", not a path/URL)
+        theme_file_base = theme_file_content.get("theme", {}).get("base")
+        if theme_file_base:
+            set_option_func("theme.base", theme_file_base, f"theme file: {base_value}")
+        else:
+            # Theme file doesn't specify a base, default to "light"
+            set_option_func(
+                "theme.base", "light", f"theme file: {base_value} (default)"
+            )
+
         for option_name, option_value in theme_section.items():
             if option_name == "base":
-                # For base, use the original value from the theme file if it exists,
-                # otherwise keep the current base (which points to our theme file)
-                theme_file_base = theme_file_content.get("theme", {}).get("base")
-                if theme_file_base:
-                    set_option_func(
-                        "theme.base", theme_file_base, f"theme file: {base_value}"
-                    )
+                # Already handled above
                 continue
 
             if isinstance(option_value, dict):

@@ -2438,3 +2438,127 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         finally:
             os.unlink(theme_file)
+
+    def test_theme_inheritance_default_to_light(self):
+        """Test config.toml referencing a theme file with no base specified defaults to "light"."""
+        # Create theme file WITHOUT base property
+        theme_without_base = """
+        [theme]
+        primaryColor = "#ff0000"
+        backgroundColor = "#000000"
+        textColor = "#ffffff"
+        font = "Inter"
+        """
+
+        theme_file = self._create_theme_file(theme_without_base, "external_theme.toml")
+
+        try:
+            # config.toml references the theme file via base (not "light"/"dark")
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff6b6b"  # Config override
+            """
+
+            with patch("streamlit.config.open", mock_open(read_data=config_toml)):
+                with patch("streamlit.config.os.path.exists") as mock_exists:
+                    mock_exists.side_effect = (
+                        lambda path: path == theme_file
+                        or path == os.path.join(os.getcwd(), ".streamlit/config.toml")
+                    )
+
+                    config.get_config_options(force_reparse=True)
+
+                    # THE CRITICAL TEST: theme.base must be valid for app_session
+                    final_base = config.get_option("theme.base")
+                    assert final_base in ("light", "dark"), (
+                        f"theme.base should be 'light' or 'dark', got '{final_base}'"
+                    )
+                    assert final_base == "light"  # Should default to light
+
+                    # Verify where_defined shows the default behavior
+                    where_defined = config.get_where_defined("theme.base")
+                    assert "theme file:" in where_defined
+                    assert "(default)" in where_defined
+                    assert theme_file in where_defined
+
+                    # Verify theme inheritance worked correctly for other options
+                    assert (
+                        config.get_option("theme.primaryColor") == "#ff6b6b"
+                    )  # Config override
+                    assert (
+                        config.get_option("theme.backgroundColor") == "#000000"
+                    )  # From theme file
+                    assert (
+                        config.get_option("theme.textColor") == "#ffffff"
+                    )  # From theme file
+                    assert config.get_option("theme.font") == "Inter"  # From theme file
+
+                    # This is what app_session.py expects - valid base values only
+                    base_map = {"light": "LIGHT", "dark": "DARK"}
+                    assert final_base in base_map, (
+                        "app_session would log warning without this fix"
+                    )
+
+        finally:
+            os.unlink(theme_file)
+
+    def test_theme_inheritance_cli_env_var_default_to_light(self):
+        """Test that CLI/env var theme.base pointing to file with no base specified defaults to "light"."""
+        # Create theme file WITHOUT base property
+        theme_without_base = """
+        [theme]
+        primaryColor = "#00ff00"
+        backgroundColor = "#111111"
+        textColor = "#cccccc"
+        # CRITICAL: No base property in external theme file
+        """
+
+        theme_file = self._create_theme_file(theme_without_base, "cli_theme.toml")
+
+        try:
+            # Simulate CLI flag or environment variable setting theme.base to file path
+            options_from_flags = {
+                "theme.base": theme_file,  # This would be set by CLI or env var
+                "theme.textColor": "#ffffff",  # CLI override to test precedence
+            }
+
+            # No config.toml file - only CLI/env var input
+            with patch("streamlit.config.get_config_files") as mock_get_files:
+                mock_get_files.return_value = []  # No config files
+
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # THE CRITICAL TEST: theme.base must be valid for app_session
+                final_base = config.get_option("theme.base")
+                assert final_base in ("light", "dark"), (
+                    f"theme.base should be 'light' or 'dark', got '{final_base}'"
+                )
+                assert final_base == "light"  # Should default to light
+
+                # Verify CLI override precedence is preserved
+                assert config.get_option("theme.textColor") == "#ffffff"  # CLI override
+                where_defined_color = config.get_where_defined("theme.textColor")
+                assert "command-line" in where_defined_color.lower()
+
+                # Verify other options come from theme file
+                assert (
+                    config.get_option("theme.primaryColor") == "#00ff00"
+                )  # From theme file
+                assert (
+                    config.get_option("theme.backgroundColor") == "#111111"
+                )  # From theme file
+
+                # Verify where_defined for base shows it's from theme file with default
+                where_defined_base = config.get_where_defined("theme.base")
+                assert "theme file:" in where_defined_base
+                assert "(default)" in where_defined_base
+
+                # Simulate what app_session.py would check (this was the warning source)
+                base_map = {"light": "LIGHT", "dark": "DARK"}
+                assert final_base in base_map, "This prevents app_session warning!"
+
+        finally:
+            os.unlink(theme_file)
