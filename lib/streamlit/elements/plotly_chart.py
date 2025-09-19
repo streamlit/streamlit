@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Streamlit support for Plotly charts."""
-
 from __future__ import annotations
 
 import json
@@ -32,14 +30,23 @@ from typing import (
 from typing_extensions import Required, TypeAlias
 
 from streamlit import type_util
-from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -75,6 +82,8 @@ FigureOrData: TypeAlias = Union[
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
 _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+
+_LOGGER: Final = get_logger(__name__)
 
 
 class PlotlySelectionState(TypedDict, total=False):
@@ -267,13 +276,61 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
+def _resolve_content_width(width: Width, figure: Any) -> Width:
+    """Resolve "content" width by inspecting the figure's layout width.
+
+    For content width, we check if the plotly figure has an explicit width
+    in its layout. If so, we use that as a pixel width. If not, we default
+    to 700 pixels which matches the plotly.js default width.
+
+    Args
+    ----
+    width : Width
+        The original width parameter
+    figure : Any
+        The plotly figure object (Figure, dict, or other supported formats)
+
+    Returns
+    -------
+    Width
+        The resolved width (either original width, figure width as pixels, or 700)
+    """
+
+    if width != "content":
+        return width
+
+    # Extract width from the figure's layout
+    # plotly.tools.mpl_to_plotly() returns Figure objects with .layout attribute
+    # plotly.tools.return_figure_from_figure_or_data() returns dictionaries
+    figure_width = None
+    if isinstance(figure, dict):
+        figure_width = figure.get("layout", {}).get("width")
+    else:
+        # Handle Figure objects from matplotlib conversion
+        try:
+            figure_width = figure.layout.width
+        except (AttributeError, TypeError):
+            _LOGGER.debug("Could not parse width from figure")
+
+    if (
+        figure_width is not None
+        and isinstance(figure_width, (int, float))
+        and figure_width > 0
+    ):
+        return int(figure_width)
+
+    # Default to 700 pixels (plotly.js default) when no width is specified
+    return 700
+
+
 class PlotlyMixin:
     @overload
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = True,
+        use_container_width: bool | None = None,
         *,
+        width: Width = "stretch",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
@@ -289,8 +346,9 @@ class PlotlyMixin:
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = True,
+        use_container_width: bool | None = None,
         *,
+        width: Width = "stretch",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
@@ -306,8 +364,9 @@ class PlotlyMixin:
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = True,
+        use_container_width: bool | None = None,
         *,
+        width: Width = "stretch",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -357,13 +416,30 @@ class PlotlyMixin:
                 render in SVG mode when passed to ``st.plotly_chart``:
                 ``px.line(df, x="x", y="y", render_mode="svg")``.
 
-        use_container_width : bool
+        width : "stretch", "content", or int
+            How to size the chart's width. Can be one of:
+
+            - ``"stretch"`` (default): Expand to the width of the parent container.
+            - ``"content"``: Size the chart to fit its contents, up to the width
+              of the parent container.
+            - An integer: Set the chart width to this many pixels.
+
+        use_container_width : bool or None
             Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``True`` (default),
-            Streamlit sets the width of the figure to match the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets the
-            width of the chart to fit its contents according to the plotting library,
-            up to the width of the parent container.
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the value of ``width``.
+            - ``True``: Streamlit sets the width of the figure to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the figure to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
+
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and ``width="content"`` instead of ``use_container_width=False``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -496,6 +572,25 @@ class PlotlyMixin:
            height: 550px
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
+
+        validate_width(width, allow_content=True)
+
         import plotly.io
         import plotly.tools
 
@@ -548,7 +643,6 @@ class PlotlyMixin:
             )
 
         plotly_chart_proto = PlotlyChartProto()
-        plotly_chart_proto.use_container_width = use_container_width
         plotly_chart_proto.theme = theme or ""
         plotly_chart_proto.form_id = current_form_id(self.dg)
 
@@ -571,8 +665,11 @@ class PlotlyMixin:
             selection_mode=selection_mode,
             is_selection_activated=is_selection_activated,
             theme=theme,
-            use_container_width=use_container_width,
+            width=width,
         )
+
+        # Handle "content" width by inspecting the figure's natural width
+        final_width = _resolve_content_width(width, figure)
 
         if is_selection_activated:
             # Selections are activated, treat plotly chart as a widget:
@@ -591,9 +688,16 @@ class PlotlyMixin:
                 value_type="string_value",
             )
 
-            self.dg._enqueue("plotly_chart", plotly_chart_proto)
+            layout_config = LayoutConfig(width=final_width)
+            self.dg._enqueue(
+                "plotly_chart", plotly_chart_proto, layout_config=layout_config
+            )
             return widget_state.value
-        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+
+        layout_config = LayoutConfig(width=final_width)
+        return self.dg._enqueue(
+            "plotly_chart", plotly_chart_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
