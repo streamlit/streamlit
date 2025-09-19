@@ -194,8 +194,10 @@ def _test_download_audio_file(app: Page, locator: FrameLocator | Locator):
     is_iframe = isinstance(locator, FrameLocator)
     stop_recording(audio_input, app, wait_for_run=not is_iframe)
     if is_iframe:
-        # Give iframe time to process the recording
-        app.wait_for_timeout(2000)
+        # Wait for the recording to be processed in iframe
+        expect(
+            audio_input.get_by_role("button", name="Download as WAV")
+        ).to_be_visible()
 
     with app.expect_download() as download_info:
         download_button = audio_input.get_by_role("button", name="Download as WAV")
