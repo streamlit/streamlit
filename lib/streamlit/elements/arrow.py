@@ -402,7 +402,7 @@ class ArrowMixin:
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
             (default), the visibility of index columns is automatically
-            determined based on the data.
+            determined based on the data and other configurations.
 
         column_order : Iterable[str] or None
             The ordered list of columns to display. If this is ``None``
@@ -705,14 +705,22 @@ class ArrowMixin:
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
-        if is_selection_activated and selection_mode in ["multi-row", "single-row"]:
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
-            )
         if hide_index is not None:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
             )
+
+        elif (
+            # Hide index column if row selections are activated and the dataframe has a range index.
+            # The range index usualy does not add a lot of value.
+            is_selection_activated
+            and selection_mode in ["multi-row", "single-row"]
+            and dataframe_util.has_range_index(data_df)
+        ):
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
+
         marshall_column_config(proto, column_config_mapping)
 
         # Create layout configuration
