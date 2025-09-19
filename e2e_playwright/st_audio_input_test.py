@@ -422,22 +422,25 @@ def test_audio_input_rapid_re_recordings(app: Page):
         # Use the specific aria-label selector to avoid ambiguity
         record_button = audio_input.locator('[aria-label="Record"]')
         record_button.click()
-        app.wait_for_timeout(500)  # Record for 0.5 seconds
+
+        # Wait for stop button to appear (indicates recording started)
+        expect(audio_input.get_by_role("button", name="Stop recording")).to_be_visible()
+
+        # Let it record briefly
+        app.wait_for_timeout(500)  # This is OK - we need actual recording time
 
         stop_button = audio_input.get_by_role("button", name="Stop recording")
         stop_button.click()
 
         if i < 2:  # Don't wait after last recording
-            # Start next recording immediately
-            app.wait_for_timeout(100)
+            # Wait for record button to be available again before next recording
+            expect(record_button).to_be_visible()
 
-    # Wait for processing to complete
+    # Wait for the final upload to complete
     wait_for_app_run(app)
-    app.wait_for_timeout(2000)  # Allow time for uploads to finish
 
-    # Check that we have an audio recording (the last one)
-    # The test passes if rapid re-recordings don't cause errors or race conditions
-    expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
+    # Wait for the audio to be processed and displayed
+    expect(app.get_by_text("Audio Input 1: True")).to_be_visible(timeout=10000)
 
 
 @pytest.mark.only_browser("chromium")
@@ -469,16 +472,23 @@ def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
 
     # Create 3 recordings rapidly - each should clean up the previous blob URL
     for i in range(3):
-        audio_input.locator('[aria-label="Record"]').click()
-        app.wait_for_timeout(300)  # Brief recording
+        record_button = audio_input.locator('[aria-label="Record"]')
+        record_button.click()
+
+        # Wait for stop button to appear
+        expect(audio_input.get_by_role("button", name="Stop recording")).to_be_visible()
+
+        # Let it record briefly
+        app.wait_for_timeout(300)  # This is OK - we need actual recording time
+
         audio_input.get_by_role("button", name="Stop recording").click()
 
         if i < 2:
-            app.wait_for_timeout(100)  # Small gap before next recording
+            # Wait for record button to be available again
+            expect(record_button).to_be_visible()
 
-    # Wait for processing
+    # Wait for processing to complete
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
 
     # Check cleanup
     tracking = app.evaluate("window.blobTracking")
