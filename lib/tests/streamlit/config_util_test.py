@@ -336,6 +336,52 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         valid_options = config_util._get_valid_theme_options(empty_template)
         assert valid_options == set()
 
+    def test_get_valid_theme_options_main_section(self):
+        """Test _get_valid_theme_options for main section specifically."""
+        main_options = config_util._get_valid_theme_options(
+            self.config_template, "main"
+        )
+
+        # These should be in main section
+        expected_main_only = {
+            "base",
+            "baseFontSize",
+            "baseFontWeight",
+            "fontFaces",
+            "showSidebarBorder",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+        }
+        assert expected_main_only.issubset(main_options)
+
+    def test_get_valid_theme_options_sidebar_section(self):
+        """Test _get_valid_theme_options for sidebar section specifically."""
+        sidebar_options = config_util._get_valid_theme_options(
+            self.config_template, "sidebar"
+        )
+
+        # These should be in sidebar section
+        expected_sidebar = {
+            "primaryColor",
+            "backgroundColor",
+            "textColor",
+            "font",
+            "borderColor",
+        }
+        assert expected_sidebar.issubset(sidebar_options)
+
+        # These should NOT be in sidebar section
+        main_only_options = {
+            "base",
+            "baseFontSize",
+            "baseFontWeight",
+            "fontFaces",
+            "showSidebarBorder",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+        }
+        assert main_only_options.isdisjoint(sidebar_options)
+
     def test_validate_theme_file_content_valid(self):
         """Test validation of valid theme file content."""
         theme_content = {
@@ -397,6 +443,39 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
         assert "invalid theme option" in str(cm.value)
         assert "invalidSidebarOption" in str(cm.value)
+
+    def test_validate_theme_file_content_invalid_sidebar_options(self):
+        """Test validation rejects main-theme-only options in sidebar."""
+        # Test each main-only option individually
+        main_only_options = [
+            "base",
+            "baseFontSize",
+            "baseFontWeight",
+            "fontFaces",
+            "showSidebarBorder",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+        ]
+
+        for main_only_option in main_only_options:
+            theme_content = {
+                "theme": {
+                    "primaryColor": "#ff0000",
+                    "sidebar": {main_only_option: "some_value"},
+                }
+            }
+
+            with pytest.raises(StreamlitAPIException) as cm:
+                config_util._validate_theme_file_content(
+                    theme_content, "test_theme.toml", self.config_template
+                )
+
+            error_msg = str(cm.value)
+            assert "invalid theme option" in error_msg
+            assert f"theme.sidebar.{main_only_option}" in error_msg
+            assert (
+                "sidebar" in error_msg
+            )  # Error message should mention it's for sidebar section
 
     def test_load_theme_file_missing_toml(self):
         """Test _load_theme_file when toml module is missing."""

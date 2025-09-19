@@ -258,9 +258,9 @@ def _extract_current_theme_config(
 
 
 def _get_valid_theme_options(
-    config_options_template: dict[str, ConfigOption],
+    config_options_template: dict[str, ConfigOption], section: str = "main"
 ) -> set[str]:
-    """Get the set of all valid theme configuration options.
+    """Get the set of valid theme configuration options for a specific section.
 
     This function automatically extracts valid theme options from the existing
     config option definitions, ensuring it stays in sync with the actual
@@ -270,6 +270,8 @@ def _get_valid_theme_options(
     ----------
     config_options_template : dict[str, ConfigOption]
         The config options template to extract theme options from
+    section : str
+        The theme section to get options for ("main" or "sidebar")
 
     Returns
     -------
@@ -281,16 +283,14 @@ def _get_valid_theme_options(
     # Extract theme options from the config template
     for option_key in config_options_template:
         if option_key.startswith("theme."):
-            # Extract the option name after "theme."
             parts = option_key.split(".")
-            if len(parts) == 2:
+            if section == "main" and len(parts) == 2:
                 # Direct theme option like "theme.primaryColor"
                 _, option_name = parts
                 valid_options.add(option_name)
-            elif len(parts) == 3:
-                # Subsection option like "theme.sidebar.primaryColor"
+            elif section == "sidebar" and len(parts) == 3 and parts[1] == "sidebar":
+                # Sidebar option like "theme.sidebar.primaryColor"
                 _, _, option_name = parts
-                # Add the option name (it's valid in both main theme and subsections)
                 valid_options.add(option_name)
 
     return valid_options
@@ -317,7 +317,7 @@ def _validate_theme_file_content(
     StreamlitAPIException
         If the theme file contains invalid options
     """
-    valid_options = _get_valid_theme_options(config_options_template)
+    valid_main_options = _get_valid_theme_options(config_options_template, "main")
     valid_subsections = {"sidebar"}
 
     theme_section = theme_content.get("theme", {})
@@ -325,38 +325,49 @@ def _validate_theme_file_content(
     # Validate theme section options
     for option_name, option_value in theme_section.items():
         if isinstance(option_value, dict):
-            # It's a subsection (like sidebar)
+            # It's a subsection (valid subsection is only sidebar for now)
             if option_name not in valid_subsections:
-                raise StreamlitAPIException(
-                    f"Theme file {file_path_or_url} contains invalid theme subsection: '{option_name}'. "
-                    f"Valid subsections are: {sorted(valid_subsections)}"
+                valid_subsections_list = "\n".join(
+                    f"  • {sub}" for sub in sorted(valid_subsections)
                 )
+                raise StreamlitAPIException(
+                    f"Theme file {file_path_or_url} contains invalid theme subsection: '{option_name}'.\n\n"
+                    f"Valid subsections are:\n{valid_subsections_list}"
+                )
+
+            # Get valid options for this specific subsection
+            valid_subsection_options = _get_valid_theme_options(
+                config_options_template, option_name
+            )
+
             # Validate options within the subsection
             for sub_option, sub_value in option_value.items():
-                if sub_option not in valid_options:
+                if sub_option not in valid_subsection_options:
+                    valid_options_list = "\n".join(
+                        f"  • {opt}" for opt in sorted(valid_subsection_options)
+                    )
                     raise StreamlitAPIException(
                         f"Theme file {file_path_or_url} contains invalid theme option: "
-                        f"'theme.{option_name}.{sub_option}'. "
-                        f"Valid theme options are: {sorted(valid_options)}"
+                        f"'theme.{option_name}.{sub_option}'.\n\n"
+                        f"Valid theme options for '{option_name}' section are:\n{valid_options_list}"
                     )
                 # Validate color options for subsection
                 full_option_name = f"theme.{option_name}.{sub_option}"
-                if (
-                    "color" in full_option_name.lower() or "Color" in full_option_name
-                ) and not full_option_name.endswith(".base"):
+                if "color" in full_option_name.lower():
                     _validate_color_value(sub_value, full_option_name)
         else:
             # It's a direct theme option
-            if option_name not in valid_options:
+            if option_name not in valid_main_options:
+                valid_options_list = "\n".join(
+                    f"  • {opt}" for opt in sorted(valid_main_options)
+                )
                 raise StreamlitAPIException(
-                    f"Theme file {file_path_or_url} contains invalid theme option: 'theme.{option_name}'. "
-                    f"Valid theme options are: {sorted(valid_options)}"
+                    f"Theme file {file_path_or_url} contains invalid theme option: 'theme.{option_name}'.\n\n"
+                    f"Valid theme options are:\n{valid_options_list}"
                 )
             # Validate color options for direct theme option
             full_option_name = f"theme.{option_name}"
-            if (
-                "color" in full_option_name.lower() or "Color" in full_option_name
-            ) and not full_option_name.endswith(".base"):
+            if "color" in full_option_name.lower():
                 _validate_color_value(option_value, full_option_name)
 
 
