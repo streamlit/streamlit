@@ -195,7 +195,7 @@ def main_hello(**kwargs: Any) -> None:
 
 @main.command("run")
 @configurator_options
-@click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
+@click.argument("target", default="streamlit_app.py", envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
 def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     """Run a Python script, piping stderr to Streamlit.

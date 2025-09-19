@@ -71,9 +71,24 @@ class CliTest(unittest.TestCase):
         for p in self.patches:
             p.stop()
 
-    def test_run_no_arguments(self):
+    def test_run_no_file_argument_but_default_exists(self):
         """streamlit run should fail if run with no arguments."""
-        result = self.runner.invoke(cli, ["run"])
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run"),
+            patch("os.path.exists", return_value=True),
+        ):
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
+        assert result.exit_code == 0
+
+    def test_run_no_file_argument_and_default_doesnt_exist(self):
+        """streamlit run should fail if run with no arguments."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run"),
+            patch("os.path.exists", return_value=False),
+        ):
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
         assert result.exit_code != 0
 
     def test_run_existing_file_argument(self):
