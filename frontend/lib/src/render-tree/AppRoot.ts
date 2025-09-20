@@ -121,8 +121,8 @@ export class AppRoot {
         case "logoNode":
           children[childName] = new StandaloneNode<Logo>(
             null,
-            mainScriptHash,
-            NO_SCRIPT_RUN_ID
+            NO_SCRIPT_RUN_ID,
+            mainScriptHash
           )
           break
         default:
@@ -342,11 +342,9 @@ export class AppRoot {
   public getElements(): Set<Element> {
     const visitor = new ElementsSetVisitor()
 
-    // Visit each major section of the app
-    this.main.accept(visitor)
-    this.sidebar.accept(visitor)
-    this.event.accept(visitor)
-    this.bottom.accept(visitor)
+    AppRoot.childOrder.forEach(childName => {
+      this.root[childName].accept(visitor)
+    })
 
     return visitor.elements
   }
@@ -446,7 +444,7 @@ export class AppRoot {
       case "logoNode":
         return new StandaloneNode<Logo>(
           null,
-          "NO_SCRIPT_RUN_ID",
+          NO_SCRIPT_RUN_ID,
           this.mainScriptHash
         )
     }
