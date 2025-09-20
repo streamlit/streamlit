@@ -24,12 +24,19 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
+  Logo,
   Logo as LogoProto,
 } from "@streamlit/protobuf"
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
+import {
+  AppNode,
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  StandaloneNode,
+} from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 import { GetNodeByDeltaPathVisitor } from "./render-tree/visitors/GetNodeByDeltaPathVisitor"
 
@@ -49,6 +56,7 @@ const ROOT = new AppRoot(FAKE_SCRIPT_HASH, {
   sidebar: new BlockNode(FAKE_SCRIPT_HASH),
   event: new BlockNode(FAKE_SCRIPT_HASH),
   bottom: new BlockNode(FAKE_SCRIPT_HASH),
+  logoNode: new StandaloneNode<Logo>(null, FAKE_SCRIPT_HASH, NO_SCRIPT_RUN_ID),
 })
 
 describe("ElementNode.quiverElement", () => {
@@ -521,26 +529,6 @@ describe("AppRoot.empty", () => {
 
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
-  })
-
-  it("passes logo to new Root if empty is called with logo", () => {
-    windowSpy.mockImplementation(() => ({
-      location: {
-        search: "",
-      },
-    }))
-    const logo = LogoProto.create({
-      image:
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
-    })
-
-    // Replicate .empty call on initial render
-    const empty = AppRoot.empty("", true)
-    expect(empty.logo).toBeNull()
-
-    // Replicate .empty call in AppNav's clearPageElements for MPA V1
-    const empty2 = AppRoot.empty(FAKE_SCRIPT_HASH, false, logo)
-    expect(empty2.logo).not.toBeNull()
   })
 })
 

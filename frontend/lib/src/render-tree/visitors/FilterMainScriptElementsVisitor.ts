@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { notUndefined } from "~lib/util/utils"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
@@ -67,6 +68,14 @@ export class FilterMainScriptElementsVisitor
       node.fragmentId,
       node.deltaMsgReceivedAt
     )
+  }
+
+  visitStandaloneNode<S>(node: StandaloneNode<S>): AppNode | undefined {
+    // Filter standalone nodes based on activeScriptHash
+    if (node.activeScriptHash !== this.mainScriptHash) {
+      return undefined
+    }
+    return node
   }
 
   /**

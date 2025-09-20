@@ -16,8 +16,10 @@
 
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 
 export interface AppNodeVisitor<T> {
   visitBlockNode(node: BlockNode): T
   visitElementNode(node: ElementNode): T
+  visitStandaloneNode<S>(node: StandaloneNode<S>): T
 }

@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+import { Logo } from "@streamlit/protobuf"
+
 import { BlockNode } from "~lib/render-tree/BlockNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { block, text } from "~lib/render-tree/test-utils"
 
 import { GetNodeByDeltaPathVisitor } from "./GetNodeByDeltaPathVisitor"
@@ -56,6 +59,144 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(() => visitor.visitElementNode(elementNode)).toThrow(
         "'setIn' cannot be called on an ElementNode"
       )
+    })
+  })
+
+  describe("visitStandaloneNode", () => {
+    const MOCK_LOGO = Logo.create({
+      image: "https://example.com/logo.png",
+    })
+
+    it("throws error when trying to set on StandaloneNode", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const nodeToSet = text("new")
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        nodeToSet,
+        "test_run_id"
+      )
+
+      expect(() => visitor.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+    })
+
+    it("throws error when trying to set on null StandaloneNode", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const nodeToSet = text("new")
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        nodeToSet,
+        "test_run_id"
+      )
+
+      expect(() => visitor.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+    })
+
+    it("throws error for different generic types", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const standaloneNode = new StandaloneNode<CustomElement>(
+        customElement,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const nodeToSet = text("new")
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        nodeToSet,
+        "test_run_id"
+      )
+
+      expect(() => visitor.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+    })
+
+    it("throws error regardless of path length", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const nodeToSet = text("new")
+
+      // Test with single-element path
+      const visitor1 = new SetNodeByDeltaPathVisitor(
+        [0],
+        nodeToSet,
+        "test_run_id"
+      )
+      expect(() => visitor1.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+
+      // Test with multi-element path
+      const visitor2 = new SetNodeByDeltaPathVisitor(
+        [0, 1, 2],
+        nodeToSet,
+        "test_run_id"
+      )
+      expect(() => visitor2.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+    })
+
+    it("throws error regardless of nodeToSet type", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      // Test with ElementNode
+      const elementVisitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        text("element"),
+        "test_run_id"
+      )
+      expect(() => elementVisitor.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+
+      // Test with BlockNode
+      const blockVisitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        block([text("block_child")]),
+        "test_run_id"
+      )
+      expect(() => blockVisitor.visitStandaloneNode(standaloneNode)).toThrow(
+        "'setIn' cannot be called on a StandaloneNode"
+      )
+
+      // Test with another StandaloneNode
+      const anotherStandalone = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "another_run_id",
+        "another_script_hash"
+      )
+      const standaloneVisitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        anotherStandalone,
+        "test_run_id"
+      )
+      expect(() =>
+        standaloneVisitor.visitStandaloneNode(standaloneNode)
+      ).toThrow("'setIn' cannot be called on a StandaloneNode")
     })
   })
 
@@ -321,6 +462,28 @@ describe("SetNodeByDeltaPathVisitor", () => {
           "test_run_id"
         )
       ).toThrow("'setIn' cannot be called on an ElementNode")
+    })
+
+    it("throws error when used on StandaloneNode via static method", () => {
+      const MOCK_LOGO = Logo.create({
+        image: "https://example.com/logo.png",
+      })
+
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const nodeToSet = text("new")
+
+      expect(() =>
+        SetNodeByDeltaPathVisitor.setNodeAtPath(
+          standaloneNode,
+          [0],
+          nodeToSet,
+          "test_run_id"
+        )
+      ).toThrow("'setIn' cannot be called on a StandaloneNode")
     })
 
     it("creates new visitor instance for each static call", () => {

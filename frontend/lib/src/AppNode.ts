@@ -15,5 +15,5 @@
  */
 
 // Re-export all classes and interfaces from the render-tree folder
+export { AppRoot, BlockNode, ElementNode, StandaloneNode } from "./render-tree"
 export type { AppNode } from "./render-tree"
-export { AppRoot, BlockNode, ElementNode } from "./render-tree"

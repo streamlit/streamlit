@@ -36,6 +36,7 @@ import {
 import { AppNode } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { StandaloneNode } from "./StandaloneNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -44,6 +45,7 @@ import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
+type ChildName = "main" | "sidebar" | "event" | "bottom" | "logoNode"
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -51,11 +53,6 @@ interface LogoMetadata {
   // Associated scriptRunId that created the logo
   scriptRunId: string
 }
-interface AppLogo extends LogoMetadata {
-  logo: Logo
-}
-
-type ChildName = "main" | "sidebar" | "event" | "bottom"
 
 /**
  * The root of our data tree. It contains the app's top-level BlockNodes.
@@ -68,22 +65,16 @@ export class AppRoot {
     "sidebar",
     "event",
     "bottom",
+    "logoNode",
   ]
 
   /* The hash of the main script that creates this AppRoot. */
   readonly mainScriptHash: string
 
-  /* The app logo, if it exists. */
-  private appLogo: AppLogo | null
-
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(
-    mainScriptHash = "",
-    isInitialRender = true,
-    logo?: Logo | null
-  ): AppRoot {
+  public static empty(mainScriptHash = "", isInitialRender = true): AppRoot {
     const mainNodes: AppNode[] = []
 
     let waitElement: Element | undefined
@@ -118,35 +109,42 @@ export class AppRoot {
 
     const children = {} as Record<ChildName, AppNode>
     AppRoot.childOrder.forEach(childName => {
-      children[childName] = new BlockNode(
-        mainScriptHash,
-        // Preserve the main nodes for the main block
-        childName === "main" ? mainNodes : [],
-        new BlockProto({ allowEmpty: true }),
-        NO_SCRIPT_RUN_ID
-      )
+      switch (childName) {
+        case "main":
+          children[childName] = new BlockNode(
+            mainScriptHash,
+            mainNodes,
+            new BlockProto({ allowEmpty: true }),
+            NO_SCRIPT_RUN_ID
+          )
+          break
+        case "logoNode":
+          children[childName] = new StandaloneNode<Logo>(
+            null,
+            mainScriptHash,
+            NO_SCRIPT_RUN_ID
+          )
+          break
+        default:
+          children[childName] = new BlockNode(
+            mainScriptHash,
+            [],
+            new BlockProto({ allowEmpty: true }),
+            NO_SCRIPT_RUN_ID
+          )
+          break
+      }
     })
 
-    // Persist logo between pages to avoid flicker (MPA V1 - Issue #8815)
-    const appLogo = logo
-      ? {
-          logo,
-          activeScriptHash: mainScriptHash,
-          scriptRunId: NO_SCRIPT_RUN_ID,
-        }
-      : null
-
-    return new AppRoot(mainScriptHash, children, appLogo)
+    return new AppRoot(mainScriptHash, children)
   }
 
   public constructor(
     mainScriptHash: string,
-    root: Record<ChildName, AppNode>,
-    appLogo: AppLogo | null = null
+    root: Record<ChildName, AppNode>
   ) {
     this.mainScriptHash = mainScriptHash
     this.root = root
-    this.appLogo = appLogo
 
     // Verify that our root node has exactly 4 children: a 'main' block,
     // a 'sidebar' block, a `bottom` block and an 'event' block.
@@ -174,23 +172,31 @@ export class AppRoot {
     return this.root.bottom as BlockNode
   }
 
+  public get logoNode(): StandaloneNode<Logo> {
+    return this.root.logoNode as StandaloneNode<Logo>
+  }
+
   public get logo(): Logo | null {
-    return this.appLogo?.logo ?? null
+    return this.logoNode.element
   }
 
   public appRootWithLogo(logo: Logo, metadata: LogoMetadata): AppRoot {
-    return new AppRoot(this.mainScriptHash, this.root, {
-      logo,
-      ...metadata,
+    return new AppRoot(this.mainScriptHash, {
+      ...this.root,
+      logoNode: new StandaloneNode<Logo>(
+        logo,
+        metadata.scriptRunId,
+        metadata.activeScriptHash
+      ),
     })
   }
 
   private runActionOnAllChildren(
-    action: (child: AppNode) => AppNode
+    action: (child: AppNode, childName: ChildName) => AppNode
   ): Record<ChildName, AppNode> {
     const newChildren = {} as Record<ChildName, AppNode>
     AppRoot.childOrder.forEach(childName => {
-      newChildren[childName] = action(this.root[childName])
+      newChildren[childName] = action(this.root[childName], childName)
     })
     return newChildren
   }
@@ -310,14 +316,11 @@ export class AppRoot {
     // clears all nodes that are not associated with the mainScriptHash
     const visitor = new FilterMainScriptElementsVisitor(mainScriptHash)
 
-    const newChildren = this.runActionOnAllChildren(child =>
-      this.ensureBlockNode(child.accept(visitor) as BlockNode | undefined)
+    const newChildren = this.runActionOnAllChildren((child, childName) =>
+      this.ensureValidAppNode(child.accept(visitor), childName)
     )
 
-    const appLogo =
-      this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
-
-    return new AppRoot(mainScriptHash, newChildren, appLogo)
+    return new AppRoot(mainScriptHash, newChildren)
   }
 
   public clearStaleNodes(
@@ -328,18 +331,11 @@ export class AppRoot {
       currentScriptRunId,
       fragmentIdsThisRun
     )
-    const newChildren = this.runActionOnAllChildren(child =>
-      this.ensureBlockNode(child.accept(visitor) as BlockNode | undefined)
+    const newChildren = this.runActionOnAllChildren((child, childName) =>
+      this.ensureValidAppNode(child.accept(visitor), childName)
     )
 
-    // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
-    const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
-    const appLogo =
-      isFragmentRun || this.appLogo?.scriptRunId === currentScriptRunId
-        ? this.appLogo
-        : null
-
-    return new AppRoot(this.mainScriptHash, newChildren, appLogo)
+    return new AppRoot(this.mainScriptHash, newChildren)
   }
 
   /** Return a Set containing all Elements in the tree. */
@@ -372,8 +368,7 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId),
-      this.appLogo
+      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId)
     )
   }
 
@@ -409,8 +404,7 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.setNodeByDeltaPathForScriptRun(deltaPath, blockNode, scriptRunId),
-      this.appLogo
+      this.setNodeByDeltaPathForScriptRun(deltaPath, blockNode, scriptRunId)
     )
   }
 
@@ -431,12 +425,30 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId),
-      this.appLogo
+      this.setNodeByDeltaPathForScriptRun(deltaPath, elementNode, scriptRunId)
     )
   }
 
-  private ensureBlockNode(node: BlockNode | undefined): BlockNode {
-    return node ?? new BlockNode(this.mainScriptHash)
+  private ensureValidAppNode(
+    node: AppNode | undefined,
+    childName: ChildName
+  ): AppNode {
+    if (node) {
+      return node
+    }
+
+    switch (childName) {
+      case "main":
+      case "sidebar":
+      case "event":
+      case "bottom":
+        return new BlockNode(this.mainScriptHash)
+      case "logoNode":
+        return new StandaloneNode<Logo>(
+          null,
+          "NO_SCRIPT_RUN_ID",
+          this.mainScriptHash
+        )
+    }
   }
 }

@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
+import { Element, ForwardMsgMetadata, Logo } from "@streamlit/protobuf"
 
 import { BlockNode } from "src/render-tree/BlockNode"
 import { ElementNode } from "src/render-tree/ElementNode"
+import { StandaloneNode } from "src/render-tree/StandaloneNode"
 import { block, makeProto, text } from "src/render-tree/test-utils"
 
 import { ClearStaleNodeVisitor } from "./ClearStaleNodeVisitor"
@@ -223,6 +224,154 @@ describe("ClearStaleNodeVisitor", () => {
         // and we're not in a fragment context yet (fragmentIdOfBlock is not set)
         expect(result.children).toHaveLength(1)
       })
+    })
+  })
+
+  describe("visitStandaloneNode", () => {
+    const MOCK_LOGO = Logo.create({
+      image: "https://example.com/logo.png",
+    })
+
+    it("returns the node if it matches the current script run ID", () => {
+      const currentRunId = "current_run"
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        currentRunId,
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(node)
+    })
+
+    it("returns a node with null element for stale script run ID", () => {
+      const currentRunId = "current_run"
+      const staleNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(
+        staleNode
+      ) as StandaloneNode<Logo>
+
+      expect(result).toBeInstanceOf(StandaloneNode)
+      expect(result.element).toBeNull()
+      expect(result.scriptRunId).toBe("old_run")
+      expect(result.activeScriptHash).toBe("script_hash")
+    })
+
+    it("preserves the node during fragment runs regardless of script run ID", () => {
+      const currentRunId = "current_run"
+      const staleNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+
+      const result = visitor.visitStandaloneNode(staleNode)
+
+      expect(result).toBe(staleNode)
+    })
+
+    it("preserves the node with current script run ID during fragment runs", () => {
+      const currentRunId = "current_run"
+      const currentNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        currentRunId,
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+
+      const result = visitor.visitStandaloneNode(currentNode)
+
+      expect(result).toBe(currentNode)
+    })
+
+    it("handles null element nodes correctly", () => {
+      const currentRunId = "current_run"
+      const nullNode = new StandaloneNode<Logo>(
+        null,
+        currentRunId,
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(nullNode)
+
+      expect(result).toBe(nullNode)
+    })
+
+    it("handles null element nodes with stale script run ID", () => {
+      const currentRunId = "current_run"
+      const staleNullNode = new StandaloneNode<Logo>(
+        null,
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(
+        staleNullNode
+      ) as StandaloneNode<Logo>
+
+      expect(result).toBeInstanceOf(StandaloneNode)
+      expect(result.element).toBeNull()
+      expect(result.scriptRunId).toBe("old_run")
+      expect(result.activeScriptHash).toBe("script_hash")
+    })
+
+    it("works with different generic types", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const currentRunId = "current_run"
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const node = new StandaloneNode<CustomElement>(
+        customElement,
+        currentRunId,
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(node)
+      expect((result as StandaloneNode<CustomElement>).element?.id).toBe(
+        "test"
+      )
+    })
+
+    it("clears stale generic element correctly", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const currentRunId = "current_run"
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const staleNode = new StandaloneNode<CustomElement>(
+        customElement,
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitStandaloneNode(
+        staleNode
+      ) as StandaloneNode<CustomElement>
+
+      expect(result).toBeInstanceOf(StandaloneNode)
+      expect(result.element).toBeNull()
+      expect(result.scriptRunId).toBe("old_run")
+      expect(result.activeScriptHash).toBe("script_hash")
     })
   })
 

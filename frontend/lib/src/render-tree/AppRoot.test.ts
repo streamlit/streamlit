@@ -16,11 +16,16 @@
 
 import { MockInstance } from "vitest"
 
-import { Delta as DeltaProto, Logo as LogoProto } from "@streamlit/protobuf"
+import {
+  Delta as DeltaProto,
+  Logo,
+  Logo as LogoProto,
+} from "@streamlit/protobuf"
 
 import { AppRoot } from "./AppRoot"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { StandaloneNode } from "./StandaloneNode"
 import {
   block,
   FAKE_SCRIPT_HASH,
@@ -45,6 +50,11 @@ const ROOT = new AppRoot(FAKE_SCRIPT_HASH, {
   sidebar: new BlockNode(FAKE_SCRIPT_HASH),
   event: new BlockNode(FAKE_SCRIPT_HASH),
   bottom: new BlockNode(FAKE_SCRIPT_HASH),
+  logoNode: new StandaloneNode<Logo>(
+    null,
+    FAKE_SCRIPT_HASH,
+    "NO_SCRIPT_RUN_ID"
+  ),
 })
 
 describe("AppRoot.empty", () => {

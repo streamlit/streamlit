@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { Element } from "@streamlit/protobuf"
+import { Element, Logo } from "@streamlit/protobuf"
 
+import { StandaloneNode } from "src/render-tree/StandaloneNode"
 import { block, text } from "src/render-tree/test-utils"
 
 import { ElementsSetVisitor } from "./ElementsSetVisitor"
@@ -122,6 +123,113 @@ describe("ElementsSetVisitor", () => {
     })
   })
 
+  describe("visitStandaloneNode", () => {
+    const MOCK_LOGO = Logo.create({
+      image: "https://example.com/logo.png",
+    })
+
+    it("does not add standalone element to the visitor's set - StandaloneNodes don't contain elements", () => {
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(visitor.elements) // Returns the same set reference
+      expect(visitor.elements.size).toBe(0) // No elements added since StandaloneNode isn't an Element
+    })
+
+    it("does not add null element to the visitor's set", () => {
+      const node = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(visitor.elements)
+      expect(visitor.elements.size).toBe(0)
+    })
+
+    it("works with different generic types", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const node = new StandaloneNode<CustomElement>(
+        customElement,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(visitor.elements)
+      expect(visitor.elements.size).toBe(0) // Still no elements since custom elements aren't protobuf Elements
+    })
+
+    it("does not interfere with existing elements in the set", () => {
+      const element = text("existing")
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+
+      // First add an existing element
+      visitor.visitElementNode(element)
+      // Then visit the standalone node
+      visitor.visitStandaloneNode(node)
+
+      expect(visitor.elements.size).toBe(1) // Only the original element
+      expect(visitor.elements.has(element.element)).toBe(true)
+    })
+
+    it("can be called multiple times without side effects", () => {
+      const node1 = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id_1",
+        "test_script_hash"
+      )
+      const node2 = new StandaloneNode<Logo>(
+        null,
+        "test_run_id_2",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitStandaloneNode(node1)
+      visitor.visitStandaloneNode(node2)
+      visitor.visitStandaloneNode(node1) // Visit first node again
+
+      expect(visitor.elements.size).toBe(0)
+    })
+
+    it("maintains set reference consistency", () => {
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new ElementsSetVisitor()
+      const originalSet = visitor.elements
+
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(originalSet) // Same reference maintained
+      expect(visitor.elements).toBe(originalSet)
+    })
+  })
+
   describe("collectElements static method", () => {
     it("collects elements from ElementNode", () => {
       const element = text("test")
@@ -161,6 +269,34 @@ describe("ElementsSetVisitor", () => {
       const emptyBlock = block([])
 
       const elements = ElementsSetVisitor.collectElements(emptyBlock)
+
+      expect(elements.size).toBe(0)
+    })
+
+    it("collects elements from StandaloneNode (no elements collected)", () => {
+      const MOCK_LOGO = Logo.create({
+        image: "https://example.com/logo.png",
+      })
+
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      const elements = ElementsSetVisitor.collectElements(node)
+
+      expect(elements.size).toBe(0) // StandaloneNodes don't contain protobuf Elements
+    })
+
+    it("collects elements from null StandaloneNode", () => {
+      const node = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      const elements = ElementsSetVisitor.collectElements(node)
 
       expect(elements.size).toBe(0)
     })

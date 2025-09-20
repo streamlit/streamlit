@@ -17,6 +17,7 @@
 import { ElementNode, notUndefined } from "~lib/index"
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 export class ClearStaleNodeVisitor
@@ -105,5 +106,15 @@ export class ClearStaleNodeVisitor
       }
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
+  }
+
+  visitStandaloneNode<S>(node: StandaloneNode<S>): AppNode | undefined {
+    // Check if we're running a fragment, ensure standalone node isn't cleared as stale (Issue #10350/#10382)
+    const isFragmentRun = this.fragmentIdsThisRun.length > 0
+    if (isFragmentRun || node.scriptRunId === this.currentScriptRunId) {
+      return node
+    }
+
+    return new StandaloneNode<S>(null, node.scriptRunId, node.activeScriptHash)
   }
 }

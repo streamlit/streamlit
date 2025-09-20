@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+import { Logo } from "@streamlit/protobuf"
+
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { block, text } from "~lib/render-tree/test-utils"
 
 import { FilterMainScriptElementsVisitor } from "./FilterMainScriptElementsVisitor"
@@ -209,6 +212,185 @@ describe("FilterMainScriptElementsVisitor", () => {
     })
   })
 
+  describe("visitStandaloneNode", () => {
+    const MOCK_LOGO = Logo.create({
+      image: "https://example.com/logo.png",
+    })
+
+    it("returns the node when activeScriptHash matches mainScriptHash", () => {
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        MAIN_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(node)
+    })
+
+    it("returns undefined when activeScriptHash does not match mainScriptHash", () => {
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        OTHER_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("handles null element nodes correctly", () => {
+      const node = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        MAIN_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(node)
+    })
+
+    it("filters out null element nodes with non-matching script hash", () => {
+      const node = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        OTHER_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("works with different generic types", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const node = new StandaloneNode<CustomElement>(
+        customElement,
+        "test_run_id",
+        MAIN_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBe(node)
+      expect((result as StandaloneNode<CustomElement>).element?.id).toBe(
+        "test"
+      )
+    })
+
+    it("filters out custom elements with non-matching script hash", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const node = new StandaloneNode<CustomElement>(
+        customElement,
+        "test_run_id",
+        OTHER_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitStandaloneNode(node)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("works with different script hashes", () => {
+      const node1 = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "script_hash_1"
+      )
+
+      const node2 = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "script_hash_2"
+      )
+
+      const visitor1 = new FilterMainScriptElementsVisitor("script_hash_1")
+      const visitor2 = new FilterMainScriptElementsVisitor("script_hash_2")
+
+      expect(visitor1.visitStandaloneNode(node1)).toBe(node1)
+      expect(visitor1.visitStandaloneNode(node2)).toBeUndefined()
+      expect(visitor2.visitStandaloneNode(node1)).toBeUndefined()
+      expect(visitor2.visitStandaloneNode(node2)).toBe(node2)
+    })
+
+    it("handles empty script hashes", () => {
+      const nodeWithEmptyHash = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        ""
+      )
+
+      const visitorWithEmptyHash = new FilterMainScriptElementsVisitor("")
+      const visitorWithMainHash = new FilterMainScriptElementsVisitor(
+        MAIN_SCRIPT_HASH
+      )
+
+      expect(visitorWithEmptyHash.visitStandaloneNode(nodeWithEmptyHash)).toBe(
+        nodeWithEmptyHash
+      )
+      expect(
+        visitorWithMainHash.visitStandaloneNode(nodeWithEmptyHash)
+      ).toBeUndefined()
+    })
+
+    it("handles case-sensitive script hash matching", () => {
+      const node = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "Script_Hash"
+      )
+
+      const visitor1 = new FilterMainScriptElementsVisitor("Script_Hash")
+      const visitor2 = new FilterMainScriptElementsVisitor("script_hash")
+
+      expect(visitor1.visitStandaloneNode(node)).toBe(node)
+      expect(visitor2.visitStandaloneNode(node)).toBeUndefined()
+    })
+
+    it("preserves visitor state across multiple visits", () => {
+      const node1 = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        MAIN_SCRIPT_HASH
+      )
+
+      const node2 = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        OTHER_SCRIPT_HASH
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+
+      const result1 = visitor.visitStandaloneNode(node1)
+      const result2 = visitor.visitStandaloneNode(node2)
+      const result3 = visitor.visitStandaloneNode(node1) // Visit first node again
+
+      expect(result1).toBe(node1)
+      expect(result2).toBeUndefined()
+      expect(result3).toBe(node1) // Should still work
+    })
+  })
+
   describe("static filterNode", () => {
     it("filters an ElementNode using static method", () => {
       const matchingElement = new ElementNode(
@@ -292,6 +474,36 @@ describe("FilterMainScriptElementsVisitor", () => {
       expect(result1).toBe(element)
       expect(result2).toBe(element)
       expect(result1).toBe(result2)
+    })
+
+    it("filters a StandaloneNode using static method", () => {
+      const MOCK_LOGO = Logo.create({
+        image: "https://example.com/logo.png",
+      })
+
+      const matchingNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        MAIN_SCRIPT_HASH
+      )
+
+      const nonMatchingNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        OTHER_SCRIPT_HASH
+      )
+
+      const result1 = FilterMainScriptElementsVisitor.filterNode(
+        matchingNode,
+        MAIN_SCRIPT_HASH
+      )
+      const result2 = FilterMainScriptElementsVisitor.filterNode(
+        nonMatchingNode,
+        MAIN_SCRIPT_HASH
+      )
+
+      expect(result1).toBe(matchingNode)
+      expect(result2).toBeUndefined()
     })
   })
 

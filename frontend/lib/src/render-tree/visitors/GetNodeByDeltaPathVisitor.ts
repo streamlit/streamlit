@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -42,6 +43,11 @@ export class GetNodeByDeltaPathVisitor
 
   visitElementNode(_node: ElementNode): AppNode | undefined {
     // ElementNodes are leaf nodes - they have no children to traverse
+    return undefined
+  }
+
+  visitStandaloneNode<S>(_node: StandaloneNode<S>): AppNode | undefined {
+    // StandaloneNodes are leaf nodes - they have no children to traverse
     return undefined
   }
 

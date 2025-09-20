@@ -30,12 +30,14 @@ import {
   mockEndpoints,
   mockSessionInfo,
   render,
+  StandaloneNode,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
   Block as BlockProto,
   Element,
   ForwardMsgMetadata,
+  Logo,
   Logo as LogoProto,
   Navigation,
   PageConfig,
@@ -161,6 +163,11 @@ describe("AppView element", () => {
       [],
       new BlockProto({ allowEmpty: true })
     )
+    const logoNode = new StandaloneNode<Logo>(
+      null,
+      FAKE_SCRIPT_HASH,
+      "NO_SCRIPT_RUN_ID"
+    )
 
     const props = getProps({
       elements: new AppRoot(FAKE_SCRIPT_HASH, {
@@ -168,6 +175,7 @@ describe("AppView element", () => {
         sidebar,
         event,
         bottom,
+        logoNode,
       }),
     })
     render(<AppView {...props} />)
@@ -238,6 +246,11 @@ describe("AppView element", () => {
       [],
       new BlockProto({ allowEmpty: true })
     )
+    const logoNode = new StandaloneNode<Logo>(
+      null,
+      FAKE_SCRIPT_HASH,
+      "NO_SCRIPT_RUN_ID"
+    )
 
     const props = getProps({
       elements: new AppRoot(FAKE_SCRIPT_HASH, {
@@ -245,6 +258,7 @@ describe("AppView element", () => {
         sidebar,
         event,
         bottom,
+        logoNode,
       }),
       appPages: [
         { pageName: "streamlit_app", pageScriptHash: "page_hash" },
@@ -292,6 +306,11 @@ describe("AppView element", () => {
       [],
       new BlockProto({ allowEmpty: true })
     )
+    const logoNode = new StandaloneNode<Logo>(
+      null,
+      FAKE_SCRIPT_HASH,
+      "NO_SCRIPT_RUN_ID"
+    )
 
     const props = getProps({
       elements: new AppRoot(FAKE_SCRIPT_HASH, {
@@ -299,6 +318,7 @@ describe("AppView element", () => {
         sidebar,
         event,
         bottom,
+        logoNode,
       }),
     })
     render(<AppView {...props} />)
@@ -413,6 +433,12 @@ describe("AppView element", () => {
           new BlockProto({ allowEmpty: true })
         )
 
+        const logoNode = new StandaloneNode<Logo>(
+          null,
+          FAKE_SCRIPT_HASH,
+          "NO_SCRIPT_RUN_ID"
+        )
+
         render(
           <AppView
             {...getProps({
@@ -421,6 +447,7 @@ describe("AppView element", () => {
                 sidebar,
                 event: empty,
                 bottom: empty,
+                logoNode,
               }),
               embedded: false, // Non-embedded
               appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
@@ -632,6 +659,12 @@ describe("AppView element", () => {
             new BlockProto({ allowEmpty: true })
           )
 
+          const logoNode = new StandaloneNode<Logo>(
+            null,
+            FAKE_SCRIPT_HASH,
+            "NO_SCRIPT_RUN_ID"
+          )
+
           // Mock collapsed sidebar state to trigger expand button
           vi.spyOn(
             StreamlitContextProviderModule,
@@ -649,6 +682,7 @@ describe("AppView element", () => {
               sidebar,
               event: empty,
               bottom: empty,
+              logoNode,
             }),
             embedded: true,
             showPadding: false,
@@ -680,6 +714,12 @@ describe("AppView element", () => {
             new BlockProto({ allowEmpty: true })
           )
 
+          const logoNode = new StandaloneNode<Logo>(
+            null,
+            FAKE_SCRIPT_HASH,
+            "NO_SCRIPT_RUN_ID"
+          )
+
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
@@ -691,6 +731,7 @@ describe("AppView element", () => {
               sidebar,
               event: empty,
               bottom: empty,
+              logoNode,
             }),
             embedded: true,
             showPadding: false,
@@ -911,12 +952,19 @@ describe("AppView element", () => {
       new BlockProto({ allowEmpty: true })
     )
 
+    const logoNode = new StandaloneNode<Logo>(
+      null,
+      FAKE_SCRIPT_HASH,
+      "NO_SCRIPT_RUN_ID"
+    )
+
     const props = getProps({
       elements: new AppRoot(FAKE_SCRIPT_HASH, {
         main,
         sidebar,
         event,
         bottom,
+        logoNode,
       }),
     })
 
@@ -1126,12 +1174,19 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       const props = getProps({
         elements: new AppRoot(FAKE_SCRIPT_HASH, {
           main: empty,
           sidebar,
           event: empty,
           bottom: empty,
+          logoNode,
         }),
         appLogo: logo,
         embedded: true,
@@ -1267,12 +1322,19 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       const props = getProps({
         elements: new AppRoot(FAKE_SCRIPT_HASH, {
           main: empty,
           sidebar,
           event: empty,
           bottom: empty,
+          logoNode,
         }),
       })
 
@@ -1330,12 +1392,19 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       const props = getProps({
         elements: new AppRoot(FAKE_SCRIPT_HASH, {
           main: empty,
           sidebar,
           event: empty,
           bottom: empty,
+          logoNode,
         }),
       })
 
@@ -1376,12 +1445,19 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       const props = getProps({
         elements: new AppRoot(FAKE_SCRIPT_HASH, {
           main: empty,
           sidebar,
           event: empty,
           bottom: empty,
+          logoNode,
         }),
       })
 
@@ -1450,12 +1526,19 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       const props = getProps({
         elements: new AppRoot(FAKE_SCRIPT_HASH, {
           main: empty,
           sidebar,
           event: empty,
           bottom: empty,
+          logoNode,
         }),
       })
 
@@ -1510,11 +1593,18 @@ describe("AppView element", () => {
         new BlockProto({ allowEmpty: true })
       )
 
+      const logoNode = new StandaloneNode<Logo>(
+        null,
+        FAKE_SCRIPT_HASH,
+        "NO_SCRIPT_RUN_ID"
+      )
+
       elementsWithSidebar = new AppRoot(FAKE_SCRIPT_HASH, {
         main,
         sidebar,
         event,
         bottom,
+        logoNode,
       })
     })
 

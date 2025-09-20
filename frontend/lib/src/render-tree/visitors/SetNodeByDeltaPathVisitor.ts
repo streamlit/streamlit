@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -49,6 +50,11 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   visitElementNode(_node: ElementNode): AppNode {
     // ElementNodes are leaf nodes - they cannot have children set
     throw new Error("'setIn' cannot be called on an ElementNode")
+  }
+
+  visitStandaloneNode<S>(_node: StandaloneNode<S>): AppNode {
+    // StandaloneNodes are leaf nodes - they cannot have children set
+    throw new Error("'setIn' cannot be called on a StandaloneNode")
   }
 
   visitBlockNode(node: BlockNode): AppNode {

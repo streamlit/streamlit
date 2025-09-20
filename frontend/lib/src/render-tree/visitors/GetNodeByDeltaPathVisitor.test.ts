@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+import { Logo } from "@streamlit/protobuf"
+
 import { BlockNode } from "~lib/render-tree/BlockNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { block, text } from "~lib/render-tree/test-utils"
 
 import { GetNodeByDeltaPathVisitor } from "./GetNodeByDeltaPathVisitor"
@@ -52,6 +55,100 @@ describe("GetNodeByDeltaPathVisitor", () => {
       const result = visitor.visitElementNode(elementNode)
 
       expect(result).toBeUndefined()
+    })
+  })
+
+  describe("visitStandaloneNode", () => {
+    const MOCK_LOGO = Logo.create({
+      image: "https://example.com/logo.png",
+    })
+
+    it("always returns undefined for StandaloneNode", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new GetNodeByDeltaPathVisitor([0])
+
+      const result = visitor.visitStandaloneNode(standaloneNode)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined for StandaloneNode even with empty path", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new GetNodeByDeltaPathVisitor([])
+
+      const result = visitor.visitStandaloneNode(standaloneNode)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined for null StandaloneNode", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new GetNodeByDeltaPathVisitor([0])
+
+      const result = visitor.visitStandaloneNode(standaloneNode)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined for StandaloneNode with multi-element path", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new GetNodeByDeltaPathVisitor([0, 1, 2])
+
+      const result = visitor.visitStandaloneNode(standaloneNode)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("works with different generic types", () => {
+      interface CustomElement {
+        id: string
+        value: number
+      }
+
+      const customElement: CustomElement = { id: "test", value: 42 }
+      const standaloneNode = new StandaloneNode<CustomElement>(
+        customElement,
+        "test_run_id",
+        "test_script_hash"
+      )
+      const visitor = new GetNodeByDeltaPathVisitor([0])
+
+      const result = visitor.visitStandaloneNode(standaloneNode)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined regardless of path indices", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      // Test various path combinations
+      const paths = [[0], [1], [10], [-1], [0, 0], [1, 2, 3], [100, 200, 300]]
+
+      paths.forEach(path => {
+        const visitor = new GetNodeByDeltaPathVisitor(path)
+        const result = visitor.visitStandaloneNode(standaloneNode)
+        expect(result).toBeUndefined()
+      })
     })
   })
 
@@ -195,6 +292,64 @@ describe("GetNodeByDeltaPathVisitor", () => {
       const result = GetNodeByDeltaPathVisitor.getNodeAtPath(element, [0])
 
       expect(result).toBeUndefined()
+    })
+
+    it("returns undefined when used on StandaloneNode via static method", () => {
+      const MOCK_LOGO = Logo.create({
+        image: "https://example.com/logo.png",
+      })
+
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      const result = GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [
+        0,
+      ])
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined for null StandaloneNode via static method", () => {
+      const standaloneNode = new StandaloneNode<Logo>(
+        null,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      const result = GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [
+        0,
+      ])
+
+      expect(result).toBeUndefined()
+    })
+
+    it("returns undefined for StandaloneNode with any path via static method", () => {
+      const MOCK_LOGO = Logo.create({
+        image: "https://example.com/logo.png",
+      })
+
+      const standaloneNode = new StandaloneNode<Logo>(
+        MOCK_LOGO,
+        "test_run_id",
+        "test_script_hash"
+      )
+
+      // Test various paths
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [])
+      ).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [0])
+      ).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [1, 2, 3])
+      ).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(standaloneNode, [-1])
+      ).toBeUndefined()
     })
 
     it("creates new visitor instance for each static call", () => {

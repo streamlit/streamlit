@@ -16,8 +16,10 @@
 
 import { Element } from "@streamlit/protobuf"
 
+import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -54,10 +56,15 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
     return this.elements
   }
 
+  visitStandaloneNode<S>(_node: StandaloneNode<S>): Set<Element> {
+    // StandaloneNodes don't contain Elements in the same way ElementNodes do
+    return this.elements
+  }
+
   /**
    * Static convenience method to collect all elements from a node tree.
    */
-  static collectElements(node: ElementNode | BlockNode): Set<Element> {
+  static collectElements(node: AppNode): Set<Element> {
     const visitor = new ElementsSetVisitor()
     node.accept(visitor)
     return visitor.elements
