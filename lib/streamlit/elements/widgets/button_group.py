@@ -418,7 +418,7 @@ class ButtonGroupMixin:
         if default is not None and (default < 0 or default >= len(transformed_options)):
             raise StreamlitAPIException(
                 f"The default value in '{options}' must be a number between 0 and 1."
-                f"The paased default value is {default}"
+                f"The passed default value is {default}"
             )
         _default: list[int] | None = (
             [options_indices[default]] if default is not None else None
