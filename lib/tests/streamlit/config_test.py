@@ -1624,10 +1624,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                     os.getcwd(), ".streamlit/config.toml"
                 )
 
-                with pytest.raises(StreamlitAPIException) as cm:
+                with pytest.raises(FileNotFoundError) as cm:
                     config.get_config_options()
 
-                assert "Failed to process theme inheritance" in str(cm.value)
+                assert "Theme file not found" in str(cm.value)
 
     def test_theme_inheritance_nested_base_error(self):
         """Test error when theme file has nested base reference."""

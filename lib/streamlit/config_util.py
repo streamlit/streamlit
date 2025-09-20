@@ -192,11 +192,14 @@ def _clean_paragraphs(txt: str) -> list[str]:
     ]
 
 
-# Theme validation functions
+# Theme configuration - theme.base support functions
 
 
 def _validate_color_value(value: Any, option_name: str) -> str:
-    """Validate that a theme color config option value is a valid color string."""
+    """
+    Lightweight validation of a theme color config option value.
+    Checks that the color is a non-empty string and if it starts with a hash, that it is a valid hex color.
+    """
     if not isinstance(value, str):
         raise StreamlitAPIException(
             f"Theme option '{option_name}' must be a string, got {type(value).__name__}: {value}"
@@ -204,7 +207,7 @@ def _validate_color_value(value: Any, option_name: str) -> str:
 
     value_str: str = value.strip()
 
-    # Check for hex colors
+    # Check hex colors
     if value_str.startswith("#"):
         if not re.match(r"^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$", value_str):
             raise StreamlitAPIException(
@@ -219,7 +222,10 @@ def _validate_color_value(value: Any, option_name: str) -> str:
 def _iterate_theme_config_options(
     config_options: dict[str, ConfigOption],
 ) -> Iterator[tuple[str, Any]]:
-    """Iterate through theme config options, yielding (option_path, value) pairs."""
+    """
+    Iterate through theme config options, yielding (option_path, value) pairs.
+    Returns: theme.primaryColor, #ff0000, ...
+    """
     for opt_name, opt_val in config_options.items():
         if opt_name.startswith("theme.") and opt_val.value is not None:
             yield opt_name, opt_val.value
@@ -228,17 +234,9 @@ def _iterate_theme_config_options(
 def _extract_current_theme_config(
     config_options: dict[str, ConfigOption],
 ) -> dict[str, Any]:
-    """Extract current theme configuration from config options.
-
-    Parameters
-    ----------
-    config_options : dict[str, ConfigOption]
-        The current config options
-
-    Returns
-    -------
-    dict[str, Any]
-        Current theme options in nested dictionary format
+    """
+    Extract current theme configuration from config options.
+    Returns a dictionary with the current theme options in nested format.
     """
     current_theme_options = {}
 
@@ -262,21 +260,10 @@ def _get_valid_theme_options(
 ) -> set[str]:
     """Get the set of valid theme configuration options for a specific section.
 
-    This function automatically extracts valid theme options from the existing
-    config option definitions, ensuring it stays in sync with the actual
-    theme options defined via _create_theme_options() calls.
+    Extracts valid theme options from the config options template to ensure they
+    stay in sync with the actual theme options defined via _create_theme_options() calls.
 
-    Parameters
-    ----------
-    config_options_template : dict[str, ConfigOption]
-        The config options template to extract theme options from
-    section : str
-        The theme section to get options for ("main" or "sidebar")
-
-    Returns
-    -------
-    set[str]
-        Set of valid theme option names (without the "theme." prefix)
+    Returns a set of valid theme option names for a specific section (without the "theme." prefix)
     """
     valid_options = set()
 
@@ -374,26 +361,13 @@ def _validate_theme_file_content(
 def _load_theme_file(
     file_path_or_url: str, config_options_template: dict[str, ConfigOption]
 ) -> dict[str, Any]:
-    """Load and parse a theme TOML file from a local path or URL.
+    """
+    Load and parse a theme TOML file from a local path or URL.
 
-    Parameters
-    ----------
-    file_path_or_url : str
-        The path to a local TOML file or a URL pointing to a TOML file
-    config_options_template : dict[str, ConfigOption]
-        The config options template to validate against
+    Handles raising erros when a file cannot be found, read, parsed,
+    or contains invalid theme options.
 
-    Returns
-    -------
-    dict[str, Any]
-        The parsed TOML content as a dictionary
-
-    Raises
-    ------
-    StreamlitAPIException
-        If the file cannot be found, read, parsed, or contains invalid theme options
-    FileNotFoundError
-        If the specified theme file cannot be found
+    Otherwise returns the parsed TOML content as a dictionary.
     """
 
     def _raise_missing_toml() -> None:
@@ -465,19 +439,11 @@ def _load_theme_file(
 def _apply_theme_inheritance(
     base_theme: dict[str, Any], override_theme: dict[str, Any]
 ) -> dict[str, Any]:
-    """Apply theme inheritance where override_theme values take precedence over base_theme.
+    """
+    Apply theme inheritance where theme config values from config.toml
+    take precedence over the theme configs defined in theme.base toml file.
 
-    Parameters
-    ----------
-    base_theme : dict[str, Any]
-        The base theme configuration (from theme.toml)
-    override_theme : dict[str, Any]
-        The override theme configuration (from config.toml)
-
-    Returns
-    -------
-    dict[str, Any]
-        The merged theme configuration
+    Returns a dictionary with the merged theme configuration.
     """
     # Start with a deep copy of the base theme
     merged_theme = copy.deepcopy(base_theme)
@@ -507,25 +473,22 @@ def _apply_theme_inheritance(
     return merged_theme
 
 
+# Theme configuration - handles theme.base
+
+
 def process_theme_inheritance(
     config_options: dict[str, ConfigOption] | None,
     config_options_template: dict[str, ConfigOption],
     set_option_func: Any,
 ) -> None:
-    """Process theme inheritance if theme.base points to a theme file.
+    """
+    Process theme inheritance if theme.base points to a theme file.
 
     This function checks if theme.base is set to a file path or URL,
     loads the theme file, and applies inheritance logic where the
-    current config.toml values override the theme file values.
+    current config.toml values override the theme.base file values.
 
-    Parameters
-    ----------
-    config_options : dict[str, ConfigOption]
-        The current config options
-    config_options_template : dict[str, ConfigOption]
-        The config options template
-    set_option_func : Any
-        Function to set config option values
+    Sets the merged theme options to the config.
     """
     # Get the current theme.base value
     if config_options is None:
@@ -548,7 +511,7 @@ def process_theme_inheritance(
         )
 
     try:
-        # Load the theme file (load_theme_file handles path resolution internally)
+        # Load the theme file config options
         theme_file_content = _load_theme_file(base_value, config_options_template)
 
         # Validate that theme.base of the referenced theme file doesn't reference another file
@@ -561,13 +524,12 @@ def process_theme_inheritance(
             _extract_current_theme_config(config_options) if config_options else {}
         )
 
-        # Apply inheritance: theme file as base, with specified theme options in config.toml as overrides
+        # Apply inheritance: referenced theme file as base, override with theme options specified in config.toml
         merged_theme = _apply_theme_inheritance(
             theme_file_content, {"theme": current_theme_options}
         )
 
-        # Update the config options with the merged theme
-        # First, preserve theme options set by env vars and command line flags (higher precedence)
+        # Preserve theme options set by env vars and command line flags (higher precedence)
         high_precedence_theme_options = {}
         if config_options is not None:
             for opt_name, opt_config in config_options.items():
@@ -594,9 +556,6 @@ def process_theme_inheritance(
             for opt_name in theme_options_to_remove:
                 set_option_func(opt_name, None, "reset for theme inheritance")
 
-        # Set the merged theme options
-        theme_section = merged_theme.get("theme", {})
-
         # Handle theme.base - always set it to a valid value ("light" or "dark", not a path/URL)
         theme_file_base = theme_file_content.get("theme", {}).get("base")
         if theme_file_base:
@@ -606,6 +565,9 @@ def process_theme_inheritance(
             set_option_func(
                 "theme.base", "light", f"theme file: {base_value} (default)"
             )
+
+        # Set the merged theme options
+        theme_section = merged_theme.get("theme", {})
 
         for option_name, option_value in theme_section.items():
             if option_name == "base":
@@ -625,24 +587,12 @@ def process_theme_inheritance(
                     f"theme.{option_name}", option_value, f"theme file: {base_value}"
                 )
 
-        # Handle sidebar section if it exists
-        sidebar_section = merged_theme.get("theme.sidebar") or merged_theme.get(
-            "theme", {}
-        ).get("sidebar")
-        if sidebar_section:
-            for option_name, option_value in sidebar_section.items():
-                set_option_func(
-                    f"theme.sidebar.{option_name}",
-                    option_value,
-                    f"theme file: {base_value}",
-                )
-
         # Finally, restore theme options set by env vars and command line flags (highest precedence)
         for opt_name, opt_data in high_precedence_theme_options.items():
             set_option_func(opt_name, opt_data["value"], opt_data["where_defined"])
 
-    except StreamlitAPIException:
-        # Re-raise StreamlitAPIException as-is to preserve specific error messages
+    except (StreamlitAPIException, FileNotFoundError):
+        # Re-raise expected user errors as-is to preserve specific error messages
         raise
     except Exception as e:
         # Import logger locally to prevent circular references
