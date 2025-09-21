@@ -56,9 +56,6 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-_TEXT_CURSOR: Final = " ▏"
-
-
 class StreamingOutput(list[Any]):
     pass
 
@@ -71,6 +68,8 @@ class WriteMixin:
         | Generator[Any, Any, Any]
         | Iterable[Any]
         | AsyncGenerator[Any, Any],
+        *,
+        cursor: str = " ▏",
     ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
@@ -229,7 +228,7 @@ class WriteMixin:
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
                 stream_container.markdown(
-                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                    streamed_response + ("" if first_text else cursor),
                 )
             elif callable(chunk):
                 flush_stream_response()
