@@ -55,6 +55,14 @@ def test_popover_button_rendering(
         get_popover(themed_app, "popover 8 (material icon)"),
         name="st_popover-material_icon",
     )
+    assert_snapshot(
+        get_popover(themed_app, "popover 18 (primary)"),
+        name="st_popover-primary",
+    )
+    assert_snapshot(
+        get_popover(themed_app, "popover 19 (tertiary)"),
+        name="st_popover-tertiary",
+    )
 
 
 def test_popover_width_content(app: Page, assert_snapshot: ImageCompareFunction):
