@@ -17,7 +17,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
@@ -43,7 +43,7 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-histogram_chart",
         "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(18)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(22)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
@@ -179,7 +179,7 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_loaded(app)
 
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(18)
+    expect(plotly_elements).to_have_count(22)
 
     # Take a snapshot of the single mark chart, shows it applies the first color
     # from chartCategoricalColors (orange):
@@ -189,11 +189,22 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
 def test_plotly_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests that width and height parameters work correctly."""
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(18)
+    expect(plotly_elements).to_have_count(22)
 
     assert_snapshot(plotly_elements.nth(14), name="st_plotly_chart-width_content")
     assert_snapshot(plotly_elements.nth(15), name="st_plotly_chart-width_stretch")
     assert_snapshot(plotly_elements.nth(16), name="st_plotly_chart-width_400px")
     assert_snapshot(
         plotly_elements.nth(17), name="st_plotly_chart-width_1000px_content"
+    )
+
+    assert_snapshot(plotly_elements.nth(18), name="st_plotly_chart-height_content")
+
+    # For height="stretch", snapshot the entire container to verify stretching behavior
+    stretch_container = get_element_by_key(app, "test_height_stretch")
+    assert_snapshot(stretch_container, name="st_plotly_chart-height_stretch")
+
+    assert_snapshot(plotly_elements.nth(20), name="st_plotly_chart-height_300px")
+    assert_snapshot(
+        plotly_elements.nth(21), name="st_plotly_chart-height_600px_content"
     )

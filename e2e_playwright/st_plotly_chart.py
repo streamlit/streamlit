@@ -288,3 +288,33 @@ large_fig.update_layout(
     height=400, width=1000, title="Chart with figure width=1000 and width='content':"
 )
 st.plotly_chart(large_fig, width="content", theme="streamlit")
+
+# Height parameter tests
+st.write("## Height Parameter Tests")
+
+# Create a simple chart for height testing
+height_fig = go.Figure()
+height_fig.add_trace(
+    go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17], name="Height Test Chart")
+)
+
+height_fig.update_layout(title="Chart with height='content':")
+st.plotly_chart(height_fig, height="content", theme="streamlit")
+
+st.write("Chart with height='stretch' (in 600px container):")
+with st.container(border=True, key="test_height_stretch", height=600):
+    height_fig.update_layout(title="Chart with height='stretch':")
+    st.plotly_chart(height_fig, height="stretch", theme="streamlit")
+
+height_fig.update_layout(title="Chart with height=300:")
+st.plotly_chart(height_fig, height=300, theme="streamlit")
+
+# Chart with explicit figure height to test content height resolution
+tall_fig = go.Figure()
+tall_fig.add_trace(
+    go.Scatter(x=[1, 2, 3, 4, 5], y=[10, 15, 13, 17, 20], name="Tall Chart")
+)
+tall_fig.update_layout(
+    height=600, width=500, title="Chart with figure height=600 and height='content':"
+)
+st.plotly_chart(tall_fig, height="content", theme="streamlit")
