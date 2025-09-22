@@ -15,10 +15,13 @@
 from __future__ import annotations
 
 import re
-from typing import Final, Literal
+from typing import TYPE_CHECKING, Final, Literal
 from urllib.parse import urlparse
 
 from typing_extensions import TypeAlias
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
@@ -69,7 +72,7 @@ def get_hostname(url: str) -> str | None:
 
 
 def is_url(
-    url: str,
+    url: str | Path,
     allowed_schemas: tuple[UrlSchema, ...] = ("http", "https"),
 ) -> bool:
     """Check if a string looks like an URL.
@@ -78,7 +81,7 @@ def is_url(
 
     Parameters
     ----------
-    url : str
+    url : str or Path
         The URL to check.
 
     allowed_schemas : Tuple[str]

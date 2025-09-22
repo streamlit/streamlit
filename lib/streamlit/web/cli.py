@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
@@ -200,25 +201,28 @@ def main_hello(**kwargs: Any) -> None:
 def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     """Run a Python script, piping stderr to Streamlit.
 
-    The script can be local or it can be an url. In the latter case, Streamlit
-    will download the script to a temporary file and runs this file.
+    If omitted, the target script will be assumed to be "streamlit_app.py".
 
+    Otherwise, the target script should be one of the following:
+    - The path to a local Python file.
+    - The path to a local folder where "streamlit_app.py" can be found.
+    - A URL pointing to a Python file. In this case Streamlit will download the
+      file to a temporary file and run it.
+
+    To pass command-line arguments to the script, add " -- " before them. For example:
+
+        $ streamlit run my_app.py -- --my_arg1=123 my_arg2
+                                   ↑
+                                   Your CLI args start after this.
     """
     from streamlit import url_util
 
-    _, extension = os.path.splitext(target)
-    if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
-        if extension[1:] == "":
-            raise click.BadArgumentUsage(
-                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\n"
-                "For more information, please see https://docs.streamlit.io"
-            )
-        raise click.BadArgumentUsage(
-            f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
-        )
+    path = Path(target)
 
-    if url_util.is_url(target):
+    if url_util.is_url(path):
         from streamlit.temporary_directory import TemporaryDirectory
+
+        _check_extension_or_raise(path)
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
@@ -228,13 +232,36 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
                 temp_dir, path.strip("/").rsplit("/", 1)[-1]
             )
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
-            target = url_util.process_gitblob_url(target)
-            _download_remote(main_script_path, target)
+            url = url_util.process_gitblob_url(target)
+            _download_remote(main_script_path, url)
             _main_run(main_script_path, args, flag_options=kwargs)
+
     else:
-        if not os.path.exists(target):
-            raise click.BadParameter(f"File does not exist: {target}")
-        _main_run(target, args, flag_options=kwargs)
+        if path.is_dir():
+            path /= "streamlit_app.py"
+
+        _check_extension_or_raise(path)
+
+        if not path.exists():
+            raise click.BadParameter(f"File does not exist: {path}")
+
+        _main_run(str(path), args, flag_options=kwargs)
+
+
+def _check_extension_or_raise(path: Path) -> None:
+    extension = path.suffix
+
+    if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
+        if extension[1:] == "":
+            raise click.BadArgumentUsage(
+                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\n"
+                "For more information, please see https://docs.streamlit.io"
+            )
+        raise click.BadArgumentUsage(
+            f"Streamlit requires raw Python (.py) files, not {
+                extension
+            }.\nFor more information, please see https://docs.streamlit.io"
+        )
 
 
 def _get_command_line_as_string() -> str | None:
