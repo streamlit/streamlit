@@ -91,6 +91,24 @@ class WriteMixin:
                 manually define a generator function and include custom output
                 parsing.
 
+        cursor : str
+            A string to append to text as it's being written. By default, this uses
+            the string " | " to give the stream a typewriter effect, but you can
+            use any string that is supported by ``st.markdown``. This includes:
+
+            - Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            - Google Material Symbols (rounded style), using the syntax
+              ``:material/icon_name:``, where "icon_name" is the name of the
+              icon in snake case. For a complete list of icons, see Google's
+              `Material Symbols <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ...and much more! See ``st.markdown`` for more.
+
+
         Returns
         -------
         str or list
