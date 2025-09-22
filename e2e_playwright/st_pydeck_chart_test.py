@@ -132,19 +132,6 @@ def test_dark_style(themed_app: Page, assert_snapshot: ImageCompareFunction) -> 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
 @pytest.mark.skip_browser("firefox")
-def test_dimensions(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
-    pydeck_charts = select_subtest(themed_app, "dimensions_subtest")
-
-    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-    assert_snapshot(
-        pydeck_charts.nth(0),
-        name="st_pydeck_chart-custom_dimensions",
-        pixel_threshold=1.0,
-    )
-
-
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
 def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "mapbox_subtest")
 
@@ -156,6 +143,26 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
     )
 
 
+# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
+@pytest.mark.skip_browser("firefox")
+def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    """Tests that width parameter works correctly."""
+    pydeck_charts = select_subtest(app, "width_parameter_subtest")
+
+    expect(pydeck_charts).to_have_count(2, timeout=15000)
+
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-width_stretch",
+        pixel_threshold=1.0,
+    )
+    assert_snapshot(
+        pydeck_charts.nth(1),
+        name="st_pydeck_chart-width_200_height_250",
+        pixel_threshold=1.0,
+    )
+
+
 def select_subtest(app: Page, name: str) -> Locator:
     # Select the text in the UI:
     selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
@@ -163,9 +170,9 @@ def select_subtest(app: Page, name: str) -> Locator:
     selectbox_input.press("Enter")
 
     # The pydeck chart takes a while to load so check that
-    # it gets attached with an increased timeout.
+    # at least one gets attached with an increased timeout.
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(1, timeout=15000)
+    expect(pydeck_charts.first).to_be_attached(timeout=15000)
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.

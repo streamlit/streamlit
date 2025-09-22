@@ -82,7 +82,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2 = st.columns([3, 2])
+        col1, _ = st.columns([3, 2])
 
         with col1:
             st.time_input("foo")

@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
+from streamlit.elements.lib.color_util import is_css_color_like
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
@@ -67,6 +69,53 @@ ColumnType: TypeAlias = Literal[
     "json",
 ]
 
+# Themeable colors supported in the theme config:
+ThemeColor: TypeAlias = Literal[
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "orange",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
+]
+
+# Color options for chart columns:
+ChartColor: TypeAlias = Union[
+    Literal["auto", "auto-inverse"],
+    ThemeColor,
+    str,
+]
+
+
+def _validate_chart_color(maybe_color: str) -> None:
+    """Validate a color for a chart column."""
+
+    supported_colors = [
+        "auto",
+        "auto-inverse",
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "orange",
+        "gray",
+        "grey",
+        "primary",
+    ]
+    if maybe_color not in supported_colors and not is_css_color_like(maybe_color):
+        raise StreamlitValueError(
+            "color",
+            [
+                *supported_colors,
+                "a valid hex color",
+                "an rgb() or rgba() color",
+            ],
+        )
+
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
@@ -110,18 +159,21 @@ class BarChartColumnConfig(TypedDict):
     type: Literal["bar_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class LineChartColumnConfig(TypedDict):
     type: Literal["line_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class AreaChartColumnConfig(TypedDict):
     type: Literal["area_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class ImageColumnConfig(TypedDict):
@@ -135,7 +187,7 @@ class ListColumnConfig(TypedDict):
 class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
-    color: NotRequired[str | None]
+    color: NotRequired[str | ThemeColor | None]
 
 
 class MultiselectColumnConfig(TypedDict):
@@ -1078,6 +1130,7 @@ def BarChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a bar chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1123,6 +1176,18 @@ def BarChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "auto", "auto-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"auto"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1157,12 +1222,17 @@ def BarChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=BarChartColumnConfig(type="bar_chart", y_min=y_min, y_max=y_max),
+        type_config=BarChartColumnConfig(
+            type="bar_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1175,6 +1245,7 @@ def LineChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a line chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1220,6 +1291,18 @@ def LineChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "auto", "auto-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"auto"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1254,13 +1337,16 @@ def LineChartColumn(
         https://doc-linechart-column.streamlit.app/
         height: 300px
     """
-
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=LineChartColumnConfig(type="line_chart", y_min=y_min, y_max=y_max),
+        type_config=LineChartColumnConfig(
+            type="line_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1273,6 +1359,7 @@ def AreaChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure an area chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1318,6 +1405,18 @@ def AreaChartColumn(
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
 
+    color: "auto", "auto-inverse", or str or None
+        The color to use for the chart. Can be one of the following:
+
+        - ``None`` (default): The primary color will be used.
+        - ``"auto"``: To color the chart green if the data is increasing, and
+          red if the data is decreasing.
+        - ``"auto-inverse"``: To color the chart red if the data is increasing, and
+          green if the data is decreasing.
+        - A single color value that is applied to all charts in the column. This supports either
+          a hex code, e.g. ``"#000000"``, or one of the following supported theme colors:
+          blue, green, orange, red, violet, yellow, gray/grey, or primary.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1353,12 +1452,16 @@ def AreaChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=AreaChartColumnConfig(type="area_chart", y_min=y_min, y_max=y_max),
+        type_config=AreaChartColumnConfig(
+            type="area_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1578,7 +1681,7 @@ def MultiselectColumn(
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
-    color: str | Iterable[str] | None = None,
+    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
     format_func: Callable[[str], str] | None = None,
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.

@@ -54,15 +54,6 @@ import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
-// Extended theme config type to include properties not in the protobuf definition
-export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
-  baseFontWeight?: number | null
-  codeFontSize?: string | number | null
-  codeFontWeight?: number | null
-  linkUnderline?: boolean | null
-  chartCategoricalColors?: string[] | null
-}
-
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 
@@ -640,7 +631,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: ExtendedCustomThemeConfig,
+  themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -689,6 +680,7 @@ export const createEmotionTheme = (
     widgetBorderColor,
     borderColor,
     linkColor,
+    codeTextColor,
     codeBackgroundColor,
     redColor,
     orangeColor,
@@ -745,8 +737,6 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  conditionalOverrides.colors.link = linkColor ?? colors.link
-
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? colors.codeBackgroundColor
 
@@ -787,6 +777,16 @@ export const createEmotionTheme = (
     conditionalOverrides.colors,
     parsedColors
   )
+
+  // Link color should use the linkColor config if provided, otherwise
+  // use blueTextColor (configured/derived or default) handled above
+  conditionalOverrides.colors.link =
+    linkColor ?? conditionalOverrides.colors.blueTextColor
+
+  // Code text color should use the codeTextColor config if provided, otherwise
+  // use the greenTextColor (configured/derived or default) handled above
+  conditionalOverrides.colors.codeTextColor =
+    codeTextColor ?? conditionalOverrides.colors.greenTextColor
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&

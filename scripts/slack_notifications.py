@@ -23,6 +23,41 @@ import sys
 import requests
 
 
+def _build_patch_cherry_pick_text(
+    *,
+    repo: str,
+    release_version: str,
+    commit_sha: str,
+    release_branch: str,
+    run_id: str | None,
+    header: str,
+    error_reason: str | None = None,
+) -> str:
+    """Build the text for a patch cherry-pick notification."""
+
+    lines = [
+        header,
+        f"- Version: {release_version}" if release_version else None,
+        (
+            f"- Commit: https://github.com/{repo}/commit/{commit_sha}"
+            if repo and commit_sha
+            else None
+        ),
+        (
+            f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+            if repo and release_branch
+            else None
+        ),
+        (
+            f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+            if repo and run_id
+            else None
+        ),
+        (f"- Note: {error_reason}" if error_reason else None),
+    ]
+    return "\n".join([ln for ln in lines if ln])
+
+
 def send_notification() -> None:
     """Create a slack message."""
 
@@ -87,9 +122,10 @@ def send_notification() -> None:
     if workflow == "release_automation":
         repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
         release_version = os.getenv("RELEASE_VERSION", "")
+        release_branch = os.getenv("RELEASE_BRANCH", "")
+        commit_sha = os.getenv("CHERRY_PICK_SHA", "")
 
         if message_key == "branch_created":
-            release_branch = os.getenv("RELEASE_BRANCH", "")
             nightly_tag = os.getenv("NIGHTLY_TAG", "")
             lines = [
                 ":evergreen_tree: Release branch created",
@@ -128,6 +164,31 @@ def send_notification() -> None:
                 ),
             ]
             text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
+        # OSS patch cherry-pick notifications
+        elif message_key == "cherry_pick_to_release_branch_success":
+            text = _build_patch_cherry_pick_text(
+                repo=repo,
+                release_version=release_version,
+                commit_sha=commit_sha,
+                release_branch=release_branch,
+                run_id=run_id,
+                header=":cherries: Cherry-pick succeeded",
+            )
+            payload = {"text": text}
+
+        elif message_key == "cherry_pick_to_release_branch_failed":
+            error_reason = os.getenv("ERROR_REASON", "")
+            text = _build_patch_cherry_pick_text(
+                repo=repo,
+                release_version=release_version,
+                commit_sha=commit_sha,
+                release_branch=release_branch,
+                run_id=run_id,
+                header=":x: Cherry-pick failed",
+                error_reason=error_reason or None,
+            )
             payload = {"text": text}
 
     if payload:

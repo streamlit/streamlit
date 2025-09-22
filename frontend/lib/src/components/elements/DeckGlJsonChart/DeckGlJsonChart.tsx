@@ -78,7 +78,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     selectionMode,
     setSelection,
     viewState,
-    width,
   } = useDeckGl({
     element,
     fragmentId,
@@ -239,7 +238,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           viewState={viewState}
           onViewStateChange={onViewStateChange}
           height={height}
-          width={width}
           layers={isInitialized ? deck.layers : EMPTY_LAYERS}
           getTooltip={createTooltip}
           // @ts-expect-error There is a type mismatch due to our versions of the libraries
@@ -251,7 +249,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         >
           <StaticMap
             height={height}
-            width={width}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"

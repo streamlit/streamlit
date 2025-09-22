@@ -25,8 +25,9 @@ message DeckGlJsonChart {
 
   string tooltip = 2;
 
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 4;
+  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
+  // Use widthConfig in layout configuration instead.
+  bool use_container_width = 4 [deprecated=true];
 
   // ID, required for selection events.
   string id = 5;
@@ -34,8 +35,9 @@ message DeckGlJsonChart {
   // The Mapbox token, if any.
   string mapbox_token = 6;
 
-  // Width in pixels
-  uint32 width = 7;
+  // DEPRECATED: Width in pixels
+  // Use widthConfig in layout configuration instead.
+  uint32 width = 7 [deprecated=true];
 
   // Height in pixels
   uint32 height = 8;
