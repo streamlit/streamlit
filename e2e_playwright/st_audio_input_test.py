@@ -22,7 +22,12 @@ import wave
 import pytest
 from playwright.sync_api import Locator, Page, Route, expect
 
-from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    IframedPage,
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -490,16 +495,23 @@ def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
     # Wait for processing to complete
     wait_for_app_run(app)
 
-    # Check cleanup
+    # Check cleanup - wait for the tracking values to be available
+    # Use wait_until pattern for async checks as per best practices
+    def check_blob_urls() -> bool:
+        tracking = app.evaluate("window.blobTracking")
+        return len(tracking["created"]) >= 3 and len(tracking["revoked"]) >= 2
+
+    wait_until(app, check_blob_urls, timeout=5)
+
+    # Now verify the actual values
     tracking = app.evaluate("window.blobTracking")
 
-    # Should have created at least 3 blob URLs (one per recording)
+    # These asserts are acceptable for non-DOM values
+    # as confirmed by st_heading_test.py and other tests
     assert len(tracking["created"]) >= 3, (
         f"Expected at least 3 blob URLs created, got {len(tracking['created'])}"
     )
 
-    # Should have revoked at least the first 2 (keeping only the last)
-    # The exact number may vary due to internal WaveSurfer behavior
     assert len(tracking["revoked"]) >= 2, (
         f"Expected at least 2 blob URLs revoked, got {len(tracking['revoked'])}"
     )
