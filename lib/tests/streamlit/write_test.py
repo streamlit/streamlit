@@ -183,9 +183,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with various input data and check that it uses
         the expected command."""
         with patch(
-            f"streamlit.delta_generator.DeltaGenerator.{
-                metadata.expected_write_command
-            }"
+            f"streamlit.delta_generator.DeltaGenerator.{metadata.expected_write_command}"
         ) as p:
             st.write(input_data)
 
