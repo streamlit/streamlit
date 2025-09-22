@@ -302,9 +302,9 @@ export const StyledPillsButtonActive = styled(
       color: theme.colors.primary,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.lightGray,
-      color: theme.colors.fadedText40,
+      color: theme.colors.gray60,
       cursor: "not-allowed",
     },
   }
@@ -349,9 +349,9 @@ export const StyledSegmentedControlButtonActive = styled(
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.lightGray,
-      color: theme.colors.fadedText40,
+      color: theme.colors.gray60,
       cursor: "not-allowed",
     },
   }
