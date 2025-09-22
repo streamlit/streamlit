@@ -24,7 +24,7 @@ else:
 with st.container(key="thumbs_container"):
     st.feedback()
     st.session_state.thumbs_feedback_disabled = 1
-    st.feedback(key="thumbs_feedback_disabled",disabled=True)
+    st.feedback(key="thumbs_feedback_disabled", disabled=True)
     st.feedback(key="thumbs_feedback_hover_test")
 
 
