@@ -82,6 +82,7 @@ class CliTest(unittest.TestCase):
         assert result.exit_code == 0
 
     def test_run_no_file_argument_and_default_doesnt_exist(self):
+        """Test that streamlit run fails when no file argument is provided and the default streamlit_app.py doesn't exist."""
         """streamlit run should fail if run with no arguments."""
         with (
             patch("streamlit.url_util.is_url", return_value=False),
