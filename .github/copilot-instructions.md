@@ -55,3 +55,17 @@ Selection of `make` commands for development (run in the repo root):
 
 - `debug-e2e-test`: Run e2e test in debug mode, via: `make debug-e2e-test st_command_test.py`.
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
+
+### Development Tips
+
+- **Follow existing patterns**: Check neighboring files for conventions.
+- You can use the `work-tmp` directory to store temporary files, specs, and scripts.
+- If you fail to run a `make` command, remember to run it from the root / top-level directory.
+
+## Testing Strategy
+
+- **Python Unit Tests**: Test internal behavior without frontend.
+- **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library.
+- **E2E Tests**: Test the entire app logic end-to-end with Playwright.
+- **(Python) Type Tests**: Verify public API typing with mypy `assert_type`.
+- Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
