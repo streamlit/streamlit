@@ -69,7 +69,7 @@ class WriteMixin:
         | Iterable[Any]
         | AsyncGenerator[Any, Any],
         *,
-        cursor: str = " ▏",
+        cursor: str | None = None,
     ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
@@ -91,10 +91,10 @@ class WriteMixin:
                 manually define a generator function and include custom output
                 parsing.
 
-        cursor : str
-            A string to append to text as it's being written. By default, this uses
-            the string " | " to give the stream a typewriter effect, but you can
-            use any string that is supported by ``st.markdown``. This includes:
+        cursor : str or None
+            A string to append to text as it's being written. By default, no cursor
+            is shown, but you can configure it to use any string that is supported
+            by ``st.markdown``. This includes:
 
             - Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
               For a list of all supported codes,
@@ -168,6 +168,7 @@ class WriteMixin:
                 "this data type."
             )
 
+        cursor_str = cursor or ""
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
@@ -246,7 +247,7 @@ class WriteMixin:
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
                 stream_container.markdown(
-                    streamed_response + ("" if first_text else cursor),
+                    streamed_response + ("" if first_text else cursor_str),
                 )
             elif callable(chunk):
                 flush_stream_response()
