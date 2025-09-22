@@ -258,9 +258,8 @@ def _check_extension_or_raise(path: Path) -> None:
                 "For more information, please see https://docs.streamlit.io"
             )
         raise click.BadArgumentUsage(
-            f"Streamlit requires raw Python (.py) files, not {
-                extension
-            }.\nFor more information, please see https://docs.streamlit.io"
+            f"Streamlit requires raw Python (.py) files, not {extension}.\n"
+            "For more information, please see https://docs.streamlit.io"
         )
 
 
