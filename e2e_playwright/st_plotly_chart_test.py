@@ -132,6 +132,10 @@ def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFu
     reset_button.hover()
     reset_button.click()
 
+    wait_for_app_loaded(app)
+    # Give time for CSS styles to resettle after the reset button click
+    app.wait_for_timeout(200)
+
     assert_snapshot(
         chart,
         name="st_plotly_chart-fullscreen_reset_axis",
