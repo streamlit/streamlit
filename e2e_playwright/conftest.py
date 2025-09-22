@@ -381,11 +381,12 @@ default-src 'none';
 worker-src blob:;
 form-action 'none';
 frame-ancestors {fake_iframe_server_origin};
-frame-src data: {app_url}/_stcore/component/;
+frame-src data: {app_url}/_stcore/component/ {app_url}/component/;
 img-src 'self' https: data: blob:;
 media-src 'self' https: data: blob:;
 connect-src ws://localhost:{app_port}/_stcore/stream
-    {app_url}/_stcore/allowed-message-origins
+    {app_url}/_stcore/component/
+    {app_url}/component/
     {app_url}/_stcore/upload_file/
     {app_url}/_stcore/host-config
     {app_url}/_stcore/health
@@ -451,8 +452,8 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 else ""
             }
                         title="Iframed Streamlit App"
-                        allow="clipboard-write; microphone;"
-                        sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
+                        allow="clipboard-read; clipboard-write; microphone; camera;"
+                        sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
                         width="100%"
                     >
                     </iframe>

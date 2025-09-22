@@ -47,7 +47,37 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledThumb, StyledThumbValue } from "./styled-components"
+import {
+  StyledSlider,
+  StyledSliderTickBar,
+  StyledThumb,
+  StyledThumbValue,
+} from "./styled-components"
+
+interface SliderTickBarProps {
+  minLabel: string
+  maxLabel: string
+  isHovered: boolean
+  isDisabled: boolean
+}
+
+function SliderTickBar({
+  minLabel,
+  maxLabel,
+  isHovered,
+  isDisabled,
+}: SliderTickBarProps): ReactElement {
+  return (
+    <StyledSliderTickBar
+      data-testid="stSliderTickBar"
+      isHovered={isHovered}
+      isDisabled={isDisabled}
+    >
+      <span>{minLabel}</span>
+      <span>{maxLabel}</span>
+    </StyledSliderTickBar>
+  )
+}
 
 export interface Props {
   disabled: boolean
@@ -81,6 +111,11 @@ function Slider({
   // the UI to `value` then the UI would only update when the user is done
   // interacting. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleMouseEnter = useCallback(() => setIsHovered(true), [])
+  const handleMouseLeave = useCallback(() => setIsHovered(false), [])
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   const [thumbRefs] = useState<
@@ -93,6 +128,9 @@ function Slider({
   const theme = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
+  const formattedMinValue = formatValue(element.min, element)
+  const formattedMaxValue = formatValue(element.max, element)
+
   const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
@@ -104,6 +142,7 @@ function Slider({
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setValueWithSource({ value: valueArg, fromUi: true })
+      setIsDragging(false)
     },
     [setValueWithSource]
   )
@@ -111,6 +150,7 @@ function Slider({
   const handleChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setUiValue(valueArg)
+      setIsDragging(true)
     },
     []
   )
@@ -212,7 +252,13 @@ function Slider({
   )
 
   return (
-    <div ref={sliderRef} className="stSlider" data-testid="stSlider">
+    <StyledSlider
+      ref={sliderRef}
+      className="stSlider"
+      data-testid="stSlider"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -253,11 +299,19 @@ function Slider({
           InnerTrack: {
             style: innerTrackStyle,
           },
-          // Hide min and max tick values
-          TickBar: () => null,
+          // Show min/max labels when hovering the slider or dragging it
+          TickBar: {
+            component: SliderTickBar,
+            props: {
+              minLabel: formattedMinValue,
+              maxLabel: formattedMaxValue,
+              isHovered: isHovered || isDragging,
+              isDisabled: disabled,
+            },
+          },
         }}
       />
-    </div>
+    </StyledSlider>
   )
 }
 

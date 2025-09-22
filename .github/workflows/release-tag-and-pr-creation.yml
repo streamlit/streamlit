@@ -1,0 +1,195 @@
+name: Release Tag and PR Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version in full semver (i.j.k)"
+        required: true
+        type: string
+      dry_run:
+        description: "Run without pushing tag or creating PR"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-tag-pr-${{ inputs.release_version || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  prepare-release:
+    name: Prepare Release ${{ inputs.release_version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Python deps for notifications
+        run: |
+          uv pip install --system requests
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Validate inputs and branch existence
+        run: |
+          set -euo pipefail
+
+          # Ensure the release version is a valid semver
+          if ! echo "${{ inputs.release_version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::release_version must be full semver (i.j.k). Got '${{ inputs.release_version }}'" >&2
+            exit 1
+          fi
+
+          # Ensure the release branch exists remotely
+          if ! git ls-remote --heads origin | grep -q "refs/heads/release/${{ inputs.release_version }}$"; then
+            echo "::error::Branch release/${{ inputs.release_version }} not found on origin. Run Release Branch Creation first." >&2
+            exit 1
+          fi
+
+          # Ensure the tag doesn't already exist remotely
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.release_version }}$"; then
+            echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
+            exit 1
+          fi
+
+      - name: Check for existing open PR for release
+        if: ${{ inputs.dry_run != true }}
+        id: check_existing_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const releaseVersion = process.env.RELEASE_VERSION;
+            const head = `release/${releaseVersion}`;
+            const base = 'develop';
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${head}`,
+              base,
+              per_page: 100,
+            });
+
+            const existing = pulls.find(p => p.base.ref === base && p.head.ref === head);
+            if (existing) {
+              core.setFailed(`Open PR already exists for ${head} -> ${base}: ${existing.html_url}`);
+            }
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+
+      - name: Switch to release branch
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git fetch origin "release/${{ inputs.release_version }}:release/${{ inputs.release_version }}"
+          git switch "release/${{ inputs.release_version }}"
+
+      - name: Create annotated tag for the release
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+
+          # Verify the tag will be created from the expected commit on the remote release branch
+          expected_commit_sha="$(git ls-remote --heads origin "release/${{ inputs.release_version }}" | awk '{print $1}')"
+          if [ -z "${expected_commit_sha}" ]; then
+            echo "::error::Unable to resolve origin/release/${{ inputs.release_version }} commit" >&2
+            exit 1
+          fi
+
+          current_head_sha="$(git rev-parse HEAD)"
+          if [ "${current_head_sha}" != "${expected_commit_sha}" ]; then
+            echo "::error::Current HEAD (${current_head_sha}) does not match origin/release/${{ inputs.release_version }} (${expected_commit_sha}). Aborting tag creation." >&2
+            exit 1
+          fi
+
+          # Create the tag explicitly on the verified commit
+          git tag -a "${{ inputs.release_version }}" "${expected_commit_sha}" -m "Streamlit ${{ inputs.release_version }}"
+          git push origin "refs/tags/${{ inputs.release_version }}"
+
+      - name: Create PR to merge release branch into develop
+        id: create_pr
+        if: ${{ inputs.dry_run != true }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const releaseVersion = process.env.RELEASE_VERSION;
+            const head = `release/${releaseVersion}`;
+            const base = 'develop';
+
+            const title = `[chore] Release v${releaseVersion}`;
+            const body = [
+              `Automated PR to merge release branch into ${base}.`,
+              `Release version: ${releaseVersion}`,
+            ].join('\n\n');
+
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body,
+              draft: false,
+            });
+
+            const pr = created.data;
+
+            core.setOutput('pr_url', pr.html_url);
+
+            const labels = ['change:chore', 'impact:users'];
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels,
+            });
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+
+      - name: Write step summary
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## Release Tag and PR Creation Summary";
+            echo "- Release version: ${RELEASE_VERSION}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no tag or PR created)";
+            else
+              echo "- PR: ${PR_URL:-n/a}";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification - tag and PR created
+        if: ${{ success() && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RUN_ID: ${{ github.run_id }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+        run: |
+          python scripts/slack_notifications.py release_automation tag_pr_created

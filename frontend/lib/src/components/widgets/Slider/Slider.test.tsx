@@ -16,7 +16,8 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
@@ -227,6 +228,44 @@ describe("Slider widget", () => {
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "5")
+    })
+  })
+
+  describe("Tick bar visibility", () => {
+    it("is hidden by default and becomes visible on hover", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      expect(tickBar).not.toBeVisible()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const sliderContainer = screen.getByTestId("stSlider")
+      await user.hover(sliderContainer)
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.unhover(sliderContainer)
+      await waitFor(() => expect(tickBar).not.toBeVisible())
+    })
+
+    it("becomes visible while dragging via keyboard and hides after release", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      const slider = screen.getByRole("slider")
+
+      expect(tickBar).not.toBeVisible()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      slider.focus()
+      await user.keyboard("{ArrowRight>}")
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.keyboard("{/ArrowRight}")
+      await waitFor(() => expect(tickBar).not.toBeVisible())
     })
   })
 
