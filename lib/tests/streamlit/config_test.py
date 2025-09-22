@@ -147,7 +147,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             RuntimeError,
-            match="Complex config options require doc strings for their description.",
+            match=r"Complex config options require doc strings for their description.",
         ):
 
             @ConfigOption("_test.noDocString")
@@ -158,7 +158,7 @@ class ConfigTest(unittest.TestCase):
         """Test setting an invalid config section."""
         with pytest.raises(
             ValueError,
-            match='Key "_test.myParam." has invalid format.',
+            match=r'Key "_test.myParam." has invalid format.',
         ):
             ConfigOption("_test.myParam.")
 
@@ -171,7 +171,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config section using _create_section."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define section "_test2" twice.',
+            match=r'Cannot define section "_test2" twice.',
         ):
             config._create_section("_test2", "A test section.")
             config._create_section("_test2", "A test section.")
@@ -180,7 +180,7 @@ class ConfigTest(unittest.TestCase):
         """Test overwriting a config option using _create_option."""
         with pytest.raises(
             RuntimeError,
-            match='Cannot define option "_test.overwriteKey" twice.',
+            match=r'Cannot define option "_test.overwriteKey" twice.',
         ):
             config._create_option("_test.overwriteKey")
             config._create_option("_test.overwriteKey")
@@ -193,7 +193,7 @@ class ConfigTest(unittest.TestCase):
         """
         with pytest.raises(
             ValueError,
-            match='Key "_test.snake_case" has invalid format.',
+            match=r'Key "_test.snake_case" has invalid format.',
         ):
             config._create_option("_test.snake_case")
 
@@ -532,6 +532,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.showWidgetBorder",
                 "theme.linkColor",
                 "theme.linkUnderline",
+                "theme.codeTextColor",
                 "theme.codeBackgroundColor",
                 "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
@@ -576,6 +577,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.showWidgetBorder",
                 "theme.sidebar.linkColor",
                 "theme.sidebar.linkUnderline",
+                "theme.sidebar.codeTextColor",
                 "theme.sidebar.codeBackgroundColor",
                 "theme.sidebar.dataframeHeaderBackgroundColor",
                 "theme.sidebar.redColor",
@@ -657,7 +659,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.port", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="server.port does not work when global.developmentMode is true.",
+            match=r"server.port does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -674,7 +676,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("browser.serverPort", 1234, "test")
         with pytest.raises(
             RuntimeError,
-            match="browser.serverPort does not work when global.developmentMode is true.",
+            match=r"browser.serverPort does not work when global.developmentMode is true.",
         ):
             config._check_conflicts()
 
@@ -732,7 +734,7 @@ class ConfigTest(unittest.TestCase):
         )
         with pytest.raises(
             RuntimeError,
-            match="had multiple mappings.*duplicate",
+            match=r"had multiple mappings.*duplicate",
         ):
             config._parse_trusted_user_headers()
 
@@ -829,6 +831,7 @@ class ConfigTest(unittest.TestCase):
             "fontFaces": None,
             "baseFontSize": None,
             "baseFontWeight": None,
+            "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
@@ -876,6 +879,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.showWidgetBorder", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
         config._set_option("theme.linkUnderline", False, "test")
+        config._set_option("theme.codeTextColor", "#158237", "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
         config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
         config._set_option("theme.font", "Inter", "test")
@@ -958,6 +962,7 @@ class ConfigTest(unittest.TestCase):
                 "1.25rem",
             ],
             "headingFontWeights": [700, 600, 500],
+            "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
             "fontFaces": [
@@ -1020,6 +1025,7 @@ class ConfigTest(unittest.TestCase):
             "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
         )
         config._set_option("theme.sidebar.headingFontWeights", [600, 500, 500], "test")
+        config._set_option("theme.sidebar.codeTextColor", "#158237", "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
@@ -1065,6 +1071,7 @@ class ConfigTest(unittest.TestCase):
             "codeFontWeight": 600,
             "headingFontSizes": ["2.875rem", "2.75rem"],
             "headingFontWeights": [600, 500, 500],
+            "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
             "redColor": "#7d353b",

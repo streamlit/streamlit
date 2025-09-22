@@ -1087,6 +1087,6 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
         caption = "ahoy!"
 
         with pytest.raises(
-            StreamlitAPIException, match="Cannot pair 2 captions with 5 images."
+            StreamlitAPIException, match=r"Cannot pair 2 captions with 5 images."
         ):
             st.image([url] * 5, caption=[caption] * 2)

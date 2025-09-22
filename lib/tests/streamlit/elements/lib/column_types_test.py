@@ -15,6 +15,8 @@
 import datetime
 import unittest
 
+import pytest
+
 from streamlit.elements.lib.column_types import (
     BarChartColumn,
     CheckboxColumn,
@@ -32,8 +34,10 @@ from streamlit.elements.lib.column_types import (
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    _validate_chart_color,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
+from streamlit.errors import StreamlitValueError
 
 
 class ColumnTypesTest(unittest.TestCase):
@@ -563,3 +567,53 @@ class ColumnTypesTest(unittest.TestCase):
                 ],
             }
         }, "Colors should cycle through the provided iterable."
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        # Supported named colors
+        "auto",
+        "auto-inverse",
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "orange",
+        "gray",
+        "grey",
+        "primary",
+        # CSS-like colors accepted by is_css_color_like
+        "#fff",
+        "#ffff",
+        "#ffffff",
+        "#ffffffff",
+        "rgb(255, 0, 0)",
+        "rgba(0, 0, 0, 0.5)",
+    ],
+)
+def test__validate_chart_color_valid(color: str) -> None:
+    """Validate that supported names and CSS-like colors do not raise."""
+    _validate_chart_color(color)
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        "purple",
+        "hsl(0,0%,0%)",
+        "#12",
+        "#12345",
+        "#1234567",
+        "auto-invers",
+        "",
+        " ",
+        "not-a-color",
+        ":material/open_in_new:",
+    ],
+)
+def test__validate_chart_color_invalid(color: str) -> None:
+    """Validate that unsupported names and non CSS-like strings raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError):
+        _validate_chart_color(color)

@@ -741,6 +741,7 @@ def _mock_get_options_for_section(
         "greenTextColor": "#7defa1",
         "violetTextColor": "#c89dff",
         "grayTextColor": "#d5dae5",
+        "codeTextColor": "#7defa1",
     }
 
     if overrides.get("sidebar") is not None:
@@ -793,6 +794,7 @@ def _mock_get_options_for_section(
         "showWidgetBorder": True,
         "showSidebarBorder": True,
         "textColor": "black",
+        "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
         "chartCategoricalColors": [
@@ -1059,8 +1061,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             ),
             pytest.raises(
                 RuntimeError,
-                match="This function must only be called on the eventloop thread "
-                "the AppSession was created on. This should never happen.",
+                match=r"This function must only be called on the eventloop thread "
+                r"the AppSession was created on. This should never happen.",
             ),
         ):
             session._handle_scriptrunner_event_on_event_loop(
@@ -1201,7 +1203,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
+            match=r"page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1221,7 +1223,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
+            match=r"exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1241,7 +1243,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="client_state must be set for the SHUTDOWN event. This should never happen.",
+            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1261,7 +1263,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
+            match=r"null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1300,6 +1302,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1364,6 +1367,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1428,6 +1432,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showWidgetBorder": None,
                     "showSidebarBorder": None,
                     "textColor": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1472,6 +1477,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "secondaryBackgroundColor": None,
                         "showWidgetBorder": None,
                         "textColor": None,
+                        "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
                         "redColor": None,
@@ -1647,6 +1653,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.green_text_color == "#7defa1"
         assert new_session_msg.custom_theme.violet_text_color == "#c89dff"
         assert new_session_msg.custom_theme.gray_text_color == "#d5dae5"
+        assert new_session_msg.custom_theme.code_text_color == "#09ab3b"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",

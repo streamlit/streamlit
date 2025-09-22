@@ -18,7 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class, get_button
 
-VEGA_LITE_CHART_COUNT = 15
+VEGA_LITE_CHART_COUNT = 12
 
 
 def test_vega_lite_chart(app: Page):
@@ -33,24 +33,6 @@ def test_vega_lite_chart(app: Page):
         expect(vega_display.locator("svg")).to_have_class("marks")
 
 
-def test_vega_lite_chart_sets_chart_width(themed_app: Page):
-    """Tests that it sets the correct chart width."""
-    vega_lite_charts = themed_app.get_by_test_id("stVegaLiteChart")
-
-    expect(
-        vega_lite_charts.nth(0).locator("[role='graphics-document']").nth(0)
-    ).to_have_css("width", "704px")
-    expect(
-        vega_lite_charts.nth(1).locator("[role='graphics-document']").nth(0)
-    ).to_have_css("width", "704px")
-    expect(
-        vega_lite_charts.nth(2).locator("[role='graphics-document']").nth(0)
-    ).to_have_css("width", "400px")
-    expect(
-        vega_lite_charts.nth(3).locator("[role='graphics-document']").nth(0)
-    ).to_have_css("width", "500px")
-
-
 @pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_displays_interactive_charts(
     themed_app: Page, assert_snapshot: ImageCompareFunction
@@ -59,9 +41,9 @@ def test_vega_lite_chart_displays_interactive_charts(
     vega_lite_charts = themed_app.get_by_test_id("stVegaLiteChart")
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
-    expect(vega_lite_charts.nth(4)).to_be_visible()
+    expect(vega_lite_charts.nth(1)).to_be_visible()
     assert_snapshot(
-        vega_lite_charts.nth(4),
+        vega_lite_charts.nth(1),
         name="st_vega_lite_chart-interactive",
     )
 
@@ -75,7 +57,7 @@ def test_vega_lite_chart_same_plot_different_ways(
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
-    for idx in range(5, 9):
+    for idx in range(2, 6):
         assert_snapshot(vega_lite_charts.nth(idx), name=f"st_vega_lite_chart-{idx}")
 
 
@@ -88,7 +70,7 @@ def test_vega_lite_chart_streamlit_theme(
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
-    for idx in range(9, 11):
+    for idx in range(6, 8):
         assert_snapshot(
             vega_lite_charts.nth(idx), name=f"st_vega_lite_chart-theming_{idx}"
         )
@@ -103,7 +85,7 @@ def test_vega_lite_chart_default_theme(
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
-    assert_snapshot(vega_lite_charts.nth(11), name="st_vega_lite_chart-default_theming")
+    assert_snapshot(vega_lite_charts.nth(8), name="st_vega_lite_chart-default_theming")
 
 
 @pytest.mark.skip_browser("firefox")
@@ -116,7 +98,7 @@ def test_vega_lite_chart_user_supplied_colors(
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
     assert_snapshot(
-        vega_lite_charts.nth(12),
+        vega_lite_charts.nth(9),
         name="st_vega_lite_chart-user_supplied_colors",
     )
 
@@ -128,7 +110,7 @@ def test_empty_vega_lite_chart(app: Page, assert_snapshot: ImageCompareFunction)
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
     assert_snapshot(
-        vega_lite_charts.nth(13),
+        vega_lite_charts.nth(10),
         name="st_vega_lite_chart-empty",
     )
 
@@ -146,9 +128,9 @@ def test_vega_lite_chart_updates_with_slightly_different_data(
     vega_lite_charts = app.get_by_test_id("stVegaLiteChart")
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
-    expect(vega_lite_charts.nth(14)).to_be_visible()
+    expect(vega_lite_charts.nth(11)).to_be_visible()
     assert_snapshot(
-        vega_lite_charts.nth(14),
+        vega_lite_charts.nth(11),
         name="st_vega_lite_chart-before_update",
     )
 
@@ -156,8 +138,8 @@ def test_vega_lite_chart_updates_with_slightly_different_data(
     wait_for_app_run(app)
 
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
-    expect(vega_lite_charts.nth(14)).to_be_visible()
+    expect(vega_lite_charts.nth(11)).to_be_visible()
     assert_snapshot(
-        vega_lite_charts.nth(14),
+        vega_lite_charts.nth(11),
         name="st_vega_lite_chart-after_update",
     )
