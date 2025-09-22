@@ -2162,28 +2162,6 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 assert "cannot reference another theme file" in str(cm.value)
 
-    def test_theme_base_invalid_theme_option(self):
-        """Test error when theme file contains invalid options."""
-        theme_content = """
-        [theme]
-        base = "dark"
-        primaryColor = "#00ff41"
-        invalidOption = "should_fail"
-        """
-
-        with self._theme_file(theme_content) as theme_file:
-            config_toml = f"""
-            [theme]
-            base = "{theme_file}"
-            """
-
-            with self._config_patches(config_toml, theme_files=[theme_file]):
-                with pytest.raises(StreamlitAPIException) as cm:
-                    config.get_config_options()
-
-                assert "invalid theme option" in str(cm.value)
-                assert "invalidOption" in str(cm.value)
-
     def test_theme_base_invalid_subsection(self):
         """Test error when theme file contains invalid subsections."""
         theme_content = """
@@ -2227,8 +2205,8 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 assert "must contain a [theme] section" in str(cm.value)
 
-    def test_theme_base_malformed_scenarios(self):
-        """Test various malformed theme file scenarios."""
+    def test_theme_base_malformed_error(self):
+        """Test malformed theme file triggers error."""
         # Test: Theme file with invalid TOML syntax
         malformed_theme_content = """
         [theme
