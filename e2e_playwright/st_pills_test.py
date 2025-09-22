@@ -107,8 +107,9 @@ def test_pills_are_disabled_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).to_have_css("opacity", re.compile(r"^0(\.\d+)?$"))
-
+    expect(selected_pill).not_to_have_css(
+        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+    )
     expect_markdown(app, "pills-disabled: None")
     assert_snapshot(pills, name="st_pills-disabled")
 

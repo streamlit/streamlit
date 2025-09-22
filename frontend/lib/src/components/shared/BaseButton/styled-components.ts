@@ -261,7 +261,9 @@ const StyledButtonGroupBaseButton = styled(
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      opacity: 0.4,
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
       cursor: "not-allowed",
     },
 
@@ -298,6 +300,12 @@ export const StyledPillsButtonActive = styled(
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.lightGray,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
@@ -339,6 +347,12 @@ export const StyledSegmentedControlButtonActive = styled(
     zIndex: theme.zIndices.priority,
     "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.lightGray,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
