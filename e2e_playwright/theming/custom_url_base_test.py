@@ -57,7 +57,10 @@ def configure_base_and_config_custom_theme():
 
 
 @pytest.mark.usefixtures("configure_base_and_config_custom_theme")
+
 def test_custom_theme_with_url_base(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that custom theme with URL base loads correctly and applies theme inheritance."""
+
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
     # Add some additional timeout to ensure that fonts can load without
