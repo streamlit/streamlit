@@ -680,19 +680,29 @@ class VegaChartsMixin:
             configuration option.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -1193,15 +1203,16 @@ class VegaChartsMixin:
             horizontally.
 
         sort : bool or str
-            How to sort the bars. This can be:
+            How to sort the bars. This can be one of the following:
 
             - ``True`` (default): The bars are sorted automatically along the
-              independent/categorical axis with Altair's default sorting. This also
-              correctly sorts ordered categorical columns (``pd.Categorical``).
+              independent/categorical axis with Altair's default sorting. This
+              also correctly sorts ordered categorical columns
+              (``pd.Categorical``).
             - ``False``: The bars are shown in data order without sorting.
             - The name of a column (e.g. ``"col1"``): The bars are sorted by
               that column in ascending order.
-            - The name of a column prefixed with a minus sign (e.g. ``"-col1"``):
+            - The name of a column with a minus-sign prefix (e.g. ``"-col1"``):
               The bars are sorted by that column in descending order.
 
         stack : bool, "normalize", "center", "layered", or None
