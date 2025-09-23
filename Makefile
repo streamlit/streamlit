@@ -251,7 +251,6 @@ frontend-lint:
 .PHONY: frontend-types
 # Run the frontend type checker.
 frontend-types:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
 .PHONY: frontend-format
