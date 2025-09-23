@@ -1203,15 +1203,16 @@ class VegaChartsMixin:
             horizontally.
 
         sort : bool or str
-            How to sort the bars. This can be:
+            How to sort the bars. This can be one of the following:
 
             - ``True`` (default): The bars are sorted automatically along the
-              independent/categorical axis with Altair's default sorting. This also
-              correctly sorts ordered categorical columns (``pd.Categorical``).
+              independent/categorical axis with Altair's default sorting. This
+              also correctly sorts ordered categorical columns
+              (``pd.Categorical``).
             - ``False``: The bars are shown in data order without sorting.
             - The name of a column (e.g. ``"col1"``): The bars are sorted by
               that column in ascending order.
-            - The name of a column prefixed with a minus sign (e.g. ``"-col1"``):
+            - The name of a column with a minus-sign prefix (e.g. ``"-col1"``):
               The bars are sorted by that column in descending order.
 
         stack : bool, "normalize", "center", "layered", or None
