@@ -35,8 +35,10 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
     LayoutConfig,
     WidthWithoutContent,
+    validate_height,
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -274,7 +276,7 @@ class PydeckMixin:
         *,
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
-        height: int | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: Literal[
             "single-object"
         ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
@@ -290,7 +292,7 @@ class PydeckMixin:
         *,
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
-        height: int | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
@@ -303,7 +305,7 @@ class PydeckMixin:
         *,
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
-        height: int | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
@@ -372,10 +374,12 @@ class PydeckMixin:
                 be removed in a future version. Use the ``width`` parameter
                 with ``width="stretch"`` instead of ``use_container_width=True``,
                 and specify an integer width instead of ``use_container_width=False``.
-        height : int or None
-            Desired height of the chart expressed in pixels. If ``height`` is
-            ``None`` (default), Streamlit sets the height of the chart to fit
-            its contents according to the plotting library.
+        height : "stretch" or int
+            How to size the chart's height. Can be one of:
+
+            - ``"stretch"``: Expand to the height of the parent container. When outside of a container,
+            the default height is 6.25rem.
+            - An integer: Set the chart height to this many pixels. Defaults to 500.
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This controls
             whether or not the chart behaves like an input widget.
@@ -491,6 +495,7 @@ class PydeckMixin:
             # Otherwise keep the provided width which should be an integer (validated below).
 
         validate_width(width, allow_content=False)
+        validate_height(height, allow_content=False)
 
         pydeck_proto = PydeckProto()
 
@@ -499,9 +504,6 @@ class PydeckMixin:
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
-
-        if height:
-            pydeck_proto.height = height
 
         tooltip = _get_pydeck_tooltip(pydeck_obj)
         if tooltip:
@@ -564,14 +566,14 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            layout_config = LayoutConfig(width=width)
+            layout_config = LayoutConfig(width=width, height=height)
             self.dg._enqueue(
                 "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
             )
 
             return widget_state.value
 
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, height=height)
         return self.dg._enqueue(
             "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
         )

@@ -72,7 +72,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     data: selection,
     deck,
     hasActiveSelection,
-    height,
     isSelectionModeActivated,
     onViewStateChange,
     selectionMode,
@@ -212,7 +211,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
-      height={height}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
@@ -237,7 +235,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         <DeckGL
           viewState={viewState}
           onViewStateChange={onViewStateChange}
-          height={height}
           layers={isInitialized ? deck.layers : EMPTY_LAYERS}
           getTooltip={createTooltip}
           // @ts-expect-error There is a type mismatch due to our versions of the libraries
@@ -248,7 +245,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           }
         >
           <StaticMap
-            height={height}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"

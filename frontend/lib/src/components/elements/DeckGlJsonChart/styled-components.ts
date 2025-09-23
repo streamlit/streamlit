@@ -18,17 +18,12 @@ import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme"
 
-export interface StyledDeckGlChartProps {
-  height: number | string
-}
-
-export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ height }) => ({
-    position: "relative",
-    height,
-    width: "100%",
-  })
-)
+export const StyledDeckGlChart = styled.div({
+  position: "relative",
+  height: "100%",
+  minHeight: "6.25rem",
+  width: "100%",
+})
 
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",
