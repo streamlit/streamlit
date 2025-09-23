@@ -148,13 +148,17 @@ def render_sample_rate_audio_inputs() -> None:
     if audio_default:
         st.write("Default rate recorded")
 
-    # Test explicit 48 kHz (without sample_rate param as it may not be available)
-    audio_48k = st.audio_input("High Quality (48 kHz)", key="sample_rate_48k")
+    # Test explicit 48 kHz
+    audio_48k = st.audio_input(
+        "High Quality (48 kHz)", sample_rate=48000, key="sample_rate_48k"
+    )
     if audio_48k:
         st.write("48 kHz recorded")
 
-    # Test browser default
-    audio_browser = st.audio_input("Browser Default", key="sample_rate_browser")
+    # Test browser default (None)
+    audio_browser = st.audio_input(
+        "Browser Default", sample_rate=None, key="sample_rate_browser"
+    )
     if audio_browser:
         st.write("Browser default recorded")
 
