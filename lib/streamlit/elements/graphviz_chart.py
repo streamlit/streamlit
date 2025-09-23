@@ -81,6 +81,12 @@ class GraphvizMixin:
             container. If ``use_container_width`` is ``True``, Streamlit sets
             the width of the figure to match the width of the parent container.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : "content", "stretch", or int
             The width of the chart element. This can be one of the following:
 
@@ -103,12 +109,6 @@ class GraphvizMixin:
               parent container.
             - An integer specifying the height in pixels: The element has a
               fixed height.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Example
         -------

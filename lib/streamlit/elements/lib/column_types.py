@@ -1805,6 +1805,7 @@ def MultiselectColumn(
         - None (default): The options are displayed without color.
         - A single color value that is used for all options. This can be one of
           the following strings:
+
             - ``"primary"`` to use the primary theme color.
             - A CSS named color name like ``"darkBlue"`` or ``"maroon"``.
             - A hex color code like ``"#483d8b"`` or ``"#6A5ACD80"``.
@@ -1812,6 +1813,7 @@ def MultiselectColumn(
               ``"RGB(70, 130, 180, .7)"``.
             - An HSL or HSLA color code like ``"hsl(248, 53%, 58%)"``
               or ``"HSL(147, 50%, 47%, .3)"``.
+
         - An iterable of color values that are mapped to the options. The colors
           are applied in sequence, cycling through the iterable if there are
           more options than colors.

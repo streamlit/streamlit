@@ -350,6 +350,12 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : "content", "stretch", or int
             The width of the button. This can be one of the following:
 
@@ -362,12 +368,6 @@ class FormMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the button matches the width
               of the parent container.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Returns
         -------

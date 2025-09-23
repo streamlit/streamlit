@@ -958,6 +958,12 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's content.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : int, "stretch", or "content"
             The width of the button. This can be one of the following:
 
@@ -974,12 +980,6 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Examples
         --------
