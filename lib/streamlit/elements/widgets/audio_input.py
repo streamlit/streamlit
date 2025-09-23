@@ -131,10 +131,13 @@ class AudioInputMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         sample_rate : int or None
-            The target sample rate for the audio recording in Hz. If specified,
-            must be one of: 8000, 11025, 16000, 22050, 24000, 32000, 44100, or 48000.
-            Default is 16000 Hz (optimal for speech recognition). Pass ``None`` to
-            use the browser's default sample rate (typically 44100 or 48000 Hz).
+            The target sample rate for the audio recording in Hz.
+            This defaults to 16000 Hz, which is optimal for speech recognition.
+
+            The following sample rates are supported: 8000, 11025, 16000,
+            22050, 24000, 32000, 44100, or 48000. If this is ``None``, the
+            widget uses the browser's default sample rate (typically 44100 or
+            48000 Hz).
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -196,22 +199,35 @@ class AudioInputMixin:
 
         Examples
         --------
+        *Example 1:* Record a voice message and play it back.*
+
+        The default sample rate of 16000 Hz is optimal for speech recognition.
+
         >>> import streamlit as st
         >>>
-        >>> # Record with default 16 kHz sample rate (optimal for speech)
         >>> audio_value = st.audio_input("Record a voice message")
         >>>
         >>> if audio_value:
         ...     st.audio(audio_value)
 
-        >>> # Record with browser's default sample rate (44.1/48 kHz)
-        >>> audio_hq = st.audio_input("Record high quality audio", sample_rate=None)
-
-        >>> # Record at 24 kHz for real-time transcription
-        >>> audio_rt = st.audio_input("Record for transcription", sample_rate=24000)
-
         .. output::
            https://doc-audio-input.streamlit.app/
+           height: 260px
+
+        *Example 2:* Record high-fidelity audio and play it back.*
+
+        Higher sample rates can create higher-quality, larger audio files. This
+        might require a nicer microphone to fully appreciate the difference.
+
+        >>> import streamlit as st
+        >>>
+        >>> audio_value = st.audio_input("Record high quality audio", sample_rate=48000)
+        >>>
+        >>> if audio_value:
+        ...     st.audio(audio_value)
+
+        .. output::
+           https://doc-audio-input-high-rate.streamlit.app/
            height: 260px
 
         """

@@ -569,7 +569,7 @@ class LayoutsMixin:
 
         To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
-        examples below.
+        the examples below.
 
         .. note::
             All content within every tab is computed and sent to the frontend,
@@ -612,7 +612,8 @@ class LayoutsMixin:
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
             tab is selected. If this is a string, it must be one of the tab
-            labels.
+            labels. If two tabs have the same label as ``default``, the first
+            one is selected.
 
         Returns
         -------
@@ -621,7 +622,9 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the ``with`` notation to insert any element into a tab:
+        *Example 1: Use context management*
+
+        You can use ``with`` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -641,7 +644,9 @@ class LayoutsMixin:
             https://doc-tabs1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly on the returned objects:
+        *Example 2: Call methods directly*
+
+        You can call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng
@@ -659,6 +664,31 @@ class LayoutsMixin:
         .. output ::
             https://doc-tabs2.streamlit.app/
             height: 700px
+
+        *Example 3: Set the default tab and style the tab labels*
+
+        Use the ``default`` parameter to set the default tab. You can also use
+        Markdown in the tab labels.
+
+        >>> import streamlit as st
+        >>>
+        >>> tab1, tab2, tab3 = st.tabs(
+        ...     [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
+        ... )
+        >>>
+        >>> with tab1:
+        >>>     st.header("A cat")
+        >>>     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+        >>> with tab2:
+        >>>     st.header("A dog")
+        >>>     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+        >>> with tab3:
+        >>>     st.header("An owl")
+        >>>     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+
+        .. output ::
+            https://doc-tabs3.streamlit.app/
+            height: 620px
 
         """
         if not tabs:
@@ -928,6 +958,12 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's content.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : int, "stretch", or "content"
             The width of the button. This can be one of the following:
 
@@ -944,12 +980,6 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Examples
         --------
