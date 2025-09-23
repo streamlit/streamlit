@@ -466,6 +466,9 @@ export function PlotlyChart({
           // to prevent flickering issues.
           visibility:
             plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+          // If the scrollbars are activated, it leads to flickering issues.
+          // We don't need overflow here since the parent container and plot dimensions are in sync.
+          overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
         // Double click is needed to make it easier to the user to
