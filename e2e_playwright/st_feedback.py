@@ -37,25 +37,14 @@ with st.container(key="faces_container"):
         ),
     )
     st.session_state.faces_feedback_disabled = 3
-    st.feedback(
-        "faces",
-        key="faces_feedback_disabled",
-        disabled=True,
-    )
+    st.feedback("faces", key="faces_feedback_disabled", disabled=True)
     st.feedback("faces", key="faces_feedback_hover_test")
 
 with st.container(key="stars_container"):
-    sentiment = st.feedback(
-        "stars",
-        default=st.session_state.default_feedback
-    )
+    sentiment = st.feedback("stars", default=st.session_state.default_feedback)
     st.write(f"Star sentiment: {sentiment}")
     st.session_state.star_feedback_disabled = 3
-    sentiment = st.feedback(
-        "stars",
-        disabled=True,
-        key="star_feedback_disabled"
-    )
+    sentiment = st.feedback("stars", disabled=True, key="star_feedback_disabled")
     st.write("feedback-disabled:", str(sentiment))
     st.feedback("stars", key="stars_feedback_hover_test")
 
