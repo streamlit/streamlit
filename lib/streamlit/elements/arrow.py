@@ -799,15 +799,16 @@ class ArrowMixin:
             Whether to show borders around the table and between cells. This can be one
             of the following:
 
-            - ``True`` (default): Show borders around the table and between cells
-            - ``False``: Show no borders
-            - ``"horizontal"``: Show only horizontal borders between rows
+            - ``True`` (default): Show borders around the table and between cells.
+            - ``False``: Don't show any borders.
+            - ``"horizontal"``: Show only horizontal borders between rows.
 
         Examples
         --------
-        **Example 1: Display a confusion matrix**
+        **Example 1: Display a confusion matrix as a static table**
 
         >>> import pandas as pd
+        >>> import streamlit as st
         >>>
         >>> confusion_matrix = pd.DataFrame(
         ...     {
@@ -821,8 +822,8 @@ class ArrowMixin:
         >>> st.table(confusion_matrix)
 
         .. output::
-           https://doc-table.streamlit.app/
-           height: 480px
+           https://doc-table-confusion.streamlit.app/
+           height: 250px
 
         **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
@@ -842,7 +843,7 @@ class ArrowMixin:
         >>> st.table(product_data, border="horizontal")
 
         .. output::
-           https://doc-table-markdown.streamlit.app/
+           https://doc-table-horizontal-border.streamlit.app/
            height: 200px
 
         """
