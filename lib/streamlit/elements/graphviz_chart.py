@@ -105,10 +105,13 @@ class GraphvizMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of the
-              parent container.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
             - An integer specifying the height in pixels: The element has a
-              fixed height.
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         Example
         -------
