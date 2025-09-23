@@ -227,9 +227,9 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
 
-            path = urlparse(target).path
+            subpath = urlparse(target).path
             main_script_path = os.path.join(
-                temp_dir, path.strip("/").rsplit("/", 1)[-1]
+                temp_dir, subpath.strip("/").rsplit("/", 1)[-1]
             )
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
             url = url_util.process_gitblob_url(target)
