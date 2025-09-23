@@ -319,7 +319,7 @@ def _validate_theme_file_content(
     theme_content: dict[str, Any],
     file_path_or_url: str,
     config_options_template: dict[str, ConfigOption],
-) -> None:
+) -> dict[str, Any]:
     """
     Validate that a theme file contains only valid theme sections and config options.
 
@@ -327,11 +327,19 @@ def _validate_theme_file_content(
 
     If invalid config options are found in the theme file, a warning is logged with the valid
     options for the given section.
+
+    Returns
+    -------
+        A filtered copy of the theme content with invalid options removed.
     """
     valid_main_options = _get_valid_theme_options(config_options_template, "main")
     valid_subsections = {"sidebar"}
 
     theme_section = theme_content.get("theme", {})
+
+    # Create a filtered copy of the theme content
+    filtered_theme = copy.deepcopy(theme_content)
+    filtered_theme_section = filtered_theme.get("theme", {})
 
     # Validate theme options
     for option_name, option_value in theme_section.items():
@@ -361,6 +369,12 @@ def _validate_theme_file_content(
                         valid_section_options,
                         section_name,
                     )
+                    # Remove invalid option from filtered theme
+                    if (
+                        section_name in filtered_theme_section
+                        and section_option in filtered_theme_section[section_name]
+                    ):
+                        del filtered_theme_section[section_name][section_option]
                 # Validate color options for subsection
                 full_option_name = f"theme.{section_name}.{section_option}"
                 if "color" in full_option_name.lower():
@@ -374,10 +388,15 @@ def _validate_theme_file_content(
                     file_path_or_url,
                     valid_main_options,
                 )
+                # Remove invalid option from filtered theme
+                if option_name in filtered_theme_section:
+                    del filtered_theme_section[option_name]
             # Validate color options for direct theme option
             full_option_name = f"theme.{option_name}"
             if "color" in full_option_name.lower():
                 _validate_color_value(option_value, full_option_name)
+
+    return filtered_theme
 
 
 def _load_theme_file(
@@ -439,12 +458,12 @@ def _load_theme_file(
         if "theme" not in parsed_theme:
             _raise_missing_theme_section()
 
-        # Validate that the theme file contains only valid theme options
-        _validate_theme_file_content(
+        # Validate that the theme file contains only valid theme options, filtering out invalid ones
+        filtered_theme = _validate_theme_file_content(
             parsed_theme, file_path_or_url, config_options_template
         )
 
-        return parsed_theme
+        return filtered_theme
 
     except (StreamlitAPIException, FileNotFoundError):
         # Re-raise these specific exceptions

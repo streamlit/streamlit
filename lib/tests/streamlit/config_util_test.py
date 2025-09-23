@@ -575,10 +575,13 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             }
         }
 
-        # Should not raise any exception
-        config_util._validate_theme_file_content(
+        # Should not raise any exception and return filtered theme
+        filtered_theme = config_util._validate_theme_file_content(
             theme_content, "test_theme.toml", self.config_template
         )
+
+        # Should return the same content since all options are valid
+        assert filtered_theme == theme_content
 
     def test_validate_theme_file_content_invalid_option(self):
         """Test validation logs warning for invalid theme options."""
@@ -587,7 +590,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         # Mock the logger returned by _get_logger
         with patch("streamlit.config_util._get_logger") as mock_get_logger:
             mock_logger = mock_get_logger.return_value
-            config_util._validate_theme_file_content(
+            filtered_theme = config_util._validate_theme_file_content(
                 theme_content, "test_theme.toml", self.config_template
             )
             mock_logger.warning.assert_called_once()
@@ -602,6 +605,11 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         assert "test_theme.toml" in args[0]  # file_path_or_url
         assert "theme.invalidOption" in args[1]  # full_option_name
         assert "theme" in args[2]  # section_name
+
+        # Verify invalid option was removed from filtered theme
+        assert "invalidOption" not in filtered_theme["theme"]
+        # Verify valid option was preserved
+        assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
     def test_validate_theme_file_content_invalid_subsection(self):
         """Test validation rejects invalid theme subsections."""
@@ -632,7 +640,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         # Mock the logger returned by _get_logger
         with patch("streamlit.config_util._get_logger") as mock_get_logger:
             mock_logger = mock_get_logger.return_value
-            config_util._validate_theme_file_content(
+            filtered_theme = config_util._validate_theme_file_content(
                 theme_content, "test_theme.toml", self.config_template
             )
             mock_logger.warning.assert_called_once()
@@ -645,6 +653,11 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         assert "test_theme.toml" in args[0]  # file_path_or_url
         assert "theme.sidebar.invalidSidebarOption" in args[1]  # full_option_name
         assert "sidebar" in args[2]  # section_name
+
+        # Verify invalid sidebar option was removed from filtered theme
+        assert "invalidSidebarOption" not in filtered_theme["theme"]["sidebar"]
+        # Verify valid main option was preserved
+        assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
     def test_validate_theme_file_content_invalid_main_option_in_sidebar(self):
         """Test validation rejects main-theme-only options in sidebar."""
@@ -669,7 +682,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
             with patch("streamlit.config_util._get_logger") as mock_get_logger:
                 mock_logger = mock_get_logger.return_value
-                config_util._validate_theme_file_content(
+                filtered_theme = config_util._validate_theme_file_content(
                     theme_content, "test_theme.toml", self.config_template
                 )
                 mock_logger.warning.assert_called_once()
@@ -684,6 +697,11 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             assert "test_theme.toml" in args[0]  # file_path_or_url
             assert f"theme.sidebar.{main_only_option}" in args[1]  # full_option_name
             assert "sidebar" in args[2]  # section_name
+
+            # Verify invalid sidebar option was removed from filtered theme
+            assert main_only_option not in filtered_theme["theme"]["sidebar"]
+            # Verify valid main option was preserved
+            assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
     def test_load_theme_file_missing_toml(self):
         """Test _load_theme_file when toml module is missing."""
