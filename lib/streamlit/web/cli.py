@@ -217,19 +217,18 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     """
     from streamlit import url_util
 
-    path = Path(target)
-
-    if url_util.is_url(path):
+    if url_util.is_url(target):
         from streamlit.temporary_directory import TemporaryDirectory
-
-        _check_extension_or_raise(path)
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
 
-            subpath = urlparse(target).path
+            url_subpath = urlparse(target).path
+
+            _check_extension_or_raise(url_subpath)
+
             main_script_path = os.path.join(
-                temp_dir, subpath.strip("/").rsplit("/", 1)[-1]
+                temp_dir, url_subpath.strip("/").rsplit("/", 1)[-1]
             )
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
             url = url_util.process_gitblob_url(target)
@@ -237,19 +236,22 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
             _main_run(main_script_path, args, flag_options=kwargs)
 
     else:
+        path = Path(target)
+
         if path.is_dir():
             path /= "streamlit_app.py"
 
-        _check_extension_or_raise(path)
+        path_str = str(path)
+        _check_extension_or_raise(path_str)
 
         if not path.exists():
             raise click.BadParameter(f"File does not exist: {path}")
 
-        _main_run(str(path), args, flag_options=kwargs)
+        _main_run(path_str, args, flag_options=kwargs)
 
 
-def _check_extension_or_raise(path: Path) -> None:
-    extension = path.suffix
+def _check_extension_or_raise(path_str: str) -> None:
+    _, extension = os.path.splitext(path_str)
 
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
         if extension[1:] == "":
