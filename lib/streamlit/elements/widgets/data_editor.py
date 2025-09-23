@@ -241,7 +241,7 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)
+            datetime_value = pd.Timestamp(value)  # ty: ignore
 
             if datetime_value is pd.NaT:
                 return None

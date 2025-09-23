@@ -11,7 +11,8 @@ alwaysApply: false
 - Formatter: prettier v3
 - Framework: React v18
 - Styling: @emotion/styled v11
-- Build tool: vite v6
+- Build tool: vite v7
+- Testing: vitest v3 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles
@@ -28,7 +29,7 @@ alwaysApply: false
 - Leverage all of best practices of React 18.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
-- Prefix event handlers with "handle" (eg: handleClick, handleSubmit).
+- Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
 - Favor leveraging @emotion/styled instead of inline styles.
 - Leverage object style notation in Emotion.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
@@ -36,12 +37,31 @@ alwaysApply: false
   - Avoid the need to target other components.
 - When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
+- Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 
 ## Yarn Workspaces
 
 - Project Structure: Monorepo managed with Yarn Workspaces.
-- Packages: `app, connection, lib, protobuf, typescript-config, utils`
+- Packages:
+  - `app` - Main application UI.
+  - `connection` - WebSocket handling
+  - `lib` - Shared UI components.
+  - `utils` - Shared TypeScript utilities.
+  - `protobuf` - Generated Protocol definitions.
+  - `typescript-config` - Configuration for TypeScript.
+  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
 - Package-specific scripts are executed within their respective directories.
+
+## Relevant `make` commands
+
+Run from the repo root:
+
+- `make frontend-fast`: Build the frontend (vite).
+- `make frontend-dev`: Start the frontend development server (hot-reload).
+- `make frontend-lint`: Lint and check formatting of frontend files (eslint).
+- `make frontend-types`: Run the TypeScript type checker (tsc).
+- `make frontend-format`: Format frontend files (eslint).
+- `make frontend-tests`: Run all frontend unit tests (vitest).
 
 ## TypeScript Test Guide
 
