@@ -254,7 +254,7 @@ class ColumnConfig(TypedDict, total=False):
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -363,7 +363,7 @@ def Column(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -471,7 +471,7 @@ def NumberColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -637,7 +637,7 @@ def TextColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -763,7 +763,7 @@ def LinkColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -925,7 +925,7 @@ def CheckboxColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1038,7 +1038,7 @@ def SelectboxColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1182,7 +1182,7 @@ def BarChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1302,7 +1302,7 @@ def LineChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1421,7 +1421,7 @@ def AreaChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1548,7 +1548,7 @@ def ImageColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1644,7 +1644,7 @@ def ListColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1769,7 +1769,7 @@ def MultiselectColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -1991,7 +1991,7 @@ def DatetimeColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -2157,7 +2157,7 @@ def TimeColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -2314,7 +2314,7 @@ def DateColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -2469,7 +2469,7 @@ def ProgressColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
@@ -2603,7 +2603,7 @@ def JsonColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-        If the total width of all columns is less that the width of the
+        If the total width of all columns is less than the width of the
         dataframe, the remaining space will be distributed evenly among all
         columns.
 
