@@ -528,6 +528,13 @@ def _dict_to_pandas_df(data: dict[Any, Any]) -> DataFrame:
     return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
 
 
+def has_range_index(df: DataFrame) -> bool:
+    """True if the dataframe has a range index."""
+    from pandas import RangeIndex
+
+    return isinstance(df.index, RangeIndex)
+
+
 def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,

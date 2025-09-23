@@ -832,6 +832,7 @@ class LayoutsMixin:
         self,
         label: str,
         *,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
@@ -881,6 +882,17 @@ class LayoutsMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        type : "primary", "secondary", or "tertiary"
+            An optional string that specifies the button type. This can be one
+            of the following:
+
+            - ``"primary"``: The button's background is the app's primary color
+              for additional emphasis.
+            - ``"secondary"`` (default): The button's background coordinates
+              with the app's background color for normal emphasis.
+            - ``"tertiary"``: The button is plain text without a border or
+              background for subtlety.
 
         icon : str
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -979,9 +991,17 @@ class LayoutsMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
+        # Checks whether the entered button type is one of the allowed options
+        if type not in ["primary", "secondary", "tertiary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
+                f'\nThe argument passed was "{type}".'
+            )
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
+        popover_proto.type = type
         if help:
             popover_proto.help = str(help)
         if icon is not None:

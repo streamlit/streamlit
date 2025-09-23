@@ -18,7 +18,7 @@ import { darken, lighten, transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
-import { CustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
 import {
   baseTheme,
@@ -37,7 +37,6 @@ import {
   createEmotionTheme,
   createTheme,
   CUSTOM_THEME_NAME,
-  ExtendedCustomThemeConfig,
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -663,13 +662,12 @@ describe("createEmotionTheme", () => {
     ],
   ])(
     "correctly handles setting of basic color configs '%s'",
-    (primary, bodyText, secondaryBg, bgColor, linkColor) => {
+    (primary, bodyText, secondaryBg, bgColor) => {
       const themeInput: Partial<CustomThemeConfig> = {
         primaryColor: primary,
         textColor: bodyText,
         secondaryBackgroundColor: secondaryBg,
         backgroundColor: bgColor,
-        linkColor,
       }
 
       const theme = createEmotionTheme(themeInput)
@@ -678,26 +676,16 @@ describe("createEmotionTheme", () => {
       expect(theme.colors.bodyText).toBe(bodyText)
       expect(theme.colors.secondaryBg).toBe(secondaryBg)
       expect(theme.colors.bgColor).toBe(bgColor)
-      expect(theme.colors.link).toBe(linkColor)
     }
   )
 
   it.each([
     // Test invalid color values passed to each color config
-    ["primaryColor", "invalid", "orange", "blue", "pink", "purple", "green"],
-    ["textColor", "red", "invalid", "blue", "pink", "purple", "green"],
-    [
-      "secondaryBackgroundColor",
-      "red",
-      "orange",
-      "invalid",
-      "pink",
-      "purple",
-      "green",
-    ],
-    ["backgroundColor", "red", "orange", "blue", "invalid", "purple", "green"],
-    ["linkColor", "red", "orange", "blue", "pink", "invalid", "green"],
-    ["borderColor", "red", "orange", "blue", "pink", "purple", "invalid"],
+    ["primaryColor", "invalid", "orange", "blue", "pink", "purple"],
+    ["textColor", "red", "invalid", "blue", "pink", "purple"],
+    ["secondaryBackgroundColor", "red", "orange", "invalid", "pink", "purple"],
+    ["backgroundColor", "red", "orange", "blue", "invalid", "purple"],
+    ["borderColor", "red", "orange", "blue", "pink", "invalid"],
   ])(
     "logs a warning and falls back to default for any invalid color configs '%s'",
     (
@@ -706,7 +694,6 @@ describe("createEmotionTheme", () => {
       bodyText,
       secondaryBg,
       bgColor,
-      linkColor,
       borderColor
     ) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
@@ -715,7 +702,6 @@ describe("createEmotionTheme", () => {
         textColor: bodyText,
         secondaryBackgroundColor: secondaryBg,
         backgroundColor: bgColor,
-        linkColor,
         borderColor,
       }
 
@@ -739,9 +725,6 @@ describe("createEmotionTheme", () => {
       if (invalidColorConfig !== "backgroundColor") {
         expect(theme.colors.bgColor).toBe(bgColor)
       }
-      if (invalidColorConfig !== "linkColor") {
-        expect(theme.colors.link).toBe(linkColor)
-      }
       if (invalidColorConfig !== "borderColor") {
         expect(theme.colors.borderColor).toBe(borderColor)
       }
@@ -760,9 +743,6 @@ describe("createEmotionTheme", () => {
       }
       if (invalidColorConfig === "backgroundColor") {
         expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
-      }
-      if (invalidColorConfig === "linkColor") {
-        expect(theme.colors.link).toBe(baseTheme.emotion.colors.link)
       }
       if (invalidColorConfig === "borderColor") {
         expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
@@ -1484,6 +1464,290 @@ describe("createEmotionTheme", () => {
 
     // Should derive for blue (main color valid)
     expect(theme.colors.blueTextColor).toBe(darken("#0000ff", 0.15))
+  })
+
+  // Link color handling
+  it("uses configured linkColor when provided", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      linkColor: "#ff0000",
+      blueTextColor: "#0000ff", // This should be ignored when linkColor is set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.link).toBe("#ff0000")
+  })
+
+  it("falls back to configured blueTextColor when linkColor not provided", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      blueTextColor: "#0000ff",
+      // linkColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.link).toBe("#0000ff")
+    expect(theme.colors.blueTextColor).toBe("#0000ff")
+  })
+
+  it("falls back to blueTextColor derived from blueColor when linkColor & blueTextColor not provided (light theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      blueColor: "#1c83e1", // blue70
+      // linkColor and blueTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    const expectedDerivedBlueTextColor = darken("#1c83e1", 0.15)
+    expect(theme.colors.blueTextColor).toBe(expectedDerivedBlueTextColor)
+    expect(theme.colors.link).toBe(expectedDerivedBlueTextColor)
+  })
+
+  it("falls back to blueTextColor derived from blueColor when linkColor & blueTextColor not provided (dark theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+      blueColor: "#1c83e1", // blue70
+      // linkColor and blueTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+
+    const expectedDerivedBlueTextColor = lighten("#1c83e1", 0.15)
+    expect(theme.colors.blueTextColor).toBe(expectedDerivedBlueTextColor)
+    expect(theme.colors.link).toBe(expectedDerivedBlueTextColor)
+  })
+
+  it("falls back to default blueTextColor when no link-related colors are configured (light theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      // No linkColor, blueTextColor, or blueColor configured
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.link).toBe(lightTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.blueTextColor).toBe(
+      lightTheme.emotion.colors.blueTextColor
+    )
+  })
+
+  it("falls back to default blueTextColor when no link-related colors are configured (dark theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+      // No linkColor, blueTextColor, or blueColor configured
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+
+    expect(theme.colors.link).toBe(darkTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.blueTextColor).toBe(
+      darkTheme.emotion.colors.blueTextColor
+    )
+  })
+
+  it("prioritizes linkColor over blueTextColor when both are configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      linkColor: "#ff0000",
+      blueTextColor: "#0000ff",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+    expect(theme.colors.link).toBe("#ff0000")
+    expect(theme.colors.blueTextColor).toBe("#0000ff")
+  })
+
+  it("handles invalid linkColor by logging warning and falling back to default blueTextColor", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      linkColor: "invalid-color",
+      blueTextColor: "#0000ff",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for linkColor in theme: "invalid-color"`
+    )
+    // Should fall back to blueTextColor since linkColor is invalid
+    expect(theme.colors.link).toBe("#0000ff")
+    expect(theme.colors.blueTextColor).toBe("#0000ff")
+  })
+
+  it("falls back to default when both linkColor and blueTextColor are invalid", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      linkColor: "invalid-color",
+      blueTextColor: "invalid-blue-color",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for linkColor in theme: "invalid-color"`
+    )
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for blueTextColor in theme: "invalid-blue-color"`
+    )
+
+    // Should use default blueTextColor since both colors are invalid
+    expect(theme.colors.link).toBe(lightTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.blueTextColor).toBe(
+      lightTheme.emotion.colors.blueTextColor
+    )
+  })
+
+  it("handles linkColor without # prefix correctly", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      linkColor: "0000ff", // Blue without # prefix
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.link).toBe("#0000ff")
+  })
+
+  // Code text color handling
+  it("uses configured codeTextColor when provided", () => {
+    const themeInput: Partial<ICustomThemeConfig> = {
+      codeTextColor: "#ff0000",
+      greenTextColor: "#00aa00", // This should be ignored when codeTextColor is set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe("#ff0000")
+    expect(theme.colors.greenTextColor).toBe("#00aa00")
+  })
+
+  it("falls back to configured greenTextColor when codeTextColor not provided", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      greenTextColor: "#00aa00",
+      // codeTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe("#00aa00")
+    expect(theme.colors.greenTextColor).toBe("#00aa00")
+  })
+
+  it("falls back to greenTextColor derived from greenColor when codeTextColor & greenTextColor not provided (light theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      greenColor: "#29b09d", // green70
+      // codeTextColor and greenTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    const expectedDerivedGreenTextColor = darken("#29b09d", 0.15)
+    expect(theme.colors.greenTextColor).toBe(expectedDerivedGreenTextColor)
+    expect(theme.colors.codeTextColor).toBe(expectedDerivedGreenTextColor)
+  })
+
+  it("falls back to greenTextColor derived from greenColor when codeTextColor & greenTextColor not provided (dark theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+      greenColor: "#177233", // green100
+      // codeTextColor and greenTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+
+    const expectedDerivedGreenTextColor = lighten("#177233", 0.15)
+    expect(theme.colors.greenTextColor).toBe(expectedDerivedGreenTextColor)
+    expect(theme.colors.codeTextColor).toBe(expectedDerivedGreenTextColor)
+  })
+
+  it("falls back to default greenTextColor when no code or green colors configured (light theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      // No codeTextColor, greenColor, or greenTextColor configured
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.greenTextColor
+    )
+    expect(theme.colors.greenTextColor).toBe(
+      lightTheme.emotion.colors.greenTextColor
+    )
+  })
+
+  it("falls back to default greenTextColor when no code or green colors configured (dark theme)", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.DARK,
+      // No codeTextColor, greenColor, or greenTextColor configured
+    }
+    const theme = createEmotionTheme(themeInput, darkTheme)
+
+    expect(theme.colors.codeTextColor).toBe(
+      darkTheme.emotion.colors.greenTextColor
+    )
+    expect(theme.colors.greenTextColor).toBe(
+      darkTheme.emotion.colors.greenTextColor
+    )
+  })
+
+  it("prioritizes codeTextColor over greenTextColor when both are configured", () => {
+    const themeInput: Partial<ICustomThemeConfig> = {
+      codeTextColor: "#ff0000", // Explicit code text color
+      greenTextColor: "#00ff00", // This should be ignored for codeTextColor
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe("#ff0000")
+    expect(theme.colors.greenTextColor).toBe("#00ff00")
+  })
+
+  it("prioritizes codeTextColor over derived greenTextColor from greenColor", () => {
+    const themeInput: Partial<ICustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      codeTextColor: "#ff0000", // Explicit code text color
+      greenColor: "#29b09d", // This would derive a different greenTextColor
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    const expectedDerivedGreenTextColor = darken("#29b09d", 0.15)
+    expect(theme.colors.greenTextColor).toBe(expectedDerivedGreenTextColor)
+    expect(theme.colors.codeTextColor).toBe("#ff0000") // Should use explicit codeTextColor
+  })
+
+  it("handles invalid codeTextColor by logging warning and falling back to default greenTextColor", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<ICustomThemeConfig> = {
+      codeTextColor: "invalid-color",
+      greenTextColor: "#00aa00",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for codeTextColor in theme: "invalid-color"`
+    )
+    // Should fall back to greenTextColor since codeTextColor is invalid
+    expect(theme.colors.codeTextColor).toBe("#00aa00")
+    expect(theme.colors.greenTextColor).toBe("#00aa00")
+  })
+
+  it("falls back to default when both codeTextColor and greenTextColor are invalid", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<ICustomThemeConfig> = {
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      codeTextColor: "invalid-code-color",
+      greenTextColor: "invalid-green-color",
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for codeTextColor in theme: "invalid-code-color"`
+    )
+    expect(logWarningSpy).toHaveBeenCalledWith(
+      `Invalid color passed for greenTextColor in theme: "invalid-green-color"`
+    )
+
+    // Should use default greenTextColor since both colors are invalid
+    expect(theme.colors.greenTextColor).toBe(
+      lightTheme.emotion.colors.greenTextColor
+    )
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.greenTextColor
+    )
+  })
+
+  it("handles codeTextColor without # prefix correctly", () => {
+    const themeInput: Partial<ICustomThemeConfig> = {
+      codeTextColor: "00ff00", // Green without # prefix
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe("#00ff00")
   })
 
   // Categorical chart colors
@@ -2647,7 +2911,7 @@ describe("Font weight configuration coverage", () => {
 
     // Test that baseFontWeight actually affects the expected weights
     const testTheme = createEmotionTheme(
-      { baseFontWeight: 300 } as ExtendedCustomThemeConfig,
+      { baseFontWeight: 300 } as Partial<ICustomThemeConfig>,
       lightTheme
     )
 

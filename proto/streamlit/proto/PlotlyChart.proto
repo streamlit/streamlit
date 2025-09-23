@@ -20,8 +20,9 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PlotlyChartProto";
 
 message PlotlyChart {
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 5;
+  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
+  // Use widthConfig in layout configuration instead.
+  bool use_container_width = 5 [deprecated=true];
 
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;

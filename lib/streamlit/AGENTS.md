@@ -1,7 +1,7 @@
 # Streamlit Lib Python Guide
 
 Tips and guidelines specific to the development of the Streamlit Python library,
-not applicable scripts and e2e tests.
+not applicable to scripts and e2e tests.
 
 ## Logging
 
