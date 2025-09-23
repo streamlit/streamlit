@@ -29,7 +29,16 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import config
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
@@ -263,8 +272,8 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
         height: int | None = None,
         selection_mode: Literal[
             "single-object"
@@ -279,8 +288,8 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
         height: int | None = None,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
@@ -292,8 +301,8 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
         height: int | None = None,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -342,22 +351,27 @@ class PydeckMixin:
         ----------
         pydeck_obj : pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
-        use_container_width : bool
-            Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``True`` (default),
-            Streamlit sets the width of the figure to match the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets the
-            width of the chart to fit its contents according to the plotting library,
-            up to the width of the parent container.
-        width : int or None
-            Desired width of the chart expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the width of the chart to fit
-            its contents according to the plotting library, up to the width of
-            the parent container. If ``width`` is greater than the width of the
-            parent container, Streamlit sets the chart width to match the width
-            of the parent container.
+        width : "stretch" or int
+            How to size the chart's width. Can be one of:
 
-            To use ``width``, you must set ``use_container_width=False``.
+            - ``"stretch"`` (default): Expand to the width of the parent container.
+            - An integer: Set the chart width to this many pixels.
+        use_container_width : bool or None
+            Whether to override the chart's native width with the width of
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the chart's default behavior.
+            - ``True``: Streamlit sets the width of the chart to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the chart to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
+
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and specify an integer width instead of ``use_container_width=False``.
         height : int or None
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
@@ -460,6 +474,24 @@ class PydeckMixin:
            you can set ``map_style=None`` in the ``pydeck.Deck`` object.
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, specify an integer width.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            # Otherwise keep the provided width which should be an integer (validated below).
+
+        validate_width(width, allow_content=False)
+
         pydeck_proto = PydeckProto()
 
         ctx = get_script_run_ctx()
@@ -467,10 +499,7 @@ class PydeckMixin:
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
-        pydeck_proto.use_container_width = use_container_width
 
-        if width:
-            pydeck_proto.width = width
         if height:
             pydeck_proto.height = height
 
@@ -535,16 +564,34 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+            layout_config = LayoutConfig(width=width)
+            self.dg._enqueue(
+                "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+            )
 
             return widget_state.value
 
-        return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+        layout_config = LayoutConfig(width=width)
+        return self.dg._enqueue(
+            "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _get_pydeck_width(pydeck_obj: Deck | None) -> int | None:
+    """Extract the width from a pydeck Deck object, if specified."""
+    if pydeck_obj is None:
+        return None
+
+    width = getattr(pydeck_obj, "width", None)
+    if width is not None and isinstance(width, (int, float)):
+        return int(width)
+
+    return None
 
 
 def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:

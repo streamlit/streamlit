@@ -19,12 +19,14 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
+    click_toggle,
     expect_help_tooltip,
+    expect_prefixed_markdown,
     get_color_picker,
     get_element_by_key,
 )
 
-NUM_COLOR_PICKERS = 11
+NUM_COLOR_PICKERS = 12
 
 
 def test_color_picker_widget_display(
@@ -236,3 +238,54 @@ def test_color_picker_width_examples(
         get_color_picker(themed_app, "Color picker with 100px width"),
         name="st_color_picker-width_100px",
     )
+
+
+def test_dynamic_color_picker_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the color picker can be updated dynamically while keeping the state."""
+    dynamic_color_picker = get_element_by_key(app, "dynamic_color_picker_with_key")
+    expect(dynamic_color_picker).to_be_visible()
+
+    expect(dynamic_color_picker).to_contain_text("Initial dynamic color picker")
+
+    expect_prefixed_markdown(app, "Initial color picker value:", "#ff0000")
+    assert_snapshot(dynamic_color_picker, name="st_color_picker-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_color_picker, "initial help")
+
+    # Type a color and submit by clicking outside
+    dynamic_color_picker.get_by_test_id("stColorPickerBlock").click()
+    popover = app.get_by_test_id("stColorPickerPopover")
+    text_input = popover.locator("input").first
+    text_input.fill("#00aa00")
+    # Close the color popover:
+    text_input.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial color picker value:", "#00aa00")
+
+    # Click the toggle to update the color picker props
+    click_toggle(app, "Update color picker props")
+
+    # new color picker is visible:
+    expect(dynamic_color_picker).to_contain_text("Updated dynamic color picker")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated color picker value:", "#00aa00")
+
+    dynamic_color_picker.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_color_picker, name="st_color_picker-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_color_picker, "updated help")
+
+    # Change color again:
+    dynamic_color_picker.get_by_test_id("stColorPickerBlock").click()
+    popover = app.get_by_test_id("stColorPickerPopover")
+    text_input = popover.locator("input").first
+    text_input.fill("#ffffff")
+    # Close the color popover:
+    text_input.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated color picker value:", "#ffffff")

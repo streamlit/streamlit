@@ -183,6 +183,7 @@ message CustomThemeConfig {
   repeated int32 heading_font_weights = 34;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
+  optional string code_text_color = 59;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
@@ -215,7 +216,7 @@ message CustomThemeConfig {
   optional string violet_text_color = 57;
   optional string gray_text_color = 58;
 
-  // Next ID: 59
+  // Next ID: 60
 }
 
 message FontFace {

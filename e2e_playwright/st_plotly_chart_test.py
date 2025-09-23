@@ -29,7 +29,7 @@ def test_plotly_has_consistent_visuals(
 ):
     snapshot_names = [
         "st_plotly_chart-none_theme",
-        "st_plotly_chart-streamlit_theme_use_container_width",
+        "st_plotly_chart-streamlit_theme",
         "st_plotly_chart-candlestick_streamlit_theme",
         "st_plotly_chart-sunburst_custom_color",
         "st_plotly_chart-contour_heatmap_together",
@@ -41,8 +41,9 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-layout_customization",
         "st_plotly_chart-template_customization",
         "st_plotly_chart-histogram_chart",
+        "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(16)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(18)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
@@ -50,23 +51,7 @@ def test_plotly_has_consistent_visuals(
         )
 
 
-def test_plotly_has_correct_visuals(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    snapshot_names = [
-        "st_plotly_chart-line_chart_specific_height_width",
-        "st_plotly_chart-use_container_width_false_and_specified_height",
-        "st_plotly_chart-none_theme_and_use_container_width",
-    ]
-    plotly_indices = [13, 14, 15]
-    for i, name in enumerate(snapshot_names):
-        assert_snapshot(
-            themed_app.get_by_test_id("stPlotlyChart").nth(plotly_indices[i]),
-            name=name,
-        )
-
-
-def test_plotly_use_container_width_false_fullscreen(
+def test_plotly_content_width_fullscreen(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     index = 14
@@ -76,7 +61,7 @@ def test_plotly_use_container_width_false_fullscreen(
     fullscreen_button.click()
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_fullscreen",
+        name="st_plotly_chart-content_width_fullscreen",
     )
 
     fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
@@ -84,11 +69,11 @@ def test_plotly_use_container_width_false_fullscreen(
     fullscreen_button.click()
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_exited_fullscreen",
+        name="st_plotly_chart-content_width_exited_fullscreen",
     )
 
 
-def test_plotly_use_container_width_true_fullscreen(
+def test_plotly_stretch_width_fullscreen(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     index = 15
@@ -98,7 +83,7 @@ def test_plotly_use_container_width_true_fullscreen(
     fullscreen_button.click()
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_fullscreen",
+        name="st_plotly_chart-stretch_width_fullscreen",
     )
 
     fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
@@ -106,7 +91,7 @@ def test_plotly_use_container_width_true_fullscreen(
     fullscreen_button.click()
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_exited_fullscreen",
+        name="st_plotly_chart-stretch_width_exited_fullscreen",
     )
 
 
@@ -194,8 +179,21 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_loaded(app)
 
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(16)
+    expect(plotly_elements).to_have_count(18)
 
     # Take a snapshot of the single mark chart, shows it applies the first color
     # from chartCategoricalColors (orange):
     assert_snapshot(plotly_elements.nth(6), name="st_plotly_chart-custom-theme")
+
+
+def test_plotly_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
+    """Tests that width and height parameters work correctly."""
+    plotly_elements = app.get_by_test_id("stPlotlyChart")
+    expect(plotly_elements).to_have_count(18)
+
+    assert_snapshot(plotly_elements.nth(14), name="st_plotly_chart-width_content")
+    assert_snapshot(plotly_elements.nth(15), name="st_plotly_chart-width_stretch")
+    assert_snapshot(plotly_elements.nth(16), name="st_plotly_chart-width_400px")
+    assert_snapshot(
+        plotly_elements.nth(17), name="st_plotly_chart-width_1000px_content"
+    )
