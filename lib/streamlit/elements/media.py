@@ -639,6 +639,7 @@ def marshall_video(
             "video",
             # video does not yet allow setting a user-defined key
             user_key=None,
+            key_as_main_identity=False,
             dg=dg,
             url=proto.url,
             mimetype=mimetype,
@@ -831,6 +832,7 @@ def marshall_audio(
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
+            key_as_main_identity=False,
             dg=dg,
             url=proto.url,
             mimetype=mimetype,

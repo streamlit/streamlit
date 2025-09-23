@@ -369,6 +369,7 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],

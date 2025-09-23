@@ -21,7 +21,7 @@ from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_width,
 )
 
-TOTAL_BAR_CHARTS = 19
+TOTAL_BAR_CHARTS = 28
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -59,7 +59,28 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(bar_chart_elements.nth(15), name="st_bar_chart-stacked_normalize")
     assert_snapshot(bar_chart_elements.nth(16), name="st_bar_chart-stacked_center")
     assert_snapshot(bar_chart_elements.nth(17), name="st_bar_chart-stacked_layered")
-    # The add_rows chart (index 18) is tested separately in test_add_rows_preserves_styling
+    # Sort behavior snapshots
+    assert_snapshot(bar_chart_elements.nth(18), name="st_bar_chart-sort_false")
+    assert_snapshot(bar_chart_elements.nth(19), name="st_bar_chart-sort_true")
+    assert_snapshot(
+        bar_chart_elements.nth(20), name="st_bar_chart-sort_by_categories_asc"
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(21), name="st_bar_chart-sort_by_categories_desc"
+    )
+    assert_snapshot(bar_chart_elements.nth(22), name="st_bar_chart-sort_by_values_asc")
+    assert_snapshot(bar_chart_elements.nth(23), name="st_bar_chart-sort_by_values_desc")
+    assert_snapshot(
+        bar_chart_elements.nth(24), name="st_bar_chart-sort_by_other_column_asc"
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(25),
+        name="st_bar_chart-horizontal_sort_by_categories_asc",
+    )
+    assert_snapshot(
+        bar_chart_elements.nth(26), name="st_bar_chart-horizontal_sort_by_values_asc"
+    )
+    # The add_rows chart (index 27) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_bar_chart_rendering(
@@ -88,7 +109,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width, horizontal, stack).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(18)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(27)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart

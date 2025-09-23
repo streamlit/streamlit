@@ -48,6 +48,27 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
+def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a color picker with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stColorPicker").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a text input with the given label.
 
@@ -169,8 +190,58 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
+def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a slider with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    # Prefer matching the widget label exactly to avoid substring collisions
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stSlider").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCheckbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a toggle widget with the given label.
 
     Parameters
     ----------
@@ -222,7 +293,16 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     label : str or Pattern[str]
         The label of the element to get.
     """
-    element = locator.get_by_test_id("stRadio").filter(has_text=label)
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # similar to multiselect/date input helpers.
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stRadio").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
 
@@ -568,8 +648,8 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    #  Click the checkbox label to be more reliable
-    checkbox_element.locator("label").click()
+    # Click the checkbox label to be more reliable:
+    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
     wait_for_app_run(page)
 
 

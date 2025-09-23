@@ -624,6 +624,7 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,

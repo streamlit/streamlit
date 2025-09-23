@@ -146,3 +146,30 @@ with st.expander("Download Button Width Examples", expanded=True):
     st.download_button("Content Width (Default)", "data", width="content")
     st.download_button("Stretch Width", "data", width="stretch")
     st.download_button("300px Width", "data", width=300)
+
+st.markdown("Dynamic download button props:")
+
+if st.toggle("Update button props"):
+    clicked = st.download_button(
+        "Updated dynamic button",
+        data="Updated data",
+        file_name="updated.txt",
+        type="secondary",
+        icon=":material/looks_two:",
+        width="stretch",
+        help="updated help",
+        key="dynamic_download_button_with_key",
+    )
+    st.write("Clicked updated button:", clicked)
+else:
+    clicked = st.download_button(
+        "Initial dynamic button",
+        data="Initial data",
+        file_name="initial.txt",
+        type="primary",
+        icon=":material/looks_one:",
+        width="content",
+        help="initial help",
+        key="dynamic_download_button_with_key",
+    )
+    st.write("Clicked initial button:", clicked)

@@ -16,15 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    TypedDict,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -51,7 +43,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -270,6 +262,17 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
+def parse_border_mode(
+    border: bool | Literal["horizontal"],
+) -> ArrowProto.BorderMode.ValueType:
+    """Parse and check the user provided border mode."""
+    if isinstance(border, bool):
+        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+    if border == "horizontal":
+        return ArrowProto.BorderMode.HORIZONTAL
+    raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -399,7 +402,7 @@ class ArrowMixin:
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
             (default), the visibility of index columns is automatically
-            determined based on the data.
+            determined based on the data and other configurations.
 
         column_order : Iterable[str] or None
             The ordered list of columns to display. If this is ``None``
@@ -676,6 +679,7 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
+        has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
@@ -698,6 +702,7 @@ class ArrowMixin:
             data_df = dataframe_util.convert_anything_to_pandas_df(
                 data, ensure_copy=False
             )
+            has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
@@ -706,6 +711,18 @@ class ArrowMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
             )
+
+        elif (
+            # Hide index column if row selections are activated and the dataframe has a range index.
+            # The range index usually does not add a lot of value.
+            is_selection_activated
+            and selection_mode in ["multi-row", "single-row"]
+            and has_range_index
+        ):
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
+
         marshall_column_config(proto, column_config_mapping)
 
         # Create layout configuration
@@ -725,6 +742,7 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
                 data=proto.data,
                 width=width,
@@ -751,7 +769,9 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
 
     @gather_metrics("table")
-    def table(self, data: Data = None) -> DeltaGenerator:
+    def table(
+        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+    ) -> DeltaGenerator:
         """Display a static table.
 
         While ``st.dataframe`` is geared towards large datasets and interactive
@@ -775,49 +795,59 @@ class ArrowMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
+        border : bool or "horizontal"
+            Whether to show borders around the table and between cells. This can be one
+            of the following:
+
+            - ``True`` (default): Show borders around the table and between cells
+            - ``False``: Show no borders
+            - ``"horizontal"``: Show only horizontal borders between rows
+
         Examples
         --------
-        **Example 1: Display a simple dataframe as a static table**
+        **Example 1: Display a confusion matrix**
 
         >>> import pandas as pd
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(
-        ...     rng(0).standard_normal(size=(10, 5)),
-        ...     columns=("col %d" % i for i in range(5)),
+        >>> confusion_matrix = pd.DataFrame(
+        ...     {
+        ...         "Predicted Cat": [85, 3, 2, 1],
+        ...         "Predicted Dog": [2, 78, 4, 0],
+        ...         "Predicted Bird": [1, 5, 72, 3],
+        ...         "Predicted Fish": [0, 2, 1, 89],
+        ...     },
+        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
         ... )
-        >>>
-        >>> st.table(df)
+        >>> st.table(confusion_matrix)
 
         .. output::
            https://doc-table.streamlit.app/
            height: 480px
 
-        **Example 2: Display a table of Markdown strings**
+        **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
-        >>> import pandas as pd
         >>> import streamlit as st
         >>>
-        >>> df = pd.DataFrame(
-        ...     {
-        ...         "Command": ["**st.table**", "*st.dataframe*"],
-        ...         "Type": ["`static`", "`interactive`"],
-        ...         "Docs": [
-        ...             "[:rainbow[docs]](https://docs.streamlit.io"
-        ...             "/develop/api-reference/data/st.dataframe)",
-        ...             "[:open_book:](https://docs.streamlit.io"
-        ...             "/develop/api-reference/data/st.table)",
-        ...         ],
-        ...     }
-        ... )
-        >>>
-        >>> st.table(df)
+        >>> product_data = {
+        ...     "Product": [
+        ...         ":material/devices: Widget Pro",
+        ...         ":material/smart_toy: Smart Device",
+        ...         ":material/inventory: Premium Kit",
+        ...     ],
+        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
+        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
+        ...     "Units sold": [1247, 892, 654],
+        ...     "Revenue": [125000, 89000, 98000],
+        ... }
+        >>> st.table(product_data, border="horizontal")
 
         .. output::
            https://doc-table-markdown.streamlit.app/
            height: 200px
+
         """
+        # Parse border parameter to enum value
+        border_mode = parse_border_mode(border)
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -843,6 +873,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
+        proto.border_mode = border_mode
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
@@ -1034,8 +1065,10 @@ def _arrow_add_rows(
 
         if metadata.chart_command == "bar_chart":
             kwargs["horizontal"] = metadata.horizontal
+            kwargs["sort"] = metadata.sort
 
-        kwargs["use_container_width"] = metadata.use_container_width
+        if metadata.use_container_width is not None:
+            kwargs["use_container_width"] = metadata.use_container_width
 
         st_method(data, **kwargs)
         return None

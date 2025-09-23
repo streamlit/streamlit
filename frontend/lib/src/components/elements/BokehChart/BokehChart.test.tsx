@@ -289,11 +289,10 @@ const getProps = (
 
 expect.extend({
   toMatchBokehDimensions(data, width, height) {
-    const plot =
-      data && data.doc && data.doc.roots && data.doc.roots.references
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-          data.doc.roots.references.find((e: any) => e.type === "Plot")
-        : undefined
+    const plot = data?.doc?.roots?.references
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        data.doc.roots.references.find((e: any) => e.type === "Plot")
+      : undefined
 
     if (!plot) {
       return {

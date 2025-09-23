@@ -187,7 +187,7 @@ def compute_and_register_element_id(
     *,
     user_key: str | None,
     dg: DeltaGenerator | None,
-    key_as_main_identity: bool = False,
+    key_as_main_identity: bool | set[str],
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -224,15 +224,27 @@ def compute_and_register_element_id(
         format_func, label_visibility, args, kwargs, on_change, and
         the active_script_hash are not supposed to be added here
 
-    key_as_main_identity : bool
-        If True, if a key is provided by the user, we don't include
+    key_as_main_identity : bool | set[str]
+        If True and a key is provided by the user, we don't include
         command kwargs in the element ID computation.
+        If a set of kwarg names is provided and a key is provided,
+        only the kwargs with names in this set will be included
+        in the element ID computation.
     """
     ctx = get_script_run_ctx()
 
-    ignore_command_kwargs = key_as_main_identity and user_key
+    # When a user_key is present and key_as_main_identity is True OR a set (even empty),
+    # we should ignore general command kwargs and form/sidebar context. For the set case,
+    # only explicitly whitelisted kwargs will be included below.
+    ignore_command_kwargs = user_key is not None and (
+        (key_as_main_identity is True) or isinstance(key_as_main_identity, set)
+    )
 
-    kwargs_to_use = {} if ignore_command_kwargs else {**kwargs}
+    if isinstance(key_as_main_identity, set) and user_key:
+        # Only include the explicitly whitelisted kwargs in the computation
+        kwargs_to_use = {k: v for k, v in kwargs.items() if k in key_as_main_identity}
+    else:
+        kwargs_to_use = {} if ignore_command_kwargs else {**kwargs}
 
     if ctx:
         # Add the active script hash to give elements on different

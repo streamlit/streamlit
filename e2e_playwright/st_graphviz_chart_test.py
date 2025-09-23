@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
@@ -34,7 +34,7 @@ def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(10)
+    ).to_have_count(14)
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -186,4 +186,62 @@ def test_width_pixels(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         width_pixels_chart.locator("svg"),
         name="st_graphviz_chart_width_pixels",
+    )
+
+
+def test_height_content(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with height='content'."""
+    height_content_chart = app.get_by_test_id("stGraphVizChart").nth(10)
+    assert_snapshot(
+        height_content_chart.locator("svg"),
+        name="st_graphviz_chart_height_content",
+    )
+
+
+# Test that it renders correctly with height='stretch'.
+# Note: Verified manually in Safari but webkit headless seems to handle width calculation incorrectly.
+@pytest.mark.skip_browser("webkit")
+def test_height_stretch(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with height='stretch'."""
+    height_stretch_chart = app.get_by_test_id("stGraphVizChart").nth(11)
+    svg_element = height_stretch_chart.locator("svg")
+
+    def check_stretched_dimensions() -> bool:
+        svg_dimensions = svg_element.bounding_box()
+        print(f"Current SVG dimensions during wait: {svg_dimensions}")
+        if svg_dimensions is None:
+            return False
+        # The container has height=400px, so the SVG should be significantly larger than default
+        # Default height is typically much smaller (around 116pt ≈ 155px from the first graph test)
+        # We need both height stretched AND width properly settled for a good snapshot
+        # Width should be similar to what we see in other browsers (~400px range)
+        height_stretched = svg_dimensions["height"] > 300
+        width_settled = (
+            svg_dimensions["width"] > 200
+        )  # Wait for width to actually settle
+        return height_stretched and width_settled
+
+    wait_until(app, check_stretched_dimensions)
+
+    assert_snapshot(
+        svg_element,
+        name="st_graphviz_chart_height_stretch",
+    )
+
+
+def test_height_pixels(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with height=200."""
+    height_pixels_chart = app.get_by_test_id("stGraphVizChart").nth(12)
+    assert_snapshot(
+        height_pixels_chart.locator("svg"),
+        name="st_graphviz_chart_height_pixels",
+    )
+
+
+def test_width_height_combined(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that it renders correctly with width=300, height=150."""
+    combined_chart = app.get_by_test_id("stGraphVizChart").nth(13)
+    assert_snapshot(
+        combined_chart.locator("svg"),
+        name="st_graphviz_chart_width_height_combined",
     )

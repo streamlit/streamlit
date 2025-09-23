@@ -106,3 +106,48 @@ st.number_input(
     max_value=100,
     width="stretch",
 )
+
+st.markdown("Dynamic number input:")
+
+if st.toggle("Update number input props"):
+    dyn_val = st.number_input(
+        "Updated dynamic number input",
+        value=15,
+        width=300,
+        help="updated help",
+        format="%0.2f",
+        placeholder="Updated placeholder",
+        icon=":material/looks_two:",
+        key="dynamic_number_input_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text input - callback triggered: {a} {param}"
+        ),
+        args=("Updated text arg",),
+        kwargs={"param": "updated kwarg param"},
+        # min_value, max_value, and step are not yet supported for dynamic changes
+        # keeping it at the same value:
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Updated number input value:", dyn_val)
+else:
+    dyn_val = st.number_input(
+        "Initial dynamic number input",
+        value=5,
+        width="stretch",
+        help="initial help",
+        format="%d",
+        placeholder="Initial placeholder",
+        icon=":material/looks_one:",
+        key="dynamic_number_input_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text input - callback triggered: {a} {param}"
+        ),
+        args=("Initial text arg",),
+        kwargs={"param": "initial kwarg param"},
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Initial number input value:", dyn_val)

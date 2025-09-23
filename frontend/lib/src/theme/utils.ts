@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { getLuminance, parseToRgba, toHex, transparentize } from "color2k"
+import {
+  darken,
+  getLuminance,
+  lighten,
+  parseToRgba,
+  toHex,
+  transparentize,
+} from "color2k"
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
 import merge from "lodash/merge"
@@ -45,16 +52,7 @@ import {
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
-import { DerivedColors } from "./types"
-
-// Extended theme config type to include properties not in the protobuf definition
-export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
-  baseFontWeight?: number | null
-  codeFontSize?: string | number | null
-  codeFontWeight?: number | null
-  linkUnderline?: boolean | null
-  chartCategoricalColors?: string[] | null
-}
+import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -197,6 +195,170 @@ const parseColor = (
 }
 
 /**
+ * Helper function for theme background colors
+ * If the background color is configured, use it.
+ * If the main color is configured, derive background color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveBgColor = (
+  configBackgroundColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultBackgroundColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configBackgroundColor) return configBackgroundColor
+  if (configMainColor) {
+    const transparency = isLightTheme ? 0.9 : 0.8
+    return transparentize(configMainColor, transparency)
+  }
+  return defaultBackgroundColor
+}
+
+/**
+ * Helper function for theme text colors
+ * If the text color is configured, use it.
+ * If the main color is configured, derive text color from it.
+ * If neither is configured, fallback to default.
+ */
+const resolveTextColor = (
+  configTextColor: string | undefined,
+  configMainColor: string | undefined,
+  defaultTextColor: string,
+  isLightTheme: boolean
+): string => {
+  if (configTextColor) return configTextColor
+  if (configMainColor) {
+    const adjustmentAmount = 0.15
+    return isLightTheme
+      ? darken(configMainColor, adjustmentAmount)
+      : lighten(configMainColor, adjustmentAmount)
+  }
+  return defaultTextColor
+}
+
+/**
+ * Applies background color overrides to theme colors using smart fallback logic.
+ * For each background color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with background colors applied
+ */
+const setBackgroundColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const backgroundColorMap = {
+    redBackgroundColor: {
+      main: parsedColors.redColor,
+      background: parsedColors.redBackgroundColor,
+    },
+    orangeBackgroundColor: {
+      main: parsedColors.orangeColor,
+      background: parsedColors.orangeBackgroundColor,
+    },
+    yellowBackgroundColor: {
+      main: parsedColors.yellowColor,
+      background: parsedColors.yellowBackgroundColor,
+    },
+    blueBackgroundColor: {
+      main: parsedColors.blueColor,
+      background: parsedColors.blueBackgroundColor,
+    },
+    greenBackgroundColor: {
+      main: parsedColors.greenColor,
+      background: parsedColors.greenBackgroundColor,
+    },
+    violetBackgroundColor: {
+      main: parsedColors.violetColor,
+      background: parsedColors.violetBackgroundColor,
+    },
+    grayBackgroundColor: {
+      main: parsedColors.grayColor,
+      background: parsedColors.grayBackgroundColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(backgroundColorMap).forEach(([key, { main, background }]) => {
+    const typedKey = key as keyof typeof backgroundColorMap
+    updatedColors[typedKey] = resolveBgColor(
+      background,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
+}
+
+/**
+ * Applies text color overrides to theme colors using smart fallback logic.
+ * For each text color: uses explicit config if provided, derives from main color if available,
+ * or falls back to default.
+ * @param existingColors - The existing emotion theme colors object
+ * @param parsedColors - All parsed color configurations from user input
+ * @returns Updated emotion theme colors object with text colors applied
+ */
+const setTextColors = (
+  existingColors: EmotionThemeColors,
+  parsedColors: Record<string, string | undefined>
+): EmotionThemeColors => {
+  const updatedColors = {
+    ...existingColors,
+  }
+  const textColorMap = {
+    redTextColor: {
+      main: parsedColors.redColor,
+      text: parsedColors.redTextColor,
+    },
+    orangeTextColor: {
+      main: parsedColors.orangeColor,
+      text: parsedColors.orangeTextColor,
+    },
+    yellowTextColor: {
+      main: parsedColors.yellowColor,
+      text: parsedColors.yellowTextColor,
+    },
+    blueTextColor: {
+      main: parsedColors.blueColor,
+      text: parsedColors.blueTextColor,
+    },
+    greenTextColor: {
+      main: parsedColors.greenColor,
+      text: parsedColors.greenTextColor,
+    },
+    violetTextColor: {
+      main: parsedColors.violetColor,
+      text: parsedColors.violetTextColor,
+    },
+    grayTextColor: {
+      main: parsedColors.grayColor,
+      text: parsedColors.grayTextColor,
+    },
+  }
+
+  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+
+  Object.entries(textColorMap).forEach(([key, { main, text }]) => {
+    const typedKey = key as keyof typeof textColorMap
+    updatedColors[typedKey] = resolveTextColor(
+      text,
+      main,
+      existingColors[typedKey],
+      isLightTheme
+    )
+  })
+
+  return updatedColors
+}
+
+/**
  * Helper function to parse the baseRadius & buttonRadius options which allow the same possible values
  * @param radius: a string - "none", "small", "medium", "large", "full", a number in pixels or rem
  * @returns radius value and css unit
@@ -318,9 +480,9 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize && validatedSize.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem")) {
     return validatedSize
-  } else if (validatedSize && validatedSize.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
@@ -469,7 +631,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: ExtendedCustomThemeConfig,
+  themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -518,7 +680,15 @@ export const createEmotionTheme = (
     widgetBorderColor,
     borderColor,
     linkColor,
+    codeTextColor,
     codeBackgroundColor,
+    redColor,
+    orangeColor,
+    yellowColor,
+    blueColor,
+    greenColor,
+    violetColor,
+    grayColor,
   } = parsedColors
 
   // Create a new generic colors object with configured colors, if they exist.
@@ -530,7 +700,14 @@ export const createEmotionTheme = (
     bodyText: bodyText ?? colors.bodyText,
     secondaryBg: secondaryBg ?? colors.secondaryBg,
     bgColor: bgColor ?? colors.bgColor,
-    link: linkColor ?? colors.link,
+    // Main theme colors
+    redColor: redColor ?? colors.redColor,
+    orangeColor: orangeColor ?? colors.orangeColor,
+    yellowColor: yellowColor ?? colors.yellowColor,
+    blueColor: blueColor ?? colors.blueColor,
+    greenColor: greenColor ?? colors.greenColor,
+    violetColor: violetColor ?? colors.violetColor,
+    grayColor: grayColor ?? colors.grayColor,
     // Secondary color is not yet configurable. Set secondary color to primary color
     // by default for all custom themes.
     secondary: primary ?? colors.primary,
@@ -588,6 +765,28 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.widgetBorderColor =
       widgetBorderColor || conditionalOverrides.colors.borderColor
   }
+
+  // Apply background color overrides based on configured background color or main color as fallback
+  conditionalOverrides.colors = setBackgroundColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
+
+  // Apply text color overrides based on configured text color or main color as fallback
+  conditionalOverrides.colors = setTextColors(
+    conditionalOverrides.colors,
+    parsedColors
+  )
+
+  // Link color should use the linkColor config if provided, otherwise
+  // use blueTextColor (configured/derived or default) handled above
+  conditionalOverrides.colors.link =
+    linkColor ?? conditionalOverrides.colors.blueTextColor
+
+  // Code text color should use the codeTextColor config if provided, otherwise
+  // use the greenTextColor (configured/derived or default) handled above
+  conditionalOverrides.colors.codeTextColor =
+    codeTextColor ?? conditionalOverrides.colors.greenTextColor
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&

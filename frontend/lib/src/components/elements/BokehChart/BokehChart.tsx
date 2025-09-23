@@ -88,11 +88,10 @@ export function BokehChart({
      * plot_width (or plot_heigth) inside the plot reference.
      * If that values are missing, we can set that values to make the chart responsive.
      */
-    const plot =
-      data && data.doc && data.doc.roots && data.doc.roots.references
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-          data.doc.roots.references.find((e: any) => e.type === "Plot")
-        : undefined
+    const plot = data?.doc?.roots?.references
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        data.doc.roots.references.find((e: any) => e.type === "Plot")
+      : undefined
 
     if (plot) {
       const { chartWidth, chartHeight } = getChartDimensions(plot)

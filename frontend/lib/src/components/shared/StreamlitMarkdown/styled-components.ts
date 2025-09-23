@@ -181,6 +181,8 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
+        // Break long words to prevent them from overflowing the container:
+        overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 

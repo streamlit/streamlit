@@ -541,6 +541,10 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
+            # Treat the provided key as the main identity. Only include
+            # the options and accept_new_options in the identity computation
+            # as those can invalidate the current selection.
+            key_as_main_identity={"options", "accept_new_options", "format_func"},
             dg=self.dg,
             label=label,
             options=formatted_options,

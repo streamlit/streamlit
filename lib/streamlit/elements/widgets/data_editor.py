@@ -241,7 +241,7 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)
+            datetime_value = pd.Timestamp(value)  # ty: ignore
 
             if datetime_value is pd.NaT:
                 return None
@@ -1028,6 +1028,7 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             data=arrow_bytes,
             width=width,

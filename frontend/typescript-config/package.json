@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/typescript-config",
-  "version": "1.48.1",
+  "version": "1.49.1",
   "license": "Apache-2.0",
   "private": true,
   "files": [

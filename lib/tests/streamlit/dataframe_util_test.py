@@ -501,7 +501,10 @@ class DataframeUtilTest(unittest.TestCase):
 
         items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
         db_relation = duckdb.sql("SELECT * from items")
-        assert dataframe_util.is_duckdb_relation(db_relation) is True
+
+        assert dataframe_util.is_duckdb_relation(db_relation) is True, (
+            "Object is not a known DuckDB relation: " + get_fqn_type(db_relation)
+        )
         assert (
             dataframe_util.determine_data_format(db_relation)
             is dataframe_util.DataFormat.DUCKDB_RELATION
@@ -641,7 +644,7 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match="Unsupported input data format: DataFormat.UNKNOWN"
+                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -676,7 +679,7 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match="Unsupported input data format: DataFormat.UNKNOWN"
+            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
@@ -776,6 +779,47 @@ class DataframeUtilTest(unittest.TestCase):
         }
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
+
+    @parameterized.expand(
+        [
+            (
+                "default_range_index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"]),
+                True,
+            ),
+            (
+                "explicit_range_index",
+                pd.DataFrame(
+                    [[1, 2], [3, 4]], columns=["a", "b"], index=pd.RangeIndex(5, 7)
+                ),
+                True,
+            ),
+            (
+                "string_index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"], index=["x", "y"]),
+                False,
+            ),
+            (
+                "int64index",
+                pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"], index=[0, 1]),
+                False,
+            ),
+            (
+                "multiindex",
+                pd.DataFrame(
+                    [[1, 2], [3, 4]],
+                    columns=["a", "b"],
+                    index=pd.MultiIndex.from_product([[0, 1], ["x", "y"]])[:2],
+                ),
+                False,
+            ),
+        ]
+    )
+    def test_has_range_index(
+        self, _name: str, df: pd.DataFrame, expected: bool
+    ) -> None:
+        """Test `has_range_index` correctly identifies RangeIndex vs others."""
+        assert dataframe_util.has_range_index(df) is expected
 
 
 class TestArrowTruncation(DeltaGeneratorTestCase):

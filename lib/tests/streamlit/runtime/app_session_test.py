@@ -720,6 +720,28 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "redColor": "red",
+        "orangeColor": "orange",
+        "yellowColor": "yellow",
+        "blueColor": "blue",
+        "greenColor": "green",
+        "violetColor": "violet",
+        "grayColor": "gray",
+        "redBackgroundColor": "#ff8c8c",
+        "orangeBackgroundColor": "#ffd16a",
+        "yellowBackgroundColor": "#ffff59",
+        "blueBackgroundColor": "#60b4ff",
+        "greenBackgroundColor": "#5ce488",
+        "violetBackgroundColor": "#b27eff",
+        "grayBackgroundColor": "#bfc5d3",
+        "redTextColor": "#ffabab",
+        "orangeTextColor": "#ffe08e",
+        "yellowTextColor": "#ffff7d",
+        "blueTextColor": "#83c9ff",
+        "greenTextColor": "#7defa1",
+        "violetTextColor": "#c89dff",
+        "grayTextColor": "#d5dae5",
+        "codeTextColor": "#7defa1",
     }
 
     if overrides.get("sidebar") is not None:
@@ -772,6 +794,7 @@ def _mock_get_options_for_section(
         "showWidgetBorder": True,
         "showSidebarBorder": True,
         "textColor": "black",
+        "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
         "chartCategoricalColors": [
@@ -796,6 +819,27 @@ def _mock_get_options_for_section(
             "#158237",
             "#177233",
         ],
+        "redColor": "#7d353b",
+        "orangeColor": "#d95a00",
+        "yellowColor": "#916e10",
+        "blueColor": "#004280",
+        "greenColor": "#177233",
+        "violetColor": "#3f3163",
+        "grayColor": "#0e1117",
+        "redBackgroundColor": "#ff4b4b",
+        "orangeBackgroundColor": "#ffa421",
+        "yellowBackgroundColor": "#ffe312",
+        "blueBackgroundColor": "#1c83e1",
+        "greenBackgroundColor": "#21c354",
+        "violetBackgroundColor": "#803df5",
+        "grayBackgroundColor": "#808495",
+        "redTextColor": "#ffabab",
+        "orangeTextColor": "#ffe08e",
+        "yellowTextColor": "#ffff7d",
+        "blueTextColor": "#83c9ff",
+        "greenTextColor": "#7defa1",
+        "violetTextColor": "#c89dff",
+        "grayTextColor": "#d5dae5",
     }
 
     for k, v in overrides.items():
@@ -1017,8 +1061,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             ),
             pytest.raises(
                 RuntimeError,
-                match="This function must only be called on the eventloop thread "
-                "the AppSession was created on. This should never happen.",
+                match=r"This function must only be called on the eventloop thread "
+                r"the AppSession was created on. This should never happen.",
             ),
         ):
             session._handle_scriptrunner_event_on_event_loop(
@@ -1159,7 +1203,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
+            match=r"page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1179,7 +1223,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
+            match=r"exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1199,7 +1243,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="client_state must be set for the SHUTDOWN event. This should never happen.",
+            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1219,7 +1263,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
+            match=r"null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1258,10 +1302,32 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                 }
             )
         )
@@ -1301,10 +1367,32 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                 }
             )
         )
@@ -1344,10 +1432,32 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showWidgetBorder": None,
                     "showSidebarBorder": None,
                     "textColor": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "redColor": None,
+                    "orangeColor": None,
+                    "yellowColor": None,
+                    "blueColor": None,
+                    "greenColor": None,
+                    "violetColor": None,
+                    "grayColor": None,
+                    "redBackgroundColor": None,
+                    "orangeBackgroundColor": None,
+                    "yellowBackgroundColor": None,
+                    "blueBackgroundColor": None,
+                    "greenBackgroundColor": None,
+                    "violetBackgroundColor": None,
+                    "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1367,8 +1477,30 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "secondaryBackgroundColor": None,
                         "showWidgetBorder": None,
                         "textColor": None,
+                        "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "redColor": None,
+                        "orangeColor": None,
+                        "yellowColor": None,
+                        "blueColor": None,
+                        "greenColor": None,
+                        "violetColor": None,
+                        "grayColor": None,
+                        "redBackgroundColor": None,
+                        "orangeBackgroundColor": None,
+                        "yellowBackgroundColor": None,
+                        "blueBackgroundColor": None,
+                        "greenBackgroundColor": None,
+                        "violetBackgroundColor": None,
+                        "grayBackgroundColor": None,
+                        "redTextColor": None,
+                        "orangeTextColor": None,
+                        "yellowTextColor": None,
+                        "blueTextColor": None,
+                        "greenTextColor": None,
+                        "violetTextColor": None,
+                        "grayTextColor": None,
                     },
                 }
             )
@@ -1407,6 +1539,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("red_color")
+        assert not new_session_msg.custom_theme.HasField("orange_color")
+        assert not new_session_msg.custom_theme.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.HasField("blue_color")
+        assert not new_session_msg.custom_theme.HasField("green_color")
+        assert not new_session_msg.custom_theme.HasField("violet_color")
+        assert not new_session_msg.custom_theme.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.heading_font_sizes
@@ -1447,6 +1586,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("blue_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("green_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("violet_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("gray_color")
 
         # Fields that are marked as repeated in proto:
         assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
@@ -1486,6 +1632,28 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.red_color == "#7d353b"
+        assert new_session_msg.custom_theme.orange_color == "#d95a00"
+        assert new_session_msg.custom_theme.yellow_color == "#916e10"
+        assert new_session_msg.custom_theme.blue_color == "#004280"
+        assert new_session_msg.custom_theme.green_color == "#177233"
+        assert new_session_msg.custom_theme.violet_color == "#3f3163"
+        assert new_session_msg.custom_theme.gray_color == "#0e1117"
+        assert new_session_msg.custom_theme.red_background_color == "#ff4b4b"
+        assert new_session_msg.custom_theme.orange_background_color == "#ffa421"
+        assert new_session_msg.custom_theme.yellow_background_color == "#ffe312"
+        assert new_session_msg.custom_theme.blue_background_color == "#1c83e1"
+        assert new_session_msg.custom_theme.green_background_color == "#21c354"
+        assert new_session_msg.custom_theme.violet_background_color == "#803df5"
+        assert new_session_msg.custom_theme.gray_background_color == "#808495"
+        assert new_session_msg.custom_theme.red_text_color == "#ffabab"
+        assert new_session_msg.custom_theme.orange_text_color == "#ffe08e"
+        assert new_session_msg.custom_theme.yellow_text_color == "#ffff7d"
+        assert new_session_msg.custom_theme.blue_text_color == "#83c9ff"
+        assert new_session_msg.custom_theme.green_text_color == "#7defa1"
+        assert new_session_msg.custom_theme.violet_text_color == "#c89dff"
+        assert new_session_msg.custom_theme.gray_text_color == "#d5dae5"
+        assert new_session_msg.custom_theme.code_text_color == "#09ab3b"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1588,6 +1756,27 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
         )
+        assert new_session_msg.custom_theme.sidebar.red_color == "red"
+        assert new_session_msg.custom_theme.sidebar.orange_color == "orange"
+        assert new_session_msg.custom_theme.sidebar.yellow_color == "yellow"
+        assert new_session_msg.custom_theme.sidebar.blue_color == "blue"
+        assert new_session_msg.custom_theme.sidebar.green_color == "green"
+        assert new_session_msg.custom_theme.sidebar.violet_color == "violet"
+        assert new_session_msg.custom_theme.sidebar.gray_color == "gray"
+        assert new_session_msg.custom_theme.sidebar.red_background_color == "#ff8c8c"
+        assert new_session_msg.custom_theme.sidebar.orange_background_color == "#ffd16a"
+        assert new_session_msg.custom_theme.sidebar.yellow_background_color == "#ffff59"
+        assert new_session_msg.custom_theme.sidebar.blue_background_color == "#60b4ff"
+        assert new_session_msg.custom_theme.sidebar.green_background_color == "#5ce488"
+        assert new_session_msg.custom_theme.sidebar.violet_background_color == "#b27eff"
+        assert new_session_msg.custom_theme.sidebar.gray_background_color == "#bfc5d3"
+        assert new_session_msg.custom_theme.sidebar.red_text_color == "#ffabab"
+        assert new_session_msg.custom_theme.sidebar.orange_text_color == "#ffe08e"
+        assert new_session_msg.custom_theme.sidebar.yellow_text_color == "#ffff7d"
+        assert new_session_msg.custom_theme.sidebar.blue_text_color == "#83c9ff"
+        assert new_session_msg.custom_theme.sidebar.green_text_color == "#7defa1"
+        assert new_session_msg.custom_theme.sidebar.violet_text_color == "#c89dff"
+        assert new_session_msg.custom_theme.sidebar.gray_text_color == "#d5dae5"
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0

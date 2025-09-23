@@ -183,12 +183,40 @@ message CustomThemeConfig {
   repeated int32 heading_font_weights = 34;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
+  optional string code_text_color = 59;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
 
-  // Next ID: 38
+  // Main color configs:
+  optional string red_color = 38;
+  optional string orange_color = 39;
+  optional string yellow_color = 40;
+  optional string blue_color = 41;
+  optional string green_color = 42;
+  optional string violet_color = 43;
+  optional string gray_color = 44;
+
+  // Background color configs:
+  optional string red_background_color = 45;
+  optional string orange_background_color = 46;
+  optional string yellow_background_color = 47;
+  optional string blue_background_color = 48;
+  optional string green_background_color = 49;
+  optional string violet_background_color = 50;
+  optional string gray_background_color = 51;
+
+  // Text color configs:
+  optional string red_text_color = 52;
+  optional string orange_text_color = 53;
+  optional string yellow_text_color = 54;
+  optional string blue_text_color = 55;
+  optional string green_text_color = 56;
+  optional string violet_text_color = 57;
+  optional string gray_text_color = 58;
+
+  // Next ID: 60
 }
 
 message FontFace {

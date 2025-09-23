@@ -16,7 +16,12 @@
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { Direction, getDirectionOfBlock, shouldChildrenStretch } from "./utils"
+import {
+  Direction,
+  getDirectionOfBlock,
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "./utils"
 
 describe("getDirectionOfBlock", () => {
   const testCases = [
@@ -79,33 +84,68 @@ describe("getDirectionOfBlock", () => {
   })
 })
 
-describe("shouldChildrenStretch", () => {
+describe("shouldWidthStretch", () => {
   it("returns false if widthConfig is undefined", () => {
-    expect(shouldChildrenStretch(undefined)).toBe(false)
+    expect(shouldWidthStretch(undefined)).toBe(false)
   })
 
   it("returns true if useStretch is true", () => {
     const widthConfig = { useStretch: true } as streamlit.WidthConfig
-    expect(shouldChildrenStretch(widthConfig)).toBe(true)
+    expect(shouldWidthStretch(widthConfig)).toBe(true)
   })
 
   it("returns true if pixelWidth is a positive number", () => {
     const widthConfig = { pixelWidth: 200 } as streamlit.WidthConfig
-    expect(shouldChildrenStretch(widthConfig)).toBe(true)
+    expect(shouldWidthStretch(widthConfig)).toBe(true)
   })
 
   it("returns false if pixelWidth is 0", () => {
     const widthConfig = { pixelWidth: 0 } as streamlit.WidthConfig
-    expect(shouldChildrenStretch(widthConfig)).toBe(false)
+    expect(shouldWidthStretch(widthConfig)).toBe(false)
   })
 
   it("returns false if useContent is true", () => {
     const widthConfig = { useContent: true } as streamlit.WidthConfig
-    expect(shouldChildrenStretch(widthConfig)).toBe(false)
+    expect(shouldWidthStretch(widthConfig)).toBe(false)
   })
 
   it("returns false for an empty widthConfig object", () => {
     const widthConfig = {} as streamlit.WidthConfig
-    expect(shouldChildrenStretch(widthConfig)).toBe(false)
+    expect(shouldWidthStretch(widthConfig)).toBe(false)
+  })
+})
+
+describe("shouldHeightStretch", () => {
+  it("returns false if heightConfig is undefined", () => {
+    expect(shouldHeightStretch(undefined)).toBe(false)
+  })
+
+  it("returns false if heightConfig is null", () => {
+    expect(shouldHeightStretch(null)).toBe(false)
+  })
+
+  it("returns true if useStretch is true", () => {
+    const heightConfig = { useStretch: true } as streamlit.HeightConfig
+    expect(shouldHeightStretch(heightConfig)).toBe(true)
+  })
+
+  it("returns true if pixelHeight is a positive number", () => {
+    const heightConfig = { pixelHeight: 300 } as streamlit.HeightConfig
+    expect(shouldHeightStretch(heightConfig)).toBe(true)
+  })
+
+  it("returns false if pixelHeight is 0", () => {
+    const heightConfig = { pixelHeight: 0 } as streamlit.HeightConfig
+    expect(shouldHeightStretch(heightConfig)).toBe(false)
+  })
+
+  it("returns false if useContent is true", () => {
+    const heightConfig = { useContent: true } as streamlit.HeightConfig
+    expect(shouldHeightStretch(heightConfig)).toBe(false)
+  })
+
+  it("returns false for an empty heightConfig object", () => {
+    const heightConfig = {} as streamlit.HeightConfig
+    expect(shouldHeightStretch(heightConfig)).toBe(false)
   })
 })

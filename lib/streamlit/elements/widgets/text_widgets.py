@@ -328,6 +328,9 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
+            # Explicitly whitelist max_chars to make sure the ID changes when it changes
+            # since the widget value might become invalid based on a different max_chars
+            key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
             value=value,
@@ -642,6 +645,9 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
+            # Explicitly whitelist max_chars to make sure the ID changes when it changes
+            # since the widget value might become invalid based on a different max_chars
+            key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
             value=value,

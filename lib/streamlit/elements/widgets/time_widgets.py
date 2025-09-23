@@ -529,6 +529,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
+            # Ensure stable ID when key is provided; only whitelist step since it
+            # affects the selection granularity and available options.
+            key_as_main_identity={"step"},
             dg=self.dg,
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
@@ -911,6 +914,12 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
+            # Ensure stable ID when key is provided; explicitly whitelist parameters
+            # that might invalidate the current widget state.
+            # format should be supported. However, there is a bug in baseweb where
+            # changing the format dynamically leads to a wrongly formatted date.
+            # So, we whitelist it for now until we migrate this away from baseweb.
+            key_as_main_identity={"min_value", "max_value", "format"},
             dg=self.dg,
             label=label,
             value=parsed,

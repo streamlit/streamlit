@@ -45,7 +45,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="Could not find current_fragment_id in fragment_id_queue. This should never happen.",
+            match=r"Could not find current_fragment_id in fragment_id_queue. This should never happen.",
         ):
             _new_fragment_id_queue(ctx, scope="fragment")
 

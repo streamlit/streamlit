@@ -1047,6 +1047,7 @@ class ButtonGroupMixin:
             # "feedback" in errors
             "feedback" if style == "borderless" else style,
             user_key=key,
+            key_as_main_identity=False,
             dg=self.dg,
             options=formatted_options,
             default=default,

@@ -60,17 +60,6 @@ const WIDTH_STRETCH_OVERRIDE = [
   // Because of how width is handled for custom components, we need the
   // element wrapper to be full width.
   "componentInstance",
-  "arrowDataFrame",
-  // TODO (lawilby): This can probably be removed once width is
-  // implemented for plotly charts. But currently, it seems like when
-  // we have use_container_width=False and the minWidth change the image
-  // doesn't render large enough.
-  "plotlyChart",
-  // The st.image element is potentially a list of images, so we always want
-  // the enclosing container to be full width. The size of individual
-  // images is managed in the ImageList component.
-  // This also covers st.pyplot() which is a special case of st.image.
-  "imgs",
   // Without this style, the skeleton width relies on the flex container that
   // wraps the page contents having align-items: stretch. There was a regression
   // where this default was changed. It is more robust to ensure that the skeleton
@@ -84,6 +73,8 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   "iframe",
   "arrowDataFrame",
   "deckGlJsonChart",
+  "arrowVegaLiteChart",
+  "graphvizChart",
 ]
 
 export const StyledElementContainerLayoutWrapper: FC<
@@ -147,32 +138,38 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (node.element.type === "deckGlJsonChart") {
-      // TODO (lawilby): When width is implemented for deckGlJsonChart, we
-      // should try to remove these custom styles.
-      // Currently, maps with use_container_width=False and a size layer
-      // don't render correctly without the width override.
-      if (
-        !node.element.deckGlJsonChart?.useContainerWidth &&
-        !node.element.deckGlJsonChart?.width
-      ) {
+    } else if (node.element.type === "arrowVegaLiteChart") {
+      if (node.element.widthConfig?.useContent) {
+        // This is necessary due to the read-only grid feature because the dataframe
+        // does not render correctly if it has a parent with fit-content styling which
+        // is the default for width.
+        // TODO (lawilby): Investigate if we can alter dataframes so that we
+        // don't need this.
         styles.width = "100%"
       }
-      return styles
-    } else if (node.element.type === "arrowVegaLiteChart") {
-      if (isInHorizontalLayout) {
+      if (isInHorizontalLayout && !node.element.widthConfig) {
+        // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
         styles.flex = "1 1 14rem"
       }
       return styles
+    } else if (node.element.type === "arrowDataFrame") {
+      if (node.element.widthConfig?.useContent) {
+        styles.width = "100%"
+      }
+      return styles
+    } else if (node.element.type === "imgs") {
+      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component,
+      // and here set the width to auto.
+      // This also covers st.pyplot() which is a special case of st.image.
+      styles.width = "auto"
     }
 
     return styles
   }, [
     node.element.type,
     node.element.heightConfig?.useStretch,
-    node.element.deckGlJsonChart?.useContainerWidth,
-    node.element.deckGlJsonChart?.width,
     isInHorizontalLayout,
+    node.element.widthConfig,
   ])
 
   const styles = useLayoutStyles({

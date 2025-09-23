@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
 import streamlit as st
 
-img: npt.NDArray[np.int_] = np.repeat(0, 75000).reshape(300, 250)
+img: npt.NDArray[np.int64] = np.repeat(0, 75000).reshape(300, 250)
 
 with st.container(
     border=False,
@@ -37,7 +39,7 @@ with st.container(
                 "y": [i * i for i in range(5)],
             }
         )
-        st.line_chart(df.set_index("x"), width=300, use_container_width=False)
+        st.line_chart(df.set_index("x"), width=300)
 
         with st.container(
             border=False,

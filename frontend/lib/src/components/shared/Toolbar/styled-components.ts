@@ -69,12 +69,18 @@ export const StyledToolbar = styled.div(({ theme }) => ({
 
 export const StyledToolbarElementContainer = styled.div<{
   width?: number | string
-  height?: number
+  height?: number | string
   useContainerWidth: boolean
   topCentered?: boolean
-}>(({ height, useContainerWidth, topCentered }) => ({
+  useContainerHeight?: boolean
+}>(({ height, useContainerWidth, topCentered, useContainerHeight }) => ({
   position: "relative",
-  height: useContainerWidth && height ? height : "fit-content",
+  height:
+    useContainerWidth && height
+      ? height
+      : useContainerHeight
+        ? height || "100%"
+        : "fit-content",
   maxWidth: "100%",
   width: useContainerWidth ? "100%" : "fit-content",
   ...(topCentered

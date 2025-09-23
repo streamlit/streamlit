@@ -224,10 +224,12 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Test get_content_type function."""
         mimetypes.add_type("custom/html", ".html")
         mimetypes.add_type("custom/js", ".js")
+        mimetypes.add_type("custom/mjs", ".mjs")
         mimetypes.add_type("custom/css", ".css")
 
         assert ComponentRequestHandler.get_content_type("test.html") == "custom/html"
         assert ComponentRequestHandler.get_content_type("test.js") == "custom/js"
+        assert ComponentRequestHandler.get_content_type("test.mjs") == "custom/mjs"
         assert ComponentRequestHandler.get_content_type("test.css") == "custom/css"
 
         # Have the server reinitialize the mimetypes
@@ -236,6 +238,10 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert ComponentRequestHandler.get_content_type("test.html") == "text/html"
         assert (
             ComponentRequestHandler.get_content_type("test.js")
+            == "application/javascript"
+        )
+        assert (
+            ComponentRequestHandler.get_content_type("test.mjs")
             == "application/javascript"
         )
         assert ComponentRequestHandler.get_content_type("test.css") == "text/css"

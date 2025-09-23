@@ -145,6 +145,82 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
 
+    def test_stable_id_button_with_key(self):
+        """Test that the button ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.button(
+                label="Label 1",
+                key="button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.button
+            id1 = c1.id
+
+            st.button(
+                label="Label 2",
+                key="button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.button
+            id2 = c2.id
+            assert id1 == id2
+
+    def test_stable_id_download_button_with_key(self):
+        """Test that the download button ID is stable when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.download_button(
+                label="Label 1",
+                data="data1",
+                file_name="file1.txt",
+                mime="text/plain",
+                key="download_button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.download_button
+            id1 = c1.id
+
+            st.download_button(
+                label="Label 2",
+                data="data2",
+                file_name="file2.txt",
+                mime="text/csv",
+                key="download_button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.download_button
+            id2 = c2.id
+            assert id1 == id2
+
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(

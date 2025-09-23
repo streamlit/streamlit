@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
-TOTAL_TABLE_ELEMENTS = 33
+TOTAL_TABLE_ELEMENTS = 35
 
 
 def test_table_rendering(app: Page, assert_snapshot: ImageCompareFunction):
