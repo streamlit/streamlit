@@ -1459,7 +1459,12 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             p.stop()
 
     def _create_theme_file(self, content: str, filename: str = "theme.toml") -> str:
-        """Helper to create a temporary theme file."""
+        """
+        Helper to create a temporary theme file.
+        WARNING: Should only be called from _theme_file() since this method creates files
+        with delete=False, so cleanup is manual. Use _theme_file() context manager for
+        automatic cleanup.
+        """
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(

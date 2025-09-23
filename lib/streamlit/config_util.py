@@ -386,7 +386,7 @@ def _load_theme_file(
     """
     Load and parse a theme TOML file from a local path or URL.
 
-    Handles raising erros when a file cannot be found, read, parsed,
+    Handles raising errors when a file cannot be found, read, parsed,
     or contains invalid theme options.
 
     Otherwise returns the parsed TOML content as a dictionary.
@@ -411,12 +411,13 @@ def _load_theme_file(
     except ImportError:
         _raise_missing_toml()
 
-    # Check if it's a URL using the url_util helper (only allow http/https schemes)
-    is_valid_url = url_util.is_url(file_path_or_url, allowed_schemas=("http", "https"))
+    # Check if it's a URL using the url_util helper (only allow http/https schemes by default)
+    is_valid_url = url_util.is_url(file_path_or_url)
 
     try:
         if is_valid_url:
-            # Load from URL - url_util.is_url already validated http/https schemes
+            # Load from URL - noqa: S310 suppressed since url_util.is_url() restricts to only
+            # http/https schemes by default, preventing file:// or other dangerous schemes
             with urllib.request.urlopen(file_path_or_url) as response:  # noqa: S310
                 content = response.read().decode("utf-8")
         else:

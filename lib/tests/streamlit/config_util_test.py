@@ -306,7 +306,29 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
     def setUp(self):
         self.config_template = CONFIG_OPTIONS_TEMPLATE
 
-    # theme.base support function tests
+    def _get_expected_theme_options_count(self, section: str = "theme") -> int:
+        """
+        Get the expected count of theme options by directly counting from config template.
+
+        This uses the config template as the source of truth, ensuring the test
+        stays in sync with the actual theme options defined in the system.
+        """
+        # Count theme options directly from the config template
+        # (not using the function under test to avoid circular logic)
+        theme_option_count = 0
+        for option_key in self.config_template:
+            if option_key.startswith(section):
+                parts = option_key.split(".")
+                # In the case we are counting theme options (e.g. "theme.primaryColor"):
+                if section == "theme" and len(parts) == 2:
+                    theme_option_count += 1
+                # In the case we are counting sidebar options (e.g. "theme.sidebar.primaryColor"):
+                if section == "theme.sidebar" and len(parts) == 3:
+                    theme_option_count += 1
+
+        return theme_option_count
+
+    # Tests for theme.base support functions
 
     def test_validate_color_value_valid_colors(self):
         """Test _validate_color_value with various valid color formats."""
@@ -464,9 +486,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         # Does not include section names
         assert "sidebar" not in valid_options
 
-        # Test that we get a reasonable number of options (should be 48+)
-        assert len(valid_options) >= 48
-
         # Test that all options are strings
         for option in valid_options:
             assert isinstance(option, str)
@@ -495,13 +514,21 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         }
         assert expected_main_only.issubset(main_options)
 
+        # Test that we get the expected number of theme options
+        # Use the config template as source of truth for expected theme options count
+        expected_count = self._get_expected_theme_options_count()
+        assert len(main_options) == expected_count, (
+            f"Expected {expected_count} main theme options based on config template, "
+            f"but got {len(main_options)}"
+        )
+
     def test_get_valid_theme_options_sidebar_section(self):
         """Test _get_valid_theme_options for sidebar section specifically."""
         sidebar_options = config_util._get_valid_theme_options(
             self.config_template, "sidebar"
         )
 
-        # These should be in sidebar section
+        # These are some options that should be in sidebar section
         expected_sidebar = {
             # The only config with base in the name that should be in sidebar
             "baseRadius",
@@ -518,7 +545,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         }
         assert expected_sidebar.issubset(sidebar_options)
 
-        # These should NOT be in sidebar section
+        # These are all the options that should NOT be in sidebar section
         main_only_options = {
             "base",
             "baseFontSize",
@@ -529,6 +556,13 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "chartSequentialColors",
         }
         assert main_only_options.isdisjoint(sidebar_options)
+
+        # Test that we get the expected number of theme.sidebar options
+        expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
+        assert len(sidebar_options) == expected_count, (
+            f"Expected {expected_count} theme.sidebar options based on config template, "
+            f"but got {len(sidebar_options)}"
+        )
 
     def test_validate_theme_file_content_with_valid_content(self):
         """Test validation of valid theme file content."""
