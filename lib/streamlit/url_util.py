@@ -78,7 +78,7 @@ def is_url(
 
     Parameters
     ----------
-    url : str or Path
+    url : str
         The URL to check.
 
     allowed_schemas : Tuple[str]
