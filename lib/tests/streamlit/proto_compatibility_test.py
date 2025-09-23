@@ -122,6 +122,7 @@ FD = FieldDescriptor
                 ("heading_font_sizes", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("heading_font_weights", FD.LABEL_REPEATED, FD.TYPE_INT32),
                 ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("code_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 (
                     "dataframe_header_background_color",

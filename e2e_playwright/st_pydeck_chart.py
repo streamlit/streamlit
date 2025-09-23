@@ -222,40 +222,6 @@ def dark_style_subtest():
     )
 
 
-def dimensions_subtest():
-    st.write("""
-    ## Test with width and height set
-
-    Should show a "road"-style map with random data centered in SF, and small width and
-    height (200x250).
-    """)
-
-    st.pydeck_chart(
-        pdk.Deck(
-            map_style="road",
-            initial_view_state=pdk.ViewState(
-                latitude=37.7749295,
-                longitude=-122.4194155,
-                zoom=12,
-                bearing=0,
-                pitch=30,
-            ),
-            layers=[
-                pdk.Layer(
-                    "ScatterplotLayer",
-                    data=random_scatter_sf,
-                    get_position="[lon, lat]",
-                    get_fill_color="[200, 30, 0, 160]",
-                    get_radius=200,
-                ),
-            ],
-        ),
-        width=200,
-        height=250,
-        use_container_width=False,
-    )
-
-
 def mapbox_subtest():
     st.write("""
     ## Test with Mapbox provider
@@ -286,6 +252,62 @@ def mapbox_subtest():
                 ),
             ],
         )
+    )
+
+
+def width_parameter_subtest():
+    st.write("""
+    ## Test width parameter
+
+    Test the new width parameter with different values.
+    """)
+
+    st.write("**Chart with width='stretch' (default):**")
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="light",
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.4,
+                zoom=11,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(50),
+                    get_position="[lon, lat]",
+                    get_fill_color="[30, 200, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        ),
+        width="stretch",
+    )
+
+    st.write("**Chart with width=200 and height=250:**")
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="road",
+            initial_view_state=pdk.ViewState(
+                latitude=37.7749295,
+                longitude=-122.4194155,
+                zoom=12,
+                bearing=0,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(50),
+                    get_position="[lon, lat]",
+                    get_fill_color="[255, 165, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        ),
+        width=200,
+        height=250,
     )
 
 

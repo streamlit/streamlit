@@ -60,11 +60,6 @@ const WIDTH_STRETCH_OVERRIDE = [
   // Because of how width is handled for custom components, we need the
   // element wrapper to be full width.
   "componentInstance",
-  // TODO (lawilby): This can probably be removed once width is
-  // implemented for plotly charts. But currently, it seems like when
-  // we have use_container_width=False and the minWidth change the image
-  // doesn't render large enough.
-  "plotlyChart",
   // Without this style, the skeleton width relies on the flex container that
   // wraps the page contents having align-items: stretch. There was a regression
   // where this default was changed. It is more robust to ensure that the skeleton
@@ -143,18 +138,6 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (node.element.type === "deckGlJsonChart") {
-      // TODO (lawilby): When width is implemented for deckGlJsonChart, we
-      // should try to remove these custom styles.
-      // Currently, maps with use_container_width=False and a size layer
-      // don't render correctly without the width override.
-      if (
-        !node.element.deckGlJsonChart?.useContainerWidth &&
-        !node.element.deckGlJsonChart?.width
-      ) {
-        styles.width = "100%"
-      }
-      return styles
     } else if (node.element.type === "arrowVegaLiteChart") {
       if (node.element.widthConfig?.useContent) {
         // This is necessary due to the read-only grid feature because the dataframe
@@ -185,8 +168,6 @@ export const StyledElementContainerLayoutWrapper: FC<
   }, [
     node.element.type,
     node.element.heightConfig?.useStretch,
-    node.element.deckGlJsonChart?.useContainerWidth,
-    node.element.deckGlJsonChart?.width,
     isInHorizontalLayout,
     node.element.widthConfig,
   ])

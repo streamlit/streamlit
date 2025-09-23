@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 import os
 from unittest import mock
@@ -19,6 +21,7 @@ from unittest import mock
 import pandas as pd
 import pydeck as pdk
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import deck_gl_json_chart
@@ -246,6 +249,125 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value
+
+
+class PyDeckChartWidthTest(DeltaGeneratorTestCase):
+    """Test pydeck_chart width parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, expected_width_spec, expected_width_value
+            ("stretch", "use_stretch", True),
+            (500, "pixel_width", 500),
+        ]
+    )
+    def test_width_parameter(
+        self,
+        width: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+    ) -> None:
+        """Test pydeck_chart with new width parameter."""
+        st.pydeck_chart(None, width=width)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            # use_container_width, width, expected_width_spec, expected_width_value
+            (
+                True,
+                "stretch",
+                "use_stretch",
+                True,
+            ),  # use_container_width=True -> stretch (overrides width)
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True -> stretch (overrides width)
+            (
+                False,
+                "stretch",
+                "use_stretch",
+                True,
+            ),  # use_container_width=False, width="stretch" -> stretch
+            (
+                False,
+                400,
+                "pixel_width",
+                400,
+            ),  # use_container_width=False, width=int -> preserve integer
+        ]
+    )
+    @mock.patch("streamlit.elements.deck_gl_json_chart.show_deprecation_warning")
+    def test_use_container_width_backward_compatibility(
+        self,
+        use_container_width: bool,
+        width: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_show_warning: mock.Mock,
+    ) -> None:
+        """Test that use_container_width still works with deprecation warning."""
+        st.pydeck_chart(None, use_container_width=use_container_width, width=width)
+
+        mock_show_warning.assert_called_once()
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            # use_container_width, expected_width_spec, expected_width_value
+            (True, "use_stretch", True),  # use_container_width=True -> stretch
+            (
+                False,
+                "use_stretch",
+                True,
+            ),  # use_container_width=False, no width -> stretch
+        ]
+    )
+    @mock.patch("streamlit.elements.deck_gl_json_chart.show_deprecation_warning")
+    def test_use_container_width_deprecation_alone(
+        self,
+        use_container_width: bool,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_show_warning: mock.Mock,
+    ) -> None:
+        """Test deprecation warning and translation logic when only use_container_width is provided."""
+        st.pydeck_chart(None, use_container_width=use_container_width)
+
+        # Check that deprecation warning was called
+        mock_show_warning.assert_called_once()
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            "invalid_width",
+            "content",  # content width not supported for pydeck
+            0,  # width must be positive
+            -100,  # negative width
+        ]
+    )
+    def test_validation_errors(self, invalid_width: str | int) -> None:
+        """Test that invalid width values raise validation errors."""
+        with pytest.raises(StreamlitAPIException):
+            st.pydeck_chart(None, width=invalid_width)
 
     def test_mapbox_token_env_var(self):
         """Test a Mapbox token is passed in proto when provided in env var."""

@@ -160,7 +160,7 @@ st.slider(
     "Label 14 - Overlapping near the left",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 10, 1e6 + 14),
+    value=(1e6 + 6, 1e6 + 10),
 )
 
 # Slider 18
@@ -176,7 +176,7 @@ st.slider(
     "Label 16 - Overlapping near the right",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 86, 1e6 + 90),
+    value=(1e6 + 88, 1e6 + 92),
 )
 
 # Slider 20
