@@ -1,8 +1,6 @@
 name: Emojis/Material icons - check & create PR
 
 on:
-  pull_request:
-    types: [synchronize]
   schedule:
     # Run job at 10.30pm PST or 11.30pm PDT every Tuesday
     - cron: "30 6 * * Tue"
