@@ -42,12 +42,14 @@ export const uploadFiles = async ({
   widgetMgr,
   widgetInfo,
   fragmentId,
+  signal,
 }: {
   files: File[]
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
   widgetInfo: WidgetInfo
   fragmentId?: string
+  signal?: AbortSignal
 }): Promise<{
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
@@ -78,7 +80,9 @@ export const uploadFiles = async ({
         await uploadClient.uploadFile(
           { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
-          file
+          file,
+          undefined, // onUploadProgress
+          signal
         )
         successfulUploads.push({ fileUrl, file })
       } catch (e) {

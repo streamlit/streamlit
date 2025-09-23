@@ -2121,6 +2121,33 @@ class VegaLiteChartWidthTest(DeltaGeneratorTestCase):
         assert el.width_config.WhichOneof("width_spec") == "use_content"
         assert el.width_config.use_content is True
 
+    def test_vega_lite_chart_default_width_parameter(self):
+        """Test that default width parameter is consistently typed across overloads and implementation.
+
+        This test verifies that when no width parameter is provided, the internal logic
+        determines the appropriate default (which varies by chart type), ensuring
+        consistency between overloads and implementation signatures.
+        """
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+
+        # Call without specifying width parameter - internal logic determines default
+        st.vega_lite_chart(df, spec)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Verify some width configuration is set (the specific default depends on chart type)
+        assert el.width_config.WhichOneof("width_spec") is not None
+        # For regular charts, the default is "stretch"
+        assert el.width_config.WhichOneof("width_spec") == "use_stretch"
+        assert el.width_config.use_stretch is True
+
 
 class VegaLiteChartHeightTest(DeltaGeneratorTestCase):
     """Test vega_lite_chart height parameter functionality."""

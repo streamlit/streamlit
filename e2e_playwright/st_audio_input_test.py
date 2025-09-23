@@ -22,7 +22,12 @@ import wave
 import pytest
 from playwright.sync_api import Locator, Page, Route, expect
 
-from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    IframedPage,
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -408,3 +413,110 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
         audio_input.get_by_text("An error has occurred, please try again.")
     ).to_be_visible()
     assert_snapshot(audio_input, name="st_audio_input-error_state")
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_rapid_re_recordings(app: Page):
+    """Test that rapid re-recordings work correctly without race conditions."""
+    grant_microphone_permissions(app)
+
+    audio_input = get_audio_input(app, MAIN)
+
+    # Do 3 rapid recordings - each new one should replace the previous
+    for i in range(3):
+        # Use the specific aria-label selector to avoid ambiguity
+        record_button = audio_input.locator('[aria-label="Record"]')
+        record_button.click()
+
+        # Wait for stop button to appear (indicates recording started)
+        expect(audio_input.get_by_role("button", name="Stop recording")).to_be_visible()
+
+        # Let it record briefly
+        app.wait_for_timeout(500)  # This is OK - we need actual recording time
+
+        stop_button = audio_input.get_by_role("button", name="Stop recording")
+        stop_button.click()
+
+        if i < 2:  # Don't wait after last recording
+            # Wait for record button to be available again before next recording
+            expect(record_button).to_be_visible()
+
+    # Wait for the final upload to complete
+    wait_for_app_run(app)
+
+    # Wait for the audio to be processed and displayed
+    expect(app.get_by_text("Audio Input 1: True")).to_be_visible(timeout=10000)
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
+    """Test that blob URLs are properly revoked when uploads are aborted to prevent memory leaks."""
+    grant_microphone_permissions(app)
+
+    # Inject tracking code for blob URL creation and revocation
+    app.evaluate("""
+        window.blobTracking = {created: [], revoked: []};
+        const origCreate = URL.createObjectURL;
+        const origRevoke = URL.revokeObjectURL;
+
+        URL.createObjectURL = function(blob) {
+            const url = origCreate.call(this, blob);
+            window.blobTracking.created.push(url);
+            console.log('Created blob URL:', url);
+            return url;
+        };
+
+        URL.revokeObjectURL = function(url) {
+            window.blobTracking.revoked.push(url);
+            console.log('Revoked blob URL:', url);
+            return origRevoke.call(this, url);
+        };
+    """)
+
+    audio_input = get_audio_input(app, MAIN)
+
+    # Create 3 recordings rapidly - each should clean up the previous blob URL
+    for i in range(3):
+        record_button = audio_input.locator('[aria-label="Record"]')
+        record_button.click()
+
+        # Wait for stop button to appear
+        expect(audio_input.get_by_role("button", name="Stop recording")).to_be_visible()
+
+        # Let it record briefly
+        app.wait_for_timeout(300)  # This is OK - we need actual recording time
+
+        audio_input.get_by_role("button", name="Stop recording").click()
+
+        if i < 2:
+            # Wait for record button to be available again
+            expect(record_button).to_be_visible()
+
+    # Wait for processing to complete
+    wait_for_app_run(app)
+
+    # Check cleanup - wait for the tracking values to be available
+    # Use wait_until pattern for async checks as per best practices
+    def check_blob_urls() -> bool:
+        tracking = app.evaluate("window.blobTracking")
+        return len(tracking["created"]) >= 3 and len(tracking["revoked"]) >= 2
+
+    wait_until(app, check_blob_urls, timeout=5)
+
+    # Now verify the actual values
+    tracking = app.evaluate("window.blobTracking")
+
+    # These asserts are acceptable for non-DOM values
+    # as confirmed by st_heading_test.py and other tests
+    assert len(tracking["created"]) >= 3, (
+        f"Expected at least 3 blob URLs created, got {len(tracking['created'])}"
+    )
+
+    assert len(tracking["revoked"]) >= 2, (
+        f"Expected at least 2 blob URLs revoked, got {len(tracking['revoked'])}"
+    )
+
+    # Verify that earlier created URLs were revoked
+    for i in range(min(2, len(tracking["created"]) - 1)):
+        url = tracking["created"][i]
+        assert url in tracking["revoked"], f"Blob URL {url} should have been revoked"
