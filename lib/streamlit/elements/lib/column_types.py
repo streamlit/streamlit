@@ -202,6 +202,10 @@ class ColumnConfig(TypedDict, total=False):
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -307,6 +311,10 @@ def Column(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -410,6 +418,10 @@ def NumberColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -573,6 +585,10 @@ def TextColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -694,6 +710,10 @@ def LinkColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -853,6 +873,10 @@ def CheckboxColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -961,6 +985,10 @@ def SelectboxColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1101,6 +1129,10 @@ def BarChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -1197,6 +1229,10 @@ def LineChartColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1295,6 +1331,10 @@ def AreaChartColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1400,6 +1440,10 @@ def ImageColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -1468,12 +1512,13 @@ def ListColumn(
 
     This is the default column type for list-like values. This command needs to
     be used in the ``column_config`` parameter of ``st.dataframe`` or
-    ``st.data_editor``.
+    ``st.data_editor``. When used with ``st.data_editor``, users can freely
+    type in new options and remove existing ones.
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow
-        serialization. We recommend you disable editing for these columns or
-        convert of all list values to strings.
+        serialization. We recommend that you disable editing for these columns
+        or convert all list values to strings.
 
     Parameters
     ----------
@@ -1490,6 +1535,10 @@ def ListColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1583,16 +1632,18 @@ def MultiselectColumn(
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
 
-    This command needs to be used in the ``column_config`` parameter of ``st.dataframe`` or
-    ``st.data_editor``. When used with ``st.data_editor``, editing will
-    be enabled with a multiselect widget.
+    This command needs to be used in the ``column_config`` parameter of
+    ``st.dataframe`` or ``st.data_editor``. When used with ``st.data_editor``,
+    users can select options from a dropdown menu. You can configure the
+    column to allow freely typed options, too.
 
-    This column type is also useful for displaying colored labels in a read-only ``st.dataframe``.
+    You can also use this column type to display colored labels in a read-only
+    ``st.dataframe``.
 
     .. Note::
-        Editing for non-string or mixed type lists can cause issues with Arrow serialization.
-        We recommend to disable editing for these columns or conversion of all list values
-        to strings.
+        Editing for non-string or mixed type lists can cause issues with Arrow
+        serialization. We recommend that you disable editing for these columns
+        or convert all list values to strings.
 
     Parameters
     ----------
@@ -1601,11 +1652,26 @@ def MultiselectColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of "small", "medium", or "large".
-        If None (default), the column will be sized to fit the cell contents.
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column label.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. Defaults to False.
@@ -1633,50 +1699,64 @@ def MultiselectColumn(
     color: str or Iterable of str or None
         The color to use for different options. This can be:
 
-        - None (default): the primary color is used for all options.
-        - A single color value that is used for all options. This supports either
-          a hex code, e.g. ``"#000000"``, or one of the following supported colors:
-          blue, green, orange, red, violet, yellow, gray/grey, or primary.
-        - An iterable of color values that are mapped to the options.
+        - None (default): The options are displayed without color.
+        - A single color value that is used for all options. This can be one of
+          the following strings:
+            - ``"primary"`` to use the primary theme color.
+            - A CSS named color name like ``"darkBlue"`` or ``"maroon"``.
+            - A hex color code like ``"#483d8b"`` or ``"#6A5ACD80"``.
+            - An RGB or RGBA color code like ``"rgb(255,0,0)"`` or
+              ``"RGB(70, 130, 180, .7)"``.
+            - An HSL or HSLA color code like ``"hsl(248, 53%, 58%)"``
+              or ``"HSL(147, 50%, 47%, .3)"``.
+        - An iterable of color values that are mapped to the options. The colors
+          are applied in sequence, cycling through the iterable if there are
+          more options than colors.
 
     format_func: function or None
         Function to modify the display of the options. It receives
         the raw option defined in ``options`` as an argument and should output
-        the label to be shown for that option. If this is ``None`` (default),
-        the raw option is used as the label.
+        the label to be shown for that option. When used in ``st.data_editor``,
+        this has no impact on the returned value. If this is ``None``
+        (default), the raw option is used as the label.
 
     Examples
     --------
     **Example 1: Editable multiselect column**
 
+    To customize the label colors, provide a list of colors to the ``color``
+    parameter. You can also format the option labels with the ``format_func``
+    parameter.
+
     >>> import pandas as pd
     >>> import streamlit as st
+    >>>
     >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "category": [
-    >>>             ["exploration", "visualization"],
-    >>>             ["llm", "visualization"],
-    >>>             ["exploration"],
-    >>>         ],
-    >>>     }
-    >>> )
+    ...     {
+    ...         "category": [
+    ...             ["exploration", "visualization"],
+    ...             ["llm", "visualization"],
+    ...             ["exploration"],
+    ...         ],
+    ...     }
+    ... )
     >>>
     >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "category": st.column_config.MultiselectColumn(
-    >>>             "App Categories",
-    >>>             help="The categories of the app",
-    >>>             options=[
-    >>>                 "exploration",
-    >>>                 "visualization",
-    >>>                 "llm",
-    >>>             ],
-    >>>             color=["orange", "red", "#ffc38a"],
-    >>>             format_func=lambda x: x.capitalize(),
-    >>>         ),
-    >>>     },
-    >>> )
+    ...     data_df,
+    ...     column_config={
+    ...         "category": st.column_config.MultiselectColumn(
+    ...             "App Categories",
+    ...             help="The categories of the app",
+    ...             options=[
+    ...                 "exploration",
+    ...                 "visualization",
+    ...                 "llm",
+    ...             ],
+    ...             color=["#ffa421", "#803df5", "#00c0f2"],
+    ...             format_func=lambda x: x.capitalize(),
+    ...         ),
+    ...     },
+    ... )
 
     .. output::
         https://doc-multiselect-column-1.streamlit.app/
@@ -1684,29 +1764,34 @@ def MultiselectColumn(
 
     **Example 2: Colored tags for st.dataframe**
 
+    When using ``st.dataframe``, the multiselect column is read-only
+    and can be used to display colored tags. In this example, the dataframe
+    uses the primary theme color for all tags.
+
     >>> import pandas as pd
     >>> import streamlit as st
+    >>>
     >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "category": [
-    >>>             ["exploration", "visualization"],
-    >>>             ["llm", "visualization"],
-    >>>             ["exploration"],
-    >>>         ],
-    >>>     }
-    >>> )
+    ...     {
+    ...         "category": [
+    ...             ["exploration", "visualization"],
+    ...             ["llm", "visualization"],
+    ...             ["exploration"],
+    ...         ],
+    ...     }
+    ... )
     >>>
     >>> st.dataframe(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "category": st.column_config.MultiselectColumn(
-    >>>             "App Categories",
-    >>>             options=["exploration", "visualization", "llm"],
-    >>>             color=["orange", "red", "#ffc38a"],
-    >>>             format_func=lambda x: x.capitalize(),
-    >>>         ),
-    >>>     },
-    >>> )
+    ...     data_df,
+    ...     column_config={
+    ...         "category": st.column_config.MultiselectColumn(
+    ...             "App Categories",
+    ...             options=["exploration", "visualization", "llm"],
+    ...             color="primary",
+    ...             format_func=lambda x: x.capitalize(),
+    ...         ),
+    ...     },
+    ... )
 
     .. output::
         https://doc-multiselect-column-2.streamlit.app/
@@ -1795,6 +1880,10 @@ def DatetimeColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1958,6 +2047,10 @@ def TimeColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -2111,6 +2204,10 @@ def DateColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -2262,6 +2359,10 @@ def ProgressColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
@@ -2391,6 +2492,10 @@ def JsonColumn(
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
+
+        If the total width of all columns is less that the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
