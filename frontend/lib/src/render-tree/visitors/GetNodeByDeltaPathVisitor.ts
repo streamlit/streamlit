@@ -18,6 +18,7 @@ import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -49,6 +50,24 @@ export class GetNodeByDeltaPathVisitor
   visitStandaloneNode<S>(_node: StandaloneNode<S>): AppNode | undefined {
     // StandaloneNodes are leaf nodes - they have no children to traverse
     return undefined
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    if (this.deltaPath.length === 0) {
+      return undefined
+    }
+
+    const [currentIndex, ...remainingPath] = this.deltaPath
+
+    if (currentIndex < 0 || currentIndex >= node.transientNodes.size) {
+      return undefined
+    }
+
+    if (remainingPath.length === 0) {
+      return node.anchor
+    }
+
+    return node.accept(new GetNodeByDeltaPathVisitor(remainingPath))
   }
 
   visitBlockNode(node: BlockNode): AppNode | undefined {

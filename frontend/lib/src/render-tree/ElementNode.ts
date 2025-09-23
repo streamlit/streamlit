@@ -33,7 +33,9 @@ import {
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 
 /**
  * A leaf AppNode. Contains a single element to render.
@@ -196,6 +198,23 @@ export class ElementNode implements AppNode {
 
   public accept<T>(visitor: AppNodeVisitor<T>): T {
     return visitor.visitElementNode(this)
+  }
+
+  public replaceTransientNode(node: TransientNode): AppNode {
+    if (node.scriptRunId !== this.scriptRunId) {
+      // This TransientNode was not defined in this script run, so we return the element node
+      // to replace everything
+      return this
+    }
+
+    // At this point, we should clear the transient nodes that are stale
+    const newTransientNodes = node.updateTransientNodes(element =>
+      element.accept(new ClearStaleNodeVisitor(this.scriptRunId))
+    )
+
+    // In this case, we require the transient node to be included, but we are providing
+    // a new anchor node
+    return new TransientNode(this.scriptRunId, this, newTransientNodes)
   }
 }
 

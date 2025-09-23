@@ -15,6 +15,7 @@
  */
 
 import { AppNode } from "./AppNode.interface"
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
@@ -43,5 +44,11 @@ export class StandaloneNode<T> implements AppNode {
 
   public accept<T>(visitor: AppNodeVisitor<T>): T {
     return visitor.visitStandaloneNode(this)
+  }
+
+  public replaceTransientNode(_node: TransientNode): AppNode {
+    // In this case, the standalone node is replacing the transient node
+    // so we return the standalone node
+    return this
   }
 }

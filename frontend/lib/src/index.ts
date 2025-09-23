@@ -17,7 +17,13 @@
 // We add some polyfills in order to support older browsers for the exports below
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
-export { AppRoot, BlockNode, ElementNode, StandaloneNode } from "./AppNode"
+export {
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  StandaloneNode,
+  TransientNode,
+} from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,

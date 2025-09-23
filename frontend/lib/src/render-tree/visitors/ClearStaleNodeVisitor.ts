@@ -18,6 +18,7 @@ import { ElementNode, notUndefined } from "~lib/index"
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 export class ClearStaleNodeVisitor
@@ -35,6 +36,10 @@ export class ClearStaleNodeVisitor
     this.currentScriptRunId = currentScriptRunId
     this.fragmentIdsThisRun = fragmentIdsThisRun ?? []
     this.fragmentIdOfBlock = fragmentIdOfBlock
+  }
+
+  get isFragmentRun(): boolean {
+    return this.fragmentIdsThisRun.length > 0
   }
 
   visitBlockNode(node: BlockNode): AppNode | undefined {
@@ -91,7 +96,7 @@ export class ClearStaleNodeVisitor
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
-    if (this.fragmentIdsThisRun.length) {
+    if (this.isFragmentRun) {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
       //   1. This element doesn't correspond to a fragment at all.
@@ -110,11 +115,36 @@ export class ClearStaleNodeVisitor
 
   visitStandaloneNode<S>(node: StandaloneNode<S>): AppNode | undefined {
     // Check if we're running a fragment, ensure standalone node isn't cleared as stale (Issue #10350/#10382)
-    const isFragmentRun = this.fragmentIdsThisRun.length > 0
-    if (isFragmentRun || node.scriptRunId === this.currentScriptRunId) {
+    if (this.isFragmentRun || node.scriptRunId === this.currentScriptRunId) {
       return node
     }
 
     return new StandaloneNode<S>(null, node.scriptRunId, node.activeScriptHash)
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // Check if we're running a fragment, ensure transient node isn't cleared as stale
+    if (this.isFragmentRun) {
+      return node
+    }
+
+    // Check whether the anchor element and transient elements are stale
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this)
+    })
+
+    // Everything is stale
+    if (!anchorNode && transientNodes.size === 0) {
+      return undefined
+    }
+
+    // All the transient elements are stale, but not the anchor element
+    // so we return the anchor element
+    if (transientNodes.size === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
   }
 }

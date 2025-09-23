@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
@@ -84,4 +85,9 @@ export interface AppNode {
    * Accept a visitor.
    */
   accept<T>(visitor: AppNodeVisitor<T>): T
+
+  /**
+   * Replace a transient node with the given node.
+   */
+  replaceTransientNode(node: TransientNode): AppNode
 }

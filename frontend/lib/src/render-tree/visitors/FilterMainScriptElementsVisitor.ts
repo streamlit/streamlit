@@ -18,6 +18,7 @@ import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 import { notUndefined } from "~lib/util/utils"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
@@ -76,6 +77,23 @@ export class FilterMainScriptElementsVisitor
       return undefined
     }
     return node
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this)
+    })
+
+    if (!anchorNode && transientNodes.size === 0) {
+      return undefined
+    }
+
+    if (transientNodes.size === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
   }
 
   /**

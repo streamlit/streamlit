@@ -18,6 +18,7 @@ import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -55,6 +56,29 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   visitStandaloneNode<S>(_node: StandaloneNode<S>): AppNode {
     // StandaloneNodes are leaf nodes - they cannot have children set
     throw new Error("'setIn' cannot be called on a StandaloneNode")
+  }
+
+  visitTransientNode(node: TransientNode): AppNode {
+    const [, ...remainingPath] = this.deltaPath
+
+    if (remainingPath.length > 0) {
+      if (node.anchor) {
+        return node.anchor.accept(
+          new SetNodeByDeltaPathVisitor(
+            remainingPath,
+            this.nodeToSet,
+            this.scriptRunId
+          )
+        )
+      }
+
+      throw new Error("TransientNode has no anchor to set node at")
+    }
+
+    // At this point, we know the nodeToSet is to replace the transient node
+    // so we let the node decide how to best replace the transient node
+    // This is especially important for transient nodes to reconcile themselves
+    return this.nodeToSet.replaceTransientNode(node)
   }
 
   visitBlockNode(node: BlockNode): AppNode {

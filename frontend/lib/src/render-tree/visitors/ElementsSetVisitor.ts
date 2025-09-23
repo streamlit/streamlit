@@ -20,6 +20,7 @@ import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { StandaloneNode } from "~lib/render-tree/StandaloneNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -58,6 +59,18 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
 
   visitStandaloneNode<S>(_node: StandaloneNode<S>): Set<Element> {
     // StandaloneNodes don't contain Elements in the same way ElementNodes do
+    return this.elements
+  }
+
+  visitTransientNode(node: TransientNode): Set<Element> {
+    // Add all transient elements to the set
+    node.transientNodes.forEach(element => {
+      element.accept(this)
+    })
+
+    // Also visit the anchor ElementNode to collect its element
+    node.anchor?.accept(this)
+
     return this.elements
   }
 

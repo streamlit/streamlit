@@ -85,6 +85,7 @@ describe("StandaloneNode", () => {
         visitElementNode: vi.fn(),
         visitBlockNode: vi.fn(),
         visitStandaloneNode: vi.fn().mockReturnValue("visited"),
+        visitTransientNode: vi.fn(),
       }
 
       const result = node.accept(mockVisitor)
@@ -107,6 +108,7 @@ describe("StandaloneNode", () => {
         visitElementNode: vi.fn(),
         visitBlockNode: vi.fn(),
         visitStandaloneNode: vi.fn().mockReturnValue("visited null"),
+        visitTransientNode: vi.fn(),
       }
 
       const result = node.accept(mockVisitor)
@@ -130,6 +132,7 @@ describe("StandaloneNode", () => {
         visitElementNode: vi.fn(),
         visitBlockNode: vi.fn(),
         visitStandaloneNode: vi.fn().mockReturnValue(complexReturnValue),
+        visitTransientNode: vi.fn(),
       }
 
       const result = node.accept(mockVisitor)
@@ -156,6 +159,7 @@ describe("StandaloneNode", () => {
         visitElementNode: vi.fn(),
         visitBlockNode: vi.fn(),
         visitStandaloneNode: vi.fn().mockReturnValue(99),
+        visitTransientNode: vi.fn(),
       }
 
       const result = node.accept(mockVisitor)
