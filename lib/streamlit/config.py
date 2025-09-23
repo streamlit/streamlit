@@ -1560,6 +1560,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1639,6 +1641,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1719,6 +1723,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "'Space Mono':https://fonts.googleapis.com/css2?family=Space+Mono&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
     """,
