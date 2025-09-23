@@ -27,7 +27,7 @@ concurrency:
 jobs:
   create-branch:
     name: Create Release Branch ${{ inputs.release_version }}
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
