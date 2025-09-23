@@ -491,6 +491,306 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart, on_select="rerun")
 
 
+class AltairChartWidthTest(DeltaGeneratorTestCase):
+    """Test altair_chart width parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, expected_width_spec, expected_width_value
+            ("stretch", "use_stretch", True),
+            ("content", "use_content", True),
+            (500, "pixel_width", 500),
+            (None, "use_stretch", True),  # Default to stretch when None
+        ]
+    )
+    def test_altair_chart_width_combinations(
+        self,
+        width: str | int | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+    ):
+        """Test altair_chart with various width combinations."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        if width is None:
+            st.altair_chart(chart)
+        else:
+            st.altair_chart(chart, width=width)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Check width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            # Test parameters: use_container_width, width, expected_width_spec, expected_width_value
+            (
+                True,
+                None,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True -> width="stretch"
+            (
+                False,
+                None,
+                "use_content",
+                True,
+            ),  # use_container_width=False -> width="content"
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides integer width
+            (
+                True,
+                "content",
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides string width
+            (
+                False,
+                "content",
+                "use_content",
+                True,
+            ),  # use_container_width=False, width="content"
+            (
+                False,
+                500,
+                "pixel_width",
+                500,
+            ),  # use_container_width=False, integer width -> respect integer
+        ]
+    )
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_altair_chart_use_container_width_deprecation(
+        self,
+        use_container_width: bool,
+        width: int | str | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_warning: Mock,
+    ):
+        """Test that use_container_width shows deprecation warning and is correctly translated to
+        the new width parameter."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        kwargs = {"use_container_width": use_container_width}
+        if width is not None:
+            kwargs["width"] = width
+
+        st.altair_chart(chart, **kwargs)
+
+        mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+
+        # Should be translated to the correct width configuration
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            ("width", "invalid_width"),
+            ("width", 0),  # width must be positive
+            ("width", -100),  # negative width
+        ]
+    )
+    def test_altair_chart_validation_errors(
+        self, param_name: str, invalid_value: str | int
+    ):
+        """Test that invalid width values raise validation errors."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.altair_chart(chart, **kwargs)
+
+    @pytest.mark.skipif(
+        is_altair_version_less_than("5.0.0"),
+        reason="This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_chart_width_with_selections(self):
+        """Test that width works correctly with selections enabled."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+            .add_params(alt.selection_point("my_param"))
+        )
+
+        result = st.altair_chart(
+            chart, width=600, on_select="rerun", key="test_altair_chart"
+        )
+
+        # Check that the chart element has the correct width configuration
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+        assert el.width_config.pixel_width == 600
+
+        # Check that selections are still working
+        assert hasattr(result, "selection")
+        assert result.selection.my_param == {}
+
+    @parameterized.expand(
+        [
+            # Test name, chart description, chart creation function
+            (
+                "regular_chart",
+                "Regular charts",
+                lambda df: alt.Chart(df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("a:O"),
+                    y=alt.Y("b:Q"),
+                ),
+            ),
+            (
+                "vconcat_chart",
+                "Vertical concatenation charts",
+                lambda df: alt.vconcat(
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                    ),
+                    alt.Chart(df)
+                    .mark_point()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                    ),
+                ),
+            ),
+        ]
+    )
+    def test_altair_chart_default_width_stretch_charts(
+        self, test_name: str, chart_description: str, chart_func: Callable
+    ):
+        """Test that certain Altair chart types default to 'stretch' width."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = chart_func(df)
+
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.width_config.WhichOneof("width_spec") == "use_stretch"
+        assert el.width_config.use_stretch is True
+
+    @parameterized.expand(
+        [
+            # Test name, chart description, chart creation function
+            (
+                "facet_chart",
+                "Facet charts",
+                lambda df: alt.Chart(df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("a:O"),
+                    y=alt.Y("b:Q"),
+                    facet=alt.Facet("a:O"),
+                ),
+            ),
+            (
+                "facet_chart_row",
+                "Charts with row faceting",
+                lambda df: alt.Chart(df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("a:O"),
+                    y=alt.Y("b:Q"),
+                    row=alt.Row("a:O"),
+                ),
+            ),
+            (
+                "facet_chart_column",
+                "Charts with column faceting",
+                lambda df: alt.Chart(df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("a:O"),
+                    y=alt.Y("b:Q"),
+                    column=alt.Column("a:O"),
+                ),
+            ),
+            (
+                "hconcat_chart",
+                "Horizontal concatenation charts",
+                lambda df: alt.hconcat(
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                    ),
+                    alt.Chart(df)
+                    .mark_point()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                    ),
+                ),
+            ),
+            (
+                "repeat_chart",
+                "Repeat charts",
+                lambda df: alt.Chart(df)
+                .mark_bar()
+                .encode(
+                    x=alt.X(alt.repeat("row"), type="ordinal"),
+                    y=alt.Y("b:Q"),
+                )
+                .repeat(row=["a", "b"]),
+            ),
+        ]
+    )
+    def test_altair_chart_default_width_content_charts(
+        self, test_name: str, chart_description: str, chart_func: Callable
+    ):
+        """Test that certain Altair chart types default to 'content' width."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = chart_func(df)
+
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.width_config.WhichOneof("width_spec") == "use_content"
+        assert el.width_config.use_content is True
+
+
 class VegaLiteChartTest(DeltaGeneratorTestCase):
     """Test the `st.vega_lite_chart` command."""
 
