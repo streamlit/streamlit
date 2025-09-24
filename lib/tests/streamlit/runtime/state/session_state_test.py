@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -410,6 +411,47 @@ def test_callbacks_with_rerun():
     assert at.session_state["message"] == "ran callback"
     warning = at.warning[0]
     assert "no-op" in warning.value
+
+
+def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
+    """Ensure fragment callback context flag is cleared on RerunException.
+
+    This guards against leaving `ctx.in_fragment_callback` stuck to True if
+    a callback raises, which could contaminate subsequent runs.
+    """
+    from streamlit.runtime.scriptrunner import RerunException
+
+    ss = SessionState()
+    wid = "w-frag"
+
+    # A callback that raises RerunException
+    def cb() -> None:
+        raise RerunException(None)
+
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callbacks={"change": cb},
+        fragment_id="frag-1",
+    )
+
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 1
+    ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
+
+    mock_ctx = MagicMock()
+    mock_ctx.in_fragment_callback = False
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        # Callbacks internally catch RerunException and log a warning.
+        ss._call_callbacks()
+
+    assert mock_ctx.in_fragment_callback is False
 
 
 def test_updates():
@@ -1102,3 +1144,120 @@ class KeyIdMapperTest(unittest.TestCase):
         assert key_id_mapper.get_key_from_id("wid2") == "key2"
         assert key_id_mapper.get_id_from_key("key") == "wid3"
         assert key_id_mapper.get_key_from_id("wid") == "key"
+
+
+# region Multiple callbacks
+
+
+def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
+    """Test that per-key callbacks only fire for changed keys."""
+    calls: list[str] = []
+
+    def cb_a() -> None:
+        calls.append("a")
+
+    def cb_b() -> None:
+        calls.append("b")
+
+    ss = SessionState()
+    wid = "w-json"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="json_value",
+        callbacks={"a": cb_a, "b": cb_b},
+    )
+
+    # Register metadata
+    ss._set_widget_metadata(meta)
+
+    # Old state: {value: {a:1, b:2}}
+    ss._old_state[wid] = {"value": {"a": 1, "b": 2}}
+    # New state: {value: {a:1, b:3}}
+    ss._new_widget_state.set_from_value(wid, {"value": {"a": 1, "b": 3}})
+
+    ss._call_callbacks()
+    assert calls == ["b"]
+
+
+def test_json_trigger_aggregator_routes_to_named_callback() -> None:
+    """Test that JSON trigger values are routed to the correct named callback.
+
+    This test verifies that for widgets using `json_trigger_value`, the
+    `event` field in the JSON payload is used to look up and execute the
+    corresponding callback from the `callbacks` dictionary.
+    """
+    called: list[str] = []
+
+    def cb_click() -> None:
+        called.append("click")
+
+    def cb_submit() -> None:
+        called.append("submit")
+
+    ss = SessionState()
+    wid = "w-trig"
+    meta = WidgetMetadata(
+        id=wid,
+        # Convert JSON string from proto into a dict
+        deserializer=lambda s: json.loads(s) if s else None,
+        serializer=lambda v: v,
+        value_type="json_trigger_value",
+        callbacks={"click": cb_click, "submit": cb_submit},
+    )
+
+    ss._set_widget_metadata(meta)
+
+    # Emulate serialized proto received from frontend
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps({"event": "submit"})
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+    assert called == ["submit"]
+
+
+def _dummy_serializer(x):
+    return x
+
+
+def _dummy_deserializer(x):
+    return x
+
+
+def test_json_trigger_value_gets_reset():
+    """Ensure json_trigger_value fields are cleared to None after _reset_triggers."""
+    ss = SessionState()
+
+    widget_id = "comp__event"
+
+    meta = WidgetMetadata(
+        id=widget_id,
+        deserializer=_dummy_deserializer,
+        serializer=_dummy_serializer,
+        value_type="json_trigger_value",
+        callbacks=None,
+        callback_args=None,
+        callback_kwargs=None,
+        fragment_id=None,
+    )
+
+    # Register metadata and set initial trigger payload
+    ss._set_widget_metadata(meta)
+    payload = {"clicked": True}
+    ss._new_widget_state[widget_id] = Value(json.dumps(payload))
+    ss._old_state[widget_id] = payload
+
+    # Act
+    ss._reset_triggers()
+
+    # Assert: value should now be None in both new and old state mappings
+    # `_reset_triggers()` sets the new state to `Value(None)`
+    new_value = ss._new_widget_state.states[widget_id]
+    assert isinstance(new_value, Value)
+    assert new_value.value is None
+    assert ss._old_state[widget_id] is None
+
+
+# endregion Multiple callbacks
