@@ -680,19 +680,29 @@ class VegaChartsMixin:
             configuration option.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -1193,15 +1203,16 @@ class VegaChartsMixin:
             horizontally.
 
         sort : bool or str
-            How to sort the bars. This can be:
+            How to sort the bars. This can be one of the following:
 
             - ``True`` (default): The bars are sorted automatically along the
-              independent/categorical axis with Altair's default sorting. This also
-              correctly sorts ordered categorical columns (``pd.Categorical``).
+              independent/categorical axis with Altair's default sorting. This
+              also correctly sorts ordered categorical columns
+              (``pd.Categorical``).
             - ``False``: The bars are shown in data order without sorting.
             - The name of a column (e.g. ``"col1"``): The bars are sorted by
               that column in ascending order.
-            - The name of a column prefixed with a minus sign (e.g. ``"-col1"``):
+            - The name of a column with a minus-sign prefix (e.g. ``"-col1"``):
               The bars are sorted by that column in descending order.
 
         stack : bool, "normalize", "center", "layered", or None
@@ -1633,6 +1644,7 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1646,6 +1658,7 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1658,6 +1671,7 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1677,6 +1691,21 @@ class VegaChartsMixin:
             https://altair-viz.github.io/gallery/ for examples of graph
             descriptions.
 
+        width : "stretch", "content", or int
+            How to size the chart's width. Can be one of:
+
+            - ``"stretch"``: Expand to the width of the parent container.
+              This is the default for most charts.
+            - ``"content"``: Size the chart to fit its contents, up to the width
+              of the parent container.
+            - An integer: Set the chart width to this many pixels.
+
+            If not specified, Streamlit automatically chooses ``"stretch"``
+            for regular charts and ``"content"`` for facet charts (charts with
+            ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
+            in the encoding), horizontal concatenation charts (``"hconcat"``),
+            and repeat charts (``"repeat"``).
+
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
             the parent container. This can be one of the following:
@@ -1690,6 +1719,12 @@ class VegaChartsMixin:
             - ``False``: Streamlit sets the width of the chart to fit its
               contents according to the plotting library, up to the width of
               the parent container.
+
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and ``width="content"`` instead of ``use_container_width=False``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1781,8 +1816,28 @@ class VegaChartsMixin:
            height: 450px
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                # This preserves the existing behavior of setting use_container_width
+                # to False combined with an integer width.
+                width = "content"
+
         return self._altair_chart(
             altair_chart=altair_chart,
+            width=width,
             use_container_width=use_container_width,
             theme=theme,
             key=key,

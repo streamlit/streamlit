@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import altair as alt
 import pandas as pd
 
 import streamlit as st
@@ -162,3 +163,17 @@ st.vega_lite_chart(simple_df, spec_with_width, width="stretch")
 
 st.write("Chart with width in spec (500) and width=200 parameter:")
 st.vega_lite_chart(simple_df, spec_with_width, width=200)
+
+# Test Altair chart with fixed width
+st.subheader("Altair Chart Width Test")
+
+st.write("Altair chart with width=350:")
+altair_chart = (
+    alt.Chart(simple_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("a:O"),
+        y=alt.Y("b:Q"),
+    )
+)
+st.altair_chart(altair_chart, width=350)
