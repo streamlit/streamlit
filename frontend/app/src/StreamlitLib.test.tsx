@@ -74,6 +74,10 @@ class Endpoints implements StreamlitEndpoints {
     return path
   }
 
+  public buildBidiComponentURL(componentName: string, path: string): string {
+    return path
+  }
+
   public buildMediaURL(url: string): string {
     return url
   }

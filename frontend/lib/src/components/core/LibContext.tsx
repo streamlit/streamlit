@@ -145,6 +145,7 @@ const noOpEndpoints: StreamlitEndpoints = {
   sendClientErrorToHost: () => {},
   checkSourceUrlResponse: () => Promise.resolve(),
   buildComponentURL: () => "",
+  buildBidiComponentURL: () => "",
   buildMediaURL: () => "",
   buildDownloadUrl: () => "",
   buildFileUploadURL: () => "",
