@@ -16,15 +16,20 @@ from __future__ import annotations
 
 import os
 import tempfile
+import threading
+import time
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_path_utils import ComponentPathUtils
 from streamlit.components.v2.component_registry import (
     BidiComponentDefinition,
     BidiComponentRegistry,
 )
+from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.errors import StreamlitComponentRegistryError
 
 
@@ -334,6 +339,26 @@ def temp_test_files() -> dict:
     temp_dir.cleanup()
 
 
+@pytest.fixture
+def temp_manager_setup() -> dict:
+    """Create a temporary directory and manager for BidiComponentManager tests."""
+    temp_dir = tempfile.TemporaryDirectory()
+    component_manager = BidiComponentManager()
+
+    # Create test files
+    js_path = os.path.join(temp_dir.name, "index.js")
+    with open(js_path, "w") as f:
+        f.write("console.log('test');")
+
+    yield {
+        "temp_dir": temp_dir,
+        "component_manager": component_manager,
+        "js_path": js_path,
+    }
+
+    temp_dir.cleanup()
+
+
 def test_string_content() -> None:
     """Test component instantiation with direct string content."""
     comp = BidiComponentDefinition(
@@ -417,6 +442,250 @@ def test_mixed_content(temp_test_files) -> None:
     assert comp.source_paths["js"] == os.path.dirname(temp_test_files["js_path"])
 
 
+def test_register_from_manifest_basic(temp_manager_setup) -> None:
+    """Test basic manifest registration with a single component.
+
+    Note
+    ----
+    JS/CSS entries in the manifest are ignored.
+    """
+    setup = temp_manager_setup
+    # Create component files in package root
+    package_root = Path(setup["temp_dir"].name)
+    # Files may exist but are not read from manifest anymore
+    (package_root / "component.js").write_text(
+        "export default function() { console.log('basic test'); }"
+    )
+    (package_root / "styles.css").write_text(".test { color: blue; }")
+
+    manifest = ComponentManifest(
+        name="test_package",
+        version="1.0.0",
+        components=[
+            ComponentConfig(
+                name="basic_component",
+            )
+        ],
+    )
+
+    setup["component_manager"].register_from_manifest(manifest, package_root)
+
+    # Check component was registered
+    component = setup["component_manager"].get("test_package.basic_component")
+    assert component is not None
+    assert component.name == "test_package.basic_component"
+    # Assert that html/js/css are None because they must be provided via the
+    # st.components.v2.component() API
+    assert component.html_content is None
+    assert component.js_content is None
+    assert component.css_content is None
+
+    # Check metadata was stored
+    assert (
+        setup["component_manager"].get_metadata("test_package.basic_component")
+        == manifest
+    )
+
+
+def test_register_from_manifest_multiple_components(temp_manager_setup) -> None:
+    """Test manifest registration with multiple components."""
+    setup = temp_manager_setup
+    package_root = Path(setup["temp_dir"].name)
+
+    # Create files (not used by manifest anymore)
+    (package_root / "comp1.js").write_text("console.log('component 1');")
+    (package_root / "comp1.css").write_text(".comp1 { background: red; }")
+    (package_root / "comp2.js").write_text("console.log('component 2');")
+
+    manifest = ComponentManifest(
+        name="multi_package",
+        version="2.0.0",
+        components=[
+            ComponentConfig(
+                name="component_one",
+            ),
+            ComponentConfig(
+                name="component_two",
+            ),
+        ],
+    )
+
+    setup["component_manager"].register_from_manifest(manifest, package_root)
+
+    # Check first component was registered
+    comp1 = setup["component_manager"].get("multi_package.component_one")
+    assert comp1 is not None
+    assert comp1.name == "multi_package.component_one"
+    assert comp1.html_content is None
+    assert comp1.js_content is None
+    assert comp1.css_content is None
+
+    # Check second component was registered
+    comp2 = setup["component_manager"].get("multi_package.component_two")
+    assert comp2 is not None
+    assert comp2.name == "multi_package.component_two"
+    assert comp2.html_content is None
+    assert comp2.js_content is None
+    assert comp2.css_content is None
+
+    # Check both components have same manifest metadata
+    assert (
+        setup["component_manager"].get_metadata("multi_package.component_one")
+        == manifest
+    )
+    assert (
+        setup["component_manager"].get_metadata("multi_package.component_two")
+        == manifest
+    )
+
+
+def test_register_from_manifest_minimal_component(temp_manager_setup) -> None:
+    """Test manifest registration with a minimal component (only HTML)."""
+    setup = temp_manager_setup
+    package_root = Path(setup["temp_dir"].name)
+
+    manifest = ComponentManifest(
+        name="minimal_package",
+        version="0.1.0",
+        components=[ComponentConfig(name="html_only")],
+    )
+
+    setup["component_manager"].register_from_manifest(manifest, package_root)
+
+    # Check component was registered
+    component = setup["component_manager"].get("minimal_package.html_only")
+    assert component is not None
+    assert component.name == "minimal_package.html_only"
+    assert component.html_content is None
+    assert component.js_content is None
+    assert component.css_content is None
+
+    # Check metadata
+    assert (
+        setup["component_manager"].get_metadata("minimal_package.html_only") == manifest
+    )
+
+
+def test_register_from_manifest_empty_components(temp_manager_setup) -> None:
+    """Test that manifest registration handles an empty components list."""
+    setup = temp_manager_setup
+    package_root = Path(setup["temp_dir"].name)
+
+    manifest = ComponentManifest(
+        name="empty_package",
+        version="1.0.0",
+        components=[],
+    )
+
+    setup["component_manager"].register_from_manifest(manifest, package_root)
+
+
+def test_register_from_manifest_overwrites_existing(temp_manager_setup) -> None:
+    """Verify that manifest registration overwrites existing components."""
+    setup = temp_manager_setup
+    package_root = Path(setup["temp_dir"].name)
+    js_file = package_root / "component.js"
+    js_file.write_text("console.log('original');")
+
+    # Register first version
+    manifest1 = ComponentManifest(
+        name="test_package",
+        version="1.0.0",
+        components=[
+            ComponentConfig(
+                name="component",
+            )
+        ],
+    )
+
+    setup["component_manager"].register_from_manifest(manifest1, package_root)
+
+    # Check first registration
+    component = setup["component_manager"].get("test_package.component")
+    assert component.html_content is None
+
+    # Register updated version
+    js_file.write_text("console.log('updated');")
+    manifest2 = ComponentManifest(
+        name="test_package",
+        version="2.0.0",
+        components=[
+            ComponentConfig(
+                name="component",
+            )
+        ],
+    )
+
+    with patch("streamlit.logger.get_logger") as mock_logger:
+        setup["component_manager"].register_from_manifest(manifest2, package_root)
+
+        # Should not log warning for manifest registration (different from manual registration)
+        mock_logger.return_value.warning.assert_not_called()
+
+    # Check component was updated
+    updated_component = setup["component_manager"].get("test_package.component")
+    assert updated_component.html_content is None
+    assert (
+        setup["component_manager"].get_metadata("test_package.component") == manifest2
+    )
+
+
+def test_register_from_manifest_thread_safety(temp_manager_setup) -> None:
+    """Verify that manifest registration is thread-safe."""
+    setup = temp_manager_setup
+    package_root = Path(setup["temp_dir"].name)
+    js_file = package_root / "thread_test.js"
+    js_file.write_text("console.log('thread test');")
+
+    results = []
+    errors = []
+
+    def register_manifest(thread_id: int) -> None:
+        try:
+            manifest = ComponentManifest(
+                name=f"thread_package_{thread_id}",
+                version="1.0.0",
+                components=[
+                    ComponentConfig(
+                        name="thread_component",
+                    )
+                ],
+            )
+
+            # Add small delay to increase chance of race conditions
+            time.sleep(0.01)
+
+            setup["component_manager"].register_from_manifest(manifest, package_root)
+            results.append(thread_id)
+
+        except Exception as e:
+            errors.append(e)
+
+    # Create multiple threads
+    threads = []
+    for i in range(5):
+        thread = threading.Thread(target=register_manifest, args=(i,))
+        threads.append(thread)
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    # Check all threads completed successfully
+    assert len(errors) == 0
+    assert len(results) == 5
+    assert set(results) == {0, 1, 2, 3, 4}
+
+    # Check all components were registered
+    for i in range(5):
+        component = setup["component_manager"].get(
+            f"thread_package_{i}.thread_component"
+        )
+        assert component is not None
+        assert component.html_content is None
+
+
 def test_resolve_glob_pattern_direct() -> None:
     """Test the `ComponentPathUtils.resolve_glob_pattern` function directly."""
 
@@ -457,6 +726,38 @@ def test_resolve_glob_pattern_direct() -> None:
         assert "Absolute paths are not allowed" in str(exc_info.value)
 
 
+@pytest.fixture
+def component_manager():
+    """Create a fresh BidiComponentManager for testing."""
+    return BidiComponentManager()
+
+
+def test_basic_registration(component_manager) -> None:
+    """Test basic component registration via `BidiComponentManager`."""
+    definition = BidiComponentDefinition(
+        name="test_component",
+        html="<div>Test</div>",
+        js="console.log('test');",
+    )
+
+    component_manager.register(definition)
+
+    retrieved = component_manager.get("test_component")
+    assert retrieved == definition
+
+
+def test_file_watching_state_tracking(component_manager) -> None:
+    """Verify that file watching state is correctly tracked."""
+    # Initially, file watching should not be started
+    assert not component_manager.is_file_watching_started
+
+    # The state should remain consistent with the file watcher
+    assert (
+        component_manager.is_file_watching_started
+        == component_manager._file_watcher.is_watching_active
+    )
+
+
 def test_glob_pattern_resolution() -> None:
     """Test glob pattern resolution via `ComponentPathUtils`."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -495,6 +796,38 @@ def test_glob_pattern_no_matches_error() -> None:
 
         with pytest.raises(StreamlitComponentRegistryError):
             ComponentPathUtils.resolve_glob_pattern("*.js", temp_path)
+
+
+@patch("streamlit.watcher.path_watcher.get_default_path_watcher_class")
+def test_file_watching_starts(mock_path_watcher_class) -> None:
+    """Verify that file watching starts correctly in."""
+    mock_watcher_instance = MagicMock()
+    mock_path_watcher_class.return_value.return_value = mock_watcher_instance
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        # Create test file
+        js_file = temp_path / "component.js"
+        js_file.write_text("console.log('test');")
+
+        # Create mock manifest with glob pattern
+        manifest = ComponentManifest(
+            name="test_package",
+            version="1.0.0",
+            components=[ComponentConfig(name="test_component")],
+        )
+
+        # Create manager and register from manifest
+        manager = BidiComponentManager()
+        manager.register_from_manifest(manifest, temp_path)
+
+        # Start file watching
+        manager.start_file_watching()
+
+        # No watchers should be created from manifest-only data
+        assert not manager.is_file_watching_started
+        mock_path_watcher_class.return_value.assert_not_called()
 
 
 def test_security_validation() -> None:
