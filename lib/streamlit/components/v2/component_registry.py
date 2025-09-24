@@ -12,6 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""Component registry for Custom Components v2.
+
+This module defines the data model and in-memory registry for Custom Components
+v2. During development, component assets (JS/CSS/HTML) may change on disk as
+build tools produce new outputs.
+
+See Also
+--------
+- :class:`streamlit.components.v2.component_file_watcher.ComponentFileWatcher`
+  for directory watching and change notifications.
+"""
+
 from __future__ import annotations
 
 import os
