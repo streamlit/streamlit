@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.vega_utils import assert_vega_chart_width
 
-VEGA_CHART_COUNT = 13
+VEGA_CHART_COUNT = 14
 
 
 def test_vega_chart_width_behavior(themed_app: Page):
@@ -40,6 +40,7 @@ def test_vega_chart_width_behavior(themed_app: Page):
         500,  # 10: Chart with width in spec (500) and width='content' parameter
         704,  # 11: Chart with width in spec (500) and width='stretch' parameter
         200,  # 12: Chart with width in spec (500) and width=200 parameter
+        350,  # 13: Altair chart with width=350
     ]
 
     descriptions = [
@@ -56,6 +57,7 @@ def test_vega_chart_width_behavior(themed_app: Page):
         "Chart with width in spec (500) and width='content' parameter",
         "Chart with width in spec (500) and width='stretch' parameter",
         "Chart with width in spec (500) and width=200 parameter",
+        "Altair chart with width=350",
     ]
 
     for i, expected_width in enumerate(expected_widths):
