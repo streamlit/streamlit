@@ -31,6 +31,7 @@ from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
     StreamlitAPIException,
 )
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -912,3 +913,93 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         # Verify complex values are properly set
         assert result["list_state"] == complex_list
         assert result["dict_state"] == complex_dict
+
+
+class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
+    """Verify that per-state callbacks fire exclusively for their key."""
+
+    COMPONENT_NAME = "stateful_component"
+
+    def setUp(self):
+        super().setUp()
+        # Set up a fresh component manager patched into the Runtime singleton.
+        self.mock_component_manager = BidiComponentManager()
+        self.runtime_patcher = patch.object(
+            Runtime, "instance", return_value=MagicMock()
+        )
+        self.mock_runtime = self.runtime_patcher.start()
+        self.mock_runtime.return_value.bidi_component_registry = (
+            self.mock_component_manager
+        )
+
+        # Register a minimal component definition (JS only is enough for backend tests).
+        self.mock_component_manager.register(
+            BidiComponentDefinition(name=self.COMPONENT_NAME, js="console.log('hi');")
+        )
+
+        # Prepare per-event callback mocks.
+        self.range_cb = MagicMock(name="range_cb")
+        self.text_cb = MagicMock(name="text_cb")
+
+        # First script run: render the component and capture its widget id.
+        st._bidi_component(
+            self.COMPONENT_NAME,
+            on_range_change=self.range_cb,
+            on_text_change=self.text_cb,
+        )
+        self.component_id = (
+            self.get_delta_from_queue().new_element.bidi_component.id  # type: ignore[attr-defined]
+        )
+        # Sanity: no callbacks should have fired during initial render.
+        self.range_cb.assert_not_called()
+        self.text_cb.assert_not_called()
+
+    def tearDown(self):
+        super().tearDown()
+        self.runtime_patcher.stop()
+
+    # ------------------------------------------------------------------
+    # Helper utilities
+    # ------------------------------------------------------------------
+    def _simulate_state_update(self, new_state: dict):
+        """Trigger a faux frontend state update and run callbacks."""
+        ws = WidgetState(id=self.component_id)
+        ws.json_value = json.dumps(new_state)
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[ws])
+        )
+
+    # ------------------------------------------------------------------
+    # Tests
+    # ------------------------------------------------------------------
+    def test_only_range_changes_invokes_only_range_callback(self):
+        """Test that only the 'range' callback is invoked when only 'range' state changes."""
+        # Update just the "range" key.
+        self._simulate_state_update({"range": 10})
+
+        self.range_cb.assert_called_once()
+        self.text_cb.assert_not_called()
+
+    def test_only_text_changes_invokes_only_text_callback(self):
+        """Test that only the 'text' callback is invoked when only 'text' state changes."""
+        # Reset mock call history.
+        self.range_cb.reset_mock()
+        self.text_cb.reset_mock()
+
+        # Update just the "text" key.
+        self._simulate_state_update({"text": "hello"})
+
+        self.text_cb.assert_called_once()
+        self.range_cb.assert_not_called()
+
+    def test_both_keys_change_invokes_both_callbacks(self):
+        """Test that both callbacks are invoked when both 'range' and 'text' states change."""
+        # Reset mock call history.
+        self.range_cb.reset_mock()
+        self.text_cb.reset_mock()
+
+        # Update both keys simultaneously.
+        self._simulate_state_update({"range": 77, "text": "world"})
+
+        self.range_cb.assert_called_once()
+        self.text_cb.assert_called_once()
