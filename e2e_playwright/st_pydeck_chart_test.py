@@ -169,7 +169,7 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     """Tests that height parameter works correctly."""
     pydeck_charts = select_subtest(app, "height_parameter_subtest")
 
-    expect(pydeck_charts).to_have_count(3, timeout=15000)
+    expect(pydeck_charts).to_have_count(4, timeout=15000)
 
     # Test different height values with snapshots
     assert_snapshot(
