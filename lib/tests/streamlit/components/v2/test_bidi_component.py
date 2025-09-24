@@ -34,22 +34,41 @@ from streamlit.runtime import Runtime
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-def test_make_trigger_id():
-    """Test that _make_trigger_id constructs a valid trigger ID."""
-    base = "component_id"
-    event = "click"
-    trigger_id = _make_trigger_id(base, event)
-    assert base in trigger_id
-    assert event in trigger_id
-    assert EVENT_DELIM in trigger_id
+def test_event_delim_is_double_underscore():
+    """Test that the EVENT_DELIM constant has the correct value."""
+    assert EVENT_DELIM == "__", (
+        f"EVENT_DELIM must be set to the string '__'. Found {EVENT_DELIM!r} instead."
+    )
 
 
-def test_make_trigger_id_with_invalid_chars():
-    """Test that _make_trigger_id raises an exception if invalid characters are used."""
+@pytest.mark.parametrize(
+    ("base", "event", "expected"),
+    [
+        ("comp", "click", "comp__click"),
+        ("component123", "change", "component123__change"),
+        ("Δelta", "🚀", "Δelta__🚀"),  # Unicode should be preserved
+    ],
+)
+def test_make_trigger_id_constructs_valid_id(base: str, event: str, expected: str):
+    """Test that _make_trigger_id constructs a valid trigger ID for various inputs."""
+    assert _make_trigger_id(base, event) == f"$$STREAMLIT_INTERNAL_KEY_{expected}"
+
+
+def test_make_trigger_id_is_idempotent():
+    """Test that _make_trigger_id is idempotent."""
+    base, event = "foo", "bar"
+    first = _make_trigger_id(base, event)
+    second = _make_trigger_id(base, event)
+    assert first == second == "$$STREAMLIT_INTERNAL_KEY_foo__bar"
+
+
+def test_make_trigger_id_rejects_delimiter_in_base_or_event():
+    """Test that _make_trigger_id rejects delimiters in base or event names."""
     with pytest.raises(StreamlitAPIException):
-        _make_trigger_id(f"base{EVENT_DELIM}id", "click")
+        _make_trigger_id("bad__base", "click")
+
     with pytest.raises(StreamlitAPIException):
-        _make_trigger_id("base_id", f"click{EVENT_DELIM}event")
+        _make_trigger_id("base", "bad__event")
 
 
 class BidiComponentInvalidCallbackNameErrorTest(DeltaGeneratorTestCase):
