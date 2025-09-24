@@ -42,6 +42,7 @@ from streamlit.runtime.state.common import (
     is_element_id,
     is_keyed_element_id,
 )
+from streamlit.runtime.state.presentation import apply_presenter
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
@@ -399,7 +400,7 @@ class SessionState:
 
     @property
     def filtered_state(self) -> dict[str, Any]:
-        """The combined session and widget state, excluding keyless widgets."""
+        """The combined session and widget state, excluding keyless widgets and internal widgets."""
 
         wid_key_map = self._key_id_mapper.id_key_mapping
 
@@ -412,9 +413,10 @@ class SessionState:
         for k in self._keys():
             if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_element_id(k):
+            elif is_keyed_element_id(k) and not _is_internal_key(k):
                 try:
                     key = wid_key_map[k]
+                    # Value returned by __getitem__ is already presented.
                     state[key] = self[k]
                 except KeyError:
                     # Widget id no longer maps to a key, it is a not yet
@@ -464,7 +466,12 @@ class SessionState:
             # the "key" is a raw widget id, so get its associated user key for lookup
             key = wid_key_map[widget_id]
         try:
-            return self._getitem(widget_id, key)
+            base_value = self._getitem(widget_id, key)
+            return (
+                apply_presenter(self, widget_id, base_value)
+                if widget_id is not None
+                else base_value
+            )
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
@@ -660,6 +667,10 @@ class SessionState:
                 )
             )
         }
+
+    def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
+        """Return the metadata for a widget id from the current widget state."""
+        return self._new_widget_state.widget_metadata.get(widget_id)
 
     def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata."""
