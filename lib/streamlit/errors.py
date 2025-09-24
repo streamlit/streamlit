@@ -41,6 +41,17 @@ class CustomComponentError(Error):
     pass
 
 
+class StreamlitComponentRegistryError(Error):
+    """Exceptions raised while discovering or registering Streamlit components.
+
+    These errors occur during Streamlit startup when scanning installed
+    distributions for component metadata and registering them with the component
+    registry.
+    """
+
+    pass
+
+
 class DeprecationError(Error):
     pass
 
