@@ -1,0 +1,58 @@
+{
+  "name": "@streamlit/component-v2-lib",
+  "version": "0.1.0",
+  "description": "Support code for Streamlit Components v2",
+  "type": "module",
+  "main": "./dist/streamlit-component-v2-lib.mjs",
+  "module": "./dist/streamlit-component-v2-lib.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/streamlit-component-v2-lib.mjs",
+      "default": "./dist/streamlit-component-v2-lib.mjs"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build",
+    "buildWatch": "env DEV_WATCH=1 vite build --watch",
+    "test": "vitest run",
+    "testWatch": "vitest",
+    "lint": "eslint --max-warnings 0 src",
+    "typecheck": "yarn run typecheck:all",
+    "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "typesync": "typesync",
+    "typesync:ci": "typesync --dry=fail"
+  },
+  "devDependencies": {
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typesync": "^0.14.3",
+    "vite": "^7.1.6",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamlit/streamlit.git"
+  },
+  "keywords": [
+    "streamlit"
+  ],
+  "author": "Streamlit",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/streamlit/streamlit/issues"
+  },
+  "homepage": "https://github.com/streamlit/streamlit#readme",
+  "packageManager": "yarn@4.5.3"
+}
