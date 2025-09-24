@@ -24,6 +24,7 @@ import streamlit as st
 from streamlit import _main as st_main
 from streamlit.components.v2.bidi_component.constants import EVENT_DELIM
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
+from streamlit.components.v2.bidi_component.state import BidiComponentResult
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
@@ -31,6 +32,7 @@ from streamlit.errors import (
     StreamlitAPIException,
 )
 from streamlit.runtime import Runtime
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -52,6 +54,29 @@ def test_event_delim_is_double_underscore():
 def test_make_trigger_id_constructs_valid_id(base: str, event: str, expected: str):
     """Test that _make_trigger_id constructs a valid trigger ID for various inputs."""
     assert _make_trigger_id(base, event) == f"$$STREAMLIT_INTERNAL_KEY_{expected}"
+
+
+def test_result_merges_state_and_trigger_values_and_exposes_dg():
+    """BidiComponentResult should behave like a mapping/attribute dict and expose the dg."""
+
+    # Arrange
+    state_vals = {"foo": 123, "bar": "abc"}
+    trigger_vals = {"clicked": True, "changed": {"value": 42}}
+
+    # Act
+    result = BidiComponentResult(state_vals, trigger_vals)
+
+    # Assert mapping access
+    assert result["foo"] == 123
+    assert result["bar"] == "abc"
+    assert result["clicked"] is True
+    assert result["changed"] == {"value": 42}
+
+    # Assert attribute access
+    assert result.foo == 123
+    assert result.bar == "abc"
+    assert result.clicked is True
+    assert result.changed == {"value": 42}
 
 
 def test_make_trigger_id_is_idempotent():
@@ -100,6 +125,94 @@ class BidiComponentInvalidCallbackNameErrorTest(DeltaGeneratorTestCase):
                 key="key2",
                 on__change=lambda: None,
             )
+
+
+class BidiComponentMixinTest(DeltaGeneratorTestCase):
+    """Validate bi-directional component mixin behavior.
+
+    This suite verifies:
+    - Parsing of ``on_<event>_change`` kwargs into an event-to-callback mapping
+    - Registration of the per-run aggregator trigger widget with
+      ``value_type`` equal to ``"json_trigger_value"``
+    - ``BidiComponentResult`` exposes event keys and merges persistent state
+      with trigger values
+    - Callbacks and widget metadata are correctly stored in ``SessionState``
+      for the current run
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Create and inject a fresh component manager for each test run
+        self.component_manager = BidiComponentManager()
+        runtime = Runtime.instance()
+        if runtime is None:
+            raise RuntimeError("Runtime.instance() returned None in test setup.")
+        runtime.bidi_component_registry = self.component_manager
+
+    # ---------------------------------------------------------------------
+    # Helpers
+    # ---------------------------------------------------------------------
+    def _register_dummy_component(self, name: str = "dummy") -> None:
+        self.component_manager.register(
+            BidiComponentDefinition(name=name, js="console.log('hi');")
+        )
+
+    # ---------------------------------------------------------------------
+    # Tests
+    # ---------------------------------------------------------------------
+    def test_event_callback_parsing_and_trigger_widget_registration(self):
+        """Providing ``on_click_change`` should register a trigger widget."""
+
+        self._register_dummy_component()
+
+        on_click_cb = MagicMock(name="on_click_cb")
+        on_hover_cb = MagicMock(name="on_hover_cb")
+
+        # Act
+        result = st._bidi_component(
+            "dummy",
+            on_click_change=on_click_cb,
+            on_hover_change=on_hover_cb,
+        )
+
+        # ------------------------------------------------------------------
+        # Assert - return type & merged keys
+        # ------------------------------------------------------------------
+        assert isinstance(result, BidiComponentResult)
+        # No state set yet, but we expect trigger keys to exist with None
+        assert "click" in result
+        assert result.click is None
+        assert "hover" in result
+        assert result.hover is None
+
+        # ------------------------------------------------------------------
+        # Assert - trigger widget metadata
+        # ------------------------------------------------------------------
+        ctx = get_script_run_ctx()
+        assert ctx is not None, "ScriptRunContext missing in test"
+
+        # Compute expected aggregator trigger id
+        base_id = next(
+            wid
+            for wid in ctx.widget_ids_this_run
+            if wid.startswith("$$ID") and EVENT_DELIM not in wid
+        )
+        aggregator_id = _make_trigger_id(base_id, "events")
+
+        # Access internal SessionState to retrieve widget metadata.
+        internal_state = ctx.session_state._state  # SessionState instance
+
+        metadata_aggregator = internal_state._new_widget_state.widget_metadata[
+            aggregator_id
+        ]
+
+        assert metadata_aggregator.value_type == "json_trigger_value"
+
+        # The callbacks must be wired by event name in metadata
+        assert metadata_aggregator.callbacks == {
+            "click": on_click_cb,
+            "hover": on_hover_cb,
+        }
 
 
 class BidiComponentTest(DeltaGeneratorTestCase):
