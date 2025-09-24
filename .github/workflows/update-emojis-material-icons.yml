@@ -89,26 +89,30 @@ jobs:
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create & switch to new branch for emojis/material icons update PR
+        id: create-branch
         if: steps.check-updates.outputs.updates_needed == 'true'
         run: |
-          git checkout -b update-assets
+          BRANCH_NAME="update-assets-$(date +%m-%d)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
 
       - name: Add changes to the branch
         if: steps.check-updates.outputs.updates_needed == 'true'
         run: |
           git add lib/
           git commit -m "Update emojis/material icons"
-          git push origin update-assets
+          git push origin "${{ steps.create-branch.outputs.branch_name }}"
 
-      - name: Create PR to merge update-emojis-material-icons branch into develop
+      - name: Create PR to merge changes into develop
         id: create_pr_update_assets
         if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
         uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const releaseVersion = process.env.RELEASE_VERSION;
-            const head = `update-assets`;
+            const head = process.env.BRANCH_NAME;
             const base = 'develop';
 
             const title = `[chore] Update emojis/material icons`;
