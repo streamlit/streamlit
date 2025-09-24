@@ -889,6 +889,33 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         finally:
             os.unlink(temp_path)
 
+    def test_load_theme_file_too_large_raises_error(self):
+        """Test loading theme file that exceeds size limit raises error."""
+        # Create a theme file larger than 1MB
+        large_content = (
+            """
+        [theme]
+        base = "light"
+        primaryColor = "#ff0000"
+        # """
+            + "A" * (config_util._MAX_THEME_FILE_SIZE_BYTES + 1000)
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(large_content)
+            temp_path = f.name
+
+        try:
+            with pytest.raises(StreamlitAPIException) as cm:
+                config_util._load_theme_file(temp_path, self.config_template)
+
+            error_msg = str(cm.value)
+            assert "too large" in error_msg
+            assert "1MB" in error_msg
+            assert "configuration options" in error_msg
+        finally:
+            os.unlink(temp_path)
+
     def test_apply_theme_inheritance_basic(self):
         """Test basic theme inheritance merging."""
         base_theme = {

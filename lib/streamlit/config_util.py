@@ -29,6 +29,10 @@ from streamlit.config_option import ConfigOption
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import StreamlitAPIException
 
+# Maximum size for theme files (1MB). Theme files should be small configuration
+# files containing only theme options, not large data files.
+_MAX_THEME_FILE_SIZE_BYTES = 1024 * 1024  # 1MB
+
 
 def _get_logger() -> Any:
     """Get logger for this module. Separate function to avoid circular imports."""
@@ -470,6 +474,14 @@ def _load_theme_file(
             f"Theme file {file_path_or_url} must contain a [theme] section"
         )
 
+    def _raise_file_too_large() -> None:
+        content_size = len(content.encode("utf-8"))
+        raise StreamlitAPIException(
+            f"Theme file {file_path_or_url} is too large ({content_size:,} bytes). "
+            f"Maximum allowed size is {_MAX_THEME_FILE_SIZE_BYTES:,} bytes (1MB). "
+            f"Theme files should contain only configuration options, not large data."
+        )
+
     try:
         import toml
     except ImportError:
@@ -482,7 +494,8 @@ def _load_theme_file(
         if is_valid_url:
             # Load from URL - noqa: S310 suppressed since url_util.is_url() restricts to only
             # http/https schemes by default, preventing file:// or other dangerous schemes
-            with urllib.request.urlopen(file_path_or_url) as response:  # noqa: S310
+            # 30-second timeout prevents hanging in poor network conditions (same as cli.py)
+            with urllib.request.urlopen(file_path_or_url, timeout=30) as response:  # noqa: S310
                 content = response.read().decode("utf-8")
         else:
             # Load from local file path
@@ -495,6 +508,11 @@ def _load_theme_file(
 
             with open(file_path_or_url, encoding="utf-8") as f:
                 content = f.read()
+
+        # Check file size limit - theme files should be small configuration files
+        content_size = len(content.encode("utf-8"))
+        if content_size > _MAX_THEME_FILE_SIZE_BYTES:
+            _raise_file_too_large()
 
         # Parse the TOML content
         parsed_theme = toml.loads(content)
