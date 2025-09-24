@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 from streamlit import cli_util, url_util
 from streamlit.config_option import ConfigOption
+from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import StreamlitAPIException
 
 
@@ -202,28 +203,72 @@ def _clean_paragraphs(txt: str) -> list[str]:
 # Theme configuration - theme.base support functions
 
 
-def _validate_color_value(value: Any, option_name: str) -> str:
+def _check_color_value(value: Any, option_name: str) -> None:
     """
-    Lightweight validation of a theme color config option value.
-    Checks that the color is a non-empty string and if it starts with a hash, that it is a valid hex color.
+    Lightweight check of theme color config option values.
+
+    Validates that the value is a string (or list of strings, in the case of
+    chartCategoricalColors and chartSequentialColors) and is not empty.
+    Logs warnings for potentially invalid colors, since we do more comprehensive validation on the frontend.
+
+    Handles both single color strings (like primaryColor, backgroundColor)
+    and arrays of color strings (like chartCategoricalColors, chartSequentialColors).
+
+    Raises StreamlitAPIException for type errors or empty values.
+    Does not return anything - used purely for validation side effects.
     """
+    logger = _get_logger()
+
+    # Handle array color options (chartCategoricalColors, chartSequentialColors)
+    if isinstance(value, list):
+        if not value:
+            raise StreamlitAPIException(
+                f"Theme option '{option_name}' cannot be an empty array"
+            )
+
+        for i, color in enumerate(value):
+            if not isinstance(color, str):
+                raise StreamlitAPIException(
+                    f"Theme option '{option_name}[{i}]' must be a string, got {type(color).__name__}: {color}"
+                )
+
+            color_str = color.strip()
+            if not color_str:
+                raise StreamlitAPIException(
+                    f"Theme option '{option_name}[{i}]' cannot be empty"
+                )
+
+            # Lightweight color validation with warning
+            if not is_css_color_like(color_str):
+                logger.warning(
+                    "Theme option '%s[%s]' may be an invalid color: %s. "
+                    "Expected formats: hex, rgb, and rgba colors",
+                    option_name,
+                    i,
+                    color_str,
+                )
+
+        return  # All colors in array have been checked
+
+    # Handle single color options (primaryColor, backgroundColor, etc.)
     if not isinstance(value, str):
         raise StreamlitAPIException(
-            f"Theme option '{option_name}' must be a string, got {type(value).__name__}: {value}"
+            f"Theme option '{option_name}' must be a string or array of strings, got {type(value).__name__}: {value}"
         )
 
     value_str: str = value.strip()
 
-    # Check hex colors
-    if value_str.startswith("#"):
-        if not re.match(r"^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$", value_str):
-            raise StreamlitAPIException(
-                f"Theme option '{option_name}' has invalid hex color format: {value_str}"
-            )
-    elif not value_str:
+    if not value_str:
         raise StreamlitAPIException(f"Theme option '{option_name}' cannot be empty")
 
-    return value_str
+    # Lightweight color validation with warning
+    if not is_css_color_like(value_str):
+        logger.warning(
+            "Theme option '%s' may be an invalid color: %s. "
+            "Expected formats: hex, rgb, and rgba colors",
+            option_name,
+            value_str,
+        )
 
 
 def _iterate_theme_config_options(
@@ -375,10 +420,10 @@ def _validate_theme_file_content(
                         and section_option in filtered_theme_section[section_name]
                     ):
                         del filtered_theme_section[section_name][section_option]
-                # Validate color options for subsection
+                # Check color options for subsection
                 full_option_name = f"theme.{section_name}.{section_option}"
                 if "color" in full_option_name.lower():
-                    _validate_color_value(section_value, full_option_name)
+                    _check_color_value(section_value, full_option_name)
 
         # Handle main theme options
         else:
@@ -391,10 +436,10 @@ def _validate_theme_file_content(
                 # Remove invalid option from filtered theme
                 if option_name in filtered_theme_section:
                     del filtered_theme_section[option_name]
-            # Validate color options for direct theme option
+            # Check color options for direct theme option
             full_option_name = f"theme.{option_name}"
             if "color" in full_option_name.lower():
-                _validate_color_value(option_value, full_option_name)
+                _check_color_value(option_value, full_option_name)
 
     return filtered_theme
 

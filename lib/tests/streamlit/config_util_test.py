@@ -330,42 +330,107 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
     # Tests for theme.base support functions
 
-    def test_validate_color_value_valid_colors(self):
-        """Test _validate_color_value with various valid color formats."""
-        # Valid hex colors
-        assert (
-            config_util._validate_color_value("#ffffff", "theme.primaryColor")
-            == "#ffffff"
-        )
-        assert config_util._validate_color_value("#000", "theme.primaryColor") == "#000"
-        assert (
-            config_util._validate_color_value("#FF0000", "theme.primaryColor")
-            == "#FF0000"
-        )
-        assert (
-            config_util._validate_color_value("  #ff0000  ", "theme.primaryColor")
-            == "#ff0000"
-        )
+    @parameterized.expand(
+        [
+            ("#ffffff", "theme.primaryColor"),
+            ("#000", "theme.primaryColor"),
+            ("#FF0000", "theme.primaryColor"),
+            ("#ffff", "theme.primaryColor"),  # 4-digit hex with alpha
+            ("#ffffffff", "theme.primaryColor"),  # 8-digit hex with alpha
+            ("rgb(255, 0, 0)", "theme.primaryColor"),
+            ("rgba(255, 0, 0, 0.5)", "theme.primaryColor"),
+            ("  #ff0000  ", "theme.primaryColor"),  # Test trimming
+        ]
+    )
+    def test_check_color_value_valid_single_colors(self, color: str, option_name: str):
+        """Test _check_color_value with various valid single color formats."""
+        # Should return None and not log any warnings
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            result = config_util._check_color_value(color, option_name)
 
-    def test_validate_color_value_invalid_colors(self):
-        """Test _validate_color_value with invalid color formats."""
-        with pytest.raises(StreamlitAPIException) as cm:
-            config_util._validate_color_value("#invalid", "theme.primaryColor")
-        assert "invalid hex color format" in str(cm.value)
+            assert result is None
+            mock_logger.warning.assert_not_called()
 
-        with pytest.raises(StreamlitAPIException) as cm:
-            config_util._validate_color_value("#ff", "theme.primaryColor")
-        assert "invalid hex color format" in str(cm.value)
+    @parameterized.expand(
+        [
+            (["#ff0000", "#00ff00", "#0000ff"], "theme.chartCategoricalColors"),
+            (
+                ["rgb(255,0,0)", "rgba(0,255,0,0.5)", "#fff"],
+                "theme.chartSequentialColors",
+            ),
+            (["#ffffff"], "theme.chartCategoricalColors"),  # Single item array
+        ]
+    )
+    def test_check_color_value_valid_color_arrays(
+        self, colors: list[str], option_name: str
+    ):
+        """Test _check_color_value with valid color arrays."""
+        # Should return None and not log any warnings
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            result = config_util._check_color_value(colors, option_name)
 
-        # Empty string should raise error
-        with pytest.raises(StreamlitAPIException) as cm:
-            config_util._validate_color_value("", "theme.primaryColor")
-        assert "cannot be empty" in str(cm.value)
+            assert result is None
+            mock_logger.warning.assert_not_called()
 
-        # Non-string value should raise error
+    @parameterized.expand(
+        [
+            ("#invalid", "theme.primaryColor"),
+            ("#ff", "theme.primaryColor"),
+            ("#12345", "theme.primaryColor"),  # Wrong length
+            ("not-a-color", "theme.primaryColor"),
+        ]
+    )
+    def test_check_color_value_invalid_single_colors_logs_warning(
+        self, color: str, option_name: str
+    ):
+        """Test _check_color_value logs warnings for invalid single colors but doesn't raise error."""
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            result = config_util._check_color_value(color, option_name)
+
+            # Should return None but log a warning
+            assert result is None
+            mock_logger.warning.assert_called_once()
+
+            # Check warning message contains expected content
+            warning_args = mock_logger.warning.call_args[0]
+            assert option_name in warning_args[1]
+            assert color in warning_args[2]
+
+    def test_check_color_value_invalid_colors_in_array_logs_warnings(self):
+        """Test _check_color_value logs warnings for invalid colors in arrays."""
+        colors = ["#ff0000", "#invalid", "#00ff00", "not-a-color"]
+
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            result = config_util._check_color_value(
+                colors, "theme.chartCategoricalColors"
+            )
+
+            # Should return None but log warnings for invalid colors
+            assert result is None
+            # Should log 2 warnings (for "#invalid" and "not-a-color")
+            assert mock_logger.warning.call_count == 2
+
+    @parameterized.expand(
+        [
+            ("", "theme.primaryColor", "cannot be empty"),
+            (123, "theme.primaryColor", "must be a string"),
+            (None, "theme.primaryColor", "must be a string"),
+            ([], "theme.chartCategoricalColors", "cannot be an empty array"),
+            (["", "#ff0000"], "theme.chartCategoricalColors", "cannot be empty"),
+            ([123, "#ff0000"], "theme.chartCategoricalColors", "must be a string"),
+        ]
+    )
+    def test_check_color_value_type_and_empty_errors(
+        self, value, option_name: str, expected_error: str
+    ):
+        """Test _check_color_value raises exceptions for type errors and empty values."""
         with pytest.raises(StreamlitAPIException) as cm:
-            config_util._validate_color_value(123, "theme.primaryColor")
-        assert "must be a string" in str(cm.value)
+            config_util._check_color_value(value, option_name)
+        assert expected_error in str(cm.value)
 
     def test_iter_theme_config_options(self):
         """Test _iterate_theme_config_options extracts theme options correctly."""
@@ -662,21 +727,21 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
     def test_validate_theme_file_content_invalid_main_option_in_sidebar(self):
         """Test validation rejects main-theme-only options in sidebar."""
         # Test each main-only option individually
-        main_only_options = [
-            "base",
-            "baseFontSize",
-            "baseFontWeight",
-            "fontFaces",
-            "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
-        ]
+        main_only_options = {
+            "base": "#ffffff",
+            "baseFontSize": "16px",
+            "baseFontWeight": "bold",
+            "fontFaces": "Arial, sans-serif",
+            "showSidebarBorder": True,
+            "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
+            "chartSequentialColors": ["#ff0000", "#00ff00", "#0000ff"],
+        }
 
-        for main_only_option in main_only_options:
+        for main_only_option, option_value in main_only_options.items():
             theme_content = {
                 "theme": {
                     "primaryColor": "#ff0000",
-                    "sidebar": {main_only_option: "some_value"},
+                    "sidebar": {main_only_option: option_value},
                 }
             }
 
