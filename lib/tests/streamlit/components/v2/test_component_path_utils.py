@@ -192,3 +192,21 @@ def test_resolve_glob_pattern_accepts_dot_prefixed_relative(tmp_path: Path) -> N
         pattern="./assets/a.js", package_root=package_root
     )
     assert resolved == asset.resolve()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_inline"),
+    [
+        ("console.log('x')", True),  # Base JS case -> inline
+        ("console.log('x')\nalert('y')", True),  # newlines -> inline
+        ("var x = 1;/*no path*/", False),  # has '/' -> path-like
+        ("var x = 1;\n/*no path*/", True),  # multiline -> inline
+        ("assets/main.js", False),
+        ("./main.css", False),
+        ("dir\\file.mjs", False),
+        ("file.cjs", False),
+    ],
+)
+def test_looks_like_inline_content_heuristic(value: str, expected_inline: bool) -> None:
+    """Inline content heuristic should classify strings correctly across cases."""
+    assert ComponentPathUtils.looks_like_inline_content(value) == expected_inline

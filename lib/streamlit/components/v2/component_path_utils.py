@@ -203,3 +203,43 @@ class ComponentPathUtils:
             raise StreamlitComponentRegistryError(
                 f"{kind} path '{abs_path}' is outside the declared asset_dir '{root}'."
             )
+
+    @staticmethod
+    def looks_like_inline_content(value: str) -> bool:
+        r"""Heuristic to detect inline JS/CSS content strings.
+
+        Treat a string as a file path ONLY if it looks path-like:
+        - Does not contain newlines
+        - Contains glob characters (*, ?, [, ])
+        - Starts with ./, /, or \
+        - Contains a path separator ("/" or "\\")
+        - Or ends with a common asset extension like .js, .mjs, .cjs, or .css
+
+        Otherwise, treat it as inline content.
+
+        Parameters
+        ----------
+        value : str
+            The string to classify as inline content or a file path.
+
+        Returns
+        -------
+        bool
+            True if ``value`` looks like inline content; False if it looks like a
+            file path.
+        """
+        s = value.strip()
+        # If the value contains newlines, it's definitely inline content
+        if "\n" in s or "\r" in s:
+            return True
+        # Glob patterns indicate path-like
+        if ComponentPathUtils.has_glob_characters(s):
+            return False
+        # Obvious path prefixes
+        if s.startswith(("./", "/", "\\")):
+            return False
+        # Any path separator
+        if "/" in s or "\\" in s:
+            return False
+
+        return not (s.lower().endswith((".js", ".css", ".mjs", ".cjs")))
