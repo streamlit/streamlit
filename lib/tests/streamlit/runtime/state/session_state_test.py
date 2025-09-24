@@ -29,6 +29,7 @@ from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
+from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
@@ -37,12 +38,11 @@ from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
+from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
     Value,
-    WidgetMetadata,
     WStates,
     _is_stale_widget,
 )
@@ -1261,3 +1261,168 @@ def test_json_trigger_value_gets_reset():
 
 
 # endregion Multiple callbacks
+
+
+def test_filtered_state_excludes_trigger_widgets() -> None:
+    """Test that filtered_state excludes trigger widgets from session state.
+
+    Trigger widgets should not appear when users access st.session_state,
+    even though they exist internally for handling events.
+    """
+
+    session_state = SessionState()
+
+    # Create some regular session state entries
+    session_state["regular_key"] = "regular_value"
+    session_state["user_counter"] = 42
+
+    # Simulate trigger widgets being registered (this would normally happen
+    # through the bidi_component registration process)
+    component_id = "my_component_123"
+    click_trigger_id = _make_trigger_id(component_id, "click")
+    change_trigger_id = _make_trigger_id(component_id, "change")
+
+    # Add trigger widgets to internal widget state
+    session_state._new_widget_state.states[click_trigger_id] = Value(True)
+    session_state._new_widget_state.states[change_trigger_id] = Value(None)
+
+    # Add metadata for the trigger widgets
+    click_metadata = WidgetMetadata(
+        id=click_trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    change_metadata = WidgetMetadata(
+        id=change_trigger_id,
+        deserializer=lambda x: x,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+
+    session_state._new_widget_state.widget_metadata[click_trigger_id] = click_metadata
+    session_state._new_widget_state.widget_metadata[change_trigger_id] = change_metadata
+
+    # Get filtered state (what users see via st.session_state)
+    filtered = session_state.filtered_state
+
+    # Regular keys should be present
+    assert "regular_key" in filtered
+    assert "user_counter" in filtered
+    assert filtered["regular_key"] == "regular_value"
+    assert filtered["user_counter"] == 42
+
+    # Trigger widgets should be filtered out
+    assert click_trigger_id not in filtered
+    assert change_trigger_id not in filtered
+
+    # Verify the trigger widgets still exist internally
+    assert click_trigger_id in session_state._new_widget_state.states
+    assert change_trigger_id in session_state._new_widget_state.states
+
+
+def test_filtered_state_includes_keyed_widgets() -> None:
+    """Test that filtered_state includes regular keyed widgets.
+
+    Regular widgets with user keys should still appear in session state,
+    even after adding trigger widget filtering.
+    """
+    session_state = SessionState()
+
+    # Create a regular widget with a user key
+    widget_id = "$$ID-my_button-my_key"
+    user_key = "my_key"
+
+    # Set up key mapping
+    session_state._key_id_mapper[user_key] = widget_id
+
+    # Add widget state
+    session_state._new_widget_state.states[widget_id] = Value(False)
+
+    # Add metadata
+    metadata = WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="bool_value",
+    )
+    session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+    # Get filtered state
+    filtered = session_state.filtered_state
+
+    # The widget should appear under its user key
+    assert user_key in filtered
+    assert filtered[user_key] is False
+
+
+def test_filtered_state_excludes_internal_keyed_widgets() -> None:
+    """Test that filtered_state excludes keyed widgets that are internal.
+
+    If a trigger widget somehow had a user key, it should still be
+    filtered out because it has the internal key prefix.
+    """
+    session_state = SessionState()
+
+    # Create a trigger widget that hypothetically has a user key
+    component_id = "my_component_123"
+    trigger_id = _make_trigger_id(component_id, "click")
+    user_key = "trigger_key"  # This shouldn't happen in practice
+
+    # Set up key mapping
+    session_state._key_id_mapper[user_key] = trigger_id
+
+    # Add widget state
+    session_state._new_widget_state.states[trigger_id] = Value(True)
+
+    # Add metadata
+    metadata = WidgetMetadata(
+        id=trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    session_state._new_widget_state.widget_metadata[trigger_id] = metadata
+
+    # Get filtered state
+    filtered = session_state.filtered_state
+
+    # The trigger widget should be filtered out even if it has a user key
+    assert user_key not in filtered
+    assert trigger_id not in filtered
+
+
+def test_session_state_iteration_excludes_trigger_widgets() -> None:
+    """Test that iterating over session state excludes trigger widgets.
+
+    When users iterate over st.session_state, trigger widgets should
+    not appear in the iteration.
+    """
+    session_state = SessionState()
+
+    # Add regular session state
+    session_state["regular_key"] = "value"
+
+    # Add trigger widget
+    component_id = "my_component_123"
+    trigger_id = _make_trigger_id(component_id, "click")
+    session_state._new_widget_state.states[trigger_id] = Value(True)
+
+    # Add metadata for trigger widget
+    metadata = WidgetMetadata(
+        id=trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    session_state._new_widget_state.widget_metadata[trigger_id] = metadata
+
+    # Get all keys that would be visible to users
+    visible_keys = list(session_state.filtered_state.keys())
+
+    # Only regular keys should be visible
+    assert "regular_key" in visible_keys
+    assert trigger_id not in visible_keys
+    assert (
+        len([k for k in visible_keys if k.startswith("$$STREAMLIT_INTERNAL_KEY")]) == 0
+    )
