@@ -109,7 +109,7 @@ def send_notification() -> None:
         if message_key == "success":
             pr_url = os.getenv("PR_URL", "")
             payload = {
-                "text": ":symbols: New Material Symbols and/or Emojis available. PR created to update the assets - "
+                "text": ":symbols: New Material Symbols and/or Emojis available. Please review the PR - "
                 f"<{pr_url}|Link here>"
             }
         else:

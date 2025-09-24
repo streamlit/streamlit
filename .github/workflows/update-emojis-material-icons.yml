@@ -2,7 +2,7 @@ name: Emojis/Material icons - check & create PR
 
 on:
   schedule:
-    # Run job at 10.30pm PST or 11.30pm PDT every Tuesday
+    # Run job at 6:30 am PST every Tuesday
     - cron: "30 6 * * Tue"
   workflow_dispatch:
     inputs:
