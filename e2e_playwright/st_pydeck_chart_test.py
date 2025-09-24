@@ -196,7 +196,7 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
 
     assert_snapshot(
         pydeck_charts.nth(3),
-        name="st_pydeck_chart-height_300px",
+        name="st_pydeck_chart-height_50px",
         pixel_threshold=1.0,
     )
 

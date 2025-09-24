@@ -18,12 +18,19 @@ import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme"
 
-export const StyledDeckGlChart = styled.div({
-  position: "relative",
-  height: "100%",
-  minHeight: "6.25rem",
-  width: "100%",
-})
+interface StyledDeckGlChartProps {
+  isStretchHeight?: boolean
+}
+
+export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
+  ({ isStretchHeight }) => ({
+    position: "relative",
+    height: "100%",
+    width: "100%",
+    // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
+    ...(isStretchHeight && { minHeight: "6.25rem" }),
+  })
+)
 
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",

@@ -57,8 +57,14 @@ const EMPTY_SELECTION = EMPTY_STATE.selection
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
-  const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
-    props
+  const {
+    disabled,
+    disableFullscreenMode,
+    element,
+    fragmentId,
+    heightConfig,
+    widgetMgr,
+  } = props
   const { libConfig } = useContext(LibContext)
   const theme = useEmotionTheme()
   const {
@@ -66,6 +72,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+
+  const isStretchHeight = !!heightConfig?.useStretch
 
   const {
     createTooltip,
@@ -211,6 +219,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
+      isStretchHeight={isStretchHeight}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
