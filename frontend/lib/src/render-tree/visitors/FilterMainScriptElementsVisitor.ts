@@ -85,15 +85,20 @@ export class FilterMainScriptElementsVisitor
       return element.accept(this)
     })
 
-    if (!anchorNode && transientNodes.size === 0) {
+    if (!anchorNode && transientNodes.length === 0) {
       return undefined
     }
 
-    if (transientNodes.size === 0) {
+    if (transientNodes.length === 0) {
       return anchorNode
     }
 
-    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.clearIdSet
+    )
   }
 
   /**

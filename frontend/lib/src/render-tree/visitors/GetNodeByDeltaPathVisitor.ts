@@ -59,7 +59,7 @@ export class GetNodeByDeltaPathVisitor
 
     const [currentIndex, ...remainingPath] = this.deltaPath
 
-    if (currentIndex < 0 || currentIndex >= node.transientNodes.size) {
+    if (currentIndex < 0 || currentIndex >= node.transientNodes.length) {
       return undefined
     }
 

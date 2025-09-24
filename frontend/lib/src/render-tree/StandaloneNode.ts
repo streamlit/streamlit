@@ -17,6 +17,7 @@
 import { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import { DebugVisitor } from "./visitors/DebugVisitor"
 
 /**
  * A standalone AppNode that represents independent items in the tree.
@@ -50,5 +51,9 @@ export class StandaloneNode<T> implements AppNode {
     // In this case, the standalone node is replacing the transient node
     // so we return the standalone node
     return this
+  }
+
+  public debug(): string {
+    return this.accept(new DebugVisitor())
   }
 }

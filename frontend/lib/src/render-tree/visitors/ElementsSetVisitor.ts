@@ -64,7 +64,7 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
 
   visitTransientNode(node: TransientNode): Set<Element> {
     // Add all transient elements to the set
-    node.transientNodes.forEach(element => {
+    node.transientNodes.forEach(([, element]) => {
       element.accept(this)
     })
 

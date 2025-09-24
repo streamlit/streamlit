@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +14,23 @@
  * limitations under the License.
  */
 
-export type { AppNode } from "./AppNode.interface"
-export { AppRoot } from "./AppRoot"
-export { BlockNode } from "./BlockNode"
-export { ElementNode } from "./ElementNode"
-export { StandaloneNode } from "./StandaloneNode"
-export { TransientNode } from "./TransientNode"
-export { DebugVisitor } from "./visitors/DebugVisitor"
+syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "DeltaProto";
+
+import "streamlit/proto/Block.proto";
+import "streamlit/proto/Element.proto";
+
+// A change to an element.
+message Transient {
+  oneof type {
+    Element element = 1;
+
+    Block block = 2;
+  }
+
+  string transient_id = 3;
+  optional uint32 order_index = 4;
+  bool clear = 5;
+}

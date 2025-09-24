@@ -20,6 +20,7 @@ import { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { DebugVisitor } from "./visitors/DebugVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -72,6 +73,11 @@ export class BlockNode implements AppNode {
       return this
     }
 
+    // It's essentially an empty transient node, so we return the element node
+    if (!node.anchor && node.transientNodes.length === 0) {
+      return this
+    }
+
     // At this point, we should clear the transient nodes that are stale
     const newTransientNodes = node.updateTransientNodes(element =>
       element.accept(new ClearStaleNodeVisitor(this.scriptRunId))
@@ -79,6 +85,15 @@ export class BlockNode implements AppNode {
 
     // In this case, we require the transient node to be included, but we are providing
     // a new anchor node
-    return new TransientNode(this.scriptRunId, this, newTransientNodes)
+    return new TransientNode(
+      this.scriptRunId,
+      this,
+      newTransientNodes,
+      node.clearIdSet
+    )
+  }
+
+  public debug(): string {
+    return this.accept(new DebugVisitor())
   }
 }

@@ -98,7 +98,7 @@ from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto import Block_pb2, ForwardMsg_pb2
+from streamlit.proto import Block_pb2, ForwardMsg_pb2, Transient_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
@@ -598,6 +598,43 @@ class DeltaGenerator(
         )
 
         return block_dg
+
+    def _transient(
+        self,
+        transient_proto: Transient_pb2.Transient,
+        layout_config: LayoutConfig | None = None,
+        advance: bool = False,
+    ) -> DeltaGenerator:
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
+
+        if dg._root_container is None or dg._cursor is None:
+            return dg
+
+        if not transient_proto.HasField("order_index"):
+            new_transient_index = dg._cursor.increment_transient_index()
+            transient_proto.order_index = new_transient_index
+
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg.metadata.delta_path[:] = dg._cursor.delta_path
+        msg.delta.new_transient.CopyFrom(transient_proto)
+
+        if layout_config:
+            if layout_config.height is not None:
+                msg.delta.new_transient.element.height_config.CopyFrom(
+                    get_height_config(layout_config.height)
+                )
+            if layout_config.width is not None:
+                msg.delta.new_transient.element.width_config.CopyFrom(
+                    get_width_config(layout_config.width)
+                )
+
+        _enqueue_message(msg)
+
+        if advance and transient_proto.order_index == 0:
+            dg._cursor.get_locked_cursor(add_rows_metadata=None)
+
+        return dg
 
 
 def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:

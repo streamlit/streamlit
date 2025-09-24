@@ -135,16 +135,21 @@ export class ClearStaleNodeVisitor
     })
 
     // Everything is stale
-    if (!anchorNode && transientNodes.size === 0) {
+    if (!anchorNode && transientNodes.length === 0) {
       return undefined
     }
 
     // All the transient elements are stale, but not the anchor element
     // so we return the anchor element
-    if (transientNodes.size === 0) {
+    if (transientNodes.length === 0) {
       return anchorNode
     }
 
-    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.clearIdSet
+    )
   }
 }

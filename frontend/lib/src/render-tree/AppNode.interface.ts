@@ -90,4 +90,10 @@ export interface AppNode {
    * Replace a transient node with the given node.
    */
   replaceTransientNode(node: TransientNode): AppNode
+
+  /**
+   * Print a tree-like representation of this node and its children for debugging.
+   * Uses the DebugVisitor internally.
+   */
+  debug(): string
 }

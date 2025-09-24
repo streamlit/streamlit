@@ -40,17 +40,17 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   private readonly scriptRunId: string
 
   constructor(deltaPath: number[], nodeToSet: AppNode, scriptRunId: string) {
-    if (deltaPath.length === 0) {
-      throw new Error("deltaPath cannot be empty")
-    }
     this.deltaPath = deltaPath
     this.nodeToSet = nodeToSet
     this.scriptRunId = scriptRunId
   }
 
   visitElementNode(_node: ElementNode): AppNode {
-    // ElementNodes are leaf nodes - they cannot have children set
-    throw new Error("'setIn' cannot be called on an ElementNode")
+    if (this.deltaPath.length > 0) {
+      throw new Error("'setIn' cannot be called on an ElementNode")
+    }
+
+    return this.nodeToSet
   }
 
   visitStandaloneNode<S>(_node: StandaloneNode<S>): AppNode {
@@ -82,6 +82,10 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   }
 
   visitBlockNode(node: BlockNode): AppNode {
+    if (this.deltaPath.length === 0) {
+      return this.nodeToSet
+    }
+
     const [currentIndex, ...remainingPath] = this.deltaPath
 
     // Validate the index
@@ -92,20 +96,39 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     }
 
     // Create a copy of the children array
-    const newChildren = node.children.slice()
+    let newChildren: AppNode[] = []
 
-    if (remainingPath.length === 0) {
-      // Base case: we're at the target location, set the node
+    if (!node.children[currentIndex]) {
+      newChildren = node.children.slice()
       newChildren[currentIndex] = this.nodeToSet
     } else {
-      // Recursive case: continue down the path
-      const childVisitor = new SetNodeByDeltaPathVisitor(
-        remainingPath,
-        this.nodeToSet,
-        this.scriptRunId
-      )
-      newChildren[currentIndex] =
-        newChildren[currentIndex].accept(childVisitor)
+      let index = 0
+      while (index < node.children.length) {
+        if (index !== currentIndex) {
+          newChildren.push(node.children[index])
+          index++
+          continue
+        }
+        const childVisitor = new SetNodeByDeltaPathVisitor(
+          remainingPath,
+          this.nodeToSet,
+          this.scriptRunId
+        )
+        const child = node.children[index]
+        const nextChild = child.accept(childVisitor)
+        if (
+          !(child instanceof TransientNode) &&
+          nextChild instanceof TransientNode
+        ) {
+          // This will be an insertion
+          newChildren.push(nextChild)
+          newChildren.push(child)
+        } else {
+          // This will be a replacement
+          newChildren.push(nextChild)
+        }
+        index++
+      }
     }
 
     // Create a new BlockNode with the updated children

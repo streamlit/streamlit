@@ -414,10 +414,11 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.spinner."""
         # TODO(armando): Test that the message is actually passed to
         # message.warning
-        with patch("streamlit.delta_generator.DeltaGenerator.empty") as e:
+        with patch("streamlit._main._transient") as t:
             with st.spinner("some message"):
                 time.sleep(0.15)
-            e.assert_called_once_with()
+            # Spinner now uses _transient instead of empty
+            t.assert_called()
 
     def test_sidebar(self):
         """Test st.write in the sidebar."""

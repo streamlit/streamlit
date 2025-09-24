@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import {
   ArrowNamedDataSet,
   Block as BlockProto,
@@ -21,6 +23,7 @@ import {
   Element,
   ForwardMsgMetadata,
   Logo,
+  Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import { ensureError } from "~lib/util/ErrorHandling"
@@ -37,13 +40,16 @@ import { AppNode } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { StandaloneNode } from "./StandaloneNode"
+import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
+const logger = getLogger("AppRoot")
 
 type ChildName = "main" | "sidebar" | "event" | "bottom" | "logoNode"
 interface LogoMetadata {
@@ -255,15 +261,20 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    debug: boolean = false
   ): AppRoot {
+    if (debug) {
+      logger.debug("BEFORE applyDelta", this.debug())
+    }
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
+    let newAppRoot: AppRoot
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
-        return this.addElement(
+        newAppRoot = this.addElement(
           deltaPath,
           scriptRunId,
           element,
@@ -271,11 +282,12 @@ export class AppRoot {
           activeScriptHash,
           delta.fragmentId
         )
+        break
       }
 
       case "addBlock": {
         const deltaMsgReceivedAt = Date.now()
-        return this.addBlock(
+        newAppRoot = this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
           scriptRunId,
@@ -283,11 +295,25 @@ export class AppRoot {
           delta.fragmentId,
           deltaMsgReceivedAt
         )
+        break
+      }
+
+      case "newTransient": {
+        const transient = delta.newTransient as TransientProto
+        newAppRoot = this.addTransient(
+          deltaPath,
+          scriptRunId,
+          transient,
+          metadata,
+          activeScriptHash,
+          delta.fragmentId
+        )
+        break
       }
 
       case "arrowAddRows": {
         try {
-          return this.arrowAddRows(
+          newAppRoot = this.arrowAddRows(
             deltaPath,
             delta.arrowAddRows as ArrowNamedDataSet,
             scriptRunId
@@ -296,7 +322,7 @@ export class AppRoot {
           const errorElement = makeElementWithErrorText(
             ensureError(error).message
           )
-          return this.addElement(
+          newAppRoot = this.addElement(
             deltaPath,
             scriptRunId,
             errorElement,
@@ -304,12 +330,86 @@ export class AppRoot {
             activeScriptHash
           )
         }
+        break
       }
 
       default: {
         throw new Error(`Unrecognized deltaType: '${delta.type}'`)
       }
     }
+
+    if (debug) {
+      logger.debug("AFTER applyDelta", newAppRoot.debug())
+    }
+    return newAppRoot
+  }
+
+  addTransient(
+    deltaPath: number[],
+    scriptRunId: string,
+    transient: TransientProto,
+    metadata: ForwardMsgMetadata,
+    activeScriptHash: string,
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
+  ): AppRoot {
+    let transientElement: AppNode | undefined
+    if (transient.element) {
+      const element = transient.element as Element
+      transientElement = new ElementNode(
+        element,
+        metadata,
+        scriptRunId,
+        activeScriptHash,
+        fragmentId
+      )
+    } else if (transient.block) {
+      const existingNode = this.findNodeByDeltaPath(deltaPath)
+      const block = transient.block as BlockProto
+
+      // If we're replacing an existing Block of the same type, this new Block
+      // inherits the existing Block's children. This preserves two things:
+      //  1. Widget State
+      //  2. React state of all elements
+      let children: AppNode[] = []
+      if (
+        existingNode instanceof BlockNode &&
+        existingNode.deltaBlock.type === block.type
+      ) {
+        children = existingNode.children
+      }
+      transientElement = new BlockNode(
+        activeScriptHash,
+        children,
+        block,
+        scriptRunId,
+        fragmentId,
+        deltaMsgReceivedAt
+      )
+    } else {
+      throw new Error("Transient node has no element or block")
+    }
+
+    const transientNode = new TransientNode(
+      scriptRunId,
+      undefined, // We do not have an anchor yet
+      [
+        [
+          transient.transientId,
+          transient.clear ? undefined : transientElement,
+          transient.orderIndex as number,
+        ],
+      ]
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      this.setNodeByDeltaPathForScriptRun(
+        deltaPath,
+        transientNode,
+        scriptRunId
+      )
+    )
   }
 
   filterMainScriptElements(mainScriptHash: string): AppRoot {
@@ -448,5 +548,24 @@ export class AppRoot {
           this.mainScriptHash
         )
     }
+  }
+
+  /**
+   * Print a tree-like representation of the AppRoot and all its children for debugging.
+   */
+  public debug(): string {
+    let result = "AppRoot\n"
+
+    AppRoot.childOrder.forEach((childName, index) => {
+      const isLast = index === AppRoot.childOrder.length - 1
+      const connector = isLast ? "└── " : "├── "
+      const childPrefix = isLast ? "    " : "│   "
+
+      result += `${connector}${childName}:\n`
+      const visitor = new DebugVisitor(childPrefix, true)
+      result += this.root[childName].accept(visitor)
+    })
+
+    return result
   }
 }

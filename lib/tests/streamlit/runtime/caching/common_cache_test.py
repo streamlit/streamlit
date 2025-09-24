@@ -669,21 +669,20 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         outer(3)
         assert not self.forward_msg_queue.is_empty()
 
-        # The spinner uses an empty element and shows the spinner only
+        # The spinner uses a transient element and shows the spinner only
         # after a timeout. Instead of mocking the time and waiting for the
-        # timeout, we check for the empty element in the queue as the spinner's
-        # surrogate.
-        empty_elements_count = 0
+        # timeout, we check for the transient element in the queue as the spinner.
+        transient_elements_count = 0
         for msg in self.forward_msg_queue._queue:
             if (
                 msg.HasField("delta")
-                and msg.delta.HasField("new_element")
-                and msg.delta.new_element.HasField("empty")
+                and msg.delta.HasField("new_transient")
+                and msg.delta.new_transient.element.HasField("spinner")
             ):
-                empty_elements_count += 1
+                transient_elements_count += 1
         # Since we automatically prevent spinners for nested cached functions,
-        # there should only be a single empty element.
-        assert empty_elements_count == 1
+        # there should only be a single transient spinner element.
+        assert transient_elements_count == 1
 
 
 class CommonCacheTTLTest(unittest.TestCase):

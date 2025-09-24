@@ -28,6 +28,13 @@ if st.button("Run spinner with time"):
 
 st.header("Spinner - width examples")
 
+if st.button("Run double spinner"):
+    with st.spinner("Loading..."):
+        with st.spinner("Also loading..."):
+            time.sleep(5)
+
+        time.sleep(5)
+
 if st.button("Run spinner with content width (default)"):
     with st.spinner("Loading with content width...", width="content"):
         time.sleep(2)

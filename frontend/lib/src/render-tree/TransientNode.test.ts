@@ -17,7 +17,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import type { AppNode } from "./AppNode.interface"
-import { TransientNode } from "./TransientNode"
+import { TransientNode, TransientNodeMap } from "./TransientNode"
 import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 function createFakeAppNode(scriptRunId: string): AppNode {
@@ -27,6 +27,9 @@ function createFakeAppNode(scriptRunId: string): AppNode {
       return undefined as unknown as T
     },
     replaceTransientNode: (_node: TransientNode): AppNode => node,
+    debug: (): string => {
+      return `FakeAppNode (run: ${scriptRunId})\n`
+    },
   }
   return node
 }
@@ -37,28 +40,29 @@ describe("TransientNode", () => {
       const node = new TransientNode("run-1")
       expect(node.scriptRunId).toBe("run-1")
       expect(node.anchor).toBeUndefined()
-      expect(node.transientNodes.size).toBe(0)
+      expect(node.transientNodes.length).toBe(0)
     })
 
     it("uses provided anchor and transient map", () => {
       const anchor = createFakeAppNode("run-1")
-      const transientMap = new Map<string, AppNode>([
-        ["t1", createFakeAppNode("run-1")],
-      ])
+      const transientElement = createFakeAppNode("run-1")
+      const transientMap = [["t1", transientElement, 0]] as TransientNodeMap
 
       const node = new TransientNode("run-1", anchor, transientMap)
 
       expect(node.anchor).toBe(anchor)
-      expect(node.transientNodes).toBe(transientMap)
+      expect(node.transientNodes).toStrictEqual(transientMap)
+      expect(node.transientNodes[0][0]).toBe("t1")
+      expect(node.transientNodes[0][1]).toBe(transientElement)
+      expect(node.transientNodes[0][2]).toBe(0)
     })
   })
 
   describe("replaceTransientNode", () => {
     it("prefers replacement anchor and preserves scriptRunId and transient map", () => {
       const originalAnchor = createFakeAppNode("run-1")
-      const transientMap = new Map<string, AppNode>([
-        ["a", createFakeAppNode("run-1")],
-      ])
+      const transientElement = createFakeAppNode("run-1")
+      const transientMap = [["a", transientElement, 0]] as TransientNodeMap
       const base = new TransientNode("run-1", originalAnchor, transientMap)
 
       const newAnchor = createFakeAppNode("other")
@@ -70,7 +74,7 @@ describe("TransientNode", () => {
       expect(result).toBeInstanceOf(TransientNode)
       expect(result.scriptRunId).toBe("run-1")
       expect(result.anchor).toBe(newAnchor)
-      expect(result.transientNodes).toBe(transientMap)
+      expect(result.transientNodes).toStrictEqual([["a", transientElement, 0]])
     })
 
     it("keeps original anchor if replacement has none", () => {
@@ -90,11 +94,11 @@ describe("TransientNode", () => {
       const b = createFakeAppNode("run")
       const c = createFakeAppNode("run")
 
-      const map = new Map<string, AppNode>([
-        ["a", a],
-        ["b", b],
-        ["c", c],
-      ])
+      const map = [
+        ["a", a, 0],
+        ["b", b, 1],
+        ["c", c, 2],
+      ] as TransientNodeMap
 
       const node = new TransientNode("run", undefined, map)
 
@@ -109,13 +113,16 @@ describe("TransientNode", () => {
       const newMap = node.updateTransientNodes(updater)
 
       expect(updater).toHaveBeenCalledTimes(3)
-      expect(Array.from(newMap.keys()).sort()).toEqual(["a", "b"])
-      expect(newMap.get("a")?.scriptRunId).toBe("updated")
-      expect(newMap.get("b")).toBe(b)
-      expect(newMap.has("c")).toBe(false)
+      expect(newMap.length).toBe(2)
+      expect(newMap.map(([id]) => id).sort()).toEqual(["a", "b"])
+      expect(newMap.find(([id]) => id === "a")?.[1]?.scriptRunId).toBe(
+        "updated"
+      )
+      expect(newMap.find(([id]) => id === "b")?.[1]).toBe(b)
+      expect(newMap.find(([id]) => id === "c")).toBeUndefined()
 
       // Original map remains unchanged
-      expect(node.transientNodes.size).toBe(3)
+      expect(node.transientNodes.length).toBe(3)
     })
   })
 

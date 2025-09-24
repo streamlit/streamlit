@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import contextlib
 import threading
+import uuid
 from typing import TYPE_CHECKING, Final
 
-import streamlit as st
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
@@ -93,28 +93,40 @@ def spinner(
         height: 210px
 
     """
+    from streamlit import _main
+    from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+    from streamlit.proto.Transient_pb2 import Transient as TransientProto
     from streamlit.string_util import clean_text
 
     validate_width(width, allow_content=True)
     layout_config = LayoutConfig(width=width)
 
-    message = st.empty()
+    message = TransientProto()
+    transient_id = str(uuid.uuid4())
+    message.transient_id = transient_id
+    message.clear = False
 
     display_message = True
+    spinner_transient = None
     display_message_lock = threading.Lock()
 
     try:
 
         def set_message() -> None:
+            nonlocal spinner_transient
+
             with display_message_lock:
                 if display_message:
+                    element_proto = ElementProto()
                     spinner_proto = SpinnerProto()
                     spinner_proto.text = clean_text(text)
                     spinner_proto.cache = _cache
                     spinner_proto.show_time = show_time
-                    message._enqueue(
-                        "spinner", spinner_proto, layout_config=layout_config
+                    element_proto.spinner.CopyFrom(spinner_proto)
+                    message.element.CopyFrom(element_proto)
+                    spinner_transient = _main._transient(
+                        message, layout_config=layout_config
                     )
 
         add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
@@ -125,14 +137,9 @@ def spinner(
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-            if "chat_message" in set(message._active_dg._ancestor_block_types):
-                # Temporary stale element fix:
-                # For chat messages, we are resetting the spinner placeholder to an
-                # empty container instead of an empty placeholder (st.empty) to have
-                # it removed from the delta path. Empty containers are ignored in the
-                # frontend since they are configured with allow_empty=False. This
-                # prevents issues with stale elements caused by the spinner being
-                # rendered only in some situations (e.g. for caching).
-                message.container()
-            else:
-                message.empty()
+
+            message.clear = True
+            if spinner_transient is not None:
+                spinner_transient._transient(
+                    message, layout_config=layout_config, advance=True
+                )

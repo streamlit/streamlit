@@ -63,6 +63,9 @@ class Cursor:
     def __repr__(self) -> str:
         return util.repr_(self)
 
+    def increment_transient_index(self) -> int:
+        raise NotImplementedError()
+
     @property
     def root_container(self) -> int:
         """The top-level container this cursor lives within - either
@@ -123,6 +126,15 @@ class RunningCursor(Cursor):
         self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
+        self._transient_index = None
+
+    def increment_transient_index(self) -> int:
+        if self._transient_index is None:
+            self._transient_index = 0
+        else:
+            self._transient_index += 1
+
+        return self._transient_index
 
     @property
     def root_container(self) -> int:
