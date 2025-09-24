@@ -32,13 +32,20 @@ class BidiComponentState(TypedDict, total=False):
 
 
 class BidiComponentResult(AttributeDictionary):
-    """Rich return object for ``st.bidi_component``.
+    """Rich return object for ``st._bidi_component``.
 
     It behaves like a regular :class:`dict` *and* allows attribute-style
     access to its keys, mirroring the behaviour of
     :class:`streamlit.util.AttributeDictionary`. It surfaces both trigger and
     state values as top-level entries so they can be accessed via either key or
     attribute access.
+
+    Parameters
+    ----------
+    state_vals : dict[str, Any] or None
+        A dictionary of state values from the component.
+    trigger_vals : dict[str, Any] or None
+        A dictionary of trigger values from the component.
     """
 
     def __init__(

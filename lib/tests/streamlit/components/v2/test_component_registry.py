@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.components.v2 import component
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_path_utils import ComponentPathUtils
 from streamlit.components.v2.component_registry import (
@@ -30,7 +31,7 @@ from streamlit.components.v2.component_registry import (
     BidiComponentRegistry,
 )
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.errors import StreamlitComponentRegistryError
+from streamlit.errors import StreamlitAPIException, StreamlitComponentRegistryError
 
 
 def _mk_file(path: os.PathLike[str] | str, content: bytes | str = b"x") -> str:
@@ -359,7 +360,7 @@ def temp_manager_setup() -> dict:
     temp_dir.cleanup()
 
 
-def test_string_content() -> None:
+def test_string_content(temp_test_files) -> None:
     """Test component instantiation with direct string content."""
     comp = BidiComponentDefinition(
         name="test",
@@ -440,6 +441,30 @@ def test_mixed_content(temp_test_files) -> None:
 
     assert len(comp.source_paths) == 1
     assert comp.source_paths["js"] == os.path.dirname(temp_test_files["js_path"])
+
+
+def test_public_api_path_object_rejection() -> None:
+    """Verify the public API rejects non-string path-like objects."""
+    from pathlib import Path
+
+    with pytest.raises(StreamlitAPIException) as exc_info:
+        component("test", js=Path("test.js"))
+    msg = str(exc_info.value)
+    assert "string or None" in msg
+    assert "string path or glob" in msg
+
+    with pytest.raises(StreamlitAPIException) as exc_info:
+        component("test", css=Path("test.css"))
+    msg = str(exc_info.value)
+    assert "string or None" in msg
+    assert "string path or glob" in msg
+
+    # Still raise for other invalid types
+    with pytest.raises(StreamlitAPIException):
+        component("test", js=123)  # Integer instead of string/Path
+
+    with pytest.raises(StreamlitAPIException):
+        component("test", css=["invalid", "list"])  # List instead of string/Path
 
 
 def test_register_from_manifest_basic(temp_manager_setup) -> None:
@@ -841,3 +866,50 @@ def test_security_validation() -> None:
 
         with pytest.raises(StreamlitComponentRegistryError):
             ComponentPathUtils.resolve_glob_pattern("/etc/passwd", temp_path)
+
+
+@pytest.mark.parametrize(
+    ("target_field", "second_args", "expect_present_field"),
+    [
+        ("html", {"js": "export default function(){}"}, "js"),
+        ("css", {"js": "export default function(){}"}, "js"),
+        ("js", {"html": "<div>Updated</div>"}, "html"),
+    ],
+)
+def test_runtime_override_removes_field(
+    monkeypatch, target_field, second_args, expect_present_field
+) -> None:
+    """Verify that removing a field in a subsequent registration clears it.
+
+    We first register a component with multiple fields set. Then, we call the
+    public API again omitting the target field. The registry should update the
+    definition so that the target field is None, rather than preserving it.
+    """
+    from streamlit.components.v2 import component as component_api
+    from streamlit.components.v2.component_manager import BidiComponentManager
+
+    manager = BidiComponentManager()
+
+    # Patch the component API to use our local manager instance.
+    monkeypatch.setattr(
+        "streamlit.components.v2.get_bidi_component_manager",
+        lambda: manager,
+    )
+
+    # Initial registration includes all three fields to keep flexibility
+    component_api(
+        "my_component",
+        html="<h1>Hello World</h1>",
+        css=".title{color:red;}",
+        js="export default function(){}",
+    )
+
+    # Subsequent registration provides only a non-target field to keep valid
+    component_api("my_component", **second_args)
+
+    definition = manager.get("my_component")
+    assert definition is not None
+    # Target field should be cleared
+    assert getattr(definition, target_field) is None
+    # Provided non-target field should remain present
+    assert getattr(definition, expect_present_field) is not None

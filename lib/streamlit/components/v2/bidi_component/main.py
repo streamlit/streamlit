@@ -60,6 +60,14 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.runtime.state import register_widget
 
 if TYPE_CHECKING:
+    from streamlit.components.v2.types import (
+        BidiComponentData,
+        BidiComponentDefaults,
+        BidiComponentKey,
+        ComponentIsolateStyles,
+    )
+
+if TYPE_CHECKING:
     # Define DeltaGenerator for type checking the dg property
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state.common import WidgetCallback
@@ -113,10 +121,10 @@ class BidiComponentMixin:
     def _bidi_component(
         self,
         component_name: str,
-        key: str | None = None,
-        isolate_styles: bool = True,
-        data: Any | None = None,
-        default: dict[str, Any] | None = None,
+        key: BidiComponentKey = None,
+        isolate_styles: ComponentIsolateStyles = True,
+        data: BidiComponentData = None,
+        default: BidiComponentDefaults = None,
         width: Width = "stretch",
         height: Height = "content",
         **kwargs: WidgetCallback | None,
