@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-PreToolUse(Bash) hook: block raw pytest/npx/uv and redirect to MCP make tools.
+PreToolUse(Bash) hook: block raw pytest/npx/uv and redirect to make targets.
 
 Exit code semantics (as of Claude Code hooks):
 - exit 0: allow tool call
@@ -55,18 +55,17 @@ def main():
                 # Provide a concrete hint (e.g., pytest -> test)
                 print(  # noqa: T201
                     f"Policy: Bash('{norm}') is blocked.\n"
-                    f"Use the MCP tool instead:\n"
-                    f"  1) call make.targets to see available targets\n"
-                    f'  2) call make.run with {{"target": "{suggested}"}} (adjust if needed)',
+                    f"Use make commands instead:\n"
+                    f"  - Run 'make help' to see available targets\n",
                     file=sys.stderr,
                 )
             else:
                 # Generic redirect (npx/uv): force the model to pick an allowed target
                 print(  # noqa: T201
                     f"Policy: Bash('{norm}') is blocked.\n"
-                    f"Use the MCP tool instead:\n"
-                    f"  1) call make.targets to see available targets\n"
-                    f'  2) pick the best target and call make.run {{"target": "<name>"}}',
+                    f"Use make commands instead:\n"
+                    f"  - Run 'make help' to see available targets\n"
+                    f"  - Pick the appropriate make target for this task",
                     file=sys.stderr,
                 )
             sys.exit(2)
