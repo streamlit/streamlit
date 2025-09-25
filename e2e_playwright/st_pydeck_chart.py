@@ -389,7 +389,7 @@ def height_parameter_subtest():
         )
 
     st.write("**Chart with height=50:**")
-    # We test a small height to verify that the minimum height for streth height doesn't affect user defined heights.
+    # Test a small height value to verify that the minimum height constraint for stretch height does not affect user-defined pixel heights.
     st.pydeck_chart(
         pdk.Deck(
             map_style="road",
