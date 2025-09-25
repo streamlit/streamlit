@@ -134,7 +134,7 @@ def spinner(
             with display_message_lock:
                 display_message = False
 
-            if element_proto is not None:
+            if spinner_transient is not None:
                 spinner_transient._transient(
                     element_proto,
                     layout_config=layout_config,
