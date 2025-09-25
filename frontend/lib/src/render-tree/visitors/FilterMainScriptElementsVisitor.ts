@@ -93,7 +93,12 @@ export class FilterMainScriptElementsVisitor
       return anchorNode
     }
 
-    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 
   /**

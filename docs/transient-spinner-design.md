@@ -46,36 +46,29 @@ The `TransientNode` class manages multiple transient elements at a single locati
 ```typescript
 export class TransientNode implements AppNode {
   readonly anchor?: AppNode                    // Optional persistent element
-  readonly transientNodes: TransientNodeMap   // Array of [id, node, orderIndex]
+  readonly transientNodes: ElementNode[]      // Array of transient ElementNodes
   readonly scriptRunId: string
-  readonly clearIdSet: Set<string>            // IDs to remove
+  readonly deltaMsgReceivedAt?: number         // Timestamp for message ordering
 
-  // Manages multiple transient elements with ordering
-  public hasTransientElement(id: string): boolean
+  // Manages multiple transient elements
   public replaceTransientNode(node: TransientNode): AppNode
-  public updateTransientNodes(update: Function): TransientNodeMap
+  public updateTransientNodes(update: (node: ElementNode) => ElementNode | undefined): ElementNode[]
 }
 ```
 
 **Key Features:**
 - **Anchor Support** - Can optionally hold a persistent element at the same location
-- **Multiple Transients** - Manages multiple transient elements with unique IDs
-- **Ordering** - Each transient has an `orderIndex` for consistent rendering order
-- **Clear Semantics** - Elements can be marked for removal via `clearIdSet`
+- **Multiple Transients** - Manages multiple transient ElementNodes in an array
+- **Message Ordering** - Uses `deltaMsgReceivedAt` timestamp for proper message sequencing
+- **Update Function** - Provides method to transform/filter transient nodes
 
 ### 3. Protocol Buffer Implementation
 
 #### New Transient.proto
 ```protobuf
 message Transient {
-  oneof type {
-    Element element = 1;
-    Block block = 2;
-  }
-
-  string transient_id = 3;
-  optional uint32 order_index = 4;
-  bool clear = 5;
+  // The list of elements available
+  repeated Element elements = 1;
 }
 ```
 
@@ -99,45 +92,55 @@ The spinner implementation in `lib/streamlit/elements/spinner.py` uses the new t
 @contextlib.contextmanager
 def spinner(text: str = "In progress...", *, show_time: bool = False,
            _cache: bool = False, width: Width = "content") -> Iterator[None]:
-    from streamlit.proto.Transient_pb2 import Transient as TransientProto
+    from streamlit.proto.Element_pb2 import Element as ElementProto
+    from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
 
-    # Create transient message with unique ID
-    message = TransientProto()
     transient_id = str(uuid.uuid4())
-    message.transient_id = transient_id
-    message.clear = False
+    element_proto = ElementProto()
+    spinner_transient = None
+    display_message = True
+    display_message_lock = threading.Lock()
 
-    # Use timer to delay spinner display (avoid flickering)
-    def set_message():
-        if display_message:
-            # Create spinner element within transient message
-            element_proto = ElementProto()
-            spinner_proto = SpinnerProto()
-            spinner_proto.text = clean_text(text)
-            spinner_proto.cache = _cache
-            spinner_proto.show_time = show_time
-            element_proto.spinner.CopyFrom(spinner_proto)
-            message.element.CopyFrom(element_proto)
+    # Timer to delay spinner display (avoid flickering) - this has always been present
+    def set_message() -> None:
+        nonlocal element_proto, spinner_transient
 
-            # Send via new _transient method
-            spinner_transient = _main._transient(message, layout_config=layout_config)
+        with display_message_lock:
+            if display_message:
+                spinner_proto = SpinnerProto()
+                spinner_proto.text = clean_text(text)
+                spinner_proto.cache = _cache
+                spinner_proto.show_time = show_time
+                element_proto.spinner.CopyFrom(spinner_proto)
+                spinner_transient = _main._transient(
+                    element_proto,
+                    layout_config=layout_config,
+                    add_transient_id=transient_id,
+                )
 
     add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 
     try:
         yield
     finally:
-        # Clear spinner by setting clear flag
-        message.clear = True
-        if spinner_transient is not None:
-            spinner_transient._transient(message, layout_config=layout_config, advance=True)
+        if display_message_lock:
+            with display_message_lock:
+                display_message = False
+
+            if spinner_transient is not None:
+                spinner_transient._transient(
+                    element_proto,
+                    layout_config=layout_config,
+                    clear_transient_id=transient_id,
+                )
 ```
 
 **Key Changes:**
 - **UUID-based identification** instead of delta paths
-- **Timer-delayed display** to prevent flickering on fast operations
-- **Clear flag semantics** for clean removal
+- **Timer-delayed display** to prevent flickering on fast operations (Note: this has always been present)
+- **Clear via transient_id** for clean removal using `clear_transient_id` parameter
 - **Dedicated `_transient()` method** separate from regular delta processing
+- **Thread-safe implementation** with display_message_lock for proper cleanup
 
 ### 5. Frontend Rendering Integration
 
@@ -194,11 +197,17 @@ The implementation was completed through a series of focused commits:
 - **Standalone Node Integration** - Made logo and special elements use StandaloneNode
 - **Render Node Visitor** - Implemented React component rendering via visitor pattern
 
-### Phase 4: Transient Implementation (Commits 1d636fe - 73d98d1)
+### Phase 4: Transient Implementation (Commits 30a9d0af1a - 4e146ff7e2)
 - **TransientNode Introduction** - Added new node type with transient element management
 - **Protocol Integration** - Added Transient.proto and Delta.proto integration
 - **Spinner Integration** - Updated spinner to use transient architecture
 - **Testing** - Added comprehensive test coverage for TransientNode
+
+### Phase 5: Integration and Refinement (Commits af765ae0eb - c2cf7b592d)
+- **af765ae0eb: Update doc** - Major documentation revision consolidating design details
+- **92c08d667d: Fix MPA issue** - Fixed Multi-Page App compatibility with new render tree
+- **e8fec6209b: Update Python side** - Refined Python backend implementation and simplified protocol
+- **c2cf7b592d: Make small tweak to spinner** - Final spinner implementation adjustments
 
 ## Benefits Achieved
 

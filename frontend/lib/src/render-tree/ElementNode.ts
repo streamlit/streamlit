@@ -224,7 +224,12 @@ export class ElementNode implements AppNode {
 
     // In this case, we require the transient node to be included, but we are providing
     // a new anchor node
-    return new TransientNode(this.scriptRunId, this, newTransientNodes)
+    return new TransientNode(
+      this.scriptRunId,
+      this,
+      newTransientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 
   public debug(): string {

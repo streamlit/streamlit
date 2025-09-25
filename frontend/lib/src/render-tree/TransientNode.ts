@@ -40,7 +40,7 @@ export class TransientNode implements AppNode {
     this.scriptRunId = scriptRunId
     this.anchor = anchor
     this.transientNodes = transientNodes ?? []
-    this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.deltaMsgReceivedAt = deltaMsgReceivedAt ?? Date.now()
   }
 
   // Combine the information of the node with the updated information
@@ -49,13 +49,14 @@ export class TransientNode implements AppNode {
     if (
       !this.deltaMsgReceivedAt ||
       !node.deltaMsgReceivedAt ||
-      this.deltaMsgReceivedAt > node.deltaMsgReceivedAt
+      this.deltaMsgReceivedAt >= node.deltaMsgReceivedAt
     ) {
       // Combine the transient nodes of the two nodes
       return new TransientNode(
         this.scriptRunId,
         this.anchor ?? node.anchor,
-        this.transientNodes
+        this.transientNodes,
+        this.deltaMsgReceivedAt
       )
     }
 

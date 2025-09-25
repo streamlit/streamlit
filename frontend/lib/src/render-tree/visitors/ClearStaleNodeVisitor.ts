@@ -145,6 +145,11 @@ export class ClearStaleNodeVisitor
       return anchorNode
     }
 
-    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 }
