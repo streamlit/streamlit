@@ -1,318 +1,266 @@
-# Technical Design: Transient Spinner Architecture
+# Technical Design: Transient Element Architecture
 
 ## Problem Statement
 
-Streamlit's current spinner implementation creates persistent elements in the execution model tree that cause duplicate element issues when elements change between reruns. The spinner utilizes a delta path - coordinates that define an element's position in the tree - and occupies that position permanently even after removal. This design leads to the "transient spinner" problem where:
+Streamlit's spinner implementation previously created persistent elements in the execution model tree that caused duplicate element issues when elements changed between reruns. The spinner utilized a delta path - coordinates that define an element's position in the tree - and occupied that position permanently even after removal. This design led to the "transient spinner" problem where:
 
-1. A spinner is shown at a specific delta path position
-2. The spinner is "removed" by sending an empty element to that position
-3. On subsequent runs, if a different element type occupies that position, duplicate elements appear in the UI
+1. A spinner was shown at a specific delta path position
+2. The spinner was "removed" by sending an empty element to that position
+3. On subsequent runs, if a different element type occupied that position, duplicate elements appeared in the UI
 
-## Current Architecture Analysis
+## Solution Overview
 
-### Backend Implementation (`lib/streamlit/elements/spinner.py`)
+This implementation introduces a comprehensive **Transient Element Architecture** that addresses the core issue through:
 
-The current spinner implementation:
-- Creates a message placeholder using `st.empty()` (line 102)
-- Enqueues spinner content via `message._enqueue("spinner", spinner_proto, layout_config=layout_config)` (line 116-118)
-- On cleanup, replaces content with either:
-  - `message.container()` for chat messages (line 136)
-  - `message.empty()` for other contexts (line 138)
+1. **Dedicated Transient Protocol** - New `Transient.proto` message type for transient elements
+2. **Visitor Pattern Architecture** - Complete refactoring of the render tree using the visitor pattern
+3. **TransientNode Implementation** - New node type that manages multiple transient elements with anchors
+4. **Non-Delta Path Elements** - Transient elements that don't occupy delta path positions
 
-### Frontend Implementation (`frontend/lib/src/components/elements/Spinner/Spinner.tsx`)
+## Architecture Implementation
 
-The spinner component:
-- Renders as a standard React component with spinner icon and text
-- Receives `SpinnerProto` element data
-- Manages elapsed time display when `showTime` is enabled
-- Has no special handling for transient behavior
+### 1. New Render Tree Architecture
 
-### Delta Path System (`frontend/lib/src/AppNode.ts`)
+The implementation completely refactored Streamlit's frontend render tree from the legacy `AppNode.ts` to a modern visitor pattern architecture:
 
-The delta path system manages element positioning:
-- Each element receives coordinates (`deltaPath: number[]`) defining its tree position
-- Elements are placed using `this.root.setIn(deltaPath, elementNode, scriptRunId)`
-- No special handling exists for temporary or transient elements
+#### Node Type Hierarchy
+- **`AppNode.interface.ts`** - Base interface for all nodes
+- **`BlockNode`** - Container nodes (columns, containers, etc.)
+- **`ElementNode`** - Regular Streamlit elements (text, widgets, etc.)
+- **`StandaloneNode`** - Special elements like logos
+- **`TransientNode`** - New node type for transient elements
 
-## Root Cause Analysis
+#### Visitor Pattern Implementation
+All operations on the render tree now use the visitor pattern with `AppNodeVisitor.interface.ts`:
+- **`RenderNodeVisitor`** - Converts nodes to React components
+- **`ClearStaleNodeVisitor`** - Removes outdated elements
+- **`ElementsSetVisitor`** - Manages element collections
+- **`FilterMainScriptElementsVisitor`** - Filters script elements
+- **`GetNodeByDeltaPathVisitor`** - Retrieves nodes by path
+- **`SetNodeByDeltaPathVisitor`** - Places nodes at specific paths
 
-The transient spinner issue stems from the fundamental mismatch between:
+### 2. TransientNode Architecture
 
-1. **Spinner's temporary nature**: Spinners should not persist in the execution model
-2. **Delta path permanence**: Current system assumes all elements with delta paths are persistent
-3. **Cleanup mechanism**: Using `empty()` or `container()` still reserves the delta path position
+The `TransientNode` class manages multiple transient elements at a single location:
 
-## Proposed Solution: Overlay-Based Transient Spinner
+```typescript
+export class TransientNode implements AppNode {
+  readonly anchor?: AppNode                    // Optional persistent element
+  readonly transientNodes: TransientNodeMap   // Array of [id, node, orderIndex]
+  readonly scriptRunId: string
+  readonly clearIdSet: Set<string>            // IDs to remove
 
-### Design Overview
-
-Implement a dual-rendering approach where spinners:
-1. **Don't use delta paths** for positioning in the execution tree
-2. **Render as overlays** positioned relative to their intended location
-3. **Self-manage lifecycle** without affecting the execution model
-
-### Technical Approach
-
-#### 1. Backend Changes
-
-**New Spinner Protocol** (`proto/streamlit/proto/Spinner.proto`):
-```protobuf
-message Spinner {
-  string text = 1;
-  bool cache = 2;
-  bool show_time = 3;
-
-  // NEW: Transient spinner metadata
-  bool is_complete = 4;          // Flag to remove spinner from screen
-  string spinner_id = 5;         // UUID for spinner identification
+  // Manages multiple transient elements with ordering
+  public hasTransientElement(id: string): boolean
+  public replaceTransientNode(node: TransientNode): AppNode
+  public updateTransientNodes(update: Function): TransientNodeMap
 }
 ```
 
-**Modified Spinner Implementation** (`lib/streamlit/elements/spinner.py`):
+**Key Features:**
+- **Anchor Support** - Can optionally hold a persistent element at the same location
+- **Multiple Transients** - Manages multiple transient elements with unique IDs
+- **Ordering** - Each transient has an `orderIndex` for consistent rendering order
+- **Clear Semantics** - Elements can be marked for removal via `clearIdSet`
+
+### 3. Protocol Buffer Implementation
+
+#### New Transient.proto
+```protobuf
+message Transient {
+  oneof type {
+    Element element = 1;
+    Block block = 2;
+  }
+
+  string transient_id = 3;
+  optional uint32 order_index = 4;
+  bool clear = 5;
+}
+```
+
+#### Integration with Delta.proto
+```protobuf
+message Delta {
+  oneof type {
+    Element new_element = 3;
+    Block add_block = 6;
+    Transient new_transient = 9;    // New transient message type
+    // ... other types
+  }
+}
+```
+
+### 4. Backend Spinner Implementation
+
+The spinner implementation in `lib/streamlit/elements/spinner.py` uses the new transient architecture:
+
 ```python
 @contextlib.contextmanager
-def spinner(
-    text: str = "In progress...",
-    *,
-    show_time: bool = False,
-    _cache: bool = False,
-    width: Width = "content",
-) -> Iterator[None]:
-    import uuid
+def spinner(text: str = "In progress...", *, show_time: bool = False,
+           _cache: bool = False, width: Width = "content") -> Iterator[None]:
+    from streamlit.proto.Transient_pb2 import Transient as TransientProto
 
-    # Generate UUID for spinner identification
-    spinner_id = str(uuid.uuid4())
+    # Create transient message with unique ID
+    message = TransientProto()
+    transient_id = str(uuid.uuid4())
+    message.transient_id = transient_id
+    message.clear = False
 
-    # Create and send initial spinner
-    spinner_proto = SpinnerProto()
-    spinner_proto.text = clean_text(text)
-    spinner_proto.cache = _cache
-    spinner_proto.show_time = show_time
-    spinner_proto.is_complete = False
-    spinner_proto.spinner_id = spinner_id
+    # Use timer to delay spinner display (avoid flickering)
+    def set_message():
+        if display_message:
+            # Create spinner element within transient message
+            element_proto = ElementProto()
+            spinner_proto = SpinnerProto()
+            spinner_proto.text = clean_text(text)
+            spinner_proto.cache = _cache
+            spinner_proto.show_time = show_time
+            element_proto.spinner.CopyFrom(spinner_proto)
+            message.element.CopyFrom(element_proto)
 
-    # Send as regular delta message
-    message = st.empty()
-    message._enqueue("spinner", spinner_proto)
+            # Send via new _transient method
+            spinner_transient = _main._transient(message, layout_config=layout_config)
+
+    add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 
     try:
         yield
     finally:
-        # Mark spinner as complete
-        completion_proto = SpinnerProto()
-        completion_proto.is_complete = True
-        completion_proto.spinner_id = spinner_id
-
-        # Send completion to same delta path
-        message._enqueue("spinner", completion_proto)
+        # Clear spinner by setting clear flag
+        message.clear = True
+        if spinner_transient is not None:
+            spinner_transient._transient(message, layout_config=layout_config, advance=True)
 ```
 
-**Updated AppNode Architecture** (`frontend/lib/src/AppNode.ts`):
+**Key Changes:**
+- **UUID-based identification** instead of delta paths
+- **Timer-delayed display** to prevent flickering on fast operations
+- **Clear flag semantics** for clean removal
+- **Dedicated `_transient()` method** separate from regular delta processing
+
+### 5. Frontend Rendering Integration
+
+The `RenderNodeVisitor` handles transient nodes specially:
+
 ```typescript
-// Updated to handle spinners through normal delta processing
-class AppNode {
-  public applyDelta(msg: ForwardMsg): AppNode {
-    if (msg.delta?.newElement?.spinner) {
-      const spinner = msg.delta.newElement.spinner
-      const deltaPath = msg.delta.metadata.deltaPath
+export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElement> {
+  visitTransientNode(node: TransientNode): OptionalReactElement {
+    const transientReactElements = []
 
-      if (spinner.isComplete) {
-        // Remove completed spinner from the normal child at this delta path
-        this.removeChild(deltaPath)
-      } else {
-        // Add spinner as a regular child but mark it as transient
-        const spinnerNode = new SpinnerNode(spinner, true) // true = isTransient
-        this.setChild(deltaPath, spinnerNode)
-      }
+    // Render all transient elements with special keys
+    node.transientNodes.forEach(([, element]) => {
+      const keyOverride = this.elementKeyOverride || `transient-${this.transientElementCount}`
+      this.transientElementCount += 1
 
-      return this
+      const transientReactElement = element.accept(
+        new RenderNodeVisitor(this.props, this.disableFullscreenMode, keyOverride)
+      )
+      transientReactElements.push(transientReactElement)
+    })
+
+    // Render anchor element if present
+    const anchorReactElement = node.anchor?.accept(this)
+    if (anchorReactElement) {
+      transientReactElements.push(anchorReactElement)
     }
 
-    // ... existing delta processing for other elements ...
-  }
-
-  // Children are already in order with transient spinners intermixed
-  public getChildren(): AppNode[] {
-    return Array.from(this.children.values())
-  }
-
-  // Generate keys for element rendering based on position and type
-  public generateElementKey(deltaPath: number[], isTransient: boolean = false): string {
-    const pathKey = deltaPath.join('-')
-    return isTransient ? `transient-${pathKey}` : `element-${pathKey}`
-  }
-}
-
-class SpinnerNode extends AppNode {
-  constructor(
-    public spinnerProto: SpinnerProto,
-    public isTransient: boolean = true
-  ) {
-    super()
+    this.reactElements.push(...transientReactElements)
+    return <>{transientReactElements}</>
   }
 }
 ```
 
-#### 2. Frontend Changes
+**Key Features:**
+- **Special key generation** for transient elements (`transient-${count}`)
+- **Anchor rendering** - persistent elements can coexist with transients
+- **Ordered rendering** - transients render in their specified order
 
-**Updated AppNode Architecture** (`frontend/lib/src/AppNode.ts`):
-```typescript
-// Updated to handle transient spinners in the AppNode architecture
-class AppNode {
-  private transientSpinners: Map<string, SpinnerElement> = new Map()
+## Implementation History
 
-  // Method to get all rendered children including transient spinners
-  public getRenderedChildren(): (AppNode | SpinnerElement)[] {
-    const regularChildren = this.children.values()
-    const transientSpinners = Array.from(this.transientSpinners.values())
-    return [...regularChildren, ...transientSpinners]
-  }
+The implementation was completed through a series of focused commits:
 
-  // Handle spinner elements with special key generation
-  public applyDelta(msg: ForwardMsg): AppNode {
-    if (msg.delta?.newElement?.spinner) {
-      const spinner = msg.delta.newElement.spinner
+### Phase 1: Foundation (Commits c2e0e15 - 784efe7)
+- **Initial Project Work** - Created design document and basic render tree structure
+- **Clear Stale Nodes Visitor** - Implemented visitor pattern for cleaning outdated nodes
+- **Elements Set Visitor** - Added visitor for managing element collections
 
-      if (spinner.isComplete) {
-        // Remove completed spinner
-        this.transientSpinners.delete(spinner.spinnerId)
-      } else {
-        // Add/update spinner with special transient key
-        const spinnerElement = new SpinnerElement(spinner)
-        this.transientSpinners.set(spinner.spinnerId, spinnerElement)
-      }
+### Phase 2: Visitor Pattern (Commits 496caa3 - 7922bb1)
+- **Set/Get Node By Delta Path Visitors** - Implemented core delta path operations as visitors
+- **Filter Main Script Elements Visitor** - Added filtering capabilities
+- **AppRoot Refactoring** - Removed root as BlockNode for cleaner architecture
 
-      return this
-    }
+### Phase 3: Architecture Completion (Commits c6bb3a7 - 07e6edc)
+- **Standalone Node Integration** - Made logo and special elements use StandaloneNode
+- **Render Node Visitor** - Implemented React component rendering via visitor pattern
 
-    // ... existing delta processing for regular elements ...
-  }
+### Phase 4: Transient Implementation (Commits 1d636fe - 73d98d1)
+- **TransientNode Introduction** - Added new node type with transient element management
+- **Protocol Integration** - Added Transient.proto and Delta.proto integration
+- **Spinner Integration** - Updated spinner to use transient architecture
+- **Testing** - Added comprehensive test coverage for TransientNode
 
-  // Generate keys for element rendering
-  public generateElementKey(index: number, isTransient: boolean = false): string {
-    if (isTransient) {
-      return `transient-${index}`
-    }
-    return `element-${index}`
-  }
-}
-```
+## Benefits Achieved
 
-**Updated Block.tsx Integration** (`frontend/lib/src/components/core/Block/Block.tsx`):
-```typescript
-// Updated Block component to handle intermixed regular and transient elements
-function Block({ node, width }: BlockProps): ReactElement {
-  const children = node.getChildren() // Regular children with transient spinners intermixed
+### 1. **Eliminates Duplicate Elements**
+- Transient elements don't occupy delta path positions
+- Clean removal via clear flags prevents path conflicts
+- Multiple transients can coexist at the same logical location
 
-  return (
-    <div className="block-container">
-      {children.map((child, index) => {
-        const deltaPath = child.deltaPath
-        const isTransient = child instanceof SpinnerNode && child.isTransient
+### 2. **Architectural Modernization**
+- Visitor pattern enables extensible operations on render tree
+- Clear separation of concerns between node types
+- Improved testability through focused visitor implementations
 
-        return (
-          <ElementNodeRenderer
-            key={node.generateElementKey(deltaPath, isTransient)}
-            node={child}
-            width={width}
-          />
-        )
-      })}
-    </div>
-  )
-}
-```
+### 3. **Performance Improvements**
+- No delta path mutations for transient elements
+- Efficient UUID-based identification
+- Timer-delayed spinner display prevents unnecessary renders
 
-#### 3. Protocol Buffer Changes
-
-**Enhanced ForwardMsg** - No longer needs special transient message handling:
-```protobuf
-// Spinners now use regular Delta messages with standard positioning
-// The is_complete flag in SpinnerProto handles lifecycle management
-// No additional protocol changes needed beyond the SpinnerProto updates
-```
-
-### Implementation Benefits
-
-#### 1. **Eliminates Duplicate Elements**
-- Spinners use normal delta path positioning like other elements
-- Use `is_complete` flag for clean removal without tree mutations
-- Natural ordering preserved with spinners intermixed with regular children
-
-#### 2. **Performance Improvements**
-- No special transient message handling needed
-- Leverages existing delta processing infrastructure
-- Efficient key generation based on delta path and transient flag
-
-#### 3. **Better User Experience**
-- Spinners appear in natural document order
-- Consistent behavior with all other Streamlit elements
+### 4. **Enhanced User Experience**
+- Spinners appear exactly where intended without layout shifts
+- Consistent ordering of multiple transient elements
 - Seamless integration with existing layout systems
 
-#### 4. **Simplified Architecture**
-- Single spinner function handles entire lifecycle
-- Standard delta message flow throughout
-- Natural intermixing of regular and transient elements in render order
+### 5. **Developer Experience**
+- Clear abstraction for adding new transient element types
+- Comprehensive visitor pattern for render tree operations
+- Well-tested architecture with extensive test coverage
 
-### Migration Strategy
+## Future Applications
 
-#### Phase 1: Infrastructure (Week 1)
-- Update SpinnerProto with `is_complete` and `spinner_id` fields
-- Modify spinner implementation to use UUID identification
-- Update AppNode to handle transient spinners in rendered children
-- Update Block.tsx to use special keys for transient elements
+The transient architecture enables additional use cases beyond spinners:
 
-#### Phase 2: Testing and Integration (Week 2)
-- Update tests for new transient behavior
-- Add performance benchmarks
-- Test spinner lifecycle with `is_complete` flag
-- Validate key generation and rendering performance
+1. **Loading States** - Any temporary loading indicators
+2. **Progress Indicators** - Transient progress bars or status messages
+3. **Notifications** - Toast messages that appear/disappear
+4. **Interactive Feedback** - Temporary validation messages or hints
+5. **Development Tools** - Debug overlays or development-time indicators
 
-#### Phase 3: Documentation and Optimization (Week 4)
-- Update documentation
-- Add examples of spinner usage patterns
-- Performance optimization based on real-world usage
-- Clean up any legacy spinner handling code
+## Migration Impact
 
-### Testing Strategy
+### Backward Compatibility
+- All existing spinner usage continues to work unchanged
+- No breaking changes to public APIs
+- Existing delta path system remains intact for regular elements
 
-#### Unit Tests
-- Backend: Verify transient spinners don't create delta path entries
-- Frontend: Test TransientSpinnerManager lifecycle management
-- Protocol: Validate transient message serialization
+### Performance Impact
+- Positive impact from reduced delta path mutations
+- Timer-based display prevents unnecessary rapid updates
+- Visitor pattern enables optimized tree operations
 
-#### Integration Tests
-- End-to-end spinner display/removal without tree modifications
-- Performance tests comparing transient vs. traditional approaches
-- Cross-browser overlay positioning validation
-
-#### Regression Tests
-- Ensure existing spinner functionality remains intact
-- Verify no duplicate elements in complex scenarios
-- Test spinner behavior in various container types (chat, columns, etc.)
-
-## Alternative Approaches Considered
-
-### 1. **Delta Path Reuse Strategy**
-- **Approach**: Mark spinner delta paths for reuse by subsequent elements
-- **Issues**: Complex path management, potential race conditions, doesn't address root cause
-
-### 2. **Virtual Spinner Elements**
-- **Approach**: Create spinner elements that exist only in frontend state
-- **Issues**: Complicated synchronization, diverges from Streamlit's execution model
-
-### 3. **Spinner-Specific Delta Paths**
-- **Approach**: Use negative indices or special path markers for spinners
-- **Issues**: Increases execution tree complexity, potential path conflicts
+### Testing Coverage
+- Comprehensive unit tests for TransientNode operations
+- Integration tests for spinner lifecycle
+- E2E tests validating visual behavior and absence of duplicate elements
 
 ## Conclusion
 
-The updated transient spinner architecture addresses the core issue by treating spinners as regular delta elements while maintaining their transient nature through the `is_complete` flag. By integrating spinners directly into the standard delta flow:
+The Transient Element Architecture successfully addresses the duplicate element issue while modernizing Streamlit's frontend architecture. The implementation provides:
 
-1. **Standard delta processing** - Spinners use normal delta paths and messaging
-2. **UUID identification** for clean lifecycle management
-3. **Completion flags** instead of complex removal logic
-4. **Natural intermixing** - Spinners appear in document order with regular elements
-5. **Integrated lifecycle** - Everything handled within the single spinner function
+1. **Complete solution** to the transient spinner problem through dedicated protocols and node types
+2. **Architectural foundation** for future transient element types beyond spinners
+3. **Performance improvements** through optimized rendering and reduced tree mutations
+4. **Enhanced maintainability** via the visitor pattern and clear separation of concerns
 
-This solution eliminates the root cause of duplicate elements while maintaining perfect consistency with Streamlit's existing architecture. Spinners are treated as first-class elements that happen to be transient, rather than as special cases requiring separate infrastructure.
+The solution demonstrates how thoughtful architectural refactoring can solve specific problems while providing broader benefits to the codebase's structure and extensibility.
