@@ -18,8 +18,16 @@ Typical incompatible changes are:
 
 ## Compile Protobuf
 
-If you ever modify the protobufs, you'll need to run the command below (from the repo root) to compile the
-protos into libraries that can be used in Python and JS:
+Some changes require compiling the protobufs into libraries that can be used in python and JS.
+
+Examples of changes that require the compilation step:
+- Adding a field.
+
+Examples of changes that do not require the compilation step:
+- Adding or modifying comments.
+- Adding the `[deprecated=true]` notation.
+
+Run this command to recompile the protobufs:
 
 ```bash
 make protobuf
