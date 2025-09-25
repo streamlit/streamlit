@@ -22,7 +22,9 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_checkbox,
     click_form_button,
+    expect_markdown,
     get_element_by_key,
     get_markdown,
 )
@@ -135,6 +137,17 @@ def test_feedback_buttons_are_disabled(app: Page):
     # the feedback value was set to 3 via session state
     text = get_markdown(app, "feedback-disabled: 3")
     expect(text).to_be_attached()
+
+
+def test_pass_default_selections(app: Page):
+    """Test that passed defaults are rendered correctly."""
+    expect_markdown(app, "Star sentiment: None")
+
+    click_checkbox(app, "Set default value")
+    expect_markdown(app, "Star sentiment: 2")
+
+    click_checkbox(app, "Set default value")
+    expect_markdown(app, "Star sentiment: None")
 
 
 def test_feedback_works_in_forms(app: Page):

@@ -38,7 +38,7 @@ if not (major == "4" and minor < "2"):
     )
 
     st.write("Pie Chart with more than 4 Legend items")
-    st.altair_chart(chart, theme="streamlit", use_container_width=False)
+    st.altair_chart(chart, theme="streamlit", width="content")
 
 
 df1 = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
@@ -117,7 +117,7 @@ c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))
 
 c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))
 
-st.altair_chart(c1 & c2, use_container_width=True)
+st.altair_chart(c1 & c2)
 
 # Issue #9339: legend.title=None shouldn't cut chart off
 df_cut_off_issue = pd.DataFrame(
@@ -139,4 +139,4 @@ cut_off_chart = (
 )
 
 st.write("Altair chart cut off if legend title is None (Issue #9339)")
-st.altair_chart(cut_off_chart, use_container_width=True)
+st.altair_chart(cut_off_chart)

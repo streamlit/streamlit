@@ -12,21 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import altair as alt
-import pandas as pd
 
-import streamlit as st
+from theme_tester_app import run_theme_tester_app  # type: ignore
 
-df = pd.DataFrame({"x": [1, 2, 3, 4, 5], "y": [10, 20, 30, 40, 50]})
-
-chart = (
-    alt.Chart(
-        data=df,
-        title="Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 5,
-    )
-    .mark_line()
-    .encode(x="x", y="y")
-)
-
-st.altair_chart(chart)
-st.altair_chart(chart, width="content")
+run_theme_tester_app()

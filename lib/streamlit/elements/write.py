@@ -56,9 +56,6 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-_TEXT_CURSOR: Final = " ▏"
-
-
 class StreamingOutput(list[Any]):
     pass
 
@@ -71,6 +68,8 @@ class WriteMixin:
         | Generator[Any, Any, Any]
         | Iterable[Any]
         | AsyncGenerator[Any, Any],
+        *,
+        cursor: str | None = None,
     ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
@@ -91,6 +90,24 @@ class WriteMixin:
                 To use additional LLM libraries, you can create a wrapper to
                 manually define a generator function and include custom output
                 parsing.
+
+        cursor : str or None
+            A string to append to text as it's being written. By default, no cursor
+            is shown, but you can configure it to use any string that is supported
+            by ``st.markdown``. This includes:
+
+            - Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            - Google Material Symbols (rounded style), using the syntax
+              ``:material/icon_name:``, where "icon_name" is the name of the
+              icon in snake case. For a complete list of icons, see Google's
+              `Material Symbols <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ...and much more! See ``st.markdown`` for more.
+
 
         Returns
         -------
@@ -151,6 +168,7 @@ class WriteMixin:
                 "this data type."
             )
 
+        cursor_str = cursor or ""
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
@@ -229,7 +247,7 @@ class WriteMixin:
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
                 stream_container.markdown(
-                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                    streamed_response + ("" if first_text else cursor_str),
                 )
             elif callable(chunk):
                 flush_stream_response()
