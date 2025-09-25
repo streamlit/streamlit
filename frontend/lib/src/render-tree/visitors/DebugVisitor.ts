@@ -116,13 +116,13 @@ export class DebugVisitor implements AppNodeVisitor<string> {
     if (node.transientNodes.length > 0) {
       result += `${childPrefix}└── transient nodes:\n`
 
-      node.transientNodes.forEach(([id, transientNode], index) => {
+      node.transientNodes.forEach((transientNode, index) => {
         const isLastTransient = index === node.transientNodes.length - 1
         const transientConnector = isLastTransient ? "└── " : "├── "
         const transientChildPrefix =
           childPrefix + "    " + (isLastTransient ? "    " : "│   ")
 
-        result += `${childPrefix}    ${transientConnector}[${id}]:\n`
+        result += `${childPrefix}    ${transientConnector}:\n`
         const transientVisitor = new DebugVisitor(transientChildPrefix, true)
         result += transientNode.accept(transientVisitor)
       })

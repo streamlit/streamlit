@@ -214,18 +214,17 @@ export class ElementNode implements AppNode {
     }
 
     // At this point, we should clear the transient nodes that are stale
-    const newTransientNodes = node.updateTransientNodes(element =>
-      element.accept(new ClearStaleNodeVisitor(this.scriptRunId))
+    const newTransientNodes = node.updateTransientNodes(
+      element =>
+        // All transient nodes should be ElementNodes
+        element.accept(new ClearStaleNodeVisitor(this.scriptRunId)) as
+          | ElementNode
+          | undefined
     )
 
     // In this case, we require the transient node to be included, but we are providing
     // a new anchor node
-    return new TransientNode(
-      this.scriptRunId,
-      this,
-      newTransientNodes,
-      node.clearIdSet
-    )
+    return new TransientNode(this.scriptRunId, this, newTransientNodes)
   }
 
   public debug(): string {

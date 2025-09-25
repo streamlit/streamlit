@@ -82,7 +82,7 @@ export class FilterMainScriptElementsVisitor
   visitTransientNode(node: TransientNode): AppNode | undefined {
     const anchorNode = node.anchor?.accept(this)
     const transientNodes = node.updateTransientNodes(element => {
-      return element.accept(this)
+      return element.accept(this) as ElementNode | undefined
     })
 
     if (!anchorNode && transientNodes.length === 0) {
@@ -93,12 +93,7 @@ export class FilterMainScriptElementsVisitor
       return anchorNode
     }
 
-    return new TransientNode(
-      node.scriptRunId,
-      anchorNode,
-      transientNodes,
-      node.clearIdSet
-    )
+    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
   }
 
   /**

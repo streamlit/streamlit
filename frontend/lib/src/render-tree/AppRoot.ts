@@ -262,10 +262,11 @@ export class AppRoot {
     scriptRunId: string,
     delta: Delta,
     metadata: ForwardMsgMetadata,
-    debug: boolean = false
+    debug: boolean = true
   ): AppRoot {
     if (debug) {
       logger.debug("BEFORE applyDelta", this.debug())
+      logger.debug("Delta", delta)
     }
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
@@ -353,53 +354,20 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    let transientElement: AppNode | undefined
-    if (transient.element) {
-      const element = transient.element as Element
-      transientElement = new ElementNode(
-        element,
-        metadata,
-        scriptRunId,
-        activeScriptHash,
-        fragmentId
-      )
-    } else if (transient.block) {
-      const existingNode = this.findNodeByDeltaPath(deltaPath)
-      const block = transient.block as BlockProto
-
-      // If we're replacing an existing Block of the same type, this new Block
-      // inherits the existing Block's children. This preserves two things:
-      //  1. Widget State
-      //  2. React state of all elements
-      let children: AppNode[] = []
-      if (
-        existingNode instanceof BlockNode &&
-        existingNode.deltaBlock.type === block.type
-      ) {
-        children = existingNode.children
-      }
-      transientElement = new BlockNode(
-        activeScriptHash,
-        children,
-        block,
-        scriptRunId,
-        fragmentId,
-        deltaMsgReceivedAt
-      )
-    } else {
-      throw new Error("Transient node has no element or block")
-    }
-
     const transientNode = new TransientNode(
       scriptRunId,
       undefined, // We do not have an anchor yet
-      [
-        [
-          transient.transientId,
-          transient.clear ? undefined : transientElement,
-          transient.orderIndex as number,
-        ],
-      ]
+      transient.elements.map(
+        element =>
+          new ElementNode(
+            element as Element,
+            metadata,
+            scriptRunId,
+            activeScriptHash,
+            fragmentId
+          )
+      ),
+      deltaMsgReceivedAt
     )
 
     return new AppRoot(

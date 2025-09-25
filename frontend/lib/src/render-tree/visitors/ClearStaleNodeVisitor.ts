@@ -131,7 +131,7 @@ export class ClearStaleNodeVisitor
     // Check whether the anchor element and transient elements are stale
     const anchorNode = node.anchor?.accept(this)
     const transientNodes = node.updateTransientNodes(element => {
-      return element.accept(this)
+      return element.accept(this) as ElementNode | undefined
     })
 
     // Everything is stale
@@ -145,11 +145,6 @@ export class ClearStaleNodeVisitor
       return anchorNode
     }
 
-    return new TransientNode(
-      node.scriptRunId,
-      anchorNode,
-      transientNodes,
-      node.clearIdSet
-    )
+    return new TransientNode(node.scriptRunId, anchorNode, transientNodes)
   }
 }

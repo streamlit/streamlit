@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import util
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+if TYPE_CHECKING:
+    from streamlit.proto.Element_pb2 import Element as ElementProto
 
 
 def make_delta_path(
@@ -97,6 +100,9 @@ class Cursor:
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
+    def get_transient_cursor(self, **props: Any) -> TransientCursor:
+        raise NotImplementedError()
+
     @property
     def props(self) -> Any:
         """Other data in this cursor. This is a temporary measure that will go
@@ -126,15 +132,6 @@ class RunningCursor(Cursor):
         self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
-        self._transient_index = None
-
-    def increment_transient_index(self) -> int:
-        if self._transient_index is None:
-            self._transient_index = 0
-        else:
-            self._transient_index += 1
-
-        return self._transient_index
 
     @property
     def root_container(self) -> int:
@@ -163,6 +160,19 @@ class RunningCursor(Cursor):
         self._index += 1
 
         return locked_cursor
+
+    def get_locked_transient_cursor(self, **props: Any) -> LockedCursor:
+        return LockedCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,
+            index=self._index,
+            **props,
+        )
+
+    def get_transient_cursor(self, **props: Any) -> TransientCursor:
+        return TransientCursor(
+            self._root_container, self._parent_path, self._index, **props
+        )
 
 
 class LockedCursor(Cursor):
@@ -220,3 +230,43 @@ class LockedCursor(Cursor):
     @property
     def props(self) -> Any:
         return self._props
+
+    def get_transient_cursor(self, **props: Any) -> TransientCursor:
+        return TransientCursor(
+            self._root_container, self._parent_path, self._index, **props
+        )
+
+
+class TransientCursor(LockedCursor):
+    def __init__(
+        self,
+        root_container: int,
+        parent_path: tuple[int, ...] = (),
+        index: int = 0,
+        **props: Any,
+    ) -> None:
+        super().__init__(root_container, parent_path, index, **props)
+        self._transient_ids: list[str] = []
+        self._transient_elements: dict[str, ElementProto] = {}
+
+    def add_transient_element(self, transient_id: str, element: ElementProto) -> None:
+        if transient_id in self._transient_ids:
+            return
+
+        self._transient_ids.append(transient_id)
+        self._transient_elements[transient_id] = element
+
+    def remove_transient_element(self, transient_id: str) -> None:
+        if transient_id in self._transient_ids:
+            self._transient_ids.remove(transient_id)
+
+        if transient_id in self._transient_elements:
+            del self._transient_elements[transient_id]
+
+    @property
+    def transient_elements(self) -> list[ElementProto]:
+        return [self._transient_elements[t_id] for t_id in self._transient_ids]
+
+    def get_transient_cursor(self, **props: Any) -> TransientCursor:
+        self._props = props
+        return self

@@ -15,6 +15,7 @@
  */
 
 import { AppNode } from "./AppNode.interface"
+import { ElementNode } from "./ElementNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
@@ -24,76 +25,52 @@ import { DebugVisitor } from "./visitors/DebugVisitor"
  * NodeNode and stores transient Nodes in a Map.
  */
 
-export type TransientNodeMap = [string, AppNode, number][]
-export type TransientNodeMapChange = [string, AppNode | undefined, number][]
 export class TransientNode implements AppNode {
   readonly anchor?: AppNode
-  readonly transientNodes: TransientNodeMap
+  readonly transientNodes: ElementNode[]
   readonly scriptRunId: string
-  readonly clearIdSet: Set<string>
+  readonly deltaMsgReceivedAt?: number
 
   constructor(
     scriptRunId: string,
     anchor?: AppNode,
-    transientNodes?: TransientNodeMapChange,
-    clearIdSet?: Set<string>
+    transientNodes?: ElementNode[],
+    deltaMsgReceivedAt?: number
   ) {
     this.scriptRunId = scriptRunId
     this.anchor = anchor
-    this.clearIdSet = clearIdSet ?? new Set<string>()
-    this.transientNodes = []
-    transientNodes?.forEach(([id, element, orderIndex]) => {
-      if (element === undefined) {
-        this.clearIdSet.add(id)
-      } else {
-        this.transientNodes.push([id, element, orderIndex])
-      }
-    })
-  }
-
-  public hasTransientElement(id: string): boolean {
-    return this.transientNodes.some(([nodeId]) => nodeId === id)
+    this.transientNodes = transientNodes ?? []
+    this.deltaMsgReceivedAt = deltaMsgReceivedAt
   }
 
   // Combine the information of the node with the updated information
   // of *this* node
   public replaceTransientNode(node: TransientNode): AppNode {
-    const nodes = [...node.transientNodes, ...this.transientNodes]
+    if (
+      !this.deltaMsgReceivedAt ||
+      !node.deltaMsgReceivedAt ||
+      this.deltaMsgReceivedAt > node.deltaMsgReceivedAt
+    ) {
+      // Combine the transient nodes of the two nodes
+      return new TransientNode(
+        this.scriptRunId,
+        this.anchor ?? node.anchor,
+        this.transientNodes
+      )
+    }
 
-    // The original node is the starting point, so we iterate over its transient nodes
-    // and see if we should add it to the new one
-    const elementSet = new Map<string, [AppNode, number]>()
-    nodes.forEach(([id, elementToInclude, orderIndex]) => {
-      elementSet.set(id, [elementToInclude, orderIndex])
-      if (this.clearIdSet.has(id)) {
-        elementSet.delete(id)
-      }
-    })
-
-    const newTransientNodes: TransientNodeMap = []
-    elementSet.forEach(([element, orderIndex], id) => {
-      newTransientNodes.push([id, element, orderIndex])
-    })
-
-    // Combine the transient nodes of the two nodes
-    return new TransientNode(
-      this.scriptRunId,
-      node.anchor ?? this.anchor,
-      newTransientNodes.toSorted(
-        ([, , orderIndex], [, , orderIndex2]) => orderIndex - orderIndex2
-      ),
-      this.clearIdSet.union(node.clearIdSet)
-    )
+    // Return the original node since it was more recent
+    return node
   }
 
   public updateTransientNodes(
-    update: (node: AppNode, id: string) => AppNode | undefined
-  ): TransientNodeMap {
-    const newTransientNodes: TransientNodeMap = []
-    this.transientNodes.forEach(([id, element, orderIndex]) => {
-      const updatedElement = update(element, id)
+    update: (node: ElementNode) => ElementNode | undefined
+  ): ElementNode[] {
+    const newTransientNodes: ElementNode[] = []
+    this.transientNodes.forEach(element => {
+      const updatedElement = update(element)
       if (updatedElement) {
-        newTransientNodes.push([id, updatedElement, orderIndex])
+        newTransientNodes.push(updatedElement)
       }
     })
 

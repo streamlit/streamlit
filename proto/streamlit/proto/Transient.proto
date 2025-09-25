@@ -22,15 +22,7 @@ option java_outer_classname = "DeltaProto";
 import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 
-// A change to an element.
 message Transient {
-  oneof type {
-    Element element = 1;
-
-    Block block = 2;
-  }
-
-  string transient_id = 3;
-  optional uint32 order_index = 4;
-  bool clear = 5;
+  // The list of elements available
+  repeated Element elements = 1;
 }

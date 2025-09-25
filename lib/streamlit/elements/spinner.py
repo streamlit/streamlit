@@ -96,37 +96,33 @@ def spinner(
     from streamlit import _main
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
-    from streamlit.proto.Transient_pb2 import Transient as TransientProto
     from streamlit.string_util import clean_text
 
     validate_width(width, allow_content=True)
     layout_config = LayoutConfig(width=width)
 
-    message = TransientProto()
     transient_id = str(uuid.uuid4())
-    message.transient_id = transient_id
-    message.clear = False
-
-    display_message = True
+    element_proto = ElementProto()
     spinner_transient = None
+    display_message = True
     display_message_lock = threading.Lock()
 
     try:
 
         def set_message() -> None:
-            nonlocal spinner_transient
+            nonlocal element_proto, spinner_transient
 
             with display_message_lock:
                 if display_message:
-                    element_proto = ElementProto()
                     spinner_proto = SpinnerProto()
                     spinner_proto.text = clean_text(text)
                     spinner_proto.cache = _cache
                     spinner_proto.show_time = show_time
                     element_proto.spinner.CopyFrom(spinner_proto)
-                    message.element.CopyFrom(element_proto)
                     spinner_transient = _main._transient(
-                        message, layout_config=layout_config
+                        element_proto,
+                        layout_config=layout_config,
+                        add_transient_id=transient_id,
                     )
 
         add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
@@ -138,8 +134,9 @@ def spinner(
             with display_message_lock:
                 display_message = False
 
-            message.clear = True
-            if spinner_transient is not None:
+            if element_proto is not None:
                 spinner_transient._transient(
-                    message, layout_config=layout_config, advance=True
+                    element_proto,
+                    layout_config=layout_config,
+                    clear_transient_id=transient_id,
                 )
