@@ -49,7 +49,7 @@ def test_vega_chart_height_behavior(app: Page):
         "Vertical concatenation chart with default height (content)",
         "Altair chart with height=250",
         "Altair chart with height in spec (180) and height='content' parameter",
-        "Altair chart with height='stretch' (in 300px container)",
+        "Altair chart with height='stretch' (in 500px container)",
     ]
 
     for i, expected_height in enumerate(expected_heights):
