@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "mcp__make",
       "Read(**)", "Write", "Edit", "Glob", "Grep", "Bash"
     ],
     "ask": [],

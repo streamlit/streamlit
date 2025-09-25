@@ -36,9 +36,8 @@ Streamlit is an open-source (Apache 2.0) Python library for creating interactive
 ### Shell & Build Policy (AI Agents)
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
-- Use the MCP tools: `make.targets` to discover, `make.run { "target": "<name>" }` to execute.
-- The following raw shell invocations are blocked by policy: `pytest`, `python -m pytest`, `npx`, `uv`.
-  If you need one of these, pick the appropriate `make` target instead.
+- For E2E tests: `pytest` commands targeting `e2e_playwright/` files are blocked by policy.
+  Use `make run-e2e-test <filename>` instead.
 
 ## `make` commands
 
