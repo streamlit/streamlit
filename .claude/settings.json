@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__make",
+      "Read(**)", "Write", "Edit", "Glob", "Grep", "Bash"
+    ],
+    "ask": [],
+    "deny": []
+  },
   "hooks": {
     "Stop": [
       {
@@ -7,6 +15,18 @@
             "type": "command",
             "command": "python ${CLAUDE_PROJECT_DIR}/.claude/stop_hook.py",
             "timeout": 150
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre_bash_redirect.py",
+            "timeout": 10
           }
         ]
       }

@@ -27,6 +27,13 @@ Streamlit is an open-source (Apache 2.0) Python library for creating interactive
 - `component-lib/`: Library for building Streamlit custom components.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 
+### Shell & Build Policy (AI Agents)
+
+- Prefer `make` targets for all dev tasks (tests, lint, format, builds).
+- Use the MCP tools: `make.targets` to discover, `make.run { "target": "<name>" }` to execute.
+- The following raw shell invocations are blocked by policy: `pytest`, `python -m pytest`, `npx`, `uv`.
+  If you need one of these, pick the appropriate `make` target instead.
+
 ## `make` commands
 
 Selection of `make` commands for development (run in the repo root):

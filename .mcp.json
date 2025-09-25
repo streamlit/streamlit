@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "make": {
+      "command": "python",
+      "args": ["-u", ".tools/make_runner.py"],
+      "env": {
+        "PROJECT_DIR": "${PWD}"
+      }
+    }
+  }
+}
