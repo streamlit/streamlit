@@ -138,6 +138,7 @@ def test_feedback_buttons_are_disabled(app: Page):
     text = get_markdown(app, "feedback-disabled: 3")
     expect(text).to_be_attached()
 
+
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
     expect_markdown(app, "Star sentiment: None")
