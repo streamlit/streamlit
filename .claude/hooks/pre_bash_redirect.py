@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-PreToolUse(Bash) hook: block raw pytest/npx/uv and redirect to make targets.
+PreToolUse(Bash) hook: block pytest commands for e2e_playwright and redirect to make targets.
 
 Exit code semantics (as of Claude Code hooks):
 - exit 0: allow tool call
@@ -25,14 +25,8 @@ import json
 import re
 import sys
 
-BLOCK = [
-    # pytest (direct or via python -m)
-    (re.compile(r"^(?:python(?:3)?\s+-m\s+)?pytest\b", re.IGNORECASE), "test"),
-    # npx (let model map to an appropriate make target, e.g., frontend build/lint)
-    (re.compile(r"^npx\b", re.IGNORECASE), None),
-    # uv (environment/package runs should be codified as make targets)
-    (re.compile(r"^uv\b", re.IGNORECASE), None),
-]
+# Pattern to match pytest commands
+PYTEST_PATTERN = re.compile(r"^(?:python(?:3)?\s+-m\s+)?pytest\b", re.IGNORECASE)
 
 
 def main():
@@ -49,26 +43,16 @@ def main():
     cmd = (payload.get("tool_input") or {}).get("command", "") or ""
     norm = re.sub(r"\s+", " ", cmd).strip()
 
-    for pat, suggested in BLOCK:
-        if pat.search(norm):
-            if suggested:
-                # Provide a concrete hint (e.g., pytest -> test)
-                print(  # noqa: T201
-                    f"Policy: Bash('{norm}') is blocked.\n"
-                    f"Use make commands instead:\n"
-                    f"  - Run 'make help' to see available targets\n",
-                    file=sys.stderr,
-                )
-            else:
-                # Generic redirect (npx/uv): force the model to pick an allowed target
-                print(  # noqa: T201
-                    f"Policy: Bash('{norm}') is blocked.\n"
-                    f"Use make commands instead:\n"
-                    f"  - Run 'make help' to see available targets\n"
-                    f"  - Pick the appropriate make target for this task",
-                    file=sys.stderr,
-                )
-            sys.exit(2)
+    # Check if this is a pytest command targeting e2e_playwright
+    if PYTEST_PATTERN.search(norm) and "e2e_playwright" in norm:
+        print(  # noqa: T201
+            f"Policy: Bash('{norm}') is blocked.\n"
+            f"E2E tests should use make commands instead:\n"
+            f"  - Run 'make help' to see available targets\n"
+            f"  - Use 'make run-e2e-test <filename>' for e2e tests\n",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     sys.exit(0)
 
