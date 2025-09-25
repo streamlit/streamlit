@@ -14,7 +14,7 @@
           {
             "type": "command",
             "command": "python ${CLAUDE_PROJECT_DIR}/.claude/stop_hook.py",
-            "timeout": 150
+            "timeout": 300
           }
         ]
       }
