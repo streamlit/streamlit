@@ -417,7 +417,7 @@ export class AppRoot {
     const visitor = new FilterMainScriptElementsVisitor(mainScriptHash)
 
     const newChildren = this.runActionOnAllChildren((child, childName) =>
-      this.ensureValidAppNode(child.accept(visitor), childName)
+      this.ensureValidAppNode(child.accept(visitor), childName, mainScriptHash)
     )
 
     return new AppRoot(mainScriptHash, newChildren)
@@ -432,7 +432,11 @@ export class AppRoot {
       fragmentIdsThisRun
     )
     const newChildren = this.runActionOnAllChildren((child, childName) =>
-      this.ensureValidAppNode(child.accept(visitor), childName)
+      this.ensureValidAppNode(
+        child.accept(visitor),
+        childName,
+        this.mainScriptHash
+      )
     )
 
     return new AppRoot(this.mainScriptHash, newChildren)
@@ -529,7 +533,8 @@ export class AppRoot {
 
   private ensureValidAppNode(
     node: AppNode | undefined,
-    childName: ChildName
+    childName: ChildName,
+    mainScriptHash: string
   ): AppNode {
     if (node) {
       return node
@@ -540,13 +545,9 @@ export class AppRoot {
       case "sidebar":
       case "event":
       case "bottom":
-        return new BlockNode(this.mainScriptHash)
+        return new BlockNode(mainScriptHash)
       case "logoNode":
-        return new StandaloneNode<Logo>(
-          null,
-          NO_SCRIPT_RUN_ID,
-          this.mainScriptHash
-        )
+        return new StandaloneNode<Logo>(null, NO_SCRIPT_RUN_ID, mainScriptHash)
     }
   }
 

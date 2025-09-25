@@ -73,6 +73,8 @@ export class DebugVisitor implements AppNodeVisitor<string> {
       result += ` (fragment: ${node.fragmentId})`
     }
 
+    result += ` (activeScriptHash: ${node.activeScriptHash})`
+
     result += "\n"
     return result
   }
