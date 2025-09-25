@@ -52,31 +52,19 @@ jobs:
       - name: Install newest version of emoji package
         run: pip install emoji --upgrade
 
-      - name: Check new Material Icons
-        id: check-material-icons
-        continue-on-error: true
-        run: python scripts/check_new_material_symbols.py
-
       - name: Update Material Icons
         id: update-material-icons
-        if: steps.check-material-icons.outcome == 'failure'
         run: make update-material-icons
-
-      - name: Check new Emojis
-        id: check-emojis
-        continue-on-error: true
-        run: python scripts/check_new_emojis.py
 
       - name: Update Emojis
         id: update-emojis
-        if: steps.check-emojis.outcome == 'failure'
         run: make update-emojis
 
       - name: Check for updates
         id: check-updates
         run: |
-          # Script failures indicate there are emoji/icon updates needed
-          if [ "${{ steps.check-material-icons.outcome }}" = "failure" ] || [ "${{ steps.check-emojis.outcome }}" = "failure" ]; then
+          # Check if any files were modified (indicating updates were made)
+          if [ -n "$(git status --porcelain)" ]; then
             echo "updates_needed=true" >> $GITHUB_OUTPUT
           else
             echo "updates_needed=false" >> $GITHUB_OUTPUT
