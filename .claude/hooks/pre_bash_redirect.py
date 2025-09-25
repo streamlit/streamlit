@@ -25,8 +25,26 @@ import json
 import re
 import sys
 
-# Pattern to match pytest commands
-PYTEST_PATTERN = re.compile(r"^(?:python(?:3)?\s+-m\s+)?pytest\b", re.IGNORECASE)
+# Pattern to match pytest commands, including:
+#   - pytest
+#   - python -m pytest
+#   - python3 -m pytest
+#   - with optional whitespace variations
+PYTEST_PATTERN = re.compile(
+    r"""
+    ^                       # start of string
+    (?:                     # non-capturing group for optional python invocation
+        python              # 'python'
+        (?:3)?              # optional '3'
+        \s+                 # whitespace
+        -m                  # '-m'
+        \s+                 # whitespace
+    )?
+    pytest                  # 'pytest'
+    \b                      # word boundary
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
 
 def main():
