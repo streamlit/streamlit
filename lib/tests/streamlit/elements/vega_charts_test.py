@@ -791,6 +791,117 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
         assert el.width_config.use_content is True
 
 
+class AltairChartHeightTest(DeltaGeneratorTestCase):
+    """Test altair_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (400, "pixel_height", 400),
+        ]
+    )
+    def test_altair_chart_height_combinations(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test altair_chart with various height combinations."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        st.altair_chart(chart, height=height)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Check height configuration
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            ("height", "invalid_height"),
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_altair_chart_height_validation_errors(
+        self, param_name: str, invalid_value: str | int
+    ):
+        """Test that invalid height values raise validation errors."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.altair_chart(chart, **kwargs)
+
+    def test_altair_chart_default_height_content(self):
+        """Test that default height is 'content'."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.height_config.WhichOneof("height_spec") == "use_content"
+        assert el.height_config.use_content is True
+
+    @pytest.mark.skipif(
+        is_altair_version_less_than("5.0.0"),
+        reason="This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_chart_height_with_selections(self):
+        """Test that height works correctly with selections enabled."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+            .add_params(alt.selection_point("my_param"))
+        )
+
+        result = st.altair_chart(
+            chart, height=300, on_select="rerun", key="test_altair_chart_height"
+        )
+
+        # Check that the chart element has the correct height configuration
+        el = self.get_delta_from_queue().new_element
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 300
+
+        # Check that selections are still working
+        assert hasattr(result, "selection")
+        assert result.selection.my_param == {}
+
+
 class VegaLiteChartTest(DeltaGeneratorTestCase):
     """Test the `st.vega_lite_chart` command."""
 
