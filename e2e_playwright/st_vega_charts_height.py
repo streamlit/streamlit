@@ -106,3 +106,15 @@ content_chart = (
     .properties(height=180)
 )
 st.altair_chart(content_chart, height="content")
+
+st.write("Altair chart with height='stretch':")
+with st.container(border=True, key="test_altair_height_stretch", height=500):
+    stretch_chart = (
+        alt.Chart(simple_df)
+        .mark_area()
+        .encode(
+            x=alt.X("a:O"),
+            y=alt.Y("b:Q"),
+        )
+    )
+    st.altair_chart(stretch_chart, height="stretch")
