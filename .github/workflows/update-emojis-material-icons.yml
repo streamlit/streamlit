@@ -87,7 +87,8 @@ jobs:
       - name: Add changes to the branch
         if: steps.check-updates.outputs.updates_needed == 'true'
         run: |
-          git add lib/
+          # Add only expected modified files
+          git add lib/ frontend/app/src/assets/fonts/MaterialSymbols/ e2e_playwright/st_alert.py
           git commit -m "Update emojis/material icons"
           git push origin "${{ steps.create-branch.outputs.branch_name }}"
 
