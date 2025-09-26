@@ -18,6 +18,7 @@ import React, { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
+import cloneDeep from "lodash/cloneDeep"
 import without from "lodash/without"
 import { getLogger } from "loglevel"
 import moment from "moment"
@@ -64,7 +65,6 @@ import {
   createFormsData,
   createPresetThemes,
   createTheme,
-  CUSTOM_THEME_NAME,
   DeployedAppMetadata,
   ensureError,
   extractPageNameFromPathName,
@@ -77,6 +77,7 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getSystemThemePreference,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -1314,6 +1315,90 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
+  // Helper to take the theme input, apply inheritance and return custom theme(s)
+  produceCustomThemes(themeInput: CustomThemeConfig): ThemeConfig[] {
+    const hasLightConfigs =
+      themeInput.light && Object.keys(themeInput.light).length > 0
+    const hasDarkConfigs =
+      themeInput.dark && Object.keys(themeInput.dark).length > 0
+
+    const customThemes: ThemeConfig[] = []
+
+    // When there are light or dark configs, we need to create a custom theme for each
+    if (hasLightConfigs || hasDarkConfigs) {
+      const lightThemeInput = this.handleThemeInheritance(themeInput, "light")
+      const lightTheme = createTheme("Custom Theme Light", lightThemeInput)
+      customThemes.push(lightTheme)
+      const darkThemeInput = this.handleThemeInheritance(themeInput, "dark")
+      const darkTheme = createTheme("Custom Theme Dark", darkThemeInput)
+      customThemes.push(darkTheme)
+    } else {
+      // No light/dark sections - create single custom theme
+      const customTheme = createTheme("Custom Theme", themeInput)
+      customThemes.push(customTheme)
+    }
+
+    return customThemes
+  }
+
+  // Helper function to apply theme inheritance to the theme input
+  // Custom Light theme = [theme.light] configs override/add to [theme] configs
+  // Custom Dark theme = [theme.dark] configs override/add to [theme] configs
+  handleThemeInheritance(
+    themeInput: CustomThemeConfig,
+    mode: "light" | "dark"
+  ): CustomThemeConfig {
+    let result = cloneDeep(themeInput)
+
+    // Always set the appropriate base theme
+    const base =
+      mode === "light"
+        ? CustomThemeConfig.BaseTheme.LIGHT
+        : CustomThemeConfig.BaseTheme.DARK
+    result.base = base
+
+    // Get the specified mode section (only apply overrides if it exists)
+    const modeSection = mode === "light" ? themeInput.light : themeInput.dark
+    if (modeSection) {
+      // Extract sidebar from the mode section if it exists
+      const { sidebar: modeSidebar, ...modeProps } = modeSection
+
+      // Apply mode properties (theme.light/dark) to the theme properties
+      result = { ...result, ...modeProps, base } as CustomThemeConfig
+
+      // Handle nested sidebar.light or sidebar.dark
+      if (modeSidebar && result.sidebar) {
+        result.sidebar = {
+          ...result.sidebar,
+          ...modeSidebar,
+        }
+      }
+    }
+
+    // Also handle direct sidebar mode sections if they exist
+    if (result.sidebar) {
+      const sidebar = { ...result.sidebar }
+
+      // Apply the specific sidebar mode (light or dark) only if it exists
+      const sidebarModeSection =
+        mode === "light" ? sidebar.light : sidebar.dark
+      if (sidebarModeSection) {
+        Object.assign(sidebar, sidebarModeSection)
+      }
+
+      // Clean up all mode sections from sidebar
+      delete sidebar.light
+      delete sidebar.dark
+      result.sidebar = sidebar
+    }
+
+    // Remove all mode sections from result
+    delete result.light
+    delete result.dark
+
+    return result
+  }
+
   processThemeInput(themeInput: CustomThemeConfig): void {
     const themeHash = this.createThemeHash(themeInput)
     if (themeHash === this.state.themeHash) {
@@ -1323,17 +1408,27 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
-      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-      // For now, users can only add one custom theme.
-      this.props.theme.addThemes([customTheme])
+      const customThemes = this.produceCustomThemes(themeInput)
+
+      // Add the themes to the theme manager
+      this.props.theme.addThemes(customThemes)
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
-        // Update the theme to be customTheme either if the user hasn't set a
+        // Update the theme to be primaryTheme either if the user hasn't set a
         // preference (developer-provided custom themes should be the default
         // for an app) or if a custom theme is currently active (to ensure that
         // we pick up any new changes to it).
-        this.setAndSendTheme(customTheme)
+        if (customThemes.length > 1) {
+          // Decide between Custom Theme Light or Custom Theme Dark
+          // based on the user's system preference
+          const systemPreference = getSystemThemePreference()
+          const themeIndex = systemPreference === "dark" ? 1 : 0
+          this.setAndSendTheme(customThemes[themeIndex])
+        } else {
+          // Set to singular Custom Theme
+          this.setAndSendTheme(customThemes[0])
+        }
       }
     } else {
       // Remove the custom theme menu option.

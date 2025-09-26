@@ -97,9 +97,15 @@ export const getMergedDarkTheme = once(() =>
   mergeTheme(darkTheme, window.__streamlit?.DARK_THEME)
 )
 
-export const getSystemTheme = (): ThemeConfig => {
+export const getSystemThemePreference = (): "light" | "dark" => {
   return window.matchMedia &&
     window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light"
+}
+
+export const getSystemTheme = (): ThemeConfig => {
+  return getSystemThemePreference() === "dark"
     ? getMergedDarkTheme()
     : getMergedLightTheme()
 }
