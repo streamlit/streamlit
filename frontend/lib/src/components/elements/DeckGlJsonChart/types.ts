@@ -49,7 +49,7 @@ export interface DeckGLProps {
   disableFullscreenMode?: boolean
   element: DeckGlJsonChartProto
   fragmentId: string | undefined
-  heightConfig?: streamlit.IHeightConfig | null | undefined
+  heightConfig?: streamlit.IHeightConfig | null
   widgetMgr: WidgetStateManager
 }
 
