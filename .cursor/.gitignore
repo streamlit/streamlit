@@ -1,3 +1,8 @@
+# Ignore all commands
+commands/*
+# Only track certain commands so that we don't track a user's local commands
+# You can add more commands to this list as needed!
+
 # Ignore all rules
 rules/*
 # Only track certain rules so that we don't track a user's local rules
