@@ -30,6 +30,7 @@ Streamlit is an open-source (Apache 2.0) Python library for creating interactive
 ### Shell & Build Policy (AI Agents)
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
+- For Python unit tests: `pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
 
