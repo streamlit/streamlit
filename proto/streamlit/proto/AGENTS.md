@@ -2,30 +2,37 @@
 
 Protobuf messages are used for communication between the Streamlit backend and frontend via WebSocket connections.
 
+**Note**: Messages are "released" once shipped in any Streamlit version.
+
 ## Protobuf Compatibility
 
-Always keep Streamlit's protobuf messages backwards compatible. New versions of the protobuf messages must work with
-old versions of Streamlit. Thereby, we can assume that the backend and frontend version are the same. All changes
-that would not work with an older Streamlit version are incompatible and should be avoided as much as possible.
+Always keep protobuf messages backwards compatible. New versions must work with older Streamlit versions.
 
-Typical incompatible changes are:
+**Incompatible changes to avoid:**
 
-- Removing a field → instead add a `// DEPRECATED` comment and mark it as `[deprecated=true]`
-- Renaming a field → instead deprecate it and introduce a new field with a *new* number
-- Changing the number of a field -> all field numbers must be kept as is.
-- Adding or removing the `optional` keyword -> deprecate field and add a new one.
-- Changing the type of a field in an incompatible way → see the @Protobuf docs for message types for more details.
+- Removing a field → Add `// DEPRECATED` comment and mark `[deprecated=true]`
+- Renaming a field → Deprecate old field, add new field with next available number
+- Changing field numbers → Keep all existing numbers unchanged
+- Adding/removing `optional` → Deprecate and create new field
+- Changing field types incompatibly → Use new field with compatible type
+
+**Compatible changes (safe to make):**
+
+- Adding new optional fields
+- Adding comments
+- Marking fields as deprecated
+- Modifying/removing unreleased fields
 
 ## Compile Protobuf
 
-Some changes require compiling the protobufs into libraries that can be used in python and JS.
+Changes requiring compilation:
 
-Examples of changes that require the compilation step:
-- Adding a field.
+- Adding a field
+- **Unreleased messages only:** Modifying/removing fields
 
-Examples of changes that do not require the compilation step:
-- Adding or modifying comments.
-- Adding the `[deprecated=true]` notation.
+Changes not requiring compilation:
+
+- Comments and `[deprecated=true]` notation
 
 Run this command to recompile the protobufs:
 
