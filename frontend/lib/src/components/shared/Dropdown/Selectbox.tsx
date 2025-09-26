@@ -252,7 +252,9 @@ const Selectbox: FC<Props> = ({
             component: ChevronDown,
             props: {
               style: {
-                cursor: "pointer",
+                ...(selectDisabled && {
+                  cursor: "not-allowed",
+                }),
               },
               overrides: {
                 Svg: {

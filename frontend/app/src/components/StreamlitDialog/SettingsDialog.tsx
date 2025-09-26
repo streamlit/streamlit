@@ -46,6 +46,8 @@ import {
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
+const DEFAULT_THEMES = 3 // Default streamlit themes: auto/light/dark
+
 export interface Props {
   isServerConnected: boolean
   onClose: () => void
@@ -120,6 +122,17 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
     [libContext, metricsMgr]
   )
 
+  const getAvailableThemeChoices = useCallback(() => {
+    // If no custom theme is set, can choose among default streamlit themes
+    if (libContext.availableThemes.length <= DEFAULT_THEMES) {
+      return libContext.availableThemes.map((theme: ThemeConfig) => theme.name)
+    }
+
+    // If a custom theme is set, this should be the only available theme
+    // so that the user cannot revert to streamlit default themes
+    return [libContext.activeTheme.name]
+  }, [libContext.activeTheme.name, libContext.availableThemes])
+
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
       <ModalHeader>Settings</ModalHeader>
@@ -168,10 +181,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
             <StyledFullRow>
               <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
-                options={libContext.availableThemes.map(
-                  (theme: ThemeConfig) => theme.name
-                )}
-                disabled={false}
+                options={getAvailableThemeChoices()}
+                disabled={libContext.availableThemes.length > DEFAULT_THEMES}
                 onChange={handleThemeChange}
                 value={libContext.activeTheme.name}
                 placeholder=""
