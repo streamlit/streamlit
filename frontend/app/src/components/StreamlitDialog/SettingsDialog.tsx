@@ -27,8 +27,6 @@ import React, {
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
-  BaseButton,
-  BaseButtonKind,
   LibContext,
   Modal,
   ModalBody,
@@ -40,7 +38,6 @@ import {
 } from "@streamlit/lib"
 
 import {
-  StyledButtonContainer,
   StyledCheckbox,
   StyledDialogBody,
   StyledFullRow,
@@ -55,23 +52,9 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  developerMode: boolean
-  openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
   sessionInfo: SessionInfo
-}
-
-const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
-  openThemeCreator,
-}) => {
-  return (
-    <StyledButtonContainer data-testid="edit-theme">
-      <BaseButton onClick={openThemeCreator} kind={BaseButtonKind.SECONDARY}>
-        Edit active theme
-      </BaseButton>
-    </StyledButtonContainer>
-  )
 }
 
 /**
@@ -83,8 +66,6 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   onSave,
   settings,
   allowRunOnSave,
-  developerMode,
-  openThemeCreator,
   animateModal,
   metricsMgr,
   sessionInfo,
@@ -185,7 +166,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
           {!!libContext.availableThemes.length && (
             <StyledFullRow>
-              <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
+              <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
                 options={libContext.availableThemes.map(
                   (theme: ThemeConfig) => theme.name
@@ -196,9 +177,6 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 placeholder=""
                 acceptNewOptions={false}
               />
-              {developerMode && (
-                <ThemeCreatorButton openThemeCreator={openThemeCreator} />
-              )}
             </StyledFullRow>
           )}
 

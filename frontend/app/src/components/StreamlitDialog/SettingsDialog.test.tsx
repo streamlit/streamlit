@@ -33,7 +33,6 @@ import {
 import { Props, SettingsDialog } from "./SettingsDialog"
 
 const mockSetTheme = vi.fn()
-const mockAddThemes = vi.fn()
 
 const getContext = (
   extend?: Partial<LibContextProps>
@@ -41,7 +40,6 @@ const getContext = (
   activeTheme: lightTheme,
   setTheme: mockSetTheme,
   availableThemes: [],
-  addThemes: mockAddThemes,
   ...extend,
 })
 
@@ -51,9 +49,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   onSave: vi.fn(),
   settings: { wideMode: false, runOnSave: false },
   allowRunOnSave: false,
-  developerMode: true,
   animateModal: true,
-  openThemeCreator: vi.fn(),
   metricsMgr: new MetricsManager(mockSessionInfo()),
   sessionInfo: mockSessionInfo(),
   ...extend,
@@ -108,9 +104,7 @@ describe("SettingsDialog", () => {
 
     renderWithContexts(<SettingsDialog {...props} />, context)
 
-    expect(
-      screen.getByText("Choose app theme, colors and fonts")
-    ).toBeVisible()
+    expect(screen.getByText("Choose app theme")).toBeVisible()
 
     expect(screen.getByRole("combobox")).toBeVisible()
   })
@@ -139,40 +133,6 @@ describe("SettingsDialog", () => {
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
-  })
-
-  it("should show theme creator button if in developer mode", () => {
-    const availableThemes = [lightTheme, darkTheme]
-    const props = getProps()
-    const context = getContext({ availableThemes })
-
-    renderWithContexts(<SettingsDialog {...props} />, context)
-
-    expect(screen.getByTestId("edit-theme")).toBeVisible()
-    expect(screen.getByText("Edit active theme")).toBeVisible()
-  })
-
-  it("should call openThemeCreator if the button has been clicked", async () => {
-    const user = userEvent.setup()
-    const availableThemes = [...createPresetThemes()]
-    const props = getProps()
-    const context = getContext({ availableThemes })
-
-    renderWithContexts(<SettingsDialog {...props} />, context)
-
-    expect(screen.getByTestId("edit-theme")).toBeVisible()
-    await user.click(screen.getByText("Edit active theme"))
-    expect(props.openThemeCreator).toHaveBeenCalledTimes(1)
-  })
-
-  it("should hide the theme creator button if not in developer mode", () => {
-    const availableThemes = [lightTheme, darkTheme]
-    const props = getProps({ developerMode: false })
-    const context = getContext({ availableThemes })
-
-    renderWithContexts(<SettingsDialog {...props} />, context)
-
-    expect(screen.queryByTestId("edit-theme")).not.toBeInTheDocument()
   })
 
   it("shows version string if SessionInfo is initialized", () => {
