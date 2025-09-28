@@ -49,7 +49,15 @@ export function BaseButtonTooltip({
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>
-      <StyledTooltipMobile>{children}</StyledTooltipMobile>
+      <StyledTooltipMobile>
+        <TooltipIcon
+          content="help"
+          placement={Placement.TOP}
+          containerWidth={containerWidth}
+        >
+          {children}
+        </TooltipIcon>
+      </StyledTooltipMobile>
     </>
   )
 }
