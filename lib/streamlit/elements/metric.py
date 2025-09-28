@@ -69,6 +69,7 @@ class MetricMixin:
         height: Height = "content",
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
+        diff_value: Value = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -174,6 +175,10 @@ class MetricMixin:
             - ``"area"``: A sparkline with area shading.
             - ``"bar"``: A bar chart.
 
+        diff_value: value : int, float, decimal.Decimal, or None
+            Difference value (Minus two number) of the metric, which can be positive, negative,
+            or zero to show up/down/neutral trend arrows. None hides the trend arrow.
+
         Examples
         --------
         **Example 1: Show a metric**
@@ -278,7 +283,7 @@ class MetricMixin:
             metric_proto.help = dedent(help)
 
         color_and_direction = _determine_delta_color_and_direction(
-            cast("DeltaColor", clean_text(delta_color)), delta
+            cast("DeltaColor", clean_text(delta_color)), delta, diff_value
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
@@ -350,8 +355,7 @@ def _parse_delta(delta: Delta) -> str:
 
 
 def _determine_delta_color_and_direction(
-    delta_color: DeltaColor,
-    delta: Delta,
+    delta_color: DeltaColor, delta: Delta, diff_value: Value = None
 ) -> MetricColorAndDirection:
     if delta_color not in {"normal", "inverse", "off"}:
         raise StreamlitAPIException(
@@ -381,6 +385,22 @@ def _determine_delta_color_and_direction(
         else:
             cd_color = MetricProto.MetricColor.GRAY
         cd_direction = MetricProto.MetricDirection.UP
+
+    if diff_value is not None:
+        if diff_value < 0:
+            cd_direction = MetricProto.MetricDirection.DOWN
+        elif diff_value > 0:
+            cd_direction = MetricProto.MetricDirection.UP
+        else:
+            cd_direction = MetricProto.MetricDirection.NONE
+
+    if delta_color != "off" and diff_value is not None:
+        if diff_value < 0:
+            cd_color = MetricProto.MetricColor.RED
+        elif diff_value > 0:
+            cd_color = MetricProto.MetricColor.GREEN
+        else:
+            cd_color = MetricProto.MetricColor.GRAY
 
     return MetricColorAndDirection(
         color=cd_color,
