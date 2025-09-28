@@ -224,3 +224,30 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
     thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
+
+
+def test_stars_width_10_no_wrap(app: Page):
+    """Test that st.feedback('stars', width=10) doesn't wrap to multiple lines."""
+
+    stars_container = get_element_by_key(app, "stars_no_wrap_width")
+    expect(stars_container).to_be_visible()
+
+    button_group = get_button_group(stars_container)
+    expect(button_group).to_be_visible()
+    star_buttons = get_feedback_icon_buttons(button_group, "star")
+
+    # Check that all buttons are on the same horizontal line by comparing their y-coordinates
+    button_positions = []
+    for i in range(5):
+        button = star_buttons.nth(i)
+        expect(button).to_be_visible()
+        bbox = button.bounding_box()
+        assert bbox is not None
+        button_positions.append(bbox["y"])
+
+    # All buttons should be on the same horizontal line (within a few pixels tolerance)
+    first_button_y = button_positions[0]
+    for y in button_positions[1:]:
+        assert abs(y - first_button_y) < 5, (
+            f"Button y-coordinates differ too much: {button_positions}. This indicates line wrapping."
+        )
