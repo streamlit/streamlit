@@ -162,6 +162,9 @@ export const StyledElementContainerLayoutWrapper: FC<
       // and here set the width to auto.
       // This also covers st.pyplot() which is a special case of st.image.
       styles.width = "auto"
+    } else if (node.element.type === "buttonGroup") {
+      styles.minWidth =
+        (node.element[node.element.type]?.options?.length || 0) * 26 + "px"
     }
 
     return styles
