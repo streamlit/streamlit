@@ -121,6 +121,20 @@ class PageConfigTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidSidebarStateError):
             st.set_page_config(initial_sidebar_state="INVALID")
 
+    def test_set_page_config_sidebar_width_positive(self):
+        st.set_page_config(initial_sidebar_state=400)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.AUTO
+        assert c.initial_sidebar_width == 400
+
+    def test_set_page_config_sidebar_width_zero(self):
+        with pytest.raises(StreamlitInvalidSidebarStateError):
+            st.set_page_config(initial_sidebar_state=0)
+
+    def test_set_page_config_sidebar_width_negative(self):
+        with pytest.raises(StreamlitInvalidSidebarStateError):
+            st.set_page_config(initial_sidebar_state=-100)
+
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
         st.set_page_config(menu_items=menu_items)

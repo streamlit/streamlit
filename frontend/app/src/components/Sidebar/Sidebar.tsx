@@ -35,6 +35,7 @@ import {
   shouldShowNavigation,
   SidebarNav,
 } from "@streamlit/app/src/components/Navigation"
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
@@ -94,6 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { hideSidebarNav, appLogo } = useContext(SidebarConfigContext)
 
   const scrollbarGutterSize = useScrollbarGutterSize()
+  const { initialSidebarWidth } = useAppContext()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -101,9 +103,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     ? window.localStorage.getItem("sidebarWidth")
     : undefined
 
-  const [sidebarWidth, setSidebarWidth] = useState<string>(
-    cachedSidebarWidth || DEFAULT_WIDTH
-  )
+  const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
+    // Use initialSidebarWidth if available, otherwise fall back to cached or default
+    if (initialSidebarWidth !== undefined) {
+      return cachedSidebarWidth || initialSidebarWidth.toString()
+    }
+    return cachedSidebarWidth || DEFAULT_WIDTH
+  })
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
     innerWidth ?? Infinity
   )
@@ -129,6 +135,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       window.localStorage.setItem("sidebarWidth", newWidth)
     }
   }, [])
+
+  // Update sidebar width when initialSidebarWidth changes
+  useEffect(() => {
+    if (initialSidebarWidth !== undefined) {
+      initializeSidebarWidth(initialSidebarWidth)
+    }
+  }, [initialSidebarWidth, initializeSidebarWidth])
 
   const onResizeStop = useCallback<ResizeCallback>(
     (
