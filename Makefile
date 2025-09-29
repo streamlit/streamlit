@@ -89,6 +89,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf frontend/connection/dist
+	rm -rf frontend/component-v2-lib/dist
 	rm -rf ~/.cache/pre-commit
 	rm -rf e2e_playwright/test-results
 	rm -rf e2e_playwright/performance-results
@@ -293,6 +294,11 @@ update-snapshots-changed:
 # Update material icons based on latest Google material symbol version.
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
+
+.PHONY: update-emojis
+# Update emojis based on latest emoji version.
+update-emojis:
+	python ./scripts/update_emojis.py
 
 .PHONY: update-notices
 # Update the notices file (licenses of frontend assets and dependencies).

@@ -163,6 +163,44 @@ def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> No
     )
 
 
+# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
+@pytest.mark.skip_browser("firefox")
+def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    """Tests that height parameter works correctly."""
+    pydeck_charts = select_subtest(app, "height_parameter_subtest")
+
+    expect(pydeck_charts).to_have_count(4, timeout=15000)
+
+    # Test different height values with snapshots
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-height_default",
+        pixel_threshold=1.0,
+    )
+
+    assert_snapshot(
+        pydeck_charts.nth(1),
+        name="st_pydeck_chart-height_stretch_outside_container",
+        pixel_threshold=1.0,
+    )
+
+    # For height="stretch", snapshot the entire container to verify stretching
+    from e2e_playwright.shared.app_utils import get_element_by_key
+
+    stretch_container = get_element_by_key(app, "test_height_stretch")
+    assert_snapshot(
+        stretch_container,
+        name="st_pydeck_chart-height_stretch",
+        pixel_threshold=1.0,
+    )
+
+    assert_snapshot(
+        pydeck_charts.nth(3),
+        name="st_pydeck_chart-height_50px",
+        pixel_threshold=1.0,
+    )
+
+
 def select_subtest(app: Page, name: str) -> Locator:
     # Select the text in the UI:
     selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")

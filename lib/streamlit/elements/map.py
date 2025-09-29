@@ -231,6 +231,9 @@ class MapMixin:
            height: 600px
 
         """
+        # TODO(lawilby): Remove this once we have modernized height for map.
+        if height is None:
+            height = 500
         map_proto = DeckGlJsonChartProto()
         deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
         marshall(

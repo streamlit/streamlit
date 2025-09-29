@@ -1645,6 +1645,7 @@ class VegaChartsMixin:
         altair_chart: AltairChart,
         *,
         width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1659,6 +1660,7 @@ class VegaChartsMixin:
         altair_chart: AltairChart,
         *,
         width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1672,6 +1674,7 @@ class VegaChartsMixin:
         altair_chart: AltairChart,
         *,
         width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1705,6 +1708,13 @@ class VegaChartsMixin:
             ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
             in the encoding), horizontal concatenation charts (``"hconcat"``),
             and repeat charts (``"repeat"``).
+
+        height : "stretch", "content", or int
+            How to size the chart's height. Can be one of:
+
+            - ``"content"`` (default): Size the chart to fit its contents.
+            - ``"stretch"``: Expand to the height of the parent container.
+            - An integer: Set the chart height to this many pixels.
 
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
@@ -1838,6 +1848,7 @@ class VegaChartsMixin:
         return self._altair_chart(
             altair_chart=altair_chart,
             width=width,
+            height=height,
             use_container_width=use_container_width,
             theme=theme,
             key=key,

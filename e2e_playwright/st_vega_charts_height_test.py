@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
-VEGA_CHART_COUNT = 7
+VEGA_CHART_COUNT = 10
 
 
 def test_vega_chart_height_behavior(app: Page):
@@ -34,6 +34,9 @@ def test_vega_chart_height_behavior(app: Page):
         368,  # 4: Chart with height in spec (200) and height='stretch' parameter (in 400px container)
         100,  # 5: Chart with height in spec (200) and height=100 parameter
         852,  # 6: Vertical concatenation chart with default height (content)
+        250,  # 7: Altair chart with height=250
+        180,  # 8: Altair chart with height in spec (180) and height='content' parameter
+        468,  # 9: Altair chart with height='stretch' (in 500px container, minus padding)
     ]
 
     descriptions = [
@@ -44,6 +47,9 @@ def test_vega_chart_height_behavior(app: Page):
         "Chart with height in spec (200) and height='stretch' parameter (in 400px container)",
         "Chart with height in spec (200) and height=100 parameter",
         "Vertical concatenation chart with default height (content)",
+        "Altair chart with height=250",
+        "Altair chart with height in spec (180) and height='content' parameter",
+        "Altair chart with height='stretch' (in 500px container)",
     ]
 
     for i, expected_height in enumerate(expected_heights):

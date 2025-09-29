@@ -31,9 +31,9 @@ from typing import Final
 # This will be addressed in a follow-up PR
 # We have 4 checks total: python-lint, python-types, frontend-lint, frontend-types
 # Give each command a reasonable timeout, but fast ones get less
-PYTHON_COMMAND_TIMEOUT: Final = 10  # Python checks are fast
+PYTHON_COMMAND_TIMEOUT: Final = 15  # Python checks are fast
 FRONTEND_COMMAND_TIMEOUT: Final = (
-    70  # Frontend checks are slower (can take 50+ seconds)
+    120  # Frontend checks are slower (can take 50+ seconds)
 )
 SEPARATOR: Final = "=" * 60
 

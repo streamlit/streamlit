@@ -1,0 +1,171 @@
+name: Emojis/Material icons - check & create PR
+
+on:
+  schedule:
+    # Run job at 6:30 am PST every Tuesday
+    - cron: "30 6 * * Tue"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        # Dry run used for workflow testing
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  # Permissions required for workflow to create/push branch and PR
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-new-assets:
+    runs-on: ubuntu-latest
+
+    if: github.repository == 'streamlit/streamlit'
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python deps for notifications
+        run: |
+          uv pip install --system requests
+
+      - name: Install newest version of emoji package
+        run: pip install emoji --upgrade
+
+      - name: Update Material Icons
+        id: update-material-icons
+        run: make update-material-icons
+
+      - name: Update Emojis
+        id: update-emojis
+        run: make update-emojis
+
+      - name: Check for updates
+        id: check-updates
+        run: |
+          # Check if any files were modified (indicating updates were made)
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "updates_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "updates_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.check-updates.outputs.updates_needed == 'true'
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Create & switch to new branch for emojis/material icons update PR
+        id: create-branch
+        if: steps.check-updates.outputs.updates_needed == 'true'
+        run: |
+          BRANCH_NAME="update-assets-$(date +%m-%d)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Add changes to the branch
+        if: steps.check-updates.outputs.updates_needed == 'true'
+        run: |
+          # Add only expected modified files
+          git add lib/ frontend/app/src/assets/fonts/MaterialSymbols/ e2e_playwright/st_alert.py
+          git commit -m "Update emojis/material icons"
+          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+
+      - name: Create PR to merge changes into develop
+        id: create_pr_update_assets
+        if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const base = 'develop';
+
+            const title = `[chore] Update emojis/material icons`;
+            const body = `Automated PR to update emojis/material icons.`;
+
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body,
+              draft: false,
+            });
+
+            const pr = created.data;
+
+            core.setOutput('pr_url', pr.html_url);
+
+            const labels = ['change:chore', 'impact:users'];
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels,
+            });
+
+      - name: Write step summary
+        env:
+          PR_URL: ${{ steps.create_pr_update_assets.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          UPDATES_NEEDED: ${{ steps.check-updates.outputs.updates_needed }}
+        run: |
+          {
+            echo "## Update emojis/material icons Summary";
+            echo "- Updates needed: ${UPDATES_NEEDED}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${UPDATES_NEEDED}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No updates found, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # To avoid spamming Slack, only send notifications if updates were needed & not a dry run
+
+      - name: Slack notification - PR created
+        # Success slack indicates updates were needed and PR was created
+        if: ${{ success() && steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PR_URL: ${{ steps.create_pr_update_assets.outputs.pr_url }}
+        run: |
+          python scripts/slack_notifications.py assets success
+
+      - name: Slack notification - PR creation failed
+        # Failure slack indicates updates were needed but PR was not created successfully
+        if: ${{ failure() && steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python scripts/slack_notifications.py assets failure

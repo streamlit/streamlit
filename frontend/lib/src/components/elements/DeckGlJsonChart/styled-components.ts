@@ -18,15 +18,17 @@ import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme"
 
-export interface StyledDeckGlChartProps {
-  height: number | string
+interface StyledDeckGlChartProps {
+  isStretchHeight?: boolean
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ height }) => ({
+  ({ isStretchHeight }) => ({
     position: "relative",
-    height,
+    height: "100%",
     width: "100%",
+    // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
+    ...(isStretchHeight && { minHeight: "6.25rem" }),
   })
 )
 
