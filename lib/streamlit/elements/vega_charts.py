@@ -1644,6 +1644,8 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1657,6 +1659,8 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1669,6 +1673,8 @@ class VegaChartsMixin:
         self,
         altair_chart: AltairChart,
         *,
+        width: Width | None = None,
+        height: Height = "content",
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1688,6 +1694,28 @@ class VegaChartsMixin:
             https://altair-viz.github.io/gallery/ for examples of graph
             descriptions.
 
+        width : "stretch", "content", or int
+            How to size the chart's width. Can be one of:
+
+            - ``"stretch"``: Expand to the width of the parent container.
+              This is the default for most charts.
+            - ``"content"``: Size the chart to fit its contents, up to the width
+              of the parent container.
+            - An integer: Set the chart width to this many pixels.
+
+            If not specified, Streamlit automatically chooses ``"stretch"``
+            for regular charts and ``"content"`` for facet charts (charts with
+            ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
+            in the encoding), horizontal concatenation charts (``"hconcat"``),
+            and repeat charts (``"repeat"``).
+
+        height : "stretch", "content", or int
+            How to size the chart's height. Can be one of:
+
+            - ``"content"`` (default): Size the chart to fit its contents.
+            - ``"stretch"``: Expand to the height of the parent container.
+            - An integer: Set the chart height to this many pixels.
+
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
             the parent container. This can be one of the following:
@@ -1701,6 +1729,12 @@ class VegaChartsMixin:
             - ``False``: Streamlit sets the width of the chart to fit its
               contents according to the plotting library, up to the width of
               the parent container.
+
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and ``width="content"`` instead of ``use_container_width=False``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1792,8 +1826,29 @@ class VegaChartsMixin:
            height: 450px
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                # This preserves the existing behavior of setting use_container_width
+                # to False combined with an integer width.
+                width = "content"
+
         return self._altair_chart(
             altair_chart=altair_chart,
+            width=width,
+            height=height,
             use_container_width=use_container_width,
             theme=theme,
             key=key,

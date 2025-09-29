@@ -3653,6 +3653,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@streamlit/component-v2-lib@workspace:^, @streamlit/component-v2-lib@workspace:component-v2-lib":
+  version: 0.0.0-use.local
+  resolution: "@streamlit/component-v2-lib@workspace:component-v2-lib"
+  dependencies:
+    eslint: "npm:^9.35.0"
+    prettier: "npm:^3.6.2"
+    typescript: "npm:^5.9.2"
+    typesync: "npm:^0.14.3"
+    vite: "npm:^7.1.6"
+    vite-plugin-dts: "npm:^4.5.4"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^3.2.4"
+  languageName: unknown
+  linkType: soft
+
 "@streamlit/connection@workspace:^, @streamlit/connection@workspace:connection":
   version: 0.0.0-use.local
   resolution: "@streamlit/connection@workspace:connection"
@@ -3704,6 +3719,7 @@ __metadata:
     "@loaders.gl/csv": "npm:^4.3.4"
     "@loaders.gl/gltf": "npm:^4.3.4"
     "@sindresorhus/slugify": "npm:^3.0.0"
+    "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@swc/plugin-emotion": "npm:^11.1.0"

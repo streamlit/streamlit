@@ -16,7 +16,10 @@
 
 import type { DeckProps } from "@deck.gl/core"
 
-import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import type {
+  DeckGlJsonChart as DeckGlJsonChartProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -46,6 +49,7 @@ export interface DeckGLProps {
   disableFullscreenMode?: boolean
   element: DeckGlJsonChartProto
   fragmentId: string | undefined
+  heightConfig?: streamlit.IHeightConfig | null
   widgetMgr: WidgetStateManager
 }
 

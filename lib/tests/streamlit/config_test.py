@@ -19,14 +19,16 @@ from __future__ import annotations
 import copy
 import os
 import sys
+import tempfile
 import textwrap
 import unittest
+from contextlib import contextmanager
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
 
-from streamlit import config, env_util
+from streamlit import config, config_util, env_util
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException
@@ -1436,3 +1438,824 @@ class ConfigLoadingTest(unittest.TestCase):
             "An update to the [server] config option section was detected."
             " To have these changes be reflected, please restart streamlit."
         )
+
+
+class ThemeInheritanceIntegrationTest(unittest.TestCase):
+    """Integration tests for theme inheritance functionality."""
+
+    def setUp(self):
+        self.patches = [
+            patch.object(
+                config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
+            ),
+            patch.object(config, "_config_options", new=None),
+        ]
+
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def _create_theme_file(self, content: str, filename: str = "theme.toml") -> str:
+        """
+        Helper to create a temporary theme file.
+        WARNING: Should only be called from _theme_file() since this method creates files
+        with delete=False, so cleanup is manual. Use _theme_file() context manager for
+        automatic cleanup.
+        """
+
+        # Use the same pattern as other tests in the repo
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=f"_{filename}", delete=False
+        ) as f:
+            f.write(content)
+            return f.name
+
+    @contextmanager
+    def _theme_file(self, content: str, filename: str = "theme.toml"):
+        """Context manager for temporary theme files with automatic cleanup."""
+        theme_file = self._create_theme_file(content, filename)
+        try:
+            yield theme_file
+        finally:
+            os.unlink(theme_file)
+
+    @contextmanager
+    def _config_patches(self, config_toml: str, theme_files: list[str] | None = None):
+        """Context manager for common config patches."""
+        if theme_files is None:
+            theme_files = []
+
+        with patch("streamlit.config.open", mock_open(read_data=config_toml)):
+            with patch("streamlit.config.os.path.exists") as mock_exists:
+
+                def mock_path_exists(path):
+                    # Allow theme files and the mocked config file to exist
+                    allowed_paths = [
+                        *theme_files,
+                        os.path.join(os.getcwd(), ".streamlit/config.toml"),
+                    ]
+                    return path in allowed_paths
+
+                mock_exists.side_effect = mock_path_exists
+                yield
+
+    def test_theme_inheritance_base_file_local(self):
+        """Test theme inheritance - theme.base is a local file."""
+        base_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+        backgroundColor = "#0a0a0a"
+        textColor = "#ffffff"
+        """
+
+        with self._theme_file(base_content) as theme_file:
+            # Create config with theme.base pointing to our file
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options()
+
+                # Verify that theme options were loaded from theme file
+                assert config.get_option("theme.base") == "dark"
+                assert config.get_option("theme.primaryColor") == "#00ff41"
+                assert config.get_option("theme.backgroundColor") == "#0a0a0a"
+                assert config.get_option("theme.textColor") == "#ffffff"
+
+    @patch("streamlit.config_util.url_util.is_url")
+    @patch("streamlit.config_util.urllib.request.urlopen")
+    def test_theme_inheritance_base_file_url(self, mock_urlopen, mock_is_url):
+        """Test theme inheritance - theme.base is a URL."""
+        mock_is_url.return_value = True
+
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+        backgroundColor = "#0a0a0a"
+        """
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = theme_content.encode("utf-8")
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+
+        config_toml = """
+        [theme]
+        base = "https://example.com/theme.toml"
+        primaryColor = "#override"
+        """
+
+        with self._config_patches(config_toml):
+            config.get_config_options()
+
+            # Verify inheritance from URL
+            assert config.get_option("theme.base") == "dark"
+            assert config.get_option("theme.primaryColor") == "#override"
+            assert config.get_option("theme.backgroundColor") == "#0a0a0a"
+
+    def test_theme_inheritance_base_not_file(self):
+        """Test that valid base values ('light', 'dark') do not trigger file loading."""
+
+        # Test each builtin base value separately to avoid interference
+        for base_value in ["light", "dark"]:
+            with self.subTest(base=base_value):
+                config_toml = f"""
+                [theme]
+                base = "{base_value}"
+                primaryColor = "#ff0000"
+                """
+
+                # Mock _load_theme_file to fail if called - it shouldn't be!
+                with patch("streamlit.config_util._load_theme_file") as mock_load_theme:
+                    mock_load_theme.side_effect = AssertionError(
+                        f"_load_theme_file should not be called for builtin base '{base_value}'"
+                    )
+
+                    with self._config_patches(config_toml):
+                        # Force a fresh config parse to avoid state leakage between subtests
+                        config.get_config_options(force_reparse=True)
+
+                        # Verify the config worked normally (primaryColor proves config was processed)
+                        assert config.get_option("theme.primaryColor") == "#ff0000"
+
+                        # Most importantly: verify file loading was never attempted
+                        mock_load_theme.assert_not_called()
+
+    def test_theme_inheritance_config_overrides_base(self):
+        """Test that config.toml values override theme.base file values."""
+        base_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+        backgroundColor = "#0a0a0a"
+        textColor = "#ffffff"
+        """
+
+        with self._theme_file(base_content) as theme_file:
+            # Config that overrides some theme file values
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff0000"
+            # backgroundColor should come from theme file
+            # textColor should come from theme file
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options()
+
+                # Verify inheritance: config overrides win
+                assert config.get_option("theme.base") == "dark"  # From base file
+                assert config.get_option("theme.primaryColor") == "#ff0000"  # Override
+                assert (
+                    config.get_option("theme.backgroundColor") == "#0a0a0a"
+                )  # From base file
+                assert (
+                    config.get_option("theme.textColor") == "#ffffff"
+                )  # From base file
+
+    def test_theme_inheritance_sidebar_sections(self):
+        """Test theme inheritance with sidebar sections."""
+        base_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+        backgroundColor = "#0a0a0a"
+
+        [theme.sidebar]
+        primaryColor = "#00ff81"
+        backgroundColor = "#1a1a1a"
+        textColor = "#dddddd"
+        """
+
+        with self._theme_file(base_content) as theme_file:
+            # Config with sidebar overrides
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff0000"
+
+            [theme.sidebar]
+            primaryColor = "#ff6b6b"
+            # backgroundColor should come from theme file
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options()
+
+                # Main theme options
+                assert config.get_option("theme.primaryColor") == "#ff0000"  # Override
+                assert (
+                    config.get_option("theme.backgroundColor") == "#0a0a0a"
+                )  # From base
+
+                # Sidebar options
+                assert (
+                    config.get_option("theme.sidebar.primaryColor") == "#ff6b6b"
+                )  # Override
+                assert (
+                    config.get_option("theme.sidebar.backgroundColor") == "#1a1a1a"
+                )  # From base
+                assert (
+                    config.get_option("theme.sidebar.textColor") == "#dddddd"
+                )  # From base
+
+    def test_theme_inheritance_comprehensive_merge(self):
+        """Test comprehensive theme inheritance with all option types."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+        backgroundColor = "#0a0a0a"
+        textColor = "#ffffff"
+        font = "Inter"
+        codeFont = "JetBrains Mono"
+        borderColor = "#333333"
+        linkColor = "#00ff41"
+
+        [theme.sidebar]
+        primaryColor = "#00ff81"
+        backgroundColor = "#1a1a1a"
+        textColor = "#dddddd"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            # Comprehensive config overrides
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff0000"
+            font = "Roboto"
+            # Other values should come from theme file
+
+            [theme.sidebar]
+            primaryColor = "#ff6b6b"
+            # Other sidebar values should come from theme file
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options()
+
+                # Main theme - overrides
+                assert config.get_option("theme.base") == "dark"  # From theme file
+                assert config.get_option("theme.primaryColor") == "#ff0000"  # Override
+                assert config.get_option("theme.font") == "Roboto"  # Override
+
+                # Main theme - from theme file
+                assert config.get_option("theme.backgroundColor") == "#0a0a0a"
+                assert config.get_option("theme.textColor") == "#ffffff"
+                assert config.get_option("theme.codeFont") == "JetBrains Mono"
+                assert config.get_option("theme.borderColor") == "#333333"
+                assert config.get_option("theme.linkColor") == "#00ff41"
+
+                # Sidebar - override
+                assert config.get_option("theme.sidebar.primaryColor") == "#ff6b6b"
+
+                # Sidebar - from theme file
+                assert config.get_option("theme.sidebar.backgroundColor") == "#1a1a1a"
+                assert config.get_option("theme.sidebar.textColor") == "#dddddd"
+
+    def test_theme_inheritance_with_base_via_cli_flag(self):
+        """Test theme inheritance when theme.base is passed via CLI flag (Click processing)."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff00"
+        backgroundColor = "#000000"
+        textColor = "#ffffff"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            # Simulate CLI flag processing by Click - this is what options_from_flags represents
+            options_from_flags = {"theme.base": theme_file}
+
+            with patch("streamlit.config.os.path.exists") as mock_exists:
+                mock_exists.side_effect = lambda path: path == theme_file
+
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # Verify theme inheritance worked with CLI flag
+                assert (
+                    config.get_option("theme.base") == "dark"
+                )  # From theme file content
+                assert (
+                    config.get_option("theme.primaryColor") == "#00ff00"
+                )  # From theme file content
+
+                # The original theme.base option should show CLI flag as source
+                # But after inheritance, theme.base gets the value from the theme file
+                # Let's verify a non-base option shows the CLI flag was the trigger
+                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+
+    def test_theme_inheritance_with_base_via_env_var(self):
+        """Test theme inheritance when theme.base is set via direct environment variable."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff00"
+        backgroundColor = "#000000"
+        textColor = "#ffffff"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            # Test direct environment variable (not processed by Click)
+            with patch.dict(os.environ, {"STREAMLIT_THEME_BASE": theme_file}):
+                # Patch both config and config_util os.path.exists for comprehensive mocking
+                with patch("streamlit.config.open", mock_open(read_data="")):
+                    with patch("streamlit.config.os.path.exists") as config_mock_exists:
+                        with patch(
+                            "streamlit.config_util.os.path.exists"
+                        ) as util_mock_exists:
+
+                            def mock_path_exists(path):
+                                # Allow theme file and empty config file to exist
+                                return path == theme_file or path.endswith(
+                                    ".streamlit/config.toml"
+                                )
+
+                            config_mock_exists.side_effect = mock_path_exists
+                            util_mock_exists.side_effect = mock_path_exists
+
+                            config.get_config_options(force_reparse=True)
+
+                            # Manually trigger env var processing for testing
+                            # (In real usage this would be automatic for sensitive options)
+                            config._set_option(
+                                "theme.base", theme_file, config._DEFINED_BY_ENV_VAR
+                            )
+
+                            # Re-run theme inheritance after env var is set
+                            # Theme file exists and both modules can access it
+                            config_util.process_theme_inheritance(
+                                config._config_options,
+                                config._config_options_template,
+                                config._set_option,
+                            )
+
+                            # Verify theme inheritance worked with direct env var
+                            assert (
+                                config.get_option("theme.base") == "dark"
+                            )  # From theme file content
+                            assert (
+                                config.get_option("theme.primaryColor") == "#00ff00"
+                            )  # From theme file content
+
+                            # Verify it shows as coming from theme file (since inheritance processed it)
+                            assert "theme file:" in config.get_where_defined(
+                                "theme.primaryColor"
+                            )
+
+    def test_cli_flag_overrides_env_var_precedence(self):
+        """Test that CLI flags have higher precedence than environment variables."""
+        # This test demonstrates precedence by showing that when config.get_config_options()
+        # processes both env vars and CLI flags, CLI flags take precedence
+
+        env_theme_content = """[theme]\nbase = "dark"\nprimaryColor = "#000000" """
+        cli_theme_content = """[theme]\nbase = "light"\nprimaryColor = "#ffffff" """
+
+        with self._theme_file(env_theme_content, "env_theme.toml") as env_theme_file:
+            with self._theme_file(
+                cli_theme_content, "cli_theme.toml"
+            ) as cli_theme_file:
+                config_toml = ""  # Empty config file
+
+                with self._config_patches(config_toml):
+                    with patch("streamlit.config.os.path.exists") as mock_exists:
+                        mock_exists.side_effect = lambda path: path in [
+                            env_theme_file,
+                            cli_theme_file,
+                        ]
+
+                        # First simulate env var processing
+                        config.get_config_options(force_reparse=True)
+                        config._set_option(
+                            "theme.base", env_theme_file, config._DEFINED_BY_ENV_VAR
+                        )
+
+                        # Then simulate CLI flag processing (higher precedence)
+                        # This simulates what happens in get_config_options when options_from_flags is provided
+                        config._set_option(
+                            "theme.base", cli_theme_file, config._DEFINED_BY_FLAG
+                        )
+
+                        # Run theme inheritance with the final CLI flag value
+                        config_util.process_theme_inheritance(
+                            config._config_options,
+                            config._config_options_template,
+                            config._set_option,
+                        )
+
+                        # CLI flag should win - theme content comes from cli_theme_file
+                        assert (
+                            config.get_option("theme.base") == "light"
+                        )  # From CLI theme file
+                        assert (
+                            config.get_option("theme.primaryColor") == "#ffffff"
+                        )  # From CLI theme file
+                        assert "theme file:" in config.get_where_defined(
+                            "theme.primaryColor"
+                        )
+
+    def test_theme_inheritance_with_base_via_command_flag(self):
+        """Test theme inheritance when theme.base is passed via command line flag."""
+        base_content = """
+        [theme]
+        base = "light"
+        primaryColor = "#ff0000"
+        backgroundColor = "#ffffff"
+        font = "serif"
+        """
+
+        with self._theme_file(base_content) as theme_file:
+            # Simulate command line flag - theme.base gets processed, then inheritance loads the theme
+            options_from_flags = {
+                "theme.base": theme_file,
+            }
+
+            with patch("streamlit.config.os.path.exists") as mock_exists:
+                mock_exists.side_effect = lambda path: path == theme_file
+
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # Base theme file values are loaded
+                assert config.get_option("theme.base") == "light"
+                assert config.get_option("theme.primaryColor") == "#ff0000"
+                assert config.get_option("theme.backgroundColor") == "#ffffff"
+                assert config.get_option("theme.font") == "serif"
+                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+
+    def test_theme_inheritance_complex_precedence(self):
+        """Test complex precedence scenario for theme.base and config.toml overrides."""
+        # Create a base theme file
+        base_theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#ff0000"
+        backgroundColor = "#000000"
+        textColor = "#ffffff"
+        font = "serif"
+        borderColor = "#333333"
+
+        [theme.sidebar]
+        primaryColor = "#ff4444"
+        backgroundColor = "#111111"
+        """
+
+        with self._theme_file(base_theme_content, "base_theme.toml") as base_theme_file:
+            # Config file references the base theme but overrides some values
+            config_toml = f"""
+            [theme]
+            base = "{base_theme_file}"
+            primaryColor = "#00ff00"
+            # backgroundColor should come from base theme
+            textColor = "#cccccc"
+
+            [theme.sidebar]
+            backgroundColor = "#222222"
+            # primaryColor should come from base theme
+            """
+
+            with self._config_patches(config_toml, theme_files=[base_theme_file]):
+                config.get_config_options(force_reparse=True)
+
+                # Verify complex precedence: base theme file < config overrides
+                assert config.get_option("theme.base") == "dark"  # From base theme
+                assert (
+                    config.get_option("theme.primaryColor") == "#00ff00"
+                )  # Config overrides base
+                assert (
+                    config.get_option("theme.backgroundColor") == "#000000"
+                )  # From base theme (no override)
+                assert (
+                    config.get_option("theme.textColor") == "#cccccc"
+                )  # Config overrides base
+                assert (
+                    config.get_option("theme.font") == "serif"
+                )  # From base theme (no config override)
+                assert (
+                    config.get_option("theme.borderColor") == "#333333"
+                )  # From base theme (no override)
+
+                # Sidebar precedence
+                assert (
+                    config.get_option("theme.sidebar.primaryColor") == "#ff4444"
+                )  # From base theme (no config override)
+                assert (
+                    config.get_option("theme.sidebar.backgroundColor") == "#222222"
+                )  # Config override
+
+                # Verify where_defined is correct
+                assert "theme file:" in config.get_where_defined(
+                    "theme.backgroundColor"
+                )
+                assert "theme file:" in config.get_where_defined("theme.textColor")
+
+    def test_theme_inheritance_preserves_env_var_and_flag_precedence(self):
+        """Test that theme inheritance preserves environment variables and command line flags."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff00"
+        backgroundColor = "#000000"
+        font = "serif"
+        borderColor = "#333333"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            # Config file references theme file and sets some overrides
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff0000"
+            textColor = "#ffffff"
+            """
+
+            # Simulate environment variable and command line flag (higher precedence)
+            options_from_flags = {
+                # Env var would be processed as flag by Click framework
+                "theme.font": "Arial",  # Should override theme file's "serif"
+                "theme.borderColor": "#999999",  # Should override theme file's "#333333"
+                "theme.linkColor": "#0066cc",  # New value not in theme file or config
+            }
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # Verify correct precedence hierarchy:
+                # 1. Theme file base values
+                assert config.get_option("theme.base") == "dark"  # From theme file
+                assert (
+                    config.get_option("theme.backgroundColor") == "#000000"
+                )  # From theme file (no override)
+
+                # 2. Config file overrides
+                assert (
+                    config.get_option("theme.primaryColor") == "#ff0000"
+                )  # Config overrides theme
+                assert (
+                    config.get_option("theme.textColor") == "#ffffff"
+                )  # From config (not in theme)
+
+                # 3. Environment variables and command line flags (higher precedence)
+                assert (
+                    config.get_option("theme.font") == "Arial"
+                )  # Flag/env overrides theme file
+                assert (
+                    config.get_option("theme.borderColor") == "#999999"
+                )  # Flag/env overrides theme file
+                assert (
+                    config.get_option("theme.linkColor") == "#0066cc"
+                )  # New value from flag/env
+
+                # Verify where_defined is correct for high-precedence options
+                assert "command-line" in config.get_where_defined("theme.font").lower()
+                assert (
+                    "command-line"
+                    in config.get_where_defined("theme.borderColor").lower()
+                )
+                assert (
+                    "command-line"
+                    in config.get_where_defined("theme.linkColor").lower()
+                )
+
+    def test_theme_inheritance_default_to_light(self):
+        """Test config.toml referencing a theme file with no base specified defaults to "light"."""
+        # Create base theme file WITHOUT base property
+        theme_without_base = """
+        [theme]
+        primaryColor = "#ff0000"
+        backgroundColor = "#000000"
+        textColor = "#ffffff"
+        font = "Inter"
+        """
+
+        with self._theme_file(theme_without_base, "external_theme.toml") as theme_file:
+            # config.toml references the theme file via base (not "light"/"dark")
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff6b6b"  # Config override
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options(force_reparse=True)
+
+                # THE CRITICAL TEST: theme.base must be valid for app_session
+                final_base = config.get_option("theme.base")
+                assert final_base in ("light", "dark"), (
+                    f"theme.base should be 'light' or 'dark', got '{final_base}'"
+                )
+                assert final_base == "light"  # Should default to light
+
+                # Verify where_defined shows the default behavior
+                where_defined = config.get_where_defined("theme.base")
+                assert "theme file:" in where_defined
+                assert "(default)" in where_defined
+                assert theme_file in where_defined
+
+                # Verify theme inheritance worked correctly for other options
+                assert (
+                    config.get_option("theme.primaryColor") == "#ff6b6b"
+                )  # Config override
+                assert (
+                    config.get_option("theme.backgroundColor") == "#000000"
+                )  # From theme file
+                assert (
+                    config.get_option("theme.textColor") == "#ffffff"
+                )  # From theme file
+                assert config.get_option("theme.font") == "Inter"  # From theme file
+
+                # This is what app_session.py expects - valid base values only
+                base_map = {"light": "LIGHT", "dark": "DARK"}
+                assert final_base in base_map, (
+                    "app_session would log warning without this fix"
+                )
+
+    def test_theme_inheritance_cli_env_var_default_to_light(self):
+        """Test that CLI/env var theme.base pointing to file with no base specified defaults to "light"."""
+        # Create theme file WITHOUT base property
+        theme_without_base = """
+        [theme]
+        primaryColor = "#00ff00"
+        backgroundColor = "#111111"
+        textColor = "#cccccc"
+        # CRITICAL: No base property in external theme file
+        """
+
+        with self._theme_file(theme_without_base, "cli_theme.toml") as theme_file:
+            # Simulate CLI flag or environment variable setting theme.base to file path
+            options_from_flags = {
+                "theme.base": theme_file,  # This would be set by CLI or env var
+                "theme.textColor": "#ffffff",  # CLI override to test precedence
+            }
+
+            # No config.toml file - only CLI/env var input
+            with patch("streamlit.config.get_config_files") as mock_get_files:
+                mock_get_files.return_value = []  # No config files
+
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # THE CRITICAL TEST: theme.base must be valid for app_session
+                final_base = config.get_option("theme.base")
+                assert final_base in ("light", "dark"), (
+                    f"theme.base should be 'light' or 'dark', got '{final_base}'"
+                )
+                assert final_base == "light"  # Should default to light
+
+                # Verify CLI override precedence is preserved
+                assert config.get_option("theme.textColor") == "#ffffff"  # CLI override
+                where_defined_color = config.get_where_defined("theme.textColor")
+                assert "command-line" in where_defined_color.lower()
+
+                # Verify other options come from theme file
+                assert (
+                    config.get_option("theme.primaryColor") == "#00ff00"
+                )  # From theme file
+                assert (
+                    config.get_option("theme.backgroundColor") == "#111111"
+                )  # From theme file
+
+                # Verify where_defined for base shows it's from theme file with default
+                where_defined_base = config.get_where_defined("theme.base")
+                assert "theme file:" in where_defined_base
+                assert "(default)" in where_defined_base
+
+                # Simulate what app_session.py would check (this was the warning source)
+                base_map = {"light": "LIGHT", "dark": "DARK"}
+                assert final_base in base_map, "This prevents app_session warning!"
+
+    # Testing expected error scenarios:
+
+    def test_theme_base_missing_file_error(self):
+        """Test error handling when referenced file in theme.base is missing."""
+        config_toml = """
+        [theme]
+        base = "nonexistent_theme.toml"
+        """
+
+        with self._config_patches(config_toml):  # No theme files exist
+            with pytest.raises(FileNotFoundError) as cm:
+                config.get_config_options()
+
+            assert "Theme file not found" in str(cm.value)
+
+    def test_theme_base_nested_base_error(self):
+        """Test error when referenced file in theme.base, has theme.base pointing to another theme file."""
+        base_content = """
+        [theme]
+        base = "another_theme.toml"
+        primaryColor = "#00ff41"
+        """
+
+        with self._theme_file(base_content) as theme_file:
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                with pytest.raises(StreamlitAPIException) as cm:
+                    config.get_config_options()
+
+                assert "cannot reference another theme file" in str(cm.value)
+
+    def test_theme_base_invalid_subsection(self):
+        """Test error when theme file contains invalid subsections."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff41"
+
+        [theme.invalidSubsection]
+        primaryColor = "#ff0000"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                with pytest.raises(StreamlitAPIException) as cm:
+                    config.get_config_options()
+
+                assert "invalid theme subsection" in str(cm.value)
+                assert "invalidSubsection" in str(cm.value)
+
+    def test_theme_base_no_theme_section_error(self):
+        """Test error when theme file is missing [theme] section."""
+        theme_content = """
+        [server]
+        port = 8501
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            """
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                with pytest.raises(StreamlitAPIException) as cm:
+                    config.get_config_options()
+
+                assert "must contain a [theme] section" in str(cm.value)
+
+    def test_theme_base_malformed_error(self):
+        """Test malformed theme file triggers error."""
+        # Test: Theme file with invalid TOML syntax
+        malformed_theme_content = """
+        [theme
+        primaryColor = "#ff0000"
+        """
+
+        with self._theme_file(
+            malformed_theme_content, "malformed.toml"
+        ) as malformed_theme_file:
+            config_toml = f"""
+            [theme]
+            base = "{malformed_theme_file}"
+            """
+
+            with self._config_patches(config_toml, theme_files=[malformed_theme_file]):
+                with pytest.raises(StreamlitAPIException) as cm:
+                    config.get_config_options()
+
+                assert "Error loading theme file" in str(cm.value)
+
+    @patch("streamlit.config_util.url_util.is_url")
+    @patch("streamlit.config_util.urllib.request.urlopen")
+    def test_theme_base_url_network_error(self, mock_urlopen, mock_is_url):
+        """Test error handling for URL network errors."""
+        mock_is_url.return_value = True
+
+        import urllib.error
+
+        mock_urlopen.side_effect = urllib.error.URLError("Network error")
+
+        config_toml = """
+        [theme]
+        base = "https://example.com/theme.toml"
+        """
+
+        with self._config_patches(config_toml):
+            with pytest.raises(StreamlitAPIException) as cm:
+                config.get_config_options()
+
+            assert "Could not load theme file from URL" in str(cm.value)
