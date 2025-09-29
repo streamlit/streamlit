@@ -3759,7 +3759,7 @@ __metadata:
     date-fns: "npm:^4.1.0"
     decamelize: "npm:^6.0.1"
     deck.gl: "npm:^9.1.14"
-    dompurify: "npm:^3.2.6"
+    dompurify: "npm:^3.2.7"
     eslint: "npm:^9.35.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     hoist-non-react-statics: "npm:^3.3.2"
@@ -3781,7 +3781,7 @@ __metadata:
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^3.6.2"
     protobufjs: "npm:^7.5.4"
-    query-string: "npm:^9.3.0"
+    query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
     react-debounce-render: "npm:^8.0.2"
@@ -16578,14 +16578,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.3.0":
-  version: 9.3.0
-  resolution: "query-string@npm:9.3.0"
+"query-string@npm:^9.3.1":
+  version: 9.3.1
+  resolution: "query-string@npm:9.3.1"
   dependencies:
     decode-uri-component: "npm:^0.4.1"
     filter-obj: "npm:^5.1.0"
     split-on-first: "npm:^3.0.0"
-  checksum: 10c0/8ec69fb710ca12949de53dd2f1660609d452e99786fe7f8473f6177de72dc75d4db9d411c527c3c6a312bd456fda60530e8de0d4fa2ad274a780254c9bd7b619
+  checksum: 10c0/47f62350be7ace6d2e03d12becf5d1985731d97577963a4d8b684e166f6708cb42f63f09aa4c92931f2ee1ff57c0800a25807b95f28fd98f7064b1d06b02b07e
   languageName: node
   linkType: hard
 
@@ -18913,8 +18913,8 @@ __metadata:
   linkType: hard
 
 "tar-fs@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "tar-fs@npm:3.1.0"
+  version: 3.1.1
+  resolution: "tar-fs@npm:3.1.1"
   dependencies:
     bare-fs: "npm:^4.0.1"
     bare-path: "npm:^3.0.0"
@@ -18925,7 +18925,7 @@ __metadata:
       optional: true
     bare-path:
       optional: true
-  checksum: 10c0/760309677543c03fbc253b5ef1ab4bb2ceafb554471b6cbe4930d1633f35662ec26a1414c66fa6754f5aa7e8c65003f73849242f624c322d3dcba7a8888a6915
+  checksum: 10c0/0c677d711c4aa41f94e1a712aa647022ba1910ff84430739e5d9e95a615e3ea1b7112dc93164fc8ce30dc715befcf9cfdc64da27d4e7958d73c59bda06aa0d8e
   languageName: node
   linkType: hard
 
