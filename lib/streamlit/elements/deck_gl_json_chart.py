@@ -492,7 +492,7 @@ class PydeckMixin:
             )
             if use_container_width:
                 width = "stretch"
-            # Otherwise keep the provided width which should be an integer (validated below).
+            # Otherwise keep the provided width.
 
         validate_width(width, allow_content=False)
         validate_height(height, allow_content=False)

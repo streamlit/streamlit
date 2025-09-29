@@ -71,7 +71,6 @@ st.map(
     longitude="xlon",
     color="color",
     size="size",
-    use_container_width=False,
 )
 
 
@@ -79,4 +78,4 @@ st.map(
 ### Simple map with defined width and height
 """
 
-st.map(simple_map_df, width=200, height=250, use_container_width=False)
+st.map(simple_map_df, width=200, height=250)
