@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 from typing import Final
 
 # Constants
@@ -49,6 +50,17 @@ FRONTEND_ERROR_KEYWORDS: Final = [
     ".jsx:",
 ]
 NODE_MODULES_KEYWORDS: Final = ["node_modules", "findpackagelocation"]
+
+
+def find_repo_root() -> Path:
+    """Find the repository root by looking for .git directory."""
+    current = Path.cwd()
+    while current != current.parent:
+        if (current / ".git").exists():
+            return current
+        current = current.parent
+    # If we can't find .git, use current directory
+    return Path.cwd()
 
 
 def run_command(
@@ -109,7 +121,7 @@ def format_check_result(
     return f"{check_name} failed (run '{make_command}' for details)"
 
 
-def check_python_quality() -> list[str]:
+def check_python_quality(repo_root: Path) -> list[str]:
     """Run Python linting and type checking.
 
     TODO: Optimize to only check modified files to reduce execution time.
@@ -119,7 +131,7 @@ def check_python_quality() -> list[str]:
 
     # Python linting (includes formatting check via ruff format --check)
     exit_code, stdout, stderr = run_command(
-        ["make", "python-lint"], timeout=PYTHON_COMMAND_TIMEOUT
+        ["make", "python-lint"], timeout=PYTHON_COMMAND_TIMEOUT, cwd=str(repo_root)
     )
     if issue := format_check_result(
         exit_code,
@@ -133,7 +145,7 @@ def check_python_quality() -> list[str]:
 
     # Python type checking
     exit_code, stdout, stderr = run_command(
-        ["make", "python-types"], timeout=PYTHON_COMMAND_TIMEOUT
+        ["make", "python-types"], timeout=PYTHON_COMMAND_TIMEOUT, cwd=str(repo_root)
     )
     if issue := format_check_result(
         exit_code,
@@ -148,7 +160,7 @@ def check_python_quality() -> list[str]:
     return issues
 
 
-def check_frontend_quality() -> list[str]:
+def check_frontend_quality(repo_root: Path) -> list[str]:
     """Run frontend linting and type checking.
 
     TODO: Optimize to only check modified files to reduce execution time.
@@ -164,7 +176,7 @@ def check_frontend_quality() -> list[str]:
 
     for make_target, check_name in commands:
         exit_code, stdout, stderr = run_command(
-            ["make", make_target], timeout=FRONTEND_COMMAND_TIMEOUT
+            ["make", make_target], timeout=FRONTEND_COMMAND_TIMEOUT, cwd=str(repo_root)
         )
 
         if exit_code != 0:
@@ -226,10 +238,13 @@ def main():
         # Already in a stop hook, allow normal stoppage
         sys.exit(0)
 
+    # Find repository root to ensure make commands run in correct directory
+    repo_root = find_repo_root()
+
     # Run all quality checks
     all_issues = []
-    all_issues.extend(check_python_quality())
-    all_issues.extend(check_frontend_quality())
+    all_issues.extend(check_python_quality(repo_root))
+    all_issues.extend(check_frontend_quality(repo_root))
 
     # Print results and exit with appropriate code
     print_results(all_issues)
