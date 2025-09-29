@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,25 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Update the list of emojis in `lib/streamlit/emojis.py.
 
-This script requires the emoji package to be installed: pip install emoji.
-"""
+from theme_tester_app import run_theme_tester_app  # type: ignore
 
-from __future__ import annotations
-
-import sys
-
-from emoji.unicode_codes import EMOJI_DATA
-
-from streamlit.emojis import ALL_EMOJIS
-
-emoji_unicodes = set(EMOJI_DATA.keys())
-
-
-if len(ALL_EMOJIS) == len(emoji_unicodes):
-    print("No new emojis to add.")
-    sys.exit(0)
-else:
-    print("New emojis found. Please update emojis.py")
-    sys.exit(1)
+run_theme_tester_app()

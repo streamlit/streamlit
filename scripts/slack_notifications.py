@@ -106,16 +106,16 @@ def send_notification() -> None:
             }
 
     if workflow == "assets":
-        if message_key == "new_icons":
+        if message_key == "success":
+            pr_url = os.getenv("PR_URL", "")
             payload = {
-                "text": ":symbols: New Material Symbols available. Please run `make update-material-icons` "
-                "to update the material icons."
+                "text": ":symbols: New Material Symbols and/or Emojis available. Please review the PR - "
+                f"<{pr_url}|Link here>"
             }
-
-        if message_key == "new_emojis":
+        else:
             payload = {
-                "text": ":symbols: New emojis available. Please run `./scripts/update_emojis.py` "
-                "to update the emojis."
+                "text": ":fire: Assets update failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
             }
 
     # OSS Release automation notifications

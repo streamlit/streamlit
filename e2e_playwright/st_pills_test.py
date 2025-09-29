@@ -114,6 +114,22 @@ def test_pills_are_disabled_and_take_screenshot(
     assert_snapshot(pills, name="st_pills-disabled")
 
 
+def test_pills_are_disabled_and_selected_and_take_screenshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    pills = get_button_group(app, 10)
+    for pill in pills.locator("button").all():
+        expect(pill).to_have_js_property("disabled", True)
+    selected_pill = get_pill_button(pills, "Air")
+    selected_pill.click(force=True)
+    wait_for_app_run(app)
+    expect(selected_pill).not_to_have_css(
+        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+    )
+    expect_markdown(app, "pills-disabled-selected: Water")
+    assert_snapshot(pills, name="st_pills-disabled-selected")
+
+
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
     expect_markdown(app, "Multi selection: []")

@@ -435,3 +435,52 @@ class PyDeckChartWidthTest(DeltaGeneratorTestCase):
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value
+
+
+class PyDeckChartHeightTest(DeltaGeneratorTestCase):
+    """Test pydeck_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            ("stretch", "use_stretch", True),
+            (400, "pixel_height", 400),
+        ]
+    )
+    def test_height_parameter(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ) -> None:
+        """Test pydeck_chart with new height parameter."""
+        st.pydeck_chart(None, height=height)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            "invalid_height",
+            "content",  # content not supported for pydeck
+            0,  # height must be positive
+            -100,  # negative height
+        ]
+    )
+    def test_height_validation_errors(self, invalid_height: str | int) -> None:
+        """Test that invalid height values raise validation errors."""
+        with pytest.raises(StreamlitAPIException):
+            st.pydeck_chart(None, height=invalid_height)
+
+    def test_default_height(self) -> None:
+        """Test that default height is 500."""
+        st.pydeck_chart(None)  # No height specified
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 500

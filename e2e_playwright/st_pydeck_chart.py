@@ -311,6 +311,110 @@ def width_parameter_subtest():
     )
 
 
+def height_parameter_subtest():
+    st.write("""
+    ## Test height parameter
+
+    Test the new height parameter with different values.
+    """)
+
+    st.write("**Chart with no specified height (default to 500px):**")
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="light",
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.4,
+                zoom=11,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(50),
+                    get_position="[lon, lat]",
+                    get_fill_color="[30, 200, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        ),
+    )
+
+    st.write("**Chart with height='stretch' (default to minimum height of 6.25rem):**")
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="light",
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.4,
+                zoom=11,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(50),
+                    get_position="[lon, lat]",
+                    get_fill_color="[30, 200, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        ),
+        height="stretch",
+    )
+
+    st.write("**Chart with height='stretch' (in 600px container):**")
+    with st.container(border=True, key="test_height_stretch", height=600):
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="dark",
+                initial_view_state=pdk.ViewState(
+                    latitude=37.7749295,
+                    longitude=-122.4194155,
+                    zoom=12,
+                    bearing=0,
+                    pitch=30,
+                ),
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=random_scatter_sf.head(50),
+                        get_position="[lon, lat]",
+                        get_fill_color="[200, 30, 0, 160]",
+                        get_radius=200,
+                    ),
+                ],
+            ),
+            height="stretch",
+        )
+
+    st.write("**Chart with height=50:**")
+    # Test a small height value to verify that the minimum height constraint for stretch height
+    # does not affect user-defined pixel heights.
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="road",
+            initial_view_state=pdk.ViewState(
+                latitude=37.7749295,
+                longitude=-122.4194155,
+                zoom=12,
+                bearing=0,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(50),
+                    get_position="[lon, lat]",
+                    get_fill_color="[255, 165, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        ),
+        height=50,
+    )
+
+
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}
 
 subtest = SUBTESTS[st.selectbox("Test to run", SUBTESTS.keys())]

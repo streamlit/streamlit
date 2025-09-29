@@ -39,8 +39,9 @@ message DeckGlJsonChart {
   // Use widthConfig in layout configuration instead.
   uint32 width = 7 [deprecated=true];
 
-  // Height in pixels
-  uint32 height = 8;
+  // DEPRECATED: Height in pixels
+  // Use heightConfig in layout configuration instead.
+  uint32 height = 8 [deprecated=true];
 
   // If non-empty, treat this instance as a Widget
   repeated SelectionMode selection_mode = 9;

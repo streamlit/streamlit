@@ -28,5 +28,5 @@ chart = (
     .encode(x="x", y="y")
 )
 
-st.altair_chart(chart, use_container_width=True)
-st.altair_chart(chart, use_container_width=False)
+st.altair_chart(chart)
+st.altair_chart(chart, width="content")
