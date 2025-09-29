@@ -2,7 +2,8 @@
 commands/*
 # Only track certain commands so that we don't track a user's local commands
 # You can add more commands to this list as needed!
-commands/py-docstring-fix.md
+!commands/py-docstring-fix.md
+!commands/py-parameterize-test.md
 
 # Ignore all rules
 rules/*
