@@ -72,6 +72,9 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   sessionInfo,
 }) {
   const libContext = useContext(LibContext)
+  const { activeTheme, availableThemes } = libContext
+  const isCustomTheme = activeTheme.name === CUSTOM_THEME_NAME
+
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
@@ -104,12 +107,12 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
     (themeName: string | null): void => {
       let newTheme = undefined
       if (themeName) {
-        newTheme = libContext.availableThemes.find(
+        newTheme = availableThemes.find(
           (theme: ThemeConfig) => theme.name === themeName
         )
       }
       if (newTheme === undefined) {
-        newTheme = libContext.availableThemes[0]
+        newTheme = availableThemes[0]
       }
 
       metricsMgr.enqueue("menuClick", {
@@ -118,19 +121,19 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
       libContext.setTheme(newTheme)
     },
-    [libContext, metricsMgr]
+    [libContext, metricsMgr, availableThemes]
   )
 
   const getAvailableThemeChoices = useCallback(() => {
     // If a custom theme is set, this should be the only available theme
     // so that the user cannot revert to streamlit default themes
-    if (libContext.activeTheme.name === CUSTOM_THEME_NAME) {
-      return [libContext.activeTheme.name]
+    if (isCustomTheme) {
+      return [activeTheme.name]
     }
 
     // If no custom theme is set, can choose among default streamlit themes (auto/light/dark)
-    return libContext.availableThemes.map((theme: ThemeConfig) => theme.name)
-  }, [libContext.activeTheme.name, libContext.availableThemes])
+    return availableThemes.map(theme => theme.name)
+  }, [isCustomTheme, activeTheme.name, availableThemes])
 
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
@@ -176,14 +179,14 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
             />
           </StyledFullRow>
 
-          {!!libContext.availableThemes.length && (
+          {!!availableThemes.length && (
             <StyledFullRow>
               <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
                 options={getAvailableThemeChoices()}
-                disabled={libContext.activeTheme.name === CUSTOM_THEME_NAME}
+                disabled={isCustomTheme}
                 onChange={handleThemeChange}
-                value={libContext.activeTheme.name}
+                value={activeTheme.name}
                 placeholder=""
                 acceptNewOptions={false}
               />
