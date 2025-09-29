@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   createPresetThemes,
+  CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
   LibContextProps,
@@ -122,7 +123,7 @@ describe("SettingsDialog", () => {
     expect(selectbox).toBeVisible()
     expect(selectbox).toBeDisabled()
 
-    expect(screen.getByText("Custom Theme")).toBeVisible()
+    expect(screen.getByText(CUSTOM_THEME_NAME)).toBeVisible()
   })
 
   it("should show custom theme does not exists", async () => {
@@ -138,7 +139,7 @@ describe("SettingsDialog", () => {
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
-    expect(screen.queryByText("Custom Theme")).not.toBeInTheDocument()
+    expect(screen.queryByText(CUSTOM_THEME_NAME)).not.toBeInTheDocument()
   })
 
   it("shows the currently active theme as selected", async () => {
