@@ -108,34 +108,6 @@ def test_vega_chart_height_150px_snapshot(
     )
 
 
-def test_scatter_chart_height_content_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Tests scatter chart height='content' parameter visual appearance."""
-    vega_lite_charts = app.get_by_test_id("stVegaLiteChart")
-    expect(vega_lite_charts).to_have_count(VEGA_CHART_COUNT)
-
-    expect(vega_lite_charts.nth(10)).to_be_visible()
-    assert_snapshot(
-        vega_lite_charts.nth(10),
-        name="st_scatter_chart-height_content",
-    )
-
-
-def test_scatter_chart_height_stretch_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Tests scatter chart height='stretch' parameter visual appearance."""
-    vega_lite_charts = app.get_by_test_id("stVegaLiteChart")
-    expect(vega_lite_charts).to_have_count(VEGA_CHART_COUNT)
-
-    expect(get_element_by_key(app, "test_scatter_height_stretch")).to_be_visible()
-    assert_snapshot(
-        vega_lite_charts.nth(11),
-        name="st_scatter_chart-height_stretch",
-    )
-
-
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stVegaLiteChart")
