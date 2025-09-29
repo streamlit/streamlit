@@ -70,7 +70,7 @@ export interface SidebarProps {
   widgetsDisabled: boolean
 }
 
-const DEFAULT_WIDTH = "256"
+const DEFAULT_WIDTH = "300"
 
 function calculateMaxBreakpoint(value: string): number {
   // We subtract a margin of 0.02 to use as a max-width

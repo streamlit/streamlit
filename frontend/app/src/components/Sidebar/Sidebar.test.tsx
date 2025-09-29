@@ -470,7 +470,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 256px")
+      expect(sidebar).toHaveStyle("width: 300px")
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
