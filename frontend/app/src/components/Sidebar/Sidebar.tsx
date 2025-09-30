@@ -201,10 +201,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   ])
 
   function resetSidebarWidth(): void {
-    // Double clicking on the resize handle resets sidebar to default width
-    setSidebarWidth(DEFAULT_WIDTH)
+    // Double clicking on the resize handle resets sidebar to initial width or default
+    const resetWidth =
+      initialSidebarWidth !== undefined
+        ? initialSidebarWidth.toString()
+        : DEFAULT_WIDTH
+    setSidebarWidth(resetWidth)
     if (localStorageAvailable()) {
-      window.localStorage.setItem("sidebarWidth", DEFAULT_WIDTH)
+      window.localStorage.setItem("sidebarWidth", resetWidth)
     }
   }
 
