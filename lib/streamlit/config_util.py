@@ -302,11 +302,18 @@ def _extract_current_theme_config(
             _, option = parts
             if option != "base":  # Don't include the base option itself
                 current_theme_options[option] = opt_value
-        elif len(parts) == 3:  # theme.sidebar.option
+        elif len(parts) == 3:  # theme.sidebar.option or theme.light.option
             _, section, option = parts
             if section not in current_theme_options:
                 current_theme_options[section] = {}
             current_theme_options[section][option] = opt_value
+        elif len(parts) == 4:  # theme.sidebar.light.option
+            _, section, subsection, option = parts
+            if section not in current_theme_options:
+                current_theme_options[section] = {}
+            if subsection not in current_theme_options[section]:
+                current_theme_options[section][subsection] = {}
+            current_theme_options[section][subsection][option] = opt_value
 
     return current_theme_options
 
@@ -382,7 +389,7 @@ def _validate_theme_file_content(
         A filtered copy of the theme content with invalid options removed.
     """
     valid_main_options = _get_valid_theme_options(config_options_template, "main")
-    valid_subsections = {"sidebar"}
+    valid_subsections = {"sidebar", "light", "dark"}
 
     theme_section = theme_content.get("theme", {})
 
@@ -541,6 +548,26 @@ def _load_theme_file(
         ) from e
 
 
+def _deep_merge_theme_dicts(
+    base_dict: dict[str, Any], override_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Recursively merge two dictionaries, with override_dict values taking precedence.
+    Handles arbitrary levels of nesting for theme configurations.
+    """
+    merged = copy.deepcopy(base_dict)
+
+    for key, value in override_dict.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            # Both base and override have dict values for this key, merge recursively
+            merged[key] = _deep_merge_theme_dicts(merged[key], value)
+        else:
+            # Override value takes precedence (either new key or non-dict value)
+            merged[key] = copy.deepcopy(value)
+
+    return merged
+
+
 def _apply_theme_inheritance(
     base_theme: dict[str, Any], override_theme: dict[str, Any]
 ) -> dict[str, Any]:
@@ -550,32 +577,7 @@ def _apply_theme_inheritance(
 
     Returns a dictionary with the merged theme configuration.
     """
-    # Start with a deep copy of the base theme
-    merged_theme = copy.deepcopy(base_theme)
-
-    # Apply overrides from the config.toml
-    for section_name, section_data in override_theme.items():
-        if section_name not in merged_theme:
-            merged_theme[section_name] = {}
-
-        if isinstance(section_data, dict):
-            # Handle nested sections like theme.sidebar
-            for key, value in section_data.items():
-                if (
-                    isinstance(value, dict)
-                    and key in merged_theme[section_name]
-                    and isinstance(merged_theme[section_name][key], dict)
-                ):
-                    # Merge nested dictionaries (e.g., theme.sidebar)
-                    merged_theme[section_name][key].update(value)
-                else:
-                    # Direct assignment for non-dict values or new keys
-                    merged_theme[section_name][key] = value
-        else:
-            # Handle direct theme options
-            merged_theme[section_name] = section_data
-
-    return merged_theme
+    return _deep_merge_theme_dicts(base_theme, override_theme)
 
 
 # Theme configuration - handles theme.base
@@ -671,26 +673,29 @@ def process_theme_inheritance(
                 "theme.base", "light", f"theme file: {base_value} (default)"
             )
 
-        # Set the merged theme options
-        theme_section = merged_theme.get("theme", {})
+        # Set the merged theme options using recursive helper
+        def _set_theme_options_recursive(
+            options_dict: dict[str, Any], prefix: str
+        ) -> None:
+            """Recursively set theme options from nested dictionary structure."""
+            for option_name, option_value in options_dict.items():
+                if option_name == "base" and prefix == "theme":
+                    # Base is already handled above
+                    continue
 
-        for option_name, option_value in theme_section.items():
-            if option_name == "base":
-                # Already handled above
-                continue
+                current_key = f"{prefix}.{option_name}" if prefix else option_name
 
-            if isinstance(option_value, dict):
-                # Handle nested sections like sidebar
-                for sub_option, sub_value in option_value.items():
+                if isinstance(option_value, dict):
+                    # Recursively handle nested sections
+                    _set_theme_options_recursive(option_value, current_key)
+                else:
+                    # Set the actual config option
                     set_option_func(
-                        f"theme.{option_name}.{sub_option}",
-                        sub_value,
-                        f"theme file: {base_value}",
+                        current_key, option_value, f"theme file: {base_value}"
                     )
-            else:
-                set_option_func(
-                    f"theme.{option_name}", option_value, f"theme file: {base_value}"
-                )
+
+        theme_section = merged_theme.get("theme", {})
+        _set_theme_options_recursive(theme_section, "theme")
 
         # Finally, restore theme options set by env vars and command line flags (highest precedence)
         for opt_name, opt_data in high_precedence_theme_options.items():
