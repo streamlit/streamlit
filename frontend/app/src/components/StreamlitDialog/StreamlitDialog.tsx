@@ -33,9 +33,6 @@ import { IException } from "@streamlit/protobuf"
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import { StyledDeployErrorContent } from "./styled-components"
-import ThemeCreatorDialog, {
-  Props as ThemeCreatorDialogProps,
-} from "./ThemeCreatorDialog"
 
 export type PlainEventHandler = () => void
 
@@ -44,16 +41,11 @@ interface SettingsProps extends SettingsDialogProps {
   sessionInfo: SessionInfo
 }
 
-interface ThemeCreatorProps extends ThemeCreatorDialogProps {
-  type: DialogType.THEME_CREATOR
-}
-
 export type DialogProps =
   | AboutProps
   | ClearCacheProps
   | SettingsProps
   | ScriptCompileErrorProps
-  | ThemeCreatorProps
   | WarningProps
   | DeployErrorProps
   | DeployDialogProps
@@ -69,8 +61,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <SettingsDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
       return <ScriptCompileErrorDialog {...dialogProps} />
-    case DialogType.THEME_CREATOR:
-      return <ThemeCreatorDialog {...dialogProps} />
     case DialogType.WARNING:
     case DialogType.CONNECTION_ERROR:
       return <WarningDialog {...dialogProps} />

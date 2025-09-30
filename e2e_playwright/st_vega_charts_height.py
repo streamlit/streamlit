@@ -118,3 +118,21 @@ with st.container(border=True, key="test_altair_height_stretch", height=500):
         )
     )
     st.altair_chart(stretch_chart, height="stretch")
+
+# Test scatter chart height parameters
+st.subheader("Scatter Chart Height Tests")
+
+scatter_df = pd.DataFrame(
+    {
+        "x": [1, 2, 3, 4, 5],
+        "y": [2, 5, 3, 8, 7],
+        "size": [20, 40, 30, 60, 50],
+    }
+)
+
+st.write("Scatter chart with height='content':")
+st.scatter_chart(scatter_df, x="x", y="y", size="size", height="content")
+
+st.write("Scatter chart with height='stretch':")
+with st.container(border=True, key="test_scatter_height_stretch", height=400):
+    st.scatter_chart(scatter_df, x="x", y="y", size="size", height="stretch")
