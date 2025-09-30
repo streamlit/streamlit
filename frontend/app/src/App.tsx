@@ -976,7 +976,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (
-      initialSidebarWidth !== undefined &&
+      notNullOrUndefined(initialSidebarWidth) &&
       initialSidebarWidth !== this.state.initialSidebarWidth
     ) {
       this.setState(() => ({

@@ -49,7 +49,7 @@ import {
   useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
-import { localStorageAvailable } from "@streamlit/utils"
+import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import {
   RESIZE_HANDLE_WIDTH,
@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
     // Use initialSidebarWidth if available, otherwise fall back to cached or default
-    if (initialSidebarWidth !== undefined) {
+    if (notNullOrUndefined(initialSidebarWidth)) {
       return cachedSidebarWidth || initialSidebarWidth.toString()
     }
     return cachedSidebarWidth || DEFAULT_WIDTH
@@ -195,10 +195,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   function resetSidebarWidth(): void {
     // Double clicking on the resize handle resets sidebar to initial width or default
-    const resetWidth =
-      initialSidebarWidth !== undefined
-        ? initialSidebarWidth.toString()
-        : DEFAULT_WIDTH
+    const resetWidth = notNullOrUndefined(initialSidebarWidth)
+      ? initialSidebarWidth.toString()
+      : DEFAULT_WIDTH
     setSidebarWidth(resetWidth)
     if (localStorageAvailable()) {
       window.localStorage.setItem("sidebarWidth", resetWidth)
