@@ -22,6 +22,7 @@ from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner.thread import replace_thread_classes
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
@@ -282,6 +283,7 @@ def run(
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
     _install_config_watchers(flag_options)
+    replace_thread_classes()
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)
