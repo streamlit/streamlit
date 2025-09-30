@@ -136,13 +136,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [])
 
-  // Update sidebar width when initialSidebarWidth changes
-  useEffect(() => {
-    if (initialSidebarWidth !== undefined) {
-      initializeSidebarWidth(initialSidebarWidth)
-    }
-  }, [initialSidebarWidth, initializeSidebarWidth])
-
   const onResizeStop = useCallback<ResizeCallback>(
     (
       _e: MouseEvent | TouchEvent,
