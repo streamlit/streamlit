@@ -22,6 +22,7 @@ import { StyledElement } from "./styled-components"
 
 export interface IDeployListElementProps {
   children?: React.ReactNode
+  // eslint-disable-next-line @eslint-react/no-unused-props
   extraSpacing?: boolean
 }
 
