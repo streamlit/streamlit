@@ -23,7 +23,7 @@ _OrigTimer = threading.Timer  # pyright: ignore
 
 
 def replace_thread_classes() -> None:
-    """Replace Python's threading.Thread an threading.Timer with our versions.
+    """Replace Python's threading.Thread and threading.Timer with our versions.
 
     The originals are stored in _OrigThread and _OrigTimer.
     """
