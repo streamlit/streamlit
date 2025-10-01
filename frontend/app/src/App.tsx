@@ -18,7 +18,6 @@ import React, { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
-import cloneDeep from "lodash/cloneDeep"
 import without from "lodash/without"
 import { getLogger } from "loglevel"
 import moment from "moment"
@@ -64,7 +63,6 @@ import {
   ComponentRegistry,
   createFormsData,
   createPresetThemes,
-  createTheme,
   DeployedAppMetadata,
   ensureError,
   extractPageNameFromPathName,
@@ -98,6 +96,7 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
+  produceCustomThemes,
   ScriptRunState,
   SessionInfo,
   StreamlitMarkdown,
@@ -1315,90 +1314,6 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  // Helper to take the theme input, apply inheritance and return custom theme(s)
-  produceCustomThemes(themeInput: CustomThemeConfig): ThemeConfig[] {
-    const hasLightConfigs =
-      themeInput.light && Object.keys(themeInput.light).length > 0
-    const hasDarkConfigs =
-      themeInput.dark && Object.keys(themeInput.dark).length > 0
-
-    const customThemes: ThemeConfig[] = []
-
-    // When there are light or dark configs, we need to create a custom theme for each
-    if (hasLightConfigs || hasDarkConfigs) {
-      const lightThemeInput = this.handleThemeInheritance(themeInput, "light")
-      const lightTheme = createTheme("Custom Theme Light", lightThemeInput)
-      customThemes.push(lightTheme)
-      const darkThemeInput = this.handleThemeInheritance(themeInput, "dark")
-      const darkTheme = createTheme("Custom Theme Dark", darkThemeInput)
-      customThemes.push(darkTheme)
-    } else {
-      // No light/dark sections - create single custom theme
-      const customTheme = createTheme("Custom Theme", themeInput)
-      customThemes.push(customTheme)
-    }
-
-    return customThemes
-  }
-
-  // Helper function to apply theme inheritance to the theme input
-  // Custom Light theme = [theme.light] configs override/add to [theme] configs
-  // Custom Dark theme = [theme.dark] configs override/add to [theme] configs
-  handleThemeInheritance(
-    themeInput: CustomThemeConfig,
-    mode: "light" | "dark"
-  ): CustomThemeConfig {
-    let result = cloneDeep(themeInput)
-
-    // Always set the appropriate base theme
-    const base =
-      mode === "light"
-        ? CustomThemeConfig.BaseTheme.LIGHT
-        : CustomThemeConfig.BaseTheme.DARK
-    result.base = base
-
-    // Get the specified mode section (only apply overrides if it exists)
-    const modeSection = mode === "light" ? themeInput.light : themeInput.dark
-    if (modeSection) {
-      // Extract sidebar from the mode section if it exists
-      const { sidebar: modeSidebar, ...modeProps } = modeSection
-
-      // Apply mode properties (theme.light/dark) to the theme properties
-      result = { ...result, ...modeProps, base } as CustomThemeConfig
-
-      // Handle nested sidebar.light or sidebar.dark
-      if (modeSidebar && result.sidebar) {
-        result.sidebar = {
-          ...result.sidebar,
-          ...modeSidebar,
-        }
-      }
-    }
-
-    // Also handle direct sidebar mode sections if they exist
-    if (result.sidebar) {
-      const sidebar = { ...result.sidebar }
-
-      // Apply the specific sidebar mode (light or dark) only if it exists
-      const sidebarModeSection =
-        mode === "light" ? sidebar.light : sidebar.dark
-      if (sidebarModeSection) {
-        Object.assign(sidebar, sidebarModeSection)
-      }
-
-      // Clean up all mode sections from sidebar
-      delete sidebar.light
-      delete sidebar.dark
-      result.sidebar = sidebar
-    }
-
-    // Remove all mode sections from result
-    delete result.light
-    delete result.dark
-
-    return result
-  }
-
   processThemeInput(themeInput: CustomThemeConfig): void {
     const themeHash = this.createThemeHash(themeInput)
     if (themeHash === this.state.themeHash) {
@@ -1408,7 +1323,7 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
-      const customThemes = this.produceCustomThemes(themeInput)
+      const customThemes = produceCustomThemes(themeInput)
 
       // Add the themes to the theme manager
       this.props.theme.addThemes(customThemes)

@@ -56,6 +56,8 @@ import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
+export const CUSTOM_THEME_LIGHT_NAME = "Custom Theme Light"
+export const CUSTOM_THEME_DARK_NAME = "Custom Theme Dark"
 
 declare global {
   interface Window {
@@ -1217,4 +1219,109 @@ export const convertRemToPx = (scssValue: string): number => {
     // We fallback to 16px if the fontSize is not defined (should only happen in tests)
     (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
   )
+}
+
+/**
+ * Helper function merge theme section configs (light/dark and sidebar.light/dark)
+ * into a consolidated theme input with proper inheritance.
+ * Custom Light theme = uses streamlit base theme + [theme] configs + [theme.light] config overrides
+ * Custom Dark theme = uses streamlit base theme + [theme] configs + [theme.dark] config overrides
+ * @param themeInput: the theme input (configs) to merge
+ * @param themeType: the theme type to create (light or dark)
+ */
+const handleSectionInheritance = (
+  themeInput: CustomThemeConfig,
+  themeType: typeof CUSTOM_THEME_LIGHT_NAME | typeof CUSTOM_THEME_DARK_NAME
+): CustomThemeConfig => {
+  let result = cloneDeep(themeInput)
+  const isLightTheme = themeType === CUSTOM_THEME_LIGHT_NAME
+
+  // Always set the appropriate base theme
+  const base = isLightTheme
+    ? CustomThemeConfig.BaseTheme.LIGHT
+    : CustomThemeConfig.BaseTheme.DARK
+  result.base = base
+
+  // Get the specified theme section (only apply overrides if it exists)
+  const themeSection = isLightTheme ? themeInput.light : themeInput.dark
+  if (themeSection) {
+    // Extract sidebar from the theme section if it exists
+    const { sidebar: themeSidebarSection, ...themeProps } = themeSection
+
+    // Apply section properties (theme.light/dark) to the theme properties
+    result = { ...result, ...themeProps, base } as CustomThemeConfig
+
+    // Handle nested sidebar.light or sidebar.dark
+    if (themeSidebarSection && result.sidebar) {
+      result.sidebar = {
+        ...result.sidebar,
+        ...themeSidebarSection,
+      }
+    }
+  }
+
+  // Also handle direct sidebar mode sections if they exist
+  if (result.sidebar) {
+    const sidebar = { ...result.sidebar }
+
+    // Apply the specific sidebar mode (light or dark) only if it exists
+    const sidebarModeSection = isLightTheme ? sidebar.light : sidebar.dark
+    if (sidebarModeSection) {
+      Object.assign(sidebar, sidebarModeSection)
+    }
+
+    // Clean up all mode sections from sidebar
+    delete sidebar.light
+    delete sidebar.dark
+    result.sidebar = sidebar
+  }
+
+  // Remove all mode sections from result
+  delete result.light
+  delete result.dark
+
+  return result
+}
+
+/**
+ * Create custom themes from the theme input
+ * Function applies merge of sections/subsections and returns custom light/dark theme(s)
+ * @param themeInput: the theme input (configs) with nested sections/subsections
+ * @returns custom theme(s)
+ */
+export const produceCustomThemes = (
+  themeInput: CustomThemeConfig
+): ThemeConfig[] => {
+  const hasLightConfigs =
+    themeInput.light && Object.keys(themeInput.light).length > 0
+  const hasDarkConfigs =
+    themeInput.dark && Object.keys(themeInput.dark).length > 0
+
+  const customThemes: ThemeConfig[] = []
+
+  // When light or dark theme section configs are set, need to create a custom theme for each
+  if (hasLightConfigs || hasDarkConfigs) {
+    const lightThemeInput = handleSectionInheritance(
+      themeInput,
+      CUSTOM_THEME_LIGHT_NAME
+    )
+    const lightTheme = createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput)
+    customThemes.push(lightTheme)
+    const darkThemeInput = handleSectionInheritance(
+      themeInput,
+      CUSTOM_THEME_DARK_NAME
+    )
+    const darkTheme = createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput)
+    customThemes.push(darkTheme)
+  } else {
+    // No light/dark section configs set - base determines which custom theme (light or dark) is created
+    const isLightBase = themeInput.base === CustomThemeConfig.BaseTheme.LIGHT
+    const themeName = isLightBase
+      ? CUSTOM_THEME_LIGHT_NAME
+      : CUSTOM_THEME_DARK_NAME
+    const customTheme = createTheme(themeName, themeInput)
+    customThemes.push(customTheme)
+  }
+
+  return customThemes
 }
