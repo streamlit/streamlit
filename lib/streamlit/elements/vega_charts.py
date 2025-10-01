@@ -107,7 +107,7 @@ AltairChart: TypeAlias = Union[
     "alt.VConcatChart",
 ]
 
-altair_globals_lock = threading.Lock()
+_altair_globals_lock = threading.Lock()
 
 
 class VegaLiteState(TypedDict, total=False):
@@ -391,7 +391,7 @@ def _convert_altair_to_vega_lite_spec(
     # Settings like alt.theme.enable and alt.data_fransformers.enable are global to all
     # threads. So this lock makes sure that whatever we set those to only apply to the
     # current thread.
-    with altair_globals_lock:
+    with _altair_globals_lock:
         # The default altair theme has some width/height defaults defined
         # which are not useful for Streamlit. Therefore, we change the theme to
         # "none" to avoid those defaults.
