@@ -21,5 +21,3 @@ export type {
   RecordingState,
 } from "./core/types"
 export { useWaveformController } from "./core/useWaveformController"
-export { default as WaveformSurface } from "./ui/WaveformSurface"
-export type { WaveformSurfaceProps } from "./ui/WaveformSurface"
