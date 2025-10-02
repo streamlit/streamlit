@@ -550,7 +550,7 @@ def test_audio_input_timer_display(app: Page):
     audio_input = get_audio_input_by_label(app, "Audio Input 1")
     timer = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
 
-    # Record for 3 seconds (add buffer for recording startup)
+    # Record for 3 seconds (add 200ms buffer for recording startup)
     audio_input.get_by_role("button", name="Record", exact=True).click()
     app.wait_for_timeout(3200)
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
@@ -559,19 +559,24 @@ def test_audio_input_timer_display(app: Page):
     # Verify timer shows 00:03 (duration of recording)
     expect(timer).to_have_text("00:03")
 
-    # Click play for 100ms and verify it shows 00:00 (playback starts at beginning)
-    audio_input.get_by_role("button", name="Play").click()
+    # Click play and wait for playback to start
+    audio_input.get_by_role("button", name="Play", exact=True).click()
+    # Wait for pause button to appear, confirming playback started
+    expect(audio_input.get_by_role("button", name="Pause", exact=True)).to_be_visible()
+
+    # Verify timer shows 00:00 at start of playback
     expect(timer).to_have_text("00:00")
-    app.wait_for_timeout(100)
-    audio_input.get_by_role("button", name="Pause").click()
 
-    # Click play again for 1 second and verify it shows 00:01
-    audio_input.get_by_role("button", name="Play").click()
-    app.wait_for_timeout(1000)
+    # Wait 1 second + 200ms buffer and verify timer shows 00:01
+    app.wait_for_timeout(1200)
     expect(timer).to_have_text("00:01")
-    audio_input.get_by_role("button", name="Pause").click()
 
-    # Re-record for 4 seconds (add buffer for recording startup)
+    # Pause playback
+    audio_input.get_by_role("button", name="Pause", exact=True).click()
+    # Wait for play button to reappear
+    expect(audio_input.get_by_role("button", name="Play", exact=True)).to_be_visible()
+
+    # Re-record for 4 seconds (add 200ms buffer for recording startup)
     audio_input.get_by_role("button", name="Record", exact=True).click()
     app.wait_for_timeout(4200)
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
