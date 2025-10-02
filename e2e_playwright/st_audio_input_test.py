@@ -572,7 +572,6 @@ def test_audio_input_timer_display(app: Page):
             return current >= target_seconds if current >= 0 else False
 
         wait_until(app, _reached_target, timeout=timeout)
-
     # Record for 3 seconds (add 200ms buffer for recording startup)
     audio_input.get_by_role("button", name="Record", exact=True).click()
     wait_for_timer_seconds(3)
