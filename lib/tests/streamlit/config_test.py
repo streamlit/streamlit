@@ -512,15 +512,27 @@ class ConfigTest(unittest.TestCase):
         assert config.get_option("theme.sidebar.dark.primaryColor") == "#00FF00"
         assert config.get_option("theme.sidebar.light.primaryColor") == "#FF0000"
 
-    def test_parsing_toml_with_invalid_theme_nesting(self):
+    @parameterized.expand(
+        [
+            # Invalid nested sections
+            "theme.light.sidebar",
+            "theme.dark.sidebar",
+            "theme.light.dark",
+            "theme.dark.light",
+            # Invalid deep nesting
+            "theme.sidebar.light.dark",
+            "theme.sidebar.dark.light",
+        ]
+    )
+    def test_parsing_toml_with_invalid_theme_nesting(self, section_path):
         """Test that invalid theme nesting patterns are rejected."""
-        toml_content = """
-        [theme.light.sidebar]
+        toml_content = f"""
+        [{section_path}]
         primaryColor = "#FF0000"
         """
         with pytest.raises(
             StreamlitInvalidThemeConfigError,
-            match=r"Invalid theme configuration: `theme.light.sidebar` is not a valid theme nesting pattern",
+            match=rf"Invalid theme configuration: `{section_path}` is not a valid theme nesting pattern",
         ):
             config._update_config_with_toml(toml_content, "test")
 
