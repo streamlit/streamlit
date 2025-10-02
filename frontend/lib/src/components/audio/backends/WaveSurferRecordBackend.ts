@@ -18,7 +18,7 @@ import type WaveSurfer from "wavesurfer.js"
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record"
 
 export interface RecordBackendOptions {
-  sampleRate?: number
+  sampleRate?: number | null
 }
 
 export interface RecordBackendEvents {

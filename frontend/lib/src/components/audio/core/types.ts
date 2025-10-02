@@ -31,9 +31,9 @@ export interface WaveformController {
 
   start(): Promise<void>
 
-  stop(): Promise<void>
+  stop(): Promise<Blob>
 
-  approve(): Promise<void>
+  approve(blob?: Blob): Promise<void>
 
   cancel(): void
 

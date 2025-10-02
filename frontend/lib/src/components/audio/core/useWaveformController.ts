@@ -40,15 +40,17 @@ const BAR_GAP = 1
 const BAR_RADIUS = 2
 const CURSOR_WIDTH = 0
 const WAVEFORM_PADDING = 8
-const SAMPLE_RATE = 16000
+const DEFAULT_SAMPLE_RATE = 16000
 
 interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLElement>
+  sampleRate?: number | null
   events?: WaveformControllerEvents
 }
 
 export function useWaveformController({
   containerRef,
+  sampleRate,
   events,
 }: UseWaveformControllerParams): WaveformController {
   const theme = useEmotionTheme()
@@ -61,6 +63,10 @@ export function useWaveformController({
   const playerRef = useRef<WaveSurferPlayer | null>(null)
   const eventsRef = useRef<WaveformControllerEvents>(events || {})
   const isInitializedRef = useRef(false)
+
+  // Use the provided sample rate, or null (browser default), or fallback to DEFAULT_SAMPLE_RATE
+  const effectiveSampleRate =
+    sampleRate === undefined ? DEFAULT_SAMPLE_RATE : sampleRate
 
   useEffect(() => {
     eventsRef.current = events || {}
@@ -96,7 +102,7 @@ export function useWaveformController({
       wavesurferRef.current = ws
 
       const recordBackend = new WaveSurferRecordBackend({
-        sampleRate: SAMPLE_RATE,
+        sampleRate: effectiveSampleRate,
       })
       recordBackend.initialize(ws, RecordPluginClass)
       recordBackend.setEventHandlers({
@@ -124,7 +130,7 @@ export function useWaveformController({
       eventsRef.current.onError?.(err)
       throw err
     }
-  }, [containerRef, theme])
+  }, [containerRef, theme, effectiveSampleRate])
 
   useEffect(() => {
     initializeWaveSurfer().catch(() => {})
@@ -172,7 +178,7 @@ export function useWaveformController({
     }
   }, [])
 
-  const stop = useCallback(async (): Promise<void> => {
+  const stop = useCallback(async (): Promise<Blob> => {
     if (currentState !== "recording") {
       throw new Error("Not currently recording")
     }
@@ -205,6 +211,7 @@ export function useWaveformController({
       })
 
       eventsRef.current.onRecordReady?.(rawBlob)
+      return rawBlob
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       eventsRef.current.onError?.(err)
@@ -212,24 +219,27 @@ export function useWaveformController({
     }
   }, [currentState])
 
-  const approve = useCallback(async (): Promise<void> => {
-    if (!currentBlob) {
-      throw new Error("No recorded audio to approve")
-    }
+  const approve = useCallback(
+    async (blob?: Blob): Promise<void> => {
+      const blobToUse = blob ?? currentBlob
+      if (!blobToUse) {
+        throw new Error("No recorded audio to approve")
+      }
 
-    try {
-      const wav = await encodeToWav(currentBlob, SAMPLE_RATE)
-      eventsRef.current.onApprove?.(wav)
+      try {
+        const wav = await encodeToWav(blobToUse, effectiveSampleRate)
+        eventsRef.current.onApprove?.(wav)
 
-      resetPlayer()
-      setCurrentBlob(null)
-      setCurrentState("idle")
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
-      eventsRef.current.onError?.(err)
-      throw err
-    }
-  }, [currentBlob, resetPlayer])
+        setCurrentBlob(null)
+        setCurrentState("idle")
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error))
+        eventsRef.current.onError?.(err)
+        throw err
+      }
+    },
+    [currentBlob, effectiveSampleRate]
+  )
 
   const cancel = useCallback((): void => {
     if (currentState === "recording") {

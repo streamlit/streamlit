@@ -118,6 +118,7 @@ const AudioInput: React.FC<Props> = ({
 
   const controller = useWaveformController({
     containerRef,
+    sampleRate: element.sampleRate ?? undefined,
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)
@@ -390,8 +391,8 @@ const AudioInput: React.FC<Props> = ({
 
   const stopRecording = useCallback(async () => {
     try {
-      await controller.stop()
-      await controller.approve()
+      const blob = await controller.stop()
+      await controller.approve(blob)
     } catch {
       setIsError(true)
     }

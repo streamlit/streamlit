@@ -19,13 +19,13 @@
  * This function performs high-quality resampling using OfflineAudioContext.
  *
  * @param blob - The input audio blob (any format Web Audio API can decode)
- * @param targetSampleRate - Target sample rate (default: 16000 Hz for speech)
+ * @param targetSampleRate - Target sample rate (default: 16000 Hz for speech). If null, uses browser's native sample rate without resampling.
  * @returns Promise resolving to WAV Blob at specified sample rate, mono
  * @throws Error if encoding fails
  */
 export async function encodeToWav(
   blob: Blob,
-  targetSampleRate: number = 16000
+  targetSampleRate: number | null = 16000
 ): Promise<Blob> {
   if (!blob || blob.size === 0) {
     throw new Error("Invalid or empty blob provided")
@@ -41,12 +41,16 @@ export async function encodeToWav(
     const arrayBuffer = await blob.arrayBuffer()
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
 
+    // If targetSampleRate is null, use the browser's native sample rate without resampling
+    const effectiveTargetSampleRate =
+      targetSampleRate ?? audioBuffer.sampleRate
+
     const monoBuffer = await resampleAndConvertToMono(
       audioBuffer,
-      targetSampleRate
+      effectiveTargetSampleRate
     )
 
-    return encodeAudioBufferToWav(monoBuffer, targetSampleRate)
+    return encodeAudioBufferToWav(monoBuffer, effectiveTargetSampleRate)
   } finally {
     void audioContext.close()
   }
