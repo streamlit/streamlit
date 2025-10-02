@@ -588,9 +588,10 @@ def test_audio_input_timer_display(app: Page):
     expect(audio_input.get_by_role("button", name="Pause", exact=True)).to_be_visible()
 
     # Verify timer shows 00:00 at start of playback
+    wait_until(app, lambda: timer_seconds() == 0, timeout=3000)
     expect(timer).to_have_text("00:00")
 
-    # Wait 1 second + 200ms buffer and verify timer shows 00:01
+    # Wait 1 second and verify timer shows 00:01
     wait_for_timer_seconds(1, timeout=3000)
     expect(timer).to_have_text("00:01")
 
