@@ -34,16 +34,25 @@ export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
     cursor: disabled ? "not-allowed" : "auto",
+    overflow: "hidden",
   })
 )
 
 export const StyledWaveformInnerDiv = styled.div({
   flex: 1,
+  display: "flex",
+  alignItems: "center",
 })
 
 export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
   ({ show }) => ({
-    display: show ? "block" : "none",
+    display: show ? "flex" : "none",
+    alignItems: "center",
+    flex: 1,
+    width: "100%",
+    "& > div": {
+      flex: 1,
+    },
   })
 )
 
@@ -79,6 +88,7 @@ export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
 
 // Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
+  flex: 1,
   height: theme.sizes.largestElementHeight,
   display: "flex",
   justifyContent: "center",

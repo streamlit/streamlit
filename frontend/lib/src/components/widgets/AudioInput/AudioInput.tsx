@@ -491,11 +491,7 @@ const AudioInput: React.FC<Props> = ({
             data-testid="stAudioInputWaveSurfer"
             show={!showNoMicPermissionsOrPlaceholderOrError}
           >
-            <WaveformSurface
-              controller={controller}
-              containerRef={containerRef}
-              ariaLabel="Recorded audio waveform"
-            />
+            <WaveformSurface containerRef={containerRef} />
           </StyledWaveSurferDiv>
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
