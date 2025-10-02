@@ -30,7 +30,7 @@ from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeConfigError
 
 # Config System Global State #
 
@@ -2387,6 +2387,48 @@ def _update_config_with_sensitive_env_var(
         _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
 
 
+def _is_valid_theme_nesting(section_path: str) -> bool:
+    """Check if a theme section path follows valid nesting rules.
+
+    Valid patterns: theme.sidebar, theme.light, theme.dark, theme.sidebar.light, theme.sidebar.dark
+    Invalid patterns: theme.light.sidebar, theme.dark.sidebar, theme.light.dark, theme.dark.light, etc.
+
+    Parameters
+    ----------
+    section_path : str
+        The dot-separated theme section path (e.g., "theme.sidebar.light").
+        Will always have at least 2 parts and start with "theme".
+
+    Returns
+    -------
+    bool
+        True if the nesting pattern is valid, False otherwise
+    """
+    parts = section_path.split(".")
+
+    # theme.sidebar/light/dark is valid (2 parts: "theme" + category)
+    if len(parts) == 2:
+        return parts[1] in [
+            CustomThemeCategories.SIDEBAR.value,
+            CustomThemeCategories.LIGHT.value,
+            CustomThemeCategories.DARK.value,
+        ]
+
+    # theme.sidebar.light/dark are the only valid 3-part patterns
+    if len(parts) == 3:
+        # Only allow sidebar as the middle level, then light/dark as the final level
+        if parts[1] == CustomThemeCategories.SIDEBAR.value:
+            return parts[2] in [
+                CustomThemeCategories.LIGHT.value,
+                CustomThemeCategories.DARK.value,
+            ]
+        # light and dark cannot have nested sections (theme.light.X or theme.dark.X)
+        return False
+
+    # Any nesting with 4+ parts is invalid (e.g., theme.sidebar.light.dark)
+    return False
+
+
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
 
@@ -2449,12 +2491,18 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
-            # Process it as a nested config section if it's a custom theme sub-category
-            if name in [
+            # Process it as a nested config section if it's a theme sub-category
+            # Only check for nested sections when we're already in a theme section
+            if section_path.startswith("theme") and name in [
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
             ]:
+                # Validate the theme nesting pattern before processing
+                if not _is_valid_theme_nesting(option_name):
+                    raise StreamlitInvalidThemeConfigError(
+                        option_name=option_name,
+                    )
                 process_section(option_name, value)
             else:
                 # It's a regular config option, set it

@@ -31,7 +31,7 @@ from parameterized import parameterized
 from streamlit import config, config_util, env_util
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeConfigError
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -486,6 +486,43 @@ class ConfigTest(unittest.TestCase):
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
         assert config.get_option("_test.tomlTest") == DUMMY_VAL_2
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
+
+    def test_parsing_toml_with_valid_theme_nesting(self):
+        """Test that valid theme nesting patterns are parsed correctly."""
+        toml_content = """
+        [theme.sidebar]
+        primaryColor = "#000000"
+
+        [theme.light]
+        primaryColor = "#0000FF"
+
+        [theme.dark]
+        primaryColor = "#FFFF00"
+
+        [theme.sidebar.dark]
+        primaryColor = "#00FF00"
+
+        [theme.sidebar.light]
+        primaryColor = "#FF0000"
+        """
+        config._update_config_with_toml(toml_content, "test")
+        assert config.get_option("theme.sidebar.primaryColor") == "#000000"
+        assert config.get_option("theme.light.primaryColor") == "#0000FF"
+        assert config.get_option("theme.dark.primaryColor") == "#FFFF00"
+        assert config.get_option("theme.sidebar.dark.primaryColor") == "#00FF00"
+        assert config.get_option("theme.sidebar.light.primaryColor") == "#FF0000"
+
+    def test_parsing_toml_with_invalid_theme_nesting(self):
+        """Test that invalid theme nesting patterns are rejected."""
+        toml_content = """
+        [theme.light.sidebar]
+        primaryColor = "#FF0000"
+        """
+        with pytest.raises(
+            StreamlitInvalidThemeConfigError,
+            match=r"Invalid theme configuration: `theme.light.sidebar` is not a valid theme nesting pattern",
+        ):
+            config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
         """Test that exceptions during toml.loads are caught and logged."""
