@@ -2051,6 +2051,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         font = "serif"
         borderColor = "#333333"
 
+        [theme.dark]
+        linkColor = "#7851A9"
+        borderColor = "#361551"
+
         [theme.sidebar]
         primaryColor = "#ff4444"
         backgroundColor = "#111111"
@@ -2064,6 +2068,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             primaryColor = "#00ff00"
             # backgroundColor should come from base theme
             textColor = "#cccccc"
+
+            [theme.dark]
+            linkColor = "#CD1C18"
 
             [theme.sidebar]
             backgroundColor = "#222222"
@@ -2085,8 +2092,14 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                     config.get_option("theme.textColor") == "#cccccc"
                 )  # Config overrides base
                 assert (
-                    config.get_option("theme.font") == "serif"
+                    config.get_option("theme.dark.linkColor") == "#CD1C18"
+                )  # Config overrides base
+                assert (
+                    config.get_option("theme.dark.borderColor") == "#361551"
                 )  # From base theme (no config override)
+                assert (
+                    config.get_option("theme.font") == "serif"
+                )  # From base theme (no override)
                 assert (
                     config.get_option("theme.borderColor") == "#333333"
                 )  # From base theme (no override)
@@ -2123,6 +2136,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             base = "{theme_file}"
             primaryColor = "#ff0000"
             textColor = "#ffffff"
+
+            [theme.dark]
+            linkColor = "#7851A9"
             """
 
             # Simulate environment variable and command line flag (higher precedence)
@@ -2130,6 +2146,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 # Env var would be processed as flag by Click framework
                 "theme.font": "Arial",  # Should override theme file's "serif"
                 "theme.borderColor": "#999999",  # Should override theme file's "#333333"
+                "theme.dark.linkColor": "#CD1C18",  # Should override theme file's "#7851A9"
                 "theme.linkColor": "#0066cc",  # New value not in theme file or config
             }
 
@@ -2159,6 +2176,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 )  # Flag/env overrides theme file
                 assert (
                     config.get_option("theme.borderColor") == "#999999"
+                )  # Flag/env overrides theme file
+                assert (
+                    config.get_option("theme.dark.linkColor") == "#CD1C18"
                 )  # Flag/env overrides theme file
                 assert (
                     config.get_option("theme.linkColor") == "#0066cc"

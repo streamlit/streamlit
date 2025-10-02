@@ -338,8 +338,12 @@ def _get_valid_theme_options(
                 # Direct theme option like "theme.primaryColor"
                 _, option_name = parts
                 valid_options.add(option_name)
-            elif section == "sidebar" and len(parts) == 3 and parts[1] == "sidebar":
-                # Sidebar option like "theme.sidebar.primaryColor"
+            elif (
+                section in ("sidebar", "light", "dark")
+                and len(parts) == 3
+                and parts[1] == section
+            ):
+                # Subsection option like "theme.sidebar.primaryColor", "theme.light.primaryColor", etc.
                 _, _, option_name = parts
                 valid_options.add(option_name)
 
