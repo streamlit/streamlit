@@ -14,62 +14,18 @@
  * limitations under the License.
  */
 
-import React, { type KeyboardEvent, memo, type RefObject } from "react"
-
-import styled from "@emotion/styled"
-
-import type { WaveformController } from "~lib/components/audio/core/types"
+import React, { memo, type RefObject } from "react"
 
 export interface WaveformSurfaceProps {
-  controller: WaveformController
   containerRef: RefObject<HTMLDivElement>
-  ariaLabel?: string
   className?: string
 }
 
-const StyledWaveformContainer = styled.div(({ theme }) => ({
-  position: "relative" as const,
-  width: "100%",
-  minHeight: "56px",
-  backgroundColor: theme.colors.secondaryBg,
-  borderRadius: theme.radii.md,
-  overflow: "hidden",
-  cursor: "pointer",
-
-  "&:focus": {
-    outline: `2px solid ${theme.colors.primary}`,
-    outlineOffset: "2px",
-  },
-}))
-
 const WaveformSurface: React.FC<WaveformSurfaceProps> = ({
-  controller,
   containerRef,
-  ariaLabel = "Recorded audio waveform",
   className,
 }) => {
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
-    if (e.key === " " || e.key === "Enter") {
-      e.preventDefault()
-      if (controller.playback.isPlaying()) {
-        controller.playback.pause()
-      } else {
-        controller.playback.play().catch(() => {})
-      }
-    }
-  }
-
-  return (
-    <StyledWaveformContainer
-      ref={containerRef}
-      className={className}
-      aria-label={ariaLabel}
-      tabIndex={0}
-      role="button"
-      onKeyDown={handleKeyDown}
-      data-testid="waveform-surface"
-    />
-  )
+  return <div ref={containerRef} className={className} />
 }
 
 export default memo(WaveformSurface)

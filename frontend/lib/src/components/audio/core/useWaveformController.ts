@@ -33,7 +33,7 @@ import type {
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme/utils"
+import { blend, convertRemToPx } from "~lib/theme/utils"
 
 const BAR_WIDTH = 3
 const BAR_GAP = 1
@@ -164,11 +164,18 @@ export function useWaveformController({
       throw new Error("Record backend not initialized")
     }
 
+    // Reset waveform color for recording mode
+    if (wavesurferRef.current) {
+      wavesurferRef.current.setOptions({
+        waveColor: theme.colors.primary,
+      })
+    }
+
     await recordBackendRef.current.startRecording()
     setCurrentState("recording")
     setCurrentBlob(null)
     eventsRef.current.onRecordStart?.()
-  }, [currentState, initializeWaveSurfer])
+  }, [currentState, initializeWaveSurfer, theme.colors.primary])
 
   const resetPlayer = useCallback((): void => {
     if (playerRef.current && wavesurferRef.current) {
@@ -210,6 +217,15 @@ export function useWaveformController({
         playerRef.current.load(rawBlob).catch(reject)
       })
 
+      // Update waveform color for playback mode
+      if (wavesurferRef.current) {
+        wavesurferRef.current.setOptions({
+          interact: true,
+          waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
+          progressColor: theme.colors.bodyText,
+        })
+      }
+
       eventsRef.current.onRecordReady?.(rawBlob)
       return rawBlob
     } catch (error) {
@@ -217,7 +233,12 @@ export function useWaveformController({
       eventsRef.current.onError?.(err)
       throw err
     }
-  }, [currentState])
+  }, [
+    currentState,
+    theme.colors.bodyText,
+    theme.colors.fadedText40,
+    theme.colors.secondaryBg,
+  ])
 
   const approve = useCallback(
     async (blob?: Blob): Promise<void> => {
