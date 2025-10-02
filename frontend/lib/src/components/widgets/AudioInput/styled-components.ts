@@ -40,19 +40,15 @@ export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
 
 export const StyledWaveformInnerDiv = styled.div({
   flex: 1,
-  display: "flex",
-  alignItems: "center",
 })
 
 export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
-  ({ show }) => ({
-    display: show ? "flex" : "none",
-    alignItems: "center",
-    flex: 1,
-    width: "100%",
-    "& > div": {
-      flex: 1,
-    },
+  ({ show, theme }) => ({
+    display: show ? "block" : "none",
+    // CRITICAL: WaveSurfer canvas is 8px shorter than container (WAVEFORM_PADDING * 2).
+    // Center it vertically with padding. DO NOT use flex or it breaks scrollingWaveform!
+    paddingTop: theme.spacing.threeXS,
+    paddingBottom: theme.spacing.threeXS,
   })
 )
 

@@ -35,11 +35,11 @@ import type {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { blend, convertRemToPx } from "~lib/theme/utils"
 
-const BAR_WIDTH = 3
-const BAR_GAP = 1
-const BAR_RADIUS = 2
+const BAR_WIDTH = 4
+const BAR_GAP = 4
+const BAR_RADIUS = 8
 const CURSOR_WIDTH = 0
-const WAVEFORM_PADDING = 8
+const WAVEFORM_PADDING = 4
 const DEFAULT_SAMPLE_RATE = 16000
 
 interface UseWaveformControllerParams {

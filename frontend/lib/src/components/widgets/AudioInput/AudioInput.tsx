@@ -27,7 +27,7 @@ import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
-import { useWaveformController, WaveformSurface } from "~lib/components/audio"
+import { useWaveformController } from "~lib/components/audio"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -489,10 +489,9 @@ const AudioInput: React.FC<Props> = ({
           {hasNoMicPermissions && <NoMicPermissions />}
           <StyledWaveSurferDiv
             data-testid="stAudioInputWaveSurfer"
+            ref={containerRef}
             show={!showNoMicPermissionsOrPlaceholderOrError}
-          >
-            <WaveformSurface containerRef={containerRef} />
-          </StyledWaveSurferDiv>
+          />
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
           isPlayingOrRecording={isRecording || isPlaying}
