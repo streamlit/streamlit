@@ -541,3 +541,41 @@ def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
     for i in range(min(2, len(tracking["created"]) - 1)):
         url = tracking["created"][i]
         assert url in tracking["revoked"], f"Blob URL {url} should have been revoked"
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_input_timer_display(app: Page):
+    """Test that the timer display shows correct values during recording and playback."""
+    grant_microphone_permissions(app)
+    audio_input = get_audio_input_by_label(app, "Audio Input 1")
+    timer = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
+
+    # Record for 3 seconds (add buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    app.wait_for_timeout(3200)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:03 (duration of recording)
+    expect(timer).to_have_text("00:03")
+
+    # Click play for 100ms and verify it shows 00:00 (playback starts at beginning)
+    audio_input.get_by_role("button", name="Play").click()
+    expect(timer).to_have_text("00:00")
+    app.wait_for_timeout(100)
+    audio_input.get_by_role("button", name="Pause").click()
+
+    # Click play again for 1 second and verify it shows 00:01
+    audio_input.get_by_role("button", name="Play").click()
+    app.wait_for_timeout(1000)
+    expect(timer).to_have_text("00:01")
+    audio_input.get_by_role("button", name="Pause").click()
+
+    # Re-record for 4 seconds (add buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    app.wait_for_timeout(4200)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:04
+    expect(timer).to_have_text("00:04")
