@@ -168,6 +168,7 @@ export function useWaveformController({
     if (wavesurferRef.current) {
       wavesurferRef.current.setOptions({
         waveColor: theme.colors.primary,
+        progressColor: theme.colors.primary,
       })
     }
 
