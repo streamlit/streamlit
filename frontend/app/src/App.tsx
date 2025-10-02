@@ -61,6 +61,7 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createCustomThemes,
   createFormsData,
   createPresetThemes,
   DeployedAppMetadata,
@@ -96,7 +97,6 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
-  produceCustomThemes,
   ScriptRunState,
   SessionInfo,
   StreamlitMarkdown,
@@ -1323,7 +1323,7 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
-      const customThemes = produceCustomThemes(themeInput)
+      const customThemes = createCustomThemes(themeInput)
 
       // Add the themes to the theme manager
       this.props.theme.addThemes(customThemes)

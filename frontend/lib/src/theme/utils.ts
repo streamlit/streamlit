@@ -1242,41 +1242,30 @@ const handleSectionInheritance = (
     : CustomThemeConfig.BaseTheme.DARK
   result.base = base
 
-  // Get the specified theme section (only apply overrides if it exists)
+  // Get the specified theme section (only apply overrides if they exist)
   const themeSection = isLightTheme ? themeInput.light : themeInput.dark
   if (themeSection) {
-    // Extract sidebar from the theme section if it exists
-    const { sidebar: themeSidebarSection, ...themeProps } = themeSection
-
     // Apply section properties (theme.light/dark) to the theme properties
-    result = { ...result, ...themeProps, base } as CustomThemeConfig
-
-    // Handle nested sidebar.light or sidebar.dark
-    if (themeSidebarSection && result.sidebar) {
-      result.sidebar = {
-        ...result.sidebar,
-        ...themeSidebarSection,
-      }
-    }
+    result = { ...result, ...themeSection, base } as CustomThemeConfig
   }
 
-  // Also handle direct sidebar mode sections if they exist
+  // Handle sidebar section
   if (result.sidebar) {
     const sidebar = { ...result.sidebar }
 
-    // Apply the specific sidebar mode (light or dark) only if it exists
-    const sidebarModeSection = isLightTheme ? sidebar.light : sidebar.dark
-    if (sidebarModeSection) {
-      Object.assign(sidebar, sidebarModeSection)
+    // Apply the specific sidebar subsection (light or dark) only if it exists
+    const sidebarSubsection = isLightTheme ? sidebar.light : sidebar.dark
+    if (sidebarSubsection) {
+      Object.assign(sidebar, sidebarSubsection)
     }
 
-    // Clean up all mode sections from sidebar
+    // Remove light/dark subsections from sidebar
     delete sidebar.light
     delete sidebar.dark
     result.sidebar = sidebar
   }
 
-  // Remove all mode sections from result
+  // Remove light/dark sections from result
   delete result.light
   delete result.dark
 
@@ -1284,12 +1273,12 @@ const handleSectionInheritance = (
 }
 
 /**
- * Create custom themes from the theme input
+ * Create custom themes from the theme input for main app
  * Function applies merge of sections/subsections and returns custom light/dark theme(s)
  * @param themeInput: the theme input (configs) with nested sections/subsections
  * @returns custom theme(s)
  */
-export const produceCustomThemes = (
+export const createCustomThemes = (
   themeInput: CustomThemeConfig
 ): ThemeConfig[] => {
   const hasLightConfigs =
@@ -1315,13 +1304,109 @@ export const produceCustomThemes = (
     customThemes.push(darkTheme)
   } else {
     // No light/dark section configs set - base determines which custom theme (light or dark) is created
-    const isLightBase = themeInput.base === CustomThemeConfig.BaseTheme.LIGHT
-    const themeName = isLightBase
-      ? CUSTOM_THEME_LIGHT_NAME
-      : CUSTOM_THEME_DARK_NAME
-    const customTheme = createTheme(themeName, themeInput)
+    const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
     customThemes.push(customTheme)
   }
 
   return customThemes
+}
+
+/**
+ * Remove empty array fields from sidebar theme configuration to prevent them from being
+ * applied on top of the main theme.
+ * This is needed since the optional protobuf keyword is not allowed for repeated fields.
+ * Therefore, we are treating empty arrays as non-existent.
+ */
+const cleanSidebarEmptyArrays = (
+  sidebar: CustomThemeConfig["sidebar"]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, any> => {
+  if (!sidebar) {
+    return {}
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cleaned: Record<string, any> = { ...sidebar }
+
+  Object.entries(cleaned).forEach(([config, value]) => {
+    if (Array.isArray(value) && value.length === 0) {
+      delete cleaned[config]
+    }
+  })
+
+  return cleaned
+}
+
+/**
+ * Set the default heading font sizes for the sidebar.
+ * @param configHeadingFontSizes: the heading font sizes provided via theme config
+ * @returns the heading font sizes for the sidebar
+ */
+const setSidebarHeadingFontSizes = (
+  configHeadingFontSizes: string[] | null | undefined
+): string[] => {
+  // Default sidebar heading font sizes
+  const sidebarHeadingFontSizes = [
+    "1.5rem",
+    "1.25rem",
+    "1.125rem",
+    "1rem",
+    "0.875rem",
+    "0.75rem",
+  ]
+
+  if (configHeadingFontSizes) {
+    // If specifically set in sidebar config, override default
+    configHeadingFontSizes.forEach((size: string, index: number) => {
+      sidebarHeadingFontSizes[index] = size
+    })
+  }
+
+  return sidebarHeadingFontSizes
+}
+
+/**
+ * Create the sidebar's theme, including any sidebar custom theme configurations
+ * @returns active theme to be used for the sidebar
+ */
+export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
+  const sidebarThemeInput = activeTheme.themeInput?.sidebar
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+
+  // Either use the configured background color or secondary background from main theme:
+  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+
+  // Either use the configured secondary background color or background from main theme:
+  const secondaryBackgroundColor =
+    sidebarThemeInput?.secondaryBackgroundColor || bgColor
+
+  // Handle configured vs. default header font sizes for sidebar
+  const headingFontSizes = setSidebarHeadingFontSizes(
+    sidebarThemeInput?.headingFontSizes
+  )
+
+  // Override the background and secondary background colors in sidebar overrides:
+  const sidebarOverride = {
+    ...cleanSidebarEmptyArrays(sidebarThemeInput),
+    backgroundColor: sidebarBackground,
+    secondaryBackgroundColor: secondaryBackgroundColor,
+    headingFontSizes: headingFontSizes,
+  }
+
+  const baseTheme =
+    getLuminance(sidebarBackground) > 0.5
+      ? CustomThemeConfig.BaseTheme.LIGHT
+      : CustomThemeConfig.BaseTheme.DARK
+
+  // Create the theme with overrides
+  return createTheme(
+    "Sidebar",
+    {
+      ...activeTheme.themeInput, // Use the theme props from the main theme as basis
+      base: baseTheme,
+      ...sidebarOverride,
+    },
+    undefined, // Creating a new theme from scratch
+    true // inSidebar
+  )
 }
