@@ -1162,25 +1162,25 @@ for cat in list(CustomThemeCategories):
     elif cat == CustomThemeCategories.LIGHT:
         _create_section(
             f"theme.{cat.value}",
-            "Settings to define custom light theme that extends the defined [theme] properties.",
+            "Settings to define custom light theme properties that extend the defined [theme] properties.",
         )
     elif cat == CustomThemeCategories.DARK:
         _create_section(
             f"theme.{cat.value}",
-            "Settings to define custom dark theme that extends the defined [theme] properties.",
+            "Settings to define custom dark theme properties that extend the defined [theme] properties.",
         )
 
     # Create nested sidebar sections
     elif cat == CustomThemeCategories.SIDEBAR_LIGHT:
         _create_section(
             f"theme.{cat.value}",
-            """Settings to define a custom light theme for the sidebar that extends the defined
+            """Settings to define custom light theme properties for the sidebar that extend the defined
             [theme.sidebar] properties.""",
         )
     elif cat == CustomThemeCategories.SIDEBAR_DARK:
         _create_section(
             f"theme.{cat.value}",
-            """Settings to define a custom dark theme for the sidebar that extends the defined
+            """Settings to define custom dark theme properties for the sidebar that extend the defined
             [theme.sidebar] properties.""",
         )
 
@@ -2387,7 +2387,7 @@ def _update_config_with_sensitive_env_var(
         _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
 
 
-def _is_valid_theme_nesting(section_path: str) -> bool:
+def _is_valid_theme_section(section_path: str) -> bool:
     """Check if a theme section path follows valid nesting rules, returns True if valid, False otherwise.
 
     Valid patterns: theme.sidebar, theme.light, theme.dark, theme.sidebar.light, theme.sidebar.dark
@@ -2486,15 +2486,14 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
-            # Process it as a nested config section if it's a theme sub-category
             # Only check for nested sections when we're already in a theme section
             if section_path.startswith("theme") and name in [
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
             ]:
-                # Validate the theme option before processing
-                if not _is_valid_theme_nesting(option_name):
+                # Validate the theme section before processing
+                if not _is_valid_theme_section(option_name):
                     raise StreamlitInvalidThemeSectionError(
                         option_name=option_name,
                     )
