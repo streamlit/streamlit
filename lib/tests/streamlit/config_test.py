@@ -31,7 +31,7 @@ from parameterized import parameterized
 from streamlit import config, config_util, env_util
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeConfigError
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -531,8 +531,8 @@ class ConfigTest(unittest.TestCase):
         primaryColor = "#FF0000"
         """
         with pytest.raises(
-            StreamlitInvalidThemeConfigError,
-            match=rf"Invalid theme configuration: `{section_path}` is not a valid theme nesting pattern",
+            StreamlitInvalidThemeSectionError,
+            match=rf"Invalid theme section: `{section_path}`",
         ):
             config._update_config_with_toml(toml_content, "test")
 

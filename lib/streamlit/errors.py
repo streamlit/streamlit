@@ -531,13 +531,13 @@ class StreamlitValueError(LocalizableStreamlitException):
 
 
 # config
-class StreamlitInvalidThemeConfigError(LocalizableStreamlitException):
+class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
     """Exception raised when an invalid theme configuration is provided."""
 
     def __init__(self, option_name: str) -> None:
         super().__init__(
-            "Invalid theme configuration: `{option_name}` is not a valid theme nesting pattern. "
-            "Valid patterns are: `theme.sidebar`, `theme.light`, `theme.dark`, `theme.sidebar.light`, "
+            "Invalid theme section: `{option_name}`. "
+            "Valid patterns are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.sidebar.light`, "
             "and `theme.sidebar.dark`.",
             option_name=option_name,
         )

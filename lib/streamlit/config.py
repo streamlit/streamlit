@@ -30,7 +30,7 @@ from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeConfigError
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 
 # Config System Global State #
 
@@ -2406,7 +2406,7 @@ def _is_valid_theme_nesting(section_path: str) -> bool:
     """
     parts = section_path.split(".")
 
-    # theme.sidebar/light/dark is valid (2 parts: "theme" + category)
+    # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
     if len(parts) == 2:
         return parts[1] in [
             CustomThemeCategories.SIDEBAR.value,
@@ -2498,9 +2498,9 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
             ]:
-                # Validate the theme nesting pattern before processing
+                # Validate the theme option before processing
                 if not _is_valid_theme_nesting(option_name):
-                    raise StreamlitInvalidThemeConfigError(
+                    raise StreamlitInvalidThemeSectionError(
                         option_name=option_name,
                     )
                 process_section(option_name, value)
