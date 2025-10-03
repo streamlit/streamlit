@@ -25,6 +25,7 @@ import {
 } from "~lib/components/shared/TooltipIcon"
 
 export interface MarkdownProps {
+  // eslint-disable-next-line @eslint-react/no-unused-props
   help?: string
   element: MarkdownProto
 }
