@@ -165,7 +165,9 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    horizontal_alignment="center", key="container-horizontal-centered-elements"
+    horizontal_alignment="center",
+    key="container-horizontal-centered-elements",
+    border=True,
 ):
     df = pd.DataFrame(
         {
