@@ -281,6 +281,8 @@ def _iterate_theme_config_options(
     """
     Iterate through theme config options, yielding (option_path, value) pairs.
     Returns: theme.primaryColor, #ff0000, ...
+
+    Leveraged by _extract_current_theme_config() to retrieve main config.toml theme options.
     """
     for opt_name, opt_val in config_options.items():
         if opt_name.startswith("theme.") and opt_val.value is not None:
@@ -319,35 +321,37 @@ def _extract_current_theme_config(
 
 
 def _get_valid_theme_options(
-    config_options_template: dict[str, ConfigOption], section: str = "main"
-) -> set[str]:
-    """Get the set of valid theme configuration options for a specific section.
+    config_options_template: dict[str, ConfigOption],
+) -> tuple[set[str], set[str]]:
+    """Get the valid theme configuration options for main theme and theme sections.
 
     Extracts valid theme options from the config options template to ensure they
     stay in sync with the actual theme options defined via _create_theme_options() calls.
 
-    Returns a set of valid theme option names for a specific section (without the "theme." prefix)
+    Returns a tuple ( main_theme_options, sidebar_theme_options )
+    where main_theme_options is a set of valid theme options for the main theme (without the "theme." prefix)
+    and sidebar_theme_options is a set of valid theme options for the sidebar/light/dark sections
     """
-    valid_options = set()
+    # Extract options dynamically from the config template
+    main_theme_options = set()
+    section_theme_options = set()
 
     # Extract theme options from the config template
     for option_key in config_options_template:
         if option_key.startswith("theme."):
             parts = option_key.split(".")
-            if section == "main" and len(parts) == 2:
-                # Direct theme option like "theme.primaryColor"
+            # Direct theme options like "theme.primaryColor"
+            if parts[0] == "theme" and len(parts) == 2:
                 _, option_name = parts
-                valid_options.add(option_name)
-            elif (
-                section in ("sidebar", "light", "dark")
-                and len(parts) == 3
-                and parts[1] == section
-            ):
-                # Subsection option like "theme.sidebar.primaryColor", "theme.light.primaryColor", etc.
+                main_theme_options.add(option_name)
+            # Subsection options like "theme.sidebar.primaryColor"
+            elif parts[0] == "theme" and parts[1] == "sidebar" and len(parts) == 3:
+                # All subsections (sidebar, light, dark, sidebar.light, sidebar.dark)
+                # get the same options as theme.sidebar (which excludes main-only options)
                 _, _, option_name = parts
-                valid_options.add(option_name)
+                section_theme_options.add(option_name)
 
-    return valid_options
+    return main_theme_options, section_theme_options
 
 
 def _invalid_theme_option_warning(
@@ -358,11 +362,14 @@ def _invalid_theme_option_warning(
 ) -> None:
     """Log a warning for an invalid theme option."""
 
-    full_option_name = (
-        f"{section_name}.{option_name}"
-        if section_name == "theme"
-        else f"theme.{section_name}.{option_name}"
-    )
+    if section_name == "theme":
+        full_option_name = f"{section_name}.{option_name}"
+    elif "." in section_name:
+        # Handle subsections like "sidebar.light" -> "theme.sidebar.light.{option_name}"
+        full_option_name = f"theme.{section_name}.{option_name}"
+    else:
+        # Handle sections like "sidebar" -> "theme.sidebar.{option_name}"
+        full_option_name = f"theme.{section_name}.{option_name}"
 
     valid_options_list = "\n".join(f"  • {opt}" for opt in sorted(valid_options))
     _get_logger().warning(
@@ -373,6 +380,65 @@ def _invalid_theme_option_warning(
         section_name,
         valid_options_list,
     )
+
+
+def _validate_theme_section_recursive(
+    section_configs: dict[str, Any],
+    section_path: str,
+    file_path_or_url: str,
+    section_options: set[str],
+    filtered_parent: dict[str, Any],
+    valid_subsections: set[str] | None = None,
+) -> None:
+    """
+    Recursively validate a theme section and its options/subsections.
+
+    Args:
+        section_configs: The section configs to validate
+        section_path: Path like 'sidebar', 'light', 'sidebar.light'
+        file_path_or_url: Theme file path for error messages
+        section_options: Valid options for this section type
+        filtered_parent: Parent dict in filtered theme to populate
+        valid_subsections: Valid subsections (only for 'sidebar' section)
+    """
+    for option_name, option_value in section_configs.items():
+        if isinstance(option_value, dict):
+            # This is a subsection
+            if not valid_subsections or option_name not in valid_subsections:
+                raise StreamlitAPIException(
+                    f"Theme file {file_path_or_url} contains invalid theme "
+                    f"subsection: 'theme.{section_path}.{option_name}'.\n\n"
+                    f"Valid subsections are only sidebar.light and sidebar.dark"
+                )
+
+            # Create and validate the subsection's options
+            if option_name not in filtered_parent:
+                filtered_parent[option_name] = {}
+
+            _validate_theme_section_recursive(
+                option_value,
+                f"{section_path}.{option_name}",
+                file_path_or_url,
+                section_options,
+                filtered_parent[option_name],
+                None,  # Subsections can't have further subsections
+            )
+        elif option_name not in section_options:
+            # This is an invalid section option
+            _invalid_theme_option_warning(
+                option_name,
+                file_path_or_url,
+                section_options,
+                section_path,
+            )
+            # Remove the invalid option from the filtered theme
+            filtered_parent.pop(option_name, None)
+        else:
+            # Valid option - add to filtered theme and check color values
+            filtered_parent[option_name] = option_value
+            full_option_name = f"theme.{section_path}.{option_name}"
+            if "color" in full_option_name.lower():
+                _check_color_value(option_value, full_option_name)
 
 
 def _validate_theme_file_content(
@@ -392,8 +458,13 @@ def _validate_theme_file_content(
     -------
         A filtered copy of the theme content with invalid options removed.
     """
-    valid_main_options = _get_valid_theme_options(config_options_template, "main")
-    valid_subsections = {"sidebar", "light", "dark"}
+    # Get valid options for each type of section
+    valid_main_options, valid_section_options = _get_valid_theme_options(
+        config_options_template
+    )
+    # Valid sections and subsections
+    valid_sections = {"sidebar", "light", "dark"}
+    valid_subsections = {"light", "dark"}
 
     theme_section = theme_content.get("theme", {})
 
@@ -403,55 +474,43 @@ def _validate_theme_file_content(
 
     # Validate theme options
     for option_name, option_value in theme_section.items():
-        # Handle subsection (valid subsection is only sidebar for now)
+        # This is a section like theme.sidebar, theme.light, theme.dark
         if isinstance(option_value, dict):
             # Invalid subsection: raise error
-            if option_name not in valid_subsections:
+            if option_name not in valid_sections:
                 raise StreamlitAPIException(
-                    f"Theme file {file_path_or_url} contains invalid theme subsection: '{option_name}'.\n\n"
-                    f"Valid subsections are: {valid_subsections}"
+                    f"Theme file {file_path_or_url} contains invalid theme section: '{option_name}'.\n\n"
+                    f"Valid sections are: {valid_sections}"
                 )
 
-            # Rename option_name for clarity - it's actually the section name in this case (i.e. sidebar)
-            section_name = option_name
+            # Create the section in our filtered theme and validate it
+            if option_name not in filtered_theme_section:
+                filtered_theme_section[option_name] = {}
 
-            # Get valid options for this specific subsection
-            valid_section_options = _get_valid_theme_options(
-                config_options_template, section_name
+            # Only sidebar can have subsections
+            subsections = valid_subsections if option_name == "sidebar" else None
+
+            _validate_theme_section_recursive(
+                option_value,
+                option_name,
+                file_path_or_url,
+                valid_section_options,
+                filtered_theme_section[option_name],
+                subsections,
             )
 
-            # Validate options within the subsection
-            for section_option, section_value in option_value.items():
-                if section_option not in valid_section_options:
-                    _invalid_theme_option_warning(
-                        section_option,
-                        file_path_or_url,
-                        valid_section_options,
-                        section_name,
-                    )
-                    # Remove invalid option from filtered theme
-                    if (
-                        section_name in filtered_theme_section
-                        and section_option in filtered_theme_section[section_name]
-                    ):
-                        del filtered_theme_section[section_name][section_option]
-                # Check color options for subsection
-                full_option_name = f"theme.{section_name}.{section_option}"
-                if "color" in full_option_name.lower():
-                    _check_color_value(section_value, full_option_name)
+        elif option_name not in valid_main_options:
+            # Invalid main theme option
+            _invalid_theme_option_warning(
+                option_name,
+                file_path_or_url,
+                valid_main_options,
+            )
+            # Remove the invalid option from the filtered theme
+            filtered_theme_section.pop(option_name, None)
 
-        # Handle main theme options
         else:
-            if option_name not in valid_main_options:
-                _invalid_theme_option_warning(
-                    option_name,
-                    file_path_or_url,
-                    valid_main_options,
-                )
-                # Remove invalid option from filtered theme
-                if option_name in filtered_theme_section:
-                    del filtered_theme_section[option_name]
-            # Check color options for direct theme option
+            # Valid main theme option - check color values
             full_option_name = f"theme.{option_name}"
             if "color" in full_option_name.lower():
                 _check_color_value(option_value, full_option_name)
@@ -584,6 +643,31 @@ def _apply_theme_inheritance(
     return _deep_merge_theme_dicts(base_theme, override_theme)
 
 
+def _set_theme_options_recursive(
+    options_dict: dict[str, Any], prefix: str, set_option_func: Any, source: str
+) -> None:
+    """
+    Recursively set theme options from nested dictionary in process_theme_inheritance().
+    This utility function traverses nested theme configuration sections/subsections
+    and sets each option using the provided set_option_func..
+    """
+    for option_name, option_value in options_dict.items():
+        if option_name == "base" and prefix == "theme":
+            # Base is handled separately in theme inheritance
+            continue
+
+        current_key = f"{prefix}.{option_name}" if prefix else option_name
+
+        if isinstance(option_value, dict):
+            # Recursively handle nested sections
+            _set_theme_options_recursive(
+                option_value, current_key, set_option_func, source
+            )
+        else:
+            # Set the actual config option
+            set_option_func(current_key, option_value, source)
+
+
 # Theme configuration - handles theme.base
 
 
@@ -678,28 +762,10 @@ def process_theme_inheritance(
             )
 
         # Set the merged theme options using recursive helper
-        def _set_theme_options_recursive(
-            options_dict: dict[str, Any], prefix: str
-        ) -> None:
-            """Recursively set theme options from nested dictionary structure."""
-            for option_name, option_value in options_dict.items():
-                if option_name == "base" and prefix == "theme":
-                    # Base is already handled above
-                    continue
-
-                current_key = f"{prefix}.{option_name}" if prefix else option_name
-
-                if isinstance(option_value, dict):
-                    # Recursively handle nested sections
-                    _set_theme_options_recursive(option_value, current_key)
-                else:
-                    # Set the actual config option
-                    set_option_func(
-                        current_key, option_value, f"theme file: {base_value}"
-                    )
-
         theme_section = merged_theme.get("theme", {})
-        _set_theme_options_recursive(theme_section, "theme")
+        _set_theme_options_recursive(
+            theme_section, "theme", set_option_func, f"theme file: {base_value}"
+        )
 
         # Finally, restore theme options set by env vars and command line flags (highest precedence)
         for opt_name, opt_data in high_precedence_theme_options.items():

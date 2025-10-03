@@ -2338,14 +2338,14 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 assert "cannot reference another theme file" in str(cm.value)
 
-    def test_theme_base_invalid_subsection(self):
-        """Test error when theme file contains invalid subsections."""
+    def test_theme_base_invalid_section(self):
+        """Test error when theme file contains invalid sections."""
         theme_content = """
         [theme]
         base = "dark"
         primaryColor = "#00ff41"
 
-        [theme.invalidSubsection]
+        [theme.invalidSection]
         primaryColor = "#ff0000"
         """
 
@@ -2359,8 +2359,8 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 with pytest.raises(StreamlitAPIException) as cm:
                     config.get_config_options()
 
-                assert "invalid theme subsection" in str(cm.value)
-                assert "invalidSubsection" in str(cm.value)
+                assert "invalid theme section" in str(cm.value)
+                assert "invalidSection" in str(cm.value)
 
     def test_theme_base_no_theme_section_error(self):
         """Test error when theme file is missing [theme] section."""
