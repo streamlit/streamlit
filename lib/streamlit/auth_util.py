@@ -84,6 +84,26 @@ def get_secrets_auth_section() -> AttrDict:
     return auth_section
 
 
+def get_expose_tokens_config() -> list[str]:
+    """Get the expose_tokens configuration from secrets.toml.
+
+    Returns a list of token types to expose. Accepts both string and list formats:
+    - expose_tokens = "id" -> ["id"]
+    - expose_tokens = ["id", "access"] -> ["id", "access"]
+    """
+    auth_section = get_secrets_auth_section()
+    expose_tokens = auth_section.get("expose_tokens")
+
+    if expose_tokens is None:
+        return []
+
+    if isinstance(expose_tokens, str):
+        return [expose_tokens]
+    if isinstance(expose_tokens, list):
+        return [str(token) for token in expose_tokens]
+    return []
+
+
 def encode_provider_token(provider: str) -> str:
     """Returns a signed JWT token with the provider and expiration time."""
     try:
