@@ -113,8 +113,6 @@ export default tseslint.config([
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
       "@eslint-react/naming-convention/use-state": "off",
-      // Helps us catch functions written as if they are hooks, but are not.
-      "@eslint-react/hooks-extra/no-useless-custom-hooks": "error",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments

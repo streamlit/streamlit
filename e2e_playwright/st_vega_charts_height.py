@@ -136,3 +136,17 @@ st.scatter_chart(scatter_df, x="x", y="y", size="size", height="content")
 st.write("Scatter chart with height='stretch':")
 with st.container(border=True, key="test_scatter_height_stretch", height=400):
     st.scatter_chart(scatter_df, x="x", y="y", size="size", height="stretch")
+
+st.write("Bar chart with height='content':")
+st.bar_chart(scatter_df, x="x", y="y", height="content")
+
+st.write("Bar chart with height='stretch':")
+with st.container(border=True, key="test_bar_height_stretch", height=400):
+    st.bar_chart(scatter_df, x="x", y="y", height="stretch")
+
+st.write("Area chart with height='content':")
+st.area_chart(scatter_df, x="x", y="y", height="content")
+
+st.write("Area chart with height='stretch':")
+with st.container(border=True, key="test_area_height_stretch", height=400):
+    st.area_chart(scatter_df, x="x", y="y", height="stretch")
