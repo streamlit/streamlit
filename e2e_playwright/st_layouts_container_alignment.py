@@ -167,15 +167,17 @@ with st.container(
 with st.container(
     horizontal_alignment="center", key="container-horizontal-centered-elements"
 ):
+    df = pd.DataFrame(
+        {
+            "x": list(range(3)),
+            "y": [i * i for i in range(3)],
+        }
+    )
     img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img)
     st.dataframe(
-        pd.DataFrame(
-            {
-                "x": list(range(3)),
-                "y": [i * i for i in range(3)],
-            }
-        ),
-        width=250,
+        df,
+        width="content",
     )
     st.button("Details")
+    st.bar_chart(df, x="x", y="y", width="content")
