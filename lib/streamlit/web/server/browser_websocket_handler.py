@@ -28,6 +28,7 @@ from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
+from streamlit.auth_util import get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
@@ -175,8 +176,17 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     # Also read in tokens if token cookie exists
                     raw_token_cookie_value = self.get_signed_cookie(TOKENS_COOKIE_NAME)
                     if raw_token_cookie_value:
-                        tokens = json.loads(raw_token_cookie_value)
-                        user_info["tokens"] = tokens
+                        all_tokens = json.loads(raw_token_cookie_value)
+
+                        # Filter tokens based on expose_tokens configuration
+                        expose_tokens = get_expose_tokens_config()
+                        filtered_tokens = {}
+                        for token_type in expose_tokens:
+                            token_key = f"{token_type}_token"
+                            if token_key in all_tokens:
+                                filtered_tokens[token_type] = all_tokens[token_key]
+
+                        user_info["tokens"] = filtered_tokens
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
