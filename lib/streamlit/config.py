@@ -1170,7 +1170,7 @@ for cat in list(CustomThemeCategories):
             "Settings to define custom dark theme that extends the defined [theme] properties.",
         )
 
-    # Also create the nested sidebar sections
+    # Create nested sidebar sections
     elif cat == CustomThemeCategories.SIDEBAR_LIGHT:
         _create_section(
             f"theme.{cat.value}",
@@ -2388,7 +2388,7 @@ def _update_config_with_sensitive_env_var(
 
 
 def _is_valid_theme_nesting(section_path: str) -> bool:
-    """Check if a theme section path follows valid nesting rules.
+    """Check if a theme section path follows valid nesting rules, returns True if valid, False otherwise.
 
     Valid patterns: theme.sidebar, theme.light, theme.dark, theme.sidebar.light, theme.sidebar.dark
     Invalid patterns: theme.light.sidebar, theme.dark.sidebar, theme.light.dark, theme.dark.light, etc.
@@ -2398,11 +2398,6 @@ def _is_valid_theme_nesting(section_path: str) -> bool:
     section_path : str
         The dot-separated theme section path (e.g., "theme.sidebar.light").
         Will always have at least 2 parts and start with "theme".
-
-    Returns
-    -------
-    bool
-        True if the nesting pattern is valid, False otherwise
     """
     parts = section_path.split(".")
 
