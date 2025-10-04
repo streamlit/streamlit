@@ -190,12 +190,16 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 
         return redirect_uri.removesuffix("oauth2callback")
 
+    def get_cookie_value(self, name: str) -> bytes | None:
+        try:
+            return self.get_signed_cookie(name)
+        except AttributeError:
+            return self.get_secure_cookie(name)
+
     def _get_provider_logout_url(self) -> str | None:
         """Get the OAuth provider's logout URL from OIDC metadata."""
-        try:
-            cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
-        except AttributeError:  # Backward compatibility with Tornado < 6.3.0
-            cookie_value = self.get_secure_cookie(AUTH_COOKIE_NAME)
+
+        cookie_value = self.get_cookie_value(AUTH_COOKIE_NAME)
 
         if not cookie_value:
             return None
@@ -223,8 +227,18 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             logout_params = {
                 "client_id": client.client_id,
                 "post_logout_redirect_uri": redirect_root,
-                # Not using id_token_hint as we don't store the id token
             }
+
+            # Add id_token_hint to logout params if it is available
+            tokens_cookie_value = self.get_cookie_value(TOKENS_COOKIE_NAME)
+            if tokens_cookie_value:
+                try:
+                    tokens = json.loads(tokens_cookie_value)
+                    id_token = tokens.get("id_token")
+                    if id_token:
+                        logout_params["id_token_hint"] = id_token
+                except (json.JSONDecodeError, TypeError):
+                    pass
 
             return f"{end_session_endpoint}?{urlencode(logout_params)}"
 
