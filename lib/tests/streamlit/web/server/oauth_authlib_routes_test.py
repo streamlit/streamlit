@@ -219,7 +219,10 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Should redirect to provider's logout URL with post_logout_redirect_uri and client_id
         location = response.headers["Location"]
         assert location.startswith("https://ese-provider.example.com/logout")
-        assert "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501" in location
+        assert (
+            "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+            in location
+        )
         assert "client_id=test_client_id" in location
         assert "id_token_hint" not in location
 
@@ -264,10 +267,10 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         # Create headers with both signed cookies
         signed_cookie = create_signed_value(
-            "test_cookie_secret", AUTH_COOKIE_NAME, cookie_value
+            "test_secret", AUTH_COOKIE_NAME, cookie_value
         ).decode("utf-8")
         signed_tokens_cookie = create_signed_value(
-            "test_cookie_secret", TOKENS_COOKIE_NAME, tokens_value
+            "test_secret", TOKENS_COOKIE_NAME, tokens_value
         ).decode("utf-8")
 
         headers = tornado.httputil.HTTPHeaders()
@@ -284,7 +287,10 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Should redirect to provider's logout URL with post_logout_redirect_uri, client_id, and id_token_hint
         location = response.headers["Location"]
         assert location.startswith("https://ese-provider.example.com/logout")
-        assert "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501" in location
+        assert (
+            "post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+            in location
+        )
         assert "client_id=test_client_id" in location
         assert "id_token_hint=test_id_token_12345" in location
 
@@ -411,9 +417,10 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.headers["Location"] == "/"
 
     def test_auth_callback_failure_missing_state(self):
-        """Test auth callback failure missing state."""
+        """Test auth callback redirects to base when state is missing (logout redirect)."""
         response = self.fetch("/oauth2callback", follow_redirects=False)
-        assert response.code == 400
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
 
     @patch.object(AuthCallbackHandler, "set_auth_cookie")
     def test_auth_callback_with_error_query_param(self, mock_set_auth_cookie):
