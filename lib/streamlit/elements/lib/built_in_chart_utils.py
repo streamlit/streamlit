@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeAlias, TypedDict, cast
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
@@ -50,6 +50,111 @@ ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
 # For datasets with more points than this threshold, hover events are throttled
 # to 16ms (~60fps) to improve performance.
 _LARGE_DATASET_POINT_THRESHOLD: Final = 1000
+
+
+# Streamlit's built-in color names (7 basic palette colors + grey alias + primary)
+BUILTIN_COLOR_NAMES: Final[frozenset[str]] = frozenset(
+    [
+        "red",
+        "orange",
+        "yellow",
+        "blue",
+        "green",
+        "violet",
+        "gray",
+        "grey",  # Alias for gray
+        "primary",
+    ]
+)
+
+
+class ThemeLike(Protocol):
+    """Duck typing for theme objects with color attributes."""
+
+    def __getattr__(self, name: str) -> Any: ...
+
+
+def is_builtin_color_name(color: Any) -> bool:
+    """Check if color is a Streamlit built-in color name.
+
+    Built-in color names: red, orange, yellow, blue, green, violet, gray/grey, primary
+
+    Parameters
+    ----------
+    color : Any
+        Value to check
+
+    Returns
+    -------
+    bool
+        True if color is a valid built-in color name (case-insensitive)
+
+    Examples
+    --------
+    >>> is_builtin_color_name("red")
+    True
+    >>> is_builtin_color_name("RED")
+    True
+    >>> is_builtin_color_name("grey")
+    True
+    >>> is_builtin_color_name("pink")
+    False
+    """
+    return isinstance(color, str) and color.lower() in BUILTIN_COLOR_NAMES
+
+
+def resolve_builtin_color_name(name: str, theme: ThemeLike | None = None) -> str:
+    """Resolve built-in color name to theme color token.
+
+    Parameters
+    ----------
+    name : str
+        Built-in color name (case-insensitive)
+    theme : ThemeLike | None
+        Current theme object (duck typing with getattr support)
+
+    Returns
+    -------
+    str
+        Resolved CSS color in HEX format
+
+    Examples
+    --------
+    >>> resolve_builtin_color_name("red", theme)
+    "#ff4b4b"  # theme.redColor
+    >>> resolve_builtin_color_name("primary", theme)
+    "#ff4b4b"  # theme.primaryColor (prioritized)
+    >>> resolve_builtin_color_name("grey", theme)
+    "#808495"  # theme.grayColor (grey is alias for gray)
+    """
+    name_lower = name.lower()
+
+    # Normalize grey to gray
+    if name_lower == "grey":
+        name_lower = "gray"
+
+    # Default values (fallback when theme is unavailable or missing attributes)
+    # Source: lib/streamlit/config.py theme color definitions (light theme defaults)
+    defaults = {
+        "red": "#ff4b4b",  # config.py line 1210
+        "orange": "#ffa421",  # config.py line 1225
+        "yellow": "#faca2b",  # config.py line 1240
+        "blue": "#1c83e1",  # config.py line 1255
+        "green": "#21c354",  # config.py line 1270
+        "violet": "#803df5",  # config.py line 1285
+        "gray": "#a3a8b8",  # config.py line 1299
+        "primary": "#ff4b4b",  # Same as red (default primaryColor)
+    }
+
+    # Theme token name (camelCase)
+    # Note: 'primary' is special - it uses 'primaryColor' not 'primaryColor'
+    token_name = f"{name_lower}Color" if name_lower != "primary" else "primaryColor"
+
+    # Get from theme, fallback to default
+    if theme is not None:
+        return getattr(theme, token_name, defaults[name_lower])
+
+    return defaults[name_lower]
 
 
 class PrepDataColumns(TypedDict):
@@ -144,6 +249,43 @@ def maybe_raise_stack_warning(
         )
 
 
+def _resolve_color_names(
+    color: str | Color | list[Color] | None,
+    theme: ThemeLike | None = None,
+) -> str | Color | list[Color] | None:
+    """Resolve built-in color names to theme colors.
+
+    Parameters
+    ----------
+    color : str | Color | list[Color] | None
+        Color specification (may contain built-in color names)
+    theme : ThemeLike | None
+        Theme object for color resolution
+
+    Returns
+    -------
+    str | Color | list[Color] | None
+        Color with built-in names resolved to HEX strings
+    """
+    if color is None:
+        return None
+
+    # Array case: resolve each element
+    if isinstance(color, list):
+        return [
+            resolve_builtin_color_name(cast("str", c), theme)
+            if is_builtin_color_name(c)
+            else c
+            for c in color
+        ]
+
+    # Single value case
+    if is_builtin_color_name(color):
+        return resolve_builtin_color_name(cast("str", color), theme)
+
+    return color
+
+
 def generate_chart(
     chart_type: ChartType,
     data: Data | None,
@@ -161,6 +303,7 @@ def generate_chart(
     # Bar charts only:
     horizontal: bool = False,
     sort_from_user: bool | str = False,
+    theme: ThemeLike | None = None,  # Theme for built-in color name resolution
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -181,6 +324,11 @@ def generate_chart(
     # Get name of column to use for color, or constant value to use. Any/both could
     # be None.
     color_column, color_value = _parse_generic_column(df, color_from_user)
+
+    # Resolve built-in color names AFTER column parsing (column names have priority)
+    # Only resolve if color is a value (not a column reference)
+    if color_column is None and color_value is not None:
+        color_value = _resolve_color_names(color_value, theme)
     # Get name of column to use for size, or constant value to use. Any/both could
     #  be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
@@ -1267,14 +1415,16 @@ class StreamlitInvalidColorError(StreamlitAPIException):
         message = f"""
 This does not look like a valid color argument: `{color_from_user}`.
 
-The color argument can be:
+Please use one of the following formats:
 
-* A hex string like "#ffaa00" or "#ffaa0088".
-* An RGB or RGBA tuple with the red, green, blue, and alpha
-  components specified as ints from 0 to 255 or floats from 0.0 to
-  1.0.
-* The name of a column.
-* Or a list of colors, matching the number of y columns to draw.
+1. Built-in color names (theme-aware):
+   "red", "orange", "yellow", "blue", "green", "violet", "gray", "grey", "primary"
+2. Hex strings:
+   "#ffaa00" or "#ffaa0088"
+3. RGB/RGBA tuples:
+   (255, 0, 0) or (255, 0, 0, 0.5)
+4. Column name (for data-driven colors)
+5. List of colors (one per series)
         """
         super().__init__(message)
 

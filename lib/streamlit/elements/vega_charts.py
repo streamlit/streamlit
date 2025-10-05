@@ -106,6 +106,21 @@ _CHANNELS: Final = {
     "column",
 }
 
+
+def _get_theme() -> Any:
+    """Get the current theme from script run context.
+
+    Returns
+    -------
+    Any | None
+        Theme object if available, None otherwise
+    """
+    ctx = get_script_run_ctx()
+    if ctx and hasattr(ctx, "session_state") and ctx.session_state:
+        return getattr(ctx.session_state, "theme", None)
+    return None
+
+
 VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
     "alt.Chart",
@@ -725,6 +740,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name (case-insensitive): ``"red"``, ``"orange"``,
+              ``"yellow"``, ``"blue"``, ``"green"``, ``"violet"``, ``"gray"``
+              (or ``"grey"``), or ``"primary"``. Built-in color names are resolved
+              to theme color tokens for theme-aware styling.
 
             For a line chart with multiple lines, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -886,6 +905,7 @@ class VegaChartsMixin:
             width=width,
             height=height,
             use_container_width=(width == "stretch"),
+            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
 
         return cast(
@@ -959,6 +979,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name (case-insensitive): ``"red"``, ``"orange"``,
+              ``"yellow"``, ``"blue"``, ``"green"``, ``"violet"``, ``"gray"``
+              (or ``"grey"``), or ``"primary"``. Built-in color names are resolved
+              to theme color tokens for theme-aware styling.
 
             For an area chart with multiple series, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -1174,6 +1198,7 @@ class VegaChartsMixin:
             height=height,
             stack=stack,
             use_container_width=(width == "stretch"),
+            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",
@@ -1248,6 +1273,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name (case-insensitive): ``"red"``, ``"orange"``,
+              ``"yellow"``, ``"blue"``, ``"green"``, ``"violet"``, ``"gray"``
+              (or ``"grey"``), or ``"primary"``. Built-in color names are resolved
+              to theme color tokens for theme-aware styling.
 
             For a bar chart with multiple series, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -1503,6 +1532,7 @@ class VegaChartsMixin:
             stack=stack,
             horizontal=horizontal,
             sort_from_user=sort,
+            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",
@@ -1575,6 +1605,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name (case-insensitive): ``"red"``, ``"orange"``,
+              ``"yellow"``, ``"blue"``, ``"green"``, ``"violet"``, ``"gray"``
+              (or ``"grey"``), or ``"primary"``. Built-in color names are resolved
+              to theme color tokens for theme-aware styling.
             - The name of a column in the dataset where the color of that
               datapoint will come from.
 
@@ -1750,6 +1784,7 @@ class VegaChartsMixin:
             width=width,
             height=height,
             use_container_width=(width == "stretch"),
+            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",

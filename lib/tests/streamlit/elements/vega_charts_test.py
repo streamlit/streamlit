@@ -1959,7 +1959,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         too_few_args = ["#f00", ["#f00"], (1, 0, 0, 0.5)]
         too_many_args = [["#f00", "#0ff"], [(1, 0, 0), (0, 0, 1)]]
-        bad_args = ["foo", "blue"]
+        bad_args = ["foo", "notacolor"]  # "blue" is now a valid built-in color name
 
         for color_arg in too_few_args:
             with pytest.raises(StreamlitAPIException) as exc:
@@ -2210,6 +2210,139 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitColumnNotFoundError):
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
+
+    @parameterized.expand(
+        [
+            (st.line_chart, "line"),
+            (st.area_chart, "area"),
+            (st.bar_chart, "bar"),
+            (st.scatter_chart, "circle"),
+        ]
+    )
+    def test_builtin_color_name_resolved_to_hex(
+        self, chart_command: Callable, mark_type: str
+    ):
+        """Test that built-in color names are resolved to hex colors in Vega-Lite spec."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Test single color string
+        chart_command(df, x="a", y="b", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify the color is resolved to default hex value (not the string "red")
+        # Handle both layer (line_chart) and non-layer (area/bar/scatter) structures
+        if "layer" in chart_spec:
+            color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        else:
+            color_value = chart_spec["encoding"]["color"]["value"]
+
+        assert color_value == "#ff4b4b", (
+            f"Expected default red color #ff4b4b, got {color_value}"
+        )
+        assert color_value != "red", (
+            "Built-in color name should be resolved, not passed through"
+        )
+
+    @parameterized.expand(
+        [
+            (st.line_chart, "line"),
+            (st.area_chart, "area"),
+            (st.bar_chart, "bar"),
+        ]
+    )
+    def test_builtin_color_names_in_list_resolved(
+        self, chart_command: Callable, mark_type: str
+    ):
+        """Test that built-in color names in a list are resolved to hex colors."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        # Test list with built-in color names
+        chart_command(df, x="a", y=["b", "c"], color=["red", "blue"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify colors are resolved to default hex values
+        # Handle both layer (line_chart) and non-layer (area/bar) structures
+        if "layer" in chart_spec:
+            color_scale = chart_spec["layer"][0]["encoding"]["color"]["scale"]["range"]
+        else:
+            color_scale = chart_spec["encoding"]["color"]["scale"]["range"]
+
+        assert color_scale == ["#ff4b4b", "#0068c9"], (
+            f"Expected resolved colors ['#ff4b4b', '#0068c9'], got {color_scale}"
+        )
+
+    def test_builtin_color_name_case_insensitive(self):
+        """Test that built-in color names are case-insensitive."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Test different case variations
+        for color_name in ["RED", "Red", "rEd"]:
+            st.line_chart(df, x="a", y="b", color=color_name)
+
+            proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            chart_spec = json.loads(proto.spec)
+
+            # line_chart uses layer structure
+            color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+            assert color_value == "#ff4b4b", (
+                f"Color name '{color_name}' should resolve to #ff4b4b, got {color_value}"
+            )
+
+    def test_grey_alias_resolved_to_gray(self):
+        """Test that 'grey' is correctly aliased to 'gray'."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        st.line_chart(df, x="a", y="b", color="grey")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # line_chart uses layer structure
+        color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        assert color_value == "#808495", (
+            f"'grey' should resolve to gray's hex #808495, got {color_value}"
+        )
+
+    def test_non_builtin_color_passed_through(self):
+        """Test that non-built-in colors are passed through unchanged."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Hex color should pass through
+        st.line_chart(df, x="a", y="b", color="#AABBCC")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # line_chart uses layer structure
+        color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        assert color_value == "#AABBCC", (
+            f"Hex color should pass through unchanged, got {color_value}"
+        )
+
+    def test_column_name_takes_priority_over_color_name(self):
+        """Test that column names have priority over built-in color names."""
+        # If a column is named "red", it should be used as a column, not resolved as a color
+        df = pd.DataFrame([[20, 30, 1]], columns=["a", "b", "red"])
+
+        st.line_chart(df, x="a", y="b", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # line_chart uses layer structure
+        color_encoding = chart_spec["layer"][0]["encoding"]["color"]
+
+        # When "red" is a column name, color encoding should be a field reference, not a value
+        assert "field" in color_encoding, (
+            "Column name 'red' should be treated as a field, not resolved as a color name"
+        )
+        assert color_encoding["field"] == "red", (
+            "Color should reference the 'red' column"
+        )
 
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):
