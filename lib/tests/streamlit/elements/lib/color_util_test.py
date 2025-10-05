@@ -203,3 +203,41 @@ class ColorUtilTest(unittest.TestCase):
         for test_arg in test_args:
             out = color_util.is_color_like(test_arg)
             assert not out
+
+    def test_is_built_in_color_name_true(self):
+        """Test is_built_in_color_name with valid built-in color names."""
+        built_in_colors = [
+            "red", "orange", "yellow", "blue", "green", "violet",
+            "gray", "grey", "primary"
+        ]
+
+        for color in built_in_colors:
+            with self.subTest(color=color):
+                result = color_util.is_built_in_color_name(color)
+                assert result
+
+    def test_is_built_in_color_name_false(self):
+        """Test is_built_in_color_name with invalid color names."""
+        invalid_colors = [
+            "Red", "RED", "Blue", "BLUE", "Primary", "PRIMARY",  # Wrong case
+            "purple", "cyan", "magenta", "unknown",  # Not built-in colors
+            "", " ", "red ", " red",  # Whitespace
+            "reddish", "blueish",  # Partial matches
+        ]
+
+        for color in invalid_colors:
+            with self.subTest(color=color):
+                result = color_util.is_built_in_color_name(color)
+                assert not result
+
+    def test_is_color_like_with_built_in_colors(self):
+        """Test that is_color_like includes built-in color names."""
+        built_in_colors = [
+            "red", "orange", "yellow", "blue", "green", "violet",
+            "gray", "grey", "primary"
+        ]
+
+        for color in built_in_colors:
+            with self.subTest(color=color):
+                result = color_util.is_color_like(color)
+                assert result

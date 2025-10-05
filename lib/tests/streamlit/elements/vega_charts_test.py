@@ -1848,6 +1848,88 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
             assert "This does not look like a valid color argument" in str(exc.value)
 
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_built_in_color_names(self, chart_command: Callable, altair_type: str):
+        """Test that built-in color names work correctly in charts."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Test each built-in color name
+        built_in_colors = ["red", "orange", "yellow", "blue", "green", "violet", "gray", "grey"]
+
+        for color_name in built_in_colors:
+            with self.subTest(color=color_name):
+                chart_command(df, x="a", y="b", color=color_name)
+
+                proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+                chart_spec = json.loads(proto.spec)
+
+                if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+                    # Line charts are layered as default to support better tooltips.
+                    # Extract the actual line mark from the layer.
+                    chart_spec = chart_spec["layer"][0]
+
+                # Check that the color value is converted to CSS
+                assert "value" in chart_spec["encoding"]["color"]
+                color_value = chart_spec["encoding"]["color"]["value"]
+
+                # Verify it's a valid CSS color (hex format)
+                assert color_value.startswith("#")
+                assert len(color_value) == 7  # #rrggbb format
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_primary_color(self, chart_command: Callable, altair_type: str):
+        """Test that primary color works correctly in charts."""
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        chart_command(df, x="a", y="b", color="primary")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
+        # Check that the color value is converted to CSS
+        assert "value" in chart_spec["encoding"]["color"]
+        color_value = chart_spec["encoding"]["color"]["value"]
+
+        # Verify it's a valid CSS color (hex format)
+        assert color_value.startswith("#")
+        assert len(color_value) == 7  # #rrggbb format
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_built_in_color_list(self, chart_command: Callable, altair_type: str):
+        """Test that built-in color names work in color lists."""
+        df = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+
+        chart_command(df, y=["a", "b", "c"], color=["red", "blue", "green"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
+        # Check that the color scale uses the converted CSS colors
+        assert "scale" in chart_spec["encoding"]["color"]
+        color_scale = chart_spec["encoding"]["color"]["scale"]
+        assert "range" in color_scale
+
+        color_range = color_scale["range"]
+        assert len(color_range) == 3
+
+        # Verify all colors are converted to CSS format
+        for color in color_range:
+            assert color.startswith("#")
+            assert len(color) == 7  # #rrggbb format
+
     def assert_output_df_is_correct_and_input_is_untouched(
         self, orig_df, expected_df, chart_proto
     ):
