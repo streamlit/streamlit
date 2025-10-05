@@ -141,13 +141,39 @@ def is_color_tuple_like(color: MaybeColor) -> bool:
     )
 
 
+def is_built_in_color_name(color: str) -> bool:
+    """Check if the string is a built-in color name.
+
+    Built-in color names are: red, orange, yellow, blue, green, violet, gray, grey, primary.
+    These are case-sensitive and must be lowercase.
+
+    Parameters
+    ----------
+    color : str
+        The string to check
+
+    Returns
+    -------
+    bool
+        True if the string is a built-in color name, False otherwise
+    """
+    built_in_colors = {
+        "red", "orange", "yellow", "blue", "green", "violet", "gray", "grey", "primary"
+    }
+    return color in built_in_colors
+
+
 def is_color_like(color: MaybeColor) -> bool:
     """A fairly lightweight check of whether the input is a color.
 
     This isn't meant to be a definitive answer. The definitive solution is to
     try to convert and see if an error is thrown.
     """
-    return is_css_color_like(color) or is_color_tuple_like(color)
+    return (
+        is_css_color_like(color)
+        or is_color_tuple_like(color)
+        or (isinstance(color, str) and is_built_in_color_name(color))
+    )
 
 
 # Wrote our own hex-to-tuple parser to avoid bringing in a dependency.

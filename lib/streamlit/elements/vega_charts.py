@@ -642,6 +642,14 @@ class VegaChartsMixin:
             For a line chart with just one line, this can be:
 
             - None, to use the default color.
+            - A built-in color name: "red", "orange", "yellow", "blue", "green",
+              "violet", "gray", "grey", or "primary".
+
+              **Note:** If you use "primary", Streamlit will use your configured
+              ``theme.primaryColor`` if set, otherwise it uses Streamlit's
+              default primary color (#ff4b4b). This allows your charts to
+              automatically match your app's theme.
+
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -673,7 +681,8 @@ class VegaChartsMixin:
             - None, to use the default colors.
             - A list of string colors or color tuples to be used for each of
               the lines in the chart. This list should have the same length
-              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              as the number of y values. You can mix built-in color names and
+              other color formats (e.g. ``color=["red", "#00ff00", (255, 0, 0)]``
               for three lines).
 
             You can set the default colors in the ``theme.chartCategoryColors``
@@ -790,6 +799,51 @@ class VegaChartsMixin:
            https://doc-line-chart2.streamlit.app/
            height: 440px
 
+        **Example 4: Line chart with built-in colors**
+
+        You can use built-in color names for simple, consistent coloring:
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
+        >>>
+        >>> st.line_chart(df, color="red")
+        >>> st.line_chart(df, y=["b", "c"], color=["blue", "green"])
+
+        .. output::
+           https://doc-line-chart-colors.streamlit.app/
+           height: 440px
+
+        **Example 5: Using primary color for theme consistency**
+
+        The "primary" color automatically adapts to your app's theme:
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
+        >>>
+        >>> # This will use your configured theme.primaryColor if set,
+        >>> # otherwise it uses Streamlit's default primary color (#ff4b4b)
+        >>> st.line_chart(df, color="primary")
+
+        **Custom theme example:**
+
+        In your `.streamlit/config.toml`:
+
+        .. code-block:: toml
+
+            [theme]
+            primaryColor = "#00AA00"  # Your brand green
+
+        Then in your app:
+
+        >>> # This will use your custom green (#00AA00)
+        >>> st.line_chart(df, color="primary")
+
         """
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.LINE,
@@ -872,6 +926,14 @@ class VegaChartsMixin:
             For an area chart with just 1 series, this can be:
 
             - None, to use the default color.
+            - A built-in color name: "red", "orange", "yellow", "blue", "green",
+              "violet", "gray", "grey", or "primary".
+
+              **Note:** If you use "primary", Streamlit will use your configured
+              ``theme.primaryColor`` if set, otherwise it uses Streamlit's
+              default primary color (#ff4b4b). This allows your charts to
+              automatically match your app's theme.
+
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -903,8 +965,9 @@ class VegaChartsMixin:
             - None, to use the default colors.
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three lines).
+              as the number of y values. You can mix built-in color names and
+              other color formats (e.g. ``color=["red", "#00ff00", (255, 0, 0)]``
+              for three series).
 
             You can set the default colors in the ``theme.chartCategoryColors``
             configuration option.
@@ -1152,6 +1215,14 @@ class VegaChartsMixin:
             For a bar chart with just one series, this can be:
 
             - None, to use the default color.
+            - A built-in color name: "red", "orange", "yellow", "blue", "green",
+              "violet", "gray", "grey", or "primary".
+
+              **Note:** If you use "primary", Streamlit will use your configured
+              ``theme.primaryColor`` if set, otherwise it uses Streamlit's
+              default primary color (#ff4b4b). This allows your charts to
+              automatically match your app's theme.
+
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -1183,8 +1254,9 @@ class VegaChartsMixin:
             - None, to use the default colors.
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three lines).
+              as the number of y values. You can mix built-in color names and
+              other color formats (e.g. ``color=["red", "#00ff00", (255, 0, 0)]``
+              for three series).
 
             You can set the default colors in the ``theme.chartCategoryColors``
             configuration option.
@@ -1470,6 +1542,14 @@ class VegaChartsMixin:
             This can be:
 
             - None, to use the default color.
+            - A built-in color name: "red", "orange", "yellow", "blue", "green",
+              "violet", "gray", "grey", or "primary".
+
+              **Note:** If you use "primary", Streamlit will use your configured
+              ``theme.primaryColor`` if set, otherwise it uses Streamlit's
+              default primary color (#ff4b4b). This allows your charts to
+              automatically match your app's theme.
+
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -1500,7 +1580,8 @@ class VegaChartsMixin:
 
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              as the number of y values. You can mix built-in color names and
+              other color formats (e.g. ``color=["red", "#00ff00", (255, 0, 0)]``
               for three series).
 
         size : str, float, int, or None

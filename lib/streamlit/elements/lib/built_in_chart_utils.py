@@ -26,6 +26,7 @@ from typing_extensions import TypeAlias
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
+    is_built_in_color_name,
     is_color_like,
     is_color_tuple_like,
     is_hex_color_like,
@@ -639,6 +640,55 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
     return df[keep]
 
 
+def _get_built_in_color_css(built_in_color: str) -> str:
+    """Convert built-in color names to CSS color values.
+
+    Maps built-in color names to their corresponding CSS color values based on
+    Streamlit's theme colors. This ensures consistency with other components
+    like badges and markdown that use the same color system.
+
+    For 'primary', attempts to use the configured theme.primaryColor.
+    Falls back to default primary color if theme is not configured.
+
+    Parameters
+    ----------
+    built_in_color : str
+        The built-in color name (red, orange, yellow, blue, green, violet, gray, grey, primary)
+
+    Returns
+    -------
+    str
+        The corresponding CSS color value, or the input unchanged if not a built-in color
+    """
+    # Static color mappings (these never change)
+    static_color_mapping = {
+        "red": "#ff4b4b",      # red70
+        "orange": "#ffa421",   # orange70
+        "yellow": "#faca2b",   # yellow80
+        "blue": "#1c83e1",     # blue70
+        "green": "#21c354",    # green70
+        "violet": "#803df5",   # purple70
+        "gray": "#a3a8b8",     # gray60
+        "grey": "#a3a8b8",     # gray and grey are aliases
+    }
+
+    # Handle primary color specially - it's theme-aware
+    if built_in_color == "primary":
+        # Try to get the configured primary color from theme
+        try:
+            from streamlit import config
+            primary_color = config.get_option("theme.primaryColor")
+            if primary_color:
+                return primary_color
+        except Exception:
+            pass  # Fall back to default if theme not configured
+
+        # Default Streamlit primary color
+        return "#ff4b4b"
+
+    return static_color_mapping.get(built_in_color, built_in_color)
+
+
 def _maybe_convert_color_column_in_place(
     df: pd.DataFrame, color_column: str | None
 ) -> None:
@@ -1037,6 +1087,17 @@ def _get_color_encoding(
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)
     if has_color_value:
+        # Handle built-in color names first
+        if isinstance(color_value, str) and is_built_in_color_name(color_value):
+            if len(y_column_list) != 1:
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
+
+            # Convert built-in color name to CSS color
+            css_color = _get_built_in_color_css(color_value)
+            return alt.ColorValue(css_color)
+
         # If the color value is color-like, return that.
         if is_color_like(cast("Any", color_value)):
             if len(y_column_list) != 1:
@@ -1053,12 +1114,20 @@ def _get_color_encoding(
             if len(color_values) != len(y_column_list):
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
-            if len(color_values) == 1:
-                return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
+            # Convert built-in color names to CSS colors in the list
+            converted_colors = []
+            for c in color_values:
+                if isinstance(c, str) and is_built_in_color_name(c):
+                    converted_colors.append(_get_built_in_color_css(c))
+                else:
+                    converted_colors.append(to_css_color(cast("Any", c)))
+
+            if len(converted_colors) == 1:
+                return alt.ColorValue(converted_colors[0])
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
                 scale=alt.Scale(
-                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
+                    domain=y_column_list, range=converted_colors
                 ),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
