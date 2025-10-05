@@ -260,6 +260,23 @@ describe("StreamlitMarkdown", () => {
       cleanup()
     }
   )
+  const literalLabelCases = [
+    { input: "+", expected: "+" },
+    { input: "-", expected: "-" },
+    { input: ">", expected: ">" },
+    { input: "1.", expected: "1." },
+    { input: "***", expected: "***" },
+  ]
+
+  test.each(literalLabelCases)(
+    "renders literal markdown markers for labels - $input",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+      cleanup()
+    }
+  )
 
   it("renders streamlit logo in markdown when isLabel is true", () => {
     render(

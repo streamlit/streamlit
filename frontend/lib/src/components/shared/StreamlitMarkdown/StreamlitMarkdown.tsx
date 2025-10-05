@@ -655,6 +655,46 @@ function createRemarkTypographicalSymbols() {
   }
 }
 
+/**
+ * Escape markdown syntax that would be interpreted in labels.
+ */
+function escapeMarkdownForLabel(text: string): string {
+  return text.split(/\r?\n/).map(escapeMarkdownLineForLabel).join("\n")
+}
+function escapeMarkdownLineForLabel(line: string): string {
+  // Extract leading and trailing whitespace to preserve it after escaping
+  const leadingWhitespace = line.match(/^\s*/)?.[0] ?? ""
+  const trailingWhitespace = line.match(/\s*$/)?.[0] ?? ""
+  const start = leadingWhitespace.length
+  const end = line.length - trailingWhitespace.length
+  const core = line.slice(start, end)
+  // If there's no core content, return the original line.
+  if (core.length === 0) {
+    return line
+  }
+  // If the core is empty after trimming, return the original line (it may be all whitespace).
+  const trimmedCore = core.trim()
+  if (trimmedCore.length === 0) {
+    return line
+  }
+  // Escape tokens that would otherwise be interpreted as list or quote markers.
+  if (SINGLE_CHARACTER_LABEL_TOKENS.has(trimmedCore)) {
+    return `${leadingWhitespace}\\${trimmedCore}${trailingWhitespace}`
+  }
+  // Match unordered list tokens (-, *, +) with optional trailing dot or parenthesis
+  const orderedListTokenMatch = trimmedCore.match(/^(\d+)([.)])$/)
+  if (orderedListTokenMatch) {
+    const escapedToken = `${orderedListTokenMatch[1]}\\${orderedListTokenMatch[2]}`
+    return `${leadingWhitespace}${escapedToken}${trailingWhitespace}`
+  }
+  // Escape horizontal rules (---, ***, ___, - - -, * * *, _ _ _)
+  if (/^([-*_])(?:\s*\1){2,}$/.test(trimmedCore)) {
+    const escapedCore = core.replace(/([-*_])/g, "\\$1")
+    return `${leadingWhitespace}${escapedCore}${trailingWhitespace}`
+  }
+  return line
+}
+
 // Standard remark plugins that don't depend on theme or props
 const BASE_REMARK_PLUGINS = [
   remarkMathPlugin,
@@ -691,6 +731,9 @@ const LABEL_DISALLOWED_ELEMENTS = [
 
 // Add link disallowing to the base disallowed elements
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
+
+// Tokens that are single characters and have special meaning in markdown
+const SINGLE_CHARACTER_LABEL_TOKENS = new Set(["+", "-", "*", ">"])
 
 interface LinkProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -770,10 +813,14 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     [overrideComponents]
   )
 
-  const processedSource = useMemo(
-    () => source.replaceAll(":material/", ":material_"),
-    [source]
-  )
+  const processedSource = useMemo(() => {
+    const withNormalizedIcons = source.replaceAll(":material/", ":material_")
+    if (!isLabel) {
+      return withNormalizedIcons
+    }
+
+    return escapeMarkdownForLabel(withNormalizedIcons)
+  }, [source, isLabel])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
