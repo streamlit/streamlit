@@ -64,7 +64,7 @@ st.bar_chart(df)
 st.bar_chart(df, x="a")
 st.bar_chart(df, y="a")
 st.bar_chart(df, y=["a", "b"])
-st.bar_chart(df, x="a", y="b", height=500, width=300, use_container_width=False)
+st.bar_chart(df, x="a", y="b", height=500, width=300)
 st.bar_chart(df, x="b", y="a")
 st.bar_chart(df, x="a", y=["b", "c"])
 st.bar_chart(utc_df)
@@ -95,7 +95,7 @@ st.bar_chart(
 st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by values
 
 # Test that add_rows maintains original styling params:
-# color, width, height, use_container_width, horizontal, stack
+# color, width, height, horizontal, stack
 bar_data = pd.DataFrame({"Bar 1": [], "Bar 2": []})
 
 empty_bar = st.bar_chart(
@@ -106,7 +106,6 @@ empty_bar = st.bar_chart(
     height=300,
     stack=False,
     horizontal=True,
-    use_container_width=False,
 )
 
 if st.button("Add data to Bar Chart"):

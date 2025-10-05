@@ -58,5 +58,15 @@ message WidgetState {
     // ChatInputValue resets itself to empty after the script has been run.
     // This is used for the chat_input widget.
     ChatInputValue chat_input_value = 15;
+
+    // Transient trigger payload transport (JSON-stringified).
+    // - Purpose: carry per-run, non-persistent trigger data across the wire.
+    // - Shape: JSON object or JSON array (batched within a single update).
+    // - Lifecycle: treated as a trigger; cleared after each script run.
+    // Use json_value for persistent state; use json_trigger_value for
+    // auto-resetting payloads.
+    string json_trigger_value = 16;
+
+    // Next ID: 17
   }
 }

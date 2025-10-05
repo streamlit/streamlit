@@ -21,12 +21,23 @@ import json
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit import config, dataframe_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
     is_color_like,
     to_int_color_tuple,
+)
+from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_height,
+    validate_width,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
@@ -85,9 +96,9 @@ class MapMixin:
         color: None | str | Color = None,
         size: None | str | float = None,
         zoom: int | None = None,
-        use_container_width: bool = True,
-        width: int | None = None,
-        height: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: HeightWithoutContent = 500,
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -163,28 +174,35 @@ class MapMixin:
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels.
 
-        use_container_width : bool
+        width : "stretch" or int
+            How to size the map's width. Can be one of:
+
+            - ``"stretch"`` (default): Expand to the width of the parent container.
+            - An integer: Set the map width to this many pixels.
+
+        height : "stretch" or int
+            How to size the map's height. Can be one of:
+
+            - ``"stretch"``: Expand to the height of the parent container.
+            When outside of a container, the default height is 6.25rem.
+            - An integer: Set the map height to this many pixels. Defaults to 500.
+
+        use_container_width : bool or None
             Whether to override the map's native width with the width of
-            the parent container. If ``use_container_width`` is ``True``
-            (default), Streamlit sets the width of the map to match the width
-            of the parent container. If ``use_container_width`` is ``False``,
-            Streamlit sets the width of the chart to fit its contents according
-            to the plotting library, up to the width of the parent container.
+            the parent container. This can be one of the following:
 
-        width : int or None
-            Desired width of the chart expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the width of the chart to fit
-            its contents according to the plotting library, up to the width of
-            the parent container. If ``width`` is greater than the width of the
-            parent container, Streamlit sets the chart width to match the width
-            of the parent container.
+            - ``None`` (default): Streamlit will use the map's default behavior.
+            - ``True``: Streamlit sets the width of the map to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the map to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
 
-            To use ``width``, you must set ``use_container_width=False``.
-
-        height : int or None
-            Desired height of the chart expressed in pixels. If ``height`` is
-            ``None`` (default), Streamlit sets the height of the chart to fit
-            its contents according to the plotting library.
+            .. deprecated::
+                The ``use_container_width`` parameter is deprecated and will
+                be removed in a future version. Use the ``width`` parameter
+                with ``width="stretch"`` instead of ``use_container_width=True``,
+                and specify an integer width instead of ``use_container_width=False``.
 
         Examples
         --------
@@ -231,15 +249,35 @@ class MapMixin:
            height: 600px
 
         """
-        # TODO(lawilby): Remove this once we have modernized height for map.
-        if height is None:
-            height = 500
+        # Handle use_container_width deprecation (for elements that already had width parameter)
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, specify an integer width.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            # For use_container_width=False, preserve any integer width that was set.
+
+        validate_width(width, allow_content=False)
+        validate_height(height, allow_content=False)
+
         map_proto = DeckGlJsonChartProto()
         deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
-        marshall(
-            map_proto, deck_gl_json, use_container_width, width=width, height=height
+
+        marshall(map_proto, deck_gl_json)
+
+        layout_config = LayoutConfig(width=width, height=height)
+        return self.dg._enqueue(
+            "deck_gl_json_chart", map_proto, layout_config=layout_config
         )
-        return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -467,18 +505,13 @@ def _get_zoom_level(distance: float) -> int:
 def marshall(
     pydeck_proto: DeckGlJsonChartProto,
     pydeck_json: str,
-    use_container_width: bool,
-    height: int | None = None,
-    width: int | None = None,
 ) -> None:
+    """Marshall a map proto with the given pydeck JSON specification.
+
+    Layout configuration (width, height, etc.) is handled by the LayoutConfig
+    system and not through proto fields.
+    """
     pydeck_proto.json = pydeck_json
-    pydeck_proto.use_container_width = use_container_width
-
-    if width:
-        pydeck_proto.width = width
-    if height:
-        pydeck_proto.height = height
-
     pydeck_proto.id = ""
 
     mapbox_token = config.get_option("mapbox.token")

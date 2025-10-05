@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,26 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+syntax = "proto3";
 
-import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ArrowDataProto";
 
-import { StyledElement } from "./styled-components"
-
-export interface IDeployListElementProps {
-  children?: React.ReactNode
-  // eslint-disable-next-line @eslint-react/no-unused-props
-  extraSpacing?: boolean
+// Data-only Arrow buffer. This intentionally excludes any UI- or element-
+// specific configuration that exists in Arrow.proto. Use this message when
+// only the serialized Arrow data is required.
+message ArrowData {
+  // The serialized Apache Arrow buffer (IPC stream or file format bytes)
+  bytes data = 1;
 }
-
-function DeployListElement(props: IDeployListElementProps): ReactElement {
-  const { children } = props
-  return (
-    <StyledElement>
-      <img src={Checkmark} alt={"Checkmark"} />
-      <span>{children}</span>
-    </StyledElement>
-  )
-}
-
-export default DeployListElement

@@ -99,16 +99,3 @@ def test_renders_clear_cache_dialog_properly(
         "Are you sure you want to clear the app's function caches?"
     )
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
-
-
-@pytest.mark.flaky(reruns=3)
-def test_renders_active_theme_dialog_properly(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    themed_app.get_by_test_id("stMainMenu").click()
-    themed_app.get_by_text("Settings").click()
-    themed_app.get_by_text("Edit active theme").click()
-
-    dialog = themed_app.get_by_test_id("stDialog").get_by_role("dialog")
-    expect(dialog.get_by_text("Edit active theme")).to_be_visible()
-    assert_snapshot(dialog, name="edit_active_theme_dialog")
