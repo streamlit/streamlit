@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
 
 from streamlit import util
@@ -100,7 +101,7 @@ class Cursor:
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
-    def get_transient_cursor(self, **props: Any) -> TransientCursor:
+    def get_transient_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
     @property
@@ -161,18 +162,15 @@ class RunningCursor(Cursor):
 
         return locked_cursor
 
-    def get_locked_transient_cursor(self, **props: Any) -> LockedCursor:
-        return LockedCursor(
+    def get_transient_locked_cursor(self, **props: Any) -> LockedCursor:
+        locked_cursor = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
             **props,
         )
 
-    def get_transient_cursor(self, **props: Any) -> TransientCursor:
-        return TransientCursor(
-            self._root_container, self._parent_path, self._index, **props
-        )
+        return locked_cursor
 
 
 class LockedCursor(Cursor):
@@ -206,6 +204,7 @@ class LockedCursor(Cursor):
         self._index = index
         self._parent_path = parent_path
         self._props = props
+        self._transient_elements: OrderedDict[str, ElementProto] = OrderedDict()
 
     @property
     def root_container(self) -> int:
@@ -223,50 +222,28 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        self._props = props
-        return self
-
     @property
     def props(self) -> Any:
         return self._props
 
-    def get_transient_cursor(self, **props: Any) -> TransientCursor:
-        return TransientCursor(
-            self._root_container, self._parent_path, self._index, **props
-        )
+    @property
+    def transient_elements(self) -> list[ElementProto]:
+        return list(self._transient_elements.values())
 
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+        self._props = props
+        return self
 
-class TransientCursor(LockedCursor):
-    def __init__(
-        self,
-        root_container: int,
-        parent_path: tuple[int, ...] = (),
-        index: int = 0,
-        **props: Any,
-    ) -> None:
-        super().__init__(root_container, parent_path, index, **props)
-        self._transient_ids: list[str] = []
-        self._transient_elements: dict[str, ElementProto] = {}
+    def get_transient_locked_cursor(self, **props: Any) -> LockedCursor:
+        self._props = props
+        return self
 
     def add_transient_element(self, transient_id: str, element: ElementProto) -> None:
-        if transient_id in self._transient_ids:
+        if transient_id in self._transient_elements:
             return
 
-        self._transient_ids.append(transient_id)
         self._transient_elements[transient_id] = element
 
     def remove_transient_element(self, transient_id: str) -> None:
-        if transient_id in self._transient_ids:
-            self._transient_ids.remove(transient_id)
-
         if transient_id in self._transient_elements:
             del self._transient_elements[transient_id]
-
-    @property
-    def transient_elements(self) -> list[ElementProto]:
-        return [self._transient_elements[t_id] for t_id in self._transient_ids]
-
-    def get_transient_cursor(self, **props: Any) -> TransientCursor:
-        self._props = props
-        return self

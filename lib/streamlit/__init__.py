@@ -135,7 +135,6 @@ from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
-from streamlit.elements.spinner import spinner as spinner
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -219,6 +218,7 @@ select_slider = _main.select_slider
 segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
+spinner = _main.spinner
 subheader = _main.subheader
 success = _main.success
 table = _main.table

@@ -15,128 +15,191 @@
 from __future__ import annotations
 
 import contextlib
+import itertools
 import threading
 import uuid
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
     validate_width,
 )
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from streamlit.cursor import LockedCursor
+    from streamlit.delta_generator import DeltaGenerator
 
 # Set the message 0.5 seconds in the future to avoid annoying
 # flickering if this spinner runs too quickly.
 DELAY_SECS: Final = 0.5
 
 
-@contextlib.contextmanager
-def spinner(
-    text: str = "In progress...",
-    *,
-    show_time: bool = False,
-    _cache: bool = False,
-    width: Width = "content",
-) -> Iterator[None]:
-    """Display a loading spinner while executing a block of code.
+class OrderGate:
+    def __init__(self, dg_cursor: LockedCursor):
+        self._cond = threading.Condition()
+        self._next_to_run = 0
+        self._counter = itertools.count()
+        self._dg_cursor = dg_cursor
 
-    Parameters
-    ----------
-    text : str
-        The text to display next to the spinner. This defaults to
-        ``"In progress..."``.
+    def ticket(self) -> int:
+        return next(self._counter)
 
-        The text can optionally contain GitHub-flavored Markdown. Syntax
-        information can be found at: https://github.github.com/gfm.
+    def wait_turn_and_advance(self, my_seq: int) -> None:
+        with self._cond:
+            while my_seq != self._next_to_run:
+                self._cond.wait()
+            self._next_to_run += 1
+            self._cond.notify_all()
 
-        See the ``body`` parameter of |st.markdown|_ for additional, supported
-        Markdown directives.
+    @property
+    def dg_cursor(self) -> LockedCursor:
+        return self._dg_cursor
 
-        .. |st.markdown| replace:: ``st.markdown``
-        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-    show_time : bool
-        Whether to show the elapsed time next to the spinner text. If this is
-        ``False`` (default), no time is displayed. If this is ``True``,
-        elapsed time is displayed with a precision of 0.1 seconds. The time
-        format is not configurable.
+# --- per-dg registry ---
+_gate_registry_lock = threading.Lock()
+_dg_gates: dict[tuple[int, ...], OrderGate] = {}
 
-    width : "content", "stretch", or int
-        The width of the spinner element. This can be one of the following:
 
-        - ``"content"`` (default): The width of the element matches the
-          width of its content, but doesn't exceed the width of the parent
-          container.
-        - ``"stretch"``: The width of the element matches the width of the
-          parent container.
-        - An integer specifying the width in pixels: The element has a
-          fixed width. If the specified width is greater than the width of
-          the parent container, the width of the element matches the width
-          of the parent container.
+def get_gate_for_dg(dg_cursor: LockedCursor) -> OrderGate:
+    # If your dg objects aren't weakref-able, fall back to a dict keyed by id(dg_obj),
+    # plus a separate WeakValueDictionary to avoid leaks.
+    with _gate_registry_lock:
+        delta_path = tuple(dg_cursor.delta_path)
+        gate = _dg_gates.get(delta_path)
+        if gate is None:
+            gate = OrderGate(dg_cursor)
+            _dg_gates[delta_path] = gate
+        return gate
 
-    Example
-    -------
-    >>> import streamlit as st
-    >>> import time
-    >>>
-    >>> with st.spinner("Wait for it...", show_time=True):
-    >>>     time.sleep(5)
-    >>> st.success("Done!")
-    >>> st.button("Rerun")
 
-    .. output ::
-        https://doc-spinner.streamlit.app/
-        height: 210px
+class SpinnerMixin:
+    @contextlib.contextmanager
+    def spinner(
+        self,
+        text: str = "In progress...",
+        *,
+        show_time: bool = False,
+        _cache: bool = False,
+        width: Width = "content",
+    ) -> Iterator[None]:
+        """Display a loading spinner while executing a block of code.
 
-    """
-    from streamlit import _main
-    from streamlit.proto.Element_pb2 import Element as ElementProto
-    from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
-    from streamlit.string_util import clean_text
+        Parameters
+        ----------
+        text : str
+            The text to display next to the spinner. This defaults to
+            ``"In progress..."``.
 
-    validate_width(width, allow_content=True)
-    layout_config = LayoutConfig(width=width)
+            The text can optionally contain GitHub-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
 
-    transient_id = str(uuid.uuid4())
-    element_proto = ElementProto()
-    spinner_transient = None
-    display_message = True
-    display_message_lock = threading.Lock()
+            See the ``body`` parameter of |st.markdown|_ for additional, supported
+            Markdown directives.
 
-    try:
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        def set_message() -> None:
-            nonlocal element_proto, spinner_transient
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
 
-            with display_message_lock:
-                if display_message:
-                    spinner_proto = SpinnerProto()
-                    spinner_proto.text = clean_text(text)
-                    spinner_proto.cache = _cache
-                    spinner_proto.show_time = show_time
-                    element_proto.spinner.CopyFrom(spinner_proto)
-                    spinner_transient = _main._transient(
-                        element_proto,
-                        layout_config=layout_config,
-                        add_transient_id=transient_id,
-                    )
+        width : "content", "stretch", or int
+            The width of the spinner element. This can be one of the following:
 
-        add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
+            - ``"content"`` (default): The width of the element matches the
+            width of its content, but doesn't exceed the width of the parent
+            container.
+            - ``"stretch"``: The width of the element matches the width of the
+            parent container.
+            - An integer specifying the width in pixels: The element has a
+            fixed width. If the specified width is greater than the width of
+            the parent container, the width of the element matches the width
+            of the parent container.
 
-        # Yield control back to the context.
-        yield
-    finally:
-        if display_message_lock:
-            with display_message_lock:
-                display_message = False
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> with st.spinner("Wait for it...", show_time=True):
+        >>>     time.sleep(5)
+        >>> st.success("Done!")
+        >>> st.button("Rerun")
 
-            if spinner_transient is not None:
-                spinner_transient._transient(
+        .. output ::
+            https://doc-spinner.streamlit.app/
+            height: 210px
+
+        """
+        from streamlit.proto.Element_pb2 import Element as ElementProto
+        from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+        from streamlit.string_util import clean_text
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        transient_id = str(uuid.uuid4())
+        spinner_proto = SpinnerProto()
+        spinner_proto.text = clean_text(text)
+        spinner_proto.cache = _cache
+        spinner_proto.show_time = show_time
+        element_proto = ElementProto()
+        element_proto.spinner.CopyFrom(spinner_proto)
+
+        active_dg = cast("DeltaGenerator", self._active_dg)
+        transient_cursor = active_dg._cursor.get_transient_locked_cursor()
+        gate = get_gate_for_dg(transient_cursor)
+        my_seq = gate.ticket()
+
+        # Ensure we are targeting the correct DeltaGenerator
+        # even though we will wait to enqueue the message
+        spinner_msg = self._transient(
+            gate.dg_cursor,
+            element_proto,
+            layout_config=layout_config,
+            add_transient_id=transient_id,
+        )
+        display_message = True
+        display_message_lock = threading.Lock()
+
+        try:
+
+            def set_message() -> None:
+                nonlocal spinner_msg, my_seq, gate
+                # enforce FIFO among *only* the same current_dg
+                gate.wait_turn_and_advance(my_seq)
+
+                with display_message_lock:
+                    if display_message:
+                        # Ignore the DeltaGenerator conveniences because Transients are special
+                        enqueue_message(spinner_msg)
+
+            add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
+
+            # Yield control back to the context.
+            yield
+        finally:
+            if display_message_lock:
+                with display_message_lock:
+                    display_message = False
+
+                complete_msg = self._transient(
+                    gate.dg_cursor,
                     element_proto,
                     layout_config=layout_config,
                     clear_transient_id=transient_id,
                 )
+
+                enqueue_message(complete_msg)
+
+    @property
+    def dg(self) -> DeltaGenerator:
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)

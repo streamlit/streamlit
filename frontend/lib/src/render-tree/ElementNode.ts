@@ -209,7 +209,7 @@ export class ElementNode implements AppNode {
     }
 
     // It's essentially an empty transient node, so we return the element node
-    if (!node.anchor && node.transientNodes.length === 0) {
+    if (node.transientNodes.length === 0) {
       return this
     }
 

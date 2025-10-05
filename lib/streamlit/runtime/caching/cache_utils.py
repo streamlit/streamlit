@@ -30,7 +30,6 @@ from typing_extensions import ParamSpec
 
 from streamlit import type_util
 from streamlit.dataframe_util import is_unevaluated_data_object
-from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
     CacheError,
@@ -260,8 +259,10 @@ class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
         # basically like auto-setting "show_spinner=False" on the @st.cache decorators
         # on behalf of the user.
         is_nested_cache_function = in_cached_function.get()
+        import streamlit as st
+
         spinner_or_no_context = (
-            spinner(spinner_message, _cache=True, show_time=self._info.show_time)
+            st.spinner(spinner_message, _cache=True, show_time=self._info.show_time)
             if spinner_message is not None and not is_nested_cache_function
             else contextlib.nullcontext()
         )

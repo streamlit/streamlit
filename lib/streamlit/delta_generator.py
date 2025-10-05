@@ -76,6 +76,7 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
+from streamlit.elements.spinner import SpinnerMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -109,7 +110,7 @@ if TYPE_CHECKING:
 
     from google.protobuf.message import Message
 
-    from streamlit.cursor import Cursor
+    from streamlit.cursor import Cursor, LockedCursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Element_pb2 import Element as ElementProto
@@ -217,6 +218,7 @@ class DeltaGenerator(
     ArrowMixin,
     VegaChartsMixin,
     DataEditorMixin,
+    SpinnerMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -602,19 +604,15 @@ class DeltaGenerator(
 
     def _transient(
         self,
+        dg_cursor: LockedCursor,
         element_proto: ElementProto,
         layout_config: LayoutConfig | None = None,
         add_transient_id: str | None = None,
         clear_transient_id: str | None = None,
-    ) -> DeltaGenerator:
-        # Operate on the active DeltaGenerator, in case we're in a `with` block.
-        dg = self._active_dg
-
-        if dg._root_container is None or dg._cursor is None:
-            return dg
-
+    ) -> ForwardMsg_pb2.ForwardMsg:
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = dg._cursor.delta_path
+        msg.metadata.delta_path[:] = dg_cursor.delta_path
+        msg.metadata.cacheable = False
 
         if layout_config:
             if layout_config.height is not None:
@@ -626,31 +624,18 @@ class DeltaGenerator(
                     get_width_config(layout_config.width)
                 )
 
-        transient_cursor = dg._cursor.get_transient_cursor()
         if clear_transient_id is not None:
-            transient_cursor.remove_transient_element(clear_transient_id)
+            dg_cursor.remove_transient_element(clear_transient_id)
         if add_transient_id is not None:
-            transient_cursor.add_transient_element(add_transient_id, element_proto)
-
-        # Advance the cursor if it's not a transient cursor
-        if dg._cursor != transient_cursor:
-            dg._cursor.get_locked_cursor(add_rows_metadata=None)
-
-        output_dg = DeltaGenerator(
-            root_container=dg._root_container,
-            cursor=transient_cursor,
-            parent=dg,
-        )
+            dg_cursor.add_transient_element(add_transient_id, element_proto)
 
         # Make sure the transient message is set as it will
         # not be set if there are no transient elements
         msg.delta.new_transient.SetInParent()
-        for e in transient_cursor.transient_elements:
+        for e in dg_cursor.transient_elements:
             msg.delta.new_transient.elements.add().CopyFrom(e)
 
-        _enqueue_message(msg)
-
-        return output_dg
+        return msg
 
 
 def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:

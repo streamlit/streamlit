@@ -267,6 +267,7 @@ export class AppRoot {
     if (debug) {
       logger.debug("BEFORE applyDelta", this.debug())
       logger.debug("Delta", delta)
+      logger.debug("Path", metadata.deltaPath)
     }
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.

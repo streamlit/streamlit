@@ -45,9 +45,20 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     this.scriptRunId = scriptRunId
   }
 
-  visitElementNode(_node: ElementNode): AppNode {
+  visitElementNode(node: ElementNode): AppNode {
     if (this.deltaPath.length > 0) {
       throw new Error("'setIn' cannot be called on an ElementNode")
+    }
+
+    // We are setting the element. If we are setting a transient node,
+    // we have an opportunity to set the anchor.
+    if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
+      return new TransientNode(
+        this.scriptRunId,
+        node,
+        this.nodeToSet.transientNodes,
+        this.nodeToSet.deltaMsgReceivedAt
+      )
     }
 
     return this.nodeToSet
@@ -61,6 +72,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   visitTransientNode(node: TransientNode): AppNode {
     const [, ...remainingPath] = this.deltaPath
 
+    // If we need to drill down, we will travel through the anchor.
     if (remainingPath.length > 0) {
       if (node.anchor) {
         return node.anchor.accept(
@@ -97,6 +109,11 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
     // Create a copy of the children array
     let newChildren: AppNode[] = []
+    const childVisitor = new SetNodeByDeltaPathVisitor(
+      remainingPath,
+      this.nodeToSet,
+      this.scriptRunId
+    )
 
     if (!node.children[currentIndex]) {
       newChildren = node.children.slice()
@@ -104,21 +121,19 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     } else {
       let index = 0
       while (index < node.children.length) {
+        const child = node.children[index]
+
         if (index !== currentIndex) {
-          newChildren.push(node.children[index])
+          newChildren.push(child)
           index++
           continue
         }
-        const childVisitor = new SetNodeByDeltaPathVisitor(
-          remainingPath,
-          this.nodeToSet,
-          this.scriptRunId
-        )
-        const child = node.children[index]
+
         const nextChild = child.accept(childVisitor)
         if (
           !(child instanceof TransientNode) &&
-          nextChild instanceof TransientNode
+          nextChild instanceof TransientNode &&
+          nextChild.anchor !== child
         ) {
           // This will be an insertion
           newChildren.push(nextChild)

@@ -82,7 +82,7 @@ export class RenderNodeVisitor
   }
 
   visitTransientNode(node: TransientNode): OptionalReactElement {
-    const transientReactElements = []
+    const transientReactElements: OptionalReactElement[] = []
     node.transientNodes.forEach(element => {
       const keyOverride =
         this.elementKeyOverride || `transient-${this.transientElementCount}`
@@ -98,12 +98,12 @@ export class RenderNodeVisitor
       transientReactElements.push(transientReactElement)
     })
 
+    this.reactElements.push(...transientReactElements)
+
     const anchorReactElement = node.anchor?.accept(this)
     if (anchorReactElement) {
       transientReactElements.push(anchorReactElement)
     }
-
-    this.reactElements.push(...transientReactElements)
 
     return <>{transientReactElements}</>
   }
