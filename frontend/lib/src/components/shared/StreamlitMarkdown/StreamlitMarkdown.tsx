@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   CSSProperties,
   type FC,
   type HTMLProps,
@@ -672,7 +672,7 @@ function escapeMarkdownLineForLabel(line: string): string {
   if (core.length === 0) {
     return line
   }
-  // If the core is empty after trimming, return the original line (it may be all whitespace).
+  // If the core only contains whitespace after trimming, return the original line unchanged.
   const trimmedCore = core.trim()
   if (trimmedCore.length === 0) {
     return line
@@ -681,7 +681,7 @@ function escapeMarkdownLineForLabel(line: string): string {
   if (SINGLE_CHARACTER_LABEL_TOKENS.has(trimmedCore)) {
     return `${leadingWhitespace}\\${trimmedCore}${trailingWhitespace}`
   }
-  // Match unordered list tokens (-, *, +) with optional trailing dot or parenthesis
+  // Match ordered list tokens (1., 2), etc.) with optional trailing dot or parenthesis
   const orderedListTokenMatch = trimmedCore.match(/^(\d+)([.)])$/)
   if (orderedListTokenMatch) {
     const escapedToken = `${orderedListTokenMatch[1]}\\${orderedListTokenMatch[2]}`
