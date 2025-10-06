@@ -1,0 +1,68 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "BidiComponentProto";
+
+import "streamlit/proto/ArrowData.proto";
+
+// Mixed data structure that allows JSON with embedded Arrow references
+message MixedData {
+    // The main JSON structure with arrow references replaced by placeholders
+    string json = 1;
+
+    // Map of arrow data blobs keyed by reference ID
+    map<string, ArrowData> arrow_blobs = 2;
+}
+
+// Represents an instance of a bidirectional component.
+message BidiComponent {
+    // The ID of the widget instance.
+    string id = 1;
+    // The registered name of the component.
+    string component_name = 2;
+    // The JavaScript content provided by the developer.
+    optional string js_content = 3;
+    // The source path for the JavaScript content.
+    optional string js_source_path = 4;
+    // The ID of the form this component belongs to, if any.
+    string form_id = 5;
+    // The HTML content provided by the developer.
+    optional string html_content = 6;
+    // The CSS content provided by the developer.
+    optional string css_content = 7;
+    // The source path for the CSS content.
+    optional string css_source_path = 8;
+    // Whether to isolate styles from the parent.
+    bool isolate_styles = 9;
+    // The component's data payload. Exactly one of the following fields
+    // will be set at any given time.
+    oneof data {
+      // JSON-serialized value for generic data payloads.
+      string json = 10;
+
+      // Data-only Apache Arrow buffer for dataframe-like payloads.
+      ArrowData arrow_data = 11;
+
+      // Arbitrary bytes payload.
+      bytes bytes = 12;
+
+      // Mixed data with JSON structure + embedded Arrow references
+      MixedData mixed = 13;
+    }
+}

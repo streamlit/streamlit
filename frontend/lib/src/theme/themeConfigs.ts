@@ -42,3 +42,10 @@ export const lightTheme: ThemeConfig = {
   basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
+
+export const customTheme: ThemeConfig = {
+  name: "Custom Theme",
+  emotion: emotionLightTheme,
+  basewebTheme: baseuiLightTheme,
+  primitives: lightThemePrimitives,
+}

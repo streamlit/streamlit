@@ -24,7 +24,6 @@ import { useTextInputAutoExpand } from "./useTextInputAutoExpand"
 
 // Mock the useTheme hook
 vi.mock("@emotion/react", () => ({
-  // eslint-disable-next-line @eslint-react/hooks-extra/no-unnecessary-use-prefix, @eslint-react/hooks-extra/no-useless-custom-hooks
   useTheme: () => ({
     sizes: {
       minElementHeight: "2.5rem",

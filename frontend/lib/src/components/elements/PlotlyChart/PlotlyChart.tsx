@@ -65,6 +65,7 @@ export interface PlotlyChartProps {
   disabled: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
+  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
 }
 

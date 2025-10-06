@@ -60,7 +60,6 @@ type LibContextValues = {
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
-  addThemes: (themes: ThemeConfig[]) => void
   onPageChange: (pageScriptHash: string) => void
   currentPageScriptHash: string
   libConfig: LibConfig
@@ -104,7 +103,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   activeTheme,
   setTheme,
   availableThemes,
-  addThemes,
   libConfig,
   fragmentIdsThisRun,
   locale,
@@ -163,7 +161,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       activeTheme,
       setTheme,
       availableThemes,
-      addThemes,
       onPageChange,
       currentPageScriptHash,
       libConfig,
@@ -181,7 +178,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       activeTheme,
       setTheme,
       availableThemes,
-      addThemes,
       onPageChange,
       currentPageScriptHash,
       libConfig,
