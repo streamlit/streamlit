@@ -126,3 +126,40 @@ st.radio(
     ["Choice 1", "Choice 2", "Choice 3"],
     width=200,
 )
+
+if st.toggle("Update radio props"):
+    dr_value = st.radio(
+        "Updated dynamic radio",
+        key="dynamic_radio_with_key",
+        help="updated help",
+        width=300,
+        horizontal=True,
+        on_change=lambda a, param: print(
+            f"Updated radio - callback triggered: {a} {param}"
+        ),
+        args=("Updated radio arg",),
+        kwargs={"param": "updated kwarg param"},
+        captions=["🍎", "🍌", "🍊"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated radio value:", dr_value)
+else:
+    dr_value = st.radio(
+        "Initial dynamic radio",
+        key="dynamic_radio_with_key",
+        help="initial help",
+        width="content",
+        horizontal=False,
+        on_change=lambda a, param: print(
+            f"Initial radio - callback triggered: {a} {param}"
+        ),
+        args=("Initial radio arg",),
+        kwargs={"param": "initial kwarg param"},
+        captions=["🍎 Apple", "🍌 Banana", "🍊 Orange"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial radio value:", dr_value)
