@@ -2271,8 +2271,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         else:
             color_scale = chart_spec["encoding"]["color"]["scale"]["range"]
 
-        assert color_scale == ["#ff4b4b", "#0068c9"], (
-            f"Expected resolved colors ['#ff4b4b', '#0068c9'], got {color_scale}"
+        assert color_scale == ["#ff4b4b", "#1c83e1"], (
+            f"Expected resolved colors ['#ff4b4b', '#1c83e1'], got {color_scale}"
         )
 
     def test_builtin_color_name_case_insensitive(self):
@@ -2303,8 +2303,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         # line_chart uses layer structure
         color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
-        assert color_value == "#808495", (
-            f"'grey' should resolve to gray's hex #808495, got {color_value}"
+        assert color_value == "#a3a8b8", (
+            f"'grey' should resolve to gray's hex #a3a8b8, got {color_value}"
         )
 
     def test_non_builtin_color_passed_through(self):
