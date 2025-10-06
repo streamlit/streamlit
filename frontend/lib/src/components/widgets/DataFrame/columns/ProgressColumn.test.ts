@@ -19,7 +19,6 @@ import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, Int64 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { mockTheme } from "~lib/mocks/mockTheme"
 
 import ProgressColumn, { ProgressColumnParams } from "./ProgressColumn"
 import { BaseColumnProps, ErrorCell, isErrorCell } from "./utils"
@@ -50,13 +49,10 @@ const PROGRESS_COLUMN_TEMPLATE = {
 function getProgressColumn(
   params?: ProgressColumnParams
 ): ReturnType<typeof ProgressColumn> {
-  return ProgressColumn(
-    {
-      ...PROGRESS_COLUMN_TEMPLATE,
-      columnTypeOptions: params,
-    } as BaseColumnProps,
-    mockTheme.emotion
-  )
+  return ProgressColumn({
+    ...PROGRESS_COLUMN_TEMPLATE,
+    columnTypeOptions: params,
+  } as BaseColumnProps)
 }
 
 describe("ProgressColumn", () => {
@@ -193,39 +189,6 @@ describe("ProgressColumn", () => {
     expect((unsafeCell as ErrorCell)?.errorDetails).toEqual(
       "The value is larger than the maximum supported integer values in number columns (2^53)."
     )
-  })
-
-  it("supports named color mapping and custom colors", () => {
-    const blueColumn = getProgressColumn({ color: "blue" })
-    const blueCell = blueColumn.getCell(0.8) as RangeCellType
-    expect(blueCell.data?.color).toEqual(mockTheme.emotion.colors.blueColor)
-
-    const greyColumn = getProgressColumn({ color: "grey" })
-    const greyCell = greyColumn.getCell(0.2) as RangeCellType
-    expect(greyCell.data?.color).toEqual(mockTheme.emotion.colors.grayColor)
-
-    const customColor = "#123456"
-    const customColumn = getProgressColumn({ color: customColor })
-    const customCell = customColumn.getCell(0.5) as RangeCellType
-    expect(customCell.data?.color).toEqual(customColor)
-  })
-
-  it("applies auto color based on 50% threshold", () => {
-    const autoCol = getProgressColumn({ color: "auto" })
-    const lowCell = autoCol.getCell(0.25) as RangeCellType
-    expect(lowCell.data?.color).toEqual(mockTheme.emotion.colors.redColor)
-
-    const highCell = autoCol.getCell(0.8) as RangeCellType
-    expect(highCell.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
-  })
-
-  it("applies auto-inverse color based on 50% threshold", () => {
-    const autoInv = getProgressColumn({ color: "auto-inverse" })
-    const lowCell = autoInv.getCell(0.25) as RangeCellType
-    expect(lowCell.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
-
-    const highCell = autoInv.getCell(0.8) as RangeCellType
-    expect(highCell.data?.color).toEqual(mockTheme.emotion.colors.redColor)
   })
 
   it.each([
