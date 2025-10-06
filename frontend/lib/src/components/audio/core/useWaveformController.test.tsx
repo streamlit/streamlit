@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { ReactNode } from "react"
+
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -52,6 +54,10 @@ describe("useWaveformController", () => {
     onProgressMs?: (ms: number) => void
   }
 
+  const wrapper = ({ children }: { children: ReactNode }): ReactNode => (
+    <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+  )
+
   beforeEach(() => {
     mockContainerRef = { current: document.createElement("div") }
     mockEvents = {
@@ -70,22 +76,26 @@ describe("useWaveformController", () => {
   })
 
   it("should initialize with idle state", () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     expect(result.current.state).toBe("idle")
   })
 
   it("should have playback methods", () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     expect(result.current.playback).toBeDefined()
@@ -97,11 +107,13 @@ describe("useWaveformController", () => {
   })
 
   it("should have control methods", () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     expect(typeof result.current.start).toBe("function")
@@ -112,11 +124,13 @@ describe("useWaveformController", () => {
   })
 
   it("should update events via setEventHandlers", () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     const newEvents = {
@@ -131,11 +145,13 @@ describe("useWaveformController", () => {
   })
 
   it("should call cancel and update state on cancel()", () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     act(() => {
@@ -147,11 +163,13 @@ describe("useWaveformController", () => {
   })
 
   it("should throw error when approving without recording", async () => {
-    const { result } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     await expect(result.current.approve()).rejects.toThrow(
@@ -166,11 +184,7 @@ describe("useWaveformController", () => {
           containerRef: mockContainerRef,
           events: mockEvents,
         }),
-      {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
-      }
+      { wrapper }
     )
 
     expect(result.current.playback.isPlaying()).toBe(false)
@@ -183,11 +197,7 @@ describe("useWaveformController", () => {
           containerRef: mockContainerRef,
           events: mockEvents,
         }),
-      {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
-      }
+      { wrapper }
     )
 
     expect(result.current.playback.getCurrentTimeMs()).toBe(0)
@@ -200,11 +210,7 @@ describe("useWaveformController", () => {
           containerRef: mockContainerRef,
           events: mockEvents,
         }),
-      {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
-      }
+      { wrapper }
     )
 
     expect(result.current.playback.getDurationMs()).toBe(0)
@@ -243,11 +249,13 @@ describe("useWaveformController", () => {
 
     mockWaveSurferInstance.registerPlugin.mockReturnValue(mockRecordPlugin)
 
-    const { unmount } = renderHook(() =>
-      useWaveformController({
-        containerRef: mockContainerRef,
-        events: mockEvents,
-      })
+    const { unmount } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
     )
 
     // Wait for initialization
@@ -284,11 +292,7 @@ describe("useWaveformController", () => {
           containerRef: mockContainerRef,
           events: { ...mockEvents, onError },
         }),
-      {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
-      }
+      { wrapper }
     )
 
     // Wait for initialization attempt
