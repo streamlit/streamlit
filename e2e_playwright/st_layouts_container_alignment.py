@@ -175,11 +175,10 @@ with st.container(
             "y": [i * i for i in range(3)],
         }
     )
-    img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int64] = np.repeat(0, 2500).reshape(50, 50)
     st.image(img)
     st.dataframe(
         df,
         width="content",
     )
-    st.button("Details")
     st.bar_chart(df, x="x", y="y", width="content")
