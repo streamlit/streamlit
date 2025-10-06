@@ -129,6 +129,12 @@ export class WaveSurferPlayer {
     return this.isPlaying
   }
 
+  seekToStart(): void {
+    if (!this.wavesurfer) return
+    this.wavesurfer.seekTo(0)
+    this.isPlaying = false
+  }
+
   private cleanupPreviousUrl(): void {
     if (this.currentBlobUrl) {
       URL.revokeObjectURL(this.currentBlobUrl)

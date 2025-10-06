@@ -291,6 +291,8 @@ export function useWaveformController({
         })
       })
 
+      playerRef.current?.seekToStart()
+
       // Update waveform color for playback mode
       if (wavesurferRef.current) {
         wavesurferRef.current.setOptions({
