@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
-from re import Pattern
-from typing import Any, Union
+from typing import Any
 
 import pytest
 from playwright.sync_api import FilePayload, Locator, Page, Route, expect
@@ -99,11 +101,9 @@ def verify_uploaded_files_in_widget(
         expect(file_name_elements.filter(has_text=expected_file).first).to_be_visible()
 
 
-def get_file_uploader(
-    locator: Union[Locator, Page], label: Union[str, Pattern[str]]
-) -> Locator:
+def get_file_uploader(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a file uploader by its label using the widget label helper pattern."""
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
