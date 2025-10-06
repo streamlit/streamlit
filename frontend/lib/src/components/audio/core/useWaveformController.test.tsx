@@ -108,6 +108,7 @@ describe("useWaveformController", () => {
     expect(typeof result.current.playback.isPlaying).toBe("function")
     expect(typeof result.current.playback.play).toBe("function")
     expect(typeof result.current.playback.pause).toBe("function")
+    expect(typeof result.current.playback.load).toBe("function")
     expect(typeof result.current.playback.getCurrentTimeMs).toBe("function")
     expect(typeof result.current.playback.getDurationMs).toBe("function")
   })

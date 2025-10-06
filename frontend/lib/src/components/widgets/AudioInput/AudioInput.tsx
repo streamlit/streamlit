@@ -349,6 +349,39 @@ const AudioInput: React.FC<Props> = ({
   }, [controller])
 
   useEffect(() => {
+    if (!recordingUrl) {
+      return
+    }
+
+    let cancelled = false
+    setProgressTime(recordingTime)
+
+    const loadRecording = async (): Promise<void> => {
+      try {
+        await controller.playback.load(recordingUrl)
+        if (cancelled) {
+          return
+        }
+
+        const durationMs = controller.playback.getDurationMs()
+        if (durationMs > 0) {
+          setProgressTime(formatTime(durationMs))
+        }
+      } catch {
+        if (!cancelled) {
+          setIsError(true)
+        }
+      }
+    }
+
+    void loadRecording()
+
+    return () => {
+      cancelled = true
+    }
+  }, [controller, recordingUrl, recordingTime])
+
+  useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
 
     const formClearHelper = new FormClearHelper()

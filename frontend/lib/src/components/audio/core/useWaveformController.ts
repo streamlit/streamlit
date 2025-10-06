@@ -251,6 +251,22 @@ export function useWaveformController({
     }
   }, [configurePlayerEvents])
 
+  const enterPlaybackMode = useCallback((): void => {
+    playerRef.current?.seekToStart()
+    setIsPlaybackPlaying(false)
+    if (wavesurferRef.current) {
+      wavesurferRef.current.setOptions({
+        interact: true,
+        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
+        progressColor: theme.colors.bodyText,
+      })
+    }
+  }, [
+    theme.colors.bodyText,
+    theme.colors.fadedText40,
+    theme.colors.secondaryBg,
+  ])
+
   const stop = useCallback(async (): Promise<Blob> => {
     if (currentState !== "recording") {
       throw new Error("Not currently recording")
@@ -291,16 +307,7 @@ export function useWaveformController({
         })
       })
 
-      playerRef.current?.seekToStart()
-
-      // Update waveform color for playback mode
-      if (wavesurferRef.current) {
-        wavesurferRef.current.setOptions({
-          interact: true,
-          waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
-          progressColor: theme.colors.bodyText,
-        })
-      }
+      enterPlaybackMode()
 
       eventsRef.current.onRecordReady?.(rawBlob)
       return rawBlob
@@ -309,12 +316,7 @@ export function useWaveformController({
       setIsPlaybackPlaying(false)
       throw err
     }
-  }, [
-    currentState,
-    theme.colors.bodyText,
-    theme.colors.fadedText40,
-    theme.colors.secondaryBg,
-  ])
+  }, [currentState, enterPlaybackMode])
 
   const approve = useCallback(
     async (blob?: Blob): Promise<void> => {
@@ -365,6 +367,21 @@ export function useWaveformController({
     pause: useCallback((): void => {
       playerRef.current?.pause()
     }, []),
+
+    load: useCallback(
+      async (source: Blob | ArrayBuffer | string): Promise<void> => {
+        if (!isInitializedRef.current) {
+          await initializeWaveSurfer()
+        }
+        if (!playerRef.current) {
+          throw new Error("Player not initialized")
+        }
+
+        await playerRef.current.load(source)
+        enterPlaybackMode()
+      },
+      [enterPlaybackMode, initializeWaveSurfer]
+    ),
 
     getCurrentTimeMs: useCallback((): number => {
       return playerRef.current?.getCurrentTime() ?? 0

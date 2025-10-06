@@ -45,6 +45,7 @@ export interface WaveformController {
     isPlaying(): boolean
     play(): Promise<void>
     pause(): void
+    load(source: Blob | ArrayBuffer | string): Promise<void>
     getCurrentTimeMs(): number
     getDurationMs(): number
   }
