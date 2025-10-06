@@ -128,9 +128,12 @@ const AudioInput: React.FC<Props> = ({
       },
       onRecordStart: () => {
         setRecordingTime(STARTING_TIME_STRING)
+        setProgressTime(STARTING_TIME_STRING)
       },
       onRecordReady: () => {
-        setRecordingTime(formatTime(controller.playback.getDurationMs()))
+        const duration = formatTime(controller.playback.getDurationMs())
+        setRecordingTime(duration)
+        setProgressTime(duration)
       },
       onApprove: (wav: Blob) => {
         void transcodeAndUploadFileRef.current?.(wav)
@@ -372,7 +375,9 @@ const AudioInput: React.FC<Props> = ({
   const onClickPlayPause = useCallback(async () => {
     try {
       if (controller.isPlaybackPlaying) {
+        const currentTime = controller.playback.getCurrentTimeMs()
         controller.playback.pause()
+        setProgressTime(formatTime(currentTime))
       } else if (controller.state === "idle" && recordingUrl) {
         await controller.playback.play()
       }
@@ -387,6 +392,7 @@ const AudioInput: React.FC<Props> = ({
     }
 
     try {
+      setProgressTime(STARTING_TIME_STRING)
       await controller.start()
     } catch {
       // Error handling is done via event listeners
@@ -431,6 +437,7 @@ const AudioInput: React.FC<Props> = ({
   const state = controller.state
   const isRecording = state === "recording"
   const isPlaying = controller.isPlaybackPlaying
+  const displayedTime = isRecording ? recordingTime : progressTime
   const showPlaceholder =
     state === "idle" && !hasNoMicPermissions && !recordingUrl
   const showNoMicPermissionsOrPlaceholderOrError =
@@ -502,7 +509,7 @@ const AudioInput: React.FC<Props> = ({
           disabled={disabled}
           data-testid="stAudioInputWaveformTimeCode"
         >
-          {isPlaying ? progressTime : recordingTime}
+          {displayedTime}
         </StyledWaveformTimeCode>
       </StyledWaveformContainerDiv>
     </StyledAudioInputContainerDiv>
