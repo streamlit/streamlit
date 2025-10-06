@@ -221,8 +221,17 @@ df = px.data.tips()
 fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig, theme="streamlit")
 
-df = pd.read_csv(
-    "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
+# Generate synthetic time series data for range selector testing
+date_range = pd.date_range(start="2015-02-17", end="2017-08-24", freq="D")
+# Create synthetic stock-like price movements
+price_changes = np.random.randn(len(date_range)) * 2
+aapl_high = 100 + np.cumsum(price_changes)
+
+df = pd.DataFrame(
+    {
+        "Date": date_range,
+        "AAPL.High": aapl_high,
+    }
 )
 
 fig = px.line(
