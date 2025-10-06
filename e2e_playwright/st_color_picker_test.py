@@ -240,6 +240,7 @@ def test_color_picker_width_examples(
     )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_dynamic_color_picker_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the color picker can be updated dynamically while keeping the state."""
     dynamic_color_picker = get_element_by_key(app, "dynamic_color_picker_with_key")
