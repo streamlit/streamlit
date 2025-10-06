@@ -335,6 +335,7 @@ class ColumnTypesTest(unittest.TestCase):
                 min_value=0,
                 max_value=100,
                 format="%.1f%%",
+                color="red",
             )
         ) == {
             "label": "Col1",
@@ -346,6 +347,7 @@ class ColumnTypesTest(unittest.TestCase):
                 "format": "%.1f%%",
                 "min_value": 0,
                 "max_value": 100,
+                "color": "red",
             },
         }, "Should have all the properties defined."
 
