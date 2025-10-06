@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 27
+TOTAL_BUTTONS = 31
 
 
 def test_button_widget_rendering(
@@ -209,6 +209,21 @@ def test_colored_text_hover(app: Page):
         "color",
         "rgb(255, 75, 75)",
     )
+
+
+def test_literal_markdown_token_labels(app: Page):
+    """Ensure buttons render literal markdown token labels instead of stripping them."""
+    token_buttons = {
+        "literal_plus_button": "+",
+        "literal_minus_button": "-",
+        "literal_ordered_button": "1.",
+        "literal_horizontal_rule_button": "***",
+    }
+
+    for key, label in token_buttons.items():
+        button_container = get_element_by_key(app, key)
+        expect(button_container).to_be_visible()
+        expect(button_container.get_by_role("button")).to_have_text(label)
 
 
 def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):

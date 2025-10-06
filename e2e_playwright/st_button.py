@@ -80,6 +80,14 @@ st.button(
 )
 
 
+with st.container(key="literal_markdown_token_buttons"):
+    st.markdown("Literal markdown token buttons")
+    st.button("+", key="literal_plus_button")
+    st.button("-", key="literal_minus_button")
+    st.button("1.", key="literal_ordered_button")
+    st.button("***", key="literal_horizontal_rule_button")
+
+
 cols = st.container(key="buttons_in_columns").columns(3)
 
 # Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot
