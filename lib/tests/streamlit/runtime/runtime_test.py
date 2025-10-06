@@ -141,7 +141,7 @@ class RuntimeTest(RuntimeTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="Only one of existing_session_id and session_id_override should be set. This should never happen.",
+            match=r"Only one of existing_session_id and session_id_override should be set. This should never happen.",
         ):
             self.runtime.connect_session(
                 client=MockSessionClient(),

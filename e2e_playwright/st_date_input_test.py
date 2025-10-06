@@ -475,6 +475,14 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_date_input, "updated help")
 
+    # Type something different and submit
+    input_field.type("2020/01/03")
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
+
 
 def test_quick_select_feature_visibility(app: Page):
     """Test that quick select is visible for range inputs and hidden for single inputs."""

@@ -103,6 +103,7 @@ export {
   createPresetThemes,
   createTheme,
   CUSTOM_THEME_NAME,
+  customTheme,
   darkTheme,
   getCachedTheme,
   getDefaultTheme,

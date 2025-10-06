@@ -239,7 +239,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.currentframe returns None."""
         mock_currentframe.return_value = None
         with pytest.raises(
-            RuntimeError, match="current_frame is None. This should never happen."
+            RuntimeError, match=r"current_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -252,7 +252,7 @@ class DeclareComponentTest(unittest.TestCase):
         mock_frame.f_back = None
         mock_currentframe.return_value = mock_frame
         with pytest.raises(
-            RuntimeError, match="caller_frame is None. This should never happen."
+            RuntimeError, match=r"caller_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -263,7 +263,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.getmodule returns None."""
         mock_getmodule.return_value = None
         with pytest.raises(
-            RuntimeError, match="module is None. This should never happen."
+            RuntimeError, match=r"module is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 

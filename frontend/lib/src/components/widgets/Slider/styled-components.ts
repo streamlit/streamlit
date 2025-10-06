@@ -15,10 +15,14 @@
  */
 
 import styled from "@emotion/styled"
+import { type StyleProps } from "baseui/slider"
 import { transparentize } from "color2k"
 
 export const StyledSlider = styled.div({
   position: "relative",
+  ":focus-within:has(:focus-visible)": {
+    "--slider-focused": 1,
+  },
 })
 
 export interface StyledThumbProps {
@@ -75,6 +79,19 @@ export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   })
 )
 
+export const StyledInnerTrackWrapper = styled.div({
+  flex: 1,
+})
+
+export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
+  return {
+    position: "absolute",
+    height: theme.spacing.twoXS,
+    left: `calc(${theme.sizes.sliderThumb} / 2)`,
+    right: `calc(${theme.sizes.sliderThumb} / 2)`,
+  }
+})
+
 export interface StyledSliderTickBarProps {
   isHovered: boolean
   isDisabled: boolean
@@ -94,7 +111,7 @@ export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
     color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-    opacity: isHovered ? 1 : 0,
-    transition: "opacity 70ms ease-in-out",
+    opacity: isHovered ? 1 : "var(--slider-focused, 0)",
+    transition: isHovered ? "none" : "opacity 300ms 200ms",
   })
 )

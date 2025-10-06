@@ -65,6 +65,7 @@ export interface PlotlyChartProps {
   disabled: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
+  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
 }
 
@@ -297,9 +298,7 @@ export function PlotlyChart({
         // width in this case.
         plotlyFigure.layout?.width
       : Math.max(
-          element.useContainerWidth
-            ? width
-            : Math.min(initialFigureSpec.layout.width ?? width, width ?? 0),
+          width,
           // Apply a min width to prevent the chart running into issues with negative
           // width values if the browser window is too small:
           MIN_WIDTH
@@ -468,6 +467,9 @@ export function PlotlyChart({
           // to prevent flickering issues.
           visibility:
             plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+          // If the scrollbars are activated, it leads to flickering issues.
+          // We don't need overflow here since the parent container and plot dimensions are in sync.
+          overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
         // Double click is needed to make it easier to the user to

@@ -1,0 +1,168 @@
+name: Patch Release Branch Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch_version:
+        description: "Patch version in full semver (x.y.z)"
+        required: true
+        type: string
+      base_tag:
+        description: "Existing release tag to base the patch on (e.g. 1.50.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Run without pushing or creating PR/tag"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-branch-${{ inputs.patch_version || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  create-patch-branch:
+    name: Create Patch Branch ${{ inputs.patch_version }}
+    if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python deps for release automation
+        run: |
+          uv pip install --system packaging semver requests
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Define variables
+        id: vars
+        run: |
+          set -euo pipefail
+          REL_VER='${{ inputs.patch_version }}'
+          REL_BRANCH="release/${REL_VER}"
+          echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          PATCH_VER='${{ inputs.patch_version }}'
+          BASE_TAG='${{ inputs.base_tag }}'
+
+          # Basic format validation
+          if ! echo "$PATCH_VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::patch_version must be full semver (x.y.z). Got '$PATCH_VER'" >&2
+            exit 1
+          fi
+          if ! echo "$BASE_TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::base_tag must be a release tag in full semver (x.y.z). Got '$BASE_TAG'" >&2
+            exit 1
+          fi
+
+          # Ensure the base tag exists remotely
+          if ! git ls-remote --tags origin | grep -q "refs/tags/${BASE_TAG}$"; then
+            echo "::error::Base tag ${BASE_TAG} does not exist on origin" >&2
+            exit 1
+          fi
+
+          # Ensure the tag for the new patch doesn't already exist remotely
+          if git ls-remote --tags origin | grep -q "refs/tags/${PATCH_VER}$"; then
+            echo "::error::Tag ${PATCH_VER} already exists on origin" >&2
+            exit 1
+          fi
+
+          # Ensure the release branch doesn't already exist remotely
+          if git ls-remote --heads origin | grep -q "refs/heads/release/${PATCH_VER}$"; then
+            echo "::error::Branch release/${PATCH_VER} already exists on origin" >&2
+            exit 1
+          fi
+
+          # Validate major/minor match and patch increments by 1
+          BASE_MAJOR=$(echo "$BASE_TAG" | awk -F. '{print $1}')
+          BASE_MINOR=$(echo "$BASE_TAG" | awk -F. '{print $2}')
+          BASE_PATCH=$(echo "$BASE_TAG" | awk -F. '{print $3}')
+
+          PATCH_MAJOR=$(echo "$PATCH_VER" | awk -F. '{print $1}')
+          PATCH_MINOR=$(echo "$PATCH_VER" | awk -F. '{print $2}')
+          PATCH_PATCH=$(echo "$PATCH_VER" | awk -F. '{print $3}')
+
+          if [ "$BASE_MAJOR" -ne "$PATCH_MAJOR" ] || [ "$BASE_MINOR" -ne "$PATCH_MINOR" ]; then
+            echo "::error::patch_version must share the same major.minor as base_tag (${BASE_MAJOR}.${BASE_MINOR}). Got ${PATCH_MAJOR}.${PATCH_MINOR}" >&2
+            exit 1
+          fi
+
+          EXPECTED_PATCH=$((BASE_PATCH + 1))
+          if [ "$PATCH_PATCH" -ne "$EXPECTED_PATCH" ]; then
+            echo "::error::patch_version patch component must be base_tag patch + 1 (expected ${EXPECTED_PATCH}, got ${PATCH_PATCH})" >&2
+            exit 1
+          fi
+
+      - name: Fetch all tags and branches
+        run: |
+          git fetch --prune --tags --force origin
+
+      - name: Checkout base tag (detached HEAD)
+        run: |
+          set -euo pipefail
+          git checkout "${{ inputs.base_tag }}"
+          echo "Checked out base tag: ${{ inputs.base_tag }}"
+
+      - name: Create release branch via script
+        run: |
+          set -euo pipefail
+          chmod +x scripts/create_release_branch.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh ${{ inputs.patch_version }}"
+          else
+            bash scripts/create_release_branch.sh "${{ inputs.patch_version }}"
+          fi
+
+      - name: Write step summary
+        env:
+          PATCH_VERSION: ${{ inputs.patch_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          BASE_TAG: ${{ inputs.base_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## Patch Release Branch Creation Summary";
+            echo "- Patch version: ${PATCH_VERSION}";
+            echo "- Release branch: \`${RELEASE_BRANCH}\`";
+            echo "- Base tag: ${BASE_TAG}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no branch created)";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification - branch created
+        if: ${{ success() && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.patch_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          RUN_ID: ${{ github.run_id }}
+          NIGHTLY_TAG: ${{ inputs.base_tag }}
+        run: |
+          python scripts/slack_notifications.py release_automation branch_created

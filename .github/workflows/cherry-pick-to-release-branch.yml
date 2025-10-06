@@ -1,0 +1,180 @@
+name: Cherry-Pick to Release Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Target release version (i.j.k), e.g., 1.49.1"
+        required: true
+        type: string
+      cherry_pick_sha:
+        description: "Commit SHA to cherry-pick"
+        required: true
+        type: string
+      dry_run:
+        description: "Run without pushing or sending Slack notifications"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cherry-pick-to-release-branch-${{ inputs.release_version || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  cherry-pick:
+    name: Cherry-pick ${{ inputs.cherry_pick_sha }} to release/${{ inputs.release_version }}
+    if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python deps for slack notifications
+        run: |
+          uv pip install --system requests
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Define variables
+        id: vars
+        run: |
+          set -euo pipefail
+
+          REL_VER='${{ inputs.release_version }}'
+          # Validate release version format before use
+          if ! echo "${REL_VER}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::release_version must be full semver (i.j.k). Got '${REL_VER}'" >&2
+            exit 1
+          fi
+
+          REL_BRANCH="release/${REL_VER}"
+          SHA='${{ inputs.cherry_pick_sha }}'
+          if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
+            echo "::error::cherry_pick_sha must be a valid Git commit SHA. Got '${SHA}'" >&2
+            exit 1
+          fi
+
+          echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate inputs and repository state
+        run: |
+          set -euo pipefail
+          # Ensure target branch exists on origin by attempting a shallow fetch of that branch
+          if ! git fetch --no-tags --depth=1 origin "${{ steps.vars.outputs.release_branch }}"; then
+            echo "::error::Branch '${{ steps.vars.outputs.release_branch }}' does not exist on origin" >&2
+            exit 1
+          fi
+
+      - name: Checkout release branch
+        run: |
+          set -euo pipefail
+          git checkout -B "${{ steps.vars.outputs.release_branch }}" "origin/${{ steps.vars.outputs.release_branch }}"
+          echo "Checked out '${{ steps.vars.outputs.release_branch }}'"
+
+      - name: Attempt cherry-pick
+        id: cp
+        run: |
+          set +e
+          git cherry-pick "${{ inputs.cherry_pick_sha }}"
+          status=$?
+          set -e
+          if [ $status -ne 0 ]; then
+            conflict_files=$(git diff --name-only --diff-filter=U || true)
+            git cherry-pick --abort || true
+            {
+              echo "status=failed"
+              if [ -n "$conflict_files" ]; then
+                reason="merge conflicts in: $(echo "$conflict_files" | tr '\n' ', ' | sed 's/, $//')"
+              else
+                reason="merge conflicts (files not listed)"
+              fi
+              echo "error_reason=$reason"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push release branch
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+          git push origin "${{ steps.vars.outputs.release_branch }}:${{ steps.vars.outputs.release_branch }}"
+
+      - name: Write step summary
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
+          STATUS: ${{ steps.cp.outputs.status }}
+          ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## Cherry-Pick to Release Branch"
+            echo "- Release version: ${RELEASE_VERSION}"
+            echo "- Release branch: \`${RELEASE_BRANCH}\`"
+            echo "- Commit: \`${CHERRY_PICK_SHA}\`"
+            echo "- Status: ${STATUS:-unknown}"
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no push, no Slack)"
+            elif [ "${STATUS}" = "success" ]; then
+              echo "- Pushed: yes"
+            else
+              echo "- Pushed: no"
+            fi
+            if [ -n "${ERROR_REASON:-}" ]; then
+              echo "- Note: ${ERROR_REASON}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification - success
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
+
+      - name: Slack notification - failure
+        if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
+          RUN_ID: ${{ github.run_id }}
+          ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
+        run: |
+          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
+
+      - name: Fail job if cherry-pick failed
+        if: ${{ steps.cp.outputs.status == 'failed' }}
+        run: |
+          echo "Cherry-pick failed: ${{ steps.cp.outputs.error_reason }}" >&2
+          exit 1

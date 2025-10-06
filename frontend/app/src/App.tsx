@@ -1809,19 +1809,6 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(deployDialogProps)
   }
 
-  openThemeCreatorDialog = (): void => {
-    this.metricsMgr.enqueue("menuClick", {
-      label: "editTheme",
-    })
-    const newDialog: DialogProps = {
-      type: DialogType.THEME_CREATOR,
-      backToSettings: this.settingsCallback,
-      onClose: this.closeDialog,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
-  }
-
   /**
    * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
    */
@@ -1898,11 +1885,6 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
-      developerMode: showDevelopmentOptions(
-        this.state.isOwner,
-        this.state.toolbarMode
-      ),
-      openThemeCreator: this.openThemeCreatorDialog,
       animateModal,
       metricsMgr: this.metricsMgr,
     }
@@ -2205,7 +2187,6 @@ export class App extends PureComponent<Props, State> {
         activeTheme={this.props.theme.activeTheme}
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
-        addThemes={this.props.theme.addThemes}
         libConfig={libConfig}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
         locale={window.navigator.language}

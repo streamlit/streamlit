@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_slider,
+    reset_focus,
     reset_hovering,
 )
 
@@ -142,7 +143,9 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     )
 
 
-def test_using_arrow_keys_on_slider_produces_correct_values(app: Page):
+def test_using_arrow_keys_on_slider_produces_correct_values(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     expect_prefixed_markdown(
         app,
         "Value 1:",
@@ -171,6 +174,9 @@ def test_using_arrow_keys_on_slider_produces_correct_values(app: Page):
         "Value 1:",
         "(datetime.date(2019, 8, 1), datetime.date(2020, 7, 2))",
     )
+
+    # Screenshot to test that the tickbar shows then focused.
+    assert_snapshot(slider, name="st_slider-tickbar_focused")
 
 
 def test_slider_calls_callback(app: Page):
@@ -223,6 +229,7 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     app.keyboard.press("ArrowRight")
     wait_for_app_run(app)
     reset_hovering(app)
+    reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
     assert_snapshot(slider, name="st_slider-float_formatting")
 

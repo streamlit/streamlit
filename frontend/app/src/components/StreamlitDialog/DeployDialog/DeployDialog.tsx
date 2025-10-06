@@ -73,6 +73,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 }
 
 export interface DeployDialogProps {
+  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
   showDeployError: (

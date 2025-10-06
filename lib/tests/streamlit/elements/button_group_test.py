@@ -374,6 +374,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
+            (
+                st.feedback,
+                ("thumbs",),
+                {"default": 1},
+                1,
+            ),
+            (st.feedback, ("stars",), {"default": 2}, 2),
+            (st.feedback, ("faces",), {"default": 3}, 3),
             (st.pills, ("label", ["a", "b", "c"])),
             (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
             (

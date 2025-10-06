@@ -182,3 +182,42 @@ class ColorPickerTest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.color_picker(
+                label="Label 1",
+                key="color_picker_key",
+                value="#112233",
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = self.get_delta_from_queue().new_element.color_picker
+            id1 = c1.id
+
+            # Second render with different params but same key
+            st.color_picker(
+                label="Label 2",
+                key="color_picker_key",
+                value="#abcdef",
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = self.get_delta_from_queue().new_element.color_picker
+            id2 = c2.id
+            assert id1 == id2

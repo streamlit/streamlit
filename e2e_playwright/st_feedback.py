@@ -16,6 +16,11 @@ import time
 
 import streamlit as st
 
+if st.checkbox("Set default value", value=False):
+    st.session_state.default_feedback = 2
+else:
+    st.session_state.default_feedback = None
+
 with st.container(key="thumbs_container"):
     st.feedback()
     st.session_state.thumbs_feedback_disabled = 1
@@ -32,15 +37,11 @@ with st.container(key="faces_container"):
         ),
     )
     st.session_state.faces_feedback_disabled = 3
-    st.feedback(
-        "faces",
-        key="faces_feedback_disabled",
-        disabled=True,
-    )
+    st.feedback("faces", key="faces_feedback_disabled", disabled=True)
     st.feedback("faces", key="faces_feedback_hover_test")
 
 with st.container(key="stars_container"):
-    sentiment = st.feedback("stars")
+    sentiment = st.feedback("stars", default=st.session_state.default_feedback)
     st.write(f"Star sentiment: {sentiment}")
     st.session_state.star_feedback_disabled = 3
     sentiment = st.feedback("stars", disabled=True, key="star_feedback_disabled")
