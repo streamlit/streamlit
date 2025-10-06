@@ -25,8 +25,8 @@ import {
 import type WaveSurfer from "wavesurfer.js"
 
 import {
-  WaveSurferPlayer,
   type PlayerEvents,
+  WaveSurferPlayer,
 } from "~lib/components/audio/backends/WaveSurferPlayer"
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
@@ -193,8 +193,10 @@ export function useWaveformController({
 
   useEffect(() => {
     initializeWaveSurfer().catch(() => {})
+    const readyResolvers = readyResolversRef.current
+
     return (): void => {
-      readyResolversRef.current.clear()
+      readyResolvers.clear()
       setIsPlaybackPlaying(false)
       if (recordBackendRef.current) {
         recordBackendRef.current.destroy()

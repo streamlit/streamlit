@@ -348,6 +348,9 @@ const AudioInput: React.FC<Props> = ({
     }
   }, [controller])
 
+  const playbackLoad = controller.playback.load
+  const playbackGetDurationMs = controller.playback.getDurationMs
+
   useEffect(() => {
     if (!recordingUrl) {
       return
@@ -358,12 +361,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await controller.playback.load(recordingUrl)
+        await playbackLoad(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = controller.playback.getDurationMs()
+        const durationMs = playbackGetDurationMs()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -379,7 +382,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [controller, recordingUrl, recordingTime])
+  }, [recordingUrl, recordingTime, playbackLoad, playbackGetDurationMs])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
@@ -412,6 +415,11 @@ const AudioInput: React.FC<Props> = ({
         controller.playback.pause()
         setProgressTime(formatTime(currentTime))
       } else if (controller.state === "idle" && recordingUrl) {
+        // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
+        // Snap the UI timer back to the canonical start value so the display stays deterministic.
+        if (controller.playback.getCurrentTimeMs() <= 100) {
+          setProgressTime(STARTING_TIME_STRING)
+        }
         await controller.playback.play()
       }
     } catch {

@@ -56,6 +56,7 @@ export class WaveSurferRecordBackend {
       const recordOptions: Record<string, unknown> = {
         renderRecordedAudio: false,
         scrollingWaveform: true,
+        scrollingWaveformWindow: 15,
         mimeType: "audio/webm",
       }
 
