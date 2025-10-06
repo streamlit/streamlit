@@ -197,6 +197,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
         height={fullScreenHeight ?? chartContainerHeight ?? undefined}
+        width={widthConfig ?? undefined}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
