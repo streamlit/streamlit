@@ -29,7 +29,11 @@ from parameterized import parameterized
 
 from streamlit import config, config_util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidThemeOptionError,
+    StreamlitInvalidThemeSectionError,
+)
 
 CONFIG_OPTIONS_TEMPLATE = config._config_options_template
 CONFIG_SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
@@ -428,7 +432,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         self, value, option_name: str, expected_error: str
     ):
         """Test _check_color_value raises exceptions for type errors and empty values."""
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as cm:
             config_util._check_color_value(value, option_name)
         assert expected_error in str(cm.value)
 
@@ -728,12 +732,12 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             }
         }
 
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
             config_util._validate_theme_file_content(
                 theme_content, "test_theme.toml", self.config_template
             )
 
-        assert "invalid theme section" in str(cm.value)
+        assert "Invalid theme section" in str(cm.value)
         assert "invalidSection" in str(cm.value)
 
     def test_validate_theme_file_content_invalid_section_option(self):
@@ -780,12 +784,12 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             }
         }
 
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
             config_util._validate_theme_file_content(
                 theme_content, "test_theme.toml", self.config_template
             )
 
-        assert "invalid theme subsection" in str(cm.value)
+        assert "Invalid theme section" in str(cm.value)
         assert "sidebar.invalidSubsection" in str(cm.value)
 
     def test_validate_theme_file_content_invalid_subsection_option(self):

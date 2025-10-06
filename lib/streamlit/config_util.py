@@ -27,7 +27,11 @@ if TYPE_CHECKING:
 from streamlit import cli_util, url_util
 from streamlit.config_option import ConfigOption
 from streamlit.elements.lib.color_util import is_css_color_like
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidThemeError,
+    StreamlitInvalidThemeOptionError,
+    StreamlitInvalidThemeSectionError,
+)
 
 # Maximum size for theme files (1MB). Theme files should be small configuration
 # files containing only theme options, not large data files.
@@ -213,32 +217,34 @@ def _check_color_value(value: Any, option_name: str) -> None:
 
     Validates that the value is a string (or list of strings, in the case of
     chartCategoricalColors and chartSequentialColors) and is not empty.
-    Logs warnings for potentially invalid colors, since we do more comprehensive validation on the frontend.
 
     Handles both single color strings (like primaryColor, backgroundColor)
     and arrays of color strings (like chartCategoricalColors, chartSequentialColors).
 
-    Raises StreamlitAPIException for type errors or empty values.
-    Does not return anything - used purely for validation side effects.
+    Raises StreamlitInvalidThemeOptionError for type errors or empty values.
+    Logs warnings for potentially invalid colors, since we do more comprehensive
+    validation on the frontend.
+
+    No return value - used purely for validation side effects in _validate_theme_file_content
     """
     logger = _get_logger()
 
     # Handle array color options (chartCategoricalColors, chartSequentialColors)
     if isinstance(value, list):
         if not value:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidThemeOptionError(
                 f"Theme option '{option_name}' cannot be an empty array"
             )
 
         for i, color in enumerate(value):
             if not isinstance(color, str):
-                raise StreamlitAPIException(
+                raise StreamlitInvalidThemeOptionError(
                     f"Theme option '{option_name}[{i}]' must be a string, got {type(color).__name__}: {color}"
                 )
 
             color_str = color.strip()
             if not color_str:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidThemeOptionError(
                     f"Theme option '{option_name}[{i}]' cannot be empty"
                 )
 
@@ -256,14 +262,16 @@ def _check_color_value(value: Any, option_name: str) -> None:
 
     # Handle single color options (primaryColor, backgroundColor, etc.)
     if not isinstance(value, str):
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeOptionError(
             f"Theme option '{option_name}' must be a string or array of strings, got {type(value).__name__}: {value}"
         )
 
     value_str: str = value.strip()
 
     if not value_str:
-        raise StreamlitAPIException(f"Theme option '{option_name}' cannot be empty")
+        raise StreamlitInvalidThemeOptionError(
+            f"Theme option '{option_name}' cannot be empty"
+        )
 
     # Lightweight color validation with warning
     if not is_css_color_like(value_str):
@@ -323,14 +331,18 @@ def _extract_current_theme_config(
 def _get_valid_theme_options(
     config_options_template: dict[str, ConfigOption],
 ) -> tuple[set[str], set[str]]:
-    """Get the valid theme configuration options for main theme and theme sections.
+    """
+    Get the valid theme configuration options for main theme and theme sections.
 
     Extracts valid theme options from the config options template to ensure they
     stay in sync with the actual theme options defined via _create_theme_options() calls.
 
-    Returns a tuple ( main_theme_options, sidebar_theme_options )
+    Returns a tuple ( main_theme_options, section_theme_options )
     where main_theme_options is a set of valid theme options for the main theme (without the "theme." prefix)
-    and sidebar_theme_options is a set of valid theme options for the sidebar/light/dark sections
+    and section_theme_options is a set of valid theme options for the sections/subsections (sidebar, light, dark,
+    sidebar.light, sidebar.dark).
+
+    Note: All non-main theme sections have the same valid options, so we only need to extract them once.
     """
     # Extract options dynamically from the config template
     main_theme_options = set()
@@ -360,7 +372,7 @@ def _invalid_theme_option_warning(
     valid_options: set[str],
     section_name: str = "theme",
 ) -> None:
-    """Log a warning for an invalid theme option."""
+    """Helper function to log a warning for an invalid theme option."""
 
     if section_name == "theme":
         full_option_name = f"{section_name}.{option_name}"
@@ -397,18 +409,19 @@ def _validate_theme_section_recursive(
         section_configs: The section configs to validate
         section_path: Path like 'sidebar', 'light', 'sidebar.light'
         file_path_or_url: Theme file path for error messages
-        section_options: Valid options for this section type
+        section_options: Valid options for this section
         filtered_parent: Parent dict in filtered theme to populate
         valid_subsections: Valid subsections (only for 'sidebar' section)
+
+    Raises StreamlitInvalidThemeSectionError if an invalid subsection is found.
     """
     for option_name, option_value in section_configs.items():
         if isinstance(option_value, dict):
             # This is a subsection
             if not valid_subsections or option_name not in valid_subsections:
-                raise StreamlitAPIException(
-                    f"Theme file {file_path_or_url} contains invalid theme "
-                    f"subsection: 'theme.{section_path}.{option_name}'.\n\n"
-                    f"Valid subsections are only sidebar.light and sidebar.dark"
+                raise StreamlitInvalidThemeSectionError(
+                    f"theme.{section_path}.{option_name}",
+                    file_path_or_url,
                 )
 
             # Create and validate the subsection's options
@@ -449,7 +462,7 @@ def _validate_theme_file_content(
     """
     Validate that a theme file contains only valid theme sections and config options.
 
-    If invalid sections are found in the theme file, a StreamlitAPIException is raised.
+    If invalid sections are found in the theme file, a StreamlitInvalidThemeSectionError is raised.
 
     If invalid config options are found in the theme file, a warning is logged with the valid
     options for the given section.
@@ -478,9 +491,9 @@ def _validate_theme_file_content(
         if isinstance(option_value, dict):
             # Invalid subsection: raise error
             if option_name not in valid_sections:
-                raise StreamlitAPIException(
-                    f"Theme file {file_path_or_url} contains invalid theme section: '{option_name}'.\n\n"
-                    f"Valid sections are: {valid_sections}"
+                raise StreamlitInvalidThemeSectionError(
+                    option_name,
+                    file_path_or_url,
                 )
 
             # Create the section in our filtered theme and validate it
@@ -531,7 +544,7 @@ def _load_theme_file(
     """
 
     def _raise_missing_toml() -> None:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             "The 'toml' package is required to load theme files. "
             "Please install it with 'pip install toml'."
         )
@@ -540,13 +553,13 @@ def _load_theme_file(
         raise FileNotFoundError(f"Theme file not found: {file_path_or_url}")
 
     def _raise_missing_theme_section() -> None:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeSectionError(
             f"Theme file {file_path_or_url} must contain a [theme] section"
         )
 
     def _raise_file_too_large() -> None:
         content_size = len(content.encode("utf-8"))
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             f"Theme file {file_path_or_url} is too large ({content_size:,} bytes). "
             f"Maximum allowed size is {_MAX_THEME_FILE_SIZE_BYTES:,} bytes (1MB). "
             f"Theme files should contain only configuration options, not large data."
@@ -598,15 +611,20 @@ def _load_theme_file(
 
         return filtered_theme
 
-    except (StreamlitAPIException, FileNotFoundError):
+    except (
+        StreamlitInvalidThemeError,
+        StreamlitInvalidThemeOptionError,
+        StreamlitInvalidThemeSectionError,
+        FileNotFoundError,
+    ):
         # Re-raise these specific exceptions
         raise
     except urllib.error.URLError as e:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             f"Could not load theme file from URL {file_path_or_url}: {e}"
         ) from e
     except Exception as e:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             f"Error loading theme file {file_path_or_url}: {e}"
         ) from e
 
@@ -700,7 +718,7 @@ def process_theme_inheritance(
         return
 
     def _raise_invalid_nested_base() -> None:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             f"Theme file {base_value} cannot reference another theme file in its base property. "
             f"Only 'light' and 'dark' are allowed in referenced theme files."
         )
@@ -771,12 +789,17 @@ def process_theme_inheritance(
         for opt_name, opt_data in high_precedence_theme_options.items():
             set_option_func(opt_name, opt_data["value"], opt_data["where_defined"])
 
-    except (StreamlitAPIException, FileNotFoundError):
+    except (
+        StreamlitInvalidThemeError,
+        StreamlitInvalidThemeOptionError,
+        StreamlitInvalidThemeSectionError,
+        FileNotFoundError,
+    ):
         # Re-raise expected user errors as-is to preserve specific error messages
         raise
     except Exception as e:
         _get_logger().exception("Error processing theme inheritance")
         # Only wrap unexpected errors (not our specific validation errors)
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeError(
             f"Failed to process theme inheritance from {base_value}: {e}"
         ) from e
