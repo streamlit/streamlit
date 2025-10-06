@@ -119,14 +119,38 @@ export class WaveSurferRecordBackend {
       return
     }
 
-    const audioConstraints: MediaTrackConstraints = this.options.sampleRate
-      ? { sampleRate: { ideal: this.options.sampleRate } }
-      : {}
+    const requestedSampleRate =
+      typeof this.options.sampleRate === "number"
+        ? this.options.sampleRate
+        : undefined
+
+    const initialConstraints: MediaTrackConstraints = {}
+    if (requestedSampleRate !== undefined) {
+      initialConstraints.sampleRate = { ideal: requestedSampleRate }
+    }
+
+    await this.startRecordingWithConstraints(
+      initialConstraints,
+      requestedSampleRate !== undefined
+    )
+  }
+
+  private async startRecordingWithConstraints(
+    constraints: MediaTrackConstraints,
+    allowRetryWithoutConstraints: boolean
+  ): Promise<void> {
+    if (!this.recordPlugin) {
+      throw new Error("Record plugin not initialized")
+    }
 
     try {
-      await this.recordPlugin.startRecording(audioConstraints)
+      const constraintValue = Object.keys(constraints).length
+        ? constraints
+        : undefined
+      await this.recordPlugin.startRecording(constraintValue)
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
+
       if (
         err.name === "NotAllowedError" ||
         err.name === "PermissionDeniedError"
@@ -134,6 +158,19 @@ export class WaveSurferRecordBackend {
         this.events.onPermissionDenied?.()
         throw new Error("Microphone permission denied")
       }
+
+      const isConstraintError =
+        allowRetryWithoutConstraints &&
+        (err.name === "OverconstrainedError" ||
+          err.name === "NotReadableError")
+
+      if (isConstraintError) {
+        // Retry once using browser defaults so recording can proceed.
+        this.options.sampleRate = undefined
+        await this.startRecordingWithConstraints({}, false)
+        return
+      }
+
       this.events.onError?.(err)
       throw err
     }

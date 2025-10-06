@@ -24,7 +24,10 @@ import {
 
 import type WaveSurfer from "wavesurfer.js"
 
-import { WaveSurferPlayer } from "~lib/components/audio/backends/WaveSurferPlayer"
+import {
+  WaveSurferPlayer,
+  type PlayerEvents,
+} from "~lib/components/audio/backends/WaveSurferPlayer"
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
 import type {
@@ -42,6 +45,11 @@ const CURSOR_WIDTH = 0
 const WAVEFORM_PADDING = 4
 const DEFAULT_SAMPLE_RATE = 16000
 
+interface ReadyResolver {
+  resolve: () => void
+  reject: (error: Error) => void
+}
+
 interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLElement>
   sampleRate?: number | null
@@ -57,12 +65,14 @@ export function useWaveformController({
 
   const [currentState, setCurrentState] = useState<RecordingState>("idle")
   const [currentBlob, setCurrentBlob] = useState<Blob | null>(null)
+  const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(false)
 
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const recordBackendRef = useRef<WaveSurferRecordBackend | null>(null)
   const playerRef = useRef<WaveSurferPlayer | null>(null)
   const eventsRef = useRef<WaveformControllerEvents>(events || {})
   const isInitializedRef = useRef(false)
+  const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
 
   // Use the provided sample rate, or null (browser default), or fallback to DEFAULT_SAMPLE_RATE
   const effectiveSampleRate =
@@ -71,6 +81,53 @@ export function useWaveformController({
   useEffect(() => {
     eventsRef.current = events || {}
   }, [events])
+
+  const notifyReady = useCallback((): void => {
+    const resolvers = Array.from(readyResolversRef.current)
+    readyResolversRef.current.clear()
+    resolvers.forEach(resolver => {
+      resolver.resolve()
+    })
+  }, [])
+
+  const notifyReadyError = useCallback((error: Error): void => {
+    setIsPlaybackPlaying(false)
+    const resolvers = Array.from(readyResolversRef.current)
+    readyResolversRef.current.clear()
+    resolvers.forEach(resolver => {
+      resolver.reject(error)
+    })
+  }, [])
+
+  const configurePlayerEvents = useCallback(
+    (player: WaveSurferPlayer): void => {
+      const playerEvents: PlayerEvents = {
+        onPlay: () => {
+          setIsPlaybackPlaying(true)
+          eventsRef.current.onPlaybackPlay?.()
+        },
+        onPause: () => {
+          setIsPlaybackPlaying(false)
+          eventsRef.current.onPlaybackPause?.()
+        },
+        onFinish: () => {
+          setIsPlaybackPlaying(false)
+          eventsRef.current.onPlaybackFinish?.()
+        },
+        onReady: () => {
+          notifyReady()
+        },
+        onError: (error: Error) => {
+          setIsPlaybackPlaying(false)
+          notifyReadyError(error)
+          eventsRef.current.onError?.(error)
+        },
+      }
+
+      player.setEventHandlers(playerEvents)
+    },
+    [notifyReady, notifyReadyError]
+  )
 
   const initializeWaveSurfer = useCallback(async (): Promise<void> => {
     if (isInitializedRef.current || !containerRef.current) {
@@ -124,17 +181,21 @@ export function useWaveformController({
       player.initialize(ws)
       playerRef.current = player
 
+      configurePlayerEvents(player)
+
       isInitializedRef.current = true
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       eventsRef.current.onError?.(err)
       throw err
     }
-  }, [containerRef, theme, effectiveSampleRate])
+  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
     initializeWaveSurfer().catch(() => {})
     return (): void => {
+      readyResolversRef.current.clear()
+      setIsPlaybackPlaying(false)
       if (recordBackendRef.current) {
         recordBackendRef.current.destroy()
         recordBackendRef.current = null
@@ -175,6 +236,7 @@ export function useWaveformController({
     await recordBackendRef.current.startRecording()
     setCurrentState("recording")
     setCurrentBlob(null)
+    setIsPlaybackPlaying(false)
     eventsRef.current.onRecordStart?.()
   }, [currentState, initializeWaveSurfer, theme.colors.primary])
 
@@ -183,8 +245,11 @@ export function useWaveformController({
       playerRef.current.destroy()
       playerRef.current = new WaveSurferPlayer()
       playerRef.current.initialize(wavesurferRef.current)
+      readyResolversRef.current.clear()
+      setIsPlaybackPlaying(false)
+      configurePlayerEvents(playerRef.current)
     }
-  }, [])
+  }, [configurePlayerEvents])
 
   const stop = useCallback(async (): Promise<Blob> => {
     if (currentState !== "recording") {
@@ -199,6 +264,7 @@ export function useWaveformController({
       const rawBlob = await recordBackendRef.current.stopRecording()
       setCurrentBlob(rawBlob)
       setCurrentState("idle") // Recording stopped, back to idle state
+      setIsPlaybackPlaying(false)
 
       await new Promise<void>((resolve, reject) => {
         if (!playerRef.current) {
@@ -206,16 +272,23 @@ export function useWaveformController({
           return
         }
 
-        playerRef.current.setEventHandlers({
-          onReady: () => {
+        const resolver: ReadyResolver = {
+          resolve: () => {
+            readyResolversRef.current.delete(resolver)
             resolve()
           },
-          onError: (error: Error) => {
+          reject: (error: Error) => {
+            readyResolversRef.current.delete(resolver)
             reject(error)
           },
-        })
+        }
 
-        playerRef.current.load(rawBlob).catch(reject)
+        readyResolversRef.current.add(resolver)
+
+        playerRef.current.load(rawBlob).catch(error => {
+          readyResolversRef.current.delete(resolver)
+          reject(error instanceof Error ? error : new Error(String(error)))
+        })
       })
 
       // Update waveform color for playback mode
@@ -231,7 +304,7 @@ export function useWaveformController({
       return rawBlob
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      eventsRef.current.onError?.(err)
+      setIsPlaybackPlaying(false)
       throw err
     }
   }, [
@@ -271,6 +344,7 @@ export function useWaveformController({
     resetPlayer()
     setCurrentBlob(null)
     setCurrentState("idle")
+    setIsPlaybackPlaying(false)
     eventsRef.current.onCancel?.()
   }, [currentState, resetPlayer])
 
@@ -308,6 +382,7 @@ export function useWaveformController({
 
   return {
     state: currentState,
+    isPlaybackPlaying,
     start,
     stop,
     approve,

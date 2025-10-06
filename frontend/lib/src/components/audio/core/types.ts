@@ -24,10 +24,14 @@ export interface WaveformControllerEvents {
   onApprove?: (wav: Blob) => void
   onCancel?: () => void
   onProgressMs?: (ms: number) => void
+  onPlaybackPlay?: () => void
+  onPlaybackPause?: () => void
+  onPlaybackFinish?: () => void
 }
 
 export interface WaveformController {
   readonly state: RecordingState
+  readonly isPlaybackPlaying: boolean
 
   start(): Promise<void>
 

@@ -142,6 +142,12 @@ const AudioInput: React.FC<Props> = ({
       onProgressMs: (ms: number) => {
         setRecordingTime(formatTime(ms))
       },
+      onPlaybackPause: () => {
+        setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
+      },
+      onPlaybackFinish: () => {
+        setProgressTime(formatTime(controller.playback.getDurationMs()))
+      },
     },
   })
 
@@ -318,19 +324,17 @@ const AudioInput: React.FC<Props> = ({
 
   useEffect(() => {
     const updatePlaybackTime = (): void => {
-      if (controller.playback.isPlaying()) {
+      if (controller.isPlaybackPlaying) {
         setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
 
-    if (controller.playback.isPlaying()) {
+    if (controller.isPlaybackPlaying) {
       playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
-    } else {
-      if (playbackTimerRef.current) {
-        cancelAnimationFrame(playbackTimerRef.current)
-        playbackTimerRef.current = null
-      }
+    } else if (playbackTimerRef.current) {
+      cancelAnimationFrame(playbackTimerRef.current)
+      playbackTimerRef.current = null
     }
 
     return () => {
@@ -367,7 +371,7 @@ const AudioInput: React.FC<Props> = ({
 
   const onClickPlayPause = useCallback(async () => {
     try {
-      if (controller.playback.isPlaying()) {
+      if (controller.isPlaybackPlaying) {
         controller.playback.pause()
       } else if (controller.state === "idle" && recordingUrl) {
         await controller.playback.play()
@@ -426,7 +430,7 @@ const AudioInput: React.FC<Props> = ({
 
   const state = controller.state
   const isRecording = state === "recording"
-  const isPlaying = controller.playback.isPlaying()
+  const isPlaying = controller.isPlaybackPlaying
   const showPlaceholder =
     state === "idle" && !hasNoMicPermissions && !recordingUrl
   const showNoMicPermissionsOrPlaceholderOrError =

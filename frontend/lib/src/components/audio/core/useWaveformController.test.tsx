@@ -52,6 +52,9 @@ describe("useWaveformController", () => {
     onApprove?: (wav: Blob) => void
     onCancel?: () => void
     onProgressMs?: (ms: number) => void
+    onPlaybackPlay?: () => void
+    onPlaybackPause?: () => void
+    onPlaybackFinish?: () => void
   }
 
   const wrapper = ({ children }: { children: ReactNode }): ReactNode => (
@@ -68,6 +71,9 @@ describe("useWaveformController", () => {
       onApprove: vi.fn(),
       onCancel: vi.fn(),
       onProgressMs: vi.fn(),
+      onPlaybackPlay: vi.fn(),
+      onPlaybackPause: vi.fn(),
+      onPlaybackFinish: vi.fn(),
     }
   })
 
@@ -188,6 +194,7 @@ describe("useWaveformController", () => {
     )
 
     expect(result.current.playback.isPlaying()).toBe(false)
+    expect(result.current.isPlaybackPlaying).toBe(false)
   })
 
   it("should return 0 for getCurrentTimeMs when no playback", () => {
@@ -305,5 +312,79 @@ describe("useWaveformController", () => {
     expect(onError.mock.calls[0][0].message).toContain(
       "WaveSurfer init failed"
     )
+  })
+
+  it("propagates playback events", async () => {
+    const mockWaveSurferInstance = {
+      destroy: vi.fn(),
+      on: vi.fn(),
+      registerPlugin: vi.fn(),
+      empty: vi.fn(),
+      pause: vi.fn(),
+    }
+
+    const waveEventHandlers = new Map<string, (...args: unknown[]) => void>()
+    mockWaveSurferInstance.on.mockImplementation(
+      (event: string, handler: (...args: unknown[]) => void) => {
+        waveEventHandlers.set(event, handler)
+      }
+    )
+
+    const mockRecordPlugin = {
+      destroy: vi.fn(),
+      on: vi.fn(),
+      startRecording: vi.fn(),
+      stopRecording: vi.fn(),
+    }
+
+    mockRecordPlugin.on.mockImplementation(() => {})
+
+    const WaveSurferModule = await import("wavesurfer.js")
+    const RecordPluginModule = await import(
+      "wavesurfer.js/dist/plugins/record"
+    )
+
+    const createMock = WaveSurferModule.default.create as ReturnType<
+      typeof vi.fn
+    >
+    createMock.mockReturnValue(mockWaveSurferInstance)
+
+    const recordCreateMock = RecordPluginModule.default.create as ReturnType<
+      typeof vi.fn
+    >
+    recordCreateMock.mockReturnValue(mockRecordPlugin)
+
+    mockWaveSurferInstance.registerPlugin.mockReturnValue(mockRecordPlugin)
+
+    const { result } = renderHook(
+      () =>
+        useWaveformController({
+          containerRef: mockContainerRef,
+          events: mockEvents,
+        }),
+      { wrapper }
+    )
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+
+    act(() => {
+      waveEventHandlers.get("play")?.()
+    })
+    expect(mockEvents.onPlaybackPlay).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaybackPlaying).toBe(true)
+
+    act(() => {
+      waveEventHandlers.get("pause")?.()
+    })
+    expect(mockEvents.onPlaybackPause).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaybackPlaying).toBe(false)
+
+    act(() => {
+      waveEventHandlers.get("finish")?.()
+    })
+    expect(mockEvents.onPlaybackFinish).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaybackPlaying).toBe(false)
   })
 })

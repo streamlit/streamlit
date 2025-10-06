@@ -44,6 +44,8 @@ describe("encodeToWav", () => {
       createChannelMerger: vi.fn(() => ({
         connect: vi.fn(),
       })),
+      createChannelSplitter: vi.fn(),
+      createGain: vi.fn(),
       destination: {},
       startRendering: vi.fn(() => Promise.resolve(mockAudioBuffer)),
     }
@@ -122,6 +124,101 @@ describe("encodeToWav", () => {
       "OfflineAudioContext not supported"
     )
 
+    global.OfflineAudioContext = originalOfflineAudioContext
+  })
+
+  it("averages channels when resampling to mono", async () => {
+    const mockAudioBuffer = {
+      length: 16000,
+      sampleRate: 44100,
+      numberOfChannels: 2,
+      duration: 1,
+      getChannelData: vi.fn(() => new Float32Array(16000)),
+    }
+
+    const sourceConnect = vi.fn()
+    const mockSource = {
+      buffer: null,
+      connect: sourceConnect,
+      start: vi.fn(),
+    } as unknown as AudioBufferSourceNode
+
+    const splitterConnect = vi.fn()
+    const mockSplitter = {
+      connect: splitterConnect,
+    } as unknown as ChannelSplitterNode
+
+    const gainNodeSpies: Array<{
+      node: GainNode
+      gainParam: { value: number }
+      connect: ReturnType<typeof vi.fn>
+    }> = []
+
+    const createGain = vi.fn(() => {
+      const gainParam = { value: 0 }
+      const connect = vi.fn()
+      const node = { gain: gainParam, connect } as unknown as GainNode
+      gainNodeSpies.push({ node, gainParam, connect })
+      return node
+    })
+
+    const mergerConnect = vi.fn()
+    const mockMerger = {
+      connect: mergerConnect,
+    } as unknown as ChannelMergerNode
+
+    const mockOfflineContext = {
+      createBufferSource: vi.fn(() => mockSource),
+      createChannelSplitter: vi.fn(() => mockSplitter),
+      createChannelMerger: vi.fn(() => mockMerger),
+      createGain,
+      destination: {},
+      startRendering: vi.fn(() => Promise.resolve(mockAudioBuffer)),
+    }
+
+    const mockAudioContext = {
+      decodeAudioData: vi.fn(() => Promise.resolve(mockAudioBuffer)),
+      close: vi.fn(),
+    }
+
+    const originalAudioContext = global.AudioContext
+    const originalOfflineAudioContext = global.OfflineAudioContext
+
+    global.AudioContext = vi.fn(
+      () => mockAudioContext
+    ) as unknown as typeof AudioContext
+    global.OfflineAudioContext = vi.fn(
+      () => mockOfflineContext
+    ) as unknown as typeof OfflineAudioContext
+
+    const testArrayBuffer = new ArrayBuffer(100)
+    const testBlob = {
+      arrayBuffer: vi.fn(() => Promise.resolve(testArrayBuffer)),
+      size: 100,
+      type: "audio/webm",
+    } as unknown as Blob
+
+    await encodeToWav(testBlob, 16000)
+
+    expect(sourceConnect).toHaveBeenCalledWith(mockSplitter)
+    expect(createGain).toHaveBeenCalledTimes(2)
+    expect(gainNodeSpies[0].gainParam.value).toBeCloseTo(0.5)
+    expect(gainNodeSpies[1].gainParam.value).toBeCloseTo(0.5)
+    expect(splitterConnect).toHaveBeenNthCalledWith(
+      1,
+      gainNodeSpies[0].node,
+      0
+    )
+    expect(splitterConnect).toHaveBeenNthCalledWith(
+      2,
+      gainNodeSpies[1].node,
+      1
+    )
+    expect(gainNodeSpies[0].connect).toHaveBeenCalledWith(mockMerger, 0, 0)
+    expect(gainNodeSpies[1].connect).toHaveBeenCalledWith(mockMerger, 0, 0)
+    expect(mergerConnect).toHaveBeenCalledWith(mockOfflineContext.destination)
+
+    global.AudioContext = originalAudioContext
     global.OfflineAudioContext = originalOfflineAudioContext
   })
 })

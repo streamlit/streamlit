@@ -137,6 +137,29 @@ describe("WaveSurferRecordBackend", () => {
     expect(onError.mock.calls[0][0].message).toBe("String error")
   })
 
+  it("retries without constraints when device rejects sample rate", async () => {
+    backend.initialize(mockWaveSurfer, MockRecordPluginClass)
+
+    const constraintError = new Error("Overconstrained")
+    constraintError.name = "OverconstrainedError"
+    mockRecordPlugin.startRecording
+      .mockRejectedValueOnce(constraintError)
+      .mockResolvedValueOnce(undefined)
+
+    await expect(backend.startRecording()).resolves.toBeUndefined()
+
+    expect(mockRecordPlugin.startRecording).toHaveBeenCalledTimes(2)
+    expect(mockRecordPlugin.startRecording.mock.calls[0][0]).toEqual({
+      sampleRate: { ideal: 16000 },
+    })
+    expect(mockRecordPlugin.startRecording.mock.calls[1][0]).toBeUndefined()
+
+    mockRecordPlugin.startRecording.mockClear()
+    await expect(backend.startRecording()).resolves.toBeUndefined()
+    expect(mockRecordPlugin.startRecording).toHaveBeenCalledTimes(1)
+    expect(mockRecordPlugin.startRecording.mock.calls[0][0]).toBeUndefined()
+  })
+
   it("cleans up resources on destroy", async () => {
     backend.initialize(mockWaveSurfer, MockRecordPluginClass)
 

@@ -81,8 +81,17 @@ async function resampleAndConvertToMono(
   source.buffer = audioBuffer
 
   if (numberOfChannels > 1) {
+    const splitter = offlineContext.createChannelSplitter(numberOfChannels)
     const merger = offlineContext.createChannelMerger(1)
-    source.connect(merger)
+    source.connect(splitter)
+
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const gainNode = offlineContext.createGain()
+      gainNode.gain.value = 1 / numberOfChannels
+      splitter.connect(gainNode, channel)
+      gainNode.connect(merger, 0, 0)
+    }
+
     merger.connect(offlineContext.destination)
   } else {
     source.connect(offlineContext.destination)
