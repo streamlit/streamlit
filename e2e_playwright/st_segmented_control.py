@@ -40,7 +40,20 @@ if st.checkbox("Set default values", value=False):
 else:
     st.session_state.default_segmented_control_options = []
 
-default = st.session_state.default_segmented_control_options
+
+val = st.segmented_control(
+    "Segmented control with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_segmented_control_options,
+)
+st.write("Segmented control with default options:", val)
 
 s1 = st.segmented_control(
     "Select some options",
@@ -61,7 +74,6 @@ s1 = st.segmented_control(
     ],
     key="segmented_control_multi_selection",
     selection_mode="multi",
-    default=default,
     help="You can choose multiple options",
 )
 st.write(f"Multi selection: {s1}")
@@ -202,6 +214,29 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_segmented_control_options = [
+        "Foobar",
+        "🧰 General widgets",
+    ]
+else:
+    st.session_state.default_segmented_control_options = []
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.segmented_control(
+    "Segmented control with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_segmented_control_options,
+)
+st.write("Segmented control with default options:", val)
 
 if st.toggle("Update segmented control props"):
     dyn_val = st.segmented_control(

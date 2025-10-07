@@ -137,18 +137,19 @@ def test_click_single_icon_segment_and_take_snapshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    expect_markdown(app, "Multi selection: []")
+    expect_markdown(app, "Segmented control with default options: []")
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Multi selection: ['Foobar', '🧰 General widgets']",
+        "Segmented control with default options:",
+        "['Foobar', '🧰 General widgets']",
     )
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    expect_markdown(app, "Multi selection: []")
+    expect_markdown(app, "Segmented control with default options: []")
 
 
 def test_selection_via_on_change_callback(app: Page):
