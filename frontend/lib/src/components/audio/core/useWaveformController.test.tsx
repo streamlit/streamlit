@@ -228,6 +228,7 @@ describe("useWaveformController", () => {
     const mockWaveSurferInstance = {
       destroy: vi.fn(),
       on: vi.fn(),
+      un: vi.fn(),
       registerPlugin: vi.fn(),
       empty: vi.fn(),
       pause: vi.fn(),
@@ -319,6 +320,7 @@ describe("useWaveformController", () => {
     const mockWaveSurferInstance = {
       destroy: vi.fn(),
       on: vi.fn(),
+      un: vi.fn(),
       registerPlugin: vi.fn(),
       empty: vi.fn(),
       pause: vi.fn(),

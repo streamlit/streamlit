@@ -37,6 +37,7 @@ describe("WaveSurferPlayer", () => {
           handlers.push(handler)
         }
       }),
+      un: vi.fn(),
       load: vi.fn().mockResolvedValue(undefined),
       play: vi.fn().mockResolvedValue(undefined),
       pause: vi.fn(),
@@ -128,6 +129,7 @@ describe("WaveSurferPlayer", () => {
 
     expect(mockWaveSurfer.empty).toHaveBeenCalled()
     expect(global.URL.revokeObjectURL).toHaveBeenCalledWith("blob:test")
+    expect(mockWaveSurfer.un).toHaveBeenCalled()
 
     // Restore
     global.URL.createObjectURL = originalCreateObjectURL
