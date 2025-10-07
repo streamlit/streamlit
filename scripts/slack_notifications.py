@@ -118,6 +118,20 @@ def send_notification() -> None:
                 f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
             }
 
+    # Browserslist DB update notifications
+    if workflow == "browserslist":
+        if message_key == "success":
+            pr_url = os.getenv("PR_URL", "")
+            payload = {
+                "text": ":earth_americas: Browserslist DB updated. Please review the PR - "
+                f"<{pr_url}|Link here>"
+            }
+        else:
+            payload = {
+                "text": ":fire: Browserslist DB update failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
+            }
+
     # OSS Release automation notifications
     if workflow == "release_automation":
         repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
