@@ -393,8 +393,8 @@ class ConfigTest(unittest.TestCase):
                 CustomThemeCategories.SIDEBAR,
                 CustomThemeCategories.LIGHT,
                 CustomThemeCategories.DARK,
-                CustomThemeCategories.SIDEBAR_LIGHT,
-                CustomThemeCategories.SIDEBAR_DARK,
+                CustomThemeCategories.LIGHT_SIDEBAR,
+                CustomThemeCategories.DARK_SIDEBAR,
             ],
             description="This is a test config",
             default_val="TEST",
@@ -431,23 +431,23 @@ class ConfigTest(unittest.TestCase):
         assert options[dark_key].value == "TEST"
 
         sidebar_light_key = (
-            f"theme.{CustomThemeCategories.SIDEBAR_LIGHT.value}.testConfig"
+            f"theme.{CustomThemeCategories.LIGHT_SIDEBAR.value}.testConfig"
         )
         assert options[sidebar_light_key].name == "testConfig"
         assert (
             options[sidebar_light_key].section
-            == f"theme.{CustomThemeCategories.SIDEBAR_LIGHT.value}"
+            == f"theme.{CustomThemeCategories.LIGHT_SIDEBAR.value}"
         )
         assert options[sidebar_light_key].description == "This is a test config"
         assert options[sidebar_light_key].value == "TEST"
 
         sidebar_dark_key = (
-            f"theme.{CustomThemeCategories.SIDEBAR_DARK.value}.testConfig"
+            f"theme.{CustomThemeCategories.DARK_SIDEBAR.value}.testConfig"
         )
         assert options[sidebar_dark_key].name == "testConfig"
         assert (
             options[sidebar_dark_key].section
-            == f"theme.{CustomThemeCategories.SIDEBAR_DARK.value}"
+            == f"theme.{CustomThemeCategories.DARK_SIDEBAR.value}"
         )
         assert options[sidebar_dark_key].description == "This is a test config"
         assert options[sidebar_dark_key].value == "TEST"
@@ -499,29 +499,29 @@ class ConfigTest(unittest.TestCase):
         [theme.dark]
         primaryColor = "#FFFF00"
 
-        [theme.sidebar.dark]
+        [theme.dark.sidebar]
         primaryColor = "#00FF00"
 
-        [theme.sidebar.light]
+        [theme.light.sidebar]
         primaryColor = "#FF0000"
         """
         config._update_config_with_toml(toml_content, "test")
         assert config.get_option("theme.sidebar.primaryColor") == "#000000"
         assert config.get_option("theme.light.primaryColor") == "#0000FF"
         assert config.get_option("theme.dark.primaryColor") == "#FFFF00"
-        assert config.get_option("theme.sidebar.dark.primaryColor") == "#00FF00"
-        assert config.get_option("theme.sidebar.light.primaryColor") == "#FF0000"
+        assert config.get_option("theme.dark.sidebar.primaryColor") == "#00FF00"
+        assert config.get_option("theme.light.sidebar.primaryColor") == "#FF0000"
 
     @parameterized.expand(
         [
             # Invalid nested sections
-            "theme.light.sidebar",
-            "theme.dark.sidebar",
+            "theme.sidebar.light",
+            "theme.sidebar.dark",
             "theme.light.dark",
             "theme.dark.light",
             # Invalid deep nesting
-            "theme.sidebar.light.dark",
-            "theme.sidebar.dark.light",
+            "theme.light.sidebar.dark",
+            "theme.dark.sidebar.light",
         ]
     )
     def test_parsing_toml_with_invalid_theme_nesting(self, section_path):
@@ -697,8 +697,8 @@ class ConfigTest(unittest.TestCase):
                 "theme.dark",
                 "theme.light",
                 "theme.sidebar",
-                "theme.sidebar.dark",
-                "theme.sidebar.light",
+                "theme.dark.sidebar",
+                "theme.light.sidebar",
                 "global",
                 "logger",
                 "magic",
@@ -720,11 +720,11 @@ class ConfigTest(unittest.TestCase):
         sidebar_config_options = self._create_subsection_config_options("sidebar")
         light_config_options = self._create_subsection_config_options("light")
         dark_config_options = self._create_subsection_config_options("dark")
-        sidebar_light_config_options = self._create_subsection_config_options(
-            "sidebar.light"
+        light_sidebar_config_options = self._create_subsection_config_options(
+            "light.sidebar"
         )
-        sidebar_dark_config_options = self._create_subsection_config_options(
-            "sidebar.dark"
+        dark_sidebar_config_options = self._create_subsection_config_options(
+            "dark.sidebar"
         )
 
         config_options = sorted(
@@ -743,10 +743,10 @@ class ConfigTest(unittest.TestCase):
                 *light_config_options,
                 # Dark theme section options
                 *dark_config_options,
-                # Sidebar light theme section options
-                *sidebar_light_config_options,
-                # Sidebar dark theme section options
-                *sidebar_dark_config_options,
+                # Light sidebar theme section options
+                *light_sidebar_config_options,
+                # Dark sidebar theme section options
+                *dark_sidebar_config_options,
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",

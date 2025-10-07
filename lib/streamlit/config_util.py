@@ -307,7 +307,7 @@ def _extract_current_theme_config(
             if section not in current_theme_options:
                 current_theme_options[section] = {}
             current_theme_options[section][option] = opt_value
-        elif len(parts) == 4:  # theme.sidebar.light.option
+        elif len(parts) == 4:  # theme.light.sidebar.option or theme.dark.sidebar.option
             _, section, subsection, option = parts
             if section not in current_theme_options:
                 current_theme_options[section] = {}

@@ -537,7 +537,7 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
     def __init__(self, option_name: str) -> None:
         super().__init__(
             "Invalid theme section: `{option_name}`. "
-            "Valid patterns are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.sidebar.light`, "
-            "and `theme.sidebar.dark`.",
+            "Valid patterns are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.light.sidebar`, "
+            "and `theme.dark.sidebar`.",
             option_name=option_name,
         )
