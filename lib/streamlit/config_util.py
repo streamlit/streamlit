@@ -400,7 +400,7 @@ def _validate_theme_section_recursive(
     file_path_or_url: str,
     section_options: set[str],
     filtered_parent: dict[str, Any],
-    valid_subsection: str | None = None,
+    allow_sidebar_subsection: bool = False,
 ) -> None:
     """
     Recursively validate a theme section and its subsection/options.
@@ -411,14 +411,14 @@ def _validate_theme_section_recursive(
         file_path_or_url: Theme file path for error messages
         section_options: Valid options for this section
         filtered_parent: Parent section to populate/filter out invalid options
-        valid_subsection: Valid subsection (only "sidebar" for "light" and "dark" sections)
+        allow_sidebar_subsection: Allow sidebar subsection (only "light" and "dark" sections)
 
     Raises StreamlitInvalidThemeSectionError if an invalid subsection is found.
     """
     for option_name, option_value in section_configs.items():
         if isinstance(option_value, dict):
             # This is a subsection
-            if not valid_subsection or option_name not in valid_subsection:
+            if not allow_sidebar_subsection or option_name != "sidebar":
                 raise StreamlitInvalidThemeSectionError(
                     f"theme.{section_path}.{option_name}",
                     file_path_or_url,
@@ -434,7 +434,7 @@ def _validate_theme_section_recursive(
                 file_path_or_url,
                 section_options,
                 filtered_parent[option_name],
-                None,  # Subsections can't have further subsections
+                False,  # sidebar subsection can't have further subsections
             )
         elif option_name not in section_options:
             # This is an invalid section option
@@ -500,7 +500,7 @@ def _validate_theme_file_content(
                 filtered_theme_section[option_name] = {}
 
             # Subsection can only be sidebar from within light and dark sections
-            subsection = "sidebar" if option_name in {"light", "dark"} else None
+            allow_sidebar_subsection = option_name in {"light", "dark"}
 
             _validate_theme_section_recursive(
                 option_value,
@@ -508,7 +508,7 @@ def _validate_theme_file_content(
                 file_path_or_url,
                 valid_section_options,
                 filtered_theme_section[option_name],
-                subsection,
+                allow_sidebar_subsection,
             )
 
         elif option_name not in valid_main_options:

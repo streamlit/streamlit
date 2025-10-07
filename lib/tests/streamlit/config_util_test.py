@@ -763,7 +763,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         args = warning_call[0][1:]
 
         assert "invalid theme option" in format_string
-        assert "test_theme.toml" in args[0]  # file_pat h_or_url
+        assert "test_theme.toml" in args[0]  # file_path_or_url
         assert "theme.light.invalidSectionOption" in args[1]  # full_option_name
         assert "light" in args[2]  # section_name
 
