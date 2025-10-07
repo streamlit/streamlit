@@ -204,10 +204,6 @@ export class WaveSurferRecordBackend {
     }
   }
 
-  getIsRecording(): boolean {
-    return this.isRecording
-  }
-
   destroy(): void {
     this.cancelRecording()
 

@@ -73,6 +73,7 @@ export function useWaveformController({
   const eventsRef = useRef<WaveformControllerEvents>(events || {})
   const isInitializedRef = useRef(false)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
+  const isPlaybackModeRef = useRef(false)
 
   // Use the provided sample rate, or null (browser default), or fallback to DEFAULT_SAMPLE_RATE
   const effectiveSampleRate =
@@ -157,6 +158,7 @@ export function useWaveformController({
       })
 
       wavesurferRef.current = ws
+      isPlaybackModeRef.current = false
 
       const recordBackend = new WaveSurferRecordBackend({
         sampleRate: effectiveSampleRate,
@@ -211,8 +213,44 @@ export function useWaveformController({
         wavesurferRef.current = null
       }
       isInitializedRef.current = false
+      isPlaybackModeRef.current = false
     }
   }, [initializeWaveSurfer])
+
+  useEffect(() => {
+    const ws = wavesurferRef.current
+    if (!ws) {
+      return
+    }
+
+    if (currentState === "recording") {
+      ws.setOptions({
+        waveColor: theme.colors.primary,
+        progressColor: theme.colors.primary,
+      })
+      return
+    }
+
+    if (isPlaybackModeRef.current) {
+      ws.setOptions({
+        interact: true,
+        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
+        progressColor: theme.colors.bodyText,
+      })
+      return
+    }
+
+    ws.setOptions({
+      waveColor: theme.colors.primary,
+      progressColor: theme.colors.bodyText,
+    })
+  }, [
+    currentState,
+    theme.colors.bodyText,
+    theme.colors.fadedText40,
+    theme.colors.primary,
+    theme.colors.secondaryBg,
+  ])
 
   const start = useCallback(async (): Promise<void> => {
     if (currentState === "recording") {
@@ -235,6 +273,8 @@ export function useWaveformController({
       })
     }
 
+    isPlaybackModeRef.current = false
+
     await recordBackendRef.current.startRecording()
     setCurrentState("recording")
     setCurrentBlob(null)
@@ -251,11 +291,13 @@ export function useWaveformController({
       setIsPlaybackPlaying(false)
       configurePlayerEvents(playerRef.current)
     }
+    isPlaybackModeRef.current = false
   }, [configurePlayerEvents])
 
   const enterPlaybackMode = useCallback((): void => {
     playerRef.current?.seekToStart()
     setIsPlaybackPlaying(false)
+    isPlaybackModeRef.current = true
     if (wavesurferRef.current) {
       wavesurferRef.current.setOptions({
         interact: true,
@@ -351,6 +393,7 @@ export function useWaveformController({
     setCurrentBlob(null)
     setCurrentState("idle")
     setIsPlaybackPlaying(false)
+    isPlaybackModeRef.current = false
     eventsRef.current.onCancel?.()
   }, [currentState, resetPlayer])
 
