@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-import re
-
 import pytest
 from playwright.sync_api import FilePayload, Locator, Page, expect
 
@@ -29,7 +27,6 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     expect_help_tooltip,
     expect_markdown,
-    get_chat_input,
     get_element_by_key,
     goto_app,
     reset_hovering,
@@ -85,43 +82,35 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     expect(chat_input_widgets).to_have_count(10)
 
     assert_snapshot(
-        get_chat_input(app, "Chat input 1 (inline)"), name="st_chat_input-inline"
+        get_element_by_key(app, "chat_input_1"), name="st_chat_input-inline"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 2 (in column, disabled)"),
-        name="st_chat_input-in_column_disabled",
+        get_element_by_key(app, "chat_input_2"), name="st_chat_input-in_column_disabled"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 3 (callback)"),
-        name="st_chat_input-callback",
+        get_element_by_key(app, "chat_input_3"), name="st_chat_input-callback"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 4 (single file)"),
-        name="st_chat_input-single-file",
+        get_element_by_key(app, "chat_input_4"), name="st_chat_input-single-file"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 5 (multiple files)"),
-        name="st_chat_input-multiple-files",
+        get_element_by_key(app, "chat_input_5"), name="st_chat_input-multiple-files"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 7 (width=300px)"),
-        name="st_chat_input-width_300px",
+        get_element_by_key(app, "chat_input_7"), name="st_chat_input-width_300px"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 8 (width='stretch')"),
-        name="st_chat_input-width_stretch",
+        get_element_by_key(app, "chat_input_8"), name="st_chat_input-width_stretch"
     )
     # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
     assert_snapshot(
-        get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars")),
-        name="st_chat_input-bottom",
+        get_element_by_key(app, "chat_input_8_bottom"), name="st_chat_input-bottom"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 9 (directory upload)"),
-        name="st_chat_input-directory",
+        get_element_by_key(app, "chat_input_9"), name="st_chat_input-directory"
     )
     assert_snapshot(
-        get_chat_input(app, "Chat input 10 (directory upload disabled)"),
+        get_element_by_key(app, "chat_input_10"),
         name="st_chat_input-directory_disabled",
     )
 
@@ -135,7 +124,7 @@ def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunctio
         "tincidunt pul vinar. Nam pulvinar neque sapien, eu pellentesque metus pellentesque "
         "at. Ut et dui molestie, iaculis magna sed. This text should not appear in the input."
     )
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \\(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     chat_input_area = chat_input.locator("textarea").first
 
     chat_input_area.type(long_text)
@@ -205,7 +194,7 @@ def test_submit_hover_state_with_input_value(
     """Test the submit button's hover state when input value is present."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \\(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.type("Corgi")
 
@@ -219,9 +208,7 @@ def test_enter_submits_clears_input(app: Page):
     expect_markdown(app, "Chat input 8 (bottom, max_chars) - value: None")
 
     chat_input_area = (
-        get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars"))
-        .locator("textarea")
-        .first
+        get_element_by_key(app, "chat_input_8_bottom").locator("textarea").first
     )
     chat_input_area.type("Corgi")
     chat_input_area.press("Enter")
@@ -236,14 +223,14 @@ def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFu
     """Test that Shift+Enter creates a new line."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
     chat_input_area.type("New Line")
     assert_snapshot(chat_input, name="st_chat_input-shift_enter_new_line")
 
-    chat_input = get_chat_input(app, "Chat input 4 (single file)")
+    chat_input = get_element_by_key(app, "chat_input_4")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
@@ -253,7 +240,7 @@ def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFu
 
 def test_click_button_to_submit_clears_input(app: Page):
     """Test that clicking the button submits and clears the input."""
-    chat_input = get_chat_input(app, "Chat input 1 (inline)")
+    chat_input = get_element_by_key(app, "chat_input_1")
     submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
     chat_input_area = chat_input.locator("textarea").first
 
@@ -269,7 +256,7 @@ def test_chat_input_focus_state(app: Page, assert_snapshot: ImageCompareFunction
     """Test that st.chat_input renders the focus state correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.click()
     expect(chat_input_area).to_be_focused()
@@ -280,7 +267,7 @@ def test_grows_shrinks_input_text(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that input grows with long text and shrinks when text is deleted."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.type(
         "Lorem ipsum dolor amet, consectetur adipiscing elit. "
@@ -320,7 +307,7 @@ def test_uploads_and_deletes_single_file(
 ):
     """Test that it correctly uploads and deletes a single file."""
     app.set_viewport_size({"width": 750, "height": 1500})
-    chat_input = get_chat_input(app, "Chat input 4 (single file)")
+    chat_input = get_element_by_key(app, "chat_input_4")
     expect(chat_input).to_be_visible()
 
     file_name1 = "file1.txt"
@@ -354,7 +341,7 @@ def test_uploads_and_deletes_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading multiple files at once works correctly."""
-    chat_input = get_chat_input(app, "Chat input 5 (multiple files)")
+    chat_input = get_element_by_key(app, "chat_input_5")
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
@@ -399,10 +386,10 @@ def test_file_upload_error_message_disallowed_files(
         buffer=b"{}",
     )
 
-    file_upload_helper(app, get_chat_input(app, "Chat input 4 (single file)"), [file1])
+    file_upload_helper(app, get_element_by_key(app, "chat_input_4"), [file1])
 
     uploaded_files = (
-        get_chat_input(app, "Chat input 4 (single file)")
+        get_element_by_key(app, "chat_input_4")
         .get_by_test_id("stChatUploadedFiles")
         .first
     )
@@ -425,7 +412,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     )
 
     expect(app.get_by_text(file_name1)).not_to_be_attached()
-    chat_input = get_chat_input(app, "Chat input 4 (single file)")
+    chat_input = get_element_by_key(app, "chat_input_4")
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
@@ -446,9 +433,9 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
 def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
-    chat_input_upload_button = get_chat_input(
-        app, "Chat input 4 (single file)"
-    ).get_by_test_id("stChatInputFileUploadButton")
+    chat_input_upload_button = get_element_by_key(app, "chat_input_4").get_by_test_id(
+        "stChatInputFileUploadButton"
+    )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
 
@@ -458,9 +445,9 @@ def test_single_file_upload_button_tooltip(app: Page):
 
 def test_multi_file_upload_button_tooltip(app: Page):
     """Test that the multi file upload button tooltip renders correctly."""
-    chat_input_upload_button = get_chat_input(
-        app, "Chat input 5 (multiple files)"
-    ).get_by_test_id("stChatInputFileUploadButton")
+    chat_input_upload_button = get_element_by_key(app, "chat_input_5").get_by_test_id(
+        "stChatInputFileUploadButton"
+    )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
 
@@ -469,9 +456,9 @@ def test_multi_file_upload_button_tooltip(app: Page):
 
 def test_directory_upload_button_tooltip(app: Page):
     """Test that the directory upload button tooltip renders correctly."""
-    chat_input_upload_button = get_chat_input(
-        app, "Chat input 9 (directory upload)"
-    ).get_by_test_id("stChatInputFileUploadButton")
+    chat_input_upload_button = get_element_by_key(app, "chat_input_9").get_by_test_id(
+        "stChatInputFileUploadButton"
+    )
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
 
@@ -482,9 +469,7 @@ def test_directory_upload_button_tooltip(app: Page):
 
 def test_directory_upload_disabled_state(app: Page):
     """Test that disabled directory upload input cannot be interacted with."""
-    disabled_chat_input = get_chat_input(
-        app, "Chat input 10 (directory upload disabled)"
-    )
+    disabled_chat_input = get_element_by_key(app, "chat_input_10")
     disabled_upload_button = disabled_chat_input.get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -499,7 +484,7 @@ def test_directory_upload_disabled_state(app: Page):
 
 def test_directory_upload_button_interaction(app: Page):
     """Test directory upload button can be clicked when enabled."""
-    chat_input = get_chat_input(app, "Chat input 9 (directory upload)")
+    chat_input = get_element_by_key(app, "chat_input_9")
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
 
     expect(upload_button).to_be_visible()
@@ -516,7 +501,7 @@ def test_chat_input_adjusts_for_long_placeholder(
     """Test that chat input properly adjusts its height for long placeholder text."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = get_chat_input(app, re.compile(r"^Chat input 8 \(bottom, max_chars"))
+    chat_input = get_element_by_key(app, "chat_input_8_bottom")
     expect(chat_input).to_be_visible()
 
     # Take a snapshot of the initial state with the long placeholder
@@ -576,7 +561,7 @@ def test_programmatically_set_value_in_session_state(app: Page):
 
 def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that chat input height resets to compact state after submission."""
-    chat_input = get_chat_input(app, "Chat input 1 (inline)")
+    chat_input = get_element_by_key(app, "chat_input_1")
     chat_input_area = chat_input.locator("textarea").first
 
     assert_snapshot(chat_input, name="st_chat_input-initial_compact_state")
