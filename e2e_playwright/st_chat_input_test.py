@@ -464,7 +464,7 @@ def test_multi_file_upload_button_tooltip(app: Page):
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
 
-    expect_help_tooltip(app, chat_input_upload_button, "Upload or drag and drop a file")
+    expect_help_tooltip(app, chat_input_upload_button, "Upload or drag and drop files")
 
 
 def test_directory_upload_button_tooltip(app: Page):
@@ -478,7 +478,6 @@ def test_directory_upload_button_tooltip(app: Page):
     expect_help_tooltip(
         app, chat_input_upload_button, "Upload or drag and drop a directory"
     )
-    # Hover on the tooltip hover target
 
 
 def test_directory_upload_disabled_state(app: Page):
