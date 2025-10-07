@@ -340,7 +340,7 @@ def _get_valid_theme_options(
     Returns a tuple ( main_theme_options, section_theme_options )
     where main_theme_options is a set of valid theme options for the main theme (without the "theme." prefix)
     and section_theme_options is a set of valid theme options for the sections/subsections (sidebar, light, dark,
-    sidebar.light, sidebar.dark).
+    light.sidebar, dark.sidebar).
 
     Note: All non-main theme sections have the same valid options, so we only need to extract them once.
     """
@@ -358,7 +358,7 @@ def _get_valid_theme_options(
                 main_theme_options.add(option_name)
             # Subsection options like "theme.sidebar.primaryColor"
             elif parts[0] == "theme" and parts[1] == "sidebar" and len(parts) == 3:
-                # All subsections (sidebar, light, dark, sidebar.light, sidebar.dark)
+                # All subsections (sidebar, light, dark, light.sidebar, dark.sidebar)
                 # get the same options as theme.sidebar (which excludes main-only options)
                 _, _, option_name = parts
                 section_theme_options.add(option_name)
@@ -400,7 +400,7 @@ def _validate_theme_section_recursive(
     file_path_or_url: str,
     section_options: set[str],
     filtered_parent: dict[str, Any],
-    valid_subsections: set[str] | None = None,
+    valid_subsection: str | None = None,
 ) -> None:
     """
     Recursively validate a theme section and its options/subsections.
@@ -411,14 +411,14 @@ def _validate_theme_section_recursive(
         file_path_or_url: Theme file path for error messages
         section_options: Valid options for this section
         filtered_parent: Parent dict in filtered theme to populate
-        valid_subsections: Valid subsections (only for 'sidebar' section)
+        valid_subsection: Valid subsection (only "sidebar" for "light" and "dark" sections)
 
     Raises StreamlitInvalidThemeSectionError if an invalid subsection is found.
     """
     for option_name, option_value in section_configs.items():
         if isinstance(option_value, dict):
             # This is a subsection
-            if not valid_subsections or option_name not in valid_subsections:
+            if not valid_subsection or option_name not in valid_subsection:
                 raise StreamlitInvalidThemeSectionError(
                     f"theme.{section_path}.{option_name}",
                     file_path_or_url,
@@ -477,7 +477,6 @@ def _validate_theme_file_content(
     )
     # Valid sections and subsections
     valid_sections = {"sidebar", "light", "dark"}
-    valid_subsections = {"light", "dark"}
 
     theme_section = theme_content.get("theme", {})
 
@@ -500,8 +499,8 @@ def _validate_theme_file_content(
             if option_name not in filtered_theme_section:
                 filtered_theme_section[option_name] = {}
 
-            # Only sidebar can have subsections
-            subsections = valid_subsections if option_name == "sidebar" else None
+            # Only light and dark can have sidebar subsection
+            subsection = "sidebar" if option_name in {"light", "dark"} else None
 
             _validate_theme_section_recursive(
                 option_value,
@@ -509,7 +508,7 @@ def _validate_theme_file_content(
                 file_path_or_url,
                 valid_section_options,
                 filtered_theme_section[option_name],
-                subsections,
+                subsection,
             )
 
         elif option_name not in valid_main_options:

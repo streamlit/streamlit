@@ -2063,7 +2063,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         primaryColor = "#ff4444"
         backgroundColor = "#111111"
 
-        [theme.sidebar.dark]
+        [theme.dark.sidebar]
         blueColor = "#4169e1"
         greenColor = "#355E3B"
         """
@@ -2084,7 +2084,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             backgroundColor = "#222222"
             # primaryColor should come from base theme
 
-            [theme.sidebar.dark]
+            [theme.dark.sidebar]
             blueColor = "#ADD8E6"
             """
 
@@ -2115,7 +2115,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                     config.get_option("theme.borderColor") == "#333333"
                 )  # From base theme (no override)
                 assert (
-                    config.get_option("theme.sidebar.dark.blueColor") == "#ADD8E6"
+                    config.get_option("theme.dark.sidebar.blueColor") == "#ADD8E6"
                 )  # Config override
 
                 # Sidebar precedence
@@ -2126,7 +2126,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                     config.get_option("theme.sidebar.backgroundColor") == "#222222"
                 )  # Config override
                 assert (
-                    config.get_option("theme.sidebar.dark.greenColor") == "#355E3B"
+                    config.get_option("theme.dark.sidebar.greenColor") == "#355E3B"
                 )  # From base theme (no override)
 
                 # Verify where_defined is correct
@@ -2231,10 +2231,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         textColor = "#ffffff"
         borderColor = "#333333"
 
-        [theme.sidebar.light]
+        [theme.light.sidebar]
         borderColor = "#999999"
 
-        [theme.sidebar.dark]
+        [theme.dark.sidebar]
         linkColor = "#cccccc"
         """
 
@@ -2251,10 +2251,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             [theme.sidebar]
             textColor = "#cccccc"
 
-            [theme.sidebar.light]
+            [theme.light.sidebar]
             borderColor = "#888888"
 
-            [theme.sidebar.dark]
+            [theme.dark.sidebar]
             linkColor = "#ADD8E6"
             """
 
@@ -2265,7 +2265,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 "theme.light.font": "Arial",  # Should override theme file's "sans-serif"
                 "theme.sidebar.borderColor": "#999999",  # Should override theme file's "#333333"
                 "theme.dark.linkColor": "#CD1C18",  # Should override theme file's "#7851A9"
-                "theme.sidebar.dark.linkColor": "#4169e1",  # Should override config file's "#ADD8E6"
+                "theme.dark.sidebar.linkColor": "#4169e1",  # Should override config file's "#ADD8E6"
                 "theme.linkColor": "#0066cc",  # New value not in theme file or config
             }
 
@@ -2282,14 +2282,14 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # 2. Config file overrides
                 assert config.get_option("theme.sidebar.textColor") == "#cccccc"
-                assert config.get_option("theme.sidebar.light.borderColor") == "#888888"
+                assert config.get_option("theme.light.sidebar.borderColor") == "#888888"
 
                 # 3. Environment variables and command line flags (higher precedence)
                 assert config.get_option("theme.primaryColor") == "#ff6b6b"
                 assert config.get_option("theme.light.font") == "Arial"
                 assert config.get_option("theme.dark.linkColor") == "#CD1C18"
                 assert config.get_option("theme.sidebar.borderColor") == "#999999"
-                assert config.get_option("theme.sidebar.dark.linkColor") == "#4169e1"
+                assert config.get_option("theme.dark.sidebar.linkColor") == "#4169e1"
                 assert config.get_option("theme.linkColor") == "#0066cc"
 
                 # Verify where_defined is correct

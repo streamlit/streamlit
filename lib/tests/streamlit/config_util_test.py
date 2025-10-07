@@ -777,7 +777,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         theme_content = {
             "theme": {
                 "primaryColor": "#ff0000",
-                "sidebar": {
+                "light": {
                     "primaryColor": "#00ff00",
                     "invalidSubsection": {"primaryColor": "#0000ff"},
                 },
@@ -790,22 +790,23 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             )
 
         assert "Invalid theme section" in str(cm.value)
-        assert "sidebar.invalidSubsection" in str(cm.value)
+        assert "light.invalidSubsection" in str(cm.value)
 
     def test_validate_theme_file_content_invalid_subsection_option(self):
         """Test validation triggers warning for invalid subsection options."""
         theme_content = {
             "theme": {
                 "primaryColor": "#ff0000",
-                "sidebar": {
-                    "primaryColor": "#00ff00",
-                    "light": {
+                "dark": {
+                    "sidebar": {
                         "invalidSubsectionOption": "value",
                     },
                 },
+                "sidebar": {
+                    "primaryColor": "#00ff00",
+                },
             }
         }
-
         with patch("streamlit.config_util._get_logger") as mock_get_logger:
             mock_logger = mock_get_logger.return_value
             filtered_theme = config_util._validate_theme_file_content(
@@ -820,13 +821,13 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         assert "invalid theme option" in format_string
         assert "test_theme.toml" in args[0]  # file_path_or_url
         assert (
-            "theme.sidebar.light.invalidSubsectionOption" in args[1]
+            "theme.dark.sidebar.invalidSubsectionOption" in args[1]
         )  # full_option_name
-        assert "sidebar.light" in args[2]  # section_name
+        assert "dark.sidebar" in args[2]  # section_name
 
         # Verify invalid subsection option was removed from filtered theme
         assert (
-            "invalidSubsectionOption" not in filtered_theme["theme"]["sidebar"]["light"]
+            "invalidSubsectionOption" not in filtered_theme["theme"]["dark"]["sidebar"]
         )
         # Verify valid main option was preserved
         assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
@@ -1220,7 +1221,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         )
         sidebar_option.set_value("#sidebar_override", "config.toml")
         sidebar_light_option = ConfigOption(
-            "theme.sidebar.light.borderColor", description="", default_val=None
+            "theme.light.sidebar.borderColor", description="", default_val=None
         )
         sidebar_light_option.set_value("#sidebar_light_override", "config.toml")
 
@@ -1229,7 +1230,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "theme.primaryColor": primary_option,
             "theme.light.linkColor": light_option,
             "theme.sidebar.primaryColor": sidebar_option,
-            "theme.sidebar.light.borderColor": sidebar_light_option,
+            "theme.light.sidebar.borderColor": sidebar_light_option,
         }
 
         # Mock loaded theme file
@@ -1241,19 +1242,19 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
                 "light": {
                     "primaryColor": "#light_primary_color",
                     "linkColor": "#light_link_color",
+                    "sidebar": {
+                        "borderColor": "#light_sidebar_border_color",
+                    },
                 },
                 "dark": {
                     "primaryColor": "#dark_primary_color",
                     "linkColor": "#dark_link_color",
+                    "sidebar": {
+                        "borderColor": "#dark_sidebar_border_color",
+                    },
                 },
                 "sidebar": {
                     "primaryColor": "#sidebar_base_color",
-                    "light": {
-                        "borderColor": "#light_border_color",
-                    },
-                    "dark": {
-                        "borderColor": "#dark_border_color",
-                    },
                 },
             }
         }
@@ -1287,11 +1288,12 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         assert set_calls_dict.get("theme.dark.linkColor") == "#dark_link_color"
         assert (
             # override from config.toml should apply in subsubsection
-            set_calls_dict.get("theme.sidebar.light.borderColor")
+            set_calls_dict.get("theme.light.sidebar.borderColor")
             == "#sidebar_light_override"
         )
         assert (
-            set_calls_dict.get("theme.sidebar.dark.borderColor") == "#dark_border_color"
+            set_calls_dict.get("theme.dark.sidebar.borderColor")
+            == "#dark_sidebar_border_color"
         )
 
     @patch("streamlit.config_util._load_theme_file")

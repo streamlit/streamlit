@@ -696,10 +696,27 @@ class AppSessionTest(unittest.TestCase):
 def _mock_get_options_for_section(
     overrides: dict[str, Any] | None = None,
 ) -> Callable[..., Any]:
+    """Mock config.get_options_for_section for testing.
+
+    Expected override structure:
+        {
+            "sidebar": {...},        # Options for theme.sidebar
+            "light": {               # Options for theme.light
+                "sidebar": {...},    # Options for theme.light.sidebar
+                ...other options...
+            },
+            "dark": {                # Options for theme.dark
+                "sidebar": {...},    # Options for theme.dark.sidebar
+                ...other options...
+            },
+            ...other theme options...
+        }
+    """
     if not overrides:
         overrides = {}
 
-    sidebar_theme_opts = {
+    # Default options for sections (excluding main theme which has unique options like base)
+    section_default_opts = {
         "backgroundColor": "white",
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
@@ -744,16 +761,8 @@ def _mock_get_options_for_section(
         "codeTextColor": "#7defa1",
     }
 
-    if overrides.get("sidebar") is not None:
-        for k, v in overrides.get("sidebar").items():
-            # Don't apply nested subsection dictionaries as theme options
-            if k not in {
-                "light",
-                "dark",
-            }:
-                sidebar_theme_opts[k] = v
-
-    theme_opts = {
+    # Main theme options (includes unique options like base, baseFontSize, etc.)
+    theme_default_opts = {
         "backgroundColor": "white",
         "base": "dark",
         "baseFontSize": 14,
@@ -847,40 +856,50 @@ def _mock_get_options_for_section(
         "grayTextColor": "#d5dae5",
     }
 
-    for k, v in overrides.items():
-        # Don't apply nested section dictionaries as theme options
-        if k not in {"sidebar", "light", "dark"}:
-            theme_opts[k] = v
+    def _apply_overrides(base: dict, overrides_dict: dict, exclude_keys: set) -> dict:
+        """Apply overrides to base dict, excluding specified keys."""
+        result = base.copy()
+        for k, v in overrides_dict.items():
+            if k not in exclude_keys:
+                result[k] = v
+        return result
 
-    def get_options_for_section(section):
+    def get_options_for_section(section: str) -> dict:
         if section == "theme":
-            return theme_opts
+            # Apply root-level overrides, excluding nested sections
+            return _apply_overrides(
+                theme_default_opts, overrides, {"sidebar", "light", "dark"}
+            )
+
         if section == "theme.sidebar":
-            return sidebar_theme_opts
-        # Handle new theme sections with proper nested overrides
-        # Using sidebar_theme_opts vs theme_opts since [theme] has some options
-        # that are unique to it (i.e. base)
+            # Apply sidebar overrides if present
+            return _apply_overrides(
+                section_default_opts, overrides.get("sidebar", {}), set()
+            )
+
         if section == "theme.light":
-            section_opts = sidebar_theme_opts.copy()
-            if "light" in overrides:
-                section_opts.update(overrides["light"])
-            return section_opts
+            # Apply light overrides, excluding nested sidebar
+            return _apply_overrides(
+                section_default_opts, overrides.get("light", {}), {"sidebar"}
+            )
+
         if section == "theme.dark":
-            section_opts = sidebar_theme_opts.copy()
-            if "dark" in overrides:
-                section_opts.update(overrides["dark"])
-            return section_opts
-        # Handle new theme subsections with proper nested overrides
-        if section == "theme.sidebar.light":
-            section_opts = sidebar_theme_opts.copy()
-            if "sidebar" in overrides and "light" in overrides["sidebar"]:
-                section_opts.update(overrides["sidebar"]["light"])
-            return section_opts
-        if section == "theme.sidebar.dark":
-            section_opts = sidebar_theme_opts.copy()
-            if "sidebar" in overrides and "dark" in overrides["sidebar"]:
-                section_opts.update(overrides["sidebar"]["dark"])
-            return section_opts
+            # Apply dark overrides, excluding nested sidebar
+            return _apply_overrides(
+                section_default_opts, overrides.get("dark", {}), {"sidebar"}
+            )
+
+        if section == "theme.light.sidebar":
+            # Apply light.sidebar overrides if present
+            light_sidebar = overrides.get("light", {}).get("sidebar", {})
+            return _apply_overrides(section_default_opts, light_sidebar, set())
+
+        if section == "theme.dark.sidebar":
+            # Apply dark.sidebar overrides if present
+            dark_sidebar = overrides.get("dark", {}).get("sidebar", {})
+            return _apply_overrides(section_default_opts, dark_sidebar, set())
+
+        # Fallback to real config for any other sections
         return config.get_options_for_section(section)
 
     return get_options_for_section
@@ -1868,13 +1887,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.dark.body_font == "monospace"
 
     @patch("streamlit.runtime.app_session.config")
-    def test_can_specify_sidebar_light_theme_options(self, patched_config):
-        """Test that theme.sidebar.light section options are populated correctly."""
+    def test_can_specify_light_sidebar_theme_options(self, patched_config):
+        """Test that theme.light.sidebar section options are populated correctly."""
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
-                    "sidebar": {
-                        "light": {
+                    "light": {
+                        "sidebar": {
                             "primaryColor": "#0000ff",
                             "backgroundColor": "#f8f9fa",
                             "textColor": "#212529",
@@ -1889,23 +1908,23 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         msg = ForwardMsg()
         new_session_msg = msg.new_session
         app_session._populate_theme_msg(
-            new_session_msg.custom_theme.sidebar.light, "theme.sidebar.light"
+            new_session_msg.custom_theme.light.sidebar, "theme.light.sidebar"
         )
 
-        assert new_session_msg.custom_theme.sidebar.light.primary_color == "#0000ff"
-        assert new_session_msg.custom_theme.sidebar.light.background_color == "#f8f9fa"
-        assert new_session_msg.custom_theme.sidebar.light.text_color == "#212529"
-        assert new_session_msg.custom_theme.sidebar.light.body_font == "sans-serif"
-        assert new_session_msg.custom_theme.sidebar.light.base_radius == "0.25rem"
+        assert new_session_msg.custom_theme.light.sidebar.primary_color == "#0000ff"
+        assert new_session_msg.custom_theme.light.sidebar.background_color == "#f8f9fa"
+        assert new_session_msg.custom_theme.light.sidebar.text_color == "#212529"
+        assert new_session_msg.custom_theme.light.sidebar.body_font == "sans-serif"
+        assert new_session_msg.custom_theme.light.sidebar.base_radius == "0.25rem"
 
     @patch("streamlit.runtime.app_session.config")
-    def test_can_specify_sidebar_dark_theme_options(self, patched_config):
-        """Test that theme.sidebar.dark section options are populated correctly."""
+    def test_can_specify_dark_sidebar_theme_options(self, patched_config):
+        """Test that theme.dark.sidebar section options are populated correctly."""
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
-                    "sidebar": {
-                        "dark": {
+                    "dark": {
+                        "sidebar": {
                             "primaryColor": "#ffff00",
                             "backgroundColor": "#212529",
                             "textColor": "#f8f9fa",
@@ -1920,14 +1939,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         msg = ForwardMsg()
         new_session_msg = msg.new_session
         app_session._populate_theme_msg(
-            new_session_msg.custom_theme.sidebar.dark, "theme.sidebar.dark"
+            new_session_msg.custom_theme.dark.sidebar, "theme.dark.sidebar"
         )
 
-        assert new_session_msg.custom_theme.sidebar.dark.primary_color == "#ffff00"
-        assert new_session_msg.custom_theme.sidebar.dark.background_color == "#212529"
-        assert new_session_msg.custom_theme.sidebar.dark.text_color == "#f8f9fa"
-        assert new_session_msg.custom_theme.sidebar.dark.body_font == "monospace"
-        assert new_session_msg.custom_theme.sidebar.dark.base_radius == "0.5rem"
+        assert new_session_msg.custom_theme.dark.sidebar.primary_color == "#ffff00"
+        assert new_session_msg.custom_theme.dark.sidebar.background_color == "#212529"
+        assert new_session_msg.custom_theme.dark.sidebar.text_color == "#f8f9fa"
+        assert new_session_msg.custom_theme.dark.sidebar.body_font == "monospace"
+        assert new_session_msg.custom_theme.dark.sidebar.base_radius == "0.5rem"
 
     @patch("streamlit.runtime.app_session.config")
     def test_new_theme_sections_handle_none_values(self, patched_config):
@@ -1940,21 +1959,19 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "backgroundColor": None,
                         "textColor": None,
                         "font": None,
+                        "sidebar": {
+                            "primaryColor": None,
+                            "backgroundColor": None,
+                            "textColor": None,
+                            "font": None,
+                        },
                     },
                     "dark": {
                         "primaryColor": None,
                         "backgroundColor": None,
                         "textColor": None,
                         "font": None,
-                    },
-                    "sidebar": {
-                        "light": {
-                            "primaryColor": None,
-                            "backgroundColor": None,
-                            "textColor": None,
-                            "font": None,
-                        },
-                        "dark": {
+                        "sidebar": {
                             "primaryColor": None,
                             "backgroundColor": None,
                             "textColor": None,
@@ -1969,8 +1986,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         test_cases = [
             ("theme.light", lambda msg: msg.custom_theme.light),
             ("theme.dark", lambda msg: msg.custom_theme.dark),
-            ("theme.sidebar.light", lambda msg: msg.custom_theme.sidebar.light),
-            ("theme.sidebar.dark", lambda msg: msg.custom_theme.sidebar.dark),
+            ("theme.light.sidebar", lambda msg: msg.custom_theme.light.sidebar),
+            ("theme.dark.sidebar", lambda msg: msg.custom_theme.dark.sidebar),
         ]
 
         for section, theme_obj_getter in test_cases:
@@ -2016,13 +2033,15 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
-                    "light": color_overrides,
-                    "dark": color_overrides,
-                    "sidebar": {
-                        "light": color_overrides,
-                        "dark": color_overrides,
+                    "light": {
+                        "sidebar": color_overrides,
+                        **color_overrides,
                     },
-                }
+                    "dark": {
+                        "sidebar": color_overrides,
+                        **color_overrides,
+                    },
+                },
             )
         )
 
@@ -2030,8 +2049,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         test_cases = [
             ("theme.light", lambda msg: msg.custom_theme.light),
             ("theme.dark", lambda msg: msg.custom_theme.dark),
-            ("theme.sidebar.light", lambda msg: msg.custom_theme.sidebar.light),
-            ("theme.sidebar.dark", lambda msg: msg.custom_theme.sidebar.dark),
+            ("theme.light.sidebar", lambda msg: msg.custom_theme.light.sidebar),
+            ("theme.dark.sidebar", lambda msg: msg.custom_theme.dark.sidebar),
         ]
 
         for section, theme_obj_getter in test_cases:

@@ -755,16 +755,15 @@ class AppSession:
             msg.new_session.custom_theme.sidebar,
             f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
         )
-
-        # [theme.sidebar.light] configs
+        # [theme.light.sidebar] configs
         _populate_theme_msg(
-            msg.new_session.custom_theme.sidebar.light,
-            f"theme.{config.CustomThemeCategories.SIDEBAR_LIGHT.value}",
+            msg.new_session.custom_theme.light.sidebar,
+            f"theme.{config.CustomThemeCategories.LIGHT_SIDEBAR.value}",
         )
-        # [theme.sidebar.dark] configs
+        # [theme.dark.sidebar] configs
         _populate_theme_msg(
-            msg.new_session.custom_theme.sidebar.dark,
-            f"theme.{config.CustomThemeCategories.SIDEBAR_DARK.value}",
+            msg.new_session.custom_theme.dark.sidebar,
+            f"theme.{config.CustomThemeCategories.DARK_SIDEBAR.value}",
         )
 
         # Immutable session data. We send this every time a new session is
