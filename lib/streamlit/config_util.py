@@ -212,8 +212,7 @@ def _clean_paragraphs(txt: str) -> list[str]:
 
 
 def _check_color_value(value: Any, option_name: str) -> None:
-    """
-    Lightweight check of theme color config option values.
+    """Validate theme color configuration option values.
 
     Validates that the value is a string (or list of strings, in the case of
     chartCategoricalColors and chartSequentialColors) and is not empty.
@@ -221,11 +220,23 @@ def _check_color_value(value: Any, option_name: str) -> None:
     Handles both single color strings (like primaryColor, backgroundColor)
     and arrays of color strings (like chartCategoricalColors, chartSequentialColors).
 
-    Raises StreamlitInvalidThemeOptionError for type errors or empty values.
-    Logs warnings for potentially invalid colors, since we do more comprehensive
-    validation on the frontend.
+    Parameters
+    ----------
+    value : Any
+        The color value to validate. Can be a string or list of strings.
+    option_name : str
+        The name of the theme option being validated (e.g., "theme.primaryColor").
 
-    No return value - used purely for validation side effects in _validate_theme_file_content
+    Raises
+    ------
+    StreamlitInvalidThemeOptionError
+        If the value is not a string/list of strings, is empty, or contains
+        empty values in the case of arrays.
+
+    Notes
+    -----
+    Logs warnings for potentially invalid colors, since more comprehensive
+    validation happens on the frontend.
     """
     logger = _get_logger()
 
@@ -331,18 +342,28 @@ def _extract_current_theme_config(
 def _get_valid_theme_options(
     config_options_template: dict[str, ConfigOption],
 ) -> tuple[set[str], set[str]]:
-    """
-    Get the valid theme configuration options for main theme and theme sections.
+    """Get valid theme configuration options for main theme and theme sections.
 
     Extracts valid theme options from the config options template to ensure they
     stay in sync with the actual theme options defined via _create_theme_options() calls.
 
-    Returns a tuple ( main_theme_options, section_theme_options )
-    where main_theme_options is a set of valid theme options for the main theme (without the "theme." prefix)
-    and section_theme_options is a set of valid theme options for the sections/subsections (sidebar, light, dark,
-    light.sidebar, dark.sidebar).
+    Parameters
+    ----------
+    config_options_template : dict[str, ConfigOption]
+        Template of all available configuration options.
 
-    Note: All non-main theme sections have the same valid options, so we only need to extract them once.
+    Returns
+    -------
+    tuple[set[str], set[str]]
+        A tuple (main_theme_options, section_theme_options) where:
+        - main_theme_options: Valid theme options for the main theme (without "theme." prefix)
+        - section_theme_options: Valid theme options for sections/subsections
+          (sidebar, light, dark, light.sidebar, dark.sidebar)
+
+    Notes
+    -----
+    All non-main theme sections have the same valid options, so we only need to
+    extract them once.
     """
     # Extract options dynamically from the config template
     main_theme_options = set()
@@ -376,11 +397,9 @@ def _invalid_theme_option_warning(
 
     if section_name == "theme":
         full_option_name = f"{section_name}.{option_name}"
-    elif "." in section_name:
-        # Handle subsections like "light.sidebar" -> "theme.light.sidebar.{option_name}"
-        full_option_name = f"theme.{section_name}.{option_name}"
     else:
         # Handle sections like "sidebar" -> "theme.sidebar.{option_name}"
+        # or subsections like "light.sidebar" -> "theme.light.sidebar.{option_name}"
         full_option_name = f"theme.{section_name}.{option_name}"
 
     valid_options_list = "\n".join(f"  • {opt}" for opt in sorted(valid_options))
@@ -402,18 +421,27 @@ def _validate_theme_section_recursive(
     filtered_parent: dict[str, Any],
     allow_sidebar_subsection: bool = False,
 ) -> None:
-    """
-    Recursively validate a theme section and its subsection/options.
+    """Recursively validate a theme section and its subsection/options.
 
-    Args:
-        section_configs: The section configs to validate
-        section_path: Path like 'sidebar', 'light', 'light.sidebar'
-        file_path_or_url: Theme file path for error messages
-        section_options: Valid options for this section
-        filtered_parent: Parent section to populate/filter out invalid options
-        allow_sidebar_subsection: Allow sidebar subsection (only "light" and "dark" sections)
+    Parameters
+    ----------
+    section_configs : dict[str, Any]
+        The section configs to validate.
+    section_path : str
+        Path like 'sidebar', 'light', 'light.sidebar'.
+    file_path_or_url : str
+        Theme file path for error messages.
+    section_options : set[str]
+        Valid options for this section.
+    filtered_parent : dict[str, Any]
+        Parent section to populate/filter out invalid options.
+    allow_sidebar_subsection : bool, optional
+        Allow sidebar subsection (only "light" and "dark" sections), by default False.
 
-    Raises StreamlitInvalidThemeSectionError if an invalid subsection is found.
+    Raises
+    ------
+    StreamlitInvalidThemeSectionError
+        If an invalid subsection is found.
     """
     for option_name, option_value in section_configs.items():
         if isinstance(option_value, dict):
