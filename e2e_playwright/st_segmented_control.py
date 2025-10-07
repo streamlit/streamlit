@@ -217,6 +217,8 @@ val = st.segmented_control(
 )
 st.write("Segmented control with default options:", str(val))
 
+st.markdown("Dynamic segmented control:")
+
 if st.toggle("Update segmented control props"):
     dyn_val = st.segmented_control(
         "Updated dynamic segmented control",
