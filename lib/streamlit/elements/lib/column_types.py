@@ -1950,6 +1950,7 @@ def MultiselectColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",
