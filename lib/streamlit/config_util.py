@@ -377,7 +377,7 @@ def _invalid_theme_option_warning(
     if section_name == "theme":
         full_option_name = f"{section_name}.{option_name}"
     elif "." in section_name:
-        # Handle subsections like "sidebar.light" -> "theme.sidebar.light.{option_name}"
+        # Handle subsections like "light.sidebar" -> "theme.light.sidebar.{option_name}"
         full_option_name = f"theme.{section_name}.{option_name}"
     else:
         # Handle sections like "sidebar" -> "theme.sidebar.{option_name}"
@@ -403,14 +403,14 @@ def _validate_theme_section_recursive(
     valid_subsection: str | None = None,
 ) -> None:
     """
-    Recursively validate a theme section and its options/subsections.
+    Recursively validate a theme section and its subsection/options.
 
     Args:
         section_configs: The section configs to validate
-        section_path: Path like 'sidebar', 'light', 'sidebar.light'
+        section_path: Path like 'sidebar', 'light', 'light.sidebar'
         file_path_or_url: Theme file path for error messages
         section_options: Valid options for this section
-        filtered_parent: Parent dict in filtered theme to populate
+        filtered_parent: Parent section to populate/filter out invalid options
         valid_subsection: Valid subsection (only "sidebar" for "light" and "dark" sections)
 
     Raises StreamlitInvalidThemeSectionError if an invalid subsection is found.
@@ -475,7 +475,7 @@ def _validate_theme_file_content(
     valid_main_options, valid_section_options = _get_valid_theme_options(
         config_options_template
     )
-    # Valid sections and subsections
+    # Valid theme sections
     valid_sections = {"sidebar", "light", "dark"}
 
     theme_section = theme_content.get("theme", {})
@@ -488,7 +488,7 @@ def _validate_theme_file_content(
     for option_name, option_value in theme_section.items():
         # This is a section like theme.sidebar, theme.light, theme.dark
         if isinstance(option_value, dict):
-            # Invalid subsection: raise error
+            # Invalid section: raise error
             if option_name not in valid_sections:
                 raise StreamlitInvalidThemeSectionError(
                     option_name,
@@ -499,7 +499,7 @@ def _validate_theme_file_content(
             if option_name not in filtered_theme_section:
                 filtered_theme_section[option_name] = {}
 
-            # Only light and dark can have sidebar subsection
+            # Subsection can only be sidebar from within light and dark sections
             subsection = "sidebar" if option_name in {"light", "dark"} else None
 
             _validate_theme_section_recursive(
@@ -522,7 +522,7 @@ def _validate_theme_file_content(
             filtered_theme_section.pop(option_name, None)
 
         else:
-            # Valid main theme option - check color values
+            # Valid main theme option - if color config, check color value
             full_option_name = f"theme.{option_name}"
             if "color" in full_option_name.lower():
                 _check_color_value(option_value, full_option_name)
@@ -665,8 +665,8 @@ def _set_theme_options_recursive(
 ) -> None:
     """
     Recursively set theme options from nested dictionary in process_theme_inheritance().
-    This utility function traverses nested theme configuration sections/subsections
-    and sets each option using the provided set_option_func..
+    This utility function traverses nested theme configuration sections/subsection
+    and sets each option using the provided set_option_func.
     """
     for option_name, option_value in options_dict.items():
         if option_name == "base" and prefix == "theme":
