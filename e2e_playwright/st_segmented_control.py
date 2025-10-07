@@ -202,3 +202,40 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.toggle("Update segmented control props"):
+    dyn_val = st.segmented_control(
+        "Updated dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="updated help",
+        width=300,
+        default="banana",
+        on_change=lambda a, param: print(
+            f"Updated segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Updated segmented control arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Updated segmented control value:", dyn_val)
+else:
+    dyn_val = st.segmented_control(
+        "Initial dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="initial help",
+        width="content",
+        default="apple",
+        on_change=lambda a, param: print(
+            f"Initial segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Initial segmented control arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Initial segmented control value:", dyn_val)
