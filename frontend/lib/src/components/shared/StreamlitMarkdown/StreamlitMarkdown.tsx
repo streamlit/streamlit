@@ -125,6 +125,15 @@ export interface Props {
 }
 
 /**
+ * Detects if a string is a valid hex color code.
+ * Supports both 3-digit (#RGB) and 6-digit (#RRGGBB) formats.
+ */
+function isHexColor(text: string): boolean {
+  const hexColorPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+  return hexColorPattern.test(text.trim())
+}
+
+/**
  * A rehype plugin to add an `inline` property to code blocks.
  * This is used to distinguish between inline code and code blocks.
  * It is needed for versions of react-markdown from v9 onwards.
@@ -342,6 +351,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 
 /**
  * Renders code tag with highlighting based on requested language.
+ * Also renders a colored dot next to hex color codes.
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -350,16 +360,33 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
-
   const codeText = String(children).replace(/^\n/, "").replace(/\n$/, "")
-
   const language = match?.[1] || ""
+
+  // Check if this is an inline code block with a hex color
+  const isHexColorCode = inline && isHexColor(codeText)
+
   return !inline ? (
     <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
       {codeText}
     </StreamlitSyntaxHighlighter>
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
+      {isHexColorCode && (
+        <span
+          style={{
+            display: "inline-block",
+            width: "0.75em",
+            height: "0.75em",
+            borderRadius: "50%",
+            backgroundColor: codeText.trim(),
+            marginRight: "0.35em",
+            verticalAlign: "middle",
+            border: "1px solid rgba(0, 0, 0, 0.1)",
+          }}
+          aria-hidden="true"
+        />
+      )}
       {children}
     </StyledInlineCode>
   )
