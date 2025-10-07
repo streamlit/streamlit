@@ -61,7 +61,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^2.0.0",
+    "@eslint-react/eslint-plugin": "^2.0.5",
     "@eslint/compat": "^1.4.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.36.0",
@@ -101,7 +101,7 @@
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^6.0.0-rc.2",
+    "eslint-plugin-react-hooks": "^6.1.0",
     "eslint-plugin-streamlit-custom": "workspace:^",
     "eslint-plugin-testing-library": "^7.10.0",
     "globals": "^16.4.0",
