@@ -981,7 +981,8 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         self, kwarg_name: str, value1: object, value2: object
     ):
         """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
-        is provided."""
+        is provided.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
