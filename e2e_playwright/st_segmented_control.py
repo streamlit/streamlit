@@ -32,28 +32,7 @@ with st.sidebar:
     )
 
 st.header("Multi Select - Segmented Control", anchor="multi-select-segmented-control")
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_segmented_control_options = [
-        "Foobar",
-        "🧰 General widgets",
-    ]
-else:
-    st.session_state.default_segmented_control_options = []
 
-
-val = st.segmented_control(
-    "Segmented control with default options",
-    [
-        "🧰 General widgets",
-        "📊 Charts",
-        "🌇 Images",
-        "🎥 Video",
-        "📝 Text",
-    ],
-    selection_mode="multi",
-    default=st.session_state.default_segmented_control_options,
-)
-st.write("Segmented control with default options:", val)
 
 s1 = st.segmented_control(
     "Select some options",
@@ -217,8 +196,8 @@ st.write("Runs:", st.session_state.runs)
 
 if st.checkbox("Set default values", value=False):
     st.session_state.default_segmented_control_options = [
-        "Foobar",
         "🧰 General widgets",
+        "🎥 Video",
     ]
 else:
     st.session_state.default_segmented_control_options = []
@@ -236,7 +215,7 @@ val = st.segmented_control(
     selection_mode="multi",
     default=st.session_state.default_segmented_control_options,
 )
-st.write("Segmented control with default options:", val)
+st.write("Segmented control with default options:", str(val))
 
 if st.toggle("Update segmented control props"):
     dyn_val = st.segmented_control(
