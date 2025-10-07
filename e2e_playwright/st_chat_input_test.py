@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     expect_help_tooltip,
     expect_markdown,
+    get_chat_input,
     get_element_by_key,
     goto_app,
     reset_hovering,
@@ -73,16 +74,6 @@ def directory_upload_helper(app: Page, chat_input: Locator):
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
     wait_for_app_run(app, 500)
-
-
-def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
-    """Get a chat input container by its label.
-
-    Prefers user-visible label over index-based selection.
-    """
-    element = locator.get_by_test_id("stChatInput").filter(has_text=label)
-    expect(element).to_be_visible()
-    return element
 
 
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):

@@ -27,6 +27,27 @@ from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
 
 
+def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
+    """Get a chat input container by its label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stChatInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a time input with the given label.
 
