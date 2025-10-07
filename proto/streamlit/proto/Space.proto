@@ -17,15 +17,13 @@
 syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "HeightConfigProto";
+option java_outer_classname = "SpaceProto";
 
-package streamlit;
-
-message HeightConfig {
-  oneof height_spec {
-    bool use_stretch = 1;
-    bool use_content = 2;
-    uint32 pixel_height = 3;
-    float rem_height = 4;
-  }
+// A space element for adding vertical or horizontal spacing.
+// The size and direction are controlled via Element.width_config and
+// Element.height_config. The frontend uses FlexContext to determine which
+// dimension to apply based on the parent container's direction.
+message Space {
+  // Space element has no content - layout is controlled via
+  // Element.width_config and Element.height_config
 }
