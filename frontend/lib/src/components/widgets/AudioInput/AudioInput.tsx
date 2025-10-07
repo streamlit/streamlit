@@ -154,6 +154,22 @@ const AudioInput: React.FC<Props> = ({
     },
   })
 
+  const {
+    state,
+    isPlaybackPlaying,
+    start: startController,
+    stop: stopController,
+    approve: approveController,
+    cancel: cancelController,
+    playback: {
+      play: playbackPlayFn,
+      pause: playbackPauseFn,
+      load: playbackLoadFn,
+      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
+      getDurationMs: playbackGetDurationMsFn,
+    },
+  } = controller
+
   const transcodeAndUploadFile = useCallback(
     async (wavBlob: Blob) => {
       if (uploadAbortControllerRef.current) {
@@ -288,7 +304,7 @@ const AudioInput: React.FC<Props> = ({
       setProgressTime(STARTING_TIME_STRING)
       setRecordingTime(STARTING_TIME_STRING)
 
-      controller.cancel()
+      cancelController()
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
@@ -315,7 +331,7 @@ const AudioInput: React.FC<Props> = ({
       deleteFileUrl,
       recordingUrl,
       uploadClient,
-      controller,
+      cancelController,
       element,
       widgetMgr,
       fragmentId,
@@ -327,13 +343,13 @@ const AudioInput: React.FC<Props> = ({
 
   useEffect(() => {
     const updatePlaybackTime = (): void => {
-      if (controller.isPlaybackPlaying) {
-        setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
+      if (isPlaybackPlaying) {
+        setProgressTime(formatTime(playbackGetCurrentTimeMsFn()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
 
-    if (controller.isPlaybackPlaying) {
+    if (isPlaybackPlaying) {
       playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
     } else if (playbackTimerRef.current) {
       cancelAnimationFrame(playbackTimerRef.current)
@@ -346,10 +362,7 @@ const AudioInput: React.FC<Props> = ({
         playbackTimerRef.current = null
       }
     }
-  }, [controller])
-
-  const playbackLoad = controller.playback.load
-  const playbackGetDurationMs = controller.playback.getDurationMs
+  }, [isPlaybackPlaying, playbackGetCurrentTimeMsFn])
 
   useEffect(() => {
     if (!recordingUrl) {
@@ -361,12 +374,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await playbackLoad(recordingUrl)
+        await playbackLoadFn(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = playbackGetDurationMs()
+        const durationMs = playbackGetDurationMsFn()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -382,7 +395,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [recordingUrl, recordingTime, playbackLoad, playbackGetDurationMs])
+  }, [recordingUrl, recordingTime, playbackLoadFn, playbackGetDurationMsFn])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
@@ -410,22 +423,29 @@ const AudioInput: React.FC<Props> = ({
 
   const onClickPlayPause = useCallback(async () => {
     try {
-      if (controller.isPlaybackPlaying) {
-        const currentTime = controller.playback.getCurrentTimeMs()
-        controller.playback.pause()
+      if (isPlaybackPlaying) {
+        const currentTime = playbackGetCurrentTimeMsFn()
+        playbackPauseFn()
         setProgressTime(formatTime(currentTime))
-      } else if (controller.state === "idle" && recordingUrl) {
+      } else if (state === "idle" && recordingUrl) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
-        if (controller.playback.getCurrentTimeMs() <= 100) {
+        if (playbackGetCurrentTimeMsFn() <= 100) {
           setProgressTime(STARTING_TIME_STRING)
         }
-        await controller.playback.play()
+        await playbackPlayFn()
       }
     } catch {
       setIsError(true)
     }
-  }, [controller, recordingUrl])
+  }, [
+    isPlaybackPlaying,
+    playbackGetCurrentTimeMsFn,
+    playbackPauseFn,
+    playbackPlayFn,
+    recordingUrl,
+    state,
+  ])
 
   const startRecording = useCallback(async () => {
     if (recordingUrl) {
@@ -434,20 +454,20 @@ const AudioInput: React.FC<Props> = ({
 
     try {
       setProgressTime(STARTING_TIME_STRING)
-      await controller.start()
+      await startController()
     } catch {
       // Error handling is done via event listeners
     }
-  }, [controller, recordingUrl, handleClear])
+  }, [handleClear, recordingUrl, startController])
 
   const stopRecording = useCallback(async () => {
     try {
-      const blob = await controller.stop()
-      await controller.approve(blob)
+      const blob = await stopController()
+      await approveController(blob)
     } catch {
       setIsError(true)
     }
-  }, [controller])
+  }, [approveController, stopController])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
@@ -475,9 +495,8 @@ const AudioInput: React.FC<Props> = ({
     })
   }, [handleClear])
 
-  const state = controller.state
   const isRecording = state === "recording"
-  const isPlaying = controller.isPlaybackPlaying
+  const isPlaying = isPlaybackPlaying
   const displayedTime = isRecording ? recordingTime : progressTime
   const showPlaceholder =
     state === "idle" && !hasNoMicPermissions && !recordingUrl

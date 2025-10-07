@@ -34,6 +34,12 @@ export class WaveSurferPlayer {
   private currentBlobUrl: string | null = null
   private events: PlayerEvents = {}
   private isPlaying = false
+  private handleTimeUpdate?: (currentTime: number) => void
+  private handlePause?: () => void
+  private handlePlay?: () => void
+  private handleFinish?: () => void
+  private handleReady?: () => void
+  private handleError?: (msg: unknown) => void
 
   initialize(wavesurfer: WaveSurfer): void {
     this.wavesurfer = wavesurfer
@@ -43,33 +49,37 @@ export class WaveSurferPlayer {
   private setupEventListeners(): void {
     if (!this.wavesurfer) return
 
-    this.wavesurfer.on("timeupdate", (currentTime: number) => {
-      this.events.onTimeUpdate?.(currentTime * 1000)
-    })
+    this.teardownEventListeners()
 
-    this.wavesurfer.on("pause", () => {
+    this.handleTimeUpdate = (currentTime: number) => {
+      this.events.onTimeUpdate?.(currentTime * 1000)
+    }
+    this.handlePause = () => {
       this.isPlaying = false
       this.events.onPause?.()
-    })
-
-    this.wavesurfer.on("play", () => {
+    }
+    this.handlePlay = () => {
       this.isPlaying = true
       this.events.onPlay?.()
-    })
-
-    this.wavesurfer.on("finish", () => {
+    }
+    this.handleFinish = () => {
       this.isPlaying = false
       this.events.onFinish?.()
-    })
-
-    this.wavesurfer.on("ready", () => {
+    }
+    this.handleReady = () => {
       this.events.onReady?.()
-    })
-
-    this.wavesurfer.on("error", (msg: unknown) => {
+    }
+    this.handleError = (msg: unknown) => {
       const err = msg instanceof Error ? msg : new Error(String(msg))
       this.events.onError?.(err)
-    })
+    }
+
+    this.wavesurfer.on("timeupdate", this.handleTimeUpdate)
+    this.wavesurfer.on("pause", this.handlePause)
+    this.wavesurfer.on("play", this.handlePlay)
+    this.wavesurfer.on("finish", this.handleFinish)
+    this.wavesurfer.on("ready", this.handleReady)
+    this.wavesurfer.on("error", this.handleError)
   }
 
   setEventHandlers(events: PlayerEvents): void {
@@ -147,11 +157,47 @@ export class WaveSurferPlayer {
     this.cleanupPreviousUrl()
 
     if (this.wavesurfer) {
+      this.teardownEventListeners()
       this.wavesurfer.empty()
       this.wavesurfer = null
     }
 
     this.events = {}
     this.isPlaying = false
+    this.handleTimeUpdate = undefined
+    this.handlePause = undefined
+    this.handlePlay = undefined
+    this.handleFinish = undefined
+    this.handleReady = undefined
+    this.handleError = undefined
+  }
+
+  private teardownEventListeners(): void {
+    if (!this.wavesurfer) return
+
+    if (this.handleTimeUpdate) {
+      this.wavesurfer.un("timeupdate", this.handleTimeUpdate)
+      this.handleTimeUpdate = undefined
+    }
+    if (this.handlePause) {
+      this.wavesurfer.un("pause", this.handlePause)
+      this.handlePause = undefined
+    }
+    if (this.handlePlay) {
+      this.wavesurfer.un("play", this.handlePlay)
+      this.handlePlay = undefined
+    }
+    if (this.handleFinish) {
+      this.wavesurfer.un("finish", this.handleFinish)
+      this.handleFinish = undefined
+    }
+    if (this.handleReady) {
+      this.wavesurfer.un("ready", this.handleReady)
+      this.handleReady = undefined
+    }
+    if (this.handleError) {
+      this.wavesurfer.un("error", this.handleError)
+      this.handleError = undefined
+    }
   }
 }
