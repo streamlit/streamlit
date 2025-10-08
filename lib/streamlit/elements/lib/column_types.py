@@ -1812,7 +1812,7 @@ def MultiselectColumn(
         The color to use for different options. This can be:
 
         - None (default): The options are displayed without color.
-        - ``"auto"``: The options are colored based on the configured sequential chart colors.
+        - ``"auto"``: The options are colored based on the configured categorical chart colors.
         - A single color value that is used for all options. This can be one of
           the following strings:
 

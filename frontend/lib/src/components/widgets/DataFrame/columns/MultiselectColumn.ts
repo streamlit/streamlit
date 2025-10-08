@@ -73,7 +73,7 @@ export const prepareOptions = (
   }
 
   const colorMapping = getColorMapping(theme)
-  const sequentialColors = theme.colors.chartSequentialColors
+  const categoricalColors = theme.colors.chartCategoricalColors
   let autoColorIndex = 0
 
   return options
@@ -91,9 +91,9 @@ export const prepareOptions = (
       let resolvedColor: string | undefined
 
       if (option.color === "auto") {
-        // If the color is "auto", we use a color from the configured sequential chart colors
+        // If the color is "auto", we use a color from the configured categorical chart colors
         resolvedColor =
-          sequentialColors[autoColorIndex % sequentialColors.length]
+          categoricalColors[autoColorIndex % categoricalColors.length]
         autoColorIndex += 1
       } else if (option.color) {
         // Try to map the color to a theme color, otherwise use the color value directly.

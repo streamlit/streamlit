@@ -228,9 +228,9 @@ describe("prepareOptions", () => {
     expect(opts[0].color).toEqual(expected)
   })
 
-  it("assigns sequential colors for 'auto' and wraps around", () => {
-    const seq = mockTheme.emotion.colors.chartSequentialColors
-    // Create more options than sequential colors to verify wrap-around
+  it("assigns categorical chart colors for 'auto' and wraps around", () => {
+    const seq = mockTheme.emotion.colors.chartCategoricalColors
+    // Create more options than categorical colors to verify wrap-around
     const count = seq.length + 3
     const input = Array.from({ length: count }, (_, i) => ({
       value: `v${i}`,
