@@ -38,6 +38,8 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
+NUM_AUDIO_INPUTS = 13
+
 
 def grant_microphone_permissions(page: Page) -> None:
     """Grant microphone permissions where supported."""
@@ -199,7 +201,7 @@ def test_audio_input_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that audio input widgets are correctly rendered via screenshot matching."""
-    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(12)
+    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(NUM_AUDIO_INPUTS)
 
     assert_snapshot(
         get_audio_input_by_label(themed_app, "Audio Input 1"),
