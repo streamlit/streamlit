@@ -227,4 +227,50 @@ describe("prepareOptions", () => {
     const expected = blend(customColor, mockTheme.emotion.colors.bgColor)
     expect(opts[0].color).toEqual(expected)
   })
+
+  it("assigns sequential colors for 'auto' and wraps around", () => {
+    const seq = mockTheme.emotion.colors.chartSequentialColors
+    // Create more options than sequential colors to verify wrap-around
+    const count = seq.length + 3
+    const input = Array.from({ length: count }, (_, i) => ({
+      value: `v${i}`,
+      color: "auto" as const,
+    }))
+
+    const opts = prepareOptions(input, mockTheme.emotion)
+    const expectedColors = input.map((_, i) =>
+      blend(seq[i % seq.length], mockTheme.emotion.colors.bgColor)
+    )
+
+    expect(opts.map(o => o.color)).toEqual(expectedColors)
+  })
+
+  it("leaves string options colorless and assigns 'auto' for object options", () => {
+    const seq = mockTheme.emotion.colors.chartSequentialColors
+    const input = [
+      "A",
+      { value: "B", color: "auto" as const },
+      "C",
+      { value: "D", color: "auto" as const },
+    ]
+
+    const opts = prepareOptions(input, mockTheme.emotion)
+
+    const expected = [
+      { value: "A", label: undefined, color: undefined },
+      {
+        value: "B",
+        label: undefined,
+        color: blend(seq[0], mockTheme.emotion.colors.bgColor),
+      },
+      { value: "C", label: undefined, color: undefined },
+      {
+        value: "D",
+        label: undefined,
+        color: blend(seq[1], mockTheme.emotion.colors.bgColor),
+      },
+    ]
+
+    expect(opts).toEqual(expected)
+  })
 })
