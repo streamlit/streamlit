@@ -246,7 +246,6 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     # Update props via toggle
     click_toggle(app, "Update feedback props")
 
-    # Updated container visible
     # Value persisted
     expect_prefixed_markdown(app, "Updated feedback value:", "3")
 
