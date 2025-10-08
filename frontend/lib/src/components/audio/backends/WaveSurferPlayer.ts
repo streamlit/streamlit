@@ -94,21 +94,27 @@ export class WaveSurferPlayer {
     this.cleanupPreviousUrl()
 
     let url: string
-    if (source instanceof Blob) {
-      url = URL.createObjectURL(source)
-      this.currentBlobUrl = url
-    } else if (source instanceof ArrayBuffer) {
-      const blob = new Blob([source])
-      url = URL.createObjectURL(blob)
-      this.currentBlobUrl = url
-    } else {
-      url = source
-    }
+    let newBlobUrl: string | null = null
 
     try {
+      if (source instanceof Blob) {
+        newBlobUrl = URL.createObjectURL(source)
+        url = newBlobUrl
+      } else if (source instanceof ArrayBuffer) {
+        const blob = new Blob([source])
+        newBlobUrl = URL.createObjectURL(blob)
+        url = newBlobUrl
+      } else {
+        url = source
+      }
+
       await this.wavesurfer.load(url)
+      this.currentBlobUrl = newBlobUrl
     } catch (error) {
-      this.cleanupPreviousUrl()
+      if (newBlobUrl) {
+        URL.revokeObjectURL(newBlobUrl)
+      }
+      this.currentBlobUrl = null
       throw error
     }
   }
