@@ -441,10 +441,8 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(audio_input, name="st_audio_input-error_state")
 
 
-def test_dynamic_audio_input_id_behavior(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that changing sample_rate (whitelisted) recreates the widget but keeps key stable for other changes."""
+def test_dynamic_audio_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the audio input can be updated dynamically while keeping the state."""
     # Initial dynamic input
     audio_input = get_element_by_key(app, "dynamic_audio_input_key")
     expect(audio_input).to_be_visible()
@@ -453,7 +451,9 @@ def test_dynamic_audio_input_id_behavior(
     assert_snapshot(audio_input, name="st_audio_input-dynamic_initial")
 
     # Check that the help tooltip is correct:
-    expect_help_tooltip(app, audio_input, "initial help")
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "initial help"
+    )
 
     # Record
     record_and_stop(app, "Dynamic Audio Input")
@@ -476,7 +476,9 @@ def test_dynamic_audio_input_id_behavior(
     assert_snapshot(audio_input, name="st_audio_input-dynamic_updated")
 
     # Check that the help tooltip is correct:
-    expect_help_tooltip(app, audio_input, "updated help")
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "updated help"
+    )
 
 
 @pytest.mark.only_browser("chromium")
