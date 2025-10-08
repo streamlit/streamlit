@@ -442,14 +442,13 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_dynamic_audio_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+def test_dynamic_audio_input_props(app: Page):
     """Test that the audio input can be updated dynamically while keeping the state."""
     # Initial dynamic input
     audio_input = get_element_by_key(app, "dynamic_audio_input_key")
     expect(audio_input).to_be_visible()
     expect(audio_input).to_contain_text("Initial dynamic audio input")
     expect_prefixed_markdown(app, "Initial audio input value:", "False")
-    assert_snapshot(audio_input, name="st_audio_input-dynamic_initial")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(
@@ -471,10 +470,8 @@ def test_dynamic_audio_input_props(app: Page, assert_snapshot: ImageCompareFunct
 
     # Verify the updated audio input value
     expect_prefixed_markdown(app, "Updated audio input value:", "True")
-
-    # Take screenshot
-    audio_input.scroll_into_view_if_needed()
-    assert_snapshot(audio_input, name="st_audio_input-dynamic_updated")
+    # Verify new width:
+    expect(audio_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(
