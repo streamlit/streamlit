@@ -159,7 +159,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
             c1 = self.get_delta_from_queue().new_element.audio_input
             id1 = c1.id
 
-            # Change non-whitelisted params, keep sample_rate the same
+            # Change non-whitelisted params
             st.audio_input(
                 label="Label 2",
                 key="audio_input_key",
