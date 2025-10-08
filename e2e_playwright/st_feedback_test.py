@@ -27,15 +27,10 @@ from e2e_playwright.shared.app_utils import (
     click_toggle,
     expect_markdown,
     expect_prefixed_markdown,
+    get_button_group,
     get_element_by_key,
     get_markdown,
 )
-
-
-def get_button_group(locator: Page | Locator, index: int = 0) -> Locator:
-    button_group = locator.get_by_test_id("stButtonGroup").nth(index)
-    expect(button_group).to_be_visible()
-    return button_group
 
 
 def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
@@ -56,15 +51,14 @@ def test_click_thumbsup_and_take_snapshot(
     container = get_element_by_key(themed_app, "thumbs_container")
     expect(container).to_be_attached()
 
-    thumbs = get_button_group(container)
+    thumbs = get_button_group(themed_app, "thumbs_container")
     expect(thumbs).to_be_attached()
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(themed_app)
 
     # Hover over the hover test feedback to show hover state
-    hover_test_thumbs = get_element_by_key(themed_app, "thumbs_feedback_hover_test")
     hover_test_button = get_feedback_icon_button(
-        get_button_group(hover_test_thumbs), "thumb_down"
+        get_button_group(themed_app, "thumbs_feedback_hover_test"), "thumb_down"
     )
     hover_test_button.hover()
 
@@ -79,16 +73,16 @@ def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snaps
     container = get_element_by_key(themed_app, "faces_container")
     expect(container).to_be_attached()
 
-    faces = get_button_group(container)
+    faces = get_button_group(themed_app, "faces_container")
     get_feedback_icon_button(faces, "sentiment_satisfied").click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Faces sentiment: 3")
     expect(text).to_be_attached()
 
     # Hover over the hover test feedback to show hover state
-    hover_test_faces = get_element_by_key(themed_app, "faces_feedback_hover_test")
     hover_test_button = get_feedback_icon_button(
-        get_button_group(hover_test_faces), "sentiment_very_satisfied"
+        get_button_group(themed_app, "faces_feedback_hover_test"),
+        "sentiment_very_satisfied",
     )
     hover_test_button.hover()
 
@@ -103,16 +97,15 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     container = get_element_by_key(themed_app, "stars_container")
     expect(container).to_be_attached()
 
-    stars = get_button_group(container)
+    stars = get_button_group(themed_app, "stars_container")
     get_feedback_icon_button(stars, "star", 3).click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Star sentiment: 3")
     expect(text).to_be_attached()
 
     # Hover over the hover test feedback to show hover state
-    hover_test_stars = get_element_by_key(themed_app, "stars_feedback_hover_test")
     hover_test_button = get_feedback_icon_button(
-        get_button_group(hover_test_stars), "star", 4
+        get_button_group(themed_app, "stars_feedback_hover_test"), "star", 4
     )
     hover_test_button.hover()
 
@@ -127,7 +120,7 @@ def test_feedback_buttons_are_disabled(app: Page):
     container = get_element_by_key(app, "stars_container")
     expect(container).to_be_attached()
 
-    stars = get_button_group(container, 1)
+    stars = get_button_group(app, "star_feedback_disabled")
     star_buttons = get_feedback_icon_buttons(stars)
     for star_button in star_buttons.all():
         expect(star_button).to_have_js_property("disabled", True)
@@ -158,7 +151,7 @@ def test_feedback_works_in_forms(app: Page):
     container = app.get_by_test_id("stForm")
     expect(container).to_be_attached()
 
-    thumbs = get_button_group(container)
+    thumbs = get_button_group(app, "feedback_in_form")
     get_feedback_icon_button(thumbs, "thumb_up").click()
     expect(app.get_by_text("feedback-in-form: None")).to_be_visible()
     click_form_button(app, "Submit")
@@ -172,8 +165,7 @@ def test_feedback_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("feedback-in-fragment: None")).to_be_visible()
 
-    fragment_container = get_element_by_key(app, "fragment_feedback")
-    thumbs = get_button_group(fragment_container)
+    thumbs = get_button_group(app, "fragment_feedback")
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(app)
 
@@ -186,8 +178,7 @@ def test_feedback_remount_keep_value(app: Page):
 
     expect(app.get_by_text("feedback-after-sleep: None")).to_be_visible()
 
-    sleep_feedback_container = get_element_by_key(app, "after_sleep_feedback")
-    thumbs = get_button_group(sleep_feedback_container)
+    thumbs = get_button_group(app, "after_sleep_feedback")
     selected_button = get_feedback_icon_button(thumbs, "thumb_up")
     selected_button.click()
     wait_for_app_run(app)
@@ -230,7 +221,7 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
 def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the feedback can be updated dynamically while keeping the state."""
-    feedback_widget = get_element_by_key(app, "dynamic_feedback_widget")
+    feedback_widget = get_button_group(app, "dynamic_feedback_widget")
     expect(feedback_widget).to_be_visible()
 
     # Initial state
@@ -238,8 +229,7 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     expect_prefixed_markdown(app, "Initial feedback value:", "2")
 
     # Click to change selection
-    stars = get_button_group(feedback_widget)
-    get_feedback_icon_button(stars, "star", 3).click()
+    get_feedback_icon_button(feedback_widget, "star", 3).click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial feedback value:", "3")
 
@@ -253,6 +243,6 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(feedback_widget, name="st_feedback-dynamic_updated")
 
     # Click a different value
-    get_feedback_icon_button(stars, "star", 4).click()
+    get_feedback_icon_button(feedback_widget, "star", 4).click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated feedback value:", "4")
