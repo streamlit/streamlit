@@ -173,4 +173,18 @@ describe("WaveSurferRecordBackend", () => {
     expect(mockRecordPlugin.stopRecording).toHaveBeenCalled()
     expect(mockRecordPlugin.destroy).toHaveBeenCalled()
   })
+
+  it("forwards record-progress events to the controller", () => {
+    const onRecordProgress = vi.fn()
+    backend.setEventHandlers({ onRecordProgress })
+    backend.initialize(mockWaveSurfer, MockRecordPluginClass)
+
+    const progressHandlers = mockEventHandlers.get("record-progress")
+    expect(progressHandlers).toBeDefined()
+
+    progressHandlers?.[0](1234)
+
+    expect(onRecordProgress).toHaveBeenCalledTimes(1)
+    expect(onRecordProgress).toHaveBeenCalledWith(1234)
+  })
 })
