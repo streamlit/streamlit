@@ -229,9 +229,9 @@ describe("prepareOptions", () => {
   })
 
   it("assigns categorical chart colors for 'auto' and wraps around", () => {
-    const seq = mockTheme.emotion.colors.chartCategoricalColors
+    const categoricalColors = mockTheme.emotion.colors.chartCategoricalColors
     // Create more options than categorical colors to verify wrap-around
-    const count = seq.length + 3
+    const count = categoricalColors.length + 3
     const input = Array.from({ length: count }, (_, i) => ({
       value: `v${i}`,
       color: "auto" as const,
@@ -239,14 +239,17 @@ describe("prepareOptions", () => {
 
     const opts = prepareOptions(input, mockTheme.emotion)
     const expectedColors = input.map((_, i) =>
-      blend(seq[i % seq.length], mockTheme.emotion.colors.bgColor)
+      blend(
+        categoricalColors[i % categoricalColors.length],
+        mockTheme.emotion.colors.bgColor
+      )
     )
 
     expect(opts.map(o => o.color)).toEqual(expectedColors)
   })
 
   it("leaves string options colorless and assigns 'auto' for object options", () => {
-    const seq = mockTheme.emotion.colors.chartSequentialColors
+    const categoricalColors = mockTheme.emotion.colors.chartCategoricalColors
     const input = [
       "A",
       { value: "B", color: "auto" as const },
@@ -261,13 +264,13 @@ describe("prepareOptions", () => {
       {
         value: "B",
         label: undefined,
-        color: blend(seq[0], mockTheme.emotion.colors.bgColor),
+        color: blend(categoricalColors[0], mockTheme.emotion.colors.bgColor),
       },
       { value: "C", label: undefined, color: undefined },
       {
         value: "D",
         label: undefined,
-        color: blend(seq[1], mockTheme.emotion.colors.bgColor),
+        color: blend(categoricalColors[1], mockTheme.emotion.colors.bgColor),
       },
     ]
 
