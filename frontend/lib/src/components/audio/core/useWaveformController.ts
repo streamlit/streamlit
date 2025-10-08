@@ -75,7 +75,7 @@ export function useWaveformController({
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
 
-  // Use the provided sample rate, or null (browser default), or fallback to DEFAULT_SAMPLE_RATE
+  // Use the provided sample rate if specified; if undefined, fall back to DEFAULT_SAMPLE_RATE; if null, use null.
   const effectiveSampleRate =
     sampleRate === undefined ? DEFAULT_SAMPLE_RATE : sampleRate
 
