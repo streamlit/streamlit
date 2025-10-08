@@ -1352,7 +1352,7 @@ export class App extends PureComponent<Props, State> {
     ) {
       // If font faces or font sources are provided, we need to set the imported
       // theme with the theme manager to make the fonts available.
-      this.props.theme.setImportedTheme(themeInput)
+      this.props.theme.setFonts(themeInput)
     }
   }
 

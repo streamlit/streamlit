@@ -37,6 +37,7 @@ export interface ThemeManager {
   availableThemes: ThemeConfig[]
   setTheme: (theme: ThemeConfig) => void
   addThemes: (themes: ThemeConfig[]) => void
+  setFonts: (themeInfo: ICustomThemeConfig) => void
   setImportedTheme: (themeInfo: ICustomThemeConfig) => void
 }
 
@@ -87,7 +88,7 @@ export function useThemeManager(): [
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }, [theme.name, availableThemes, updateTheme])
 
-  const setImportedTheme = useCallback(
+  const setFonts = useCallback(
     (themeInfo: ICustomThemeConfig): void => {
       // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
       // component. So let's store them in state so we can pass them as props.
@@ -113,12 +114,19 @@ export function useThemeManager(): [
       setFontSources(
         Object.keys(newFontSources).length > 0 ? newFontSources : null
       )
+    },
+    [setFontFaces, setFontSources]
+  )
+
+  const setImportedTheme = useCallback(
+    (themeInfo: ICustomThemeConfig): void => {
+      setFonts(themeInfo)
 
       const themeConfigProto = new CustomThemeConfig(themeInfo)
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
       updateTheme(customTheme)
     },
-    [setFontFaces, updateTheme]
+    [setFonts, updateTheme]
   )
 
   useEffect(() => {
@@ -139,6 +147,7 @@ export function useThemeManager(): [
       activeTheme: theme,
       addThemes,
       availableThemes,
+      setFonts,
       setImportedTheme,
     },
     fontFaces,
