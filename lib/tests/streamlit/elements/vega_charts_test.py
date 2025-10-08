@@ -2286,8 +2286,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             chart_spec = json.loads(proto.spec)
 
-            # line_chart uses layer structure
-            color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+            # Handle both layer (line_chart) and non-layer structures
+            if "layer" in chart_spec:
+                color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+            else:
+                color_value = chart_spec["encoding"]["color"]["value"]
+
             assert color_value == "#ff4b4b", (
                 f"Color name '{color_name}' should resolve to #ff4b4b, got {color_value}"
             )
@@ -2301,8 +2305,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        # line_chart uses layer structure
-        color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        # Handle both layer (line_chart) and non-layer structures
+        if "layer" in chart_spec:
+            color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        else:
+            color_value = chart_spec["encoding"]["color"]["value"]
+
         assert color_value == "#a3a8b8", (
             f"'grey' should resolve to gray's hex #a3a8b8, got {color_value}"
         )
@@ -2317,8 +2325,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        # line_chart uses layer structure
-        color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        # Handle both layer (line_chart) and non-layer structures
+        if "layer" in chart_spec:
+            color_value = chart_spec["layer"][0]["encoding"]["color"]["value"]
+        else:
+            color_value = chart_spec["encoding"]["color"]["value"]
+
         assert color_value == "#AABBCC", (
             f"Hex color should pass through unchanged, got {color_value}"
         )
@@ -2333,8 +2345,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        # line_chart uses layer structure
-        color_encoding = chart_spec["layer"][0]["encoding"]["color"]
+        # Handle both layer (line_chart) and non-layer structures
+        if "layer" in chart_spec:
+            color_encoding = chart_spec["layer"][0]["encoding"]["color"]
+        else:
+            color_encoding = chart_spec["encoding"]["color"]
 
         # When "red" is a column name, color encoding should be a field reference, not a value
         assert "field" in color_encoding, (
