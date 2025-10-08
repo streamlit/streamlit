@@ -183,7 +183,7 @@ st.audio_input("Width 300px", width=300)
 
 if st.toggle("Update audio input props"):
     dyn_val = st.audio_input(
-        label="Dynamic Audio Input",
+        "Updated dynamic audio input",
         key="dynamic_audio_input_key",
         sample_rate=44100,
         help="updated help",
@@ -197,7 +197,7 @@ if st.toggle("Update audio input props"):
     st.write("Updated audio input value:", bool(dyn_val))
 else:
     dyn_val = st.audio_input(
-        label="Dynamic Audio Input",
+        "Initial dynamic text input",
         key="dynamic_audio_input_key",
         sample_rate=16000,
         help="initial help",
