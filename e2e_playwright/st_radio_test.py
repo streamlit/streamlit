@@ -85,8 +85,6 @@ def test_radio_widget_rendering(
         get_radio(themed_app, re.compile(r"^radio 14")), name="st_radio-markdown_label"
     )
 
-    # Dynamic radio snapshots are tested in dedicated test
-
 
 def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test width examples via label targeting."""
