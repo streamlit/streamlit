@@ -323,8 +323,6 @@ export function useWaveformController({
     try {
       const rawBlob = await recordBackendRef.current.stopRecording()
       setCurrentBlob(rawBlob)
-      setCurrentState("idle") // Recording stopped, back to idle state
-      setIsPlaybackPlaying(false)
 
       await new Promise<void>((resolve, reject) => {
         if (!playerRef.current) {
@@ -351,6 +349,8 @@ export function useWaveformController({
         })
       })
 
+      setCurrentState("idle") // Recording stopped, back to idle state
+      setIsPlaybackPlaying(false)
       enterPlaybackMode()
 
       eventsRef.current.onRecordReady?.(rawBlob)
