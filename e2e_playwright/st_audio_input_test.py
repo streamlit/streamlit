@@ -541,3 +541,69 @@ def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
     for i in range(min(2, len(tracking["created"]) - 1)):
         url = tracking["created"][i]
         assert url in tracking["revoked"], f"Blob URL {url} should have been revoked"
+
+
+# Marking this as only Chromium because Playwright Firefox
+# is having a strange issue that does not reproduce locally with Firefox,
+# where clicking play seeks to the end and sets the time to 00:03.
+@pytest.mark.only_browser("chromium")
+def test_audio_input_timer_display(app: Page):
+    """Test that the timer display shows correct values during recording and playback."""
+    grant_microphone_permissions(app)
+    audio_input = get_audio_input_by_label(app, "Audio Input 1")
+    timer = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
+
+    def timer_seconds() -> int:
+        """Return the timer value in seconds or -1 if not yet initialized."""
+        value = timer.inner_text().strip()
+        if value == "--:--":
+            return -1
+
+        try:
+            minutes, seconds = value.split(":", maxsplit=1)
+        except ValueError:
+            return -1
+
+        return int(minutes) * 60 + int(seconds)
+
+    def wait_for_timer_seconds(target_seconds: int, *, timeout: int = 6000) -> None:
+        def _reached_target() -> bool:
+            current = timer_seconds()
+            return current >= target_seconds if current >= 0 else False
+
+        wait_until(app, _reached_target, timeout=timeout)
+
+    # Record for 3 seconds (add 200ms buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    wait_for_timer_seconds(3)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:03 (duration of recording)
+    expect(timer).to_have_text("00:03")
+
+    # Click play and wait for playback to start
+    audio_input.get_by_role("button", name="Play", exact=True).click()
+    # Wait for pause button to appear, confirming playback started
+    expect(audio_input.get_by_role("button", name="Pause", exact=True)).to_be_visible()
+
+    # Verify timer shows 00:00 at start of playback
+    expect(timer).to_have_text("00:00")
+
+    # Wait 1 second + 200ms buffer and verify timer shows 00:01
+    wait_for_timer_seconds(1, timeout=3000)
+    expect(timer).to_have_text("00:01")
+
+    # Pause playback
+    audio_input.get_by_role("button", name="Pause", exact=True).click()
+    # Wait for play button to reappear
+    expect(audio_input.get_by_role("button", name="Play", exact=True)).to_be_visible()
+
+    # Re-record for 4 seconds (add 200ms buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    wait_for_timer_seconds(4, timeout=7000)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:04
+    expect(timer).to_have_text("00:04")

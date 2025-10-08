@@ -161,6 +161,17 @@ st.pills(
     key="pills_300px_width",
 )
 
+st.header("Pills - disabled and selected")
+s10 = st.pills(
+    "Elements",
+    ["Water", "Fire", "Earth", "Air"],
+    key="pills_disabled-selected",
+    default="Water",
+    disabled=True,
+)
+st.write("pills-disabled-selected:", str(s10))
+
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

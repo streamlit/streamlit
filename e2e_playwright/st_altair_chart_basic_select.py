@@ -57,7 +57,9 @@ base = (
 )
 chart_point = base.add_params(point)
 st.altair_chart(
-    chart_point, on_select="rerun", key="scatter_point", use_container_width=True
+    chart_point,
+    on_select="rerun",
+    key="scatter_point",
 )
 if (
     "scatter_point" in st.session_state
@@ -78,9 +80,7 @@ base = (
 )
 chart_interval = base.add_params(interval)
 # Set use_container_width=True for all charts so that the width is not dependent on Vega-lib updates.
-st.altair_chart(
-    chart_interval, on_select="rerun", key="scatter_interval", use_container_width=True
-)
+st.altair_chart(chart_interval, on_select="rerun", key="scatter_interval")
 if (
     "scatter_interval" in st.session_state
     and len(st.session_state.scatter_interval.selection) > 0
@@ -101,12 +101,12 @@ base = (
     )
 )
 chart_interval = base.add_params(interval)
-# Set use_container_width=True for all charts so that the width is not dependent on Vega-lib updates.
+# Set width="stretch" for all charts so that the width is not dependent on Vega-lib updates.
 st.altair_chart(
     chart_interval,
     on_select="rerun",
     key="scatter_interval_tooltip",
-    use_container_width=True,
+    width="stretch",
 )
 if (
     "scatter_interval_tooltip" in st.session_state
@@ -138,9 +138,7 @@ bar_graph_point = (
     )
     .add_params(point)
 )
-st.altair_chart(
-    bar_graph_point, on_select="rerun", key="bar_point", use_container_width=True
-)
+st.altair_chart(bar_graph_point, on_select="rerun", key="bar_point")
 if "bar_point" in st.session_state and len(st.session_state.bar_point.selection) > 0:
     st.write("Bar chart with selection_point:", str(st.session_state.bar_point))
 
@@ -182,9 +180,7 @@ base = (
 )
 area_chart_point = base.add_params(point)
 st.subheader("Area chart with selection_point")
-selection = st.altair_chart(
-    area_chart_point, on_select="rerun", key="area_point", use_container_width=True
-)
+selection = st.altair_chart(area_chart_point, on_select="rerun", key="area_point")
 if len(selection["selection"]) > 0:
     st.write("Area chart with selection_point:", str(selection["selection"]))
 
@@ -202,10 +198,7 @@ base = (
 area_chart_interval = base.add_params(interval)
 st.subheader("Area chart with selection_interval")
 area_interval_selection = st.altair_chart(
-    area_chart_interval,
-    on_select="rerun",
-    key="area_interval",
-    use_container_width=True,
+    area_chart_interval, on_select="rerun", key="area_interval"
 )
 if len(area_interval_selection["selection"]) > 0:
     st.write(
@@ -229,7 +222,7 @@ base = (
 histogram_point = base.add_params(point)
 st.subheader("Histogram chart with selection_point")
 st.altair_chart(
-    histogram_point, on_select="rerun", key="histogram_point", use_container_width=True
+    histogram_point, on_select="rerun", key="histogram_point", width="stretch"
 )
 if (
     "histogram_point" in st.session_state
@@ -255,7 +248,7 @@ st.altair_chart(
     histogram_interval,
     on_select="rerun",
     key="histogram_interval",
-    use_container_width=True,
+    width="stretch",
 )
 if (
     "histogram_interval" in st.session_state
@@ -271,10 +264,7 @@ st.header("Selections in form:")
 
 with st.form(key="my_form", clear_on_submit=True):
     selection = st.altair_chart(
-        histogram_point,
-        on_select="rerun",
-        key="histogram_point_in_form",
-        use_container_width=True,
+        histogram_point, on_select="rerun", key="histogram_point_in_form"
     )
     st.form_submit_button("Submit")
 
@@ -300,7 +290,7 @@ selection = st.altair_chart(
     histogram_point,
     on_select=on_selection,
     key="histogram_point_in_callback",
-    use_container_width=True,
+    width="stretch",
 )
 
 
@@ -314,7 +304,6 @@ def test_fragment():
         histogram_point,
         on_select=on_selection,
         key="histogram_point_in_fragment",
-        use_container_width=True,
     )
     st.write("Histogram-in-fragment selection:", str(selection))
 

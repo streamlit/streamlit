@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "app",
+    "component-v2-lib",
     "connection",
     "eslint-plugin-streamlit-custom",
     "lib",
