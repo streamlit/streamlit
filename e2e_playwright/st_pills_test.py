@@ -22,8 +22,10 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
 )
 
@@ -233,3 +235,43 @@ def test_pills_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
 
     pills_300px = get_button_group(app, 9)
     assert_snapshot(pills_300px, name="st_pills-width_300px")
+
+
+def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the pills can be updated dynamically while keeping the state."""
+    dynamic_pills = get_element_by_key(app, "dynamic_pills_with_key")
+    expect(dynamic_pills).to_be_visible()
+
+    # Initial state
+    expect(dynamic_pills).to_contain_text("Initial dynamic pills")
+    assert_snapshot(dynamic_pills, name="st_pills-dynamic_initial")
+    expect_prefixed_markdown(app, "Initial pills value:", "apple")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_pills, "initial help")
+
+    # Click a selection and submit
+    dynamic_pills.filter(has_text="banana").click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial pills value:", "banana")
+
+    # Click the toggle to update the pills props
+    click_toggle(app, "Update pills props")
+
+    # new pills is visible:
+    expect(dynamic_pills).to_contain_text("Updated dynamic pills")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated pills value:", "banana")
+
+    dynamic_pills.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_pills, name="st_pills-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_pills, "updated help")
+
+    # Click a different value
+    dynamic_pills.filter(has_text="orange").click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated pills value:", "orange")

@@ -24,7 +24,9 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
+    click_toggle,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_markdown,
 )
@@ -224,3 +226,36 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
     thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
+
+
+def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the feedback can be updated dynamically while keeping the state."""
+    dynamic_container = get_element_by_key(app, "dynamic_feedback_with_key")
+    expect(dynamic_container).to_be_visible()
+
+    # Initial state
+    expect(dynamic_container).to_contain_text("Initial dynamic feedback")
+    assert_snapshot(dynamic_container, name="st_feedback-dynamic_initial")
+    expect_prefixed_markdown(app, "Initial feedback value:", "2")
+
+    # Click to change selection
+    stars = get_button_group(dynamic_container)
+    get_feedback_icon_button(stars, "star", 3).click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial feedback value:", "3")
+
+    # Update props via toggle
+    click_toggle(app, "Update feedback props")
+
+    # Updated container visible
+    expect(dynamic_container).to_contain_text("Updated dynamic feedback")
+    # Value persisted
+    expect_prefixed_markdown(app, "Updated feedback value:", "3")
+
+    dynamic_container.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_container, name="st_feedback-dynamic_updated")
+
+    # Click a different value
+    get_feedback_icon_button(stars, "star", 4).click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated feedback value:", "4")
