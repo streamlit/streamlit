@@ -79,6 +79,7 @@ export const prepareOptions = (
   }
 
   const colorMapping = getColorMapping(theme)
+  // Categorical chart colors are used for the "auto" color option:
   const categoricalColors = theme.colors.chartCategoricalColors
   const isLightTheme = hasLightBackgroundColor(theme)
   let autoColorIndex = 0
@@ -101,6 +102,7 @@ export const prepareOptions = (
         // If the color is "auto", we use a color from the configured categorical chart colors
         resolvedColor = transparentize(
           categoricalColors[autoColorIndex % categoricalColors.length],
+          // Add some transparency to make the colors better as background colors:
           isLightTheme ? 0.7 : 0.6
         )
 
