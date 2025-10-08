@@ -50,7 +50,7 @@ with st.container(key="stars_container"):
 
 
 with st.form(key="my_form", clear_on_submit=True):
-    sentiment = st.feedback()
+    sentiment = st.feedback(key="feedback_in_form")
     st.form_submit_button("Submit")
 
 st.write("feedback-in-form:", str(sentiment))

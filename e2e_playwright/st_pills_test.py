@@ -24,12 +24,9 @@ from e2e_playwright.shared.app_utils import (
     click_form_button,
     expect_help_tooltip,
     expect_markdown,
+    get_button_group,
     get_element_by_key,
 )
-
-
-def get_button_group(app: Page, index: int) -> Locator:
-    return app.get_by_test_id("stButtonGroup").nth(index)
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
@@ -46,7 +43,7 @@ def test_click_multiple_pills_and_take_snapshot(
     Click on same pill multiple times to test unselect.
     """
 
-    pills = get_button_group(themed_app, 0)
+    pills = get_button_group(themed_app, "pills")
     get_pill_button(pills, "📝").click()
     wait_for_app_run(themed_app)
     # click on second element to test multiselect
@@ -78,7 +75,7 @@ def test_click_single_icon_pill_and_take_snapshot(
     Click on two different elements to validate single select.
     """
 
-    pills = get_button_group(themed_app, 1)
+    pills = get_button_group(themed_app, "icon_only_pills")
 
     # the icon's span element has the respective text
     # (e.g. :material/zoom_out_map: -> zoom_out_map)
@@ -101,7 +98,7 @@ def test_click_single_icon_pill_and_take_snapshot(
 def test_pills_are_disabled_and_take_screenshot(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    pills = get_button_group(app, 3)
+    pills = get_button_group(app, "pills_disabled")
     for pill in pills.locator("button").all():
         expect(pill).to_have_js_property("disabled", True)
     selected_pill = get_pill_button(pills, "Air")
@@ -117,7 +114,7 @@ def test_pills_are_disabled_and_take_screenshot(
 def test_pills_are_disabled_and_selected_and_take_screenshot(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    pills = get_button_group(app, 10)
+    pills = get_button_group(app, "pills_disabled-selected")
     for pill in pills.locator("button").all():
         expect(pill).to_have_js_property("disabled", True)
     selected_pill = get_pill_button(pills, "Air")
@@ -145,7 +142,7 @@ def test_pass_default_selections(app: Page):
 
 def test_selection_via_on_change_callback(app: Page):
     """Test that the on_change callback is triggered when a pill is clicked."""
-    pills = get_button_group(app, 2)
+    pills = get_button_group(app, "pills_on_change")
     get_pill_button(pills, "Air").click()
     wait_for_app_run(app)
     expect_markdown(app, "on_change selection: Air")
@@ -153,7 +150,7 @@ def test_selection_via_on_change_callback(app: Page):
 
 def test_pills_work_in_forms(app: Page):
     expect_markdown(app, "pills-in-form: None")
-    pills = get_button_group(app, 4)
+    pills = get_button_group(app, "pills_in_form")
     get_pill_button(pills, "Air").click()
     click_form_button(app, "Submit")
     wait_for_app_run(app)
@@ -162,7 +159,7 @@ def test_pills_work_in_forms(app: Page):
 
 def test_pills_work_with_fragments(app: Page):
     expect_markdown(app, "pills-in-fragment: None")
-    pills = get_button_group(app, 5)
+    pills = get_button_group(app, "pills_in_fragment")
     get_pill_button(pills, "Air").click()
     wait_for_app_run(app)
     expect_markdown(app, "pills-in-fragment: Air")
@@ -171,7 +168,7 @@ def test_pills_work_with_fragments(app: Page):
 
 def test_pills_remount_keep_value(app: Page):
     expect_markdown(app, "pills-after-sleep: None")
-    pills = get_button_group(app, 6)
+    pills = get_button_group(app, "pills_after_sleep")
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click()
     wait_for_app_run(app)
@@ -181,7 +178,9 @@ def test_pills_remount_keep_value(app: Page):
 
 
 def test_help_tooltip_works(app: Page):
-    expect_help_tooltip(app, get_button_group(app, 0), "This is for choosing options")
+    expect_help_tooltip(
+        app, get_button_group(app, "pills"), "This is for choosing options"
+    )
 
 
 def test_check_top_level_class(app: Page):
@@ -224,12 +223,12 @@ def test_pills_with_labels(app: Page):
 def test_pills_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test pills with different width configurations."""
 
-    # The width examples start at index 7 (after the other pills examples)
-    content_pills = get_button_group(app, 7)
+    # The width examples are addressed via their keys
+    content_pills = get_button_group(app, "pills_content_width")
     assert_snapshot(content_pills, name="st_pills-width_content")
 
-    stretch_pills = get_button_group(app, 8)
+    stretch_pills = get_button_group(app, "pills_stretch_width")
     assert_snapshot(stretch_pills, name="st_pills-width_stretch")
 
-    pills_300px = get_button_group(app, 9)
+    pills_300px = get_button_group(app, "pills_300px_width")
     assert_snapshot(pills_300px, name="st_pills-width_300px")
