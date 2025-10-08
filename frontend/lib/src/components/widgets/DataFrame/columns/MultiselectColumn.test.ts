@@ -16,6 +16,7 @@
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
+import { transparentize } from "color2k"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -240,7 +241,7 @@ describe("prepareOptions", () => {
     const opts = prepareOptions(input, mockTheme.emotion)
     const expectedColors = input.map((_, i) =>
       blend(
-        categoricalColors[i % categoricalColors.length],
+        transparentize(categoricalColors[i % categoricalColors.length], 0.7),
         mockTheme.emotion.colors.bgColor
       )
     )
@@ -264,13 +265,19 @@ describe("prepareOptions", () => {
       {
         value: "B",
         label: undefined,
-        color: blend(categoricalColors[0], mockTheme.emotion.colors.bgColor),
+        color: blend(
+          transparentize(categoricalColors[0], 0.7),
+          mockTheme.emotion.colors.bgColor
+        ),
       },
       { value: "C", label: undefined, color: undefined },
       {
         value: "D",
         label: undefined,
-        color: blend(categoricalColors[1], mockTheme.emotion.colors.bgColor),
+        color: blend(
+          transparentize(categoricalColors[1], 0.7),
+          mockTheme.emotion.colors.bgColor
+        ),
       },
     ]
 
