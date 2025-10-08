@@ -15,20 +15,34 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type WaveSurfer from "wavesurfer.js"
 
 import { WaveSurferPlayer } from "./WaveSurferPlayer"
 
+type WaveSurferEventHandler = (...args: unknown[]) => void
+
+interface WaveSurferMock {
+  on: (event: string, handler: WaveSurferEventHandler) => void
+  un: (event: string, handler: WaveSurferEventHandler) => void
+  load: (url: string) => Promise<void>
+  play: () => Promise<void>
+  pause: () => void
+  getDuration: () => number
+  getCurrentTime: () => number
+  empty: () => void
+}
+
 describe("WaveSurferPlayer", () => {
   let player: WaveSurferPlayer
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockWaveSurfer: any
-  let mockEventHandlers: Map<string, Array<(...args: unknown[]) => void>>
+  let mockWaveSurfer: WaveSurferMock
+  let mockWaveSurferInstance: WaveSurfer
+  let mockEventHandlers: Map<string, WaveSurferEventHandler[]>
 
   beforeEach(() => {
     mockEventHandlers = new Map()
 
     mockWaveSurfer = {
-      on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      on: vi.fn<WaveSurferMock["on"]>((event, handler) => {
         if (!mockEventHandlers.has(event)) {
           mockEventHandlers.set(event, [])
         }
@@ -37,14 +51,27 @@ describe("WaveSurferPlayer", () => {
           handlers.push(handler)
         }
       }),
-      un: vi.fn(),
-      load: vi.fn().mockResolvedValue(undefined),
-      play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
-      getDuration: vi.fn().mockReturnValue(10),
-      getCurrentTime: vi.fn().mockReturnValue(5),
-      empty: vi.fn(),
+      un: vi.fn<WaveSurferMock["un"]>((event, handler) => {
+        const handlers = mockEventHandlers.get(event)
+        if (!handlers) {
+          return
+        }
+        mockEventHandlers.set(
+          event,
+          handlers.filter(storedHandler => storedHandler !== handler)
+        )
+      }),
+      load: vi
+        .fn<(url: string) => Promise<void>>()
+        .mockResolvedValue(undefined),
+      play: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      pause: vi.fn<() => void>(),
+      getDuration: vi.fn<() => number>().mockReturnValue(10),
+      getCurrentTime: vi.fn<() => number>().mockReturnValue(5),
+      empty: vi.fn<() => void>(),
     }
+
+    mockWaveSurferInstance = mockWaveSurfer as unknown as WaveSurfer
 
     player = new WaveSurferPlayer()
   })
@@ -52,7 +79,7 @@ describe("WaveSurferPlayer", () => {
   it("forwards WaveSurfer 'error' events to PlayerEvents.onError", () => {
     const onError = vi.fn()
     player.setEventHandlers({ onError })
-    player.initialize(mockWaveSurfer)
+    player.initialize(mockWaveSurferInstance)
 
     // Simulate WaveSurfer error event
     const errorHandlers = mockEventHandlers.get("error")
@@ -73,7 +100,7 @@ describe("WaveSurferPlayer", () => {
   })
 
   it("sets up all event listeners on initialization", () => {
-    player.initialize(mockWaveSurfer)
+    player.initialize(mockWaveSurferInstance)
 
     expect(mockWaveSurfer.on).toHaveBeenCalledWith(
       "timeupdate",
@@ -104,7 +131,7 @@ describe("WaveSurferPlayer", () => {
   it("converts time to milliseconds in onTimeUpdate", () => {
     const onTimeUpdate = vi.fn()
     player.setEventHandlers({ onTimeUpdate })
-    player.initialize(mockWaveSurfer)
+    player.initialize(mockWaveSurferInstance)
 
     const timeUpdateHandlers = mockEventHandlers.get("timeupdate")
     expect(timeUpdateHandlers).toBeDefined()
@@ -114,7 +141,7 @@ describe("WaveSurferPlayer", () => {
   })
 
   it("cleans up resources on destroy", async () => {
-    player.initialize(mockWaveSurfer)
+    player.initialize(mockWaveSurferInstance)
 
     // Mock URL methods
     const originalCreateObjectURL = global.URL.createObjectURL
