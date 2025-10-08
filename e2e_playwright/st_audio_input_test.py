@@ -468,6 +468,9 @@ def test_dynamic_audio_input_props(app: Page):
     # New widget rendered with same key container but different configuration
     expect(audio_input).to_contain_text("Updated dynamic audio input")
 
+    # The recorded audio input snapshots are flaky, so we can only verify
+    # metadata in this case.
+
     # Verify the updated audio input value
     expect_prefixed_markdown(app, "Updated audio input value:", "True")
     # Verify new width:
