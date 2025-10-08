@@ -1222,10 +1222,13 @@ export const convertRemToPx = (scssValue: string): number => {
 }
 
 /**
- * Helper function merge theme section configs (light/dark and sidebar.light/dark)
+ * Helper function merge theme section configs (light/dark and light.sidebar/dark.sidebar)
  * into a consolidated theme input with proper inheritance.
  * Custom Light theme = uses streamlit base theme + [theme] configs + [theme.light] config overrides
  * Custom Dark theme = uses streamlit base theme + [theme] configs + [theme.dark] config overrides
+ * Sidebar inherits from main theme with additional [theme.sidebar] overrides
+ * Light sidebar = custom light theme + [theme.sidebar] + [theme.light.sidebar] overrides
+ * Dark sidebar = custom dark theme + [theme.sidebar] + [theme.dark.sidebar] overrides
  * @param themeInput: the theme input (configs) to merge
  * @param themeType: the theme type to create (light or dark)
  */
@@ -1247,29 +1250,62 @@ const handleSectionInheritance = (
   if (themeSection) {
     // Apply section properties (theme.light/dark) to the theme properties
     result = { ...result, ...themeSection, base } as CustomThemeConfig
-  }
 
-  // Handle sidebar section
-  if (result.sidebar) {
-    const sidebar = { ...result.sidebar }
-
-    // Apply the specific sidebar subsection (light or dark) only if it exists
-    const sidebarSubsection = isLightTheme ? sidebar.light : sidebar.dark
-    if (sidebarSubsection) {
-      Object.assign(sidebar, sidebarSubsection)
+    // Handle nested sidebar section (theme.light.sidebar or theme.dark.sidebar)
+    // This overrides theme.sidebar configs for the specific light/dark theme
+    if (themeSection.sidebar) {
+      result.sidebar = {
+        ...result.sidebar,
+        ...themeSection.sidebar,
+      }
     }
-
-    // Remove light/dark subsections from sidebar
-    delete sidebar.light
-    delete sidebar.dark
-    result.sidebar = sidebar
   }
 
-  // Remove light/dark sections from result
+  // Remove light/dark sections from result (they've been merged)
   delete result.light
   delete result.dark
 
   return result
+}
+
+/**
+ * Check if a theme section has any non-null/undefined values set.
+ * Checks one level deep for nested objects (e.g., sidebar within light/dark sections).
+ * Treats empty arrays as "no config" since they represent default values.
+ * @param section: The theme section to check (e.g., themeInput.light or themeInput.dark)
+ * @returns true if the section has any actual values set
+ */
+const hasThemeSectionConfigs = (
+  section: ICustomThemeConfig | null | undefined
+): boolean => {
+  if (!section) {
+    return false
+  }
+
+  // Check if any values in the section are non-null/undefined/non-empty
+  return Object.values(section).some(value => {
+    if (value === null || value === undefined) {
+      return false
+    }
+    // Empty arrays are treated as "no config" (they're default values)
+    if (Array.isArray(value) && value.length === 0) {
+      return false
+    }
+    // Check nested objects one level deep (e.g., sidebar subsection)
+    if (typeof value === "object" && !Array.isArray(value)) {
+      return Object.values(value).some(nestedValue => {
+        if (nestedValue === null || nestedValue === undefined) {
+          return false
+        }
+        // Also check for empty arrays in nested objects
+        if (Array.isArray(nestedValue) && nestedValue.length === 0) {
+          return false
+        }
+        return true
+      })
+    }
+    return true
+  })
 }
 
 /**
@@ -1281,10 +1317,8 @@ const handleSectionInheritance = (
 export const createCustomThemes = (
   themeInput: CustomThemeConfig
 ): ThemeConfig[] => {
-  const hasLightConfigs =
-    themeInput.light && Object.keys(themeInput.light).length > 0
-  const hasDarkConfigs =
-    themeInput.dark && Object.keys(themeInput.dark).length > 0
+  const hasLightConfigs = hasThemeSectionConfigs(themeInput.light)
+  const hasDarkConfigs = hasThemeSectionConfigs(themeInput.dark)
 
   const customThemes: ThemeConfig[] = []
 
