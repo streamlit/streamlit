@@ -21,7 +21,7 @@ import {
   StyledEmptyState,
   StyledList,
 } from "baseui/menu"
-import { FixedSizeList } from "react-window"
+import { List, type RowComponentProps } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -34,14 +34,10 @@ import { ThemedStyledDropdownListItem } from "./styled-components"
  * options at a time. Overall, the dropdown improves performance for
  * [Multi]Select components to display a practically large number of options.
  */
-interface FixedSizeListItemProps {
-  data: { props: OptionListProps }[]
-  index: number
-  style: React.CSSProperties
-}
+type RowProps = { data: { props: OptionListProps }[] }
 
-function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
-  const { data, index, style } = props
+function FixedSizeListItem(props: RowComponentProps<RowProps>): ReactElement {
+  const { ariaAttributes, data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { item, overrides, ...restChildProps } = data[index].props
 
@@ -52,6 +48,7 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
     <ThemedStyledDropdownListItem
       key={item.value}
       style={style}
+      {...ariaAttributes}
       {...restChildProps}
     >
       <OverflowTooltip content={label} placement={Placement.AUTO}>
@@ -119,22 +116,13 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       }}
       data-testid="stSelectboxVirtualDropdown"
     >
-      <FixedSizeList
-        width="100%"
-        height={height}
-        itemCount={children.length}
-        itemData={children}
-        itemKey={(index: number, data: { props: OptionListProps }[]) => {
-          const { id, value } = data[index].props.item
-
-          // For all current use cases, id should always be defined, but
-          // we also allow the value to be used as a fallback.
-          return id ?? value
-        }}
-        itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
-      >
-        {FixedSizeListItem}
-      </FixedSizeList>
+      <List
+        style={{ height }}
+        rowCount={children.length}
+        rowHeight={convertRemToPx(theme.sizes.dropdownItemHeight)}
+        rowComponent={FixedSizeListItem}
+        rowProps={{ data: children }}
+      />
     </StyledList>
   )
 })
