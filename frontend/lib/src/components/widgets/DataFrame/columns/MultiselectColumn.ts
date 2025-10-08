@@ -16,8 +16,14 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import { transparentize } from "color2k"
 
-import { blend, EmotionTheme, getMarkdownBgColors } from "~lib/theme"
+import {
+  blend,
+  EmotionTheme,
+  getMarkdownBgColors,
+  hasLightBackgroundColor,
+} from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -74,6 +80,7 @@ export const prepareOptions = (
 
   const colorMapping = getColorMapping(theme)
   const categoricalColors = theme.colors.chartCategoricalColors
+  const isLightTheme = hasLightBackgroundColor(theme)
   let autoColorIndex = 0
 
   return options
@@ -92,8 +99,11 @@ export const prepareOptions = (
 
       if (option.color === "auto") {
         // If the color is "auto", we use a color from the configured categorical chart colors
-        resolvedColor =
-          categoricalColors[autoColorIndex % categoricalColors.length]
+        resolvedColor = transparentize(
+          categoricalColors[autoColorIndex % categoricalColors.length],
+          isLightTheme ? 0.7 : 0.6
+        )
+
         autoColorIndex += 1
       } else if (option.color) {
         // Try to map the color to a theme color, otherwise use the color value directly.
