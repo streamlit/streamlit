@@ -25,8 +25,10 @@ from e2e_playwright.conftest import (
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     goto_app,
     reset_hovering,
@@ -581,3 +583,38 @@ def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunc
 
     expect(chat_input_area).to_have_value("")
     assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")
+
+
+def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the chat input can be updated dynamically while keeping the state."""
+    dynamic_chat_input = get_element_by_key(app, "dynamic_chat_input_with_key")
+    expect(dynamic_chat_input).to_be_visible()
+
+    # Initial state
+    expect(dynamic_chat_input).to_contain_text("Initial dynamic chat input")
+    assert_snapshot(dynamic_chat_input, name="st_chat_input-dynamic_initial")
+
+    # Type something and submit
+    input_field = dynamic_chat_input.locator("textarea").first
+    input_field.fill("hello")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    # Ensure the markdown entry is present (prefix match)
+    expect_prefixed_markdown(app, "Initial chat input value:", "hello")
+
+    # Click the toggle to update the chat input props
+    click_toggle(app, "Update chat input props")
+
+    # New chat input is visible:
+    expect(dynamic_chat_input).to_contain_text("Updated dynamic chat input")
+
+    dynamic_chat_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_chat_input, name="st_chat_input-dynamic_updated")
+
+    # Ensure we can still interact normally
+    input_field = dynamic_chat_input.locator("textarea").first
+    input_field.fill("world")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated chat input value:", "world")
