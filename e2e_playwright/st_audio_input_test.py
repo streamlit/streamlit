@@ -567,7 +567,7 @@ def test_audio_input_timer_display(app: Page):
 
         return int(minutes) * 60 + int(seconds)
 
-    def wait_for_timer_at_least(target_seconds: int, timeout_ms: float) -> str:
+    def wait_for_timer_at_least(target_seconds: int, timeout_ms: int) -> str:
         """Wait until the timer reaches ``target_seconds`` and return the label seen."""
 
         target = target_seconds
