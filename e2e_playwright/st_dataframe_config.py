@@ -864,6 +864,12 @@ st.dataframe(
         {
             "col_0": [["a", "b"], ["b", "c", "d"], [], None],
             "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [
+                ["orange", "banana", "apple"],
+                ["pineapple", "mango", "orange", "strawberry"],
+                [],
+                None,
+            ],
         }
     ),
     column_config={
@@ -888,6 +894,11 @@ st.dataframe(
             options=["a", "b", "c", "d", "e"],
             color="primary",
             format_func=lambda x: f"Option {x}",
+        ),
+        "col_2": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["orange", "banana", "apple", "pineapple", "mango", "strawberry"],
+            color="auto",
         ),
     },
     width="content",
