@@ -456,9 +456,9 @@ def test_dynamic_audio_input_props(app: Page, assert_snapshot: ImageCompareFunct
     )
 
     # Record
-    record_and_stop(app, "Dynamic Audio Input")
+    record_and_stop(app, "Initial dynamic audio input")
     wait_for_app_run(app)
-    verify_recording_exists(app, "Dynamic Audio Input")
+    verify_recording_exists(app, "Initial dynamic audio input")
 
     expect_prefixed_markdown(app, "Initial audio input value:", "True")
 
