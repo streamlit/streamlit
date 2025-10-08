@@ -12,6 +12,9 @@ on:
         type: boolean
         required: false
         default: false
+  push:
+    paths:
+      - ".github/workflows/update-browserslist-db.yml"
 
 permissions:
   # Permissions required for workflow to create/push branch and PR
@@ -24,6 +27,10 @@ jobs:
 
     # Only run in the upstream repository
     if: github.repository == 'streamlit/streamlit'
+
+    env:
+      # Force dry-run when triggered by push; otherwise respect manual input
+      DRY_RUN: ${{ github.event_name == 'push' || inputs.dry_run == true }}
 
     steps:
       - name: Checkout Streamlit code
@@ -79,7 +86,7 @@ jobs:
 
       - name: Create PR to merge changes into develop
         id: create_pr
-        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && env.DRY_RUN != 'true' }}
         uses: actions/github-script@v8
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
@@ -118,7 +125,7 @@ jobs:
         env:
           LOCK_CHANGED: ${{ steps.check-lock.outputs.lock_changed }}
           PR_URL: ${{ steps.create_pr.outputs.pr_url }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          DRY_RUN: ${{ env.DRY_RUN }}
         run: |
           {
             echo "## Browserslist DB Update Summary";
@@ -133,7 +140,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Slack notification - PR created
-        if: ${{ success() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        if: ${{ success() && steps.check-lock.outputs.lock_changed == 'true' && env.DRY_RUN != 'true' }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
@@ -143,7 +150,7 @@ jobs:
           python scripts/slack_notifications.py browserslist success
 
       - name: Slack notification - PR creation failed
-        if: ${{ failure() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        if: ${{ failure() && steps.check-lock.outputs.lock_changed == 'true' && env.DRY_RUN != 'true' }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
