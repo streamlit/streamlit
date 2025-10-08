@@ -31,7 +31,7 @@ from parameterized import parameterized
 from streamlit import config, config_util, env_util
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -57,6 +57,88 @@ class ConfigTest(unittest.TestCase):
             p.stop()
 
         config._delete_option("_test.tomlTest")
+
+    def _create_theme_config_options(self):
+        """Create a list of the valid config options for the [theme] section."""
+        valid_general_config_options = self._create_subsection_config_options("theme")
+
+        # Config option valid only for the [theme] section
+        # Add option here if it is only allowed in the [theme] section
+        valid_theme_only_config_options = [
+            "base",
+            "baseFontSize",
+            "baseFontWeight",
+            "fontFaces",
+            "showSidebarBorder",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+        ]
+
+        theme_config_options = [
+            *valid_general_config_options,
+        ]
+        for option in valid_theme_only_config_options:
+            theme_config_options.append(f"theme.{option}")
+
+        return theme_config_options
+
+    def _create_subsection_config_options(self, section: str):
+        """Create a list of the valid config options for a subsection of the theme section."""
+
+        # Valid config options for subsections
+        # Add config option here if it is allowed in any section
+        valid_section_config_options = [
+            "primaryColor",
+            "backgroundColor",
+            "secondaryBackgroundColor",
+            "textColor",
+            "baseRadius",
+            "buttonRadius",
+            "font",
+            "headingFont",
+            "codeFont",
+            "codeFontSize",
+            "codeFontWeight",
+            "headingFontSizes",
+            "headingFontWeights",
+            "borderColor",
+            "dataframeBorderColor",
+            "showWidgetBorder",
+            "linkColor",
+            "linkUnderline",
+            "codeTextColor",
+            "codeBackgroundColor",
+            "dataframeHeaderBackgroundColor",
+            "redColor",
+            "orangeColor",
+            "yellowColor",
+            "blueColor",
+            "greenColor",
+            "violetColor",
+            "grayColor",
+            "redBackgroundColor",
+            "orangeBackgroundColor",
+            "yellowBackgroundColor",
+            "blueBackgroundColor",
+            "greenBackgroundColor",
+            "violetBackgroundColor",
+            "grayBackgroundColor",
+            "redTextColor",
+            "orangeTextColor",
+            "yellowTextColor",
+            "blueTextColor",
+            "greenTextColor",
+            "violetTextColor",
+            "grayTextColor",
+        ]
+
+        section_config_options = []
+        if section != "theme":
+            section = f"theme.{section}"
+        for option in valid_section_config_options:
+            section_config_options.append(f"{section}.{option}")
+
+        return section_config_options
 
     def test_set_user_option_scriptable(self):
         """Test that scriptable options can be set from API."""
@@ -303,6 +385,80 @@ class ConfigTest(unittest.TestCase):
         config._delete_option(theme_key)
         config._delete_option(sidebar_key)
 
+    def test_create_theme_options_for_complex_categories(self):
+        config._create_theme_options(
+            "testConfig",
+            categories=[
+                "theme",
+                CustomThemeCategories.SIDEBAR,
+                CustomThemeCategories.LIGHT,
+                CustomThemeCategories.DARK,
+                CustomThemeCategories.LIGHT_SIDEBAR,
+                CustomThemeCategories.DARK_SIDEBAR,
+            ],
+            description="This is a test config",
+            default_val="TEST",
+        )
+
+        options = config.get_config_options(force_reparse=True)
+        theme_key = "theme.testConfig"
+        assert options[theme_key].name == "testConfig"
+        assert options[theme_key].section == "theme"
+        assert options[theme_key].description == "This is a test config"
+        assert options[theme_key].value == "TEST"
+
+        sidebar_key = f"theme.{CustomThemeCategories.SIDEBAR.value}.testConfig"
+        assert options[sidebar_key].name == "testConfig"
+        assert (
+            options[sidebar_key].section
+            == f"theme.{CustomThemeCategories.SIDEBAR.value}"
+        )
+        assert options[sidebar_key].description == "This is a test config"
+        assert options[sidebar_key].value == "TEST"
+
+        light_key = f"theme.{CustomThemeCategories.LIGHT.value}.testConfig"
+        assert options[light_key].name == "testConfig"
+        assert (
+            options[light_key].section == f"theme.{CustomThemeCategories.LIGHT.value}"
+        )
+        assert options[light_key].description == "This is a test config"
+        assert options[light_key].value == "TEST"
+
+        dark_key = f"theme.{CustomThemeCategories.DARK.value}.testConfig"
+        assert options[dark_key].name == "testConfig"
+        assert options[dark_key].section == f"theme.{CustomThemeCategories.DARK.value}"
+        assert options[dark_key].description == "This is a test config"
+        assert options[dark_key].value == "TEST"
+
+        sidebar_light_key = (
+            f"theme.{CustomThemeCategories.LIGHT_SIDEBAR.value}.testConfig"
+        )
+        assert options[sidebar_light_key].name == "testConfig"
+        assert (
+            options[sidebar_light_key].section
+            == f"theme.{CustomThemeCategories.LIGHT_SIDEBAR.value}"
+        )
+        assert options[sidebar_light_key].description == "This is a test config"
+        assert options[sidebar_light_key].value == "TEST"
+
+        sidebar_dark_key = (
+            f"theme.{CustomThemeCategories.DARK_SIDEBAR.value}.testConfig"
+        )
+        assert options[sidebar_dark_key].name == "testConfig"
+        assert (
+            options[sidebar_dark_key].section
+            == f"theme.{CustomThemeCategories.DARK_SIDEBAR.value}"
+        )
+        assert options[sidebar_dark_key].description == "This is a test config"
+        assert options[sidebar_dark_key].value == "TEST"
+
+        config._delete_option(theme_key)
+        config._delete_option(sidebar_key)
+        config._delete_option(light_key)
+        config._delete_option(dark_key)
+        config._delete_option(sidebar_light_key)
+        config._delete_option(sidebar_dark_key)
+
     def test_parsing_toml(self):
         """Test config._update_config_with_toml()."""
         # Some useful variables.
@@ -330,6 +486,55 @@ class ConfigTest(unittest.TestCase):
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
         assert config.get_option("_test.tomlTest") == DUMMY_VAL_2
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
+
+    def test_parsing_toml_with_valid_theme_nesting(self):
+        """Test that valid theme nesting patterns are parsed correctly."""
+        toml_content = """
+        [theme.sidebar]
+        primaryColor = "#000000"
+
+        [theme.light]
+        primaryColor = "#0000FF"
+
+        [theme.dark]
+        primaryColor = "#FFFF00"
+
+        [theme.dark.sidebar]
+        primaryColor = "#00FF00"
+
+        [theme.light.sidebar]
+        primaryColor = "#FF0000"
+        """
+        config._update_config_with_toml(toml_content, "test")
+        assert config.get_option("theme.sidebar.primaryColor") == "#000000"
+        assert config.get_option("theme.light.primaryColor") == "#0000FF"
+        assert config.get_option("theme.dark.primaryColor") == "#FFFF00"
+        assert config.get_option("theme.dark.sidebar.primaryColor") == "#00FF00"
+        assert config.get_option("theme.light.sidebar.primaryColor") == "#FF0000"
+
+    @parameterized.expand(
+        [
+            # Invalid nested sections
+            "theme.sidebar.light",
+            "theme.sidebar.dark",
+            "theme.light.dark",
+            "theme.dark.light",
+            # Invalid deep nesting
+            "theme.light.sidebar.dark",
+            "theme.dark.sidebar.light",
+        ]
+    )
+    def test_parsing_toml_with_invalid_theme_nesting(self, section_path):
+        """Test that invalid theme nesting patterns are rejected."""
+        toml_content = f"""
+        [{section_path}]
+        primaryColor = "#FF0000"
+        """
+        with pytest.raises(
+            StreamlitInvalidThemeSectionError,
+            match=rf"Invalid theme section: `{section_path}`",
+        ):
+            config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
         """Test that exceptions during toml.loads are caught and logged."""
@@ -489,7 +694,11 @@ class ConfigTest(unittest.TestCase):
                 "browser",
                 "client",
                 "theme",
+                "theme.dark",
+                "theme.light",
                 "theme.sidebar",
+                "theme.dark.sidebar",
+                "theme.light.sidebar",
                 "global",
                 "logger",
                 "magic",
@@ -504,6 +713,20 @@ class ConfigTest(unittest.TestCase):
         assert sections == keys
 
     def test_config_option_keys(self):
+        # To avoid having to manually add a new config for each section (theme, theme.sidebar, etc.),
+        # we create a list of config options for each section with a helper.
+        # To update this test, add new config option to the helper.
+        theme_config_options = self._create_theme_config_options()
+        sidebar_config_options = self._create_subsection_config_options("sidebar")
+        light_config_options = self._create_subsection_config_options("light")
+        dark_config_options = self._create_subsection_config_options("dark")
+        light_sidebar_config_options = self._create_subsection_config_options(
+            "light.sidebar"
+        )
+        dark_sidebar_config_options = self._create_subsection_config_options(
+            "dark.sidebar"
+        )
+
         config_options = sorted(
             [
                 "browser.gatherUsageStats",
@@ -512,97 +735,18 @@ class ConfigTest(unittest.TestCase):
                 "client.showErrorDetails",
                 "client.showSidebarNavigation",
                 "client.toolbarMode",
-                "theme.base",
-                "theme.primaryColor",
-                "theme.backgroundColor",
-                "theme.secondaryBackgroundColor",
-                "theme.textColor",
-                "theme.baseFontSize",
-                "theme.baseFontWeight",
-                "theme.baseRadius",
-                "theme.buttonRadius",
-                "theme.font",
-                "theme.headingFont",
-                "theme.codeFont",
-                "theme.codeFontSize",
-                "theme.codeFontWeight",
-                "theme.headingFontSizes",
-                "theme.headingFontWeights",
-                "theme.fontFaces",
-                "theme.borderColor",
-                "theme.dataframeBorderColor",
-                "theme.showWidgetBorder",
-                "theme.linkColor",
-                "theme.linkUnderline",
-                "theme.codeTextColor",
-                "theme.codeBackgroundColor",
-                "theme.dataframeHeaderBackgroundColor",
-                "theme.showSidebarBorder",
-                "theme.chartCategoricalColors",
-                "theme.chartSequentialColors",
-                "theme.redColor",
-                "theme.orangeColor",
-                "theme.yellowColor",
-                "theme.blueColor",
-                "theme.greenColor",
-                "theme.violetColor",
-                "theme.grayColor",
-                "theme.redBackgroundColor",
-                "theme.orangeBackgroundColor",
-                "theme.yellowBackgroundColor",
-                "theme.blueBackgroundColor",
-                "theme.greenBackgroundColor",
-                "theme.violetBackgroundColor",
-                "theme.grayBackgroundColor",
-                "theme.redTextColor",
-                "theme.orangeTextColor",
-                "theme.yellowTextColor",
-                "theme.blueTextColor",
-                "theme.greenTextColor",
-                "theme.violetTextColor",
-                "theme.grayTextColor",
-                "theme.sidebar.primaryColor",
-                "theme.sidebar.backgroundColor",
-                "theme.sidebar.secondaryBackgroundColor",
-                "theme.sidebar.textColor",
-                "theme.sidebar.baseRadius",
-                "theme.sidebar.buttonRadius",
-                "theme.sidebar.font",
-                "theme.sidebar.headingFont",
-                "theme.sidebar.codeFont",
-                "theme.sidebar.codeFontSize",
-                "theme.sidebar.codeFontWeight",
-                "theme.sidebar.headingFontSizes",
-                "theme.sidebar.headingFontWeights",
-                "theme.sidebar.borderColor",
-                "theme.sidebar.dataframeBorderColor",
-                "theme.sidebar.showWidgetBorder",
-                "theme.sidebar.linkColor",
-                "theme.sidebar.linkUnderline",
-                "theme.sidebar.codeTextColor",
-                "theme.sidebar.codeBackgroundColor",
-                "theme.sidebar.dataframeHeaderBackgroundColor",
-                "theme.sidebar.redColor",
-                "theme.sidebar.orangeColor",
-                "theme.sidebar.yellowColor",
-                "theme.sidebar.blueColor",
-                "theme.sidebar.greenColor",
-                "theme.sidebar.violetColor",
-                "theme.sidebar.grayColor",
-                "theme.sidebar.redBackgroundColor",
-                "theme.sidebar.orangeBackgroundColor",
-                "theme.sidebar.yellowBackgroundColor",
-                "theme.sidebar.blueBackgroundColor",
-                "theme.sidebar.greenBackgroundColor",
-                "theme.sidebar.violetBackgroundColor",
-                "theme.sidebar.grayBackgroundColor",
-                "theme.sidebar.redTextColor",
-                "theme.sidebar.orangeTextColor",
-                "theme.sidebar.yellowTextColor",
-                "theme.sidebar.blueTextColor",
-                "theme.sidebar.greenTextColor",
-                "theme.sidebar.violetTextColor",
-                "theme.sidebar.grayTextColor",
+                # Theme section options
+                *theme_config_options,
+                # Sidebar theme section options
+                *sidebar_config_options,
+                # Light theme section options
+                *light_config_options,
+                # Dark theme section options
+                *dark_config_options,
+                # Light sidebar theme section options
+                *light_sidebar_config_options,
+                # Dark sidebar theme section options
+                *dark_sidebar_config_options,
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -1907,6 +2051,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         font = "serif"
         borderColor = "#333333"
 
+        [theme.dark]
+        linkColor = "#7851A9"
+        borderColor = "#361551"
+
         [theme.sidebar]
         primaryColor = "#ff4444"
         backgroundColor = "#111111"
@@ -1920,6 +2068,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             primaryColor = "#00ff00"
             # backgroundColor should come from base theme
             textColor = "#cccccc"
+
+            [theme.dark]
+            linkColor = "#CD1C18"
 
             [theme.sidebar]
             backgroundColor = "#222222"
@@ -1941,8 +2092,14 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                     config.get_option("theme.textColor") == "#cccccc"
                 )  # Config overrides base
                 assert (
-                    config.get_option("theme.font") == "serif"
+                    config.get_option("theme.dark.linkColor") == "#CD1C18"
+                )  # Config overrides base
+                assert (
+                    config.get_option("theme.dark.borderColor") == "#361551"
                 )  # From base theme (no config override)
+                assert (
+                    config.get_option("theme.font") == "serif"
+                )  # From base theme (no override)
                 assert (
                     config.get_option("theme.borderColor") == "#333333"
                 )  # From base theme (no override)
@@ -1979,6 +2136,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             base = "{theme_file}"
             primaryColor = "#ff0000"
             textColor = "#ffffff"
+
+            [theme.dark]
+            linkColor = "#7851A9"
             """
 
             # Simulate environment variable and command line flag (higher precedence)
@@ -1986,6 +2146,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 # Env var would be processed as flag by Click framework
                 "theme.font": "Arial",  # Should override theme file's "serif"
                 "theme.borderColor": "#999999",  # Should override theme file's "#333333"
+                "theme.dark.linkColor": "#CD1C18",  # Should override theme file's "#7851A9"
                 "theme.linkColor": "#0066cc",  # New value not in theme file or config
             }
 
@@ -2015,6 +2176,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 )  # Flag/env overrides theme file
                 assert (
                     config.get_option("theme.borderColor") == "#999999"
+                )  # Flag/env overrides theme file
+                assert (
+                    config.get_option("theme.dark.linkColor") == "#CD1C18"
                 )  # Flag/env overrides theme file
                 assert (
                     config.get_option("theme.linkColor") == "#0066cc"
