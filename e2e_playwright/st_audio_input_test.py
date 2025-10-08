@@ -441,6 +441,7 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(audio_input, name="st_audio_input-error_state")
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_dynamic_audio_input_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the audio input can be updated dynamically while keeping the state."""
     # Initial dynamic input
