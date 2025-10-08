@@ -197,7 +197,7 @@ if st.toggle("Update audio input props"):
     st.write("Updated audio input value:", bool(dyn_val))
 else:
     dyn_val = st.audio_input(
-        "Initial dynamic text input",
+        "Initial dynamic audio input",
         key="dynamic_audio_input_key",
         sample_rate=16000,
         help="initial help",
