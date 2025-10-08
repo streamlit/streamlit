@@ -147,7 +147,8 @@ def resolve_builtin_color_name(name: str, theme: ThemeLike | None = None) -> str
     }
 
     # Theme token name (camelCase)
-    # Note: 'primary' is special - it uses 'primaryColor' not 'primaryColor'
+    # Note: For 'primary', the token name is explicitly set to 'primaryColor'.
+    # This is the same as the default pattern, but the conditional is kept for clarity.
     token_name = f"{name_lower}Color" if name_lower != "primary" else "primaryColor"
 
     # Get from theme, fallback to default
