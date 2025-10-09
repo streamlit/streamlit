@@ -222,10 +222,11 @@ fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig, theme="streamlit")
 
 # Generate synthetic time series data for range selector testing
+# Using deterministic data for consistent snapshots
 date_range = pd.date_range(start="2015-02-17", end="2017-08-24", freq="D")
-# Create synthetic stock-like price movements
-price_changes = np.random.randn(len(date_range)) * 2
-aapl_high = 100 + np.cumsum(price_changes)
+# Create deterministic stock-like price movements using sine wave
+t = np.arange(len(date_range))
+aapl_high = 100 + 20 * np.sin(t / 30) + t / 10
 
 df = pd.DataFrame(
     {
