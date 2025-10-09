@@ -97,6 +97,11 @@ export class WaveSurferRecordBackend {
         this.recordEndReject(new Error("Invalid or empty recording"))
         this.recordEndResolve = null
         this.recordEndReject = null
+      } else {
+        // Defensive: avoid memory leak if both resolve/reject are null
+        console.error("WaveSurferRecordBackend: Promise for record-end was not settled because both resolve and reject handlers are null.")
+        this.recordEndResolve = null
+        this.recordEndReject = null
       }
     })
 
