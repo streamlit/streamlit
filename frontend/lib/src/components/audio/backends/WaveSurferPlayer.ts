@@ -107,14 +107,11 @@ export class WaveSurferPlayer {
       } else {
         url = source
       }
-
-      await this.wavesurfer.load(url)
+      
       this.currentBlobUrl = newBlobUrl
+      await this.wavesurfer.load(url)
     } catch (error) {
-      if (newBlobUrl) {
-        URL.revokeObjectURL(newBlobUrl)
-      }
-      this.currentBlobUrl = null
+      this.cleanupPreviousUrl() // This will revoke the URL we just set
       throw error
     }
   }
