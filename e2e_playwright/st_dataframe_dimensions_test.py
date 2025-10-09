@@ -37,15 +37,15 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "229px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
-        {"width": "704px", "height": "142px"},
-        {"width": "229px", "height": "142px"},
+        {"width": "704px", "height": "177px"},
+        {"width": "288px", "height": "177px"},
         {"width": "400px", "height": "300px"},
         {
             "width": "672px",
             "height": "368px",
         },
-        {"width": "704px", "height": "142px"},
-        {"width": "672px", "height": "74px"},
+        {"width": "704px", "height": "177px"},
+        {"width": "672px", "height": "144px"},
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
@@ -56,13 +56,21 @@ def test_data_frame_with_different_sizes(app: Page):
         expected_height = expected[i]["height"]
 
         # Content width dataframes (indices 11 and 15) can vary between browsers/environments
-        # Chromium/Linux CI: 226px, Firefox/WebKit: 229px
-        if i in [11, 15]:
+        # Index 11 (small_df, 3 cols): Chromium/Linux CI: 226px, Firefox/WebKit: 229px
+        # Index 15 (short_dataframe, 4 cols): ~286-288px
+        if i == 11:
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
 
             assert actual_width_px in [226, 229], (
                 f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 226px or 229px"
+            )
+        elif i == 15:
+            actual_width_str = element.evaluate("el => getComputedStyle(el).width")
+            actual_width_px = int(actual_width_str.replace("px", ""))
+
+            assert actual_width_px in [286, 288], (
+                f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 286px or 288px"
             )
         else:
             expect(element).to_have_css("width", expected_width)

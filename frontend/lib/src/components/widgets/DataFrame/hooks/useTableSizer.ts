@@ -85,7 +85,9 @@ function useTableSizer(
   // Min height for the resizable table container:
   // Based on header + one column, and border threshold
   const minHeight =
-    gridTheme.defaultHeaderHeight + rowHeight + 2 * gridTheme.tableBorderWidth
+    gridTheme.defaultHeaderHeight +
+    rowHeight * 3 +
+    2 * gridTheme.tableBorderWidth
 
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
