@@ -88,6 +88,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           display: "none",
         }
       : {}),
+    ...(elementType === "space"
+      ? {
+          // Space elements should have minimal cross-axis dimensions.
+          // The FlexContext logic in StyledElementContainerLayoutWrapper handles
+          // the primary dimension (width for horizontal, height for vertical).
+          minWidth: 0,
+          minHeight: 0,
+        }
+      : {}),
     ...(GLOBAL_ELEMENTS.includes(elementType)
       ? {
           // Global elements are rendered in their delta position, but they
