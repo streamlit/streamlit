@@ -31,7 +31,7 @@ import {
   shouldUseContainerWidth,
   shouldUseContentWidth,
   shouldUseStretchHeight,
-} from "~lib/components/widgets/DataFrame/arrowUtils"
+} from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
@@ -106,13 +106,14 @@ function useTableSizer(
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
   const configuredHeight = getConfiguredHeight(element, heightConfig)
-  const useStretchHeight = shouldUseStretchHeight(heightConfig)
+  // Stretch height styling does not work in the root container without an
+  // enclosing fixed-height container.
+  const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
 
   if (
     useStretchHeight &&
     measuredContainerHeight &&
-    measuredContainerHeight > 0 &&
-    !isInRoot
+    measuredContainerHeight > 0
   ) {
     // height="stretch" - for stretch mode, we want the dataframe to participate
     // in flexbox layout, so we don't set a fixed height. Instead, we let the
@@ -188,7 +189,7 @@ function useTableSizer(
     // we configure the table to 100%. Which will cause the data grid to
     // calculate the best size on the content and use that.
     width: initialWidth || "100%",
-    height: useStretchHeight && !isInRoot ? "100%" : initialHeight,
+    height: useStretchHeight ? "100%" : initialHeight,
   })
 
   useLayoutEffect(() => {
@@ -215,7 +216,7 @@ function useTableSizer(
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
-      height: useStretchHeight && !isInRoot ? "100%" : initialHeight,
+      height: useStretchHeight ? "100%" : initialHeight,
     }))
   }, [
     initialHeight,

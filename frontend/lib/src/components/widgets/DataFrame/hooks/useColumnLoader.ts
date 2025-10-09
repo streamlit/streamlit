@@ -25,10 +25,8 @@ import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
-  getConfiguredWidth,
   initAllColumnsFromArrow,
   initEmptyIndexColumn,
-  shouldUseContainerWidth,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
@@ -37,6 +35,10 @@ import {
   ColumnTypes,
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
+import {
+  getConfiguredWidth,
+  shouldUseContainerWidth,
+} from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
