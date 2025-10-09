@@ -279,7 +279,7 @@ function ProgressColumn(
                 // the width of the progress bar label.
                 displayData
               : measureLabel,
-          color: progressColor ?? undefined,
+          color: progressColor,
         },
       } as RangeCellType
     },
