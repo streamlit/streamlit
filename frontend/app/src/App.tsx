@@ -61,10 +61,9 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createCustomThemes,
   createFormsData,
   createPresetThemes,
-  createTheme,
-  CUSTOM_THEME_NAME,
   DeployedAppMetadata,
   ensureError,
   extractPageNameFromPathName,
@@ -77,6 +76,7 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getSystemThemePreference,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -1323,9 +1323,10 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
-      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-      // For now, users can only add one custom theme.
-      this.props.theme.addThemes([customTheme])
+      const customThemes = createCustomThemes(themeInput)
+
+      // Add the themes to the theme manager
+      this.props.theme.addThemes(customThemes)
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
@@ -1333,7 +1334,16 @@ export class App extends PureComponent<Props, State> {
         // preference (developer-provided custom themes should be the default
         // for an app) or if a custom theme is currently active (to ensure that
         // we pick up any new changes to it).
-        this.setAndSendTheme(customTheme)
+        if (customThemes.length > 1) {
+          // Decide between Custom Theme Light or Custom Theme Dark
+          // based on the user's system preference
+          const systemPreference = getSystemThemePreference()
+          const themeIndex = systemPreference === "dark" ? 1 : 0
+          this.setAndSendTheme(customThemes[themeIndex])
+        } else {
+          // Set to singular Custom Theme
+          this.setAndSendTheme(customThemes[0])
+        }
       }
     } else {
       // Remove the custom theme menu option.
