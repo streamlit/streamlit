@@ -3189,7 +3189,7 @@ describe("Custom theme creation", () => {
       )
     })
 
-    it("returns 2 custom themes when light section configs are set", () => {
+    it("returns 3 custom themes when light section configs are set", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         light: {
@@ -3199,9 +3199,10 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
-      expect(customThemes).toHaveLength(2)
+      expect(customThemes).toHaveLength(3)
       expect(customThemes[0].name).toBe(CUSTOM_THEME_LIGHT_NAME)
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
+      expect(customThemes[2].name).toBe(AUTO_THEME_NAME)
 
       // Light theme should use light section override
       expect(customThemes[0].emotion.colors.primary).toBe("lightblue")
@@ -3209,7 +3210,7 @@ describe("Custom theme creation", () => {
       expect(customThemes[1].emotion.colors.primary).toBe("blue")
     })
 
-    it("returns 2 custom themes when dark section configs are set", () => {
+    it("returns 3 custom themes when dark section configs are set", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "green",
         dark: {
@@ -3219,9 +3220,10 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
-      expect(customThemes).toHaveLength(2)
+      expect(customThemes).toHaveLength(3)
       expect(customThemes[0].name).toBe(CUSTOM_THEME_LIGHT_NAME)
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
+      expect(customThemes[2].name).toBe(AUTO_THEME_NAME)
 
       // Light theme should use base config
       expect(customThemes[0].emotion.colors.primary).toBe("green")
@@ -3229,7 +3231,7 @@ describe("Custom theme creation", () => {
       expect(customThemes[1].emotion.colors.primary).toBe("darkgreen")
     })
 
-    it("returns 2 custom themes when both light and dark section configs are set", () => {
+    it("returns 3 custom themes when both light and dark section configs are set", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "yellow",
         light: {
@@ -3244,7 +3246,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
-      expect(customThemes).toHaveLength(2)
+      expect(customThemes).toHaveLength(3)
 
       // Light theme
       expect(customThemes[0].name).toBe(CUSTOM_THEME_LIGHT_NAME)
@@ -3273,7 +3275,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
-      expect(customThemes).toHaveLength(2)
+      expect(customThemes).toHaveLength(3)
 
       // Light theme sidebar should merge: theme.sidebar + theme.light.sidebar
       expect(customThemes[0].themeInput?.sidebar?.primaryColor).toBe("gray") // From theme.sidebar
@@ -3306,7 +3308,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
-      expect(customThemes).toHaveLength(2)
+      expect(customThemes).toHaveLength(3)
 
       // Light theme sidebar should only have base sidebar config (no light.sidebar override)
       expect(customThemes[0].themeInput?.sidebar?.primaryColor).toBe("gray")

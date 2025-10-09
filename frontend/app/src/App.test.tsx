@@ -37,13 +37,11 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
+  AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
-  getSystemThemePreference,
   HOST_COMM_VERSION,
   HostCommunicationManager,
   isEmbed,
@@ -98,7 +96,6 @@ vi.mock("@streamlit/lib", async () => {
     ...actualLib,
     isEmbed: vi.fn(),
     isToolbarDisplayed: vi.fn(),
-    getSystemThemePreference: vi.fn(),
   }
 })
 
@@ -1924,6 +1921,67 @@ describe("App", () => {
   })
 
   describe("App.processThemeInput", () => {
+    it("passing a custom theme adds the custom theme and removes preset themes", () => {
+      // Simplest custom theme (no light/dark versions)
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Custom theme should be added
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Should only have one theme added
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toHaveLength(1)
+      // Check that keepPresetThemes is false
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][1]).toBe(false)
+      // Active theme should be set to the custom theme
+      // @ts-expect-error
+      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
+        CUSTOM_THEME_NAME
+      )
+    })
+
+    it("passing a custom theme with light/dark versions adds both and removes preset themes", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "red",
+        },
+        dark: {
+          primaryColor: "green",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Check that 3 themes were added (light, dark, auto)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toHaveLength(3)
+      // Check that keepPresetThemes is false
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][1]).toBe(false)
+
+      // Active theme should be set to the auto theme
+      // @ts-expect-error
+      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(AUTO_THEME_NAME)
+    })
+
     it("calls setFonts when fontFaces are provided", () => {
       const fontFaces = [{ url: "test-url" }]
       const themeInput = new CustomThemeConfig({
@@ -2027,8 +2085,13 @@ describe("App", () => {
     })
 
     it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Light", () => {
-      // Mock the system preference return value
-      vi.mocked(getSystemThemePreference).mockReturnValue("light")
+      // Mock the system preference return value (light)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: light)", // Returns true for light
+        })),
+      })
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         light: {
@@ -2048,16 +2111,25 @@ describe("App", () => {
       })
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom light theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: CUSTOM_THEME_LIGHT_NAME,
+          name: AUTO_THEME_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "lightblue",
+          }),
         })
       )
     })
 
     it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Dark", () => {
-      // Mock the system preference return value
-      vi.mocked(getSystemThemePreference).mockReturnValue("dark")
+      // Mock the system preference return value (dark)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: dark)", // Returns true for dark
+        })),
+      })
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         light: {
@@ -2077,9 +2149,13 @@ describe("App", () => {
       })
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom dark theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: CUSTOM_THEME_DARK_NAME,
+          name: AUTO_THEME_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "darkblue",
+          }),
         })
       )
     })

@@ -59,6 +59,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  AUTO_THEME_NAME,
   CircularBuffer,
   ComponentRegistry,
   createCustomThemes,
@@ -76,7 +77,6 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
-  getSystemThemePreference,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -1327,8 +1327,8 @@ export class App extends PureComponent<Props, State> {
       // or 2 themes ("Custom Theme Light" and "Custom Theme Dark")
       const customThemes = createCustomThemes(themeInput)
 
-      // Add the themes to the theme manager
-      this.props.theme.addThemes(customThemes)
+      // Add the new custom themes to the theme manager and remove the preset themes
+      this.props.theme.addThemes(customThemes, false)
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
@@ -1337,11 +1337,12 @@ export class App extends PureComponent<Props, State> {
         // for an app) or if a custom theme is currently active (to ensure that
         // we pick up any new changes to it).
         if (customThemes.length > 1) {
-          // Decide between Custom Theme Light or Custom Theme Dark
-          // based on the user's system preference
-          const systemPreference = getSystemThemePreference()
-          const themeIndex = systemPreference === "dark" ? 1 : 0
-          this.setAndSendTheme(customThemes[themeIndex])
+          // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
+          // on the system preference and set this as the active theme
+          const autoThemeIndex = customThemes.findIndex(
+            theme => theme.name === AUTO_THEME_NAME
+          )
+          this.setAndSendTheme(customThemes[autoThemeIndex])
         } else {
           // Set to singular Custom Theme
           this.setAndSendTheme(customThemes[0])
