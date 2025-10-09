@@ -48,6 +48,13 @@ export interface StyledElementContainerProps {
   flex?: React.CSSProperties["flex"]
 }
 
+export const StyledSpace = styled.div({
+  // Styling is handled in StyledElementContainerLayoutWrapper.
+  // Space component should fill the container.
+  width: "100%",
+  height: "100%",
+})
+
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
