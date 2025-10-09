@@ -219,6 +219,7 @@ select_slider = _main.select_slider
 segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
+space = _main.space
 subheader = _main.subheader
 success = _main.success
 table = _main.table
