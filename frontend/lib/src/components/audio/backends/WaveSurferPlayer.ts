@@ -107,7 +107,7 @@ export class WaveSurferPlayer {
       } else {
         url = source
       }
-      
+
       this.currentBlobUrl = newBlobUrl
       await this.wavesurfer.load(url)
     } catch (error) {
