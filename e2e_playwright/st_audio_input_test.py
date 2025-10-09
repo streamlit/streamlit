@@ -32,8 +32,13 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_form_button,
+    click_toggle,
+    expect_help_tooltip,
+    expect_prefixed_markdown,
     get_element_by_key,
 )
+
+NUM_AUDIO_INPUTS = 13
 
 
 def grant_microphone_permissions(page: Page) -> None:
@@ -196,7 +201,7 @@ def test_audio_input_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that audio input widgets are correctly rendered via screenshot matching."""
-    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(12)
+    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(NUM_AUDIO_INPUTS)
 
     assert_snapshot(
         get_audio_input_by_label(themed_app, "Audio Input 1"),
@@ -436,6 +441,47 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(audio_input, name="st_audio_input-error_state")
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_dynamic_audio_input_props(app: Page):
+    """Test that the audio input can be updated dynamically while keeping the state."""
+    # Initial dynamic input
+    audio_input = get_element_by_key(app, "dynamic_audio_input_key")
+    expect(audio_input).to_be_visible()
+    expect(audio_input).to_contain_text("Initial dynamic audio input")
+    expect_prefixed_markdown(app, "Initial audio input value:", "False")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "initial help"
+    )
+
+    # Record
+    record_and_stop(app, "Initial dynamic audio input")
+    wait_for_app_run(app)
+    verify_recording_exists(app, "Initial dynamic audio input")
+
+    expect_prefixed_markdown(app, "Initial audio input value:", "True")
+
+    # Toggle to update props (changes sample_rate)
+    click_toggle(app, "Update audio input props")
+
+    # New widget rendered with same key container but different configuration
+    expect(audio_input).to_contain_text("Updated dynamic audio input")
+
+    # The recorded audio input snapshots are flaky, so we can only verify
+    # metadata in this case.
+
+    # Verify the updated audio input value
+    expect_prefixed_markdown(app, "Updated audio input value:", "True")
+    # Verify new width:
+    expect(audio_input).to_have_css("width", "300px")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "updated help"
+    )
+
+
 @pytest.mark.only_browser("chromium")
 def test_audio_input_rapid_re_recordings(app: Page):
     """Test that rapid re-recordings work correctly without race conditions."""
@@ -541,3 +587,69 @@ def test_audio_input_cleans_up_blob_urls_on_abort(app: Page):
     for i in range(min(2, len(tracking["created"]) - 1)):
         url = tracking["created"][i]
         assert url in tracking["revoked"], f"Blob URL {url} should have been revoked"
+
+
+# Marking this as only Chromium because Playwright Firefox
+# is having a strange issue that does not reproduce locally with Firefox,
+# where clicking play seeks to the end and sets the time to 00:03.
+@pytest.mark.only_browser("chromium")
+def test_audio_input_timer_display(app: Page):
+    """Test that the timer display shows correct values during recording and playback."""
+    grant_microphone_permissions(app)
+    audio_input = get_audio_input_by_label(app, "Audio Input 1")
+    timer = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
+
+    def timer_seconds() -> int:
+        """Return the timer value in seconds or -1 if not yet initialized."""
+        value = timer.inner_text().strip()
+        if value == "--:--":
+            return -1
+
+        try:
+            minutes, seconds = value.split(":", maxsplit=1)
+        except ValueError:
+            return -1
+
+        return int(minutes) * 60 + int(seconds)
+
+    def wait_for_timer_seconds(target_seconds: int, *, timeout: int = 6000) -> None:
+        def _reached_target() -> bool:
+            current = timer_seconds()
+            return current >= target_seconds if current >= 0 else False
+
+        wait_until(app, _reached_target, timeout=timeout)
+
+    # Record for 3 seconds (add 200ms buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    wait_for_timer_seconds(3)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:03 (duration of recording)
+    expect(timer).to_have_text("00:03")
+
+    # Click play and wait for playback to start
+    audio_input.get_by_role("button", name="Play", exact=True).click()
+    # Wait for pause button to appear, confirming playback started
+    expect(audio_input.get_by_role("button", name="Pause", exact=True)).to_be_visible()
+
+    # Verify timer shows 00:00 at start of playback
+    expect(timer).to_have_text("00:00")
+
+    # Wait 1 second + 200ms buffer and verify timer shows 00:01
+    wait_for_timer_seconds(1, timeout=3000)
+    expect(timer).to_have_text("00:01")
+
+    # Pause playback
+    audio_input.get_by_role("button", name="Pause", exact=True).click()
+    # Wait for play button to reappear
+    expect(audio_input.get_by_role("button", name="Play", exact=True)).to_be_visible()
+
+    # Re-record for 4 seconds (add 200ms buffer for recording startup)
+    audio_input.get_by_role("button", name="Record", exact=True).click()
+    wait_for_timer_seconds(4, timeout=7000)
+    audio_input.get_by_role("button", name="Stop recording", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify timer shows 00:04
+    expect(timer).to_have_text("00:04")

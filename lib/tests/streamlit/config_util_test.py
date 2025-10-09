@@ -508,6 +508,53 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
         assert result == expected
 
+    def test_extract_current_theme_config_complex_nesting(self):
+        """Test _extract_current_theme_config with section and subsection nesting."""
+        mock_config_options = {
+            "theme.light.primaryColor": ConfigOption(
+                "theme.light.primaryColor", description="", default_val=None
+            ),
+            "theme.dark.primaryColor": ConfigOption(
+                "theme.dark.primaryColor", description="", default_val=None
+            ),
+            "theme.sidebar.primaryColor": ConfigOption(
+                "theme.sidebar.primaryColor", description="", default_val=None
+            ),
+            "theme.light.sidebar.primaryColor": ConfigOption(
+                "theme.light.sidebar.primaryColor", description="", default_val=None
+            ),
+            "theme.dark.sidebar.primaryColor": ConfigOption(
+                "theme.dark.sidebar.primaryColor", description="", default_val=None
+            ),
+        }
+        mock_config_options["theme.light.primaryColor"].set_value("#0000ff", "test")
+        mock_config_options["theme.dark.primaryColor"].set_value("#ffff00", "test")
+        mock_config_options["theme.sidebar.primaryColor"].set_value("#00ff00", "test")
+        mock_config_options["theme.light.sidebar.primaryColor"].set_value(
+            "#ff0000", "test"
+        )
+        mock_config_options["theme.dark.sidebar.primaryColor"].set_value(
+            "#00ff00", "test"
+        )
+
+        result = config_util._extract_current_theme_config(mock_config_options)
+
+        expected = {
+            "light": {
+                "primaryColor": "#0000ff",
+                "sidebar": {"primaryColor": "#ff0000"},
+            },
+            "dark": {
+                "primaryColor": "#ffff00",
+                "sidebar": {"primaryColor": "#00ff00"},
+            },
+            "sidebar": {
+                "primaryColor": "#00ff00",
+            },
+        }
+
+        assert result == expected
+
     def test_extract_current_theme_config_no_theme_options(self):
         """Test _extract_current_theme_config with no theme options set."""
         mock_config_options = {
@@ -1060,6 +1107,75 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
         # Primary color should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
+
+    @patch("streamlit.config_util._load_theme_file")
+    def test_process_theme_inheritance_nested_sections(self, mock_load_theme):
+        """Test process_theme_inheritance with nested sections."""
+        base_option = ConfigOption("theme.base", description="", default_val=None)
+        base_option.set_value("custom_theme.toml", "test")
+
+        primary_option = ConfigOption(
+            "theme.primaryColor", description="", default_val=None
+        )
+        primary_option.set_value("#override", "config.toml")
+
+        sidebar_dark_primary_option = ConfigOption(
+            "theme.dark.sidebar.primaryColor", description="", default_val=None
+        )
+        sidebar_dark_primary_option.set_value("#sidebar_dark_override", "test")
+
+        config_options = {
+            "theme.base": base_option,
+            "theme.primaryColor": primary_option,
+            "theme.dark.sidebar.primaryColor": sidebar_dark_primary_option,
+        }
+
+        # Mock loaded theme file
+        mock_load_theme.return_value = {
+            "theme": {
+                "base": "dark",
+                "primaryColor": "#base_color",
+                "light": {
+                    "primaryColor": "#light_color",
+                    "sidebar": {
+                        "primaryColor": "#sidebar_light_color",
+                    },
+                },
+                "dark": {
+                    "primaryColor": "#dark_color",
+                    "sidebar": {
+                        "primaryColor": "#sidebar_dark_color",
+                    },
+                },
+                "sidebar": {
+                    "primaryColor": "#sidebar_color",
+                },
+            }
+        }
+
+        set_option_calls = []
+
+        def mock_set_option(key, value, source):
+            set_option_calls.append((key, value, source))
+
+        config_util.process_theme_inheritance(
+            config_options, self.config_template, mock_set_option
+        )
+
+        set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+
+        assert set_calls_dict.get("theme.base") == "dark"
+        assert set_calls_dict.get("theme.primaryColor") == "#override"
+        assert set_calls_dict.get("theme.light.primaryColor") == "#light_color"
+        assert set_calls_dict.get("theme.dark.primaryColor") == "#dark_color"
+        assert (
+            set_calls_dict.get("theme.light.sidebar.primaryColor")
+            == "#sidebar_light_color"
+        )
+        assert (
+            set_calls_dict.get("theme.dark.sidebar.primaryColor")
+            == "#sidebar_dark_override"
+        )
 
     @patch("streamlit.config_util._load_theme_file")
     def test_process_theme_inheritance_nested_base_error(self, mock_load_theme):

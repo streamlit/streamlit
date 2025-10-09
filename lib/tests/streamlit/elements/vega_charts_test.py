@@ -2087,6 +2087,8 @@ class ChartWidthHeightTest(DeltaGeneratorTestCase):
     CHART_COMMANDS: ClassVar[list[tuple[Callable, str]]] = [
         (st.line_chart, "line_chart"),
         (st.scatter_chart, "scatter_chart"),
+        (st.bar_chart, "bar_chart"),
+        (st.area_chart, "area_chart"),
     ]
 
     @parameterized.expand(

@@ -66,6 +66,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
 
 export interface BaseColorPickerProps {
   disabled: boolean
+  // eslint-disable-next-line @eslint-react/no-unused-props
   width?: number
   value: string
   showValue?: boolean

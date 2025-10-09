@@ -70,6 +70,7 @@ import "streamlit/proto/Toast.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/Heading.proto";
+import "streamlit/proto/BidiComponent.proto";
 import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/WidthConfig.proto";
 
@@ -89,6 +90,7 @@ message Element {
     Audio audio = 13;
     AudioInput audio_input = 56;
     Balloons balloons = 12;
+    BidiComponent bidi_component = 59;
     BokehChart bokeh_chart = 17;
     Button button = 19;
     ButtonGroup button_group = 55;
@@ -138,7 +140,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 59
+    // Next ID: 60
   }
 
   reserved 9;

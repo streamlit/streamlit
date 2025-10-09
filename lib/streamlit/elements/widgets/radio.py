@@ -369,7 +369,12 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat provided key as the main widget identity. Only include the
+            # following parameters in the identity computation since they can
+            # invalidate the current selection mapping.
+            # Changes to format_func also invalidate the current selection,
+            # but this is already handled via the `options` parameter below:
+            key_as_main_identity={"options"},
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
