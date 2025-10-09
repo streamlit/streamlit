@@ -230,6 +230,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     availableThemes: [],
     setTheme: vi.fn(),
     addThemes: vi.fn(),
+    setFonts: vi.fn(),
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
@@ -832,6 +833,7 @@ describe("App", () => {
           availableThemes: [],
           setTheme: vi.fn(),
           addThemes: vi.fn(),
+          setFonts: vi.fn(),
           setImportedTheme: vi.fn(),
         },
       })
@@ -1916,7 +1918,7 @@ describe("App", () => {
   })
 
   describe("App.processThemeInput", () => {
-    it("calls setImportedTheme when fontFaces are provided", () => {
+    it("calls setFonts when fontFaces are provided", () => {
       const fontFaces = [{ url: "test-url" }]
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
@@ -1931,11 +1933,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should have called setImportedTheme
-      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
     })
 
-    it("doesn't call setImportedTheme when fontFaces is empty", () => {
+    it("doesn't call setFonts when fontFaces is empty", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         fontFaces: [],
@@ -1949,11 +1951,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should not have called setImportedTheme
-      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
     })
 
-    it("calls setImportedTheme when a fontSource is provided", () => {
+    it("calls setFonts when a fontSource is provided", () => {
       const fontSources = [
         {
           configName: "font",
@@ -1974,11 +1976,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should have called setImportedTheme
-      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
     })
 
-    it("doesn't call setImportedTheme when fontSources is empty", () => {
+    it("doesn't call setFonts when fontSources is empty", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         fontSources: [],
@@ -1992,8 +1994,8 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should not have called setImportedTheme
-      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
     })
   })
 
