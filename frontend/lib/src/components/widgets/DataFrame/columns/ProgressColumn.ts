@@ -144,8 +144,7 @@ function ProgressColumn(
       parameters.format,
       fixedDecimals
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     measureLabel = toSafeString(parameters.max_value)
   }
 
@@ -280,7 +279,7 @@ function ProgressColumn(
                 // the width of the progress bar label.
                 displayData
               : measureLabel,
-          ...(progressColor && { color: progressColor }),
+          color: progressColor ?? undefined,
         },
       } as RangeCellType
     },
