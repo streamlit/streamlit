@@ -22,7 +22,7 @@
     "@typescript-eslint/types": "^8.44.1",
     "@typescript-eslint/utils": "^8.44.1",
     "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.36.0",
+    "eslint": "^9.37.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typesync": "^0.14.3",
