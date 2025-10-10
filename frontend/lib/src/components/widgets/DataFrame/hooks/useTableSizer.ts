@@ -26,6 +26,7 @@ import { Size as ResizableSize } from "re-resizable"
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
+  calculateTableHeight,
   getConfiguredHeight,
   getConfiguredWidth,
   shouldUseContainerWidth,
@@ -60,11 +61,12 @@ export type AutoSizerReturn = {
  * @param numRows - The number of rows in the table
  * @param usesGroupRow - Whether the table uses a group row to display multiple column headers.
  * @param containerWidth - The width of the surrounding container
- * @param containerHeight - The height of the surrounding container (fullscreen mode)
+ * @param fullscreenContainerHeight - The height of the surrounding container (fullscreen mode)
  * @param isFullScreen - Whether the table is in fullscreen mode
  * @param widthConfig - The width configuration of the table
  * @param heightConfig - The height configuration of the table
  * @param measuredContainerHeight - The measured height of the container for height="stretch"
+ * @param isInRoot - Whether the table is in the root container
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
@@ -74,7 +76,7 @@ function useTableSizer(
   numRows: number,
   usesGroupRow: boolean,
   containerWidth: number,
-  containerHeight?: number,
+  fullscreenContainerHeight?: number,
   isFullScreen?: boolean,
   widthConfig?: streamlit.IWidthConfig | null,
   heightConfig?: streamlit.IHeightConfig | null,
@@ -82,35 +84,57 @@ function useTableSizer(
   isInRoot?: boolean
 ): AutoSizerReturn {
   const rowHeight = element.rowHeight ?? gridTheme.defaultRowHeight
-  // Min height for the resizable table container:
-  // Based on header + one column, and border threshold
-  const minHeight =
-    gridTheme.defaultHeaderHeight +
-    rowHeight * 3 +
-    2 * gridTheme.tableBorderWidth
 
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
     element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
-  // Calculate the maximum height of the table based on the number of rows:
-  const totalDataRows = numRows + numTrailingRows
-  let maxHeight = Math.max(
-    totalDataRows * rowHeight +
-      numHeaderRows * gridTheme.defaultHeaderHeight +
-      2 * gridTheme.tableBorderWidth,
-    minHeight
-  )
 
-  // The reason why we have initial height is that the table itself is
-  // resizable by the user. So, it starts with initial height but can be
-  // resized between min and max height.
-  let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
+  // Calculate the height of the table based on the number of rows:
+  const totalDataRows = numRows + numTrailingRows
+  const calculatedHeight = calculateTableHeight({
+    numRows: totalDataRows,
+    rowHeight,
+    theme: gridTheme,
+    numHeaderRows,
+  })
+
+  /**
+   * Minimum height logic:
+   *
+   * Base minimum (all modes): header + 1 row + borders (applies even to user-configured height)
+   *
+   * Stretch height mode (height="stretch") additionally:
+   *   - 0 rows → 1-row minimum
+   *   - 1-3 rows → match actual number of rows
+   *   - 4+ rows → 3-row minimum
+   */
 
   const configuredHeight = getConfiguredHeight(element, heightConfig)
   // Stretch height styling does not work in the root container without an
   // enclosing fixed-height container.
   const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
+
+  // Determine the minimum number of rows to display
+  const minRows = useStretchHeight
+    ? Math.max(1, Math.min(numRows, 3)) // Stretch: match rows (1-3 range)
+    : 1 // All other modes: 1-row minimum
+
+  const minHeight = calculateTableHeight({
+    numRows: minRows,
+    rowHeight,
+    theme: gridTheme,
+  })
+
+  // Ensure maxHeight is at least minHeight
+  // E.g., with 0 rows: calculatedHeight might be just header+borders,
+  // but we enforce minHeight to maintain table structure (at least 1 row visible)
+  let maxHeight = Math.max(calculatedHeight, minHeight)
+
+  // The reason why we have initial height is that the table itself is
+  // resizable by the user. So, it starts with initial height but can be
+  // resized between min and max height.
+  let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
   if (
     useStretchHeight &&
@@ -125,16 +149,17 @@ function useTableSizer(
     // Don't override initialHeight - let it use the default behavior
   } else if (configuredHeight) {
     // User has explicitly configured a height (integer value)
+    // Respect their choice, but enforce minimum (minHeight = 1 row when not stretch)
     initialHeight = Math.max(configuredHeight, minHeight)
-    maxHeight = Math.max(configuredHeight, maxHeight)
+    maxHeight = Math.max(initialHeight, maxHeight)
   }
   // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
-  if (containerHeight) {
-    // If container height is set (e.g. when used in fullscreen)
-    // The maxHeight and height should not be larger than container height
-    initialHeight = Math.min(initialHeight, containerHeight)
-    maxHeight = Math.min(maxHeight, containerHeight)
+  if (fullscreenContainerHeight) {
+    // If we are in fullscreen mode, the height and maxHeight should not exceed
+    // the fullscreen container height.
+    initialHeight = Math.min(initialHeight, fullscreenContainerHeight)
+    maxHeight = Math.min(maxHeight, fullscreenContainerHeight)
 
     if (!configuredHeight) {
       // If no explicit height is set, set height to max height (fullscreen mode)

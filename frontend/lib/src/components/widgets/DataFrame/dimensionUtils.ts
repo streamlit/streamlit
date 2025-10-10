@@ -88,3 +88,33 @@ export function getConfiguredHeight(
   }
   return element.height || undefined
 }
+
+/**
+ * Calculate the total height of a table based on the number of rows and styling.
+ *
+ * @param numRows - Number of data rows
+ * @param rowHeight - Height of each row in pixels
+ * @param theme - Grid theme containing header height and border width
+ * @param numHeaderRows - Number of header rows (1 for normal, 2 for grouped)
+ * @returns Total calculated height in pixels
+ */
+export function calculateTableHeight({
+  numRows,
+  rowHeight,
+  theme,
+  numHeaderRows = 1,
+}: {
+  numRows: number
+  rowHeight: number
+  theme: {
+    defaultHeaderHeight: number
+    tableBorderWidth: number
+  }
+  numHeaderRows?: number
+}): number {
+  return (
+    numRows * rowHeight +
+    numHeaderRows * theme.defaultHeaderHeight +
+    2 * theme.tableBorderWidth
+  )
+}
