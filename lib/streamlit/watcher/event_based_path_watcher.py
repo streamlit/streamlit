@@ -403,10 +403,16 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         if os.path.commonpath([path, abs_changed_path]) == path:
                             changed_path_info = info
                             break
-                    except ValueError:
+                    except ValueError as ex:
                         # On Windows, os.path.commonpath raises ValueError when paths
                         # are on different drives. In that case, the changed path
                         # cannot be inside the watched directory.
+                        _LOGGER.debug(
+                            "Ignoring changed path %s.\nWatched_paths: %s",
+                            abs_changed_path,
+                            self._watched_paths,
+                            exc_info=ex,
+                        )
                         continue
 
         # If we still haven't found a matching path, ignore this event
