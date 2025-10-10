@@ -57,7 +57,7 @@ def test_data_frame_with_different_sizes(app: Page):
 
         # Content width dataframes (indices 11 and 15) can vary between browsers/environments
         # Index 11 (small_df, 3 cols): Chromium/Linux CI: 226px, Firefox/WebKit: 229px
-        # Index 15 (short_dataframe, 4 cols): ~286-288px
+        # Index 15 (short_dataframe, 4 cols): Linux CI: 284px, macOS: 288px
         if i == 11:
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
@@ -69,8 +69,8 @@ def test_data_frame_with_different_sizes(app: Page):
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
 
-            assert actual_width_px in [286, 288], (
-                f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 286px or 288px"
+            assert actual_width_px in [284, 288], (
+                f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 284px or 288px"
             )
         else:
             expect(element).to_have_css("width", expected_width)
