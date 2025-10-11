@@ -70,6 +70,10 @@ export interface Props {
   fragmentId?: string
 }
 
+function sanitizeNumericInput(value: string): string {
+  return value.replace(/[\u0020\u00A0\u202F\u2009]/g, "")
+}
+
 const NumberInput: React.FC<Props> = ({
   disabled,
   element,
@@ -284,7 +288,8 @@ const NumberInput: React.FC<Props> = ({
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const { value: targetValue } = e.target
+    const rawValue = e.target.value
+    const targetValue = sanitizeNumericInput(rawValue)
 
     if (targetValue === "") {
       setDirty(true)
