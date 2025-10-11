@@ -14,19 +14,27 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
 
 from streamlit import config
 from streamlit.errors import StreamlitAuthError
+from streamlit.logger import get_logger
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
 
     class ProviderTokenPayload(TypedDict):
         provider: str
         exp: int
+
+
+MAX_COOKIE_BYTES: Final = 4096
+APPROX_COOKIE_ATTR_SIZE: Final = 31
 
 
 class AuthCache:
@@ -94,14 +102,19 @@ def get_expose_tokens_config() -> list[str]:
     auth_section = get_secrets_auth_section()
     expose_tokens = auth_section.get("expose_tokens")
 
-    if expose_tokens is None:
+    if isinstance(expose_tokens, str):
+        res = [expose_tokens]
+    elif isinstance(expose_tokens, list):
+        res = [str(token) for token in expose_tokens]
+    else:
         return []
 
-    if isinstance(expose_tokens, str):
-        return [expose_tokens]
-    if isinstance(expose_tokens, list):
-        return [str(token) for token in expose_tokens]
-    return []
+    if set(res) - {"id", "access"}:
+        raise StreamlitAuthError(
+            "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
+        )
+
+    return res
 
 
 def encode_provider_token(provider: str) -> str:
@@ -162,6 +175,176 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
             "AttrDict", auth_section.get("client_kwargs", AttrDict({}))
         ).to_dict()
     return default_provider_section
+
+
+def set_cookie_with_chunks(
+    set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: dict[str, Any],
+) -> None:
+    """Set a cookie, splitting into multiple cookies if necessary.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value (cookie_name, value)
+        cookie_name: Name of the cookie
+        value: Dictionary value to serialize and store
+    """
+    serialized_cookie_value = json.dumps(value)
+
+    # Calculate actual cookie size using the provided signing function
+    signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
+
+    # Cookie format: "name=value; HttpOnly; Path=/"
+    actual_cookie_size = len(cookie_name) + len(signed_value) + APPROX_COOKIE_ATTR_SIZE
+
+    # Check if cookie needs to be split
+    if actual_cookie_size > MAX_COOKIE_BYTES:
+        _LOGGER.debug(
+            "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
+            actual_cookie_size,
+        )
+        _set_split_cookie(set_single_cookie_fn, cookie_name, serialized_cookie_value)
+    else:
+        set_single_cookie_fn(cookie_name, serialized_cookie_value)
+
+
+def _set_split_cookie(
+    set_single_cookie_fn: Callable[[str, str], None],
+    cookie_name: str,
+    value: str,
+) -> None:
+    """Split a large cookie value into multiple smaller cookies.
+
+    The main cookie always exists and contains the first chunk.
+    Additional chunks are stored as cookie_name_1, cookie_name_2, etc.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        cookie_name: Name of the cookie
+        value: Serialized string value to split and store
+    """
+
+    # Maximum size for a single cookie chunk (conservatively set to allow for overhead)
+    # Overhead seems to be around 110 bytes, but depends on Tornado internals, so having a safe 3x margin
+    cookie_space = 3800 - len(
+        cookie_name
+    )  # Account for cookie name + fix-length overhead (timestamp etc)
+    chunk_size = (
+        cookie_space * 3
+    ) // 4  # Account for base64 encoding overhead of 4/3 ratio
+    chunks = []
+    for i in range(0, len(value), chunk_size):
+        chunk = value[i : i + chunk_size]
+        chunks.append(chunk)
+
+    # Store number of chunks in a metadata cookie
+    set_single_cookie_fn(f"{cookie_name}_count", str(len(chunks)))
+
+    # Store first chunk in the main cookie
+    set_single_cookie_fn(cookie_name, chunks[0])
+
+    # Store remaining chunks as cookie_name_1, cookie_name_2, etc.
+    for i in range(1, len(chunks)):
+        chunk_name = f"{cookie_name}_{i}"
+        set_single_cookie_fn(chunk_name, chunks[i])
+
+    _LOGGER.info(
+        "Split cookie '%s' into %d chunks",
+        cookie_name,
+        len(chunks),
+    )
+
+
+def get_cookie_with_chunks(
+    get_single_cookie_fn: Callable[[str], bytes | None],
+    cookie_name: str,
+) -> bytes | None:
+    """Get a cookie, reconstructing from chunks if it was split.
+
+    If a count cookie exists, the main cookie contains the first chunk,
+    and additional chunks are in cookie_name_1, cookie_name_2, etc.
+    If no count cookie exists, the main cookie contains the entire value.
+
+    Args:
+        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
+        cookie_name: Name of the cookie
+
+    Returns
+    -------
+        Cookie value as bytes, or None if not found
+    """
+    # Check if there's a count cookie indicating split cookies
+    count_cookie_name = f"{cookie_name}_count"
+    count_value = get_single_cookie_fn(count_cookie_name)
+
+    # If no count cookie, just return the main cookie
+    if count_value is None:
+        return get_single_cookie_fn(cookie_name)
+
+    # Parse chunk count
+    try:
+        chunk_count = int(count_value)
+    except (ValueError, TypeError):
+        _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
+        return None
+
+    # Reconstruct the original value from chunks
+    # First chunk is in the main cookie
+    chunks = []
+    main_chunk = get_single_cookie_fn(cookie_name)
+    if main_chunk is None:
+        _LOGGER.exception("Missing main cookie (chunk 0) for '%s'", cookie_name)
+        return None
+    chunks.append(main_chunk)
+
+    # Remaining chunks are in cookie_name_1, cookie_name_2, etc.
+    for i in range(1, chunk_count):
+        chunk_name = f"{cookie_name}_{i}"
+        chunk_value = get_single_cookie_fn(chunk_name)
+        if chunk_value is None:
+            _LOGGER.exception("Missing chunk %d for cookie '%s'", i, cookie_name)
+            return None
+        chunks.append(chunk_value)
+
+    reconstructed_value = b"".join(chunks)
+    return reconstructed_value
+
+
+def clear_cookie_and_chunks(
+    get_single_cookie_fn: Callable[[str], bytes | None],
+    clear_single_cookie_fn: Callable[[str], None],
+    cookie_name: str,
+) -> None:
+    """Clear a cookie and any associated chunk cookies.
+
+    The main cookie always exists. If there are chunks, also clear
+    cookie_name_1, cookie_name_2, etc., and the count cookie.
+
+    Args:
+        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
+        clear_single_cookie_fn: Function to clear a single cookie (cookie_name)
+        cookie_name: Name of the cookie
+    """
+    # Clear the main cookie (always exists)
+    clear_single_cookie_fn(cookie_name)
+
+    # Check if there's a count cookie indicating split cookies
+    count_cookie_name = f"{cookie_name}_count"
+    count_value = get_single_cookie_fn(count_cookie_name)
+
+    if count_value:
+        try:
+            chunk_count = int(count_value)
+            # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
+            for i in range(1, chunk_count):
+                clear_single_cookie_fn(f"{cookie_name}_{i}")
+            # Clear the count cookie
+            clear_single_cookie_fn(count_cookie_name)
+        except (ValueError, TypeError):
+            # If count is invalid, just clear the count cookie
+            clear_single_cookie_fn(count_cookie_name)
 
 
 def validate_auth_credentials(provider: str) -> None:

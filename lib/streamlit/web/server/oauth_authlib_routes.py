@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import json
 from typing import Any, Final, cast
 from urllib.parse import urlparse
 
@@ -21,9 +20,11 @@ import tornado.web
 
 from streamlit.auth_util import (
     AuthCache,
+    clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
     get_secrets_auth_section,
+    set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.logger import get_logger
@@ -75,37 +76,66 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
     def set_auth_cookie(
         self, user_info: dict[str, Any], tokens: dict[str, Any]
     ) -> None:
-        self.set_serialized_cookie(AUTH_COOKIE_NAME, user_info)
-        self.set_serialized_cookie(TOKENS_COOKIE_NAME, tokens)
+        set_cookie_with_chunks(
+            self._set_single_cookie,
+            self._create_signed_value,
+            AUTH_COOKIE_NAME,
+            user_info,
+        )
+        set_cookie_with_chunks(
+            self._set_single_cookie,
+            self._create_signed_value,
+            TOKENS_COOKIE_NAME,
+            tokens,
+        )
 
-    def set_serialized_cookie(self, cookie_name: str, value: dict[str, Any]) -> None:
-        """Set a serialized cookie with a value that is less than 4096 bytes."""
-        serialized_cookie_value = json.dumps(value)
-
-        # log error if cookie value is larger than 4096 bytes
-        if len(serialized_cookie_value.encode()) > 4096:
-            _LOGGER.error(
-                "Cookie size exceeds maximum browser limit of 4096 bytes. Authentication may fail."
-            )
+    def _set_single_cookie(self, cookie_name: str, value: str) -> None:
+        """Set a single cookie."""
         try:
             # We don't specify Tornado secure flag here because it leads to missing cookie on Safari.
             # The OIDC flow should work only on secure context anyway (localhost or HTTPS),
             # so specifying the secure flag here will not add anything in terms of security.
             self.set_signed_cookie(
                 cookie_name,
-                serialized_cookie_value,
+                value,
                 httpOnly=True,
             )
         except AttributeError:
             self.set_secure_cookie(
                 cookie_name,
-                serialized_cookie_value,
+                value,
                 httponly=True,
             )
 
+    def _create_signed_value(self, cookie_name: str, value: str) -> bytes:
+        """Create a signed cookie value."""
+        try:
+            return self.create_signed_value(cookie_name, value)
+        except AttributeError:
+            return self.create_secure_cookie_value(cookie_name, value)
+
+    def _get_signed_cookie(self, cookie_name: str) -> bytes | None:
+        """Get a signed cookie."""
+        try:
+            return self.get_signed_cookie(cookie_name)
+        except AttributeError:
+            return self.get_secure_cookie(cookie_name)
+        except Exception:
+            # Handle cases where cookie_secret is not configured or other errors
+            return None
+
     def clear_auth_cookie(self) -> None:
-        self.clear_cookie(AUTH_COOKIE_NAME)
-        self.clear_cookie(TOKENS_COOKIE_NAME)
+        """Clear auth cookies, including any split cookie chunks."""
+        clear_cookie_and_chunks(
+            self._get_signed_cookie,
+            self.clear_cookie,
+            AUTH_COOKIE_NAME,
+        )
+        clear_cookie_and_chunks(
+            self._get_signed_cookie,
+            self.clear_cookie,
+            TOKENS_COOKIE_NAME,
+        )
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
@@ -183,7 +213,11 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         user = cast("dict[str, Any]", token.get("userinfo"))
 
         cookie_value = dict(user, origin=origin, is_logged_in=True)
-        tokens = {k: v for k, v in token.items() if k.endswith("_token")}
+        tokens = {
+            k: v
+            for k, v in token.items()
+            if k in ["id_token", "access_token", "refresh_token"]
+        }
 
         if user:
             self.set_auth_cookie(cookie_value, tokens)
