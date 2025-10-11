@@ -379,7 +379,94 @@ def _get_user_info() -> UserInfo:
 
 
 class TokensProxy(Mapping[str, str]):
-    """A read-only, dict-like object for accessing exposed tokens."""
+    """
+    A read-only, dict-like object for accessing exposed tokens from the
+    identity provider.
+
+    This class provides access to tokens that have been explicitly exposed via
+    the ``expose_tokens`` setting in your authentication configuration. Tokens
+    are accessed through ``st.user.tokens`` and contain sensitive credentials
+    that your app can use to authenticate with external services on behalf of
+    the logged-in user.
+
+    To expose tokens, add the ``expose_tokens`` parameter to your authentication
+    configuration in ``.streamlit/secrets.toml``. You can specify a single token
+    type as a string or multiple token types as a list. Streamlit supports
+    exposing ``"id"`` tokens (identity tokens) and ``"access"`` tokens (access
+    tokens). If ``expose_tokens`` is not configured, ``st.user.tokens`` will be
+    empty.
+
+    .. Warning::
+        Tokens are sensitive credentials that should be handled securely. Never
+        expose tokens in your app's UI, logs, or error messages. Only use tokens
+        for server-side API calls, and be mindful of token expiration times.
+        Only expose tokens if your app needs them for specific API integrations.
+
+    You can access token values using either key notation (``st.user.tokens["id"]``)
+    or attribute notation (``st.user.tokens.id``). The object is read-only to
+    prevent accidental modification of sensitive credentials.
+
+    .. Note::
+        If no tokens are exposed or if the user is not logged in,
+        ``st.user.tokens`` will be an empty dict-like object. Attempting to
+        access a non-existent token will raise a ``KeyError`` (for key notation)
+        or ``AttributeError`` (for attribute notation).
+
+    Examples
+    --------
+    **Example 1: Expose the ID token**
+
+    To expose only the identity token, add ``expose_tokens`` to your
+    authentication configuration. This example uses an unnamed default provider.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [auth]
+    >>> redirect_uri = "http://localhost:8501/oauth2callback"
+    >>> cookie_secret = "xxx"
+    >>> client_id = "xxx"
+    >>> client_secret = "xxx"
+    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
+    >>> expose_tokens = "id"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>>
+    >>> if st.user.is_logged_in:
+    >>>     try:
+    >>>         id_token = st.user.tokens["id"]
+    >>> # Use the token for API verification (never display it!)
+    >>>         st.success("ID token retrieved successfully")
+    >>>     except KeyError:
+    >>>         st.warning("ID token not available")
+
+    **Example 2: Expose multiple tokens with a named provider**
+
+    To expose both ID and access tokens, provide a list to ``expose_tokens``.
+    This example uses a named provider configuration.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [auth]
+    >>> redirect_uri = "http://localhost:8501/oauth2callback"
+    >>> cookie_secret = "xxx"
+    >>>
+    >>> [auth.google]
+    >>> client_id = "xxx"
+    >>> client_secret = "xxx"
+    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
+    >>> expose_tokens = ["id", "access"]
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>>
+    >>> if st.user.is_logged_in:
+    >>>     st.write("Available tokens:")
+    >>>     for token_name in st.user.tokens:
+    >>>         st.write(f"- {token_name}")
+    """
 
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
@@ -393,13 +480,13 @@ class TokensProxy(Mapping[str, str]):
         except KeyError:
             raise AttributeError(f'Token "{key}" is not exposed or does not exist.')
 
-    def __setattr__(self, name: str, value: str | None) -> NoReturn:
+    def __setattr__(self, name: str, value: str | None) -> None:
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
             raise StreamlitAPIException("st.user.tokens cannot be modified")
 
-    def __setitem__(self, name: str, value: str | None) -> NoReturn:
+    def __setitem__(self, name: str, value: str | None) -> None:
         raise StreamlitAPIException("st.user.tokens cannot be modified")
 
     def __iter__(self) -> Iterator[str]:

@@ -153,7 +153,8 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     AuthLogoutHandler,
                     {"base_url": ""},
                 )
-            ]
+            ],
+            cookie_secret="test_secret",
         )
 
     def test_logout_success(self):
