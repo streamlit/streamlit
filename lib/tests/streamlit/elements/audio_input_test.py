@@ -138,6 +138,44 @@ class AudioInputTest(DeltaGeneratorTestCase):
         # When sample_rate is None, the field should not be set in protobuf
         assert not c.HasField("sample_rate")
 
+    def test_stable_id_with_key(self):
+        """Widget ID is stable when key is provided and non-whitelisted args change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=True,
+        ):
+            st.audio_input(
+                label="Label 1",
+                key="audio_input_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                label_visibility="visible",
+                sample_rate=8000,
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.audio_input
+            id1 = c1.id
+
+            # Change non-whitelisted params
+            st.audio_input(
+                label="Label 2",
+                key="audio_input_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                label_visibility="hidden",
+                sample_rate=16000,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.audio_input
+            id2 = c2.id
+            assert id1 == id2
+
     @parameterized.expand(
         [
             (12345,),

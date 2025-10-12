@@ -99,14 +99,14 @@ class PyplotMixin:
             contents according to the plotting library, up to the width of the
             parent container.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Example
         -------

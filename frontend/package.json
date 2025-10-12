@@ -1,9 +1,10 @@
 {
   "name": "streamlit",
-  "version": "1.49.1",
+  "version": "1.50.0",
   "private": true,
   "workspaces": [
     "app",
+    "component-v2-lib",
     "connection",
     "eslint-plugin-streamlit-custom",
     "lib",

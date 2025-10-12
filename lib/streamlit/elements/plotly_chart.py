@@ -506,8 +506,9 @@ class PlotlyMixin:
             see Plotly's documentation on `Configuration in Python
             <https://plotly.com/python/configuration-options/>`_.
 
-            .. deprecated:: 1.48.2
-               The keyword arguments are deprecated. use ``config`` instead.
+            .. deprecated::
+               ``**kwargs`` are deprecated and will be removed in a future
+               release. Use ``config`` instead.
 
         Returns
         -------

@@ -154,6 +154,8 @@ FD = FieldDescriptor
                 ("violet_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("gray_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+                ("light", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+                ("dark", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },
         ),
         (

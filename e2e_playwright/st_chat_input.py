@@ -18,13 +18,16 @@ from streamlit import config, runtime
 # Set file max upload size to 1MB
 config.set_option("server.maxUploadSize", 1)
 
-v1 = st.container().chat_input("Chat input 1 (inline)")
+v1 = st.container().chat_input("Chat input 1 (inline)", key="chat_input_1")
 st.write("Chat input 1 (inline) - value:", v1)
 
 col1, _ = st.columns(2)
 
 v2 = col1.chat_input(
-    "Chat input 2 (in column, disabled)", accept_file=True, disabled=True
+    "Chat input 2 (in column, disabled)",
+    accept_file=True,
+    disabled=True,
+    key="chat_input_2",
 )
 st.write("Chat input 2 (in column, disabled) - value:", v2)
 
@@ -51,15 +54,21 @@ if runtime.exists():
 
 
 v4 = st.container().chat_input(
-    "Chat input 4 (single file)", accept_file=True, file_type="txt"
+    "Chat input 4 (single file)", accept_file=True, file_type="txt", key="chat_input_4"
 )
 st.write("Chat input 4 (single file) - value:", v4)
 
-v5 = st.container().chat_input("Chat input 5 (multiple files)", accept_file="multiple")
+v5 = st.container().chat_input(
+    "Chat input 5 (multiple files)", accept_file="multiple", key="chat_input_5"
+)
 st.write("Chat input 5 (multiple files) - value:", v5)
 
-v6 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
-v7 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
+v6 = st.container().chat_input(
+    "Chat input 7 (width=300px)", width=300, key="chat_input_7"
+)
+v7 = st.container().chat_input(
+    "Chat input 8 (width='stretch')", width="stretch", key="chat_input_8"
+)
 
 
 v8 = st.chat_input(
@@ -68,16 +77,20 @@ v8 = st.chat_input(
     "and cause the chat input to grow vertically to accommodate all the "
     "text properly when displayed in the UI",
     max_chars=200,
+    key="chat_input_8_bottom",
 )
 st.write("Chat input 8 (bottom, max_chars) - value:", v8)
 
 # Directory upload tests
 v9 = st.container().chat_input(
-    "Chat input 9 (directory upload)", accept_file="directory"
+    "Chat input 9 (directory upload)", accept_file="directory", key="chat_input_9"
 )
 st.write("Chat input 9 (directory upload) - value:", v9)
 
 v10 = st.container().chat_input(
-    "Chat input 10 (directory upload disabled)", accept_file="directory", disabled=True
+    "Chat input 10 (directory upload disabled)",
+    accept_file="directory",
+    disabled=True,
+    key="chat_input_10",
 )
 st.write("Chat input 10 (directory upload disabled) - value:", v10)

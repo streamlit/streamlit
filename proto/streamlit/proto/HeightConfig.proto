@@ -26,5 +26,6 @@ message HeightConfig {
     bool use_stretch = 1;
     bool use_content = 2;
     uint32 pixel_height = 3;
+    float rem_height = 4;
   }
 }

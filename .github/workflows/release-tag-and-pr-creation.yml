@@ -24,6 +24,7 @@ concurrency:
 jobs:
   prepare-release:
     name: Prepare Release ${{ inputs.release_version }}
+    if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,7 +42,7 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
 
       - name: Install Python deps for notifications
         run: |
@@ -62,14 +63,14 @@ jobs:
             exit 1
           fi
 
-          # Ensure the release branch exists remotely
-          if ! git ls-remote --heads origin | grep -q "refs/heads/release/${{ inputs.release_version }}$"; then
+          # Ensure the release branch exists on origin by attempting a shallow fetch of that branch
+          if ! git fetch --no-tags --depth=1 origin "release/${{ inputs.release_version }}"; then
             echo "::error::Branch release/${{ inputs.release_version }} not found on origin. Run Release Branch Creation first." >&2
             exit 1
           fi
 
           # Ensure the tag doesn't already exist remotely
-          if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.release_version }}$"; then
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ inputs.release_version }}" >/dev/null 2>&1; then
             echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
             exit 1
           fi
@@ -77,7 +78,7 @@ jobs:
       - name: Check for existing open PR for release
         if: ${{ inputs.dry_run != true }}
         id: check_existing_pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -132,7 +133,7 @@ jobs:
       - name: Create PR to merge release branch into develop
         id: create_pr
         if: ${{ inputs.dry_run != true }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

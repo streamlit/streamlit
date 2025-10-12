@@ -30,7 +30,7 @@ from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 
 # Config System Global State #
 
@@ -98,6 +98,10 @@ class CustomThemeCategories(str, Enum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
+    LIGHT = "light"
+    DARK = "dark"
+    LIGHT_SIDEBAR = "light.sidebar"
+    DARK_SIDEBAR = "dark.sidebar"
 
 
 def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None:
@@ -323,6 +327,8 @@ def _create_theme_options(
     The same config option can be supported for multiple categories, e.g. "theme"
     and "theme.sidebar".
     """
+    # Handle creation of the main theme config sections (e.g. theme, theme.sidebar, theme.light, theme.dark)
+    # as well as the nested subsections (e.g. theme.light.sidebar, theme.dark.sidebar)
     for cat in categories:
         section = cat if cat == "theme" else f"theme.{cat.value}"
 
@@ -1148,24 +1154,62 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 # Create a section for each custom theme element
 for cat in list(CustomThemeCategories):
-    _create_section(
-        f"theme.{cat.value}",
-        f"Settings to define a custom {cat.value} theme in your Streamlit app.",
-    )
+    if cat == CustomThemeCategories.SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            f"Settings to define a custom {cat.value} theme in your Streamlit app.",
+        )
+    elif cat == CustomThemeCategories.LIGHT:
+        _create_section(
+            f"theme.{cat.value}",
+            "Settings to define custom light theme properties that extend the defined [theme] properties.",
+        )
+    elif cat == CustomThemeCategories.DARK:
+        _create_section(
+            f"theme.{cat.value}",
+            "Settings to define custom dark theme properties that extend the defined [theme] properties.",
+        )
+
+    # Create nested sidebar sections
+    elif cat == CustomThemeCategories.LIGHT_SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            """Settings to define custom light theme properties for the sidebar that extend the defined
+            [theme.sidebar] properties.""",
+        )
+    elif cat == CustomThemeCategories.DARK_SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            """Settings to define custom dark theme properties for the sidebar that extend the defined
+            [theme.sidebar] properties.""",
+        )
 
 _create_theme_options(
     "base",
     categories=["theme"],
     description="""
-        The preset Streamlit theme that your custom theme inherits from.
+        The preset Streamlit theme that your custom theme inherits from, or a path/URL to a theme file.
 
-        This can be one of the following: "light" or "dark".
+        This can be one of the following:
+        - "light" or "dark" (preset themes)
+        - A local file path to a .toml theme file (e.g., "themes/custom.toml")
+        - A URL to a .toml theme file (e.g., "https://example.com/theme.toml")
+
+        When using a theme file, it should contain a [theme] section with theme options.
+        Any options also set in config.toml will override the theme file values.
     """,
 )
 
 _create_theme_options(
     "primaryColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Primary accent color.
     """,
@@ -1173,7 +1217,14 @@ _create_theme_options(
 
 _create_theme_options(
     "backgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color of the app.
     """,
@@ -1181,7 +1232,14 @@ _create_theme_options(
 
 _create_theme_options(
     "secondaryBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color used for most interactive widgets.
     """,
@@ -1189,7 +1247,14 @@ _create_theme_options(
 
 _create_theme_options(
     "textColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Color used for almost all text.
     """,
@@ -1197,323 +1262,461 @@ _create_theme_options(
 
 _create_theme_options(
     "redColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main red color.
+        Red color used in the basic color palette.
 
-        By default, this is #ff4b4b for light theme and #ff2b2b for dark theme.
+        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        dark theme.
 
-        If a redColor config is provided, and redBackgroundColor is not, the
-        redBackgroundColor will be derived from the redColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If `redColor` is provided, and `redBackgroundColor` isn't, then
+        `redBackgroundColor` will be derived from `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "orangeColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main orange color.
+        Orange color used in the basic color palette.
 
-        By default, this is #ffa421 for light theme and #ff8700 for dark theme.
+        By default, this is #ffa421 for the light theme and #ff8700 for the
+        dark theme.
 
-        If an orangeColor config is provided, and orangeBackgroundColor is not, the
-        orangeBackgroundColor will be derived from the orangeColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
+        `orangeBackgroundColor` will be derived from `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "yellowColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main yellow color.
+        Yellow color used in the basic color palette.
 
-        By default, this is #faca2b for light theme and #ffe312 for dark theme.
+        By default, this is #faca2b for the light theme and #ffe312 for the
+        dark theme.
 
-        If a yellowColor config is provided, and yellowBackgroundColor is not, the
-        yellowBackgroundColor will be derived from the yellowColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
+        `yellowBackgroundColor` will be derived from `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "blueColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main blue color.
+        Blue color used in the basic color palette.
 
-        By default, this is #1c83e1 for light theme and #0068c9 for dark theme.
+        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        dark theme.
 
-        If a blueColor config is provided, and blueBackgroundColor is not, the
-        blueBackgroundColor will be derived from the blueColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
+        `blueBackgroundColor` will be derived from `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "greenColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main green color.
+        Green color used in the basic color palette.
 
-        By default, this is #21c354 for light theme and #09ab3b for dark theme.
+        By default, this is #21c354 for the light theme and #09ab3b for the
+        dark theme.
 
-        If a greenColor config is provided, and greenBackgroundColor is not, the
-        greenBackgroundColor will be derived from the greenColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If `greenColor` is provided, and `greenBackgroundColor` isn't, then
+        `greenBackgroundColor` will be derived from `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "violetColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main violet color.
+        Violet color used in the basic color palette.
 
-        By default, this is #803df5 for both light and dark themes.
+        By default, this is #803df5 for both the light and dark themes.
 
-        If a violetColor config is provided, and violetBackgroundColor is not, the
-        violetBackgroundColor will be derived from the violetColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
+        `violetBackgroundColor` will be derived from `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "grayColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Color used as main gray color.
+        Gray color used in the basic color palette.
 
-        By default, this is #a3a8b8 for light theme and #555867 for dark theme.
+        By default, this is #a3a8b8 for the light theme and #555867 for the
+        dark theme.
 
-        If a grayColor config is provided, and grayBackgroundColor is not, the
-        grayBackgroundColor will be derived from the grayColor using 10% opacity for
-        light theme and 20% opacity for dark theme.
+        If `grayColor` is provided, and `grayBackgroundColor` isn't, then
+        `grayBackgroundColor` will be derived from `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "redBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for red-themed elements.
+        Red background color used in the basic color palette.
 
-        If this config is not provided, it will be derived from the redColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `redColor` is provided, this defaults to `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #ff2b2b with 10% opacity for light theme and
+        Otherwise, this is #ff2b2b with 10% opacity for light theme and
         #ff6c6c with 20% opacity for dark theme.
     """,
 )
 
 _create_theme_options(
     "orangeBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for orange-themed elements.
+        Orange background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the orangeColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `orangeColor` is provided, this defaults to `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #ffa421 with 10% opacity for light theme and
-        #ff8700 with 20% opacity for dark theme.
+        Otherwise, this is #ffa421 with 10% opacity for the light theme and
+        #ff8700 with 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "yellowBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for yellow-themed elements.
+        Yellow background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the yellowColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `yellowColor` is provided, this defaults to `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #ffff12 with 10% opacity for light theme and
-        #ffff12 with 20% opacity for dark theme.
+        Otherwise, this is #ffff12 with 10% opacity for the light theme and
+        #ffff12 with 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "blueBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for blue-themed elements.
+        Blue background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the blueColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `blueColor` is provided, this defaults to `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #1c83ff with 10% opacity for light theme and
-        #3d9df3 with 20% opacity for dark theme.
+        Otherwise, this is #1c83ff with 10% opacity for the light theme and
+        #3d9df3 with 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "greenBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for green-themed elements.
+        Green background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the greenColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `greenColor` is provided, this defaults to `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #21c354 with 10% opacity for light theme and
-        #3dd56d with 20% opacity for dark theme.
+        Otherwise, this is #21c354 with 10% opacity for the light theme and
+        #3dd56d with 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "violetBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for violet-themed elements.
+        Violet background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the violetColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `violetColor` is provided, this defaults to `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #9a5dff with 10% opacity for light theme and
+        Otherwise, this is #9a5dff with 10% opacity for light theme and
         #9a5dff with 20% opacity for dark theme.
     """,
 )
 
 _create_theme_options(
     "grayBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Background color used for gray-themed elements.
+        Gray background color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the grayColor config
-        (if provided), using 10% opacity for light theme and 20% opacity for dark theme.
+        If `grayColor` is provided, this defaults to `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #31333F with 10% opacity for light theme and
-        #808495 with 20% opacity for dark theme.
+        Otherwise, this is #31333f with 10% opacity for the light theme and
+        #808495 with 20% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "redTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for red-themed elements.
+        Red text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the redColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `redColor` is provided, this defaults to `redColor`, darkened by 15%
+        for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #BD4043 for light theme and #FF6C6C for dark theme.
+        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "orangeTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for orange-themed elements.
+        Orange text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the orangeColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `orangeColor` is provided, this defaults to `orangeColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #E2660C for light theme and #FFBD45 for dark theme.
+        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "yellowTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for yellow-themed elements.
+        Yellow text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the yellowColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `yellowColor` is provided, this defaults to `yellowColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #926C05 for light theme and #FFFFC2 for dark theme.
+        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "blueTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for blue-themed elements.
+        Blue text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the blueColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `blueColor` is provided, this defaults to `blueColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #0054A3 for light theme and #3D9DF3 for dark theme.
+        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "greenTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for green-themed elements.
+        Green text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the greenColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `greenColor` is provided, this defaults to `greenColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #158237 for light theme and #5CE488 for dark theme.
+        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "violetTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for violet-themed elements.
+        Violet text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the violetColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `violetColor` is provided, this defaults to `violetColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #583F84 for light theme and #B27EFF for dark theme.
+        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        theme.
     """,
 )
 
 _create_theme_options(
     "grayTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
-        Text color used for gray-themed elements.
+        Gray text color used for the basic color palette.
 
-        If this config is not provided, it will be derived from the grayColor config
-        (if provided), darkened by 15% for light theme and lightened by 15% for dark theme.
+        If `grayColor` is provided, this defaults to `grayColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
 
-        If neither is provided, it will fallback to the default value.
-
-        By default, this is #31333F with 60% opacity for light theme and #FAFAFA with
-        60% opacity for dark theme.
+        Otherwise, this is #31333f with 60% opacity for the light theme and
+        #fafafa with 60% opacity for the dark theme.
     """,
 )
 
 _create_theme_options(
     "linkColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Color used for all links.
     """,
@@ -1521,7 +1724,14 @@ _create_theme_options(
 
 _create_theme_options(
     "linkUnderline",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Whether or not links should be displayed with an underline.
     """,
@@ -1530,7 +1740,14 @@ _create_theme_options(
 
 _create_theme_options(
     "codeTextColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Text color used for code blocks.
 
@@ -1543,7 +1760,14 @@ _create_theme_options(
 
 _create_theme_options(
     "codeBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color used for code blocks.
     """,
@@ -1551,7 +1775,14 @@ _create_theme_options(
 
 _create_theme_options(
     "font",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font family for all text, except code blocks.
 
@@ -1560,6 +1791,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1630,7 +1863,14 @@ _create_theme_options(
 
 _create_theme_options(
     "headingFont",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font family to use for headings.
 
@@ -1639,6 +1879,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1648,7 +1890,14 @@ _create_theme_options(
 
 _create_theme_options(
     "headingFontSizes",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         One or more font sizes for h1-h6 headings.
 
@@ -1680,7 +1929,14 @@ _create_theme_options(
 
 _create_theme_options(
     "headingFontWeights",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         One or more font weights for h1-h6 headings.
 
@@ -1710,7 +1966,14 @@ _create_theme_options(
 
 _create_theme_options(
     "codeFont",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font family to use for code (monospace) in the sidebar.
 
@@ -1719,6 +1982,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "'Space Mono':https://fonts.googleapis.com/css2?family=Space+Mono&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
     """,
@@ -1726,7 +1991,14 @@ _create_theme_options(
 
 _create_theme_options(
     "codeFontSize",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font size (in pixels or rem) for code blocks and code text.
 
@@ -1739,7 +2011,14 @@ _create_theme_options(
 
 _create_theme_options(
     "codeFontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font weight for code blocks and code text.
 
@@ -1754,7 +2033,14 @@ _create_theme_options(
 
 _create_theme_options(
     "baseRadius",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The radius used as basis for the corners of most UI elements.
 
@@ -1773,7 +2059,14 @@ _create_theme_options(
 
 _create_theme_options(
     "buttonRadius",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The radius used as basis for the corners of buttons.
 
@@ -1794,7 +2087,14 @@ _create_theme_options(
 
 _create_theme_options(
     "borderColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The color of the border around elements.
     """,
@@ -1802,7 +2102,14 @@ _create_theme_options(
 
 _create_theme_options(
     "dataframeBorderColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The color of the border around dataframes and tables.
 
@@ -1812,7 +2119,14 @@ _create_theme_options(
 
 _create_theme_options(
     "dataframeHeaderBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The background color of the dataframe's header.
 
@@ -1826,7 +2140,14 @@ _create_theme_options(
 
 _create_theme_options(
     "showWidgetBorder",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Whether to show a border around input widgets.
     """,
@@ -2066,6 +2387,43 @@ def _update_config_with_sensitive_env_var(
         _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
 
 
+def _is_valid_theme_section(section_path: str) -> bool:
+    """Check if a theme section path follows valid nesting rules, returns True if valid, False otherwise.
+
+    Valid patterns: theme.sidebar, theme.light, theme.dark, theme.light.sidebar, theme.dark.sidebar
+    Invalid patterns: theme.sidebar.light, theme.sidebar.dark, theme.light.dark, theme.dark.light, etc.
+
+    Parameters
+    ----------
+    section_path : str
+        The dot-separated theme section path (e.g., "theme.light.sidebar").
+        Will always have at least 2 parts and start with "theme".
+    """
+    parts = section_path.split(".")
+
+    # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
+    if len(parts) == 2:
+        return parts[1] in [
+            CustomThemeCategories.SIDEBAR.value,
+            CustomThemeCategories.LIGHT.value,
+            CustomThemeCategories.DARK.value,
+        ]
+
+    # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
+    if len(parts) == 3:
+        # Only allow light/dark as the middle level, with sidebar as the final level
+        if parts[1] in [
+            CustomThemeCategories.LIGHT.value,
+            CustomThemeCategories.DARK.value,
+        ]:
+            return parts[2] == CustomThemeCategories.SIDEBAR.value
+        # sidebar cannot have nested sections (theme.sidebar.light/dark)
+        return False
+
+    # Any nesting with 4+ parts is invalid (e.g., theme.light.sidebar.dark)
+    return False
+
+
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
 
@@ -2128,8 +2486,17 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
-            # Process it as a nested config section if it's a custom theme sub-category
-            if name in [CustomThemeCategories.SIDEBAR.value]:
+            # Only check for nested sections when we're already in a theme section
+            if section_path.startswith("theme") and name in [
+                CustomThemeCategories.SIDEBAR.value,
+                CustomThemeCategories.LIGHT.value,
+                CustomThemeCategories.DARK.value,
+            ]:
+                # Validate the theme section before processing
+                if not _is_valid_theme_section(option_name):
+                    raise StreamlitInvalidThemeSectionError(
+                        option_name=option_name,
+                    )
                 process_section(option_name, value)
             else:
                 # It's a regular config option, set it
@@ -2279,6 +2646,13 @@ def get_config_options(
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
+        # Handle theme inheritance if theme.base points to a file
+        # This happens AFTER all config sources (files, env vars, flags) are processed
+        # so theme.base can be set via any of those
+        config_util.process_theme_inheritance(
+            _config_options, _config_options_template, _set_option
+        )
 
         if old_options and config_util.server_option_changed(
             old_options, _config_options

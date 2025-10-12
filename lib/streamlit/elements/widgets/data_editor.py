@@ -711,6 +711,11 @@ class DataEditorMixin:
             this is ``False``, Streamlit sets the data editor's width according
             to ``width``.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
+
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
             (default), the visibility of index columns is automatically
@@ -792,11 +797,6 @@ class DataEditorMixin:
             The height of each row in the data editor in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``.
 
         Returns
         -------

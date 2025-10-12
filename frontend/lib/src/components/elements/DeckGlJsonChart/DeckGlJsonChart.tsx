@@ -57,8 +57,14 @@ const EMPTY_SELECTION = EMPTY_STATE.selection
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
-  const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
-    props
+  const {
+    disabled,
+    disableFullscreenMode,
+    element,
+    fragmentId,
+    heightConfig,
+    widgetMgr,
+  } = props
   const { libConfig } = useContext(LibContext)
   const theme = useEmotionTheme()
   const {
@@ -67,18 +73,18 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
+  const isStretchHeight = !!heightConfig?.useStretch
+
   const {
     createTooltip,
     data: selection,
     deck,
     hasActiveSelection,
-    height,
     isSelectionModeActivated,
     onViewStateChange,
     selectionMode,
     setSelection,
     viewState,
-    width,
   } = useDeckGl({
     element,
     fragmentId,
@@ -213,7 +219,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
-      height={height}
+      isStretchHeight={isStretchHeight}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
@@ -238,8 +244,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         <DeckGL
           viewState={viewState}
           onViewStateChange={onViewStateChange}
-          height={height}
-          width={width}
           layers={isInitialized ? deck.layers : EMPTY_LAYERS}
           getTooltip={createTooltip}
           // @ts-expect-error There is a type mismatch due to our versions of the libraries
@@ -250,8 +254,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           }
         >
           <StaticMap
-            height={height}
-            width={width}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"

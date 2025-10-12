@@ -88,6 +88,7 @@ import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
 import { getElementId } from "~lib/util/utils"
 
+import { StyledSpace } from "./styled-components"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import {
   BaseBlockProps,
@@ -376,6 +377,9 @@ const RawElementNodeRenderer = (
         props.isStale,
         <Snow scriptRunId={node.scriptRunId} />
       )
+
+    case "space":
+      return <StyledSpace className="stSpace" data-testid="stSpace" />
 
     case "spinner":
       return (

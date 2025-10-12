@@ -27,8 +27,7 @@ import React, {
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
-  BaseButton,
-  BaseButtonKind,
+  CUSTOM_THEME_NAME,
   LibContext,
   Modal,
   ModalBody,
@@ -40,7 +39,6 @@ import {
 } from "@streamlit/lib"
 
 import {
-  StyledButtonContainer,
   StyledCheckbox,
   StyledDialogBody,
   StyledFullRow,
@@ -55,23 +53,9 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  developerMode: boolean
-  openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
   sessionInfo: SessionInfo
-}
-
-const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
-  openThemeCreator,
-}) => {
-  return (
-    <StyledButtonContainer data-testid="edit-theme">
-      <BaseButton onClick={openThemeCreator} kind={BaseButtonKind.SECONDARY}>
-        Edit active theme
-      </BaseButton>
-    </StyledButtonContainer>
-  )
 }
 
 /**
@@ -83,13 +67,14 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   onSave,
   settings,
   allowRunOnSave,
-  developerMode,
-  openThemeCreator,
   animateModal,
   metricsMgr,
   sessionInfo,
 }) {
   const libContext = useContext(LibContext)
+  const { activeTheme, availableThemes } = libContext
+  const isCustomTheme = activeTheme.name === CUSTOM_THEME_NAME
+
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
@@ -122,12 +107,12 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
     (themeName: string | null): void => {
       let newTheme = undefined
       if (themeName) {
-        newTheme = libContext.availableThemes.find(
+        newTheme = availableThemes.find(
           (theme: ThemeConfig) => theme.name === themeName
         )
       }
       if (newTheme === undefined) {
-        newTheme = libContext.availableThemes[0]
+        newTheme = availableThemes[0]
       }
 
       metricsMgr.enqueue("menuClick", {
@@ -136,8 +121,19 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
       libContext.setTheme(newTheme)
     },
-    [libContext, metricsMgr]
+    [libContext, metricsMgr, availableThemes]
   )
+
+  const getAvailableThemeChoices = useCallback(() => {
+    // If a custom theme is set, this should be the only available theme
+    // so that the user cannot revert to streamlit default themes
+    if (isCustomTheme) {
+      return [activeTheme.name]
+    }
+
+    // If no custom theme is set, can choose among default streamlit themes (auto/light/dark)
+    return availableThemes.map(theme => theme.name)
+  }, [isCustomTheme, activeTheme.name, availableThemes])
 
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
@@ -183,22 +179,17 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
             />
           </StyledFullRow>
 
-          {!!libContext.availableThemes.length && (
+          {!!availableThemes.length && (
             <StyledFullRow>
-              <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
+              <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
-                options={libContext.availableThemes.map(
-                  (theme: ThemeConfig) => theme.name
-                )}
-                disabled={false}
+                options={getAvailableThemeChoices()}
+                disabled={isCustomTheme}
                 onChange={handleThemeChange}
-                value={libContext.activeTheme.name}
+                value={activeTheme.name}
                 placeholder=""
                 acceptNewOptions={false}
               />
-              {developerMode && (
-                <ThemeCreatorButton openThemeCreator={openThemeCreator} />
-              )}
             </StyledFullRow>
           )}
 
