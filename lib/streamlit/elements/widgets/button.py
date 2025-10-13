@@ -25,11 +25,9 @@ from typing import (
     Final,
     Literal,
     TextIO,
-    Union,
+    TypeAlias,
     cast,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
@@ -74,7 +72,7 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
-DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
+DownloadButtonDataType: TypeAlias = str | bytes | TextIO | BinaryIO | io.RawIOBase
 
 
 @dataclass

@@ -20,6 +20,7 @@ import types
 from collections import ChainMap, UserDict, UserList
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -30,7 +31,6 @@ from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     cast,
 )

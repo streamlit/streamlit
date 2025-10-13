@@ -256,7 +256,7 @@ class ChatTest(DeltaGeneratorTestCase):
         return_val = st.chat_input(accept_file="multiple")
 
         assert return_val.files == uploaded_files
-        for actual, expected in zip(return_val.files, uploaded_files):
+        for actual, expected in zip(return_val.files, uploaded_files, strict=False):
             assert actual.name == expected.name
             assert actual.type == expected.type
             assert actual.size == expected.size

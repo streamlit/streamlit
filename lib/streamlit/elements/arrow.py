@@ -16,9 +16,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    TypedDict,
+    cast,
+    overload,
+)
 
 from streamlit import dataframe_util
 from streamlit.deprecation_util import (

@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
@@ -54,7 +52,7 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.runtime.state import WidgetCallback
 
-SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
+SpecType: TypeAlias = int | Sequence[int | float]
 
 
 class LayoutsMixin:

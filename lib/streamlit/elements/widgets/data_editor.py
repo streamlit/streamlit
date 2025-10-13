@@ -22,14 +22,13 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -89,18 +88,11 @@ _LOGGER: Final = _logger.get_logger(__name__)
 # formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
     "EditableData",
-    bound=Union[
-        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        tuple[Any],
-        list[Any],
-        set[Any],
-        dict[str, Any],
-        # TODO(lukasmasuch): Add support for np.ndarray
-        # but it is not possible with np.ndarray.
-        # NDArray[Any] works, but is only available in numpy>1.20.
-        # TODO(lukasmasuch): Add support for pa.Table typing
-        # pa.Table does not work since it is a C-based class resulting in Any
-    ],
+    bound=dataframe_util.DataFrameGenericAlias[Any]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any],
 )
 
 

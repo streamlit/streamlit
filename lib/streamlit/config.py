@@ -24,13 +24,16 @@ import secrets
 import threading
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Config System Global State #
 

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase, mock
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
@@ -35,6 +35,8 @@ from streamlit.runtime.session_manager import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -43,6 +43,9 @@ from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class TestGetMappedOptions:

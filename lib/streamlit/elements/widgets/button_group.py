@@ -14,21 +14,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (

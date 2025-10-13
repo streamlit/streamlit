@@ -16,20 +16,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
+    TypeGuard,
     TypeVar,
-    Union,
     cast,
     get_args,
 )
-
-from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import util
 from streamlit.errors import (
@@ -44,7 +43,7 @@ T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 
-WidgetArgs: TypeAlias = Union[tuple[Any, ...], list[Any]]
+WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
 

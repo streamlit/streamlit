@@ -18,7 +18,7 @@ import contextlib
 import datetime
 import unittest
 from collections import Counter
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
@@ -33,6 +33,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 MAC = "mac"
 UUID = "uuid"

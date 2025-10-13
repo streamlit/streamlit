@@ -24,7 +24,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 from typing_extensions import ParamSpec
 
@@ -54,6 +54,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 if TYPE_CHECKING:
     import types
+    from collections.abc import Callable
 
     from streamlit.runtime.caching.cache_type import CacheType
 

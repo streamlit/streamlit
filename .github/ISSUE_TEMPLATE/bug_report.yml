@@ -86,8 +86,8 @@ body:
         Please share some system information related to the environment your app is running in.
 
         Example:
-          - **Streamlit version**: 1.13.0 _(get it with `$ streamlit version`)_
-          - **Python version**: 3.9 _(get it with `$ python --version`)_
+          - **Streamlit version**: 1.50.0 _(get it with `$ streamlit version`)_
+          - **Python version**: 3.13 _(get it with `$ python --version`)_
           - **Operating System**: MacOs 12.6
           - **Browser**: Chrome
       value: |

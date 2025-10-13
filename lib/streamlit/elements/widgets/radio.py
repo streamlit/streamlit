@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
 
@@ -56,7 +56,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
 

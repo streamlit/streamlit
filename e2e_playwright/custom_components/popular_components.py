@@ -38,9 +38,12 @@ Following actions/components are tested:
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def use_components_html():

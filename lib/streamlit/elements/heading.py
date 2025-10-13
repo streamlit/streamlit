@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
@@ -37,8 +35,8 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
-Anchor: TypeAlias = Union[str, Literal[False], None]
-Divider: TypeAlias = Union[bool, str, None]
+Anchor: TypeAlias = str | Literal[False] | None
+Divider: TypeAlias = bool | str | None
 
 
 class HeadingMixin:
