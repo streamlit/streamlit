@@ -61,6 +61,30 @@ import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
 import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
+type FilesUpdater =
+  | UploadFileInfo[]
+  | ((prev: UploadFileInfo[]) => UploadFileInfo[])
+
+const toWidgetState = (
+  targetFiles: UploadFileInfo[]
+): FileUploaderStateProto => {
+  const uploadedFileInfo: UploadedFileInfoProto[] = targetFiles
+    .filter(f => f.status.type === "uploaded")
+    .map(f => {
+      const { name, size, status } = f
+      const { fileId, fileUrls } = status as UploadedStatus
+
+      return new UploadedFileInfoProto({
+        fileId,
+        fileUrls,
+        name,
+        size,
+      })
+    })
+
+  return new FileUploaderStateProto({ uploadedFileInfo })
+}
+
 interface InnerProps {
   disabled: boolean
   element: FileUploaderProto
@@ -127,10 +151,6 @@ const FileUploader = ({
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }, [element.maxUploadSizeMb])
 
-  type FilesUpdater =
-    | UploadFileInfo[]
-    | ((prev: UploadFileInfo[]) => UploadFileInfo[])
-
   const setFilesImmediate = useCallback(
     (updater: FilesUpdater): void => {
       /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
@@ -139,10 +159,7 @@ const FileUploader = ({
        */
       flushSync(() => {
         setFiles(prev => {
-          const next =
-            typeof updater === "function"
-              ? (updater as (prev: UploadFileInfo[]) => UploadFileInfo[])(prev)
-              : updater
+          const next = typeof updater === "function" ? updater(prev) : updater
           filesRef.current = next
           return next
         })
@@ -188,26 +205,6 @@ const FileUploader = ({
     return filesRef.current.find(file => file.id === fileId)
   }, [])
 
-  const createWidgetValueFromFiles = useCallback(
-    (targetFiles: UploadFileInfo[]): FileUploaderStateProto => {
-      const uploadedFileInfo: UploadedFileInfoProto[] = targetFiles
-        .filter(f => f.status.type === "uploaded")
-        .map(f => {
-          const { name, size, status } = f
-          const { fileId, fileUrls } = status as UploadedStatus
-          return new UploadedFileInfoProto({
-            fileId,
-            fileUrls,
-            name,
-            size,
-          })
-        })
-
-      return new FileUploaderStateProto({ uploadedFileInfo })
-    },
-    []
-  )
-
   const status: FileUploaderStatus =
     files.some(file => file.status.type === "uploading") ||
     forceUpdatingStatusRef.current
@@ -219,21 +216,21 @@ const FileUploader = ({
     if (prevWidgetValue === undefined) {
       widgetMgr.setFileUploaderStateValue(
         element,
-        createWidgetValueFromFiles(filesRef.current),
+        toWidgetState(filesRef.current),
         {
           fromUi: false,
         },
         fragmentId
       )
     }
-  }, [createWidgetValueFromFiles, widgetMgr, element, fragmentId])
+  }, [widgetMgr, element, fragmentId])
 
   useEffect(() => {
     if (status !== "ready") {
       return
     }
 
-    const newWidgetValue = createWidgetValueFromFiles(files)
+    const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(
@@ -245,31 +242,18 @@ const FileUploader = ({
         fragmentId
       )
     }
-  }, [
-    status,
-    files,
-    createWidgetValueFromFiles,
-    widgetMgr,
-    element,
-    fragmentId,
-  ])
+  }, [status, files, widgetMgr, element, fragmentId])
 
   const onFormCleared = useCallback((): void => {
     setFilesImmediate(() => [])
-    const newWidgetValue = createWidgetValueFromFiles([])
+    const newWidgetValue = toWidgetState([])
     widgetMgr.setFileUploaderStateValue(
       element,
       newWidgetValue,
       { fromUi: true },
       fragmentId
     )
-  }, [
-    createWidgetValueFromFiles,
-    element,
-    fragmentId,
-    setFilesImmediate,
-    widgetMgr,
-  ])
+  }, [element, fragmentId, setFilesImmediate, widgetMgr])
 
   useFormClearHelper({
     element,
