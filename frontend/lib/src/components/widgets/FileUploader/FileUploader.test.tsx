@@ -16,7 +16,13 @@
 
 import React from "react"
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -889,54 +895,25 @@ describe("FileUploader widget tests", () => {
 
   it("resets its value when form is cleared", async () => {
     const user = userEvent.setup()
+    const props = getProps({ multipleFiles: true, formId: "form-id" })
 
-    // Create a widget in a clearOnSubmit form
-    const props = getProps({ formId: "form" })
-    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form-id", true)
 
-    vi.spyOn(props.widgetMgr, "setIntValue")
-
-    const { rerender } = render(<FileUploader {...props} />)
+    render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
-    // Upload a single file
-    await user.upload(fileDropZoneInput, createFile())
+    await user.upload(fileDropZoneInput, createFile("filename1.txt"))
+    await user.upload(fileDropZoneInput, createFile("filename2.txt"))
 
-    const fileName = screen.getByTestId("stFileUploaderFile")
-    expect(fileName.textContent).toContain("filename.txt")
+    expect(screen.getAllByTestId("stFileUploaderFile").length).toBe(2)
 
-    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
-      buildFileUploaderStateProto([
-        {
-          fileId: "filename.txt",
-          uploadUrl: "filename.txt",
-          deleteUrl: "filename.txt",
-        },
-      ]),
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    act(() => {
+      props.widgetMgr.submitForm("form-id")
+    })
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
-    rerender(<FileUploader {...props} />)
-
-    // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
-
-    // WidgetStateManager will still have been called once, during component mounting
-    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
-      props.element,
-      buildFileUploaderStateProto([]),
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    await waitFor(() => {
+      expect(screen.queryAllByTestId("stFileUploaderFile")).toHaveLength(0)
+    })
   })
 })

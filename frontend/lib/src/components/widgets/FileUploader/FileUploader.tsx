@@ -207,11 +207,6 @@ const FileUploader = ({
     []
   )
 
-  const createWidgetValue = useCallback(
-    () => createWidgetValueFromFiles(filesRef.current),
-    [createWidgetValueFromFiles]
-  )
-
   const status: FileUploaderStatus =
     files.some(file => file.status.type === "uploading") ||
     forceUpdatingStatusRef.current
@@ -223,21 +218,21 @@ const FileUploader = ({
     if (prevWidgetValue === undefined) {
       widgetMgr.setFileUploaderStateValue(
         element,
-        createWidgetValue(),
+        createWidgetValueFromFiles(filesRef.current),
         {
           fromUi: false,
         },
         fragmentId
       )
     }
-  }, [createWidgetValue, widgetMgr, element, fragmentId])
+  }, [createWidgetValueFromFiles, widgetMgr, element, fragmentId])
 
   useEffect(() => {
     if (status !== "ready") {
       return
     }
 
-    const newWidgetValue = createWidgetValue()
+    const newWidgetValue = createWidgetValueFromFiles(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(
@@ -249,7 +244,14 @@ const FileUploader = ({
         fragmentId
       )
     }
-  }, [status, createWidgetValue, widgetMgr, element, fragmentId])
+  }, [
+    status,
+    files,
+    createWidgetValueFromFiles,
+    widgetMgr,
+    element,
+    fragmentId,
+  ])
 
   useEffect(() => {
     const formClearHelper = formClearHelperRef.current
