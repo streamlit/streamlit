@@ -27,7 +27,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import tornado.httpserver
@@ -577,8 +577,7 @@ class SslServerTest(unittest.TestCase):
 
 
 class UnixSocketTest(unittest.TestCase):
-    """Tests start_listening uses a unix socket when socket.address starts with
-    unix://"""
+    """Tests unix socket handling for Tornado and Starlette servers."""
 
     def setUp(self) -> None:
         self.original_address = config.get_option("server.address")
@@ -597,7 +596,7 @@ class UnixSocketTest(unittest.TestCase):
         return httpserver
 
     @unittest.skipIf("win32" in sys.platform, "Windows does not have unit sockets")
-    def test_unix_socket(self):
+    def test_unix_socket_tornado(self):
         app = mock.MagicMock()
 
         config.set_option("server.address", "unix://~/fancy-test/testasd")
@@ -618,12 +617,29 @@ class UnixSocketTest(unittest.TestCase):
             )
             mock_server.add_socket.assert_called_with(some_socket)
 
+    @unittest.skipIf("win32" in sys.platform, "Windows does not have unix sockets")
+    def test_unix_socket_starlette(self) -> None:
+        server = Server("mock/script/path", is_hello=False)
+        event_loop = asyncio.new_event_loop()
+        server._runtime._eventloop = event_loop
+
+        file_path = "~/fake-unix/streamlit.sock"
+        config.set_option("server.address", f"unix://{file_path}")
+
+        with patch("uvicorn.Server.serve", new=AsyncMock()) as serve_mock:
+            event_loop.run_until_complete(server._start_starlette())
+
+        serve_mock.assert_awaited_once()
+        event_loop.close()
+        config.set_option("server.address", self.original_address)
+
 
 class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
     async def does_script_run_without_error(self):
         return True, "test_message"
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", True, "test")
         super().setUp()
@@ -662,6 +678,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         self.fail("Should not be called")
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", False, "test")
         super().setUp()

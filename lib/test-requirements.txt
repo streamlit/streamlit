@@ -7,6 +7,8 @@ seaborn>=0.11.2
 watchdog>=2.1.5
 streamlit-pdf>=1.0.0
 
+
+
 # Optional dependency used for improved exception formatting
 # in Community Cloud:
 rich>=10.14.0
@@ -20,6 +22,12 @@ pytest>=8.3.5
 pytest-cov
 requests-mock
 testfixtures
+# Required for starlette integration:
+starlette
+python-multipart
+uvicorn
+httpx # only for unit tests
+
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.

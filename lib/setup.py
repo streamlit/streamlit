@@ -83,6 +83,13 @@ EXTRA_REQUIRES = {
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
+    # Optional dependency required for Starlette integration:
+    "starlette": [
+        "starlette>=0.40.0",
+        "python-multipart>=0.0.10",
+        "uvicorn>=0.30.0",
+        "anyio>=4.0.0",
+    ],
     # Optional dependency required for PDF rendering:
     "pdf": [
         "streamlit-pdf>=1.0.0",
@@ -117,7 +124,7 @@ class VerifyVersionCommand(install):
 
     description = "verify that the git tag matches our version"
 
-    def run(self):
+    def run(self) -> None:
         tag = os.getenv("TAG")
 
         if tag != VERSION:

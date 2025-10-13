@@ -337,7 +337,10 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
-        app = self._create_app()
+        if config.get_option("server.useStarlette"):
+            await self._start_starlette()
+        else:
+            app = self._create_app()
         start_listening(app)
 
         port = config.get_option("server.port")
@@ -508,6 +511,92 @@ class Server:
     def stop(self) -> None:
         cli_util.print_to_cli("  Stopping...", fg="blue")
         self._runtime.stop()
+
+    async def _start_starlette(self) -> None:
+        from streamlit.web.server.starlette_app import create_starlette_app
+
+        try:
+            import uvicorn
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "uvicorn is required for server.useStarlette but is not installed."
+            ) from exc
+
+        app = create_starlette_app(self._runtime)
+
+        address = config.get_option("server.address")
+        configured_port = int(config.get_option("server.port"))
+
+        cert_file = config.get_option("server.sslCertFile")
+        key_file = config.get_option("server.sslKeyFile")
+
+        ws_ping_interval, ws_ping_timeout = _get_websocket_ping_interval_and_timeout()
+
+        if server_address_is_unix_socket():
+            unix_address = config.get_option("server.address")
+            if not isinstance(unix_address, str):
+                raise RuntimeError("server.address must be a string")
+
+            socket_path = os.path.expanduser(unix_address[len(UNIX_SOCKET_PREFIX) :])
+
+            uvicorn_config = uvicorn.Config(
+                app,
+                uds=socket_path,
+                ssl_certfile=cert_file,
+                ssl_keyfile=key_file,
+                ws="websockets",
+                ws_ping_interval=ws_ping_interval,
+                ws_ping_timeout=ws_ping_timeout,
+                log_config=None,
+            )
+
+            server = uvicorn.Server(uvicorn_config)
+            _LOGGER.debug("Starting Starlette server on unix socket %s", socket_path)
+            await server.serve()
+            return
+
+        last_exception: BaseException | None = None
+
+        for attempt in range(MAX_PORT_SEARCH_RETRIES + 1):
+            port = configured_port + attempt
+
+            uvicorn_config = uvicorn.Config(
+                app,
+                host=address,
+                port=port,
+                ssl_certfile=cert_file,
+                ssl_keyfile=key_file,
+                ws="websockets",
+                ws_ping_interval=ws_ping_interval,
+                ws_ping_timeout=ws_ping_timeout,
+                log_config=None,
+            )
+
+            server = uvicorn.Server(uvicorn_config)
+
+            _LOGGER.debug("Starting Starlette server on %s:%s", address, port)
+
+            try:
+                await server.serve()
+                config.set_option("server.port", port)
+                return
+            except OSError as exc:
+                last_exception = exc
+                _LOGGER.warning(
+                    "Port %s unavailable (%s). Retrying %s/%s...",
+                    port,
+                    exc,
+                    attempt + 1,
+                    MAX_PORT_SEARCH_RETRIES,
+                )
+                if attempt == MAX_PORT_SEARCH_RETRIES:
+                    raise
+            except Exception as exc:  # pragma: no cover - defensive
+                last_exception = exc
+                raise
+
+        if last_exception:
+            raise last_exception
 
 
 def _set_tornado_log_levels() -> None:
