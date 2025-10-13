@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 import pytest
 from starlette.testclient import TestClient
 
+from streamlit import file_util
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -30,7 +31,6 @@ from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
-from streamlit import file_util
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -119,7 +119,9 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
 
-    with patch_config_options({"server.baseUrlPath": "", "global.developmentMode": False}):
+    with patch_config_options(
+        {"server.baseUrlPath": "", "global.developmentMode": False}
+    ):
         monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
