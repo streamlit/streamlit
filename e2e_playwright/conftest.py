@@ -1093,6 +1093,8 @@ def start_app_server(
         "none",
         "--server.enableStaticServing",
         "true",
+        "--server.useStarlette",
+        "true",
     ]
 
     # Append any caller-supplied extra args at the end so they can override
