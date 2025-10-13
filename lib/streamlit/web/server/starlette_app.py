@@ -185,8 +185,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         from starlette.websockets import WebSocketDisconnect
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
-            "Starlette is not installed. Install optional dependencies or disable "
-            "`server.useStarlette`."
+            "Starlette is not installed. Run `pip install streamlit[starlette]` or disable `server.useStarlette`."
         ) from exc
 
     routes: list[Any] = []
