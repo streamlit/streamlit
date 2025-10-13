@@ -26,6 +26,8 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
+NUM_CAMERA_INPUT_WIDGETS = 5
+
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
     def check_dimensions() -> bool:
@@ -35,9 +37,6 @@ def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
         return bbox is not None and bbox["width"] > 0 and bbox["height"] > 0
 
     return check_dimensions
-
-
-NUM_CAMERA_INPUT_WIDGETS = 5
 
 
 @pytest.mark.skip_browser("webkit")
@@ -80,7 +79,7 @@ def test_shows_disabled_widget_correctly(
 ):
     """Test that it renders disabled camera_input widget correctly."""
     camera_input_widgets = themed_app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
     disabled_camera_input = get_camera_input(themed_app, "Label2")
 
     # The width is debounced in this component, so we need to wait until the
@@ -96,7 +95,7 @@ def test_shows_disabled_widget_correctly(
 def test_take_photo_button_styling(app: Page):
     """Test that the Take Photo button is rendered properly when active/disabled."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
     # Active button styling
     active_camera_input = get_camera_input(app, "Label1")
