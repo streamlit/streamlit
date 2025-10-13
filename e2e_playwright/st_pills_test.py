@@ -131,15 +131,17 @@ def test_pills_are_disabled_and_selected_and_take_screenshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    expect_markdown(app, "Multi selection: []")
+    expect_prefixed_markdown(app, "Pills with default options:", "[]")
 
     click_checkbox(app, "Set default values")
-    expect_markdown(
-        app, "Multi selection: ['🧰 General widgets', '📊 Charts', '🧊 3D']"
+    expect_prefixed_markdown(
+        app,
+        "Pills with default options:",
+        "['🧰 General widgets', '🎥 Video']",
     )
 
     click_checkbox(app, "Set default values")
-    expect_markdown(app, "Multi selection: []")
+    expect_prefixed_markdown(app, "Pills with default options:", "[]")
 
 
 def test_selection_via_on_change_callback(app: Page):

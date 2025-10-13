@@ -18,13 +18,6 @@ import streamlit as st
 
 st.header("Pills - standard")
 
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_pills = ["🧰 General widgets", "📊 Charts", "🧊 3D"]
-else:
-    st.session_state.default_pills = []
-
-default = st.session_state.default_pills
-
 pills_options = [
     "🧰 General widgets",
     "📊 Charts",
@@ -51,7 +44,6 @@ s1 = st.pills(
     pills_options,
     key="pills",
     selection_mode="multi",
-    default=default,
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {s1}")
@@ -176,6 +168,28 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_pills = ["🧰 General widgets", "🎥 Video"]
+else:
+    st.session_state.default_pills = []
+
+default = st.session_state.default_pills
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.pills(
+    "Pills with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_pills,
+)
+st.write("Pills with default options:", str(val))
 
 if st.toggle("Update pills props"):
     dyn_val = st.pills(
