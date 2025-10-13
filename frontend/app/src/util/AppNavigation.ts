@@ -60,10 +60,8 @@ export function stripMarkdown(text: string): string {
       .replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, "$1")
       // Remove [links](url)
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      // Remove emoji shortcodes
-      .replace(/:[a-zA-Z0-9_+-]+:/g, "")
-      // Remove material icons
-      .replace(/:[a-zA-Z0-9_+/-]+:/g, "")
+      // Remove both material icons and emoji shortcodes
+      .replace(/:[a-zA-Z]+\/[a-zA-Z0-9_-]+:|:[a-zA-Z0-9_+-]+:/g, "")
       // Remove :color[text] and :color-background[text]
       .replace(/:[a-zA-Z0-9_+-]+(?:-background)?\[(.*?)\]/g, "$1")
       .trim()
