@@ -39,7 +39,9 @@ def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Loca
     ).filter(has_text=type)
 
 
-def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Locator:
+def get_feedback_icon_button(
+    locator: Locator, type: str | None = None, index: int = 0
+) -> Locator:
     return get_feedback_icon_buttons(locator, type).nth(index)
 
 
@@ -229,9 +231,8 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     expect_prefixed_markdown(app, "Initial feedback value:", "2")
 
     # Click to change selection
-    feedback_widget.get_by_test_id(
-        re.compile("stBaseButton-borderlessIcon(Active)?")
-    ).nth(3).click()
+    get_feedback_icon_button(feedback_widget, None, 3).click()
+
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial feedback value:", "3")
 
@@ -245,8 +246,7 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(feedback_widget, name="st_feedback-dynamic_updated")
 
     # Click a different value
-    feedback_widget.get_by_test_id(
-        re.compile("stBaseButton-borderlessIcon(Active)?")
-    ).nth(4).click()
+    get_feedback_icon_button(feedback_widget, None, 4).click()
+
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated feedback value:", "4")
