@@ -339,8 +339,9 @@ class Server:
 
         if config.get_option("server.useStarlette"):
             await self._start_starlette()
-        else:
-            app = self._create_app()
+            return
+
+        app = self._create_app()
         start_listening(app)
 
         port = config.get_option("server.port")
