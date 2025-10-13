@@ -34,6 +34,8 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
+NUM_CHAT_INPUT_WIDGETS = 11
+
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
@@ -81,7 +83,7 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(10)
+    expect(chat_input_widgets).to_have_count(NUM_CHAT_INPUT_WIDGETS)
 
     assert_snapshot(
         get_element_by_key(app, "chat_input_1"), name="st_chat_input-inline"
