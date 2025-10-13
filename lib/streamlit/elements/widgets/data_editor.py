@@ -171,7 +171,8 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v for k, v in data_editor_state["edited_rows"].items()
+            int(k): v
+            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
         }
         return data_editor_state
 
