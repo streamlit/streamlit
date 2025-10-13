@@ -99,7 +99,7 @@ st.write("Chat input 10 (directory upload disabled) - value:", v10)
 st.markdown("Dynamic chat input:")
 
 if st.toggle("Update chat input props"):
-    dyn_val = st.chat_input(
+    dyn_val = st.container().chat_input(
         "Updated dynamic chat input",
         key="dynamic_chat_input_with_key",
         width=300,
@@ -115,7 +115,7 @@ if st.toggle("Update chat input props"):
     )
     st.write("Updated chat input value:", dyn_val)
 else:
-    dyn_val = st.chat_input(
+    dyn_val = st.container().chat_input(
         "Initial dynamic chat input",
         key="dynamic_chat_input_with_key",
         width="stretch",
