@@ -40,7 +40,6 @@ Color3Tuple: TypeAlias = FloatRGBColorTuple | IntRGBColorTuple
 ColorTuple: TypeAlias = Color4Tuple | Color3Tuple
 
 IntColorTuple: TypeAlias = IntRGBColorTuple | IntRGBAColorTuple
-CSSColorStr: TypeAlias = IntRGBAColorTuple | MixedRGBAColorTuple
 
 ColorStr: TypeAlias = str
 
