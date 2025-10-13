@@ -922,3 +922,87 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         # Make sure the correct name is used in the error message
         assert element_name in str(exception.value)
+
+    def test_stable_id_with_key_segmented_control(self):
+        """Test that the widget ID is stable for segmented_control when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.segmented_control(
+                label="Label 1",
+                key="segmented_control_key",
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                default="a",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.segmented_control(
+                label="Label 2",
+                key="segmented_control_key",
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                default="b",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "b"], ["x", "y"]),
+            ("selection_mode", "single", "multi"),
+            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_segmented_control(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
+        is provided.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs: dict[str, object] = {
+                "label": "Label",
+                "key": "segmented_control_key_1",
+                "options": ["a", "b", "c"],
+                "selection_mode": "single",
+            }
+
+            # Apply first value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value1
+            st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Apply second value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value2
+            st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 != id2

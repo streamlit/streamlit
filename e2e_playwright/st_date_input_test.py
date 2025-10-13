@@ -235,19 +235,19 @@ def test_calls_callback_on_change(app: Page):
     calendar.click()
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 12: 1970-01-02")
-    expect_markdown(app, "Date Input Changed: True")
+    expect_prefixed_markdown(app, "Value 12:", "1970-01-02")
+    expect_prefixed_markdown(app, "Date Input Changed:", "True")
 
     # Change different date input to trigger delta path change
     first_date_input_field = get_date_input(app, "Single date").locator("input")
     first_date_input_field.fill("1971/01/03")
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 1: 1971-01-03")
+    expect_prefixed_markdown(app, "Value 1:", "1971-01-03")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "Value 12: 1970-01-02")
-    expect_markdown(app, "Date Input Changed: False")
+    expect_prefixed_markdown(app, "Value 12:", "1970-01-02")
+    expect_prefixed_markdown(app, "Date Input Changed:", "False")
 
 
 def test_single_date_calendar_picker_rendering(

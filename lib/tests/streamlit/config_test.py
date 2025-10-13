@@ -31,7 +31,11 @@ from parameterized import parameterized
 from streamlit import config, config_util, env_util
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidThemeError,
+    StreamlitInvalidThemeSectionError,
+)
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -524,8 +528,8 @@ class ConfigTest(unittest.TestCase):
             "theme.dark.sidebar.light",
         ]
     )
-    def test_parsing_toml_with_invalid_theme_nesting(self, section_path):
-        """Test that invalid theme nesting patterns are rejected."""
+    def test_parsing_toml_with_invalid_theme_sections(self, section_path):
+        """Test that invalid theme section patterns are rejected."""
         toml_content = f"""
         [{section_path}]
         primaryColor = "#FF0000"
@@ -2058,6 +2062,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         [theme.sidebar]
         primaryColor = "#ff4444"
         backgroundColor = "#111111"
+
+        [theme.dark.sidebar]
+        blueColor = "#4169e1"
+        greenColor = "#355E3B"
         """
 
         with self._theme_file(base_theme_content, "base_theme.toml") as base_theme_file:
@@ -2075,6 +2083,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             [theme.sidebar]
             backgroundColor = "#222222"
             # primaryColor should come from base theme
+
+            [theme.dark.sidebar]
+            blueColor = "#ADD8E6"
             """
 
             with self._config_patches(config_toml, theme_files=[base_theme_file]):
@@ -2103,6 +2114,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert (
                     config.get_option("theme.borderColor") == "#333333"
                 )  # From base theme (no override)
+                assert (
+                    config.get_option("theme.dark.sidebar.blueColor") == "#ADD8E6"
+                )  # Config override
 
                 # Sidebar precedence
                 assert (
@@ -2111,6 +2125,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert (
                     config.get_option("theme.sidebar.backgroundColor") == "#222222"
                 )  # Config override
+                assert (
+                    config.get_option("theme.dark.sidebar.greenColor") == "#355E3B"
+                )  # From base theme (no override)
 
                 # Verify where_defined is correct
                 assert "theme file:" in config.get_where_defined(
@@ -2189,6 +2206,108 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert (
                     "command-line"
                     in config.get_where_defined("theme.borderColor").lower()
+                )
+                assert (
+                    "command-line"
+                    in config.get_where_defined("theme.linkColor").lower()
+                )
+
+    def test_theme_complex_inheritance_preserves_env_var_and_flag_precedence(self):
+        """Test that theme inheritance with sections/subsections preserves environment
+        variables and command line flags."""
+        theme_content = """
+        [theme]
+        base = "dark"
+        primaryColor = "#00ff00"
+
+        [theme.light]
+        font = "sans-serif"
+        backgroundColor = "#000000"
+
+        [theme.dark]
+        font = "serif"
+
+        [theme.sidebar]
+        textColor = "#ffffff"
+        borderColor = "#333333"
+
+        [theme.light.sidebar]
+        borderColor = "#999999"
+
+        [theme.dark.sidebar]
+        linkColor = "#cccccc"
+        """
+
+        with self._theme_file(theme_content) as theme_file:
+            # Config file references theme file and sets some overrides
+            config_toml = f"""
+            [theme]
+            base = "{theme_file}"
+            primaryColor = "#ff0000"
+
+            [theme.dark]
+            linkColor = "#7851A9"
+
+            [theme.sidebar]
+            textColor = "#cccccc"
+
+            [theme.light.sidebar]
+            borderColor = "#888888"
+
+            [theme.dark.sidebar]
+            linkColor = "#ADD8E6"
+            """
+
+            # Simulate environment variable and command line flag (higher precedence)
+            options_from_flags = {
+                # Env var would be processed as flag by Click framework
+                "theme.primaryColor": "#ff6b6b",  # Should override base/config toml
+                "theme.light.font": "Arial",  # Should override theme file's "sans-serif"
+                "theme.sidebar.borderColor": "#999999",  # Should override theme file's "#333333"
+                "theme.dark.linkColor": "#CD1C18",  # Should override theme file's "#7851A9"
+                "theme.dark.sidebar.linkColor": "#4169e1",  # Should override config file's "#ADD8E6"
+                "theme.linkColor": "#0066cc",  # New value not in theme file or config
+            }
+
+            with self._config_patches(config_toml, theme_files=[theme_file]):
+                config.get_config_options(
+                    force_reparse=True, options_from_flags=options_from_flags
+                )
+
+                # Verify correct precedence hierarchy:
+                # 1. Theme file base values
+                assert config.get_option("theme.base") == "dark"  # From theme file
+                assert config.get_option("theme.light.backgroundColor") == "#000000"
+                assert config.get_option("theme.dark.font") == "serif"
+
+                # 2. Config file overrides
+                assert config.get_option("theme.sidebar.textColor") == "#cccccc"
+                assert config.get_option("theme.light.sidebar.borderColor") == "#888888"
+
+                # 3. Environment variables and command line flags (higher precedence)
+                assert config.get_option("theme.primaryColor") == "#ff6b6b"
+                assert config.get_option("theme.light.font") == "Arial"
+                assert config.get_option("theme.dark.linkColor") == "#CD1C18"
+                assert config.get_option("theme.sidebar.borderColor") == "#999999"
+                assert config.get_option("theme.dark.sidebar.linkColor") == "#4169e1"
+                assert config.get_option("theme.linkColor") == "#0066cc"
+
+                # Verify where_defined is correct
+                assert (
+                    "theme file"
+                    in config.get_where_defined("theme.light.backgroundColor").lower()
+                )
+                assert (
+                    "theme file"
+                    in config.get_where_defined("theme.sidebar.textColor").lower()
+                )
+                assert (
+                    "command-line"
+                    in config.get_where_defined("theme.primaryColor").lower()
+                )
+                assert (
+                    "command-line"
+                    in config.get_where_defined("theme.light.font").lower()
                 )
                 assert (
                     "command-line"
@@ -2333,19 +2452,19 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             """
 
             with self._config_patches(config_toml, theme_files=[theme_file]):
-                with pytest.raises(StreamlitAPIException) as cm:
+                with pytest.raises(StreamlitInvalidThemeError) as cm:
                     config.get_config_options()
 
                 assert "cannot reference another theme file" in str(cm.value)
 
-    def test_theme_base_invalid_subsection(self):
-        """Test error when theme file contains invalid subsections."""
+    def test_theme_base_invalid_section(self):
+        """Test error when theme file contains invalid sections."""
         theme_content = """
         [theme]
         base = "dark"
         primaryColor = "#00ff41"
 
-        [theme.invalidSubsection]
+        [theme.invalidSection]
         primaryColor = "#ff0000"
         """
 
@@ -2356,11 +2475,11 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             """
 
             with self._config_patches(config_toml, theme_files=[theme_file]):
-                with pytest.raises(StreamlitAPIException) as cm:
+                with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
                     config.get_config_options()
 
-                assert "invalid theme subsection" in str(cm.value)
-                assert "invalidSubsection" in str(cm.value)
+                assert "Invalid theme section" in str(cm.value)
+                assert "invalidSection" in str(cm.value)
 
     def test_theme_base_no_theme_section_error(self):
         """Test error when theme file is missing [theme] section."""
@@ -2376,7 +2495,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             """
 
             with self._config_patches(config_toml, theme_files=[theme_file]):
-                with pytest.raises(StreamlitAPIException) as cm:
+                with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
                     config.get_config_options()
 
                 assert "must contain a [theme] section" in str(cm.value)
@@ -2398,7 +2517,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
             """
 
             with self._config_patches(config_toml, theme_files=[malformed_theme_file]):
-                with pytest.raises(StreamlitAPIException) as cm:
+                with pytest.raises(StreamlitInvalidThemeError) as cm:
                     config.get_config_options()
 
                 assert "Error loading theme file" in str(cm.value)
@@ -2419,7 +2538,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
         """
 
         with self._config_patches(config_toml):
-            with pytest.raises(StreamlitAPIException) as cm:
+            with pytest.raises(StreamlitInvalidThemeError) as cm:
                 config.get_config_options()
 
             assert "Could not load theme file from URL" in str(cm.value)

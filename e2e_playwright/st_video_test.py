@@ -72,7 +72,6 @@ def test_video_width_configurations(app: Page, assert_snapshot: ImageCompareFunc
 
 # Chromium miss codecs required to play that mp3 videos
 # https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
-@pytest.mark.flaky(reruns=3)
 @pytest.mark.skip_browser("chromium")
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly via screenshots matching."""

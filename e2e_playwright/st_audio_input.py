@@ -180,3 +180,32 @@ st.audio_input("Width Stretch", width="stretch")
 
 # Audio input with fixed pixel width
 st.audio_input("Width 300px", width=300)
+
+if st.toggle("Update audio input props"):
+    dyn_val = st.audio_input(
+        "Updated dynamic audio input",
+        key="dynamic_audio_input_key",
+        sample_rate=44100,
+        help="updated help",
+        width=300,
+        on_change=lambda a, param: print(
+            f"Updated audio input - callback triggered: {a} {param}"
+        ),
+        args=("Updated audio input arg",),
+        kwargs={"param": "updated audio input kwarg param"},
+    )
+    st.write("Updated audio input value:", bool(dyn_val))
+else:
+    dyn_val = st.audio_input(
+        "Initial dynamic audio input",
+        key="dynamic_audio_input_key",
+        sample_rate=16000,
+        help="initial help",
+        width="stretch",
+        on_change=lambda a, param: print(
+            f"Initial audio input - callback triggered: {a} {param}"
+        ),
+        args=("Initial audio input arg",),
+        kwargs={"param": "initial audio input kwarg param"},
+    )
+    st.write("Initial audio input value:", bool(dyn_val))

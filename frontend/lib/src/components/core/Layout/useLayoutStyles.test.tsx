@@ -867,6 +867,119 @@ describe("#useLayoutStyles", () => {
       })
     })
 
+    describe("that has remWidth in widthConfig", () => {
+      it.each([
+        [
+          new streamlit.WidthConfig({ remWidth: 2.5 }),
+          getDefaultStyles({ width: "2.5rem" }),
+        ],
+        [
+          new streamlit.WidthConfig({ remWidth: 0.75 }),
+          getDefaultStyles({ width: "0.75rem" }),
+        ],
+        [
+          new streamlit.WidthConfig({ remWidth: 4.25 }),
+          getDefaultStyles({ width: "4.25rem" }),
+        ],
+      ])(
+        "and with a widthConfig value of %o, returns %o",
+        (widthConfig, expected) => {
+          const element = new MockElement({ widthConfig })
+          const { result } = renderHook(() => useLayoutStyles({ element }))
+          expect(result.current).toEqual(expected)
+        }
+      )
+    })
+
+    describe("that has remHeight in heightConfig", () => {
+      it.each([
+        [
+          new streamlit.HeightConfig({ remHeight: 2.5 }),
+          getDefaultStyles({ height: "2.5rem" }),
+        ],
+        [
+          new streamlit.HeightConfig({ remHeight: 0.75 }),
+          getDefaultStyles({ height: "0.75rem" }),
+        ],
+        [
+          new streamlit.HeightConfig({ remHeight: 4.25 }),
+          getDefaultStyles({ height: "4.25rem" }),
+        ],
+      ])(
+        "and with a heightConfig value of %o, returns %o",
+        (heightConfig, expected) => {
+          const element = new MockElement({ heightConfig })
+          const { result } = renderHook(() => useLayoutStyles({ element }))
+          expect(result.current).toEqual(expected)
+        }
+      )
+    })
+
+    describe("flex property with rem dimensions", () => {
+      it("should include flex for horizontal direction with rem width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ remWidth: 2.5 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.flex).toBe("0 0 2.5rem")
+        expect(result.current.width).toBe("2.5rem")
+      })
+
+      it("should include flex for vertical direction with rem height", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ remHeight: 4.25 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current.flex).toBe("0 0 4.25rem")
+        expect(result.current.height).toBe("4.25rem")
+      })
+
+      it("should not include flex for vertical direction with rem width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ remWidth: 2.5 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current.flex).toBeUndefined()
+        expect(result.current.width).toBe("2.5rem")
+      })
+
+      it("should not include flex for horizontal direction with rem height", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ remHeight: 4.25 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.flex).toBeUndefined()
+        expect(result.current.height).toBe("4.25rem")
+      })
+    })
+
+    describe("with both rem width and rem height", () => {
+      it("applies both rem dimensions correctly", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ remWidth: 2.5 }),
+          heightConfig: new streamlit.HeightConfig({ remHeight: 4.25 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current).toEqual(
+          getDefaultStyles({
+            width: "2.5rem",
+            height: "4.25rem",
+            flex: "0 0 4.25rem",
+          })
+        )
+      })
+    })
+
     describe("with styleOverrides", () => {
       it("applies style overrides to computed styles", () => {
         const element = new MockElement({

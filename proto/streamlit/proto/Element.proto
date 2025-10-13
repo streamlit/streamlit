@@ -62,6 +62,7 @@ import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
+import "streamlit/proto/Space.proto";
 import "streamlit/proto/Text.proto";
 import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
@@ -129,6 +130,7 @@ message Element {
     Skeleton skeleton = 52;
     Slider slider = 21;
     Snow snow = 46;
+    Space space = 60;
     Spinner spinner = 44;
     Text text = 1;
     TextArea text_area = 22;
@@ -140,7 +142,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 60
+    // Next ID: 61
   }
 
   reserved 9;

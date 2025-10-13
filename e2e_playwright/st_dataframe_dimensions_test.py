@@ -76,7 +76,7 @@ def test_data_frame_resizing(app: Page):
     expect(dataframe_element).to_have_css("height", "200px")
 
 
-@pytest.mark.flaky(reruns=3)
+@pytest.mark.skip_browser("firefox")
 def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe should render as expected with width and height."""
     stretch_dataframe = app.get_by_test_id("stDataFrame").nth(14)

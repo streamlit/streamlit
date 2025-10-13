@@ -194,3 +194,42 @@ st.slider(
 
 st.slider("Label 19 - Width 300px", min_value=0, max_value=100, width=300)
 st.slider("Label 20 - Width Stretch", min_value=0, max_value=100, width="stretch")
+
+if st.toggle("Update slider props"):
+    dyn_value = st.slider(
+        "Updated dynamic slider",
+        value=42,
+        width=300,
+        help="updated help",
+        format="%d€",
+        key="dynamic_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Updated slider - callback triggered: {a} {param}"
+        ),
+        args=("Updated slider arg",),
+        kwargs={"param": "updated kwarg param"},
+        # min_value, max_value, and step are not yet supported for dynamic changes
+        # keeping it at the same value:
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Updated slider value:", dyn_value)
+else:
+    dyn_value = st.slider(
+        "Initial dynamic slider",
+        value=25,
+        width="stretch",
+        help="initial help",
+        format="%0.2f",
+        key="dynamic_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Initial slider - callback triggered: {a} {param}"
+        ),
+        args=("Initial slider arg",),
+        kwargs={"param": "initial kwarg param"},
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Initial slider value:", dyn_value)

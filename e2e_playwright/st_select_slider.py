@@ -153,3 +153,38 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.toggle("Update select slider props"):
+    dyn_val = st.select_slider(
+        "Updated dynamic select slider",
+        value="blue",
+        width=300,
+        help="updated help",
+        key="dynamic_select_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Updated select slider - callback triggered: {a} {param}"
+        ),
+        args=("Updated select arg",),
+        kwargs={"param": "updated kwarg param"},
+        # options are not yet supported for dynamic changes
+        # keeping it at the same value:
+        options=["red", "orange", "yellow", "green", "blue"],
+    )
+    st.write("Updated select slider value:", dyn_val)
+else:
+    dyn_val = st.select_slider(
+        "Initial dynamic select slider",
+        value="orange",
+        width="stretch",
+        help="initial help",
+        key="dynamic_select_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Initial select slider - callback triggered: {a} {param}"
+        ),
+        args=("Initial select arg",),
+        kwargs={"param": "initial kwarg param"},
+        # options are not yet supported for dynamic changes
+        # keeping it at the same value:
+        options=["red", "orange", "yellow", "green", "blue"],
+    )
+    st.write("Initial select slider value:", dyn_val)
