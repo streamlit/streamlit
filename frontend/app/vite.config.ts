@@ -115,8 +115,17 @@ export default defineConfig({
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
           if (assetInfo.name?.endsWith(".css")) {
+            // Ensure the entry file is named index.css.
+            // We can infer it based on the originalFileName
+            // being index.html (the root html file).
+            if (
+              assetInfo.names.includes("index.css") &&
+              assetInfo.originalFileNames.includes("index.html")
+            ) {
+              return `static/css/[name]${HASH}[extname]`
+            }
             // For CSS files, place them in the /static/css/ directory
-            return `static/css/[name]${HASH}[extname]`
+            return `static/css/[name].[hash][extname]`
           }
 
           // For other assets, use the /static/media/ directory
