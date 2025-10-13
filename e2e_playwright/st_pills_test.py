@@ -250,7 +250,7 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_help_tooltip(app, dynamic_pills, "initial help")
 
     # Click a selection and submit
-    dynamic_pills.filter(has_text="banana").click()
+    get_pill_button(dynamic_pills, "banana").click()
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Initial pills value:", "banana")
@@ -271,6 +271,6 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_help_tooltip(app, dynamic_pills, "updated help")
 
     # Click a different value
-    dynamic_pills.filter(has_text="orange").click()
+    get_pill_button(dynamic_pills, "orange").click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated pills value:", "orange")

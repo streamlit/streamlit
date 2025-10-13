@@ -229,7 +229,9 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     expect_prefixed_markdown(app, "Initial feedback value:", "2")
 
     # Click to change selection
-    get_feedback_icon_button(feedback_widget, "star", 3).click()
+    feedback_widget.get_by_test_id(
+        re.compile("stBaseButton-borderlessIcon(Active)?")
+    ).nth(3).click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial feedback value:", "3")
 
@@ -243,6 +245,8 @@ def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(feedback_widget, name="st_feedback-dynamic_updated")
 
     # Click a different value
-    get_feedback_icon_button(feedback_widget, "star", 4).click()
+    feedback_widget.get_by_test_id(
+        re.compile("stBaseButton-borderlessIcon(Active)?")
+    ).nth(4).click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated feedback value:", "4")
