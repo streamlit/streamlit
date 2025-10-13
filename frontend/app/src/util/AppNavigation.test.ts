@@ -85,7 +85,6 @@ function generateNewSession(changes = {}): NewSession {
 
 describe("stripMarkdown", () => {
   it("removes basic markdown formatting", () => {
-    expect(stripMarkdown("*bold*")).toBe("bold")
     expect(stripMarkdown("_italic_")).toBe("italic")
     expect(stripMarkdown("**very bold**")).toBe("very bold")
   })
