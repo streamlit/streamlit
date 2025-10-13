@@ -592,8 +592,10 @@ def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     dynamic_chat_input = get_element_by_key(app, "dynamic_chat_input_with_key")
     expect(dynamic_chat_input).to_be_visible()
 
-    # Initial state
-    expect(dynamic_chat_input).to_contain_text("Initial dynamic chat input")
+    # Initial state (placeholder is rendered as attribute, not visible text)
+    expect(dynamic_chat_input.locator("textarea")).to_have_attribute(
+        "placeholder", "Initial dynamic chat input"
+    )
     assert_snapshot(dynamic_chat_input, name="st_chat_input-dynamic_initial")
 
     # Type something and submit
@@ -608,8 +610,10 @@ def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Click the toggle to update the chat input props
     click_toggle(app, "Update chat input props")
 
-    # New chat input is visible:
-    expect(dynamic_chat_input).to_contain_text("Updated dynamic chat input")
+    # New chat input is rendered with updated placeholder text
+    expect(dynamic_chat_input.locator("textarea")).to_have_attribute(
+        "placeholder", "Updated dynamic chat input"
+    )
 
     dynamic_chat_input.scroll_into_view_if_needed()
     assert_snapshot(dynamic_chat_input, name="st_chat_input-dynamic_updated")
