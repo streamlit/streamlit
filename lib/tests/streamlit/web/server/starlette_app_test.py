@@ -30,6 +30,7 @@ from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit import file_util
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -112,14 +113,22 @@ class _DummyRuntime:
 
 @pytest.fixture
 def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime]]:
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
 
-    runtime = _DummyRuntime(component_dir)
-    app = create_starlette_app(runtime)
-    with TestClient(app) as client:
-        yield client, runtime
+    with patch_config_options({"server.baseUrlPath": "", "global.developmentMode": False}):
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+        runtime = _DummyRuntime(component_dir)
+        app = create_starlette_app(runtime)
+        with TestClient(app) as client:
+            yield client, runtime
+
+        monkeypatch.undo()
 
 
 def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
