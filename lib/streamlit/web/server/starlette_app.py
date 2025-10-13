@@ -155,7 +155,8 @@ class _StarletteSessionClient(SessionClient):
 
 
 def create_starlette_app(runtime: Runtime) -> Starlette:
-    try:  # pragma: no cover - import guard
+    try:
+        import anyio
         from starlette.applications import Starlette
         from starlette.datastructures import UploadFile
         from starlette.exceptions import HTTPException
@@ -305,6 +306,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 runtime.handle_backmsg(session_id, back_msg)
 
         except WebSocketDisconnect:
+            # The websocket was closed by the client,
+            # we are handling it in the finally block.
             pass
         finally:
             if session_id is not None:
@@ -428,8 +431,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         try:
-            import anyio
-
             async with await anyio.open_file(abspath, "rb") as file:
                 data = await file.read()
         except OSError as exc:
@@ -520,15 +521,11 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         return response
 
     @app.on_event("startup")
-    async def _on_startup() -> (
-        None
-    ):  # pragma: no cover - exercised in integration tests
+    async def _on_startup() -> None:
         await runtime.start()
 
     @app.on_event("shutdown")
-    async def _on_shutdown() -> (
-        None
-    ):  # pragma: no cover - exercised in integration tests
+    async def _on_shutdown() -> None:
         runtime.stop()
 
     return app
