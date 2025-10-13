@@ -43,7 +43,7 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import {
   FileSize,
@@ -84,7 +84,6 @@ const FileUploader = ({
   fragmentId,
   width,
 }: InnerProps): React.ReactElement => {
-  const formClearHelperRef = useRef(new FormClearHelper())
   const localFileIdCounterRef = useRef(1)
   const forceUpdatingStatusRef = useRef(false)
 
@@ -253,13 +252,6 @@ const FileUploader = ({
     fragmentId,
   ])
 
-  useEffect(() => {
-    const formClearHelper = formClearHelperRef.current
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [])
-
   const onFormCleared = useCallback((): void => {
     setFilesImmediate(() => [])
     const newWidgetValue = createWidgetValueFromFiles([])
@@ -277,13 +269,11 @@ const FileUploader = ({
     widgetMgr,
   ])
 
-  useEffect(() => {
-    formClearHelperRef.current.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      onFormCleared
-    )
-  }, [widgetMgr, element.formId, onFormCleared])
+  useFormClearHelper({
+    element,
+    widgetMgr,
+    onFormCleared,
+  })
 
   const isFileTypeAllowed = useCallback(
     (file: File): boolean => {
