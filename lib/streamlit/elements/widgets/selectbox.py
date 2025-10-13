@@ -404,6 +404,8 @@ class SelectboxMixin:
         any
             The selected option or ``None`` if no option is selected.
 
+            This is a copy of the selected option, not the original.
+
         Examples
         --------
         **Example 1: Use a basic selectbox widget**
