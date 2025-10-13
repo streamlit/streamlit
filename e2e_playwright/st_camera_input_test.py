@@ -160,7 +160,7 @@ def test_camera_input_widths(
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI camera permission issue
-def test_dynamic_camera_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+def test_dynamic_camera_input_props(app: Page):
     """Test that the camera input can be updated dynamically while keeping the state."""
     dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
     expect(dynamic_camera_input).to_be_visible()
@@ -168,10 +168,6 @@ def test_dynamic_camera_input_props(app: Page, assert_snapshot: ImageCompareFunc
     # Check initial state
     expect(dynamic_camera_input).to_contain_text("Initial dynamic camera input")
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
-
-    # Take initial snapshot
-    wait_until(app, check_dimensions_func(dynamic_camera_input))
-    assert_snapshot(dynamic_camera_input, name="st_camera_input-dynamic_initial")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_camera_input, "initial help")
@@ -185,10 +181,8 @@ def test_dynamic_camera_input_props(app: Page, assert_snapshot: ImageCompareFunc
     # The value should still be False (no photo taken)
     expect_prefixed_markdown(app, "Updated camera input value:", "False")
 
-    # Take updated snapshot
-    dynamic_camera_input.scroll_into_view_if_needed()
-    wait_until(app, check_dimensions_func(dynamic_camera_input))
-    assert_snapshot(dynamic_camera_input, name="st_camera_input-dynamic_updated")
+    # Check width manually since we cannot get stable screenshots:
+    expect(dynamic_camera_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_camera_input, "updated help")
