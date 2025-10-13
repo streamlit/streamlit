@@ -26,5 +26,6 @@ message WidthConfig {
     bool use_stretch = 1;
     bool use_content = 2;
     uint32 pixel_width = 3;
+    float rem_width = 4;
   }
 }

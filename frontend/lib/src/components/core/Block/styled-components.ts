@@ -48,6 +48,13 @@ export interface StyledElementContainerProps {
   flex?: React.CSSProperties["flex"]
 }
 
+export const StyledSpace = styled.div({
+  // Styling is handled in StyledElementContainerLayoutWrapper.
+  // Space component should fill the container.
+  width: "100%",
+  height: "100%",
+})
+
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
@@ -86,6 +93,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       ? {
           // Use display: none for empty elements to avoid the flexbox gap.
           display: "none",
+        }
+      : {}),
+    ...(elementType === "space"
+      ? {
+          // Space elements should have minimal cross-axis dimensions.
+          // The FlexContext logic in StyledElementContainerLayoutWrapper handles
+          // the primary dimension (width for horizontal, height for vertical).
+          minWidth: 0,
+          minHeight: 0,
         }
       : {}),
     ...(GLOBAL_ELEMENTS.includes(elementType)

@@ -1493,11 +1493,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@glideapps/glide-data-grid-cells@npm:6.0.4-alpha23":
-  version: 6.0.4-alpha23
-  resolution: "@glideapps/glide-data-grid-cells@npm:6.0.4-alpha23"
+"@glideapps/glide-data-grid-cells@npm:6.0.4-alpha24":
+  version: 6.0.4-alpha24
+  resolution: "@glideapps/glide-data-grid-cells@npm:6.0.4-alpha24"
   dependencies:
-    "@glideapps/glide-data-grid": "npm:6.0.4-alpha23"
+    "@glideapps/glide-data-grid": "npm:6.0.4-alpha24"
     "@linaria/react": "npm:^6.3.0"
     "@toast-ui/editor": "npm:3.2.2"
     "@toast-ui/react-editor": "npm:3.2.3"
@@ -1505,26 +1505,26 @@ __metadata:
   peerDependencies:
     react: ^16.12.0 || 17.x || 18.x || 19.x
     react-dom: ^16.12.0 || 17.x || 18.x || 19.x
-  checksum: 10c0/26ad19a079845f3f92644fcbaa77e6f7b4f344efb0855336ca31281572b3e5cc5d1adffd49c6445efc8c435aefac8d80dfb747bed986ea6d02c888f511678f29
+  checksum: 10c0/050f67569d846002da0763648b5ce731f33dcdc58ba6ac93b2dab5e38c607c4a40a6101807bc11081b6ba7721b2065e32545c768c3b1fdf78aca43f505507a43
   languageName: node
   linkType: hard
 
-"@glideapps/glide-data-grid-source@npm:6.0.4-alpha23":
-  version: 6.0.4-alpha23
-  resolution: "@glideapps/glide-data-grid-source@npm:6.0.4-alpha23"
+"@glideapps/glide-data-grid-source@npm:6.0.4-alpha24":
+  version: 6.0.4-alpha24
+  resolution: "@glideapps/glide-data-grid-source@npm:6.0.4-alpha24"
   dependencies:
-    "@glideapps/glide-data-grid": "npm:6.0.4-alpha23"
+    "@glideapps/glide-data-grid": "npm:6.0.4-alpha24"
   peerDependencies:
     lodash: ^4.17.19
     react: ^16.12.0 || 17.x || 18.x || 19.x
     react-dom: ^16.12.0 || 17.x || 18.x || 19.x
-  checksum: 10c0/f9fefae831dec09350e44c66beed9b94ebda7e0630be7e0fde3ee8ab2e2871fea479be6674dad2c215e218ed65d5cd0bc6d4b0a63fc0be74381d99e18689411f
+  checksum: 10c0/01cfa2264b6a8465f85f2d3d9d435c66c5e92c9eef5d2519ac31b96eb699b2d0a43d9c2b0abaca6bfc955f266856617aa447de7447398c4b1d4ef74b48c14208
   languageName: node
   linkType: hard
 
-"@glideapps/glide-data-grid@npm:6.0.4-alpha23":
-  version: 6.0.4-alpha23
-  resolution: "@glideapps/glide-data-grid@npm:6.0.4-alpha23"
+"@glideapps/glide-data-grid@npm:6.0.4-alpha24":
+  version: 6.0.4-alpha24
+  resolution: "@glideapps/glide-data-grid@npm:6.0.4-alpha24"
   dependencies:
     "@linaria/react": "npm:^6.3.0"
     canvas-hypertxt: "npm:^1.0.3"
@@ -1535,7 +1535,7 @@ __metadata:
     react: ^16.12.0 || 17.x || 18.x || 19.x
     react-dom: ^16.12.0 || 17.x || 18.x || 19.x
     react-responsive-carousel: ^3.2.7
-  checksum: 10c0/4152ca8a1f81d931ddc187b99929fdc8940e1187816b679338ef3ef47c5bff967811989dc6c46e3bb9c7fb44f25a290c0b0ed719dcf1403f6f5bb690cade3f9b
+  checksum: 10c0/5182b3e1a514006f2a20e37e9463774d30e8683143a78cf71e0c2bc671696d081ef8afd7073ce35de17995ab83b290a36eab4b99aadd2e89743ec1a0a1f96447
   languageName: node
   linkType: hard
 
@@ -3714,9 +3714,9 @@ __metadata:
     "@emotion/is-prop-valid": "npm:^1.4.0"
     "@emotion/react": "npm:^11.13.5"
     "@emotion/styled": "npm:^11.14.1"
-    "@glideapps/glide-data-grid": "npm:6.0.4-alpha23"
-    "@glideapps/glide-data-grid-cells": "npm:6.0.4-alpha23"
-    "@glideapps/glide-data-grid-source": "npm:6.0.4-alpha23"
+    "@glideapps/glide-data-grid": "npm:6.0.4-alpha24"
+    "@glideapps/glide-data-grid-cells": "npm:6.0.4-alpha24"
+    "@glideapps/glide-data-grid-source": "npm:6.0.4-alpha24"
     "@loaders.gl/core": "npm:^4.3.4"
     "@loaders.gl/csv": "npm:^4.3.4"
     "@loaders.gl/gltf": "npm:^4.3.4"

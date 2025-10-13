@@ -64,7 +64,6 @@ def test_check_top_level_class(app: Page):
 
 # Webkit is quite flaky, potentially pointing to a bug
 # see the other comments in the test script
-@pytest.mark.flaky(reruns=3)
 @pytest.mark.skip_browser("webkit")
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
