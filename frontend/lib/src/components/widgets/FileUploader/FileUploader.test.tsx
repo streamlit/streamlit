@@ -909,7 +909,7 @@ describe("FileUploader widget tests", () => {
     expect(screen.getAllByTestId("stFileUploaderFile").length).toBe(2)
 
     act(() => {
-      props.widgetMgr.submitForm("form-id")
+      props.widgetMgr.submitForm("form-id", undefined)
     })
 
     await waitFor(() => {

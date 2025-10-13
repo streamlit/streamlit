@@ -87,6 +87,12 @@ const FileUploader = ({
   const localFileIdCounterRef = useRef(1)
   const forceUpdatingStatusRef = useRef(false)
 
+  const nextLocalFileId = useCallback((): number => {
+    const id = localFileIdCounterRef.current
+    localFileIdCounterRef.current += 1
+    return id
+  }, [])
+
   const getInitialFiles = (): UploadFileInfo[] => {
     const widgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (isNullOrUndefined(widgetValue)) {
@@ -104,7 +110,7 @@ const FileUploader = ({
       const fileId = f.fileId as string
       const fileUrls = f.fileUrls as FileURLsProto
 
-      return new UploadFileInfo(name, size, localFileIdCounterRef.current++, {
+      return new UploadFileInfo(name, size, nextLocalFileId(), {
         type: "uploaded",
         fileId,
         fileUrls,
@@ -120,10 +126,6 @@ const FileUploader = ({
     const maxMbs = element.maxUploadSizeMb
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }, [element.maxUploadSizeMb])
-
-  const nextLocalFileId = useCallback((): number => {
-    return localFileIdCounterRef.current++
-  }, [])
 
   type FilesUpdater =
     | UploadFileInfo[]
