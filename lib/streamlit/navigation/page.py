@@ -59,8 +59,10 @@ def Page(  # noqa: N802
     title : str or None
         The title of the page. If this is ``None`` (default), the page title
         (in the browser tab) and label (in the navigation menu) will be
-        inferred from the filename or callable name in ``page``. For more
-        information, see `Overview of multipage apps
+        inferred from the filename or callable name in ``page``. The title may
+        contain basic markdown formatting (bold, italics, emoji shortcodes,
+        links, etc.) which will be stripped when setting the browser tab title.
+        For more information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
     icon : str or None
@@ -140,8 +142,10 @@ class StreamlitPage:
     title : str
         The title of the page.
 
-        Unless declared otherwise in ``st.Page``, the page title is inferred
-        from the filename or callable name. For more information, see
+        The title may contain basic markdown formatting (bold, italics, emoji
+        shortcodes, links, etc.) which will be stripped when setting the browser
+        tab title. Unless declared otherwise in ``st.Page``, the page title is
+        inferred from the filename or callable name. For more information, see
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 

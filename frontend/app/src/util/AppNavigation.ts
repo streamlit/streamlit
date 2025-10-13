@@ -41,12 +41,41 @@ export type PageUrlUpdateCallback = (
 export type PageNotFoundCallback = (pageName?: string) => void
 export type SetIconCallback = (icon: string) => void
 
+/**
+ * Strips markdown formatting from text, leaving just the plain text content.
+ *
+ * Handles the following markdown elements:
+ * - Basic formatting (*bold*, _italics_)
+ * - Links ([text](url))
+ * - Emoji shortcodes (:wave:)
+ * - Material icons (:material/icon_name:)
+ * - Colored text (:color[text])
+ *
+ * Used for converting page titles with markdown to plain text for browser tabs.
+ */
+export function stripMarkdown(text: string): string {
+  return (
+    text
+      // Remove *bold* and _italics_
+      .replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, "$1")
+      // Remove [links](url)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      // Remove emoji shortcodes
+      .replace(/:[a-zA-Z0-9_+-]+:/g, "")
+      // Remove material icons
+      .replace(/:[a-zA-Z0-9_+/-]+:/g, "")
+      // Remove :color[text] and :color-background[text]
+      .replace(/:[a-zA-Z0-9_+-]+(?:-background)?\[(.*?)\]/g, "$1")
+      .trim()
+  )
+}
+
 function getTitle(pageName: string): string {
   if (!pageName) {
     return "Streamlit"
   }
 
-  return pageName
+  return stripMarkdown(pageName)
 }
 
 export class AppNavigation {

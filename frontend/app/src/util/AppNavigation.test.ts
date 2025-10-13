@@ -30,6 +30,7 @@ import {
   PageNotFoundCallback,
   PageUrlUpdateCallback,
   SetIconCallback,
+  stripMarkdown,
 } from "./AppNavigation"
 
 function generateNewSession(changes = {}): NewSession {
@@ -81,6 +82,46 @@ function generateNewSession(changes = {}): NewSession {
     ...changes,
   })
 }
+
+describe("stripMarkdown", () => {
+  it("removes basic markdown formatting", () => {
+    expect(stripMarkdown("*bold*")).toBe("bold")
+    expect(stripMarkdown("_italic_")).toBe("italic")
+    expect(stripMarkdown("**very bold**")).toBe("very bold")
+  })
+
+  it("handles links", () => {
+    expect(stripMarkdown("[link](https://example.com)")).toBe("link")
+    expect(stripMarkdown("[text with spaces](url)")).toBe("text with spaces")
+  })
+
+  it("removes emoji shortcodes", () => {
+    expect(stripMarkdown("Hello :wave:")).toBe("Hello")
+    expect(stripMarkdown(":smile: text")).toBe("text")
+    expect(stripMarkdown("before :+1: after")).toBe("before  after")
+  })
+
+  it("removes material icons", () => {
+    expect(stripMarkdown(":material/info:")).toBe("")
+    expect(stripMarkdown("before:material/settings:after")).toBe("beforeafter")
+    expect(stripMarkdown("text :material/thumb_up: here")).toBe("text  here")
+  })
+
+  it("removes colored text", () => {
+    expect(stripMarkdown(":red[colored]")).toBe("colored")
+    expect(stripMarkdown(":blue-background[highlighted]")).toBe("highlighted")
+    expect(stripMarkdown("start :green[middle] end")).toBe("start middle end")
+  })
+
+  it("handles combinations of markdown elements", () => {
+    expect(stripMarkdown(":wave: *Hello* [world](url)!")).toBe("Hello world!")
+    expect(stripMarkdown(":material/settings: **Settings** :gear:")).toBe(
+      "Settings"
+    )
+    expect(stripMarkdown("**:red[Important]** :warning:")).toBe("Important")
+    expect(stripMarkdown(":red[_italic text_]")).toBe("italic text")
+  })
+})
 
 describe("AppNavigation", () => {
   let hostCommunicationMgr: HostCommunicationManager

@@ -19,8 +19,8 @@ import React, { MouseEvent, ReactElement } from "react"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
 
+import NavigationTitle from "./NavigationTitle"
 import {
-  StyledSidebarLinkText,
   StyledSidebarNavIcon,
   StyledSidebarNavLink,
   StyledSidebarNavLinkContainer,
@@ -91,14 +91,12 @@ const SidebarNavLink = ({
             />
           </StyledSidebarNavIcon>
         ) : null}
-        <StyledSidebarLinkText
+        <NavigationTitle
+          title={children}
           isActive={isActive}
-          disabled={disableSidebarNavLinks}
           isTopNav={isTopNav}
-          label={children}
-        >
-          {children}
-        </StyledSidebarLinkText>
+          disabled={disableSidebarNavLinks}
+        />
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>
   )
