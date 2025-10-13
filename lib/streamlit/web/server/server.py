@@ -591,9 +591,6 @@ class Server:
                 )
                 if attempt == MAX_PORT_SEARCH_RETRIES:
                     raise
-            except Exception as exc:  # pragma: no cover - defensive
-                last_exception = exc
-                raise
 
         if last_exception:
             raise last_exception
