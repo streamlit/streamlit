@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python ${CLAUDE_PROJECT_DIR}/.claude/stop_hook.py",
-            "timeout": 300
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

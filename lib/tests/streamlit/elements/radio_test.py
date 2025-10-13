@@ -320,6 +320,86 @@ class RadioTest(DeltaGeneratorTestCase):
         )
         assert el.width_config.use_content is True
 
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.radio(
+                label="Label 1",
+                key="radio_key",
+                index=0,
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                horizontal=False,
+                captions=["c1", "c2"],
+                # Whitelisted kwargs:
+                options=["a", "b"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c1 = self.get_delta_from_queue().new_element.radio
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.radio(
+                label="Label 2",
+                key="radio_key",
+                index=1,
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                horizontal=True,
+                captions=["c1x", "c2x"],
+                # Whitelisted kwargs:
+                options=["a", "b"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c2 = self.get_delta_from_queue().new_element.radio
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            (
+                "options",
+                {"options": ["a", "b"], "format_func": str},
+                {"options": ["a", "b", "c"], "format_func": str},
+            ),
+            (
+                "format_func",
+                {"options": ["a", "b"], "format_func": str},
+                {"options": ["a", "b"], "format_func": str.upper},
+            ),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, _name: str, first_kwargs: dict, second_kwargs: dict
+    ) -> None:
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.radio(label="Label 1", key="radio_key2", **first_kwargs)
+            c1 = self.get_delta_from_queue().new_element.radio
+            id1 = c1.id
+
+            st.radio(label="Label 2", key="radio_key2", **second_kwargs)
+            c2 = self.get_delta_from_queue().new_element.radio
+            id2 = c2.id
+            assert id1 != id2
+
 
 def test_radio_interaction():
     """Test interactions with an empty radio widget."""

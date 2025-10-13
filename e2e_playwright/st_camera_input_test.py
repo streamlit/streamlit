@@ -17,7 +17,11 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_camera_input,
+    get_element_by_key,
+)
 
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
@@ -40,9 +44,10 @@ def test_displays_correct_number_of_elements(app: Page):
 @pytest.mark.only_browser("chromium")
 def test_captures_photo(app: Page):
     """Test camera_input captures photo when 'Take photo' button clicked."""
-    # Wait for some timeout, until fake video stream available for camera_input
-    app.wait_for_timeout(3000)
-    take_photo_button = app.get_by_test_id("stCameraInputButton").first
+    camera = get_camera_input(app, "Label1")
+    take_photo_button = camera.get_by_test_id("stCameraInputButton").first
+    # Wait until the fake video stream is ready (button becomes enabled)
+    expect(take_photo_button).to_be_enabled()
     # Capture a photo
     take_photo_button.click()
     expect(app.get_by_test_id("stImage")).to_have_count(1)
@@ -51,13 +56,13 @@ def test_captures_photo(app: Page):
 @pytest.mark.only_browser("chromium")
 def test_clear_photo(app: Page):
     """Test camera_input removes photo when 'Clear photo' button clicked."""
-    # Wait for some timeout, until fake video stream available for camera_input
-    app.wait_for_timeout(3000)
-    take_photo_button = app.get_by_test_id("stCameraInputButton").first
+    camera = get_camera_input(app, "Label1")
+    take_photo_button = camera.get_by_test_id("stCameraInputButton").first
+    expect(take_photo_button).to_be_enabled()
     # Capture a photo
     take_photo_button.click()
     expect(app.get_by_test_id("stImage")).to_have_count(1)
-    remove_photo_button = app.get_by_text("Clear photo").first
+    remove_photo_button = camera.get_by_text("Clear photo").first
     remove_photo_button.click()
     expect(app.get_by_test_id("stImage")).to_have_count(0)
 
@@ -70,7 +75,7 @@ def test_shows_disabled_widget_correctly(
     """Test that it renders disabled camera_input widget correctly."""
     camera_input_widgets = themed_app.get_by_test_id("stCameraInput")
     expect(camera_input_widgets).to_have_count(4)
-    disabled_camera_input = camera_input_widgets.nth(1)
+    disabled_camera_input = get_camera_input(themed_app, "Label2")
 
     # The width is debounced in this component, so we need to wait until the
     # webcam view has a non-zero width/height
@@ -88,7 +93,7 @@ def test_take_photo_button_styling(app: Page):
     expect(camera_input_widgets).to_have_count(4)
 
     # Active button styling
-    active_camera_input = camera_input_widgets.nth(0)
+    active_camera_input = get_camera_input(app, "Label1")
     take_photo_button = active_camera_input.get_by_test_id("stCameraInputButton")
 
     # Check that the button is enabled and has the correct cursor
@@ -102,7 +107,7 @@ def test_take_photo_button_styling(app: Page):
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
     # Disabled button styling
-    disabled_camera_input = camera_input_widgets.nth(1)
+    disabled_camera_input = get_camera_input(app, "Label2")
     take_photo_button = disabled_camera_input.get_by_test_id("stCameraInputButton")
 
     # Check that the button is disabled and has the correct cursor
@@ -134,8 +139,8 @@ def test_camera_input_widths(
     camera_input_widgets = app.get_by_test_id("stCameraInput")
     expect(camera_input_widgets).to_have_count(4)
 
-    stretch_camera = camera_input_widgets.nth(2)
-    pixel_width_camera = camera_input_widgets.nth(3)
+    stretch_camera = get_camera_input(app, "Width Stretch")
+    pixel_width_camera = get_camera_input(app, "Width 300px")
 
     # The width is debounced in this component, so we need to wait until the
     # webcam view has a non-zero width/height
