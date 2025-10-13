@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -248,29 +247,33 @@ def test_text_input_shows_state_value(app: Page):
     )
 
 
-@pytest.mark.flaky(reruns=3)
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     text_input_field = get_element_by_key(app, "text_input_9").locator("input").first
+    expect(text_input_field).to_be_visible()
 
     text_input_field.fill("hello world")
     text_input_field.press("Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text input changed: True")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text input changed:", "True")
 
-    # Change differentwidget to trigger delta path change
+    # Change different widget to trigger delta path change
     first_text_input_field = (
         get_text_input(app, "text input 1 (default)").locator("input").first
     )
+    expect(first_text_input_field).to_be_visible()
+
     first_text_input_field.fill("hello world")
     first_text_input_field.press("Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 1: hello world")
+    expect_prefixed_markdown(app, "value 1:", "hello world")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text input changed: False")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text input changed:", "False")
 
 
 def test_text_input_in_form_with_submit_by_enter(app: Page):

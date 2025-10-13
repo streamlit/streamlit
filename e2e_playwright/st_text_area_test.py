@@ -252,24 +252,29 @@ def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     text_area = get_element_by_key(app, "text_area_9")
     text_area_field = text_area.locator("textarea").first
+    expect(text_area_field).to_be_visible()
 
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text area changed: True")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text area changed:", "True")
 
     # Change different widget to trigger delta path change
     first_text_area = get_text_area(app, "text area 1 (default)")
     first_text_area_field = first_text_area.locator("textarea").first
+    expect(first_text_area_field).to_be_visible()
+
     first_text_area_field.fill("hello world")
     first_text_area_field.press("Control+Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 1: hello world")
+    expect_prefixed_markdown(app, "value 1:", "hello world")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text area changed: False")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text area changed:", "False")
 
 
 def test_text_area_in_form_with_submit_by_enter(app: Page):

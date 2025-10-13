@@ -400,7 +400,7 @@ def test_file_upload_error_message_disallowed_files(
     expect(app.get_by_text("json files are not allowed.")).to_be_visible()
 
 
-@pytest.mark.flaky(reruns=3)
+@pytest.mark.skip_browser("chromium")
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
 

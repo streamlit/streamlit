@@ -32,8 +32,13 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_form_button,
+    click_toggle,
+    expect_help_tooltip,
+    expect_prefixed_markdown,
     get_element_by_key,
 )
+
+NUM_AUDIO_INPUTS = 13
 
 
 def grant_microphone_permissions(page: Page) -> None:
@@ -196,7 +201,7 @@ def test_audio_input_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that audio input widgets are correctly rendered via screenshot matching."""
-    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(12)
+    expect(themed_app.get_by_test_id("stAudioInput")).to_have_count(NUM_AUDIO_INPUTS)
 
     assert_snapshot(
         get_audio_input_by_label(themed_app, "Audio Input 1"),
@@ -434,6 +439,47 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
         audio_input.get_by_text("An error has occurred, please try again.")
     ).to_be_visible()
     assert_snapshot(audio_input, name="st_audio_input-error_state")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_dynamic_audio_input_props(app: Page):
+    """Test that the audio input can be updated dynamically while keeping the state."""
+    # Initial dynamic input
+    audio_input = get_element_by_key(app, "dynamic_audio_input_key")
+    expect(audio_input).to_be_visible()
+    expect(audio_input).to_contain_text("Initial dynamic audio input")
+    expect_prefixed_markdown(app, "Initial audio input value:", "False")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "initial help"
+    )
+
+    # Record
+    record_and_stop(app, "Initial dynamic audio input")
+    wait_for_app_run(app)
+    verify_recording_exists(app, "Initial dynamic audio input")
+
+    expect_prefixed_markdown(app, "Initial audio input value:", "True")
+
+    # Toggle to update props (changes sample_rate)
+    click_toggle(app, "Update audio input props")
+
+    # New widget rendered with same key container but different configuration
+    expect(audio_input).to_contain_text("Updated dynamic audio input")
+
+    # The recorded audio input snapshots are flaky, so we can only verify
+    # metadata in this case.
+
+    # Verify the updated audio input value
+    expect_prefixed_markdown(app, "Updated audio input value:", "True")
+    # Verify new width:
+    expect(audio_input).to_have_css("width", "300px")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(
+        app, audio_input.get_by_test_id("stWidgetLabel"), "updated help"
+    )
 
 
 @pytest.mark.only_browser("chromium")

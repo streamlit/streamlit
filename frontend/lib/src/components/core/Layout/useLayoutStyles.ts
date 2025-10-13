@@ -18,6 +18,8 @@ import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
+import { assertNever } from "~lib/util/assertNever"
+
 import { FlexContext, IFlexContext } from "./FlexContext"
 import { Direction, MinFlexElementWidth } from "./utils"
 
@@ -53,12 +55,16 @@ enum DimensionType {
   PIXEL = "pixel",
   STRETCH = "stretch",
   CONTENT = "content",
+  REM = "rem",
+  AUTO = "auto",
 }
 
-type LayoutDimensionConfig = {
-  type: DimensionType | undefined
-  pixels?: number | undefined
-}
+type LayoutDimensionConfig =
+  | { type: DimensionType.STRETCH }
+  | { type: DimensionType.CONTENT }
+  | { type: DimensionType.PIXEL; pixels: number }
+  | { type: DimensionType.REM; rem: number }
+  | { type: DimensionType.AUTO }
 
 const getWidth = (
   element: Element | BlockProto,
@@ -66,12 +72,15 @@ const getWidth = (
   // level element.
   subElement?: SubElement
 ): LayoutDimensionConfig => {
+  // The current behaviour is for useContainerWidth to take precedence over
+  // width, see arrow.py for reference.
+  if (subElement?.useContainerWidth) {
+    return { type: DimensionType.STRETCH }
+  }
+
   // We need to support old width configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
-  let pixels: number | undefined
-  let type: DimensionType | undefined
-
   const isStretch =
     element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
@@ -80,33 +89,35 @@ const getWidth = (
     element?.widthConfig?.pixelWidth ||
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
+  const isRem = element.widthConfig?.remWidth
 
   if (isStretch) {
-    type = DimensionType.STRETCH
+    return { type: DimensionType.STRETCH }
   } else if (isContent) {
-    type = DimensionType.CONTENT
+    return { type: DimensionType.CONTENT }
+  } else if (isRem && isPositiveNumber(element.widthConfig?.remWidth)) {
+    return { type: DimensionType.REM, rem: element.widthConfig.remWidth }
   } else if (isPixel && isPositiveNumber(element.widthConfig?.pixelWidth)) {
-    type = DimensionType.PIXEL
-    pixels = element.widthConfig?.pixelWidth
+    return {
+      type: DimensionType.PIXEL,
+      pixels: element.widthConfig.pixelWidth,
+    }
   } else if (
     isPixel &&
     isPositiveNumber(subElement?.widthConfig?.pixelWidth)
   ) {
-    type = DimensionType.PIXEL
-    pixels = subElement?.widthConfig?.pixelWidth
+    return {
+      type: DimensionType.PIXEL,
+      pixels: subElement.widthConfig.pixelWidth,
+    }
   } else if (
     isNonZeroPositiveNumber(subElement?.width) &&
     !element.widthConfig
   ) {
-    pixels = subElement?.width
-    type = DimensionType.PIXEL
+    return { type: DimensionType.PIXEL, pixels: subElement.width }
   }
-  // The current behaviour is for useContainerWidth to take precedence over
-  // width, see arrow.py for reference.
-  if (subElement?.useContainerWidth) {
-    type = DimensionType.STRETCH
-  }
-  return { pixels, type }
+
+  return { type: DimensionType.AUTO }
 }
 
 const getHeight = (
@@ -118,62 +129,71 @@ const getHeight = (
   // We need to support old height configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
-  let pixels: number | undefined
-  let type: DimensionType | undefined
-
   const isStretch = !!element.heightConfig?.useStretch
   const isContent = !!element.heightConfig?.useContent
   const isPixel =
     !!element.heightConfig?.pixelHeight ||
     element.heightConfig?.pixelHeight === 0
+  const isRem = element.heightConfig?.remHeight
 
   if (isStretch) {
-    type = DimensionType.STRETCH
+    return { type: DimensionType.STRETCH }
   } else if (isContent) {
-    type = DimensionType.CONTENT
+    return { type: DimensionType.CONTENT }
+  } else if (isRem && isPositiveNumber(element.heightConfig?.remHeight)) {
+    return { type: DimensionType.REM, rem: element.heightConfig.remHeight }
   } else if (isPixel && isPositiveNumber(element.heightConfig?.pixelHeight)) {
-    type = DimensionType.PIXEL
-    pixels = element.heightConfig?.pixelHeight
+    return {
+      type: DimensionType.PIXEL,
+      pixels: element.heightConfig.pixelHeight,
+    }
   } else if (
     isNonZeroPositiveNumber(subElement?.height) &&
     !element.heightConfig
   ) {
-    pixels = subElement?.height
-    type = DimensionType.PIXEL
+    return { type: DimensionType.PIXEL, pixels: subElement.height }
   }
 
-  return { pixels, type }
+  return { type: DimensionType.AUTO }
 }
 
 const getFlex = (
-  widthType: DimensionType | undefined,
-  widthPixels: number | undefined,
-  heightType: DimensionType | undefined,
-  heightPixels: number | undefined,
+  widthConfig: LayoutDimensionConfig,
+  heightConfig: LayoutDimensionConfig,
   direction: Direction | undefined,
   minStretchBehavior?: MinFlexElementWidth
 ): string | undefined => {
-  if (
-    widthType === DimensionType.PIXEL &&
-    direction === Direction.HORIZONTAL
-  ) {
-    return `0 0 ${widthPixels}px`
-  } else if (
-    heightType === DimensionType.PIXEL &&
-    direction === Direction.VERTICAL
-  ) {
-    return `0 0 ${heightPixels}px`
-  } else if (
-    widthType === DimensionType.CONTENT &&
-    direction === Direction.HORIZONTAL
-  ) {
-    return "0 0 fit-content"
-  } else if (
-    widthType === DimensionType.STRETCH &&
-    direction === Direction.HORIZONTAL
-  ) {
-    return `1 1 ${minStretchBehavior ?? "fit-content"}`
+  if (direction === Direction.HORIZONTAL) {
+    switch (widthConfig.type) {
+      case DimensionType.PIXEL:
+        return `0 0 ${widthConfig.pixels}px`
+      case DimensionType.REM:
+        return `0 0 ${widthConfig.rem}rem`
+      case DimensionType.CONTENT:
+        return "0 0 fit-content"
+      case DimensionType.STRETCH:
+        return `1 1 ${minStretchBehavior ?? "fit-content"}`
+      case DimensionType.AUTO:
+        return undefined
+      default:
+        assertNever(widthConfig)
+    }
+  } else if (direction === Direction.VERTICAL) {
+    switch (heightConfig.type) {
+      case DimensionType.PIXEL:
+        return `0 0 ${heightConfig.pixels}px`
+      case DimensionType.REM:
+        return `0 0 ${heightConfig.rem}rem`
+      case DimensionType.CONTENT:
+      case DimensionType.STRETCH:
+      case DimensionType.AUTO:
+        return undefined
+      default:
+        assertNever(heightConfig)
+    }
   }
+
+  return undefined
 }
 
 const getDirection = (
@@ -208,40 +228,57 @@ export const useLayoutStyles = ({
       }
     }
 
-    const { pixels: commandWidth, type: widthType } = getWidth(
-      element,
-      subElement
-    )
-    let width: React.CSSProperties["width"] = "auto"
-    if (widthType === DimensionType.STRETCH) {
-      width = "100%"
-    } else if (widthType === DimensionType.PIXEL) {
-      width = `${commandWidth}px`
-    } else if (widthType === DimensionType.CONTENT) {
-      width = "fit-content"
+    const widthConfig = getWidth(element, subElement)
+    let width: React.CSSProperties["width"]
+
+    switch (widthConfig.type) {
+      case DimensionType.STRETCH:
+        width = "100%"
+        break
+      case DimensionType.REM:
+        width = `${widthConfig.rem}rem`
+        break
+      case DimensionType.PIXEL:
+        width = `${widthConfig.pixels}px`
+        break
+      case DimensionType.CONTENT:
+        width = "fit-content"
+        break
+      case DimensionType.AUTO:
+        width = "auto"
+        break
+      default:
+        assertNever(widthConfig)
     }
 
-    const { pixels: commandHeight, type: heightType } = getHeight(
-      element,
-      subElement
-    )
-    let height: React.CSSProperties["height"] = "auto"
+    const heightConfig = getHeight(element, subElement)
+    let height: React.CSSProperties["height"]
     let overflow: React.CSSProperties["overflow"] = "visible"
 
-    if (heightType === DimensionType.STRETCH) {
-      height = "100%"
-    } else if (heightType === DimensionType.CONTENT) {
-      height = "auto"
-    } else if (heightType === DimensionType.PIXEL) {
-      height = `${commandHeight}px`
-      overflow = "auto"
+    switch (heightConfig.type) {
+      case DimensionType.STRETCH:
+        height = "100%"
+        break
+      case DimensionType.CONTENT:
+        height = "auto"
+        break
+      case DimensionType.REM:
+        height = `${heightConfig.rem}rem`
+        break
+      case DimensionType.PIXEL:
+        height = `${heightConfig.pixels}px`
+        overflow = "auto"
+        break
+      case DimensionType.AUTO:
+        height = "auto"
+        break
+      default:
+        assertNever(heightConfig)
     }
 
     const flex = getFlex(
-      widthType,
-      commandWidth,
-      heightType,
-      commandHeight,
+      widthConfig,
+      heightConfig,
       getDirection(flexContext),
       minStretchBehavior
     )

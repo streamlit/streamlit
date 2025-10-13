@@ -64,7 +64,9 @@ def configure_custom_theme_colors():
 def test_custom_theme_colors(app: Page, assert_snapshot: ImageCompareFunction):
     # Set bigger viewport to better show app content
     app.set_viewport_size({"width": 1280, "height": 1000})
+    # Add a small timeout to allow elements to adjust to the new viewport size
+    app.wait_for_timeout(2000)
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
-    assert_snapshot(app, name="custom_main_colors_app", image_threshold=0.0003)
+    assert_snapshot(app, name="custom_main_colors_app")

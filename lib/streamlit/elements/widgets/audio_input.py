@@ -282,11 +282,13 @@ class AudioInputMixin:
         element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity.
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,
             width=width,
+            sample_rate=sample_rate,
         )
 
         audio_input_proto = AudioInputProto()
