@@ -107,7 +107,6 @@ const NavigationTitle: FC<NavigationTitleProps> = ({
   isTopNav = false,
   disabled = false,
 }): JSX.Element => {
-
   // Get current theme for styled component
   const theme = useEmotionTheme()
 
