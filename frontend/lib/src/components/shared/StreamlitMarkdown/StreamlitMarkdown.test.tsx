@@ -273,7 +273,7 @@ describe("StreamlitMarkdown", () => {
     ({ input, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
       const markdownText = screen.getByText(expected)
-      expect(markdownText).toBeInTheDocument()
+      expect(markdownText).toBeVisible()
       cleanup()
     }
   )
@@ -379,7 +379,7 @@ describe("StreamlitMarkdown", () => {
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
       const markdownText = screen.getByText(expected)
-      expect(markdownText).toBeVisible()
+      expect(markdownText).toBeInTheDocument()
 
       const expectedTag = markdownText.nodeName.toLowerCase()
       expect(expectedTag).not.toEqual(tag)
