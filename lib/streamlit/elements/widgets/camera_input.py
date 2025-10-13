@@ -234,7 +234,7 @@ class CameraInputMixin:
         element_id = compute_and_register_element_id(
             "camera_input",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,

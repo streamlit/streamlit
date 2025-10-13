@@ -19,6 +19,9 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
+    expect_help_tooltip,
+    expect_prefixed_markdown,
     get_camera_input,
     get_element_by_key,
 )
@@ -34,11 +37,14 @@ def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
     return check_dimensions
 
 
+NUM_CAMERA_INPUT_WIDGETS = 5
+
+
 @pytest.mark.skip_browser("webkit")
 def test_displays_correct_number_of_elements(app: Page):
     """Test that it renders correct number of camera_input elements."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
 
 @pytest.mark.only_browser("chromium")
@@ -137,7 +143,7 @@ def test_camera_input_widths(
     assert_snapshot: ImageCompareFunction,
 ):
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
     stretch_camera = get_camera_input(app, "Width Stretch")
     pixel_width_camera = get_camera_input(app, "Width 300px")
@@ -151,3 +157,38 @@ def test_camera_input_widths(
     check_dimensions = check_dimensions_func(pixel_width_camera)
     wait_until(app, check_dimensions)
     assert_snapshot(pixel_width_camera, name="st_camera_input-width_300px")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI camera permission issue
+def test_dynamic_camera_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the camera input can be updated dynamically while keeping the state."""
+    dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
+    expect(dynamic_camera_input).to_be_visible()
+
+    # Check initial state
+    expect(dynamic_camera_input).to_contain_text("Initial dynamic camera input")
+    expect_prefixed_markdown(app, "Initial camera input value:", "False")
+
+    # Take initial snapshot
+    wait_until(app, check_dimensions_func(dynamic_camera_input))
+    assert_snapshot(dynamic_camera_input, name="st_camera_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_camera_input, "initial help")
+
+    # Click the toggle to update the camera input props
+    click_toggle(app, "Update camera input props")
+
+    # Check updated state
+    expect(dynamic_camera_input).to_contain_text("Updated dynamic camera input")
+
+    # The value should still be False (no photo taken)
+    expect_prefixed_markdown(app, "Updated camera input value:", "False")
+
+    # Take updated snapshot
+    dynamic_camera_input.scroll_into_view_if_needed()
+    wait_until(app, check_dimensions_func(dynamic_camera_input))
+    assert_snapshot(dynamic_camera_input, name="st_camera_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_camera_input, "updated help")
