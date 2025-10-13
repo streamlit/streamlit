@@ -100,12 +100,14 @@ const StyledStreamlitMarkdown = styled(StreamlitMarkdown)<{
  * Component that renders page titles in navigation with markdown support.
  * Handles color states for active/inactive and disabled states.
  */
+
 const NavigationTitle: FC<NavigationTitleProps> = ({
   title,
   isActive = false,
   isTopNav = false,
   disabled = false,
-}) => {
+}): JSX.Element => {
+
   // Get current theme for styled component
   const theme = useEmotionTheme()
 
