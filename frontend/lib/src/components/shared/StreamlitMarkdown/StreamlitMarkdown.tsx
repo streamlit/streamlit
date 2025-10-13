@@ -677,9 +677,11 @@ function escapeMarkdownLineForLabel(line: string): string {
   if (trimmedCore.length === 0) {
     return line
   }
+  const coreWithEscapedBackslashes = core.replace(/\\/g, "\\\\")
+  const trimmedCoreWithEscapedBackslashes = trimmedCore.replace(/\\/g, "\\\\")
   // Escape tokens that would otherwise be interpreted as list or quote markers.
   if (SINGLE_CHARACTER_LABEL_TOKENS.has(trimmedCore)) {
-    return `${leadingWhitespace}\\${trimmedCore}${trailingWhitespace}`
+    return `${leadingWhitespace}\\${trimmedCoreWithEscapedBackslashes}${trailingWhitespace}`
   }
   // Match ordered list tokens (1., 2), etc.) with optional trailing dot or parenthesis
   const orderedListTokenMatch = trimmedCore.match(/^(\d+)([.)])$/)
@@ -689,10 +691,13 @@ function escapeMarkdownLineForLabel(line: string): string {
   }
   // Escape horizontal rules (---, ***, ___, - - -, * * *, _ _ _)
   if (/^([-*_])(?:\s*\1){2,}$/.test(trimmedCore)) {
-    const escapedCore = core.replace(/([-*_])/g, "\\$1")
+    const escapedCore = coreWithEscapedBackslashes.replace(/([-*_])/g, "\\$1")
     return `${leadingWhitespace}${escapedCore}${trailingWhitespace}`
   }
-  return line
+  if (core === coreWithEscapedBackslashes) {
+    return line
+  }
+  return `${leadingWhitespace}${coreWithEscapedBackslashes}${trailingWhitespace}`
 }
 
 // Standard remark plugins that don't depend on theme or props
