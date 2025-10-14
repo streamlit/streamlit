@@ -114,17 +114,21 @@ export default defineConfig({
         entryFileNames: `static/js/[name]${HASH}.js`,
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
+          // For CSS files, place them in the /static/css/ directory
           if (assetInfo.name?.endsWith(".css")) {
-            // Ensure the entry file is named index.css.
-            // We can infer it based on the originalFileName
-            // being index.html (the root html file).
+            // If OMIT_HASH_FROM_MAIN_FILES is set, we don't want to include the
+            // hash in the filename of the entry file at the minimum. There could
+            // be other files with the same name that cause a conflict, which would
+            // increment the entry file to index2.css, etc. This ensures the entry
+            // file is named index.css in this case.
             if (
               assetInfo.names.includes("index.css") &&
               assetInfo.originalFileNames.includes("index.html")
             ) {
               return `static/css/[name]${HASH}[extname]`
             }
-            // For CSS files, place them in the /static/css/ directory
+
+            // For chunk css files, include the hash in the filename.
             return `static/css/[name].[hash][extname]`
           }
 
