@@ -388,7 +388,7 @@ def _convert_altair_to_vega_lite_spec(
     # type: ignore[arg-type,attr-defined,unused-ignore]
     alt.data_transformers.register("to_arrow_dataset", _to_arrow_dataset)
 
-    # Settings like alt.theme.enable and alt.data_fransformers.enable are global to all
+    # Settings like alt.theme.enable and alt.data_transformers.enable are global to all
     # threads. So this lock makes sure that whatever we set those to only apply to the
     # current thread.
     with _altair_globals_lock:
