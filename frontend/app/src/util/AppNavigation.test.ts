@@ -119,6 +119,7 @@ describe("stripMarkdown", () => {
     )
     expect(stripMarkdown("**:red[Important]** :warning:")).toBe("Important")
     expect(stripMarkdown(":red[_italic text_]")).toBe("italic text")
+    expect(stripMarkdown("*bold and _italic text_*")).toBe("bold italic text")
   })
 })
 
