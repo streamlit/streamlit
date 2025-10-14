@@ -118,8 +118,8 @@
     "uuid": "^13.0.0",
     "vega": "^6.2.0",
     "vega-embed": "^7.0.2",
-    "vega-interpreter": "^2.1.0",
-    "vega-lite": "6.3.1",
+    "vega-interpreter": "^2.2.1",
+    "vega-lite": "6.4.1",
     "wavesurfer.js": "^7.10.1",
     "xxhashjs": "^0.2.2"
   },
