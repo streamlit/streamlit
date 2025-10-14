@@ -35,17 +35,17 @@ def register_handler(
 ) -> None:
     """
     Register a custom logging handler to be attached to Streamlit loggers.
-    
+
     This function must be called before any Streamlit loggers are created
     (i.e., before importing streamlit.web.cli or creating a Streamlit app).
-    
+
     Args:
         handler: A logging.Handler instance that will receive log records
         apply_to_tornado: If True, also attach handler to Tornado loggers
             (tornado.access, tornado.application, tornado.general)
         remove_default_handler: If True, remove Streamlit's default console handler
             and only use the custom handler
-    
+
     Example:
         >>> import logging
         >>> from streamlit.logger import register_handler
@@ -62,13 +62,13 @@ def register_handler(
         >>> cli.main()
     """
     _custom_handlers.append(handler)
-    
+
     # Apply to already-created loggers
     for logger in _loggers.values():
         if remove_default_handler and hasattr(logger, 'streamlit_console_handler'):
             logger.removeHandler(logger.streamlit_console_handler)
         logger.addHandler(handler)
-    
+
     # Apply to Tornado loggers if requested
     if apply_to_tornado:
         for logger_name in ["tornado.access", "tornado.application", "tornado.general"]:
@@ -79,11 +79,11 @@ def register_handler(
 def get_logger(name: str) -> logging.Logger:
     """Get or create a Streamlit logger (existing function, modified)."""
     # ... existing logger creation logic ...
-    
+
     # Attach any registered custom handlers
     for handler in _custom_handlers:
         logger.addHandler(handler)
-    
+
     return logger
 ```
 
@@ -122,25 +122,25 @@ cli.main()
 
 #### **Pros**
 
-1. **Maximum flexibility**: Users control handler type, formatter, destination, filters   
-2. **Standard Python API**: Uses `logging.Handler`, familiar to Python developers  
-3. **No Streamlit coupling**: Streamlit doesn't know or care about JSON/formatters  
-4. **Composable**: Users can register multiple handlers (e.g., one for stdout, one for file)  
+1. **Maximum flexibility**: Users control handler type, formatter, destination, filters
+2. **Standard Python API**: Uses `logging.Handler`, familiar to Python developers
+3. **No Streamlit coupling**: Streamlit doesn't know or care about JSON/formatters
+4. **Composable**: Users can register multiple handlers (e.g., one for stdout, one for file)
 5. **Full control**: Can add filters, set levels per-handler, route to different outputs
 
 #### **Cons**
 
-1. **More complex**: Users must understand handlers vs formatters vs loggers  
-2. **Easy to misconfigure**: Could create duplicate output if `remove_default_handler=False`  
-3. **Handler lifecycle**: Users responsible for handler cleanup/shutdown  
+1. **More complex**: Users must understand handlers vs formatters vs loggers
+2. **Easy to misconfigure**: Could create duplicate output if `remove_default_handler=False`
+3. **Handler lifecycle**: Users responsible for handler cleanup/shutdown
 4. **Timing-sensitive**: Must register before Streamlit creates loggers
 
 #### **Risk Assessment**
 
 **Medium Risk**:
 
-1. If users register handler after loggers created, some logs won't use custom handler  
-2. Could create multiple outputs if default handler not removed  
+1. If users register handler after loggers created, some logs won't use custom handler
+2. Could create multiple outputs if default handler not removed
 3. Handler errors could break logging entirely
 
 ### **Option B: Formatter Registration API**
@@ -166,14 +166,14 @@ def register_formatter(
 ) -> None:
     """
     Register a custom formatter for Streamlit logs.
-    
+
     This formatter will be used for all Streamlit loggers instead of the default
     formatter. Must be called before any Streamlit loggers are created.
-    
+
     Args:
         formatter: A logging.Formatter instance (or subclass)
         apply_to_tornado: If True, also apply formatter to Tornado loggers
-    
+
     Example:
         >>> from pythonjsonlogger import jsonlogger
         >>> from streamlit.logger import register_formatter
@@ -191,7 +191,7 @@ def register_formatter(
     global _custom_formatter, _apply_formatter_to_tornado
     _custom_formatter = formatter
     _apply_formatter_to_tornado = apply_to_tornado
-    
+
     # Reapply to existing loggers
     update_formatter()
 
@@ -201,10 +201,10 @@ def setup_formatter(logger: logging.Logger) -> None:
     # Deregister any previous console loggers
     if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(logger.streamlit_console_handler)
-    
+
     # Create handler
     logger.streamlit_console_handler = logging.StreamHandler()
-    
+
     # Use custom formatter if registered, otherwise default
     if _custom_formatter is not None:
         formatter = _custom_formatter
@@ -212,7 +212,7 @@ def setup_formatter(logger: logging.Logger) -> None:
         # Import here to avoid circular imports
         from streamlit import config
         formatter = _create_standard_formatter(config)
-    
+
     logger.streamlit_console_handler.setFormatter(formatter)
     logger.addHandler(logger.streamlit_console_handler)
 
@@ -222,7 +222,7 @@ def update_formatter() -> None:
     # Reapply to Streamlit loggers
     for logger in _loggers.values():
         setup_formatter(logger)
-    
+
     # Reapply to Tornado loggers if requested
     if _apply_formatter_to_tornado and _custom_formatter is not None:
         for logger_name in ["tornado.access", "tornado.application", "tornado.general"]:
@@ -256,25 +256,25 @@ cli.main()
 
 #### **Pros**
 
-1. **Simpler than handlers**: Users only think about formatting, not handler management  
-2. **No duplicate output**: Streamlit manages the handler lifecycle  
-3. **Clearer scope**: Only affects log formatting, not routing/filtering  
-4. **Standard API**: Uses `logging.Formatter`, familiar interface  
+1. **Simpler than handlers**: Users only think about formatting, not handler management
+2. **No duplicate output**: Streamlit manages the handler lifecycle
+3. **Clearer scope**: Only affects log formatting, not routing/filtering
+4. **Standard API**: Uses `logging.Formatter`, familiar interface
 5. **Less error-prone**: Fewer moving parts, harder to misconfigure
 
 #### **Cons**
 
-1. **Less flexible**: Can't change handler type (always StreamHandler to stdout/stderr)  
-2. **Can't control destination**: Logs always go to console, can't route to file/network  
-3. **Single formatter only**: Can't have different formats for different loggers  
+1. **Less flexible**: Can't change handler type (always StreamHandler to stdout/stderr)
+2. **Can't control destination**: Logs always go to console, can't route to file/network
+3. **Single formatter only**: Can't have different formats for different loggers
 4. **Timing-sensitive**: Still must register before logger creation
 
 #### **Risk Assessment**
 
 **Low Risk**:
 
-1. API is simple and hard to misuse  
-2. Worst case: formatter not applied (logs still work, just wrong format)  
+1. API is simple and hard to misuse
+2. Worst case: formatter not applied (logs still work, just wrong format)
 3. No risk of duplicate output or broken logging
 
 ### **Option C: Hook/Callback Pattern**
@@ -302,16 +302,16 @@ def register_log_transform(
 ) -> None:
     """
     Register a function that transforms log records into formatted strings.
-    
+
     The transform function receives a logging.LogRecord and must return a
     formatted string. Multiple transforms can be registered; they will be
     called in priority order (higher priority first).
-    
+
     Args:
         transform_func: Function that takes LogRecord and returns formatted string
         apply_to_tornado: If True, also apply to Tornado loggers
         priority: Higher priority transforms are called first (default: 0)
-    
+
     Example:
         >>> import json
         >>> from streamlit.logger import register_log_transform
@@ -330,18 +330,18 @@ def register_log_transform(
     _log_transform_hooks.append((priority, transform_func))
     _log_transform_hooks.sort(key=lambda x: x[0], reverse=True)
     _apply_hooks_to_tornado = apply_to_tornado
-    
+
     # Reapply formatters to existing loggers
     update_formatter()
 
 
 class HookFormatter(logging.Formatter):
     """Formatter that applies registered transform hooks."""
-    
+
     def __init__(self, hooks: List[LogTransformHook], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.hooks = hooks
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format record using hooks, or fall back to standard formatting."""
         if self.hooks:
@@ -374,7 +374,7 @@ def setup_formatter(logger: logging.Logger) -> None:
         )
     else:
         formatter = _create_standard_formatter(config)
-    
+
     logger.streamlit_console_handler.setFormatter(formatter)
     logger.addHandler(logger.streamlit_console_handler)
 ```
@@ -427,25 +427,25 @@ register_log_transform(json_transform)
 
 #### **Pros**
 
-1. **Very simple API**: Just a function that takes LogRecord, returns string  
-2. **Language-agnostic**: Not tied to logging.Formatter interface  
-3. **Easy error handling**: Streamlit can catch exceptions and fallback  
-4. **Composable**: Multiple hooks could be chained (though we use highest priority)  
+1. **Very simple API**: Just a function that takes LogRecord, returns string
+2. **Language-agnostic**: Not tied to logging.Formatter interface
+3. **Easy error handling**: Streamlit can catch exceptions and fallback
+4. **Composable**: Multiple hooks could be chained (though we use highest priority)
 5. **Testable**: Easy to unit test transform functions
 
 #### **Cons**
 
-1. **Limited scope**: Only formatting, can't change destination/filtering  
-2. **Less "Pythonic"**: Introduces new concept instead of using standard logging API  
-3. **Performance overhead**: Extra function call per log record  
+1. **Limited scope**: Only formatting, can't change destination/filtering
+2. **Less "Pythonic"**: Introduces new concept instead of using standard logging API
+3. **Performance overhead**: Extra function call per log record
 4. **Duplicate LogRecord access**: Hook receives LogRecord but can't modify it
 
 #### **Risk Assessment**
 
 **Low Risk**:
 
-1. Hooks are isolated (can't affect other parts of logging)  
-2. Built-in error handling with fallback  
+1. Hooks are isolated (can't affect other parts of logging)
+2. Built-in error handling with fallback
 3. Worst case: hook fails, logs use standard format
 
 ### **Option D: Plugin System with Entry Points**
@@ -465,10 +465,10 @@ import logging
 def discover_logging_plugin() -> Optional[logging.Formatter]:
     """
     Discover logging formatters via setuptools entry points.
-    
+
     Looks for entry points in the 'streamlit.logging.formatter' group.
     If multiple plugins are installed, the first one found is used.
-    
+
     Returns:
         A logging.Formatter instance, or None if no plugin found
     """
@@ -477,15 +477,15 @@ def discover_logging_plugin() -> Optional[logging.Formatter]:
     except ImportError:
         # pkg_resources not available
         return None
-    
+
     for entry_point in pkg_resources.iter_entry_points('streamlit.logging.formatter'):
         try:
             # Entry point should be a callable that returns a Formatter
             plugin_factory = entry_point.load()
-            
+
             # Import config here to avoid circular imports
             from streamlit import config
-            
+
             # Call plugin factory, passing config so plugin can read settings
             formatter = plugin_factory(config)
             if isinstance(formatter, logging.Formatter):
@@ -501,14 +501,14 @@ def discover_logging_plugin() -> Optional[logging.Formatter]:
             sys.stderr.write(
                 f"Warning: Failed to load logging plugin {entry_point.name}: {e}\n"
             )
-    
+
     return None
 
 
 def setup_formatter(logger: logging.Logger) -> None:
     """Set up the formatter for a logger (existing function, modified)."""
     # ... handler setup ...
-    
+
     # Try to load plugin formatter
     plugin_formatter = discover_logging_plugin()
     if plugin_formatter is not None:
@@ -517,7 +517,7 @@ def setup_formatter(logger: logging.Logger) -> None:
         # Use default formatter
         from streamlit import config
         formatter = _create_standard_formatter(config)
-    
+
     logger.streamlit_console_handler.setFormatter(formatter)
     logger.addHandler(logger.streamlit_console_handler)
 ```
@@ -554,16 +554,16 @@ import logging
 def create_formatter(config) -> logging.Formatter:
     """
     Factory function called by Streamlit to create formatter.
-    
+
     Args:
         config: Streamlit's config object (can read config options)
-    
+
     Returns:
         A logging.Formatter instance
     """
     # Could read custom config options if defined
     # fields = config.get_option("logger.jsonFields")
-    
+
     return jsonlogger.JsonFormatter(
         fmt='%(message)s %(levelname)s %(name)s %(asctime)s',
         # Plugin controls all formatting details
@@ -578,18 +578,18 @@ Streamlit automatically discovers and uses it.
 
 #### **Pros**
 
-1. **True plugin architecture**: Clean separation between Streamlit and formatters  
-2. **Discoverable**: Can list installed plugins, choose between them  
-3. **Distributable**: Plugins can be published to PyPI, shared across teams  
-4. **No code changes needed**: Just `pip install`, no modification to runner scripts  
+1. **True plugin architecture**: Clean separation between Streamlit and formatters
+2. **Discoverable**: Can list installed plugins, choose between them
+3. **Distributable**: Plugins can be published to PyPI, shared across teams
+4. **No code changes needed**: Just `pip install`, no modification to runner scripts
 5. **Versioned**: Plugin has its own version, release cycle independent of Streamlit
 
 #### **Cons**
 
-1. **More complex setup**: Requires creating a package with setup.py  
-2. **Harder for simple cases**: Overkill if you just want custom formatting  
-3. **Discovery overhead**: Entry point discovery has startup cost  
-4. **Versioning complexity**: Plugin compatibility with Streamlit versions  
+1. **More complex setup**: Requires creating a package with setup.py
+2. **Harder for simple cases**: Overkill if you just want custom formatting
+3. **Discovery overhead**: Entry point discovery has startup cost
+4. **Versioning complexity**: Plugin compatibility with Streamlit versions
 5. **No direct control**: User can't pass arguments to formatter (only via config)
 
 #### **Risk Assessment**
@@ -784,10 +784,10 @@ Option E gives us the best of both worlds: users just point to a Python file via
 
 **Option**: Allow specifying formatter via config.toml
 
-\[logger\]  
+\[logger\]
 formatterClass \= "my\_module.MyFormatter"
 
-**Pros**: No code changes needed, purely configuration 
+**Pros**: No code changes needed, purely configuration
 
 **Cons**: Requires dynamic import (security concern), more complex
 
@@ -797,10 +797,10 @@ formatterClass \= "my\_module.MyFormatter"
 
 **Option**: Allow per-logger formatter registration
 
-register\_formatter(json\_formatter, logger\_pattern="streamlit.\*")  
+register\_formatter(json\_formatter, logger\_pattern="streamlit.\*")
 register\_formatter(plain\_formatter, logger\_pattern="tornado.\*")
 
-**Pros**: Maximum flexibility 
+**Pros**: Maximum flexibility
 
 **Cons**: Complicates API, most users want consistent formatting
 
@@ -814,7 +814,7 @@ from streamlit.logger import SimpleJSONFormatter
 
 register\_formatter(SimpleJSONFormatter())
 
-**Pros**: Works without external dependencies 
+**Pros**: Works without external dependencies
 
 **Cons**: Reinventing wheel, maintenance burden, users still need pythonjsonlogger for advanced features
 
@@ -826,8 +826,8 @@ register\_formatter(SimpleJSONFormatter())
 
 **Options**:
 
-1. Let logging module handle it (current behavior)  
-2. Wrap formatter calls in try/except, fallback to default formatter  
+1. Let logging module handle it (current behavior)
+2. Wrap formatter calls in try/except, fallback to default formatter
 3. Add `safe_mode=True` parameter that enables fallback
 
 **Recommendation**: Start with option 1 (standard logging behavior), add option 3 if users request it.
@@ -838,8 +838,8 @@ register\_formatter(SimpleJSONFormatter())
 
 **Analysis**:
 
-1. Registration should happen once at startup, before threading  
-2. If registration happens during runtime, race conditions could occur  
+1. Registration should happen once at startup, before threading
+2. If registration happens during runtime, race conditions could occur
 3. Python's GIL provides some protection, but not complete
 
 **Recommendation**: Document that registration must happen before multi-threading starts. Add lock if real-world issues arise.
