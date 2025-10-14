@@ -37,7 +37,7 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
-  AUTO_THEME_NAME,
+  CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -1979,7 +1979,9 @@ describe("App", () => {
 
       // Active theme should be set to the auto theme
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(AUTO_THEME_NAME)
+      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
+        CUSTOM_THEME_AUTO_NAME
+      )
     })
 
     it("calls setFonts when fontFaces are provided", () => {
@@ -2114,7 +2116,7 @@ describe("App", () => {
       // Check that the auto theme is set, and that it is the custom light theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: AUTO_THEME_NAME,
+          name: CUSTOM_THEME_AUTO_NAME,
           themeInput: expect.objectContaining({
             primaryColor: "lightblue",
           }),
@@ -2152,7 +2154,7 @@ describe("App", () => {
       // Check that the auto theme is set, and that it is the custom dark theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: AUTO_THEME_NAME,
+          name: CUSTOM_THEME_AUTO_NAME,
           themeInput: expect.objectContaining({
             primaryColor: "darkblue",
           }),

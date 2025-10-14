@@ -38,6 +38,7 @@ import {
   createEmotionTheme,
   createSidebarTheme,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
@@ -3199,10 +3200,11 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
       expect(customThemes).toHaveLength(3)
       expect(customThemes[0].name).toBe(CUSTOM_THEME_LIGHT_NAME)
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
-      expect(customThemes[2].name).toBe(AUTO_THEME_NAME)
+      expect(customThemes[2].name).toBe(CUSTOM_THEME_AUTO_NAME)
 
       // Light theme should use light section override
       expect(customThemes[0].emotion.colors.primary).toBe("lightblue")
@@ -3220,10 +3222,11 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
       expect(customThemes).toHaveLength(3)
       expect(customThemes[0].name).toBe(CUSTOM_THEME_LIGHT_NAME)
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
-      expect(customThemes[2].name).toBe(AUTO_THEME_NAME)
+      expect(customThemes[2].name).toBe(CUSTOM_THEME_AUTO_NAME)
 
       // Light theme should use base config
       expect(customThemes[0].emotion.colors.primary).toBe("green")
@@ -3246,6 +3249,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
       expect(customThemes).toHaveLength(3)
 
       // Light theme
@@ -3275,6 +3279,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
       expect(customThemes).toHaveLength(3)
 
       // Light theme sidebar should merge: theme.sidebar + theme.light.sidebar
@@ -3308,6 +3313,7 @@ describe("Custom theme creation", () => {
 
       const customThemes = createCustomThemes(themeInput)
 
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
       expect(customThemes).toHaveLength(3)
 
       // Light theme sidebar should only have base sidebar config (no light.sidebar override)
@@ -3353,6 +3359,70 @@ describe("Custom theme creation", () => {
       // Empty arrays don't count as configs, so should return 1 theme
       expect(customThemes).toHaveLength(1)
       expect(customThemes[0].name).toBe(CUSTOM_THEME_NAME)
+    })
+
+    it("sets auto theme to light when system preference is light", () => {
+      // Mock the system preference return value (light)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: light)", // Returns true for light
+        })),
+      })
+
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "yellow",
+        light: {
+          primaryColor: "lightyellow",
+          backgroundColor: "white",
+        },
+        dark: {
+          primaryColor: "gold",
+          backgroundColor: "black",
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
+      expect(customThemes).toHaveLength(3)
+      expect(customThemes[2].name).toBe(CUSTOM_THEME_AUTO_NAME)
+
+      // Auto theme should be based the same as the custom light theme
+      expect(customThemes[2].emotion.colors.primary).toBe("lightyellow")
+      expect(customThemes[2].emotion.colors.bgColor).toBe("white")
+    })
+
+    it("sets auto theme to dark when system preference is dark", () => {
+      // Mock the system preference return value (dark)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: dark)", // Returns true for dark
+        })),
+      })
+
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "yellow",
+        light: {
+          primaryColor: "lightyellow",
+          backgroundColor: "white",
+        },
+        dark: {
+          primaryColor: "gold",
+          backgroundColor: "black",
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      // Expect 3 themes: Custom Theme Light, Custom Theme Dark, Custom Theme Auto
+      expect(customThemes).toHaveLength(3)
+      expect(customThemes[2].name).toBe(CUSTOM_THEME_AUTO_NAME)
+
+      // Auto theme should be based the same as the custom light theme
+      expect(customThemes[2].emotion.colors.primary).toBe("gold")
+      expect(customThemes[2].emotion.colors.bgColor).toBe("black")
     })
   })
 })

@@ -22,25 +22,44 @@ import { userEvent } from "@testing-library/user-event"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   AUTO_THEME_NAME,
-  autoTheme,
   createPresetThemes,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   customTheme,
-  customThemeDark,
-  customThemeLight,
   darkTheme,
   LibContextProps,
   lightTheme,
   mockSessionInfo,
   renderWithContexts,
   SessionInfo,
+  ThemeConfig,
 } from "@streamlit/lib"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 
 const mockSetTheme = vi.fn()
+
+export const autoCustomTheme: ThemeConfig = {
+  name: "Use system setting",
+  emotion: lightTheme.emotion,
+  basewebTheme: lightTheme.basewebTheme,
+  primitives: lightTheme.primitives,
+}
+
+const customThemeLight: ThemeConfig = {
+  name: "Custom Theme Light",
+  emotion: lightTheme.emotion,
+  basewebTheme: lightTheme.basewebTheme,
+  primitives: lightTheme.primitives,
+}
+
+const customThemeDark: ThemeConfig = {
+  name: "Custom Theme Dark",
+  emotion: darkTheme.emotion,
+  basewebTheme: darkTheme.basewebTheme,
+  primitives: darkTheme.primitives,
+}
 
 const getContext = (
   extend?: Partial<LibContextProps>
@@ -118,7 +137,7 @@ describe("SettingsDialog", () => {
   })
 
   it("if single custom theme exists, only show Custom Theme as option & disable selectbox", () => {
-    // When single custom theme exists ( no light/dark versions), this is the only option
+    // When single custom theme exists (no light/dark versions), this is the only option
     // and the preset themes are removed from available themes
     const availableThemes = [customTheme]
     const props = getProps()
@@ -133,11 +152,15 @@ describe("SettingsDialog", () => {
     expect(screen.getByText(CUSTOM_THEME_NAME)).toBeVisible()
   })
 
-  it("if custom light theme active, show correct active theme & both custom themes as options", async () => {
+  it("if Custom Theme Light active, show correct active theme & light/dark/auto custom themes as options", async () => {
     const user = userEvent.setup()
     // When custom theme light & dark exist, also have auto theme
     // and the preset themes are removed from available themes
-    const availableThemes = [autoTheme, customThemeLight, customThemeDark]
+    const availableThemes = [
+      autoCustomTheme,
+      customThemeLight,
+      customThemeDark,
+    ]
     const props = getProps()
     const context = getContext({
       availableThemes,
@@ -152,7 +175,7 @@ describe("SettingsDialog", () => {
     const selectbox = screen.getByRole("combobox")
     await user.click(selectbox)
 
-    // Should only show Custom Theme Light and Custom Theme Dark as options
+    // Should only show Auto (Use System Setting), Custom Theme Light and Custom Theme Dark as options
     const options = screen.getAllByRole("option")
     expect(options).toHaveLength(3)
     expect(options[0]).toHaveTextContent(AUTO_THEME_NAME)
@@ -160,9 +183,13 @@ describe("SettingsDialog", () => {
     expect(options[2]).toHaveTextContent(CUSTOM_THEME_DARK_NAME)
   })
 
-  it("if custom dark theme active, show correct active theme & both custom themes as options", async () => {
+  it("if Custom Theme Dark active, show correct active theme & light/dark/auto custom themes as options", async () => {
     const user = userEvent.setup()
-    const availableThemes = [autoTheme, customThemeLight, customThemeDark]
+    const availableThemes = [
+      autoCustomTheme,
+      customThemeLight,
+      customThemeDark,
+    ]
     const props = getProps()
     const context = getContext({
       availableThemes,
@@ -177,7 +204,7 @@ describe("SettingsDialog", () => {
     const selectbox = screen.getByRole("combobox")
     await user.click(selectbox)
 
-    // Should only show Custom Theme Light and Custom Theme Dark as options
+    // Should only show Auto (Use System Setting), Custom Theme Light and Custom Theme Dark as options
     const options = screen.getAllByRole("option")
     expect(options).toHaveLength(3)
     expect(options[0]).toHaveTextContent(AUTO_THEME_NAME)

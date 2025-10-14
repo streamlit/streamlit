@@ -58,6 +58,7 @@ export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 export const CUSTOM_THEME_LIGHT_NAME = "Custom Theme Light"
 export const CUSTOM_THEME_DARK_NAME = "Custom Theme Dark"
+export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
@@ -1298,8 +1299,11 @@ export const hasThemeSectionConfigs = (
 /**
  * Create custom themes from the theme input for main app
  * Function applies merge of sections/subsections and returns custom light/dark theme(s)
+ * When no light/dark section configs are set, returns "Custom Theme" (1 theme)
+ * When light and/or dark section configs are set, returns "Custom Theme Light", "Custom Theme Dark"
+ * & auto based on system preference ("Use System Setting") (3 themes)
  * @param themeInput: the theme input (configs) with nested sections/subsections
- * @returns custom theme(s)
+ * @returns 1 or 3 custom themes
  */
 export const createCustomThemes = (
   themeInput: CustomThemeConfig
@@ -1312,22 +1316,29 @@ export const createCustomThemes = (
   // When light or dark theme section configs are set, need to create a custom theme for each
   if (hasLightConfigs || hasDarkConfigs) {
     const lightThemeInput = handleSectionInheritance(themeInput, "light")
-    const lightTheme = createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput)
+    const lightTheme = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput),
+      displayName: "Light",
+    }
 
     const darkThemeInput = handleSectionInheritance(themeInput, "dark")
-    const darkTheme = createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput)
+    const darkTheme = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput),
+      displayName: "Dark",
+    }
 
     // Also add an auto custom theme based on the system preference
     const autoCustomTheme =
       getSystemThemePreference() === "dark" ? darkTheme : lightTheme
     const autoTheme = {
       ...autoCustomTheme,
-      name: AUTO_THEME_NAME,
+      displayName: AUTO_THEME_NAME,
+      name: CUSTOM_THEME_AUTO_NAME,
     }
     // Return light, dark, and auto custom themes
     customThemes.push(lightTheme, darkTheme, autoTheme)
   } else {
-    // No light/dark section configs set - base determines which custom theme (light or dark) is created
+    // No light/dark section configs set - single "Custom Theme" returned
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
     // Return the single custom theme
     customThemes.push(customTheme)
@@ -1386,6 +1397,8 @@ const setSidebarHeadingFontSizes = (
 
 /**
  * Create the sidebar's theme, including any sidebar custom theme configurations
+ * Note: handleSectionInheritance has already handled section inheritance for sidebar
+ * in generating the main theme.
  * @returns active theme to be used for the sidebar
  */
 export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
@@ -1412,10 +1425,17 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     headingFontSizes: headingFontSizes,
   }
 
-  const baseTheme =
+  let baseTheme =
     getLuminance(sidebarBackground) > 0.5
       ? CustomThemeConfig.BaseTheme.LIGHT
       : CustomThemeConfig.BaseTheme.DARK
+
+  // If the active theme is a light/dark custom theme, use the expected base
+  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+    baseTheme = CustomThemeConfig.BaseTheme.LIGHT
+  } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
+    baseTheme = CustomThemeConfig.BaseTheme.DARK
+  }
 
   // Create the theme with overrides
   return createTheme(

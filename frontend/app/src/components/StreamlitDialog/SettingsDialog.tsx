@@ -104,10 +104,14 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
   const handleThemeChange = useCallback(
     (themeName: string | null): void => {
+      // The themeName from selector will always be Light, Dark, or Use System Setting
+      // These are the names for default themes, and the display names for custom themes
       let newTheme = undefined
       if (themeName) {
-        newTheme = availableThemes.find(
-          (theme: ThemeConfig) => theme.name === themeName
+        newTheme = availableThemes.find((theme: ThemeConfig) =>
+          theme.name.startsWith("Custom Theme")
+            ? theme.displayName === themeName
+            : theme.name === themeName
         )
       }
       if (newTheme === undefined) {
@@ -124,7 +128,10 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   )
 
   const getAvailableThemeChoices = useCallback(() => {
-    return availableThemes.map(theme => theme.name)
+    return availableThemes.map(theme => {
+      // Custom themes have a display name, default themes just use their name
+      return theme.displayName ?? theme.name
+    })
   }, [availableThemes])
 
   return (
@@ -178,7 +185,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 options={getAvailableThemeChoices()}
                 disabled={activeTheme.name === CUSTOM_THEME_NAME}
                 onChange={handleThemeChange}
-                value={activeTheme.name}
+                value={activeTheme.displayName ?? activeTheme.name}
                 placeholder=""
                 acceptNewOptions={false}
               />

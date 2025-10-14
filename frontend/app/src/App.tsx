@@ -59,12 +59,12 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
-  AUTO_THEME_NAME,
   CircularBuffer,
   ComponentRegistry,
   createCustomThemes,
   createFormsData,
   createPresetThemes,
+  CUSTOM_THEME_AUTO_NAME,
   DeployedAppMetadata,
   ensureError,
   extractPageNameFromPathName,
@@ -1340,7 +1340,7 @@ export class App extends PureComponent<Props, State> {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
           const autoThemeIndex = customThemes.findIndex(
-            theme => theme.name === AUTO_THEME_NAME
+            theme => theme.name === CUSTOM_THEME_AUTO_NAME
           )
           this.setAndSendTheme(customThemes[autoThemeIndex])
         } else {
