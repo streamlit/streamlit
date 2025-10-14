@@ -60,8 +60,21 @@ def Page(  # noqa: N802
         The title of the page. If this is ``None`` (default), the page title
         (in the browser tab) and label (in the navigation menu) will be
         inferred from the filename or callable name in ``page``. The title may
-        contain basic markdown formatting (bold, italics, emoji shortcodes,
-        links, etc.) which will be stripped when setting the browser tab title.
+        contain basic markdown formatting which will be stripped when setting
+        the browser tab title. Only the following markdown features are supported:
+
+        - Bold
+        - Italic
+        - Emojis
+        - Material Icons
+
+        The following markdown features are not supported:
+
+        - Links
+        - Headings
+        - HTML tags
+        - Other advanced markdown features
+
         For more information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 

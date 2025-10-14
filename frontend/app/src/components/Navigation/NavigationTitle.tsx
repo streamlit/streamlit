@@ -28,7 +28,18 @@ import {
 
 export interface NavigationTitleProps {
   /**
-   * Title text which may contain markdown
+   * Title text which may contain markdown.
+   * Only basic markdown formatting is supported:
+   * - Bold (**text**)
+   * - Italic (*text*)
+   * - Emojis (e.g., :smile:)
+   * - Material Icons (e.g., :material-home:)
+   *
+   * Note: The following markdown features are not supported:
+   * - Links
+   * - Headings
+   * - HTML tags
+   * - Other advanced markdown features
    */
   title: string
   /**

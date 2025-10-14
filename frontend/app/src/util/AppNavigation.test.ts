@@ -89,11 +89,6 @@ describe("stripMarkdown", () => {
     expect(stripMarkdown("**very bold**")).toBe("very bold")
   })
 
-  it("handles links", () => {
-    expect(stripMarkdown("[link](https://example.com)")).toBe("link")
-    expect(stripMarkdown("[text with spaces](url)")).toBe("text with spaces")
-  })
-
   it("removes emoji shortcodes", () => {
     expect(stripMarkdown("Hello :wave:")).toBe("Hello")
     expect(stripMarkdown(":smile: text")).toBe("text")
@@ -113,7 +108,7 @@ describe("stripMarkdown", () => {
   })
 
   it("handles combinations of markdown elements", () => {
-    expect(stripMarkdown(":wave: *Hello* [world](url)!")).toBe("Hello world!")
+    expect(stripMarkdown(":wave: *Hello* world!")).toBe("Hello world!")
     expect(stripMarkdown(":material/settings: **Settings** :gear:")).toBe(
       "Settings"
     )
