@@ -14,7 +14,7 @@
 
 """chat input and message unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -423,6 +423,94 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions for chat_input."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.chat_input("Placeholder", width=width)
+
+    @parameterized.expand(
+        [
+            (
+                "accept_file",
+                True,
+                "multiple",
+            ),
+            (
+                "file_type",
+                ["txt"],
+                ["csv"],
+            ),
+            (
+                "max_chars",
+                100,
+                200,
+            ),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ) -> None:
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "placeholder": "Label 1",
+                "key": "chat_input_key",
+                # Keep other whitelisted params stable depending on the tested kwarg
+                "accept_file": True,
+                "file_type": ["txt"],
+                "max_chars": 100,
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.chat_input(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.chat_input
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.chat_input(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.chat_input
+            id2 = c2.id
+            assert id1 != id2
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided and only non-whitelisted kwargs change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.chat_input(
+                placeholder="Label 1",
+                key="chat_input_key",
+                disabled=False,
+                width="stretch",
+                on_submit=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                # Whitelisted kwargs (keep stable):
+                accept_file=True,
+                file_type=["txt"],
+                max_chars=100,
+            )
+            c1 = self.get_delta_from_queue().new_element.chat_input
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.chat_input(
+                placeholder="Label 2",
+                key="chat_input_key",
+                disabled=True,
+                width=300,
+                on_submit=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                # Keep whitelisted the same to ensure ID stability
+                accept_file=True,
+                file_type=["txt"],
+                max_chars=100,
+            )
+            c2 = self.get_delta_from_queue().new_element.chat_input
+            id2 = c2.id
+            assert id1 == id2
 
     def test_just_label(self):
         """Test st.chat_input with just a label."""

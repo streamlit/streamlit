@@ -624,7 +624,13 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity. Only include
+            # properties that can invalidate the current widget state
+            # when changed. For chat_input, those are:
+            # - accept_file: Changes whether files can be attached (and how)
+            # - file_type: Restricts the accepted file types
+            # - max_chars: Changes the maximum allowed characters for the input
+            key_as_main_identity={"accept_file", "file_type", "max_chars"},
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,

@@ -397,12 +397,23 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # directories themselves.
             if changed_path_info is None:
                 for path, info in self._watched_paths.items():
-                    if (
-                        os.path.isdir(path)
-                        and os.path.commonpath([path, abs_changed_path]) == path
-                    ):
-                        changed_path_info = info
-                        break
+                    if not os.path.isdir(path):
+                        continue
+                    try:
+                        if os.path.commonpath([path, abs_changed_path]) == path:
+                            changed_path_info = info
+                            break
+                    except ValueError as ex:
+                        # On Windows, os.path.commonpath raises ValueError when paths
+                        # are on different drives. In that case, the changed path
+                        # cannot be inside the watched directory.
+                        _LOGGER.debug(
+                            "Ignoring changed path %s.\nWatched_paths: %s",
+                            abs_changed_path,
+                            self._watched_paths,
+                            exc_info=ex,
+                        )
+                        continue
 
         # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:

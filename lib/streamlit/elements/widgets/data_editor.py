@@ -163,7 +163,8 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v for k, v in data_editor_state["edited_rows"].items()
+            int(k): v
+            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
         }
         return data_editor_state
 
@@ -662,6 +663,9 @@ class DataEditorMixin:
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
                 - Text and number formatting from ``column_config`` always takes
                   precedence over text and number formatting from ``pandas.Styler``.
+                - If your dataframe starts with an empty column, you should set
+                  the column datatype in the underlying dataframe to ensure your
+                  intended datatype, especially for integers versus floats.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
                   ``complex``, ``tuple``, ``bytes``, ``bytearray``,
