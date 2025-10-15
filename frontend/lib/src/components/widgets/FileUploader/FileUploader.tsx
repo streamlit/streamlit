@@ -86,7 +86,7 @@ const toWidgetState = (
   return new FileUploaderStateProto({ uploadedFileInfo })
 }
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: FileUploaderProto
   widgetMgr: WidgetStateManager
