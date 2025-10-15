@@ -187,7 +187,7 @@ class ListColumnConfig(TypedDict):
 class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
-    color: NotRequired[str | ThemeColor | None]
+    color: NotRequired[str | Literal["auto"] | ThemeColor | None]
 
 
 class MultiselectColumnConfig(TypedDict):
@@ -1736,7 +1736,11 @@ def MultiselectColumn(
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
-    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
+    color: str
+    | Literal["auto"]
+    | ThemeColor
+    | Iterable[str | ThemeColor]
+    | None = None,
     format_func: Callable[[str], str] | None = None,
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
@@ -1815,6 +1819,7 @@ def MultiselectColumn(
         The color to use for different options. This can be:
 
         - None (default): The options are displayed without color.
+        - ``"auto"``: The options are colored based on the configured categorical chart colors.
         - A single color value that is used for all options. This can be one of
           the following strings:
 

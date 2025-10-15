@@ -264,6 +264,8 @@ class SelectSliderMixin:
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         >>> import streamlit as st

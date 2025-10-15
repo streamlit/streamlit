@@ -94,3 +94,39 @@ v10 = st.container().chat_input(
     key="chat_input_10",
 )
 st.write("Chat input 10 (directory upload disabled) - value:", v10)
+
+# Dynamic chat input example
+st.markdown("Dynamic chat input:")
+
+if st.toggle("Update chat input props"):
+    dyn_val = st.container().chat_input(
+        "Updated dynamic chat input",
+        key="dynamic_chat_input_with_key",
+        width=300,
+        on_submit=lambda a, param: print(
+            f"Updated chat input - callback triggered: {a} {param}"
+        ),
+        args=("Updated chat arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted params:
+        max_chars=200,
+        accept_file=False,
+        file_type=["txt"],
+    )
+    st.write("Updated chat input value:", dyn_val)
+else:
+    dyn_val = st.container().chat_input(
+        "Initial dynamic chat input",
+        key="dynamic_chat_input_with_key",
+        width="stretch",
+        on_submit=lambda a, param: print(
+            f"Initial chat input - callback triggered: {a} {param}"
+        ),
+        args=("Initial chat arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted params:
+        max_chars=200,
+        accept_file=False,
+        file_type=["txt"],
+    )
+    st.write("Initial chat input value:", dyn_val)
