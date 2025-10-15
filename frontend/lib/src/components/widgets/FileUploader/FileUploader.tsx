@@ -60,6 +60,7 @@ import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
 import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 
 type FilesUpdater =
   | UploadFileInfo[]
@@ -85,16 +86,13 @@ const toWidgetState = (
   return new FileUploaderStateProto({ uploadedFileInfo })
 }
 
-interface InnerProps {
+interface Props {
   disabled: boolean
   element: FileUploaderProto
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
-  width: number
 }
-
-export type Props = Omit<InnerProps, "width">
 
 type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
@@ -106,10 +104,10 @@ const FileUploader = ({
   widgetMgr,
   uploadClient,
   fragmentId,
-  width,
-}: InnerProps): React.ReactElement => {
+}: Props): React.ReactElement => {
   const localFileIdCounterRef = useRef(1)
   const forceUpdatingStatusRef = useRef(false)
+  const { width, elementRef } = useCalculatedDimensions()
 
   const nextLocalFileId = useCallback((): number => {
     const id = localFileIdCounterRef.current
@@ -521,6 +519,7 @@ const FileUploader = ({
       className="stFileUploader"
       data-testid="stFileUploader"
       width={width}
+      ref={elementRef}
     >
       <WidgetLabel
         label={element.label}
@@ -560,5 +559,5 @@ const FileUploader = ({
   )
 }
 
-const FileUploaderWithCalculatedWidth = withCalculatedWidth(memo(FileUploader))
+const FileUploaderWithCalculatedWidth = memo(FileUploader)
 export default FileUploaderWithCalculatedWidth
