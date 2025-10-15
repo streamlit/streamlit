@@ -246,6 +246,9 @@ const FileUploader = ({
     }
   }, [widgetMgr, element, fragmentId])
 
+  /**
+   * Set the widget value when the status is ready.
+   */
   useEffect(() => {
     if (status !== "ready") {
       return
@@ -457,6 +460,9 @@ const FileUploader = ({
     [disabled, getFile, removeFile, uploadClient]
   )
 
+  /**
+   * Handle the drag-and-drop event for file-upload.
+   */
   const dropHandler = useCallback(
     (
       acceptedFilesParam: File[],
