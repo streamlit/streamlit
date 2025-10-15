@@ -124,7 +124,7 @@ describe("useWidgetManagerElementState hook", () => {
       <TestComponent />,
       // LibContext overrides
       {},
-      // ScriptRunContext overrides
+      // ThemeContext overrides
       {},
       // FormsContext overrides
       {

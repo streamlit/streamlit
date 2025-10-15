@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import React, { ReactElement, ReactNode } from "react"
 
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   BaseButton,
   BaseButtonKind,
   DynamicIcon,
-  LibContext,
+  ThemeContext,
+  useRequiredContext,
 } from "@streamlit/lib"
 
 import {
@@ -52,7 +53,7 @@ const Header = ({
   logoComponent,
 }: HeaderProps): ReactElement => {
   const { showToolbar } = useAppContext()
-  const { activeTheme } = useContext(LibContext)
+  const { activeTheme } = useRequiredContext(ThemeContext)
 
   const shouldShowLogo = logoComponent && !isSidebarOpen
   const shouldShowExpandButton = hasSidebar && !isSidebarOpen

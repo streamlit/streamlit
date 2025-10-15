@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import React, { ReactElement, useCallback, useEffect, useState } from "react"
 
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
@@ -43,9 +37,10 @@ import {
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
-  LibContext,
   Profiler,
+  ThemeContext,
   useExecuteWhenChanged,
+  useRequiredContext,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -151,7 +146,7 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { initialSidebarState, widgetsDisabled, showToolbar } = useAppContext()
 
-  const { activeTheme } = useContext(LibContext)
+  const { activeTheme } = useRequiredContext(ThemeContext)
 
   const { innerWidth } = useWindowDimensionsContext()
 

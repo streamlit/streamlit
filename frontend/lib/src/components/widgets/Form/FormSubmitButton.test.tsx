@@ -157,7 +157,7 @@ describe("FormSubmitButton", () => {
       <FormSubmitButton {...getProps()} />,
       // LibContext overrides
       {},
-      // ScriptRunContext overrides
+      // ThemeContext overrides
       {},
       // FormsContext overrides
       {

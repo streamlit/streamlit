@@ -95,7 +95,13 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
+        // LibContext overrides
         {},
+        // ThemeContext overrides
+        {},
+        // FormsContext overrides
+        {},
+        // ScriptRunContext overrides
         {
           scriptRunState: ScriptRunState.RUNNING,
           scriptRunId: "NEW_SCRIPT_ID",
@@ -118,7 +124,13 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
+        // LibContext overrides
         {},
+        // ThemeContext overrides
+        {},
+        // FormsContext overrides
+        {},
+        // ScriptRunContext overrides
         {
           scriptRunId,
         }
@@ -143,7 +155,13 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
+        // LibContext overrides
         {},
+        // ThemeContext overrides
+        {},
+        // FormsContext overrides
+        {},
+        // ScriptRunContext overrides
         {
           scriptRunState: ScriptRunState.RUNNING,
           scriptRunId: "NEW_SCRIPT_ID",
@@ -165,7 +183,13 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
+        // LibContext overrides
         {},
+        // ThemeContext overrides
+        {},
+        // FormsContext overrides
+        {},
+        // ScriptRunContext overrides
         {
           scriptRunId,
         }

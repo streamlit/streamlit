@@ -19,7 +19,6 @@ import React, {
   FC,
   memo,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
@@ -28,14 +27,15 @@ import React, {
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   CUSTOM_THEME_NAME,
-  LibContext,
   Modal,
   ModalBody,
   ModalHeader,
   SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
+  ThemeContext,
   UISelectbox,
+  useRequiredContext,
 } from "@streamlit/lib"
 
 import {
@@ -71,8 +71,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   metricsMgr,
   sessionInfo,
 }) {
-  const libContext = useContext(LibContext)
-  const { activeTheme, availableThemes } = libContext
+  const { activeTheme, availableThemes, setTheme } =
+    useRequiredContext(ThemeContext)
 
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
@@ -122,9 +122,9 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
         label: "changeTheme",
       })
 
-      libContext.setTheme(newTheme)
+      setTheme(newTheme)
     },
-    [libContext, metricsMgr, availableThemes]
+    [setTheme, metricsMgr, availableThemes]
   )
 
   const getAvailableThemeChoices = useCallback(() => {

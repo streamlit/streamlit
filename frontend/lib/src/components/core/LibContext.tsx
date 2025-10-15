@@ -18,7 +18,6 @@ import { createContext } from "react"
 
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { baseTheme, ThemeConfig } from "~lib/theme"
 
 /**
  * The lib config contains various configurations that the host platform can
@@ -54,18 +53,6 @@ export interface LibContextProps {
 
   /** Function that sets the `isFullScreen` property. */
   setFullScreen: (value: boolean) => void
-
-  /** The currently active app theme. */
-  activeTheme: ThemeConfig
-
-  /**
-   * Set the app's active theme locally and send it the app's host (if any).
-   * @see App.setAndSendTheme
-   */
-  setTheme: (theme: ThemeConfig) => void
-
-  /** List of all available themes. */
-  availableThemes: ThemeConfig[]
 
   /**
    * Change the page in a multi-page app.
@@ -124,9 +111,6 @@ const noOpEndpoints: StreamlitEndpoints = {
 export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
-  activeTheme: baseTheme,
-  setTheme: () => {},
-  availableThemes: [],
   onPageChange: () => {},
   currentPageScriptHash: "",
   libConfig: {},

@@ -53,10 +53,6 @@ export interface ScriptRunContextProps {
 /**
  * ScriptRunContext provides script execution state throughout the app.
  *
- * **Performance Note:** This context is separated from LibContext to minimize
- * re-renders. Components that only need script run state won't re-render when
- * other library properties change.
- *
  * Initialize with a default value of null so downstream usages will trigger
  * runtime errors if context expected to exist but does not.
  */

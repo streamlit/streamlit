@@ -57,7 +57,7 @@ describe("Form", () => {
       <Form {...getProps()} />,
       // LibContext overrides
       {},
-      // ScriptRunContext overrides
+      // ThemeContext overrides
       {},
       // FormsContext overrides
       {
@@ -77,12 +77,15 @@ describe("Form", () => {
     const { rerenderWithContexts } = renderWithContexts(
       <Form {...props} />,
       {},
-      {
-        scriptRunState: ScriptRunState.RUNNING,
-      },
+      {},
+      // FormsContext overrides
       {
         // default formsData has no submit buttons
         formsData: defaultFormsData(),
+      },
+      // ScriptRunContext overrides
+      {
+        scriptRunState: ScriptRunState.RUNNING,
       }
     )
 
@@ -91,15 +94,27 @@ describe("Form", () => {
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
-    rerenderWithContexts(<Form {...props} />, undefined, {
-      scriptRunState: ScriptRunState.NOT_RUNNING,
-    })
+    rerenderWithContexts(
+      <Form {...props} />,
+      undefined,
+      undefined,
+      undefined,
+      {
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      }
+    )
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // If the app restarts, we continue to show the error...
-    rerenderWithContexts(<Form {...props} />, undefined, {
-      scriptRunState: ScriptRunState.RUNNING,
-    })
+    rerenderWithContexts(
+      <Form {...props} />,
+      undefined,
+      undefined,
+      undefined,
+      {
+        scriptRunState: ScriptRunState.RUNNING,
+      }
+    )
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // Until we get a submit button, and the error is removed immediately,
