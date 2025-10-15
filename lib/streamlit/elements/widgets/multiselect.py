@@ -370,7 +370,9 @@ class MultiSelectMixin:
         Returns
         -------
         list
-            A list with the selected options
+            A list of the selected options.
+
+            The list contains copies of the selected options, not the originals.
 
         Examples
         --------

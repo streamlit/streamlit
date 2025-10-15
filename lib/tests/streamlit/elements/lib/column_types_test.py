@@ -504,6 +504,7 @@ class ColumnTypesTest(unittest.TestCase):
                 help="Help text",
                 disabled=False,
                 required=True,
+                pinned=True,
                 default=["a", "b"],
                 options=["a", "b", "c"],
                 accept_new_options=True,
@@ -514,6 +515,7 @@ class ColumnTypesTest(unittest.TestCase):
             "help": "Help text",
             "disabled": False,
             "required": True,
+            "pinned": True,
             "default": ["a", "b"],
             "type_config": {
                 "type": "multiselect",

@@ -222,9 +222,6 @@ def test_interval_area_chart_displays_selection_text(app: Page):
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
-# The altair chart seems to sometimes be rendered too small in the
-# initial rendering.
-@pytest.mark.flaky(reruns=3)
 def test_point_histogram_chart_displays_selection_text(app: Page):
     chart = _get_selection_point_histogram(app)
 
@@ -237,9 +234,6 @@ def test_point_histogram_chart_displays_selection_text(app: Page):
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
-# The altair chart seems to sometimes be rendered too small in the
-# initial rendering.
-@pytest.mark.flaky(reruns=3)
 def test_interval_histogram_chart_displays_selection_text(app: Page):
     chart = _get_selection_interval_histogram(app)
 
@@ -350,11 +344,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
     wait_for_app_run(app)
-    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
+    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
 
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.

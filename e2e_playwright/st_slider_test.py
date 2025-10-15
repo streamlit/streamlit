@@ -24,6 +24,7 @@ from e2e_playwright.conftest import (
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
@@ -33,10 +34,12 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
+NUM_SLIDER_WIDGETS = 25
+
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_sliders).to_have_count(24)
+    expect(st_sliders).to_have_count(NUM_SLIDER_WIDGETS)
 
     assert_snapshot(
         get_slider(themed_app, "Label 1"), name="st_slider-regular_with_format"
@@ -286,3 +289,45 @@ def test_slider_tick_bar_visibility(app: Page, assert_snapshot: ImageCompareFunc
     expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
 
     assert_snapshot(slider, name="st_slider-tick_bar_visibility")
+
+
+def test_dynamic_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the slider can be updated dynamically while keeping the state."""
+    dynamic_slider = get_element_by_key(app, "dynamic_slider_with_key")
+    expect(dynamic_slider).to_be_visible()
+
+    expect(dynamic_slider).to_contain_text("Initial dynamic slider")
+    expect_prefixed_markdown(app, "Initial slider value:", "25")
+
+    assert_snapshot(dynamic_slider, name="st_slider-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_slider, "initial help")
+
+    # Click to change value
+    dynamic_slider.click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial slider value:", "50")
+
+    # Click the toggle to update the slider props
+    click_toggle(app, "Update slider props")
+
+    # new slider is visible:
+    expect(dynamic_slider).to_contain_text("Updated dynamic slider")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated slider value:", "50")
+
+    dynamic_slider.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_slider, name="st_slider-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_slider, "updated help")
+
+    # Click in the middle and move slider once to right
+    dynamic_slider.click()
+    dynamic_slider.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated slider value:", "51")

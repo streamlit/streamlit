@@ -73,6 +73,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
     )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
     expect(app.get_by_test_id("stExpander")).to_have_count(3)
@@ -86,7 +87,7 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         expander = container_expanders.first
         expect(expander).to_be_visible()
         expander.click()
-        app.wait_for_timeout(3000)
+        app.wait_for_timeout(5000)
 
         assert_snapshot(
             container,

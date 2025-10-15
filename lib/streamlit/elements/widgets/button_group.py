@@ -615,6 +615,8 @@ class ButtonGroupMixin:
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         **Example 1: Multi-select pills**
@@ -841,6 +843,8 @@ class ButtonGroupMixin:
             If the ``selection_mode`` is ``multi``, this is a list of selected
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
+
+            This contains copies of the selected options, not the originals.
 
         Examples
         --------

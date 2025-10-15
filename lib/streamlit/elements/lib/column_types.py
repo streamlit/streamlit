@@ -187,7 +187,7 @@ class ListColumnConfig(TypedDict):
 class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
-    color: NotRequired[str | ThemeColor | None]
+    color: NotRequired[str | Literal["auto"] | ThemeColor | None]
 
 
 class MultiselectColumnConfig(TypedDict):
@@ -1733,10 +1733,15 @@ def MultiselectColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
-    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
+    color: str
+    | Literal["auto"]
+    | ThemeColor
+    | Iterable[str | ThemeColor]
+    | None = None,
     format_func: Callable[[str], str] | None = None,
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
@@ -1789,6 +1794,12 @@ def MultiselectColumn(
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
 
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
     default : Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
 
@@ -1809,6 +1820,7 @@ def MultiselectColumn(
         The color to use for different options. This can be:
 
         - None (default): The options are displayed without color.
+        - ``"auto"``: The options are colored based on the configured categorical chart colors.
         - A single color value that is used for all options. This can be one of
           the following strings:
 
@@ -1944,6 +1956,7 @@ def MultiselectColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",

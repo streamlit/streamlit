@@ -318,7 +318,7 @@ def _navigation(
     else:
         nav_sections = {
             section: [convert_to_streamlit_page(p) for p in section_pages]
-            for section, section_pages in pages.items()  # ty: ignore[possibly-unbound-attribute]
+            for section, section_pages in pages.items()
         }
     page_list = pages_from_nav_sections(nav_sections)
 

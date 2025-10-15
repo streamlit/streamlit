@@ -531,13 +531,32 @@ class StreamlitValueError(LocalizableStreamlitException):
 
 
 # config
-class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
-    """Exception raised when an invalid theme configuration is provided."""
+class StreamlitInvalidThemeError(LocalizableStreamlitException):
+    """Exception raised for general theme errors."""
 
-    def __init__(self, option_name: str) -> None:
+    def __init__(self, message: str) -> None:
         super().__init__(
-            "Invalid theme section: `{option_name}`. "
-            "Valid patterns are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.light.sidebar`, "
+            message,
+        )
+
+
+class StreamlitInvalidThemeOptionError(LocalizableStreamlitException):
+    """Exception raised when an invalid theme config option is provided."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            message,
+        )
+
+
+class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
+    """Exception raised when an invalid theme section is provided."""
+
+    def __init__(self, option_name: str, file_path_or_url: str = "config.toml") -> None:
+        super().__init__(
+            "Invalid theme section: `{option_name}` found in {file_path_or_url}. "
+            "Valid sections are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.light.sidebar`, "
             "and `theme.dark.sidebar`.",
             option_name=option_name,
+            file_path_or_url=file_path_or_url,
         )

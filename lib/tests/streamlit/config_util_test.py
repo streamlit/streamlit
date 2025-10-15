@@ -29,7 +29,11 @@ from parameterized import parameterized
 
 from streamlit import config, config_util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidThemeOptionError,
+    StreamlitInvalidThemeSectionError,
+)
 
 CONFIG_OPTIONS_TEMPLATE = config._config_options_template
 CONFIG_SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
@@ -428,7 +432,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         self, value, option_name: str, expected_error: str
     ):
         """Test _check_color_value raises exceptions for type errors and empty values."""
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as cm:
             config_util._check_color_value(value, option_name)
         assert expected_error in str(cm.value)
 
@@ -575,7 +579,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
     def test_get_valid_theme_options(self):
         """Test that _get_valid_theme_options extracts all valid theme options."""
-        valid_options = config_util._get_valid_theme_options(self.config_template)
+        main_options, _ = config_util._get_valid_theme_options(self.config_template)
 
         # Test subset of expected core theme options
         expected_options = {
@@ -593,20 +597,18 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "violetBackgroundColor",
             "violetTextColor",
         }
-        assert expected_options.issubset(valid_options)
+        assert expected_options.issubset(main_options)
 
         # Does not include section names
-        assert "sidebar" not in valid_options
+        assert "sidebar" not in main_options
 
         # Test that all options are strings
-        for option in valid_options:
+        for option in main_options:
             assert isinstance(option, str)
 
     def test_get_valid_theme_options_main_section(self):
         """Test _get_valid_theme_options for main section specifically."""
-        main_options = config_util._get_valid_theme_options(
-            self.config_template, "main"
-        )
+        main_options, _ = config_util._get_valid_theme_options(self.config_template)
 
         # These should be in main section
         expected_main_only = {
@@ -634,11 +636,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             f"but got {len(main_options)}"
         )
 
-    def test_get_valid_theme_options_sidebar_section(self):
-        """Test _get_valid_theme_options for sidebar section specifically."""
-        sidebar_options = config_util._get_valid_theme_options(
-            self.config_template, "sidebar"
-        )
+    def test_get_valid_theme_options_section(self):
+        """Test _get_valid_theme_options for sections (sidebar, light, dark) specifically."""
+        _, section_options = config_util._get_valid_theme_options(self.config_template)
 
         # These are some options that should be in sidebar section
         expected_sidebar = {
@@ -655,7 +655,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "greenBackgroundColor",
             "greenTextColor",
         }
-        assert expected_sidebar.issubset(sidebar_options)
+        assert expected_sidebar.issubset(section_options)
 
         # These are all the options that should NOT be in sidebar section
         main_only_options = {
@@ -667,13 +667,13 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "chartCategoricalColors",
             "chartSequentialColors",
         }
-        assert main_only_options.isdisjoint(sidebar_options)
+        assert main_only_options.isdisjoint(section_options)
 
         # Test that we get the expected number of theme.sidebar options
         expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
-        assert len(sidebar_options) == expected_count, (
+        assert len(section_options) == expected_count, (
             f"Expected {expected_count} theme.sidebar options based on config template, "
-            f"but got {len(sidebar_options)}"
+            f"but got {len(section_options)}"
         )
 
     def test_validate_theme_file_content_with_valid_content(self):
@@ -723,22 +723,114 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         # Verify valid option was preserved
         assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
+    def test_validate_theme_file_content_invalid_section(self):
+        """Test validation rejects invalid theme sections."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "invalidSection": {"primaryColor": "#00ff00"},
+            }
+        }
+
+        with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
+            config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+
+        assert "Invalid theme section" in str(cm.value)
+        assert "invalidSection" in str(cm.value)
+
+    def test_validate_theme_file_content_invalid_section_option(self):
+        """Test validation triggers warning for invalid section options."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "light": {
+                    "invalidSectionOption": "value",
+                },
+            }
+        }
+
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_called_once()
+
+        warning_call = mock_logger.warning.call_args
+        format_string = warning_call[0][0]
+        args = warning_call[0][1:]
+
+        assert "invalid theme option" in format_string
+        assert "test_theme.toml" in args[0]  # file_path_or_url
+        assert "theme.light.invalidSectionOption" in args[1]  # full_option_name
+        assert "light" in args[2]  # section_name
+
+        # Verify invalid section option was removed from filtered theme
+        assert "invalidSectionOption" not in filtered_theme["theme"]["light"]
+        # Verify valid main option was preserved
+        assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
+
     def test_validate_theme_file_content_invalid_subsection(self):
         """Test validation rejects invalid theme subsections."""
         theme_content = {
             "theme": {
                 "primaryColor": "#ff0000",
-                "invalidSubsection": {"primaryColor": "#00ff00"},
+                "light": {
+                    "primaryColor": "#00ff00",
+                    "invalidSubsection": {"primaryColor": "#0000ff"},
+                },
             }
         }
 
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitInvalidThemeSectionError) as cm:
             config_util._validate_theme_file_content(
                 theme_content, "test_theme.toml", self.config_template
             )
 
-        assert "invalid theme subsection" in str(cm.value)
-        assert "invalidSubsection" in str(cm.value)
+        assert "Invalid theme section" in str(cm.value)
+        assert "light.invalidSubsection" in str(cm.value)
+
+    def test_validate_theme_file_content_invalid_subsection_option(self):
+        """Test validation triggers warning for invalid subsection options."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "dark": {
+                    "sidebar": {
+                        "invalidSubsectionOption": "value",
+                    },
+                },
+                "sidebar": {
+                    "primaryColor": "#00ff00",
+                },
+            }
+        }
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_called_once()
+
+        warning_call = mock_logger.warning.call_args
+        format_string = warning_call[0][0]
+        args = warning_call[0][1:]
+
+        assert "invalid theme option" in format_string
+        assert "test_theme.toml" in args[0]  # file_path_or_url
+        assert (
+            "theme.dark.sidebar.invalidSubsectionOption" in args[1]
+        )  # full_option_name
+        assert "dark.sidebar" in args[2]  # section_name
+
+        # Verify invalid subsection option was removed from filtered theme
+        assert (
+            "invalidSubsectionOption" not in filtered_theme["theme"]["dark"]["sidebar"]
+        )
+        # Verify valid main option was preserved
+        assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
     def test_validate_theme_file_content_invalid_sidebar_option(self):
         """Test validation rejects invalid sidebar options."""
@@ -1107,6 +1199,102 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
 
         # Primary color should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
+
+    @patch("streamlit.config_util._load_theme_file")
+    def test_process_theme_inheritance_successful_complex_merge(self, mock_load_theme):
+        """Test successful theme inheritance processing with a complex merge."""
+        base_option = ConfigOption("theme.base", description="", default_val=None)
+        base_option.set_value("custom_theme.toml", "test")
+
+        primary_option = ConfigOption(
+            "theme.primaryColor", description="", default_val=None
+        )
+        primary_option.set_value("#override", "config.toml")
+
+        light_option = ConfigOption(
+            "theme.light.linkColor", description="", default_val=None
+        )
+        light_option.set_value("#light_link_override", "config.toml")
+
+        sidebar_option = ConfigOption(
+            "theme.sidebar.primaryColor", description="", default_val=None
+        )
+        sidebar_option.set_value("#sidebar_override", "config.toml")
+        sidebar_light_option = ConfigOption(
+            "theme.light.sidebar.borderColor", description="", default_val=None
+        )
+        sidebar_light_option.set_value("#sidebar_light_override", "config.toml")
+
+        config_options = {
+            "theme.base": base_option,
+            "theme.primaryColor": primary_option,
+            "theme.light.linkColor": light_option,
+            "theme.sidebar.primaryColor": sidebar_option,
+            "theme.light.sidebar.borderColor": sidebar_light_option,
+        }
+
+        # Mock loaded theme file
+        mock_load_theme.return_value = {
+            "theme": {
+                "base": "dark",
+                "primaryColor": "#base_color",
+                "backgroundColor": "#from_theme_file",
+                "light": {
+                    "primaryColor": "#light_primary_color",
+                    "linkColor": "#light_link_color",
+                    "sidebar": {
+                        "borderColor": "#light_sidebar_border_color",
+                    },
+                },
+                "dark": {
+                    "primaryColor": "#dark_primary_color",
+                    "linkColor": "#dark_link_color",
+                    "sidebar": {
+                        "borderColor": "#dark_sidebar_border_color",
+                    },
+                },
+                "sidebar": {
+                    "primaryColor": "#sidebar_base_color",
+                },
+            }
+        }
+
+        set_option_calls = []
+
+        def mock_set_option(key, value, source):
+            set_option_calls.append((key, value, source))
+
+        config_util.process_theme_inheritance(
+            config_options, self.config_template, mock_set_option
+        )
+
+        # Verify that theme options were set correctly
+        set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+
+        # Base should be set from theme file
+        assert set_calls_dict.get("theme.base") == "dark"
+
+        # Theme and sidebar primary colors should be the merged result (config override wins)
+        assert set_calls_dict.get("theme.primaryColor") == "#override"
+        assert set_calls_dict.get("theme.sidebar.primaryColor") == "#sidebar_override"
+
+        # Background color should come from base theme file
+        assert set_calls_dict.get("theme.backgroundColor") == "#from_theme_file"
+
+        # Config options should include the new section/subsections
+        assert set_calls_dict.get("theme.light.primaryColor") == "#light_primary_color"
+        assert set_calls_dict.get("theme.light.linkColor") == "#light_link_override"
+        assert set_calls_dict.get("theme.dark.primaryColor") == "#dark_primary_color"
+        assert set_calls_dict.get("theme.dark.linkColor") == "#dark_link_color"
+        assert (
+            # override from config.toml should apply in subsubsection
+            set_calls_dict.get("theme.light.sidebar.borderColor")
+            == "#sidebar_light_override"
+        )
+        assert (
+            set_calls_dict.get("theme.dark.sidebar.borderColor")
+            == "#dark_sidebar_border_color"
+        )
 
     @patch("streamlit.config_util._load_theme_file")
     def test_process_theme_inheritance_nested_sections(self, mock_load_theme):
