@@ -34,6 +34,87 @@ export function isNullOrUndefined<T>(
   return <T>value === null || <T>value === undefined
 }
 
+/**
+ * The lib config contains various configurations that the host platform can
+ * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ */
+export type LibConfig = {
+  /**
+   * The mapbox token that can be configured by a platform.
+   */
+  mapboxToken?: string
+
+  /**
+   * Whether to disable the full screen mode all elements / widgets.
+   */
+  disableFullscreenMode?: boolean
+
+  enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+
+  /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
+  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
+}
+
+/**
+ * The app config contains various configurations that the host platform can
+ * use to configure streamlit-app frontend behavior. This should to be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ *
+ * TODO(lukasmasuch): Potentially refactor HostCommunicationManager and move this type
+ * to AppContext.tsx.
+ */
+export type AppConfig = {
+  /**
+   * A list of origins that we're allowed to receive cross-iframe messages
+   * from via the browser's window.postMessage API.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Whether to wait until we've received a SET_AUTH_TOKEN message before
+   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
+   * for this promise to resolve before attempting to establish a connection
+   * with the Streamlit server.
+   */
+  useExternalAuthToken?: boolean
+  /**
+   * Enables custom string messages to be sent to the host
+   */
+  enableCustomParentMessages?: boolean
+  /**
+   * Whether host wants to block error dialogs. If true, blocks error dialogs
+   * from being shown to the user, sends error info to host via postMessage
+   */
+  blockErrorDialogs?: boolean
+}
+
+export type MetricsConfig = {
+  /**
+   * URL to send metrics data to via POST request.
+   * Setting to "postMessage" sends metrics events via postMessage to host.
+   * Setting to "off" disables metrics collection.
+   * If undefined, metricsUrl requested from centralized config file.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  metricsUrl?: string | "postMessage" | "off"
+}
+
+/**
+ * The response structure of the `_stcore/host-config` endpoint.
+ * This combines streamlit-lib specific configuration options with
+ * streamlit-app specific options (e.g. allowed message origins).
+ */
+export type IHostConfigResponse = LibConfig & AppConfig & MetricsConfig
+
 export interface StreamlitWindowObject {
   // URL pointing to where the Streamlit server is running. This is useful in
   // deployments of Streamlit where the server is running on a different origin
@@ -64,4 +145,6 @@ export interface StreamlitWindowObject {
 
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+
+  HOST_CONFIG?: IHostConfigResponse
 }

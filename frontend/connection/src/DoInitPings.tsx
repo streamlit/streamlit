@@ -62,6 +62,28 @@ export function doInitPings(
   onHostConfigResp: (resp: IHostConfigResponse) => void
 ): AsyncPingRequest {
   const { promise, resolve, reject } = Promise.withResolvers<number>()
+
+  // All the opportunity to bypass the ping if we know the host config
+  // and the backend base url
+  if (
+    window.__streamlit?.HOST_CONFIG &&
+    window.__streamlit?.BACKEND_BASE_URL
+  ) {
+    const backendBaseUrlParts = parseUriIntoBaseParts(
+      window.__streamlit.BACKEND_BASE_URL
+    )
+    const uriPartsIndex = uriPartsList.findIndex(
+      u => u.href === backendBaseUrlParts.href
+    )
+    if (uriPartsIndex !== -1) {
+      onHostConfigResp(window.__streamlit.HOST_CONFIG)
+      return {
+        promise: Promise.resolve(uriPartsIndex),
+        cancel: () => {},
+      }
+    }
+  }
+
   let totalTries = 0
   let uriNumber = 0
   let timeout: NodeJS.Timeout | number | undefined
