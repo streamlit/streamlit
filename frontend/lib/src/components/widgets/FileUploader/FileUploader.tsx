@@ -86,6 +86,10 @@ const toWidgetState = (
   return new FileUploaderStateProto({ uploadedFileInfo })
 }
 
+type FileUploaderStatus =
+  | "ready" // FileUploader can upload or delete files
+  | "updating" // at least one file is being uploaded or deleted
+
 export interface Props {
   disabled: boolean
   element: FileUploaderProto
@@ -93,10 +97,6 @@ export interface Props {
   uploadClient: FileUploadClient
   fragmentId?: string
 }
-
-type FileUploaderStatus =
-  | "ready" // FileUploader can upload or delete files
-  | "updating" // at least one file is being uploaded or deleted
 
 const FileUploader = ({
   disabled,
@@ -109,12 +109,18 @@ const FileUploader = ({
   const forceUpdatingStatusRef = useRef(false)
   const { width, elementRef } = useCalculatedDimensions()
 
+  /**
+   * Generate a unique ID for a new file.
+   */
   const nextLocalFileId = useCallback((): number => {
     const id = localFileIdCounterRef.current
     localFileIdCounterRef.current += 1
     return id
   }, [])
 
+  /**
+   * Get the initial files from the widget manager.
+   */
   const getInitialFiles = (): UploadFileInfo[] => {
     const widgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (isNullOrUndefined(widgetValue)) {
@@ -149,6 +155,9 @@ const FileUploader = ({
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }, [element.maxUploadSizeMb])
 
+  /**
+   * Set the files immediately.
+   */
   const setFilesImmediate = useCallback(
     (updater: FilesUpdater): void => {
       /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
@@ -166,6 +175,9 @@ const FileUploader = ({
     [setFiles]
   )
 
+  /**
+   * Add a file to the list of files.
+   */
   const addFile = useCallback(
     (file: UploadFileInfo): void => {
       setFilesImmediate(prev => [...prev, file])
@@ -173,6 +185,9 @@ const FileUploader = ({
     [setFilesImmediate]
   )
 
+  /**
+   * Add multiple files to the list of files.
+   */
   const addFiles = useCallback(
     (filesToAdd: UploadFileInfo[]): void => {
       if (filesToAdd.length === 0) {
@@ -183,6 +198,9 @@ const FileUploader = ({
     [setFilesImmediate]
   )
 
+  /**
+   * Remove a file from the list of files.
+   */
   const removeFile = useCallback(
     (idToRemove: number): void => {
       setFilesImmediate(prev => prev.filter(file => file.id !== idToRemove))
@@ -190,6 +208,9 @@ const FileUploader = ({
     [setFilesImmediate]
   )
 
+  /**
+   * Update a file in the list of files.
+   */
   const updateFile = useCallback(
     (curFileId: number, newFile: UploadFileInfo): void => {
       setFilesImmediate(prev =>
@@ -209,6 +230,9 @@ const FileUploader = ({
       ? "updating"
       : "ready"
 
+  /**
+   * Set the initial widget value on mount.
+   */
   useEffect(() => {
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
@@ -259,6 +283,9 @@ const FileUploader = ({
     onFormCleared,
   })
 
+  /**
+   * Check if the file type is allowed.
+   */
   const isFileTypeAllowed = useCallback(
     (file: File): boolean => {
       const acceptedExtensions = element.type
@@ -303,6 +330,9 @@ const FileUploader = ({
     [isFileTypeAllowed]
   )
 
+  /**
+   * Update the file status when the upload has finished.
+   */
   const onUploadComplete = useCallback(
     (localFileId: number, fileUrls: IFileURLs): void => {
       const curFile = getFile(localFileId)
@@ -322,6 +352,9 @@ const FileUploader = ({
     [getFile, updateFile]
   )
 
+  /**
+   * Update the file status when the upload has progressed.
+   */
   const onUploadProgress = useCallback(
     (event: ProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
@@ -346,6 +379,9 @@ const FileUploader = ({
     [getFile, updateFile]
   )
 
+  /**
+   * Upload a file to the backend.
+   */
   const uploadFile = useCallback(
     (fileURLs: IFileURLs, file: File): void => {
       const abortController = new AbortController()
@@ -395,6 +431,9 @@ const FileUploader = ({
     ]
   )
 
+  /**
+   * Delete a file from the backend and client.
+   */
   const deleteFile = useCallback(
     (fileId: number): void => {
       if (disabled) {
