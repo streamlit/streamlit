@@ -160,22 +160,19 @@ const FileUploader = ({
   /**
    * Set the files immediately.
    */
-  const setFilesImmediate = useCallback(
-    (updater: FilesUpdater): void => {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-       * Using flushSync here because we need the state to be immediately updated
-       * before any subsequent file upload operations occur.
-       */
-      flushSync(() => {
-        setFiles(prev => {
-          const next = typeof updater === "function" ? updater(prev) : updater
-          filesRef.current = next
-          return next
-        })
+  const setFilesImmediate = useCallback((updater: FilesUpdater): void => {
+    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+     * Using flushSync here because we need the state to be immediately updated
+     * before any subsequent file upload operations occur.
+     */
+    flushSync(() => {
+      setFiles(prev => {
+        const next = typeof updater === "function" ? updater(prev) : updater
+        filesRef.current = next
+        return next
       })
-    },
-    [setFiles]
-  )
+    })
+  }, [])
 
   /**
    * Add a file to the list of files.
