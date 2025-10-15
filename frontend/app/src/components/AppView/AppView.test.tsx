@@ -100,6 +100,8 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     expandSidebarNav: false,
     navigationPosition: Navigation.Position.SIDEBAR,
     currentPageScriptHash: "",
+    addScriptFinishedHandler: vi.fn(),
+    removeScriptFinishedHandler: vi.fn(),
     ...props,
   }
 }

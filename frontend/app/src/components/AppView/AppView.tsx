@@ -104,6 +104,10 @@ export interface AppViewProps {
   disableScrolling: boolean
 
   currentPageScriptHash: string
+
+  addScriptFinishedHandler: (func: () => void) => void
+
+  removeScriptFinishedHandler: (func: () => void) => void
 }
 
 /**
@@ -130,6 +134,8 @@ function AppView(props: AppViewProps): ReactElement {
     showPadding,
     disableScrolling,
     currentPageScriptHash,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
   } = props
 
   useEffect(() => {
@@ -145,11 +151,7 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { initialSidebarState, widgetsDisabled, showToolbar } = useAppContext()
 
-  const {
-    addScriptFinishedHandler,
-    removeScriptFinishedHandler,
-    activeTheme,
-  } = useContext(LibContext)
+  const { activeTheme } = useContext(LibContext)
 
   const { innerWidth } = useWindowDimensionsContext()
 

@@ -86,19 +86,37 @@ export function mockWindowLocation(hostname: string): void {
 }
 
 /**
+ * Extended RenderResult that includes a rerender function supporting context updates
+ */
+export interface RenderWithContextsResult extends RenderResult {
+  /**
+   * Re-render the component with updated context values.
+   * @param component The component to render (usually the same component with updated props)
+   * @param newLibContextProps New LibContext overrides to merge with existing values
+   * @param newFormsContextProps New FormsContext overrides to merge with existing values
+   */
+  rerenderWithContexts: (
+    component: ReactElement,
+    newLibContextProps?: Partial<LibContextProps>,
+    newFormsContextProps?: Partial<FormsContextProps>
+  ) => void
+}
+
+/**
  * Use react-testing-library to render a ReactElement. The element will be
  * wrapped in our LibContext.Provider and FormsContext.Provider.
+ *
+ * Returns an extended RenderResult with a `rerenderWithContexts` method that
+ * allows updating context values during re-renders.
  */
 export const renderWithContexts = (
   component: ReactElement,
-  overrideLibContextProps: Partial<LibContextProps>,
+  overrideLibContextProps: Partial<LibContextProps> = {},
   overrideFormsContextProps?: Partial<FormsContextProps>
-): RenderResult => {
+): RenderWithContextsResult => {
   const defaultLibContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
-    addScriptFinishedHandler: vi.fn(),
-    removeScriptFinishedHandler: vi.fn(),
     activeTheme: baseTheme,
     setTheme: vi.fn(),
     availableThemes: [],
@@ -116,28 +134,58 @@ export const renderWithContexts = (
     formsData: createFormsData(),
   }
 
-  return reactTestingLibraryRender(component, {
-    wrapper: ({ children }) => (
-      <ThemeProvider theme={baseTheme.emotion}>
-        <WindowDimensionsProvider>
-          <FlexContext.Provider value={flexContextValue}>
-            <LibContext.Provider
-              value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
-            >
-              <FormsContext.Provider
-                value={{
-                  ...defaultFormsContextProps,
-                  ...overrideFormsContextProps,
-                }}
-              >
-                {children}
-              </FormsContext.Provider>
-            </LibContext.Provider>
-          </FlexContext.Provider>
-        </WindowDimensionsProvider>
-      </ThemeProvider>
-    ),
+  // Track current context values across rerenders
+  let currentLibContextProps = {
+    ...defaultLibContextProps,
+    ...overrideLibContextProps,
+  }
+  let currentFormsContextProps = {
+    ...defaultFormsContextProps,
+    ...overrideFormsContextProps,
+  }
+
+  const Wrapper: FC<PropsWithChildren> = ({ children }) => (
+    <ThemeProvider theme={baseTheme.emotion}>
+      <WindowDimensionsProvider>
+        <FlexContext.Provider value={flexContextValue}>
+          <LibContext.Provider value={currentLibContextProps}>
+            <FormsContext.Provider value={currentFormsContextProps}>
+              {children}
+            </FormsContext.Provider>
+          </LibContext.Provider>
+        </FlexContext.Provider>
+      </WindowDimensionsProvider>
+    </ThemeProvider>
+  )
+
+  const result = reactTestingLibraryRender(component, {
+    wrapper: Wrapper,
   })
+
+  return {
+    ...result,
+    rerenderWithContexts: (
+      newComponent: ReactElement,
+      newLibContextProps?: Partial<LibContextProps>,
+      newFormsContextProps?: Partial<FormsContextProps>
+    ): void => {
+      // Update context values if provided
+      if (newLibContextProps) {
+        currentLibContextProps = {
+          ...currentLibContextProps,
+          ...newLibContextProps,
+        }
+      }
+      if (newFormsContextProps) {
+        currentFormsContextProps = {
+          ...currentFormsContextProps,
+          ...newFormsContextProps,
+        }
+      }
+      // Use the original rerender with the wrapper
+      result.rerender(newComponent)
+    },
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

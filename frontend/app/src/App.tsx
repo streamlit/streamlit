@@ -2193,8 +2193,6 @@ export class App extends PureComponent<Props, State> {
         gitInfo={this.state.gitInfo}
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
-        addScriptFinishedHandler={this.addScriptFinishedHandler}
-        removeScriptFinishedHandler={this.removeScriptFinishedHandler}
         activeTheme={this.props.theme.activeTheme}
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
@@ -2243,6 +2241,8 @@ export class App extends PureComponent<Props, State> {
               showPadding={showPadding}
               disableScrolling={disableScrolling}
               currentPageScriptHash={currentPageScriptHash}
+              addScriptFinishedHandler={this.addScriptFinishedHandler}
+              removeScriptFinishedHandler={this.removeScriptFinishedHandler}
               topRightContent={
                 <>
                   {!hideTopBar && (

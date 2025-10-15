@@ -55,8 +55,6 @@ type AppContextValues = {
 type LibContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
-  addScriptFinishedHandler: (func: () => void) => void
-  removeScriptFinishedHandler: (func: () => void) => void
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
@@ -98,8 +96,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // LibContext
   isFullScreen,
   setFullScreen,
-  addScriptFinishedHandler,
-  removeScriptFinishedHandler,
   activeTheme,
   setTheme,
   availableThemes,
@@ -156,8 +152,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     () => ({
       isFullScreen,
       setFullScreen,
-      addScriptFinishedHandler,
-      removeScriptFinishedHandler,
       activeTheme,
       setTheme,
       availableThemes,
@@ -173,8 +167,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [
       isFullScreen,
       setFullScreen,
-      addScriptFinishedHandler,
-      removeScriptFinishedHandler,
       activeTheme,
       setTheme,
       availableThemes,

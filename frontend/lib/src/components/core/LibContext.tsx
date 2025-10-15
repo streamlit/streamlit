@@ -56,15 +56,6 @@ export interface LibContextProps {
   /** Function that sets the `isFullScreen` property. */
   setFullScreen: (value: boolean) => void
 
-  /**
-   * Add a callback that will be called every time the app's script finishes
-   * executing.
-   */
-  addScriptFinishedHandler: (func: () => void) => void
-
-  /** Remove a previously-added scriptFinishedHandler callback. */
-  removeScriptFinishedHandler: (func: () => void) => void
-
   /** The currently active app theme. */
   activeTheme: ThemeConfig
 
@@ -158,8 +149,6 @@ const noOpEndpoints: StreamlitEndpoints = {
 export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
-  addScriptFinishedHandler: () => {},
-  removeScriptFinishedHandler: () => {},
   activeTheme: baseTheme,
   setTheme: () => {},
   availableThemes: [],
