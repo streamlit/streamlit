@@ -54,12 +54,12 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
 import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
-import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 
 type FilesUpdater =
   | UploadFileInfo[]
