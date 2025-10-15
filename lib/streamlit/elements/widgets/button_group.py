@@ -229,6 +229,7 @@ def _build_proto(
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
+    button_helps: Sequence[str] | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -248,9 +249,21 @@ def _build_proto(
         if help is not None:
             proto.help = help
 
-    for formatted_option in formatted_options:
-        proto.options.append(formatted_option)
+    if button_helps is not None and len(button_helps) != len(formatted_options):
+        raise StreamlitAPIException(
+            f"`button_helps` must have the same length as `options` "
+            f"(got {len(button_helps)}; expected {len(formatted_options)})."
+        )
+
+    # Append options exactly once; set per-option help if provided
+    for i, opt in enumerate(formatted_options):
+        if button_helps is not None:
+            help_text = button_helps[i]
+            opt.help = help_text
+        proto.options.append(opt)
+
     proto.selection_visualization = selection_visualization
+
     return proto
 
 
@@ -461,6 +474,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -479,6 +493,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -497,6 +512,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -667,6 +683,7 @@ class ButtonGroupMixin:
             format_func=format_func,
             key=key,
             help=help,
+            button_helps=button_helps,
             style="pills",
             on_change=on_change,
             args=args,
@@ -687,6 +704,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -705,6 +723,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -724,6 +743,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -897,6 +917,7 @@ class ButtonGroupMixin:
             format_func=format_func,
             key=key,
             help=help,
+            button_helps=button_helps,
             style="segmented_control",
             on_change=on_change,
             args=args,
@@ -923,6 +944,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         width: Width = "content",
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
@@ -969,6 +991,7 @@ class ButtonGroupMixin:
             format_func=_transformed_format_func,
             key=key,
             help=help,
+            button_helps=button_helps,
             style=style,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
@@ -1008,6 +1031,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        button_helps: Sequence[str] | None = None,
         width: Width = "content",
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
@@ -1093,6 +1117,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             help=help,
+            button_helps=button_helps,
         )
 
         widget_state = register_widget(
