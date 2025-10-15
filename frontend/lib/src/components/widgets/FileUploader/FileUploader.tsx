@@ -65,6 +65,9 @@ type FilesUpdater =
   | UploadFileInfo[]
   | ((prev: UploadFileInfo[]) => UploadFileInfo[])
 
+/**
+ * Convert a list of uploaded file info to the widget state.
+ */
 const toWidgetState = (
   targetFiles: UploadFileInfo[]
 ): FileUploaderStateProto => {
