@@ -805,7 +805,7 @@ class SliderMixin:
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):
+            ) and max_value - min_value < timedelta(days=1):  # ty: ignore[unsupported-operator]
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001

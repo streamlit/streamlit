@@ -1051,8 +1051,8 @@ def _browser_server_port() -> int:
 
 _SSL_PRODUCTION_WARNING = [
     "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For the production environment, "
-    "we recommend performing SSL termination by the load balancer or the reverse proxy."
+    "security audits or performance tests. For a production environment, we "
+    "recommend performing SSL termination through a load balancer or reverse proxy."
 ]
 
 _create_option(

@@ -272,6 +272,8 @@ class RadioMixin:
         any
             The selected option or ``None`` if no option is selected.
 
+            This is a copy of the selected option, not the original.
+
         Example
         -------
         >>> import streamlit as st
