@@ -46,6 +46,7 @@ export interface StyledElementContainerProps {
   elementType: string
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
+  minWidth?: React.CSSProperties["minWidth"]
 }
 
 export const StyledSpace = styled.div({
@@ -57,14 +58,23 @@ export const StyledSpace = styled.div({
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
+  ({
+    theme,
+    isStale,
+    width,
+    height,
+    elementType,
+    overflow,
+    flex,
+    minWidth,
+  }) => ({
     width,
     height,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
     // Some components support zero width (e.g. iframe).
-    minWidth: width === "0px" ? 0 : "1rem",
+    minWidth: width === "0px" ? 0 : (minWidth ?? "1rem"),
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",

@@ -207,6 +207,7 @@ export type UseLayoutStylesShape = {
   height: React.CSSProperties["height"]
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
+  minWidth?: React.CSSProperties["minWidth"]
 }
 
 /**
@@ -230,6 +231,7 @@ export const useLayoutStyles = ({
 
     const widthConfig = getWidth(element, subElement)
     let width: React.CSSProperties["width"]
+    let minWidth: React.CSSProperties["minWidth"]
 
     switch (widthConfig.type) {
       case DimensionType.STRETCH:
@@ -249,6 +251,18 @@ export const useLayoutStyles = ({
         break
       default:
         assertNever(widthConfig)
+    }
+
+    const direction = getDirection(flexContext)
+
+    // Set minWidth only in vertical layouts when element has stretch width
+    // In horizontal layouts, minStretchBehavior is used as flex-basis in getFlex
+    if (
+      direction === Direction.VERTICAL &&
+      widthConfig.type === DimensionType.STRETCH &&
+      minStretchBehavior !== undefined
+    ) {
+      minWidth = minStretchBehavior
     }
 
     const heightConfig = getHeight(element, subElement)
@@ -279,15 +293,16 @@ export const useLayoutStyles = ({
     const flex = getFlex(
       widthConfig,
       heightConfig,
-      getDirection(flexContext),
+      direction,
       minStretchBehavior
     )
 
-    const calculatedStyles = {
+    const calculatedStyles: UseLayoutStylesShape = {
       width,
       height,
       overflow,
       flex,
+      minWidth,
     }
 
     return {
