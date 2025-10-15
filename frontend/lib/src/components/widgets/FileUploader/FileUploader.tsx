@@ -597,5 +597,4 @@ const FileUploader = ({
   )
 }
 
-const FileUploaderWithCalculatedWidth = memo(FileUploader)
-export default FileUploaderWithCalculatedWidth
+export default memo(FileUploader)
