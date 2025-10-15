@@ -44,6 +44,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   FileSize,
   getRejectedFileInfo,
@@ -54,7 +55,6 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
