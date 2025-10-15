@@ -85,7 +85,7 @@ describe("FlexBoxContainer Block Component", () => {
     const block: BlockNode = makeVerticalBlock([
       makeHorizontalBlockWithColumns(4),
     ])
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
 
     const horizontalBlock = screen.getByTestId("stHorizontalBlock")
     expect(horizontalBlock).toBeVisible()
@@ -101,7 +101,7 @@ describe("FlexBoxContainer Block Component", () => {
     const block: BlockNode = makeVerticalBlock([], {
       id: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
     })
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getByTestId("stVerticalBlock")).toBeVisible()
     expect(screen.getByTestId("stVerticalBlock")).toHaveClass(
@@ -117,7 +117,7 @@ describe("FlexBoxContainer Block Component", () => {
       }
     )
 
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
       "overflow: auto"
@@ -131,7 +131,7 @@ describe("FlexBoxContainer Block Component", () => {
         flexContainer: { border: true },
       }
     )
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
       "border: 1px solid rgba(49, 51, 63, 0.2);"
@@ -186,7 +186,7 @@ describe("FlexBoxContainer layout props", () => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
     })
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
   })
 
@@ -215,7 +215,7 @@ describe("FlexBoxContainer layout props", () => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
     })
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
   })
 
@@ -244,7 +244,7 @@ describe("FlexBoxContainer layout props", () => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
     })
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
   })
 
@@ -255,7 +255,7 @@ describe("FlexBoxContainer layout props", () => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
     })
-    renderWithContexts(makeVerticalBlockComponent(block), {})
+    renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
   })
 })

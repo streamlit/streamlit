@@ -72,6 +72,7 @@ import { ElementNode } from "~lib/AppNode"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { LibContext } from "~lib/components/core/LibContext"
 import Maybe from "~lib/components/core/Maybe"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
@@ -87,6 +88,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { getElementId } from "~lib/util/utils"
 
 import { StyledSpace } from "./styled-components"
@@ -717,8 +719,8 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const { isFullScreen, fragmentIdsThisRun } = useContext(LibContext)
+  const { scriptRunState, scriptRunId } = useRequiredContext(ScriptRunContext)
   const { node } = props
 
   const elementType = node.element.type || ""

@@ -18,13 +18,12 @@ import React, {
   memo,
   ReactElement,
   ReactNode,
-  useContext,
   useEffect,
   useState,
 } from "react"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
-import { LibContext } from "~lib/components/core/LibContext"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -73,8 +72,8 @@ function Form(props: Props): ReactElement {
   const hasSubmitButton =
     submitButtons !== undefined && submitButtons.length > 0
 
-  // Consume LibContext to get script run state
-  const { scriptRunState } = useContext(LibContext)
+  // Consume ScriptRunContext to get script run state
+  const { scriptRunState } = useRequiredContext(ScriptRunContext)
   const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`

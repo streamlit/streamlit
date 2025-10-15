@@ -17,7 +17,6 @@
 import { createContext } from "react"
 
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { baseTheme, ThemeConfig } from "~lib/theme"
 
@@ -99,30 +98,6 @@ export interface LibContextProps {
   locale: typeof window.navigator.language
 
   /**
-   * The app's current ScriptRunState. This is used in combination with
-   * scriptRunId to prune stale elements. It's also used by the app to
-   * display the "running man" indicator when the app's script is being re-run.
-   * Pulled from context in BlockNodeRenderer, ElementNodeRenderer, Tabs
-   * @see Block
-   * @see ElementNodeRender
-   * @see Tabs
-   */
-  scriptRunState: ScriptRunState
-
-  /**
-   * The ID of the current "script run". When a Streamlit script is re-run
-   * (usually as a result of the user interacting with a widget), the Streamlit
-   * backend sends a new scriptRunId to the frontend. When the script run ends,
-   * the frontend discards "stale" elements (that is, elements with a non-current
-   * scriptRunId).
-   * Pulled from context in BlockNodeRenderer, ElementNodeRenderer, Tabs
-   * @see Block
-   * @see ElementNodeRender
-   * @see Tabs
-   */
-  scriptRunId: string
-
-  /**
    * The app's ComponentRegistry instance. Dispatches "Custom Component"
    * iframe messages to ComponentInstances.
    * Pulled from context in ComponentInstance
@@ -157,8 +132,6 @@ export const LibContext = createContext<LibContextProps>({
   libConfig: {},
   fragmentIdsThisRun: [],
   locale: window.navigator.language,
-  scriptRunState: ScriptRunState.NOT_RUNNING,
-  scriptRunId: "",
   // This should be overwritten
   componentRegistry: new ComponentRegistry(noOpEndpoints),
 })

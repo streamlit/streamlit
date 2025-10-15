@@ -28,6 +28,8 @@ import {
   LibConfig,
   LibContext,
   LibContextProps,
+  ScriptRunContext,
+  ScriptRunContextProps,
   ScriptRunState,
   ThemeConfig,
   useRequiredContext,
@@ -63,9 +65,13 @@ type LibContextValues = {
   libConfig: LibConfig
   fragmentIdsThisRun: Array<string>
   locale: typeof window.navigator.language
+  componentRegistry: ComponentRegistry
+}
+
+// Type for ScriptRunContext props
+type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
-  componentRegistry: ComponentRegistry
 }
 
 type FormsContextValues = {
@@ -73,7 +79,10 @@ type FormsContextValues = {
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  AppContextValues & LibContextValues & FormsContextValues
+  AppContextValues &
+    LibContextValues &
+    ScriptRunContextValues &
+    FormsContextValues
 >
 
 /**
@@ -102,10 +111,11 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   libConfig,
   fragmentIdsThisRun,
   locale,
+  componentRegistry,
+  // ScriptRunContext
   scriptRunState,
   scriptRunId,
-  componentRegistry,
-  // Used in both contexts
+  // Used in both AppContext and LibContext
   currentPageScriptHash,
   onPageChange,
   // FormsContext
@@ -160,8 +170,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       libConfig,
       fragmentIdsThisRun,
       locale,
-      scriptRunState,
-      scriptRunId,
       componentRegistry,
     }),
     [
@@ -175,10 +183,17 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       libConfig,
       fragmentIdsThisRun,
       locale,
-      scriptRunState,
-      scriptRunId,
       componentRegistry,
     ]
+  )
+
+  // Memoized object for ScriptRunContext values
+  const scriptRunContextProps = useMemo<ScriptRunContextProps>(
+    () => ({
+      scriptRunState,
+      scriptRunId,
+    }),
+    [scriptRunState, scriptRunId]
   )
 
   // formsData is not a stable reference, so memoization does not help
@@ -187,11 +202,24 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
+  /**
+   * Context Provider Ordering (Outer → Inner):
+   * 1. AppContext - Changes least frequently (app-level config)
+   * 2. LibContext - Changes moderately (theme, fullscreen, etc.)
+   * 3. FormsContext - Changes when forms are modified
+   * 4. ScriptRunContext - Changes most frequently (every script run)
+   *
+   * Performance: More frequently changing contexts are innermost to minimize
+   * cascading re-renders. When ScriptRunContext changes (every script run),
+   * only its consumers re-render, not FormsContext consumers.
+   */
   return (
     <AppContext.Provider value={appContextProps}>
       <LibContext.Provider value={libContextProps}>
         <FormsContext.Provider value={formsContextProps}>
-          {children}
+          <ScriptRunContext.Provider value={scriptRunContextProps}>
+            {children}
+          </ScriptRunContext.Provider>
         </FormsContext.Provider>
       </LibContext.Provider>
     </AppContext.Provider>

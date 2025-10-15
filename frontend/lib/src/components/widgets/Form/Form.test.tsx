@@ -55,7 +55,11 @@ describe("Form", () => {
   it("renders without crashing", () => {
     renderWithContexts(
       <Form {...getProps()} />,
+      // LibContext overrides
       {},
+      // ScriptRunContext overrides
+      {},
+      // FormsContext overrides
       {
         formsData: defaultFormsData(),
       }
@@ -72,6 +76,7 @@ describe("Form", () => {
     // Start with script RUNNING, no submit button
     const { rerenderWithContexts } = renderWithContexts(
       <Form {...props} />,
+      {},
       {
         scriptRunState: ScriptRunState.RUNNING,
       },
@@ -86,13 +91,13 @@ describe("Form", () => {
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
-    rerenderWithContexts(<Form {...props} />, {
+    rerenderWithContexts(<Form {...props} />, undefined, {
       scriptRunState: ScriptRunState.NOT_RUNNING,
     })
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // If the app restarts, we continue to show the error...
-    rerenderWithContexts(<Form {...props} />, {
+    rerenderWithContexts(<Form {...props} />, undefined, {
       scriptRunState: ScriptRunState.RUNNING,
     })
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
@@ -104,7 +109,7 @@ describe("Form", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
       { formId } as any,
     ])
-    rerenderWithContexts(<Form {...props} />, undefined, {
+    rerenderWithContexts(<Form {...props} />, undefined, undefined, {
       formsData: formsDataWithButton,
     })
     expect(screen.getByTestId("stForm")).toBeInTheDocument()
