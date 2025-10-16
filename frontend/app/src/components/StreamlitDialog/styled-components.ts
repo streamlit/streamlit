@@ -15,12 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { ChevronLeft } from "react-feather"
-
-export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
-  cursor: "pointer",
-  marginRight: theme.spacing.lg,
-}))
 
 export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",

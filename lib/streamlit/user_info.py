@@ -20,7 +20,6 @@ from typing import (
     Any,
     Final,
     NoReturn,
-    Union,
 )
 
 from streamlit import config, logger, runtime
@@ -379,7 +378,7 @@ def _get_user_info() -> UserInfo:
     return context_user_info
 
 
-class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
+class UserInfoProxy(Mapping[str, str | bool | None]):
     """
     A read-only, dict-like object for accessing information about the current\
     user.

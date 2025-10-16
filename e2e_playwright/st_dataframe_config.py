@@ -417,11 +417,9 @@ st.dataframe(
             help="This is a progress column",
         ),
         "col_1": st.column_config.ProgressColumn(
-            format="$%f", min_value=0, max_value=1000
+            format="$%f", min_value=0, max_value=1000, color="blue"
         ),
-        "col_2": st.column_config.ProgressColumn(
-            step=0.0001,
-        ),
+        "col_2": st.column_config.ProgressColumn(step=0.0001, color="auto"),
     },
     width="content",
     hide_index=True,
@@ -864,6 +862,12 @@ st.dataframe(
         {
             "col_0": [["a", "b"], ["b", "c", "d"], [], None],
             "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [
+                ["orange", "banana", "apple"],
+                ["pineapple", "mango", "orange", "strawberry"],
+                [],
+                None,
+            ],
         }
     ),
     column_config={
@@ -888,6 +892,11 @@ st.dataframe(
             options=["a", "b", "c", "d", "e"],
             color="primary",
             format_func=lambda x: f"Option {x}",
+        ),
+        "col_2": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["orange", "banana", "apple", "pineapple", "mango", "strawberry"],
+            color="auto",
         ),
     },
     width="content",

@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
@@ -53,7 +51,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
-SomeUploadedAudioFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
+SomeUploadedAudioFile: TypeAlias = UploadedFile | DeletedFile | None
 
 # Allowed sample rates for audio recording
 ALLOWED_SAMPLE_RATES = {8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000}
@@ -282,11 +280,13 @@ class AudioInputMixin:
         element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity.
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,
             width=width,
+            sample_rate=sample_rate,
         )
 
         audio_input_proto = AudioInputProto()

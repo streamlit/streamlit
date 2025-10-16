@@ -18,9 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Final, Literal, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
@@ -405,16 +403,14 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = dict[
-    Union[IndexIdentifierType, str, int], ColumnConfig
-]
+ColumnConfigMapping: TypeAlias = dict[IndexIdentifierType | str | int, ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Mapping[
     # TODO(lukasmasuch): This should also use int here to
     # correctly type the support for positional index. However,
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
-    Union[IndexIdentifierType, str],
-    Union[ColumnConfig, None, str],
+    IndexIdentifierType | str,
+    ColumnConfig | None | str,
 ]
 
 

@@ -14,21 +14,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -615,6 +613,8 @@ class ButtonGroupMixin:
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         **Example 1: Multi-select pills**
@@ -842,6 +842,8 @@ class ButtonGroupMixin:
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         **Example 1: Multi-select segmented control**
@@ -1065,7 +1067,10 @@ class ButtonGroupMixin:
             # "feedback" in errors
             "feedback" if style == "borderless" else style,
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity for segmented_control, pills and feedback,
+            # and only include kwargs that can invalidate the current selection.
+            # We whitelist the formatted options and the click mode (single vs multi).
+            key_as_main_identity={"options", "click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,

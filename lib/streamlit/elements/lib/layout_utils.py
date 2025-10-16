@@ -14,9 +14,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import Literal, TypeAlias, cast
 
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
@@ -30,10 +28,10 @@ from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 
-WidthWithoutContent: TypeAlias = Union[int, Literal["stretch"]]
-Width: TypeAlias = Union[int, Literal["stretch", "content"]]
-HeightWithoutContent: TypeAlias = Union[int, Literal["stretch"]]
-Height: TypeAlias = Union[int, Literal["stretch", "content"]]
+WidthWithoutContent: TypeAlias = int | Literal["stretch"]
+Width: TypeAlias = int | Literal["stretch", "content"]
+HeightWithoutContent: TypeAlias = int | Literal["stretch"]
+Height: TypeAlias = int | Literal["stretch", "content"]
 Gap: TypeAlias = Literal["small", "medium", "large"]
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]

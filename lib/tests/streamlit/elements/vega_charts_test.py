@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, ClassVar
 from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
@@ -48,6 +48,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
@@ -789,6 +792,117 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
 
         assert el.width_config.WhichOneof("width_spec") == "use_content"
         assert el.width_config.use_content is True
+
+
+class AltairChartHeightTest(DeltaGeneratorTestCase):
+    """Test altair_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (400, "pixel_height", 400),
+        ]
+    )
+    def test_altair_chart_height_combinations(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test altair_chart with various height combinations."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        st.altair_chart(chart, height=height)
+
+        el = self.get_delta_from_queue().new_element
+
+        # Check height configuration
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            ("height", "invalid_height"),
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_altair_chart_height_validation_errors(
+        self, param_name: str, invalid_value: str | int
+    ):
+        """Test that invalid height values raise validation errors."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.altair_chart(chart, **kwargs)
+
+    def test_altair_chart_default_height_content(self):
+        """Test that default height is 'content'."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+
+        assert el.height_config.WhichOneof("height_spec") == "use_content"
+        assert el.height_config.use_content is True
+
+    @pytest.mark.skipif(
+        is_altair_version_less_than("5.0.0"),
+        reason="This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_chart_height_with_selections(self):
+        """Test that height works correctly with selections enabled."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("a:O"),
+                y=alt.Y("b:Q"),
+            )
+            .add_params(alt.selection_point("my_param"))
+        )
+
+        result = st.altair_chart(
+            chart, height=300, on_select="rerun", key="test_altair_chart_height"
+        )
+
+        # Check that the chart element has the correct height configuration
+        el = self.get_delta_from_queue().new_element
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 300
+
+        # Check that selections are still working
+        assert hasattr(result, "selection")
+        assert result.selection.my_param == {}
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -1970,8 +2084,15 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
 
 
-class LineChartWidthHeightTest(DeltaGeneratorTestCase):
-    """Test line_chart width and height parameter functionality."""
+class ChartWidthHeightTest(DeltaGeneratorTestCase):
+    """Test width and height parameter functionality for modernized chart commands."""
+
+    CHART_COMMANDS: ClassVar[list[tuple[Callable, str]]] = [
+        (st.line_chart, "line_chart"),
+        (st.scatter_chart, "scatter_chart"),
+        (st.bar_chart, "bar_chart"),
+        (st.area_chart, "area_chart"),
+    ]
 
     @parameterized.expand(
         [
@@ -1991,7 +2112,7 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
             (600, 400, "pixel_width", 600, "pixel_height", 400),
         ]
     )
-    def test_line_chart_width_height_combinations(
+    def test_chart_width_height_combinations(
         self,
         width: str | int,
         height: str | int,
@@ -2000,24 +2121,32 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
         expected_height_spec: str,
         expected_height_value: bool | int,
     ):
-        """Test line_chart with various width and height combinations."""
+        """Test chart commands with various width and height combinations."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st.line_chart(df, x="a", y="b", width=width, height=height)
+        for chart_command, chart_name in self.CHART_COMMANDS:
+            with self.subTest(chart=chart_name):
+                chart_command(df, x="a", y="b", width=width, height=height)
 
-        el = self.get_delta_from_queue().new_element
+                el = self.get_delta_from_queue().new_element
 
-        # Check width configuration
-        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
-        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert (
+                    getattr(el.width_config, expected_width_spec)
+                    == expected_width_value
+                )
 
-        # Check height configuration
-        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
-        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+                assert (
+                    el.height_config.WhichOneof("height_spec") == expected_height_spec
+                )
+                assert (
+                    getattr(el.height_config, expected_height_spec)
+                    == expected_height_value
+                )
 
     @parameterized.expand(
         [
-            # Test parameters: use_container_width, width, expected_width_spec, expected_width_value
+            # use_container_width, width, expected_width_spec, expected_width_value
             (
                 True,
                 None,
@@ -2063,7 +2192,7 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
         ]
     )
     @patch("streamlit.elements.vega_charts.show_deprecation_warning")
-    def test_line_chart_use_container_width_deprecation(
+    def test_chart_use_container_width_deprecation(
         self,
         use_container_width: bool,
         width: int | str | None,
@@ -2079,18 +2208,26 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
         if width is not None:
             kwargs["width"] = width
 
-        st.line_chart(df, x="a", y="b", **kwargs)
+        for chart_command, chart_name in self.CHART_COMMANDS:
+            with self.subTest(chart=chart_name):
+                chart_command(df, x="a", y="b", **kwargs)
 
-        mock_warning.assert_called_once()
+                mock_warning.assert_called()
 
-        el = self.get_delta_from_queue().new_element
+                el = self.get_delta_from_queue().new_element
 
-        # Should be translated to the correct width configuration
-        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
-        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert (
+                    getattr(el.width_config, expected_width_spec)
+                    == expected_width_value
+                )
+
+        # Verify the warning was called for each chart command
+        assert mock_warning.call_count == len(self.CHART_COMMANDS)
 
     @parameterized.expand(
         [
+            # param_name, invalid_value
             ("width", "invalid_width"),
             ("height", "invalid_height"),
             ("width", 0),  # width must be positive
@@ -2099,15 +2236,32 @@ class LineChartWidthHeightTest(DeltaGeneratorTestCase):
             ("height", -100),  # negative height
         ]
     )
-    def test_line_chart_validation_errors(
-        self, param_name: str, invalid_value: str | int
-    ):
+    def test_chart_validation_errors(self, param_name: str, invalid_value: str | int):
         """Test that invalid width/height values raise validation errors."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
         kwargs = {param_name: invalid_value}
-        with pytest.raises(StreamlitAPIException):
-            st.line_chart(df, x="a", y="b", **kwargs)
+
+        for chart_command, chart_name in self.CHART_COMMANDS:
+            with self.subTest(chart=chart_name):
+                with pytest.raises(StreamlitAPIException):
+                    chart_command(df, x="a", y="b", **kwargs)
+
+    def test_chart_default_width_height(self):
+        """Test that default width is 'stretch' and default height is 'content'."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        for chart_command, chart_name in self.CHART_COMMANDS:
+            with self.subTest(chart=chart_name):
+                chart_command(df, x="a", y="b")  # No width/height specified
+
+                el = self.get_delta_from_queue().new_element
+
+                # Should default to stretch width and content height
+                assert el.width_config.WhichOneof("width_spec") == "use_stretch"
+                assert el.width_config.use_stretch is True
+                assert el.height_config.WhichOneof("height_spec") == "use_content"
+                assert el.height_config.use_content is True
 
 
 class VegaLiteChartWidthTest(DeltaGeneratorTestCase):

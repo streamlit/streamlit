@@ -33,6 +33,7 @@ export interface StreamlitSyntaxHighlighterProps {
   language?: string
   showLineNumbers?: boolean
   wrapLines?: boolean
+  // eslint-disable-next-line @eslint-react/no-unused-props
   height?: number
 }
 

@@ -22,14 +22,13 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -90,18 +89,11 @@ _LOGGER: Final = _logger.get_logger(__name__)
 # formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
     "EditableData",
-    bound=Union[
-        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        tuple[Any],
-        list[Any],
-        set[Any],
-        dict[str, Any],
-        # TODO(lukasmasuch): Add support for np.ndarray
-        # but it is not possible with np.ndarray.
-        # NDArray[Any] works, but is only available in numpy>1.20.
-        # TODO(lukasmasuch): Add support for pa.Table typing
-        # pa.Table does not work since it is a C-based class resulting in Any
-    ],
+    bound=dataframe_util.DataFrameGenericAlias[Any]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any],
 )
 
 
@@ -172,7 +164,8 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v for k, v in data_editor_state["edited_rows"].items()
+            int(k): v
+            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
         }
         return data_editor_state
 
@@ -671,6 +664,9 @@ class DataEditorMixin:
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
                 - Text and number formatting from ``column_config`` always takes
                   precedence over text and number formatting from ``pandas.Styler``.
+                - If your dataframe starts with an empty column, you should set
+                  the column datatype in the underlying dataframe to ensure your
+                  intended datatype, especially for integers versus floats.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
                   ``complex``, ``tuple``, ``bytes``, ``bytearray``,

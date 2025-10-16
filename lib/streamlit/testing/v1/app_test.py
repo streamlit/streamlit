@@ -18,7 +18,7 @@ import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib import parse
 
@@ -88,7 +88,7 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
 

@@ -21,9 +21,9 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Sized
+from collections.abc import Callable, Sized
 from functools import wraps
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, util
 from streamlit.logger import get_logger

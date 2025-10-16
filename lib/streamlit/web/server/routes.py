@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, Callable, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import tornado.web
 
@@ -28,7 +28,7 @@ from streamlit.web.server.server_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Sequence
+    from collections.abc import Awaitable, Callable, Sequence
 
 
 # Files that match this pattern do not get cached.

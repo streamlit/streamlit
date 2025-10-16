@@ -22,8 +22,10 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_button_group,
     get_element_by_key,
     get_markdown,
@@ -135,18 +137,19 @@ def test_click_single_icon_segment_and_take_snapshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    expect_markdown(app, "Multi selection: []")
+    expect_prefixed_markdown(app, "Segmented control with default options:", "[]")
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    expect_markdown(
+    expect_prefixed_markdown(
         app,
-        "Multi selection: ['Foobar', '🧰 General widgets']",
+        "Segmented control with default options:",
+        "['🧰 General widgets', '🎥 Video']",
     )
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    expect_markdown(app, "Multi selection: []")
+    expect_prefixed_markdown(app, "Segmented control with default options:", "[]")
 
 
 def test_selection_via_on_change_callback(app: Page):
@@ -236,3 +239,42 @@ def test_segmented_control_width_examples(
 
     segmented_control_300px = get_button_group(app, "segmented_control_300px_width")
     assert_snapshot(segmented_control_300px, name="st_segmented_control-width_300px")
+
+
+def test_dynamic_segmented_control_props(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the segmented control can be updated dynamically while keeping the state."""
+    dynamic_segmented = get_element_by_key(app, "dynamic_segmented_control_with_key")
+    expect(dynamic_segmented).to_be_visible()
+
+    # Initial state
+    expect(dynamic_segmented).to_contain_text("Initial dynamic segmented control")
+    assert_snapshot(dynamic_segmented, name="st_segmented_control-dynamic_initial")
+    expect_prefixed_markdown(app, "Initial segmented control value:", "apple")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_segmented, "initial help")
+
+    # Click a value
+    get_segment_button(dynamic_segmented, "banana").click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial segmented control value:", "banana")
+
+    # Click the toggle to update the segmented control props
+    click_toggle(app, "Update segmented control props")
+
+    # new segmented control is visible:
+    expect(dynamic_segmented).to_contain_text("Updated dynamic segmented control")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated segmented control value:", "banana")
+
+    dynamic_segmented.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_segmented, name="st_segmented_control-dynamic_updated")
+    expect_help_tooltip(app, dynamic_segmented, "updated help")
+
+    # Click a different value
+    get_segment_button(dynamic_segmented, "orange").click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated segmented control value:", "orange")

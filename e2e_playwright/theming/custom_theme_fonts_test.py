@@ -16,7 +16,7 @@
 import os
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_no_skeletons
@@ -65,3 +65,30 @@ def test_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(10000)
 
     assert_snapshot(app, name="custom_fonts_app", image_threshold=0.0003)
+
+
+@pytest.mark.usefixtures("configure_custom_fonts")
+def test_custom_theme_settings_dialog(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the settings dialog is rendered correctly with a custom theme."""
+    # Make sure that all elements are rendered and no skeletons are shown:
+    expect_no_skeletons(app, timeout=25000)
+
+    # Open the main menu
+    app.get_by_test_id("stMainMenu").click()
+
+    # Open the settings dialog
+    main_menu_list = app.get_by_test_id("stMainMenuList")
+    main_menu_list.get_by_text("Settings").click()
+
+    # Check that the custom theme is selected
+    settings_dialog = app.get_by_test_id("stDialog")
+    expect(settings_dialog).to_be_visible()
+    expect(settings_dialog).to_contain_text("Custom Theme")
+
+    assert_snapshot(
+        settings_dialog.get_by_role("dialog"),
+        name="custom_theme_settings_dialog",
+        image_threshold=0.0003,
+        # Hide version info so that snapshots don't change across versions.
+        style="[data-testid='stVersionInfo'] { display: none !important; }",
+    )

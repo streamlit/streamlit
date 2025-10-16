@@ -172,13 +172,33 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.widthConfig,
   ])
 
-  const styles = useLayoutStyles({
+  let styles = useLayoutStyles({
     element: node.element,
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
     styleOverrides,
     minStretchBehavior,
   })
+
+  // Special handling for space elements: apply only relevant dimension
+  // to prevent unintended cross-axis spacing
+  if (node.element.type === "space") {
+    if (isInHorizontalLayout) {
+      // In horizontal layout: keep width, clear height
+      // This prevents unwanted vertical spacing
+      styles = {
+        ...styles,
+        height: "auto",
+      }
+    } else {
+      // In vertical layout (default): keep height, clear width
+      // This prevents unwanted horizontal spacing
+      styles = {
+        ...styles,
+        width: "auto",
+      }
+    }
+  }
 
   return <StyledElementContainer {...rest} {...styles} />
 }

@@ -20,11 +20,13 @@ cycle between streamlit.delta_generator and some elements.
 from __future__ import annotations
 
 from contextvars import ContextVar, Token
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer

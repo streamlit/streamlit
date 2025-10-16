@@ -19,21 +19,20 @@ from __future__ import annotations
 
 import textwrap
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
+    TypeAlias,
     TypeVar,
-    Union,
     cast,
     overload,
 )
 
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -505,8 +504,8 @@ class Dataframe(Element):
         return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
-SingleDateValue: TypeAlias = Union[date, datetime]
-DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
+SingleDateValue: TypeAlias = date | datetime
+DateValue: TypeAlias = SingleDateValue | Sequence[SingleDateValue] | None
 
 
 @dataclass(repr=False)
@@ -861,7 +860,7 @@ class Multiselect(Widget, Generic[T]):
         return self
 
 
-Number = Union[int, float]
+Number: TypeAlias = int | float
 
 
 @dataclass(repr=False)
@@ -1308,7 +1307,7 @@ class TextInput(Widget):
         return self.set_value(v)
 
 
-TimeValue: TypeAlias = Union[time, datetime]
+TimeValue: TypeAlias = time | datetime
 
 
 @dataclass(repr=False)
@@ -1828,7 +1827,7 @@ class Tab(Block):
         self.label = proto.label
 
 
-Node: TypeAlias = Union[Element, Block]
+Node: TypeAlias = Element | Block
 
 
 def get_widget_state(node: Node) -> WidgetState | None:

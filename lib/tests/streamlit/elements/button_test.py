@@ -21,7 +21,7 @@ import os
 import tempfile
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,6 +36,9 @@ from streamlit.proto.DownloadButton_pb2 import (
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def get_button_command_matrix(

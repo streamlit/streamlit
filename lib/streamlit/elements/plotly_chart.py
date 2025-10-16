@@ -21,13 +21,14 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     Union,
     cast,
     overload,
 )
 
-from typing_extensions import Required, TypeAlias
+from typing_extensions import Required
 
 from streamlit import type_util
 from streamlit.deprecation_util import (

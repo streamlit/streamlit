@@ -17,20 +17,18 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     NoReturn,
+    TypeAlias,
     TypeVar,
     cast,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,

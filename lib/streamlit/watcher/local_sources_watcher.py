@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -28,6 +28,7 @@ from streamlit.watcher.path_watcher import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import ModuleType
 
     from streamlit.runtime.pages_manager import PagesManager

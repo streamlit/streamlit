@@ -101,7 +101,6 @@ export const renderWithContexts = (
     activeTheme: baseTheme,
     setTheme: vi.fn(),
     availableThemes: [],
-    addThemes: vi.fn(),
     onPageChange: vi.fn(),
     currentPageScriptHash: "",
     libConfig: {},

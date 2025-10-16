@@ -30,13 +30,13 @@ from typing import (
     Any,
     Final,
     Protocol,
+    TypeAlias,
+    TypeGuard,
     TypeVar,
     Union,
     cast,
     runtime_checkable,
 )
-
-from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
@@ -165,12 +165,12 @@ class DataframeInterchangeCompatible(Protocol):
     def __dataframe__(self, allow_copy: bool) -> Any: ...
 
 
-OptionSequence: TypeAlias = Union[
-    Iterable[V_co],
-    DataFrameGenericAlias[V_co],
-    PandasCompatible,
-    DataframeInterchangeCompatible,
-]
+OptionSequence: TypeAlias = (
+    Iterable[V_co]
+    | DataFrameGenericAlias[V_co]
+    | PandasCompatible
+    | DataframeInterchangeCompatible
+)
 
 # Various data types supported by our dataframe processing
 # used for commands like `st.dataframe`, `st.table`, `st.map`,

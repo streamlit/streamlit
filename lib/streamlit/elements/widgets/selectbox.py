@@ -17,7 +17,6 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -67,7 +66,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -404,6 +403,8 @@ class SelectboxMixin:
         any
             The selected option or ``None`` if no option is selected.
 
+            This is a copy of the selected option, not the original.
+
         Examples
         --------
         **Example 1: Use a basic selectbox widget**
@@ -544,7 +545,9 @@ class SelectboxMixin:
             # Treat the provided key as the main identity. Only include
             # the options and accept_new_options in the identity computation
             # as those can invalidate the current selection.
-            key_as_main_identity={"options", "accept_new_options", "format_func"},
+            # Changes to format_func also invalidate the current selection,
+            # but this is already handled via the `options` parameter below:
+            key_as_main_identity={"options", "accept_new_options"},
             dg=self.dg,
             label=label,
             options=formatted_options,

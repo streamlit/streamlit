@@ -78,12 +78,6 @@ export interface LibContextProps {
   availableThemes: ThemeConfig[]
 
   /**
-   * Call to add additional themes to the app.
-   * @see ThemeCreatorDialog
-   */
-  addThemes: (themes: ThemeConfig[]) => void
-
-  /**
    * Change the page in a multi-page app.
    * @see PageLink
    */
@@ -168,7 +162,6 @@ export const LibContext = createContext<LibContextProps>({
   activeTheme: baseTheme,
   setTheme: () => {},
   availableThemes: [],
-  addThemes: () => {},
   onPageChange: () => {},
   currentPageScriptHash: "",
   libConfig: {},

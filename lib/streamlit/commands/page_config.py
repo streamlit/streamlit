@@ -18,9 +18,7 @@ import random
 from collections.abc import Mapping
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
@@ -38,20 +36,20 @@ from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeGuard
+    from typing import TypeGuard
 
 GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
 
-PageIcon: TypeAlias = Union[AtomicImage, str]
+PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
 InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
-MenuItems: TypeAlias = Mapping[MenuKey, Union[str, None]]
+MenuItems: TypeAlias = Mapping[MenuKey, str | None]
 
 RANDOM_EMOJIS: Final = list(
     "🔥™🎉🚀🌌💣✨🌙🎆🎇💥🤩🤙🌛🤘⬆💡🤪🥂⚡💨🌠🎊🍿😛🔮🤟🌃🍃🍾💫▪🌴🎈🎬🌀🎄😝☔⛽🍂💃😎🍸🎨🥳☀😍🅱🌞😻🌟😜💦💅🦄😋😉👻🍁🤤👯🌻‼🌈👌🎃💛😚🔫🙌👽🍬🌅☁🍷👭☕🌚💁👅🥰🍜😌🎥🕺❕🧡☄💕🍻✅🌸🚬🤓🍹®☺💪😙☘🤠✊🤗🍵🤞😂💯😏📻🎂💗💜🌊❣🌝😘💆🤑🌿🦋😈⛄🚿😊🌹🥴😽💋😭🖤🙆👐⚪💟☃🙈🍭💻🥀🚗🤧🍝💎💓🤝💄💖🔞⁉⏰🕊🎧☠♥🌳🏾🙉⭐💊🍳🌎🙊💸❤🔪😆🌾✈📚💀🏠✌🏃🌵🚨💂🤫🤭😗😄🍒👏🙃🖖💞😅🎅🍄🆓👉💩🔊🤷⌚👸😇🚮💏👳🏽💘💿💉👠🎼🎶🎤👗❄🔐🎵🤒🍰👓🏄🌲🎮🙂📈🚙📍😵🗣❗🌺🙄👄🚘🥺🌍🏡♦💍🌱👑👙☑👾🍩🥶📣🏼🤣☯👵🍫➡🎀😃✋🍞🙇😹🙏👼🐝⚫🎁🍪🔨🌼👆👀😳🌏📖👃🎸👧💇🔒💙😞⛅🏻🍴😼🗿🍗♠🦁✔🤖☮🐢🐎💤😀🍺😁😴📺☹😲👍🎭💚🍆🍋🔵🏁🔴🔔🧐👰☎🏆🤡🐠📲🙋📌🐬✍🔑📱💰🐱💧🎓🍕👟🐣👫🍑😸🍦👁🆗🎯📢🚶🦅🐧💢🏀🚫💑🐟🌽🏊🍟💝💲🐍🍥🐸☝♣👊⚓❌🐯🏈📰🌧👿🐳💷🐺📞🆒🍀🤐🚲🍔👹🙍🌷🙎🐥💵🔝📸⚠❓🎩✂🍼😑⬇⚾🍎💔🐔⚽💭🏌🐷🍍✖🍇📝🍊🐙👋🤔🥊🗽🐑🐘🐰💐🐴♀🐦🍓✏👂🏴👇🆘😡🏉👩💌😺✝🐼🐒🐶👺🖕👬🍉🐻🐾⬅⏬▶👮🍌♂🔸👶🐮👪⛳🐐🎾🐕👴🐨🐊🔹©🎣👦👣👨👈💬⭕📹📷"

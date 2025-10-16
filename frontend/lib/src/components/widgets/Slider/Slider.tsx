@@ -89,6 +89,7 @@ export interface Props {
   disabled: boolean
   element: SliderProto
   widgetMgr: WidgetStateManager
+  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
   fragmentId?: string
 }

@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
 
-from typing_extensions import NotRequired, TypeAlias
+from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import StreamlitValueError
@@ -29,7 +29,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -45,7 +45,7 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
-ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
+ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -83,11 +83,7 @@ ThemeColor: TypeAlias = Literal[
 ]
 
 # Color options for chart columns:
-ChartColor: TypeAlias = Union[
-    Literal["auto", "auto-inverse"],
-    ThemeColor,
-    str,
-]
+ChartColor: TypeAlias = Literal["auto", "auto-inverse"] | ThemeColor | str
 
 
 def _validate_chart_color(maybe_color: str) -> None:
@@ -135,7 +131,7 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
-SelectboxOptionValue: TypeAlias = Union[str, int, float, bool]
+SelectboxOptionValue: TypeAlias = str | int | float | bool
 
 
 class SelectboxOption(TypedDict):
@@ -187,7 +183,7 @@ class ListColumnConfig(TypedDict):
 class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
-    color: NotRequired[str | ThemeColor | None]
+    color: NotRequired[str | Literal["auto"] | ThemeColor | None]
 
 
 class MultiselectColumnConfig(TypedDict):
@@ -229,6 +225,7 @@ class ProgressColumnConfig(TypedDict):
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -1732,10 +1729,15 @@ def MultiselectColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
-    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
+    color: str
+    | Literal["auto"]
+    | ThemeColor
+    | Iterable[str | ThemeColor]
+    | None = None,
     format_func: Callable[[str], str] | None = None,
 ) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
@@ -1788,6 +1790,12 @@ def MultiselectColumn(
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
 
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
     default : Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
 
@@ -1808,6 +1816,7 @@ def MultiselectColumn(
         The color to use for different options. This can be:
 
         - None (default): The options are displayed without color.
+        - ``"auto"``: The options are colored based on the configured categorical chart colors.
         - A single color value that is used for all options. This can be one of
           the following strings:
 
@@ -1943,6 +1952,7 @@ def MultiselectColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",
@@ -2446,6 +2456,7 @@ def ProgressColumn(
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2558,6 +2569,9 @@ def ProgressColumn(
         height: 300px
     """  # noqa: E501
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -2569,6 +2583,7 @@ def ProgressColumn(
             min_value=min_value,
             max_value=max_value,
             step=step,
+            color=color,
         ),
     )
 
