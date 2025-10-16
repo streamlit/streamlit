@@ -62,7 +62,7 @@ export function stripMarkdown(text: string): string {
       .replace(/[_]{1,2}([^_]+)[_]{1,2}/g, "$1")
       // Remove both material icons and emoji shortcodes
       .replace(
-        /\s+:[a-zA-Z]+\/[a-zA-Z0-9_-]+:\s*|\s+:[a-zA-Z0-9_+-]+:\s*/g,
+        /(\s+|^):[a-zA-Z]+\/[a-zA-Z0-9_-]+:\s*|(\s+|^):[a-zA-Z0-9_+-]+:\s*/g,
         " "
       )
       // Remove :color[text] and :color-background[text]
