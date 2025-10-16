@@ -38,6 +38,8 @@ import {
 } from "@streamlit/connection"
 import {
   CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -1937,16 +1939,14 @@ describe("App", () => {
 
       // Custom theme should be added
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // Should only have one theme added
-      // @ts-expect-error
-      expect(props.theme.addThemes.mock.calls[0][0]).toHaveLength(1)
-      // Check that keepPresetThemes is false
-      // @ts-expect-error
-      expect(props.theme.addThemes.mock.calls[0][1]).toBe(false)
+      // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
+        false
+      )
       // Active theme should be set to the custom theme
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
       )
     })
 
@@ -1971,16 +1971,23 @@ describe("App", () => {
 
       // Check that 3 themes were added (light, dark, auto)
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // @ts-expect-error
-      expect(props.theme.addThemes.mock.calls[0][0]).toHaveLength(3)
-      // Check that keepPresetThemes is false
-      // @ts-expect-error
-      expect(props.theme.addThemes.mock.calls[0][1]).toBe(false)
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ name: CUSTOM_THEME_LIGHT_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
+        ],
+        false
+      )
 
       // Active theme should be set to the auto theme
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_AUTO_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "red",
+          }),
+        })
       )
     })
 
