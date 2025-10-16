@@ -15,6 +15,7 @@
 import re
 import textwrap
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -260,8 +261,13 @@ def test_container_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(height_container, name="st_code-height_container")
 
 
+@pytest.mark.only_browser("chromium")
 def test_copy_to_clipboard_functionality(app: Page):
-    """Test that the copy-to-clipboard button actually copies code to the clipboard."""
+    """Test that the copy-to-clipboard button actually copies code to the clipboard.
+
+    Note: Only runs on Chromium as Firefox and WebKit don't support clipboard
+    permissions in Playwright.
+    """
     # Grant clipboard permissions to the browser context
     context = app.context
     context.grant_permissions(["clipboard-read", "clipboard-write"])
@@ -294,12 +300,15 @@ def test_copy_to_clipboard_functionality(app: Page):
     expect(copy_button).to_have_attribute("title", "Copied")
 
 
+@pytest.mark.only_browser("chromium")
 def test_copy_to_clipboard_multiline_code(app: Page):
-    """
-    Test that copying multiline code blocks works correctly.
+    """Test that copying multiline code blocks works correctly.
 
     Verifies that the entire code block, including newlines and indentation,
     is copied correctly to the clipboard.
+
+    Note: Only runs on Chromium as Firefox and WebKit don't support clipboard
+    permissions in Playwright.
     """
     # Grant clipboard permissions
     context = app.context
