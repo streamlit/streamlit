@@ -258,3 +258,75 @@ def test_container_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunc
     height_container = app.get_by_test_id("stVerticalBlock").last
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_code-height_container")
+
+
+def test_copy_to_clipboard_functionality(app: Page):
+    """Test that the copy-to-clipboard button actually copies code to the clipboard."""
+    # Grant clipboard permissions to the browser context
+    context = app.context
+    context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    # Get the first code block (contains "# This code is awesome!")
+    first_code_block = app.get_by_test_id("stCode").first
+
+    # Get the copy button - it should appear on hover
+    copy_button = first_code_block.get_by_test_id("stCodeCopyButton")
+
+    # Hover to make the button visible
+    first_code_block.hover()
+
+    # Wait for button to be visible
+    expect(copy_button).to_be_visible()
+
+    # Click the copy button
+    copy_button.click()
+
+    # Read the clipboard contents
+    clipboard_text = app.evaluate("async () => await navigator.clipboard.readText()")
+
+    # Verify the clipboard contains the expected code text
+    assert clipboard_text == "# This code is awesome!", (
+        f"Expected clipboard to contain '# This code is awesome!' but got: {clipboard_text!r}"
+    )
+
+    # Verify the button shows the "copied" state (checkmark icon)
+    # The button should show a checkmark after successful copy
+    expect(copy_button).to_have_attribute("title", "Copied")
+
+
+def test_copy_to_clipboard_multiline_code(app: Page):
+    """
+    Test that copying multiline code blocks works correctly.
+
+    Verifies that the entire code block, including newlines and indentation,
+    is copied correctly to the clipboard.
+    """
+    # Grant clipboard permissions
+    context = app.context
+    context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    # Get the third code block (Python code with function definition)
+    # nth(2) because it's 0-indexed
+    python_code_block = app.get_by_test_id("stCode").nth(2)
+
+    # Hover and click copy button
+    python_code_block.hover()
+    copy_button = python_code_block.get_by_test_id("stCodeCopyButton")
+    expect(copy_button).to_be_visible()
+    copy_button.click()
+
+    # Read clipboard
+    clipboard_text = app.evaluate("async () => await navigator.clipboard.readText()")
+
+    # Expected multiline code
+    expected_code = textwrap.dedent(
+        """
+        def hello():
+            print("Hello, Streamlit!")
+        """
+    ).strip()
+
+    # Verify clipboard contains the correct multiline code
+    assert clipboard_text == expected_code, (
+        f"Expected clipboard to contain multiline code but got: {clipboard_text!r}"
+    )
