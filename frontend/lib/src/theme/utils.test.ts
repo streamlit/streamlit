@@ -3030,10 +3030,7 @@ describe("Custom theme creation", () => {
         },
       })
 
-      const result = handleSectionInheritance(
-        themeInput,
-        CUSTOM_THEME_LIGHT_NAME
-      )
+      const result = handleSectionInheritance(themeInput, "light")
 
       // Should merge light section with base
       expect(result.primaryColor).toBe("lightblue")
@@ -3055,10 +3052,7 @@ describe("Custom theme creation", () => {
         },
       })
 
-      const result = handleSectionInheritance(
-        themeInput,
-        CUSTOM_THEME_DARK_NAME
-      )
+      const result = handleSectionInheritance(themeInput, "dark")
 
       // Should merge dark section with base
       expect(result.primaryColor).toBe("darkred")
@@ -3085,10 +3079,7 @@ describe("Custom theme creation", () => {
         },
       })
 
-      const result = handleSectionInheritance(
-        themeInput,
-        CUSTOM_THEME_LIGHT_NAME
-      )
+      const result = handleSectionInheritance(themeInput, "light")
 
       // Should use light theme overrides
       expect(result.primaryColor).toBe("lightblue")
@@ -3116,10 +3107,7 @@ describe("Custom theme creation", () => {
         },
       })
 
-      const result = handleSectionInheritance(
-        themeInput,
-        CUSTOM_THEME_DARK_NAME
-      )
+      const result = handleSectionInheritance(themeInput, "dark")
 
       // Should use dark theme overrides
       expect(result.primaryColor).toBe("darkred")
@@ -3151,10 +3139,7 @@ describe("Custom theme creation", () => {
         },
       })
 
-      const result = handleSectionInheritance(
-        themeInput,
-        CUSTOM_THEME_DARK_NAME
-      )
+      const result = handleSectionInheritance(themeInput, "dark")
 
       // Main theme properties: theme < theme.dark
       expect(result.primaryColor).toBe("dark-primary") // theme.dark wins

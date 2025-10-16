@@ -1230,14 +1230,14 @@ export const convertRemToPx = (scssValue: string): number => {
  * Light sidebar = custom light theme + [theme.sidebar] + [theme.light.sidebar] overrides
  * Dark sidebar = custom dark theme + [theme.sidebar] + [theme.dark.sidebar] overrides
  * @param themeInput: the theme input (configs) to merge
- * @param themeType: the theme type to create (light or dark)
+ * @param variant: the theme variant to create ('light' or 'dark')
  */
 export const handleSectionInheritance = (
   themeInput: CustomThemeConfig,
-  themeType: typeof CUSTOM_THEME_LIGHT_NAME | typeof CUSTOM_THEME_DARK_NAME
+  variant: "light" | "dark"
 ): CustomThemeConfig => {
   let result = cloneDeep(themeInput)
-  const isLightTheme = themeType === CUSTOM_THEME_LIGHT_NAME
+  const isLightTheme = variant === "light"
 
   // Always set the appropriate base theme
   const base = isLightTheme
@@ -1328,16 +1328,10 @@ export const createCustomThemes = (
 
   // When light or dark theme section configs are set, need to create a custom theme for each
   if (hasLightConfigs || hasDarkConfigs) {
-    const lightThemeInput = handleSectionInheritance(
-      themeInput,
-      CUSTOM_THEME_LIGHT_NAME
-    )
+    const lightThemeInput = handleSectionInheritance(themeInput, "light")
     const lightTheme = createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput)
     customThemes.push(lightTheme)
-    const darkThemeInput = handleSectionInheritance(
-      themeInput,
-      CUSTOM_THEME_DARK_NAME
-    )
+    const darkThemeInput = handleSectionInheritance(themeInput, "dark")
     const darkTheme = createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput)
     customThemes.push(darkTheme)
   } else {
@@ -1357,18 +1351,18 @@ export const createCustomThemes = (
  */
 const cleanSidebarEmptyArrays = (
   sidebar: CustomThemeConfig["sidebar"]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Record<string, any> => {
+): Partial<NonNullable<CustomThemeConfig["sidebar"]>> => {
   if (!sidebar) {
     return {}
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cleaned: Record<string, any> = { ...sidebar }
+  const cleaned: Partial<NonNullable<CustomThemeConfig["sidebar"]>> = {
+    ...sidebar,
+  }
 
   Object.entries(cleaned).forEach(([config, value]) => {
     if (Array.isArray(value) && value.length === 0) {
-      delete cleaned[config]
+      delete cleaned[config as keyof typeof cleaned]
     }
   })
 
@@ -1441,6 +1435,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     "Sidebar",
     {
       ...activeTheme.themeInput, // Use the theme props from the main theme as basis
+      // @ts-expect-error - baseTheme is not null
       base: baseTheme,
       ...sidebarOverride,
     },

@@ -775,9 +775,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -798,9 +799,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -2017,9 +2019,10 @@ describe("App", () => {
       })
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -2045,9 +2048,10 @@ describe("App", () => {
       })
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_LIGHT_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_LIGHT_NAME,
+        })
       )
     })
 
@@ -2073,9 +2077,10 @@ describe("App", () => {
       })
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_DARK_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_DARK_NAME,
+        })
       )
     })
   })
