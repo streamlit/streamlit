@@ -89,16 +89,22 @@ describe("stripMarkdown", () => {
     expect(stripMarkdown("**very bold**")).toBe("very bold")
   })
 
-  it("removes emoji shortcodes", () => {
+  it("removes emoji shortcodes and handle spaces like Github Markdown", () => {
     expect(stripMarkdown("Hello :wave:")).toBe("Hello")
     expect(stripMarkdown(":smile: text")).toBe("text")
-    expect(stripMarkdown("before :+1: after")).toBe("before  after")
+    expect(stripMarkdown("before :+1: after")).toBe("before after")
+    expect(stripMarkdown("multiple :smile:spaces  :heart:   here")).toBe(
+      "multiple spaces here"
+    )
   })
 
-  it("removes material icons", () => {
+  it("removes material icons and handle spaces like Github Markdown", () => {
     expect(stripMarkdown(":material/info:")).toBe("")
     expect(stripMarkdown("before:material/settings:after")).toBe("beforeafter")
-    expect(stripMarkdown("text :material/thumb_up: here")).toBe("text  here")
+    expect(stripMarkdown("text :material/thumb_up: here")).toBe("text here")
+    expect(
+      stripMarkdown("multiple :material/home:spaces  :material/lock:   here")
+    ).toBe("multiple spaces here")
   })
 
   it("removes colored text", () => {
