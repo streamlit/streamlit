@@ -92,6 +92,8 @@ describe("SettingsDialog", () => {
       <SettingsDialog {...props} />,
       // LibContext
       {},
+      // SidebarConfigContext
+      {},
       // ThemeContext
       themeContext
     )
@@ -108,6 +110,8 @@ describe("SettingsDialog", () => {
     renderWithContexts(
       <SettingsDialog {...props} />,
       // LibContext
+      {},
+      // SidebarConfigContext
       {},
       // ThemeContext
       themeContext
@@ -129,6 +133,8 @@ describe("SettingsDialog", () => {
       <SettingsDialog {...props} />,
       // LibContext
       {},
+      // SidebarConfigContext
+      {},
       // ThemeContext
       themeContext
     )
@@ -147,7 +153,15 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     expect(screen.getByText("Choose app theme")).toBeVisible()
 
@@ -164,7 +178,15 @@ describe("SettingsDialog", () => {
       activeTheme: customTheme,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     const selectbox = screen.getByRole("combobox")
     expect(selectbox).toBeVisible()
@@ -188,7 +210,15 @@ describe("SettingsDialog", () => {
       activeTheme: customThemeLight,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_LIGHT_NAME)).toBeVisible()
@@ -217,7 +247,15 @@ describe("SettingsDialog", () => {
       activeTheme: customThemeDark,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_DARK_NAME)).toBeVisible()
@@ -240,7 +278,15 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     expect(screen.getByText("Light")).toBeVisible()
 
@@ -259,7 +305,15 @@ describe("SettingsDialog", () => {
       availableThemes,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     expect(screen.getByText("Dark")).toBeVisible()
 
@@ -273,7 +327,15 @@ describe("SettingsDialog", () => {
     })
     const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     const versionRegex = /Made with Streamlit\s*42\.42\.42/
     const versionText = screen.getByText(versionRegex)
@@ -287,7 +349,15 @@ describe("SettingsDialog", () => {
     const props = getProps({ sessionInfo })
     const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, {}, themeContext)
+    renderWithContexts(
+      <SettingsDialog {...props} />,
+      // LibContext
+      {},
+      // SidebarConfigContext
+      {},
+      // ThemeContext
+      themeContext
+    )
 
     const versionRegex = /^Made with Streamlit.*/
     const nonExistentText = screen.queryByText(versionRegex)

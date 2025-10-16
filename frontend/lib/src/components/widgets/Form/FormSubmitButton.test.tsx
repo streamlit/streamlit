@@ -157,6 +157,8 @@ describe("FormSubmitButton", () => {
       <FormSubmitButton {...getProps()} />,
       // LibContext overrides
       {},
+      // SidebarConfigContext overrides
+      {},
       // ThemeContext overrides
       {},
       // NavigationContext overrides

@@ -124,6 +124,8 @@ describe("useWidgetManagerElementState hook", () => {
       <TestComponent />,
       // LibContext overrides
       {},
+      // SidebarConfigContext overrides
+      {},
       // ThemeContext overrides
       {},
       // NavigationContext overrides

@@ -16,51 +16,9 @@
 
 import { createContext } from "react"
 
-import { IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
+import { IGitInfo } from "@streamlit/protobuf"
 
 export interface AppContextProps {
-  /**
-   * The sidebar's default display state.
-   * Set from the PageConfig protobuf.
-   * Pulled from appContext in AppView as prop to ThemedSidebar.
-   * @see Sidebar
-   */
-  initialSidebarState: PageConfig.SidebarState
-
-  /**
-   * The app logo (displayed in top left corner of app)
-   * Pulled from appContext in Sidebar
-   * @see SidebarNav
-   */
-  appLogo: Logo | null
-
-  /**
-   * If non-zero, this is the number of pixels that the sidebar's
-   * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
-   * the current theme's spacing is used.);
-   * this is set from the host communication manager via host message.
-   * Pulled from appContext in AppView & ThemedSidebar
-   * @see AppView (StyledSidebarOpenContainer)
-   * @see Sidebar (StyledSidebarOpenContainer)
-   */
-  sidebarChevronDownshift: number
-
-  /**
-   * Whether to expand the sidebar nav section by default.
-   * Pulled from appContext in SidebarNav
-   * @see SidebarNav
-   */
-  expandSidebarNav: boolean
-
-  /**
-   * Whether to hide the sidebar nav. Can be configured via host message.
-   * Used to control visibility of multi-page app navigation in sidebar.
-   * Pulled from appContext in Sidebar
-   * @see Sidebar
-   * @see AppView
-   */
-  hideSidebarNav: boolean
-
   /**
    * Whether to disable widgets and sidebar page navigation links, based on connection
    * state and whether the host has disabled inputs.
@@ -88,11 +46,6 @@ export interface AppContextProps {
 }
 
 export const AppContext = createContext<AppContextProps | null>({
-  initialSidebarState: PageConfig.SidebarState.AUTO,
-  appLogo: null,
-  sidebarChevronDownshift: 0,
-  expandSidebarNav: false,
-  hideSidebarNav: false,
   widgetsDisabled: false,
   gitInfo: null,
   showToolbar: true,

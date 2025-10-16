@@ -97,6 +97,8 @@ describe("ElementNodeRenderer Block Component", () => {
         <ElementNodeRenderer {...props} />,
         // LibContext overrides
         {},
+        // SidebarConfigContext overrides
+        {},
         // ThemeContext overrides
         {},
         // NavigationContext overrides
@@ -127,6 +129,8 @@ describe("ElementNodeRenderer Block Component", () => {
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
         // LibContext overrides
+        {},
+        // SidebarConfigContext overrides
         {},
         // ThemeContext overrides
         {},
@@ -161,6 +165,8 @@ describe("ElementNodeRenderer Block Component", () => {
         <ElementNodeRenderer {...props} />,
         // LibContext overrides
         {},
+        // SidebarConfigContext overrides
+        {},
         // ThemeContext overrides
         {},
         // NavigationContext overrides
@@ -190,6 +196,8 @@ describe("ElementNodeRenderer Block Component", () => {
       renderWithContexts(
         <ElementNodeRenderer {...props} />,
         // LibContext overrides
+        {},
+        // SidebarConfigContext overrides
         {},
         // ThemeContext overrides
         {},

@@ -32,6 +32,7 @@ import {
   NavigationContextProps,
   render,
   renderWithContexts,
+  SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -51,14 +52,22 @@ function getAppContextOutput(
   context: Partial<AppContextProps>
 ): AppContextProps {
   return {
+    widgetsDisabled: false,
+    gitInfo: null,
+    showToolbar: true,
+    ...context,
+  }
+}
+
+function getSidebarConfigContextOutput(
+  context: Partial<SidebarConfigContextProps>
+): SidebarConfigContextProps {
+  return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
     ...context,
   }
 }
@@ -107,7 +116,6 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
-    appLogo: null,
     wideMode: false,
     embedded: false,
     showPadding: false,
@@ -124,18 +132,25 @@ function renderAppView(
   props: Partial<AppViewProps> = {},
   overrides?: {
     appContext?: Partial<AppContextProps>
+    sidebarConfigContext?: Partial<SidebarConfigContextProps>
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {
   // Setup AppContext mock with overrides if provided
   setupAppContextMocks(overrides?.appContext || {})
 
+  const sidebarConfigContextValues = getSidebarConfigContextOutput(
+    overrides?.sidebarConfigContext || {}
+  )
+
   const navigationContextValues = getNavigationContextOutput(
     overrides?.navigationContext || {}
   )
+
   return renderWithContexts(
     <AppView {...getProps(props)} />,
     {}, // libContextProps
+    sidebarConfigContextValues, // sidebarConfigContextProps
     {}, // themeContextProps
     navigationContextValues, // navigationContextProps
     {}, // formsContextProps
@@ -230,7 +245,7 @@ describe("AppView element", () => {
     renderAppView(
       {},
       {
-        appContext: { hideSidebarNav: true },
+        sidebarConfigContext: { hideSidebarNav: true },
         navigationContext: {
           appPages: [
             { pageName: "streamlit_app", pageScriptHash: "page_hash" },
@@ -299,7 +314,7 @@ describe("AppView element", () => {
     renderAppView(
       {},
       {
-        appContext: { hideSidebarNav: true },
+        sidebarConfigContext: { hideSidebarNav: true },
         navigationContext: {
           appPages: [
             { pageName: "streamlit_app", pageScriptHash: "page_hash" },
@@ -493,15 +508,15 @@ describe("AppView element", () => {
             image: "https://example.com/logo.png",
           })
 
-          render(
-            <AppView
-              {...getProps({
-                embedded: true,
-                showPadding: true,
-                appLogo: logo,
-                navigationPosition: Navigation.Position.TOP,
-              })}
-            />
+          renderAppView(
+            {
+              embedded: true,
+              showPadding: true,
+              navigationPosition: Navigation.Position.TOP,
+            },
+            {
+              sidebarConfigContext: { appLogo: logo },
+            }
           )
 
           const style = getMainBlockContainerStyle()
@@ -537,24 +552,20 @@ describe("AppView element", () => {
         })
 
         it("uses 6rem top padding when showToolbar=true regardless of header content", () => {
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
-
           // Create elements that would trigger hasHeader=true
           const logo = LogoProto.create({
             image: "https://example.com/logo.png",
           })
 
-          render(
-            <AppView
-              {...getProps({
-                embedded: true,
-                appLogo: logo,
-                navigationPosition: Navigation.Position.TOP,
-              })}
-            />
+          renderAppView(
+            {
+              embedded: true,
+              navigationPosition: Navigation.Position.TOP,
+            },
+            {
+              appContext: { showToolbar: true },
+              sidebarConfigContext: { appLogo: logo },
+            }
           )
 
           const style = getMainBlockContainerStyle()
@@ -591,7 +602,6 @@ describe("AppView element", () => {
               {...getProps({
                 embedded: true,
                 showPadding: false,
-                appLogo: null, // Single page, no nav
                 navigationPosition: Navigation.Position.SIDEBAR,
               })}
             />
@@ -607,14 +617,15 @@ describe("AppView element", () => {
             image: "https://example.com/logo.png",
           })
 
-          render(
-            <AppView
-              {...getProps({
-                embedded: true,
-                showPadding: false,
-                appLogo: logo,
-              })}
-            />
+          renderAppView(
+            {
+              embedded: true,
+              showPadding: false,
+            },
+            {
+              appContext: { showToolbar: false },
+              sidebarConfigContext: { appLogo: logo },
+            }
           )
 
           const style = getMainBlockContainerStyle()
@@ -627,12 +638,14 @@ describe("AppView element", () => {
             {
               embedded: true,
               showPadding: false,
-              appLogo: null,
               navigationPosition: Navigation.Position.TOP,
             },
             {
               appContext: {
                 showToolbar: false,
+              },
+              sidebarConfigContext: {
+                appLogo: null,
               },
               navigationContext: {
                 appPages: [
@@ -668,17 +681,6 @@ describe("AppView element", () => {
             new BlockProto({ allowEmpty: true })
           )
 
-          // Mock collapsed sidebar state to trigger expand button
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(
-            getAppContextOutput({
-              showToolbar: false,
-              initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-            })
-          )
-
           const props = getProps({
             elements: new AppRoot(
               FAKE_SCRIPT_HASH,
@@ -688,7 +690,12 @@ describe("AppView element", () => {
             showPadding: false,
           })
 
-          render(<AppView {...props} />)
+          renderAppView(props, {
+            appContext: { showToolbar: false },
+            sidebarConfigContext: {
+              initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+            },
+          })
           const style = getMainBlockContainerStyle()
           expect(style.paddingTop).toEqual("4.5rem")
           expect(style.paddingBottom).toEqual("1rem")
@@ -726,7 +733,6 @@ describe("AppView element", () => {
             ),
             embedded: true,
             showPadding: false,
-            appLogo: null, // No header content, only sidebar
           })
 
           render(<AppView {...props} />)
@@ -743,14 +749,14 @@ describe("AppView element", () => {
           image: "https://example.com/logo.png",
         })
 
-        render(
-          <AppView
-            {...getProps({
-              embedded: true,
-              showPadding: true,
-              appLogo: logo,
-            })}
-          />
+        renderAppView(
+          {
+            embedded: true,
+            showPadding: true,
+          },
+          {
+            sidebarConfigContext: { appLogo: logo },
+          }
         )
 
         const style = getMainBlockContainerStyle()
@@ -758,23 +764,19 @@ describe("AppView element", () => {
       })
 
       it("prioritizes showToolbar over header content", () => {
-        vi.spyOn(
-          StreamlitContextProviderModule,
-          "useAppContext"
-        ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
-
         const logo = LogoProto.create({
           image: "https://example.com/logo.png",
         })
 
-        render(
-          <AppView
-            {...getProps({
-              embedded: true,
-              showPadding: false,
-              appLogo: logo,
-            })}
-          />
+        renderAppView(
+          {
+            embedded: true,
+            showPadding: false,
+          },
+          {
+            appContext: { showToolbar: true },
+            sidebarConfigContext: { appLogo: logo },
+          }
         )
 
         const style = getMainBlockContainerStyle()
@@ -809,13 +811,17 @@ describe("AppView element", () => {
     })
 
     it("doesn't render if no logo provided", () => {
-      render(<AppView {...getProps()} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: null },
+      })
       expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
     })
 
     it("uses iconImage if provided", () => {
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      render(<AppView {...getProps({ appLogo: fullAppLogo })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: fullAppLogo },
+      })
       const collapsedLogo = screen.getByTestId("stHeaderLogo")
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
@@ -826,7 +832,9 @@ describe("AppView element", () => {
 
     it("defaults to image if no iconImage", () => {
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      render(<AppView {...getProps({ appLogo: imageOnly })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: imageOnly },
+      })
 
       const collapsedLogo = screen.getByTestId("stHeaderLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -836,7 +844,9 @@ describe("AppView element", () => {
     })
 
     it("default no link with image size medium", () => {
-      render(<AppView {...getProps({ appLogo: imageOnly })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: imageOnly },
+      })
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
       expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
         height: "1.5rem",
@@ -844,7 +854,9 @@ describe("AppView element", () => {
     })
 
     it("link with image if provided", () => {
-      render(<AppView {...getProps({ appLogo: imageWithLink })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: imageWithLink },
+      })
       expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
         "href",
         "www.example.com"
@@ -852,15 +864,18 @@ describe("AppView element", () => {
     })
 
     it("renders logo - large size when specified", () => {
-      render(<AppView {...getProps({ appLogo: imageWithSize })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: imageWithSize },
+      })
       expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
         height: "2rem",
       })
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
-      const props = getProps({ appLogo: imageOnly })
-      render(<AppView {...props} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: imageOnly },
+      })
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
@@ -1064,7 +1079,6 @@ describe("AppView element", () => {
       render(
         <AppView
           {...getProps({
-            appLogo: null, // Single page, no nav
             navigationPosition: Navigation.Position.SIDEBAR,
           })}
         />
@@ -1082,7 +1096,9 @@ describe("AppView element", () => {
         image: "https://example.com/logo.png",
       })
 
-      render(<AppView {...getProps({ appLogo: logo })} />)
+      renderAppView(getProps(), {
+        sidebarConfigContext: { appLogo: logo },
+      })
 
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
@@ -1112,17 +1128,6 @@ describe("AppView element", () => {
     })
 
     it("header shows logo and sidebar button in embed mode", () => {
-      // Mock embed mode (showToolbar = false)
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          showToolbar: false, // This simulates embed=true without show_toolbar
-          initialSidebarState: PageConfig.SidebarState.COLLAPSED, // Ensure sidebar starts collapsed
-        })
-      )
-
       const logo = LogoProto.create({
         image: "https://example.com/logo.png",
       })
@@ -1151,11 +1156,19 @@ describe("AppView element", () => {
           FAKE_SCRIPT_HASH,
           new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
         ),
-        appLogo: logo,
         embedded: true,
       })
 
-      render(<AppView {...props} />)
+      // Mock embed mode (showToolbar = false)
+      renderAppView(props, {
+        appContext: {
+          showToolbar: false, // This simulates embed=true without show_toolbar
+        },
+        sidebarConfigContext: {
+          initialSidebarState: PageConfig.SidebarState.COLLAPSED, // Ensure sidebar starts collapsed
+          appLogo: logo,
+        },
+      })
 
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
@@ -1252,16 +1265,6 @@ describe("AppView element", () => {
 
   describe("sidebar flicker prevention", () => {
     it("does not render sidebar when initialSidebarState is AUTO on initial render", () => {
-      // Mock the context with AUTO state
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          initialSidebarState: PageConfig.SidebarState.AUTO,
-        })
-      )
-
       const sidebarElement = new ElementNode(
         makeElementWithInfoText("sidebar content"),
         ForwardMsgMetadata.create({}),
@@ -1288,7 +1291,13 @@ describe("AppView element", () => {
         ),
       })
 
-      const { rerender } = render(<AppView {...props} />)
+      // Mock the context with AUTO state
+      // Use renderWithContexts to get the rerender with ability to update context values
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...props} />,
+        {}, // LibContext
+        { initialSidebarState: PageConfig.SidebarState.AUTO } // SidebarConfigContext
+      )
 
       // Sidebar should be rendered and expanded when initialSidebarState is AUTO
       const sidebarDOMElement = screen.getByTestId("stSidebar")
@@ -1296,16 +1305,11 @@ describe("AppView element", () => {
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
 
       // Now simulate receiving page config with collapsed state
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-        })
+      rerenderWithContexts(
+        <AppView {...props} />,
+        {},
+        { initialSidebarState: PageConfig.SidebarState.COLLAPSED }
       )
-
-      rerender(<AppView {...props} />)
 
       // Now sidebar should be rendered but collapsed
       const sidebarAfterConfig = screen.getByTestId("stSidebar")
@@ -1314,15 +1318,6 @@ describe("AppView element", () => {
     })
 
     it("renders sidebar immediately when initialSidebarState is COLLAPSED", () => {
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-        })
-      )
-
       const sidebarElement = new ElementNode(
         makeElementWithInfoText("sidebar content"),
         ForwardMsgMetadata.create({}),
@@ -1349,7 +1344,11 @@ describe("AppView element", () => {
         ),
       })
 
-      render(<AppView {...props} />)
+      renderAppView(props, {
+        sidebarConfigContext: {
+          initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+        },
+      })
 
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
@@ -1358,15 +1357,6 @@ describe("AppView element", () => {
     })
 
     it("renders sidebar immediately when initialSidebarState is EXPANDED", () => {
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          initialSidebarState: PageConfig.SidebarState.EXPANDED,
-        })
-      )
-
       const sidebarElement = new ElementNode(
         makeElementWithInfoText("sidebar content"),
         ForwardMsgMetadata.create({}),
@@ -1393,7 +1383,11 @@ describe("AppView element", () => {
         ),
       })
 
-      render(<AppView {...props} />)
+      renderAppView(props, {
+        sidebarConfigContext: {
+          initialSidebarState: PageConfig.SidebarState.EXPANDED,
+        },
+      })
 
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
@@ -1405,7 +1399,7 @@ describe("AppView element", () => {
       renderAppView(
         { navigationPosition: Navigation.Position.SIDEBAR },
         {
-          appContext: {
+          sidebarConfigContext: {
             initialSidebarState: PageConfig.SidebarState.AUTO,
           },
           navigationContext: {
@@ -1424,15 +1418,6 @@ describe("AppView element", () => {
     })
 
     it("sidebar shows after first script run when no page config is set", () => {
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          initialSidebarState: PageConfig.SidebarState.AUTO,
-        })
-      )
-
       const sidebarElement = new ElementNode(
         makeElementWithInfoText("sidebar content"),
         ForwardMsgMetadata.create({}),
@@ -1460,7 +1445,11 @@ describe("AppView element", () => {
       })
 
       // Initially AUTO state, sidebar should be rendered and expanded
-      render(<AppView {...props} />)
+      renderAppView(props, {
+        sidebarConfigContext: {
+          initialSidebarState: PageConfig.SidebarState.AUTO,
+        },
+      })
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
@@ -1521,26 +1510,19 @@ describe("AppView element", () => {
       window.localStorage.clear()
     })
 
-    const mockSidebarContext = (
+    const renderAppViewWithSidebar = (
       initialSidebarState: PageConfig.SidebarState
     ): void => {
-      setupAppContextMocks({
-        initialSidebarState,
-      })
-    }
-
-    const renderAppViewWithSidebar = (): ReturnType<typeof render> => {
-      return render(
-        <AppView {...getProps({ elements: elementsWithSidebar })} />
+      renderAppView(
+        { ...getProps({ elements: elementsWithSidebar }) },
+        { sidebarConfigContext: { initialSidebarState } }
       )
     }
 
     it("uses initial sidebar config when no localStorage value exists", () => {
       expect(window.localStorage.getItem("stSidebarCollapsed-")).toBeNull()
 
-      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
-
-      renderAppViewWithSidebar()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
@@ -1549,9 +1531,7 @@ describe("AppView element", () => {
     it("uses initial sidebar config for collapsed state when no localStorage value exists", () => {
       expect(window.localStorage.getItem("stSidebarCollapsed-")).toBeNull()
 
-      mockSidebarContext(PageConfig.SidebarState.COLLAPSED)
-
-      renderAppViewWithSidebar()
+      renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
@@ -1560,9 +1540,7 @@ describe("AppView element", () => {
     it("restores collapsed state from localStorage on initial load", () => {
       window.localStorage.setItem("stSidebarCollapsed-", "true")
 
-      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
-
-      renderAppViewWithSidebar()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
@@ -1571,9 +1549,7 @@ describe("AppView element", () => {
     it("restores expanded state from localStorage on initial load", () => {
       window.localStorage.setItem("stSidebarCollapsed-", "false")
 
-      mockSidebarContext(PageConfig.SidebarState.COLLAPSED)
-
-      renderAppViewWithSidebar()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
@@ -1582,9 +1558,7 @@ describe("AppView element", () => {
     it("handles invalid localStorage values gracefully", () => {
       window.localStorage.setItem("stSidebarCollapsed-", "invalid")
 
-      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
-
-      renderAppViewWithSidebar()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")

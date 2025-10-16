@@ -33,6 +33,8 @@ import {
   ScriptRunContext,
   ScriptRunContextProps,
   ScriptRunState,
+  SidebarConfigContext,
+  SidebarConfigContextProps,
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
@@ -42,11 +44,6 @@ import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
 // Type for AppContext props
 type AppContextValues = {
-  initialSidebarState: PageConfig.SidebarState
-  appLogo: Logo | null
-  sidebarChevronDownshift: number
-  expandSidebarNav: boolean
-  hideSidebarNav: boolean
   widgetsDisabled: boolean
   gitInfo: IGitInfo | null
   showToolbar: boolean
@@ -68,6 +65,15 @@ type NavigationContextValues = {
   onPageChange: (pageScriptHash: string) => void
   navSections: string[]
   appPages: IAppPage[]
+}
+
+// Type for SidebarConfigContext props
+type SidebarConfigContextValues = {
+  initialSidebarState: PageConfig.SidebarState
+  appLogo: Logo | null
+  sidebarChevronDownshift: number
+  expandSidebarNav: boolean
+  hideSidebarNav: boolean
 }
 
 // Type for ThemeContext props
@@ -92,6 +98,7 @@ export type StreamlitContextProviderProps = PropsWithChildren<
   AppContextValues &
     LibContextValues &
     NavigationContextValues &
+    SidebarConfigContextValues &
     ThemeContextValues &
     ScriptRunContextValues &
     FormsContextValues
@@ -103,11 +110,6 @@ export type StreamlitContextProviderProps = PropsWithChildren<
  */
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // AppContext
-  initialSidebarState,
-  appLogo,
-  sidebarChevronDownshift,
-  expandSidebarNav,
-  hideSidebarNav,
   widgetsDisabled,
   gitInfo,
   showToolbar,
@@ -123,6 +125,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   onPageChange,
   navSections,
   appPages,
+  // SidebarConfigContext
+  initialSidebarState,
+  appLogo,
+  sidebarChevronDownshift,
+  expandSidebarNav,
+  hideSidebarNav,
   // ThemeContext
   activeTheme,
   setTheme,
@@ -139,25 +147,11 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Memoized object for AppContext values
   const appContextProps = useMemo<AppContextProps>(
     () => ({
-      initialSidebarState,
-      appLogo,
-      sidebarChevronDownshift,
-      expandSidebarNav,
-      hideSidebarNav,
       widgetsDisabled,
       gitInfo,
       showToolbar,
     }),
-    [
-      initialSidebarState,
-      appLogo,
-      sidebarChevronDownshift,
-      expandSidebarNav,
-      hideSidebarNav,
-      widgetsDisabled,
-      gitInfo,
-      showToolbar,
-    ]
+    [widgetsDisabled, gitInfo, showToolbar]
   )
 
   // Memoized object for LibContext values
@@ -190,6 +184,24 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     ]
   )
 
+  // Memoized object for SidebarConfigContext values
+  const sidebarConfigContextProps = useMemo<SidebarConfigContextProps>(
+    () => ({
+      initialSidebarState,
+      appLogo,
+      sidebarChevronDownshift,
+      expandSidebarNav,
+      hideSidebarNav,
+    }),
+    [
+      initialSidebarState,
+      appLogo,
+      sidebarChevronDownshift,
+      expandSidebarNav,
+      hideSidebarNav,
+    ]
+  )
+
   // Memoized object for ThemeContext values
   const themeContextProps = useMemo<ThemeContextProps>(
     () => ({
@@ -219,15 +231,17 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   return (
     <AppContext.Provider value={appContextProps}>
       <LibContext.Provider value={libContextProps}>
-        <ThemeContext.Provider value={themeContextProps}>
-          <NavigationContext.Provider value={navigationContextProps}>
-            <FormsContext.Provider value={formsContextProps}>
-              <ScriptRunContext.Provider value={scriptRunContextProps}>
-                {children}
-              </ScriptRunContext.Provider>
-            </FormsContext.Provider>
-          </NavigationContext.Provider>
-        </ThemeContext.Provider>
+        <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
+          <ThemeContext.Provider value={themeContextProps}>
+            <NavigationContext.Provider value={navigationContextProps}>
+              <FormsContext.Provider value={formsContextProps}>
+                <ScriptRunContext.Provider value={scriptRunContextProps}>
+                  {children}
+                </ScriptRunContext.Provider>
+              </FormsContext.Provider>
+            </NavigationContext.Provider>
+          </ThemeContext.Provider>
+        </SidebarConfigContext.Provider>
       </LibContext.Provider>
     </AppContext.Provider>
   )

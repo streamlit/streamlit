@@ -92,6 +92,8 @@ describe("PageLink", () => {
       <PageLink {...props} />,
       // LibContext overrides
       {},
+      // SidebarConfigContext overrides
+      {},
       // ThemeContext overrides
       {},
       // NavigationContext overrides
@@ -113,6 +115,8 @@ describe("PageLink", () => {
       <PageLink {...props} />,
       // LibContext overrides
       {},
+      // SidebarConfigContext overrides
+      {},
       // ThemeContext overrides
       {},
       // NavigationContext overrides
@@ -133,6 +137,8 @@ describe("PageLink", () => {
     renderWithContexts(
       <PageLink {...props} />,
       // LibContext overrides
+      {},
+      // SidebarConfigContext overrides
       {},
       // ThemeContext overrides
       {},
@@ -194,6 +200,8 @@ describe("PageLink", () => {
     renderWithContexts(
       <PageLink {...props} />,
       // LibContext overrides
+      {},
+      // SidebarConfigContext overrides
       {},
       // ThemeContext overrides
       {},

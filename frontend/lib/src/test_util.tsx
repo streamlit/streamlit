@@ -23,6 +23,8 @@ import {
 } from "@testing-library/react"
 import { Vector } from "apache-arrow"
 
+import { PageConfig } from "@streamlit/protobuf"
+
 import {
   FormsContext,
   FormsContextProps,
@@ -38,6 +40,10 @@ import {
   ScriptRunContext,
   ScriptRunContextProps,
 } from "./components/core/ScriptRunContext"
+import {
+  SidebarConfigContext,
+  SidebarConfigContextProps,
+} from "./components/core/SidebarConfigContext"
 import {
   ThemeContext,
   ThemeContextProps,
@@ -77,18 +83,34 @@ const defaultNavigationContextValue = {
   appPages: [],
 }
 
+const defaultSidebarConfigContextValue = {
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+}
+
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          <ThemeContext.Provider value={defaultThemeContextValue}>
-            <NavigationContext.Provider value={defaultNavigationContextValue}>
-              <ScriptRunContext.Provider value={defaultScriptRunContextValue}>
-                {children}
-              </ScriptRunContext.Provider>
-            </NavigationContext.Provider>
-          </ThemeContext.Provider>
+          <SidebarConfigContext.Provider
+            value={defaultSidebarConfigContextValue}
+          >
+            <ThemeContext.Provider value={defaultThemeContextValue}>
+              <NavigationContext.Provider
+                value={defaultNavigationContextValue}
+              >
+                <ScriptRunContext.Provider
+                  value={defaultScriptRunContextValue}
+                >
+                  {children}
+                </ScriptRunContext.Provider>
+              </NavigationContext.Provider>
+            </ThemeContext.Provider>
+          </SidebarConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -130,10 +152,11 @@ export interface RenderWithContextsResult extends RenderResult {
    * Re-render the component with updated context values.
    *
    * Parameter order matches the provider nesting order (outer → inner):
-   * LibContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+   * LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
    *
    * @param component The component to render (usually the same component with updated props)
    * @param newLibContextProps New LibContext overrides to merge with existing values
+   * @param newSidebarConfigContextProps New SidebarConfigContext overrides to merge with existing values
    * @param newThemeContextProps New ThemeContext overrides to merge with existing values
    * @param newNavigationContextProps New NavigationContext overrides to merge with existing values
    * @param newFormsContextProps New FormsContext overrides to merge with existing values
@@ -142,6 +165,7 @@ export interface RenderWithContextsResult extends RenderResult {
   rerenderWithContexts: (
     component: ReactElement,
     newLibContextProps?: Partial<LibContextProps>,
+    newSidebarConfigContextProps?: Partial<SidebarConfigContextProps>,
     newThemeContextProps?: Partial<ThemeContextProps>,
     newNavigationContextProps?: Partial<NavigationContextProps>,
     newFormsContextProps?: Partial<FormsContextProps>,
@@ -151,10 +175,10 @@ export interface RenderWithContextsResult extends RenderResult {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContext.Provider, ThemeContext.Provider, NavigationContext.Provider, FormsContext.Provider, and ScriptRunContext.Provider.
+ * wrapped in our LibContext.Provider, SidebarConfigContext.Provider, ThemeContext.Provider, NavigationContext.Provider, FormsContext.Provider, and ScriptRunContext.Provider.
  *
  * Parameter order matches the provider nesting order (outer → inner):
- * LibContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+ * LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
  *
  * Returns an extended RenderResult with a `rerenderWithContexts` method that
  * allows updating context values during re-renders.
@@ -162,6 +186,7 @@ export interface RenderWithContextsResult extends RenderResult {
 export const renderWithContexts = (
   component: ReactElement,
   overrideLibContextProps: Partial<LibContextProps> = {},
+  overrideSidebarConfigContextProps: Partial<SidebarConfigContextProps> = {},
   overrideThemeContextProps: Partial<ThemeContextProps> = {},
   overrideNavigationContextProps: Partial<NavigationContextProps> = {},
   overrideFormsContextProps: Partial<FormsContextProps> = {},
@@ -173,6 +198,14 @@ export const renderWithContexts = (
     libConfig: {},
     locale: "en-US",
     componentRegistry: new ComponentRegistry(mockEndpoints()),
+  }
+
+  const defaultSidebarConfigContextProps = {
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
   }
 
   const defaultThemeContextProps = {
@@ -200,10 +233,14 @@ export const renderWithContexts = (
   }
 
   // Track current context values across rerenders
-  // Order matches provider nesting: LibContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+  // Order matches provider nesting: LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
   let currentLibContextProps = {
     ...defaultLibContextProps,
     ...overrideLibContextProps,
+  }
+  let currentSidebarConfigContextProps = {
+    ...defaultSidebarConfigContextProps,
+    ...overrideSidebarConfigContextProps,
   }
   let currentThemeContextProps = {
     ...defaultThemeContextProps,
@@ -227,19 +264,23 @@ export const renderWithContexts = (
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
           <LibContext.Provider value={currentLibContextProps}>
-            <ThemeContext.Provider value={currentThemeContextProps}>
-              <NavigationContext.Provider
-                value={currentNavigationContextProps}
-              >
-                <FormsContext.Provider value={currentFormsContextProps}>
-                  <ScriptRunContext.Provider
-                    value={currentScriptRunContextProps}
-                  >
-                    {children}
-                  </ScriptRunContext.Provider>
-                </FormsContext.Provider>
-              </NavigationContext.Provider>
-            </ThemeContext.Provider>
+            <SidebarConfigContext.Provider
+              value={currentSidebarConfigContextProps}
+            >
+              <ThemeContext.Provider value={currentThemeContextProps}>
+                <NavigationContext.Provider
+                  value={currentNavigationContextProps}
+                >
+                  <FormsContext.Provider value={currentFormsContextProps}>
+                    <ScriptRunContext.Provider
+                      value={currentScriptRunContextProps}
+                    >
+                      {children}
+                    </ScriptRunContext.Provider>
+                  </FormsContext.Provider>
+                </NavigationContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
           </LibContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
@@ -255,17 +296,24 @@ export const renderWithContexts = (
     rerenderWithContexts: (
       newComponent: ReactElement,
       newLibContextProps?: Partial<LibContextProps>,
+      newSidebarConfigContextProps?: Partial<SidebarConfigContextProps>,
       newThemeContextProps?: Partial<ThemeContextProps>,
       newNavigationContextProps?: Partial<NavigationContextProps>,
       newFormsContextProps?: Partial<FormsContextProps>,
       newScriptRunContextProps?: Partial<ScriptRunContextProps>
     ): void => {
       // Update context values if provided
-      // Order matches provider nesting: LibContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+      // Order matches provider nesting: LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
       if (newLibContextProps) {
         currentLibContextProps = {
           ...currentLibContextProps,
           ...newLibContextProps,
+        }
+      }
+      if (newSidebarConfigContextProps) {
+        currentSidebarConfigContextProps = {
+          ...currentSidebarConfigContextProps,
+          ...newSidebarConfigContextProps,
         }
       }
       if (newThemeContextProps) {

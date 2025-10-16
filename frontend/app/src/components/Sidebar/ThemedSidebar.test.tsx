@@ -36,7 +36,6 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
     hasElements: true,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
-    appLogo: null,
     ...props,
   }
 }
@@ -45,9 +44,8 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
 function renderThemedSidebar(
   props: Partial<SidebarProps> = {}
 ): ReturnType<typeof renderWithContexts> {
-  const fullProps = getProps(props)
   return renderWithContexts(
-    <ThemedSidebar {...fullProps} />,
+    <ThemedSidebar {...getProps(props)} />,
     {}, // LibContextProps
     {}, // ThemeContextProps
     {}, // NavigationContextProps
