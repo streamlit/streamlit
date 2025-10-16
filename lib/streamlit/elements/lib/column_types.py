@@ -225,6 +225,7 @@ class ProgressColumnConfig(TypedDict):
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -2455,6 +2456,7 @@ def ProgressColumn(
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2567,6 +2569,9 @@ def ProgressColumn(
         height: 300px
     """  # noqa: E501
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -2578,6 +2583,7 @@ def ProgressColumn(
             min_value=min_value,
             max_value=max_value,
             step=step,
+            color=color,
         ),
     )
 

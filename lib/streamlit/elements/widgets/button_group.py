@@ -1067,12 +1067,10 @@ class ButtonGroupMixin:
             # "feedback" in errors
             "feedback" if style == "borderless" else style,
             user_key=key,
-            # Treat the provided key as the main identity for segmented_control,
+            # Treat the provided key as the main identity for segmented_control, pills and feedback,
             # and only include kwargs that can invalidate the current selection.
             # We whitelist the formatted options and the click mode (single vs multi).
-            key_as_main_identity={"options", "click_mode"}
-            if style == "segmented_control"
-            else False,
+            key_as_main_identity={"options", "click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,

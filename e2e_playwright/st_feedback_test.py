@@ -24,7 +24,9 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
+    click_toggle,
     expect_markdown,
+    expect_prefixed_markdown,
     get_button_group,
     get_element_by_key,
     get_markdown,
@@ -32,12 +34,17 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
-    return locator.get_by_test_id(
+    elements = locator.get_by_test_id(
         re.compile("stBaseButton-borderlessIcon(Active)?")
-    ).filter(has_text=type)
+    )
+    if type:
+        elements = elements.filter(has_text=type)
+    return elements
 
 
-def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Locator:
+def get_feedback_icon_button(
+    locator: Locator, type: str | None = None, index: int = 0
+) -> Locator:
     return get_feedback_icon_buttons(locator, type).nth(index)
 
 
@@ -215,3 +222,34 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
     thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
+
+
+def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the feedback can be updated dynamically while keeping the state."""
+    feedback_widget = get_button_group(app, "dynamic_feedback_widget")
+    expect(feedback_widget).to_be_visible()
+
+    # Initial state
+    assert_snapshot(feedback_widget, name="st_feedback-dynamic_initial")
+    expect_prefixed_markdown(app, "Initial feedback value:", "2")
+
+    # Click to change selection
+    get_feedback_icon_button(feedback_widget, None, 3).click()
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial feedback value:", "3")
+
+    # Update props via toggle
+    click_toggle(app, "Update feedback props")
+
+    # Value persisted
+    expect_prefixed_markdown(app, "Updated feedback value:", "3")
+
+    feedback_widget.scroll_into_view_if_needed()
+    assert_snapshot(feedback_widget, name="st_feedback-dynamic_updated")
+
+    # Click a different value
+    get_feedback_icon_button(feedback_widget, None, 4).click()
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated feedback value:", "4")
