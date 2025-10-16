@@ -62,7 +62,6 @@ type LibContextValues = {
   onPageChange: (pageScriptHash: string) => void
   currentPageScriptHash: string
   libConfig: LibConfig
-  fragmentIdsThisRun: Array<string>
   locale: typeof window.navigator.language
   componentRegistry: ComponentRegistry
 }
@@ -78,6 +77,7 @@ type ThemeContextValues = {
 type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
+  fragmentIdsThisRun: Array<string>
 }
 
 type FormsContextValues = {
@@ -113,7 +113,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   isFullScreen,
   setFullScreen,
   libConfig,
-  fragmentIdsThisRun,
   locale,
   componentRegistry,
   // ThemeContext
@@ -123,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // ScriptRunContext
   scriptRunState,
   scriptRunId,
+  fragmentIdsThisRun,
   // Used in both AppContext and LibContext
   currentPageScriptHash,
   onPageChange,
@@ -173,7 +173,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       onPageChange,
       currentPageScriptHash,
       libConfig,
-      fragmentIdsThisRun,
       locale,
       componentRegistry,
     }),
@@ -183,7 +182,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       onPageChange,
       currentPageScriptHash,
       libConfig,
-      fragmentIdsThisRun,
       locale,
       componentRegistry,
     ]
@@ -204,8 +202,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     () => ({
       scriptRunState,
       scriptRunId,
+      fragmentIdsThisRun,
     }),
-    [scriptRunState, scriptRunId]
+    [scriptRunState, scriptRunId, fragmentIdsThisRun]
   )
 
   // formsData is not a stable reference, so memoization does not help

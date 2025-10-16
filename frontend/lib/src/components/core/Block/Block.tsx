@@ -300,8 +300,8 @@ const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 
 const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { node } = props
-  const { fragmentIdsThisRun } = useContext(LibContext)
-  const { scriptRunState, scriptRunId } = useRequiredContext(ScriptRunContext)
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useRequiredContext(ScriptRunContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {

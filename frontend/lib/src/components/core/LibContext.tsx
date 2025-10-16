@@ -73,12 +73,6 @@ export interface LibContextProps {
   libConfig: LibConfig
 
   /**
-   * The IDs of the fragments that the current script run corresponds to. If the
-   * current script run isn't due to a fragment, this field is falsy.
-   */
-  fragmentIdsThisRun: Array<string>
-
-  /**
    * The current locale of the app. Defaults to the browser's locale.
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language
    */
@@ -114,7 +108,6 @@ export const LibContext = createContext<LibContextProps>({
   onPageChange: () => {},
   currentPageScriptHash: "",
   libConfig: {},
-  fragmentIdsThisRun: [],
   locale: window.navigator.language,
   // This should be overwritten
   componentRegistry: new ComponentRegistry(noOpEndpoints),

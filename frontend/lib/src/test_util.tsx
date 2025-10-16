@@ -56,6 +56,7 @@ const flexContextValue = {
 const defaultScriptRunContextValue = {
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "script run 123",
+  fragmentIdsThisRun: [],
 }
 
 const defaultThemeContextValue = {
@@ -155,7 +156,6 @@ export const renderWithContexts = (
     onPageChange: vi.fn(),
     currentPageScriptHash: "",
     libConfig: {},
-    fragmentIdsThisRun: [],
     locale: "en-US",
     componentRegistry: new ComponentRegistry(mockEndpoints()),
   }
@@ -173,6 +173,7 @@ export const renderWithContexts = (
   const defaultScriptRunContextProps = {
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
+    fragmentIdsThisRun: [],
   }
 
   // Track current context values across rerenders

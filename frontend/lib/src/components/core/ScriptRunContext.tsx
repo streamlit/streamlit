@@ -48,6 +48,15 @@ export interface ScriptRunContextProps {
    * @see Tabs
    */
   scriptRunId: string
+
+  /**
+   * The IDs of the fragments that the current script run corresponds to. If the
+   * current script run isn't due to a fragment, this field is falsy.
+   *
+   * Consumed by: BlockNodeRenderer
+   * @see Block
+   */
+  fragmentIdsThisRun: Array<string>
 }
 
 /**
