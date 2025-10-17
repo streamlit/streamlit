@@ -1323,6 +1323,8 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
+      // createCustomThemes can return either 1 theme ("Custom Theme")
+      // or 2 themes ("Custom Theme Light" and "Custom Theme Dark")
       const customThemes = createCustomThemes(themeInput)
 
       // Add the themes to the theme manager

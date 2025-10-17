@@ -1236,38 +1236,28 @@ export const handleSectionInheritance = (
   themeInput: CustomThemeConfig,
   variant: "light" | "dark"
 ): CustomThemeConfig => {
-  let result = cloneDeep(themeInput)
   const isLightTheme = variant === "light"
-
-  // Always set the appropriate base theme
   const base = isLightTheme
     ? CustomThemeConfig.BaseTheme.LIGHT
     : CustomThemeConfig.BaseTheme.DARK
-  result.base = base
 
-  // Get the specified theme section (only apply overrides if they exist)
-  const themeSection = isLightTheme ? themeInput.light : themeInput.dark
-  if (themeSection) {
-    // Separate sidebar from other theme section properties to handle merging correctly
-    const { sidebar: sectionSidebar, ...sectionWithoutSidebar } = themeSection
+  // Destructure to separate concerns: common theme properties, sidebar properties,
+  // and light or dark variant sections
+  const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
+  const variantSection = isLightTheme ? light : dark
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
 
-    // Apply section properties (theme.light/dark) to the theme properties
-    // We exclude sidebar here to merge it separately with correct precedence
-    result = { ...result, ...sectionWithoutSidebar, base } as CustomThemeConfig
+  // Merge common theme properties with variant overrides (excluding sidebars for now)
+  const result = merge(
+    { base } as CustomThemeConfig,
+    commonTheme, // Common theme properties from themeInput
+    variantTheme // Variant-specific theme overrides (without sidebar)
+  )
 
-    // Handle nested sidebar section with correct precedence:
-    // theme.sidebar < theme.light.sidebar (or theme.dark.sidebar)
-    if (sectionSidebar) {
-      result.sidebar = {
-        ...result.sidebar, // theme.sidebar (base)
-        ...sectionSidebar, // theme.light.sidebar or theme.dark.sidebar (override)
-      }
-    }
+  // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
+  if (baseSidebar || variantSidebar) {
+    result.sidebar = merge({}, baseSidebar, variantSidebar)
   }
-
-  // Remove light/dark sections from result (they've been merged)
-  delete result.light
-  delete result.dark
 
   return result
 }
@@ -1286,30 +1276,23 @@ export const hasThemeSectionConfigs = (
     return false
   }
 
-  // Check if any values in the section are non-null/undefined/non-empty
-  return Object.values(section).some(value => {
+  // Helper to check if a value is non-empty (recursively checks one level deep)
+  const isNonEmpty = (value: unknown): boolean => {
     if (value === null || value === undefined) {
       return false
     }
     // Empty arrays are treated as "no config" (they're default values)
-    if (Array.isArray(value) && value.length === 0) {
-      return false
+    if (Array.isArray(value)) {
+      return value.length > 0
     }
     // Check nested objects one level deep (e.g., sidebar subsection)
-    if (typeof value === "object" && !Array.isArray(value)) {
-      return Object.values(value).some(nestedValue => {
-        if (nestedValue === null || nestedValue === undefined) {
-          return false
-        }
-        // Also check for empty arrays in nested objects
-        if (Array.isArray(nestedValue) && nestedValue.length === 0) {
-          return false
-        }
-        return true
-      })
+    if (typeof value === "object") {
+      return Object.values(value).some(isNonEmpty)
     }
     return true
-  })
+  }
+
+  return Object.values(section).some(isNonEmpty)
 }
 
 /**
@@ -1330,13 +1313,14 @@ export const createCustomThemes = (
   if (hasLightConfigs || hasDarkConfigs) {
     const lightThemeInput = handleSectionInheritance(themeInput, "light")
     const lightTheme = createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput)
-    customThemes.push(lightTheme)
     const darkThemeInput = handleSectionInheritance(themeInput, "dark")
     const darkTheme = createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput)
-    customThemes.push(darkTheme)
+    // Return both light and dark custom themes
+    customThemes.push(lightTheme, darkTheme)
   } else {
     // No light/dark section configs set - base determines which custom theme (light or dark) is created
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+    // Return the single custom theme
     customThemes.push(customTheme)
   }
 
@@ -1378,7 +1362,7 @@ const setSidebarHeadingFontSizes = (
   configHeadingFontSizes: string[] | null | undefined
 ): string[] => {
   // Default sidebar heading font sizes
-  const sidebarHeadingFontSizes = [
+  const defaultHeadingFontSizes = [
     "1.5rem",
     "1.25rem",
     "1.125rem",
@@ -1387,14 +1371,8 @@ const setSidebarHeadingFontSizes = (
     "0.75rem",
   ]
 
-  if (configHeadingFontSizes) {
-    // If specifically set in sidebar config, override default
-    configHeadingFontSizes.forEach((size: string, index: number) => {
-      sidebarHeadingFontSizes[index] = size
-    })
-  }
-
-  return sidebarHeadingFontSizes
+  // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
 }
 
 /**
