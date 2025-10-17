@@ -16,7 +16,7 @@
 
 import { ReactNode } from "react"
 
-import { act, renderHook } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"
@@ -198,7 +198,7 @@ describe("useWaveformController", () => {
     expect(result.current.isPlaybackPlaying).toBe(false)
   })
 
-  it("should return 0 for getCurrentTimeMs when no playback", () => {
+  it("should return 0 for getCurrentTimeMs in initial state", () => {
     const { result } = renderHook(
       () =>
         useWaveformController({
@@ -304,12 +304,10 @@ describe("useWaveformController", () => {
       { wrapper }
     )
 
-    // Wait for initialization attempt
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100))
+    // Wait for initialization attempt and error to be reported
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalled()
     })
-
-    expect(onError).toHaveBeenCalled()
     expect(onError.mock.calls[0][0]).toBeInstanceOf(Error)
     expect(onError.mock.calls[0][0].message).toContain(
       "WaveSurfer init failed"

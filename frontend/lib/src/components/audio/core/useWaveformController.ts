@@ -189,12 +189,11 @@ export function useWaveformController({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       eventsRef.current.onError?.(err)
-      throw err
     }
   }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
-    initializeWaveSurfer().catch(() => {})
+    void initializeWaveSurfer()
     const readyResolvers = readyResolversRef.current
 
     return (): void => {
