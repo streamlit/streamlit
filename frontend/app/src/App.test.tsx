@@ -1942,7 +1942,7 @@ describe("App", () => {
       // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
       expect(props.theme.addThemes).toHaveBeenCalledWith(
         [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
-        false
+        expect.objectContaining({ keepPresetThemes: false })
       )
       // Active theme should be set to the custom theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
@@ -1977,7 +1977,7 @@ describe("App", () => {
           expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
           expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
         ],
-        false
+        expect.objectContaining({ keepPresetThemes: false })
       )
 
       // Active theme should be set to the auto theme

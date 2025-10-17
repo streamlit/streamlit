@@ -1328,7 +1328,7 @@ export class App extends PureComponent<Props, State> {
       const customThemes = createCustomThemes(themeInput)
 
       // Add the new custom themes to the theme manager and remove the preset themes
-      this.props.theme.addThemes(customThemes, false)
+      this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
