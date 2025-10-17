@@ -61,6 +61,8 @@ export function useThemeManager(): [
     themeConfigs: ThemeConfig[],
     keepPresetThemes: boolean = true
   ): void => {
+    // keepPresetThemes is false when adding custom themes
+    // so that user cannot revert to a preset theme.
     setAvailableThemes([
       ...(keepPresetThemes ? createPresetThemes() : []),
       ...themeConfigs,

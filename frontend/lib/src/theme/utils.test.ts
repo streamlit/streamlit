@@ -3420,7 +3420,7 @@ describe("Custom theme creation", () => {
       expect(customThemes).toHaveLength(3)
       expect(customThemes[2].name).toBe(CUSTOM_THEME_AUTO_NAME)
 
-      // Auto theme should be based the same as the custom light theme
+      // Auto theme should be based the same as the custom dark theme
       expect(customThemes[2].emotion.colors.primary).toBe("gold")
       expect(customThemes[2].emotion.colors.bgColor).toBe("black")
     })

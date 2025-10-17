@@ -1324,7 +1324,7 @@ export class App extends PureComponent<Props, State> {
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
       // createCustomThemes can return either 1 theme ("Custom Theme")
-      // or 2 themes ("Custom Theme Light" and "Custom Theme Dark")
+      // or 3 themes ("Custom Theme Light", "Custom Theme Dark", and "Custom Theme Auto")
       const customThemes = createCustomThemes(themeInput)
 
       // Add the new custom themes to the theme manager and remove the preset themes
@@ -1332,10 +1332,8 @@ export class App extends PureComponent<Props, State> {
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
-        // Update the theme to be customTheme either if the user hasn't set a
-        // preference (developer-provided custom themes should be the default
-        // for an app) or if a custom theme is currently active (to ensure that
-        // we pick up any new changes to it).
+        // If the user hasn't set a preference, or if a custom theme is currently active,
+        // update the theme to be a custom theme.
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
