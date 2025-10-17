@@ -64,16 +64,17 @@ def configure_custom_dark_sidebar_theme():
     # [theme.sidebar] configs
     os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"] = "#091c36"
     os.environ["STREAMLIT_THEME_SIDEBAR_BACKGROUND_COLOR"] = (
-        "#b4c3d6"  # Should override [theme.dark] config - light blue gray
+        "#b4c3d6"  # Should apply - override [theme.dark] config - light blue gray
     )
     os.environ["STREAMLIT_THEME_SIDEBAR_SECONDARY_BACKGROUND_COLOR"] = (
-        "#c7cdd4"  # light gray
+        "#c7cdd4"  # Should apply - override [theme.dark] config - light gray
     )
     os.environ["STREAMLIT_THEME_SIDEBAR_BORDER_COLOR"] = (
-        "#000000"  # Should apply - black
+        "#000000"  # Overridden by [theme.dark.sidebar] config in dark theme
     )
+
     os.environ["STREAMLIT_THEME_SIDEBAR_DATAFRAME_BORDER_COLOR"] = (
-        "#7851A9"  # Should apply - royal purple
+        "#7851A9"  # Should apply - new config option - royal purple
     )
 
     # [theme.dark.sidebar] configs
@@ -160,7 +161,7 @@ def test_custom_light_sidebar_theme_with_no_light_configs(
     settings_dialog = app.get_by_test_id("stDialog")
     settings_dialog.get_by_role("combobox").click()
 
-    # Select Custom Theme Dark
+    # Select Custom Theme Light
     light_theme_option = app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
         "Light"
     )

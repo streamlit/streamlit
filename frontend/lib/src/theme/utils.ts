@@ -25,6 +25,7 @@ import {
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
 import merge from "lodash/merge"
+import mergeWith from "lodash/mergeWith"
 import once from "lodash/once"
 import { getLogger } from "loglevel"
 
@@ -1249,15 +1250,35 @@ export const handleSectionInheritance = (
   const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
+  // Note: base is set explicitly based on variant and is merged last to ensure it overrides
   const result = merge(
-    { base } as CustomThemeConfig,
+    {} as CustomThemeConfig,
     commonTheme, // Common theme properties from themeInput
-    variantTheme // Variant-specific theme overrides (without sidebar)
+    variantTheme, // Variant-specific theme overrides (without sidebar)
+    { base } // Set base last to override any base from commonTheme/variantTheme
   )
 
   // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
   if (baseSidebar || variantSidebar) {
-    result.sidebar = merge({}, baseSidebar, variantSidebar)
+    // Use mergeWith with a customizer to skip protobuf default values (empty strings/arrays/null)
+    // to prevent them from overwriting baseSidebar values
+    result.sidebar = mergeWith(
+      {},
+      baseSidebar,
+      variantSidebar,
+      (objValue, srcValue) => {
+        // Exclude empty strings, empty arrays, and null values
+        if (
+          srcValue === "" ||
+          srcValue === null ||
+          (Array.isArray(srcValue) && srcValue.length === 0)
+        ) {
+          return objValue
+        }
+        // Let mergeWith handle all other cases normally
+        return undefined
+      }
+    )
   }
 
   return result
