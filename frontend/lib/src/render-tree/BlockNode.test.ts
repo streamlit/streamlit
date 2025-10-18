@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { block, text } from "./test-utils"
+import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -25,44 +26,31 @@ const BLOCK = block([
   ]),
 ])
 
+function getIn(node: AppNode, path: number[]): AppNode | undefined {
+  return GetNodeByDeltaPathVisitor.getNodeAtPath(node, path)
+}
+
 describe("BlockNode", () => {
-  describe("BlockNode.getIn", () => {
-    it("handles shallow paths", () => {
-      const node = BLOCK.getIn([0])
-      expect(node).toBeTextNode("1")
-    })
-
-    it("handles deep paths", () => {
-      const node = BLOCK.getIn([1, 0])
-      expect(node).toBeTextNode("2")
-    })
-
-    it("returns undefined for invalid paths", () => {
-      const node = BLOCK.getIn([2, 3, 4])
-      expect(node).toBeUndefined()
-    })
-  })
-
   describe("BlockNode.setIn", () => {
     it("handles shallow paths", () => {
       const newBlock = BLOCK.setIn([0], text("new"), NO_SCRIPT_RUN_ID)
-      expect(newBlock.getIn([0])).toBeTextNode("new")
+      expect(getIn(newBlock, [0])).toBeTextNode("new")
 
       // Check BLOCK..newBlock diff is as expected.
       expect(newBlock).not.toStrictEqual(BLOCK)
-      expect(newBlock.getIn([1])).toStrictEqual(BLOCK.getIn([1]))
+      expect(getIn(newBlock, [1])).toStrictEqual(getIn(BLOCK, [1]))
     })
 
     it("handles deep paths", () => {
       const newBlock = BLOCK.setIn([1, 1], text("new"), NO_SCRIPT_RUN_ID)
-      expect(newBlock.getIn([1, 1])).toBeTextNode("new")
+      expect(getIn(newBlock, [1, 1])).toBeTextNode("new")
 
       // Check BLOCK..newBlock diff is as expected
       expect(newBlock).not.toStrictEqual(BLOCK)
-      expect(newBlock.getIn([0])).toStrictEqual(BLOCK.getIn([0]))
-      expect(newBlock.getIn([1])).not.toStrictEqual(BLOCK.getIn([1]))
-      expect(newBlock.getIn([1, 0])).toStrictEqual(BLOCK.getIn([1, 0]))
-      expect(newBlock.getIn([1, 1])).not.toStrictEqual(BLOCK.getIn([1, 1]))
+      expect(getIn(newBlock, [0])).toStrictEqual(getIn(BLOCK, [0]))
+      expect(getIn(newBlock, [1])).not.toStrictEqual(getIn(BLOCK, [1]))
+      expect(getIn(newBlock, [1, 0])).toStrictEqual(getIn(BLOCK, [1, 0]))
+      expect(getIn(newBlock, [1, 1])).not.toStrictEqual(getIn(BLOCK, [1, 1]))
     })
 
     it("throws an error for invalid paths", () => {
@@ -110,7 +98,9 @@ describe("BlockNode", () => {
 
       expect(result).not.toBe(originalNode)
       expect(result.children).toHaveLength(1)
-      expect(result.getIn([0])).toBeTextNode("transformed")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])
+      ).toBeTextNode("transformed")
     })
   })
 })

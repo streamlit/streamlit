@@ -121,10 +121,6 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  public getIn(): AppNode | undefined {
-    return undefined
-  }
-
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
