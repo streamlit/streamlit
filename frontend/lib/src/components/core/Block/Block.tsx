@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import React, { ReactElement, useContext } from "react"
 
 import classNames from "classnames"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -43,9 +43,9 @@ import Tabs, { TabProps } from "~lib/components/elements/Tabs"
 import Form from "~lib/components/widgets/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
+import { notNullOrUndefined } from "~lib/util/utils"
 
-import ElementNodeRenderer from "./ElementNodeRenderer"
+import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
   StyledFlexContainerBlock,
@@ -72,60 +72,15 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  // Capture all the element ids to avoid rendering the same element twice
-  const elementKeySet = new Set<string>()
+  const disableFullscreenMode =
+    libConfig.disableFullscreenMode || props.disableFullscreenMode
 
   return (
     <>
-      {props.node.children?.map((node: AppNode, index: number): ReactNode => {
-        const disableFullscreenMode =
-          libConfig.disableFullscreenMode || props.disableFullscreenMode
-
-        // Base case: render a leaf node.
-        if (node instanceof ElementNode) {
-          // Put node in childProps instead of passing as a node={node} prop in React to
-          // guarantee it doesn't get overwritten by {...childProps}.
-          const childProps = {
-            ...props,
-            disableFullscreenMode,
-            node,
-          }
-
-          const key = getElementId(node.element) || index.toString()
-          // Avoid rendering the same element twice. We assume the first one is the one we want
-          // because the page is rendered top to bottom, so a valid widget would be rendered
-          // correctly and we assume the second one is therefore stale (or throw an error).
-          // Also, our setIn logic pushes stale widgets down in the list of elements, so the
-          // most recent one should always come first.
-          if (elementKeySet.has(key)) {
-            return null
-          }
-
-          elementKeySet.add(key)
-
-          return <ElementNodeRenderer key={key} {...childProps} />
-        }
-
-        // Recursive case: render a block, which can contain other blocks
-        // and elements.
-        if (node instanceof BlockNode) {
-          // Put node in childProps instead of passing as a node={node} prop in React to
-          // guarantee it doesn't get overwritten by {...childProps}.
-          const childProps = {
-            ...props,
-            disableFullscreenMode,
-            node,
-          }
-
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
-          return <BlockNodeRenderer key={index} {...childProps} />
-        }
-
-        // We don't have any other node types!
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-        throw new Error(`Unrecognized AppNode: ${node}`)
-      })}
+      {RenderNodeVisitor.collectReactElements(
+        props,
+        Boolean(disableFullscreenMode)
+      )}
     </>
   )
 }
@@ -297,7 +252,9 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
 const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 
-const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
+export const BlockNodeRenderer = (
+  props: BlockPropsWithoutWidth
+): ReactElement => {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
