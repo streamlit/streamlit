@@ -1369,12 +1369,11 @@ export const createCustomThemes = (
 }
 
 /**
- * Remove empty array fields from sidebar theme configuration to prevent them from being
- * applied on top of the main theme.
- * This is needed since the optional protobuf keyword is not allowed for repeated fields.
- * Therefore, we are treating empty arrays as non-existent.
+ * Remove protobuf default values (empty arrays, empty strings, null) from sidebar theme
+ * configuration to prevent them from being applied on top of the main theme.
+ * This is needed since protobuf populates all fields with default values.
  */
-const cleanSidebarEmptyArrays = (
+const cleanSidebarEmptyFields = (
   sidebar: CustomThemeConfig["sidebar"]
 ): Partial<NonNullable<CustomThemeConfig["sidebar"]>> => {
   if (!sidebar) {
@@ -1386,7 +1385,12 @@ const cleanSidebarEmptyArrays = (
   }
 
   Object.entries(cleaned).forEach(([config, value]) => {
-    if (Array.isArray(value) && value.length === 0) {
+    // Remove empty arrays, empty strings, and null values
+    if (
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ||
+      value === null
+    ) {
       delete cleaned[config as keyof typeof cleaned]
     }
   })
@@ -1440,7 +1444,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
 
   // Override the background and secondary background colors in sidebar overrides:
   const sidebarOverride = {
-    ...cleanSidebarEmptyArrays(sidebarThemeInput),
+    ...cleanSidebarEmptyFields(sidebarThemeInput),
     backgroundColor: sidebarBackground,
     secondaryBackgroundColor: secondaryBackgroundColor,
     headingFontSizes: headingFontSizes,
