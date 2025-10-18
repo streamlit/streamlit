@@ -158,10 +158,14 @@ export const StyledElementContainerLayoutWrapper: FC<
       }
       return styles
     } else if (node.element.type === "imgs") {
-      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component,
-      // and here set the width to auto.
+      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component.
       // This also covers st.pyplot() which is a special case of st.image.
-      styles.width = "auto"
+      //
+      // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
+      // Use "100%" when using stretch or no width config to ensure container has dimensions for width calculation (#12678).
+      const isUsingStretchOrDefault =
+        !node.element.widthConfig || node.element.widthConfig.useStretch
+      styles.width = isUsingStretchOrDefault ? "100%" : "auto"
     }
 
     return styles
