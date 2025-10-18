@@ -16,6 +16,8 @@
 
 import { Element } from "@streamlit/protobuf"
 
+import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+
 /**
  * The Generic ID of the script run this node was generated in.
  */
@@ -119,4 +121,21 @@ export interface AppNode {
    * Otherwise, a new Set will be created and will be returned.
    */
   getElements(elementSet?: Set<Element>): Set<Element>
+
+  /**
+   * Accept a visitor.
+   * @param visitor - The visitor to accept.
+   * @returns The result of the visitor's visit{AppNodeType} method.
+   * @example
+   * const visitor = new DebugVisitor()
+   * const result = blockNode.accept(visitor)
+   * console.log(result)
+   */
+  accept<T>(visitor: AppNodeVisitor<T>): T
+
+  /**
+   * Print a tree-like representation of this node and its children for debugging.
+   * Uses the DebugVisitor internally.
+   */
+  debug(): string
 }

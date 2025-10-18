@@ -33,11 +33,10 @@ import {
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
-import { AppNode } from "./AppNode.interface"
+import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
-
-const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
+import { DebugVisitor } from "./visitors/DebugVisitor"
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -422,5 +421,43 @@ export class AppRoot {
       this.root.setIn(deltaPath, elementNode, scriptRunId),
       this.appLogo
     )
+  }
+
+  private getChildName(child: AppNode): string {
+    switch (child) {
+      case this.main:
+        return "main"
+      case this.sidebar:
+        return "sidebar"
+      case this.event:
+        return "event"
+      case this.bottom:
+        return "bottom"
+      default:
+        return "unknown"
+    }
+  }
+
+  /**
+   * Returns a string representation of the AppRoot structure for debugging purposes.
+   * This method traverses the AppRoot tree and outputs a formatted string
+   * showing the hierarchy of its child nodes.
+   *
+   * @returns {string} A formatted string representing the AppRoot structure.
+   */
+  public debug(): string {
+    let result = "AppRoot\n"
+    this.root.children.forEach((child, index) => {
+      const isLast = index === this.root.children.length - 1
+      const childName = this.getChildName(child)
+      const connector = isLast ? "└── " : "├── "
+      const childPrefix = isLast ? "    " : "│   "
+
+      result += `${connector}${childName}:\n`
+      const visitor = new DebugVisitor(childPrefix, true)
+      result += child.accept(visitor)
+    })
+
+    return result
   }
 }

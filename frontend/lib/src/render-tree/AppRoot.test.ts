@@ -661,4 +661,31 @@ describe("AppRoot", () => {
       )
     })
   })
+
+  describe("AppRoot.debug", () => {
+    it("prints labeled child sections with tree output", () => {
+      const out = ROOT.debug()
+
+      // Header
+      expect(out.startsWith("AppRoot\n")).toBe(true)
+
+      // main
+      expect(out).toContain("├── main:\n")
+      expect(out).toContain("│   └── BlockNode [2 children]")
+      expect(out).toContain('ElementNode [text] "1"')
+      expect(out).toContain('ElementNode [text] "2"')
+
+      // sidebar
+      expect(out).toContain("├── sidebar:\n")
+      expect(out).toContain("│   └── BlockNode [0 children]")
+
+      // event
+      expect(out).toContain("├── event:\n")
+      expect(out).toContain("│   └── BlockNode [0 children]")
+
+      // bottom
+      expect(out).toContain("└── bottom:\n")
+      expect(out).toContain("    └── BlockNode [0 children]")
+    })
+  })
 })

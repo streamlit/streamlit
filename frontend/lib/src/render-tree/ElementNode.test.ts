@@ -419,3 +419,43 @@ describe("ElementNode", () => {
     })
   })
 })
+
+describe("ElementNode.accept", () => {
+  it("calls visitElementNode on the visitor", () => {
+    const node = text("test")
+    const mockVisitor = {
+      visitElementNode: vi.fn().mockReturnValue("element-result"),
+      visitBlockNode: vi.fn().mockReturnValue("block-result"),
+    }
+
+    const result = node.accept(mockVisitor)
+
+    expect(mockVisitor.visitElementNode).toHaveBeenCalledWith(node)
+    expect(mockVisitor.visitBlockNode).not.toHaveBeenCalled()
+    expect(result).toEqual("element-result")
+  })
+
+  it("allows visitor to return the same node", () => {
+    const node = text("test")
+    const identityVisitor = {
+      visitElementNode: vi.fn().mockReturnValue(node),
+      visitBlockNode: vi.fn(),
+    }
+
+    const result = node.accept(identityVisitor)
+
+    expect(result).toBe(node)
+  })
+
+  it("allows visitor to return undefined", () => {
+    const node = text("test")
+    const nullVisitor = {
+      visitElementNode: vi.fn().mockReturnValue(undefined),
+      visitBlockNode: vi.fn(),
+    }
+
+    const result = node.accept(nullVisitor)
+
+    expect(result).toBeUndefined()
+  })
+})
