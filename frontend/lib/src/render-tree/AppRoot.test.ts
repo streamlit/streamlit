@@ -29,6 +29,7 @@ import {
   makeProto,
   text,
 } from "./test-utils"
+import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -660,6 +661,55 @@ describe("AppRoot", () => {
         ])
       )
     })
+  })
+
+  it("uses visitor pattern internally", () => {
+    // Create a more complex structure to test visitor traversal
+    const delta1 = makeProto(DeltaProto, {
+      newElement: { text: { body: "main_element" } },
+    })
+    const delta2 = makeProto(DeltaProto, {
+      newElement: { text: { body: "sidebar_element" } },
+    })
+
+    const rootWithElements = ROOT.applyDelta(
+      "test_run",
+      delta1,
+      forwardMsgMetadata([0, 0]) // main section
+    ).applyDelta(
+      "test_run",
+      delta2,
+      forwardMsgMetadata([1, 0]) // sidebar section
+    )
+
+    const elements = rootWithElements.getElements()
+
+    // Should find elements from main, sidebar, and the original ROOT elements
+    // one new insert overwrote an existing main element; the sidebar insert
+    // added a new one
+    expect(elements.size).toBe(3)
+
+    // Verify we can find the sidebar element specifically
+    const elementsArray = Array.from(elements)
+    const sidebarElement = elementsArray.find(
+      el => el.text?.body === "sidebar_element"
+    )
+
+    expect(sidebarElement).toBeDefined()
+  })
+
+  it("demonstrates visitor pattern flexibility", () => {
+    // Show that we can use ElementsSetVisitor directly on parts of the tree
+    const mainElements = ElementsSetVisitor.collectElements(ROOT.main)
+    const sidebarElements = ElementsSetVisitor.collectElements(ROOT.sidebar)
+
+    // Should have elements in main, none in sidebar for basic ROOT
+    expect(mainElements.size).toBe(2) // The original elements from ROOT
+    expect(sidebarElements.size).toBe(0)
+
+    // Combined should equal getElements() result
+    const combinedSize = mainElements.size + sidebarElements.size
+    expect(ROOT.getElements().size).toBe(combinedSize)
   })
 
   describe("AppRoot.debug", () => {

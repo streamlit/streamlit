@@ -37,6 +37,7 @@ import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { DebugVisitor } from "./visitors/DebugVisitor"
+import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -337,12 +338,15 @@ export class AppRoot {
 
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
-    const elements = new Set<Element>()
-    this.main.getElements(elements)
-    this.sidebar.getElements(elements)
-    this.event.getElements(elements)
-    this.bottom.getElements(elements)
-    return elements
+    const visitor = new ElementsSetVisitor()
+
+    // Visit each major section of the app
+    this.main.accept(visitor)
+    this.sidebar.accept(visitor)
+    this.event.accept(visitor)
+    this.bottom.accept(visitor)
+
+    return visitor.elements
   }
 
   private addElement(

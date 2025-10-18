@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, Element } from "@streamlit/protobuf"
+import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { isNullOrUndefined, notUndefined } from "~lib/util/utils"
+import { notUndefined } from "~lib/util/utils"
 
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
@@ -182,18 +182,6 @@ export class BlockNode implements AppNode {
       this.fragmentId,
       this.deltaMsgReceivedAt
     )
-  }
-
-  public getElements(elementSet?: Set<Element>): Set<Element> {
-    if (isNullOrUndefined(elementSet)) {
-      elementSet = new Set<Element>()
-    }
-
-    for (const child of this.children) {
-      child.getElements(elementSet)
-    }
-
-    return elementSet
   }
 
   /**
