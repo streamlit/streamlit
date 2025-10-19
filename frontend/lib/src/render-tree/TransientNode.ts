@@ -78,4 +78,26 @@ export class TransientNode implements AppNode {
   public debug(): string {
     return this.accept(new DebugVisitor())
   }
+
+  // Combine the information of the node with the updated information
+  // of *this* node
+  public replaceTransientNodeWithSelf(node: TransientNode): AppNode {
+    if (
+      !this.deltaMsgReceivedAt ||
+      !node.deltaMsgReceivedAt ||
+      this.deltaMsgReceivedAt >= node.deltaMsgReceivedAt
+    ) {
+      // Replace with this node's information, but keep the anchor if it is not being replaced
+
+      return new TransientNode(
+        this.scriptRunId,
+        this.anchor ?? node.anchor,
+        this.transientNodes,
+        this.deltaMsgReceivedAt
+      )
+    }
+
+    // Return the original node since it was more recent
+    return node
+  }
 }

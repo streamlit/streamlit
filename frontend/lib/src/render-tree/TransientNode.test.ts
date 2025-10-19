@@ -120,4 +120,49 @@ describe("TransientNode", () => {
       expect(viaVisitor).toBe(debug)
     })
   })
+
+  describe("replaceTransientNodeWithSelf", () => {
+    it("returns combined this when this is as new or newer (or timestamps missing)", () => {
+      const anchorThis = text("this-anchor")
+      const t1 = text("t1")
+      const current = new TransientNode("run-a", anchorThis, [t1], 200)
+
+      const anchorOther = text("other-anchor")
+      const other = new TransientNode(
+        "run-b",
+        anchorOther,
+        [text("ignore")],
+        100
+      )
+
+      const replaced = current.replaceTransientNodeWithSelf(
+        other
+      ) as TransientNode
+
+      expect(replaced).not.toBe(other)
+      expect(replaced.scriptRunId).toBe("run-a")
+      expect(replaced.transientNodes).toEqual([t1])
+      expect(replaced.deltaMsgReceivedAt).toBe(200)
+      expect(replaced.anchor).toBe(anchorThis)
+    })
+
+    it("uses other anchor if this has no anchor when combining", () => {
+      const otherAnchor = text("anchor")
+      const current = new TransientNode("run-a", undefined, [text("t")], 300)
+      const other = new TransientNode("run-b", otherAnchor, [text("x")], 100)
+
+      const replaced = current.replaceTransientNodeWithSelf(
+        other
+      ) as TransientNode
+      expect(replaced.anchor).toBe(otherAnchor)
+    })
+
+    it("returns the other node when other is newer", () => {
+      const current = new TransientNode("run-a", text("a"), [text("t")], 50)
+      const other = new TransientNode("run-b", text("b"), [text("x")], 100)
+
+      const replaced = current.replaceTransientNodeWithSelf(other)
+      expect(replaced).toBe(other)
+    })
+  })
 })

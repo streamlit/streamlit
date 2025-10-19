@@ -88,8 +88,28 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     )
   }
 
-  visitTransientNode(_node: TransientNode): AppNode {
-    throw new Error("Method not implemented.")
+  visitTransientNode(node: TransientNode): AppNode {
+    const [, ...remainingPath] = this.deltaPath
+
+    // If we need to drill down, we will travel through the anchor.
+    if (remainingPath.length > 0) {
+      if (node.anchor) {
+        return node.anchor.accept(
+          new SetNodeByDeltaPathVisitor(
+            remainingPath,
+            this.nodeToSet,
+            this.scriptRunId
+          )
+        )
+      }
+
+      throw new Error("TransientNode has no anchor to set node at")
+    }
+
+    // At this point, we know the nodeToSet is to replace the transient node
+    // so we let the node decide how to best replace the transient node
+    // This is especially important for transient nodes to reconcile themselves
+    return this.nodeToSet.replaceTransientNodeWithSelf(node)
   }
 
   /**

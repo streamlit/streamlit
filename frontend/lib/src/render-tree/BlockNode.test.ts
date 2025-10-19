@@ -16,6 +16,7 @@
 
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { block, text } from "./test-utils"
+import { TransientNode } from "./TransientNode"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
@@ -121,5 +122,41 @@ describe("BlockNode", () => {
         GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])
       ).toBeTextNode("transformed")
     })
+  })
+})
+
+describe("BlockNode.replaceTransientNodeWithSelf", () => {
+  it("returns this when transient node scriptRunId differs", () => {
+    const b = block([text("c")], "runA")
+    const t = new TransientNode("runB", text("anchor"), [text("t")], 1)
+    const result = b.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(b)
+  })
+
+  it("returns this when transient node is effectively empty (no anchor, no transients)", () => {
+    const b = block([], "runA")
+    const t = new TransientNode("runA", undefined, [], 1)
+    const result = b.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(b)
+  })
+
+  it("returns TransientNode anchored to this block with filtered transients", () => {
+    const runId = "cur"
+    const b = block([], runId)
+    const keep = text("keep", runId)
+    const drop = text("drop", "old")
+    const t = new TransientNode(
+      runId,
+      text("old-anchor", "old"),
+      [keep, drop],
+      99
+    )
+
+    const result = b.replaceTransientNodeWithSelf(t) as TransientNode
+    expect(result).toBeInstanceOf(TransientNode)
+    expect(result.anchor).toBe(b)
+    expect(result.transientNodes).toEqual([keep])
+    expect(result.scriptRunId).toBe(runId)
+    expect(result.deltaMsgReceivedAt).toBe(99)
   })
 })

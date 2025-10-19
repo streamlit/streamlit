@@ -25,6 +25,7 @@ import {
   arrowVegaLiteChart,
   text,
 } from "./test-utils"
+import { TransientNode } from "./TransientNode"
 
 describe("ElementNode", () => {
   describe("ElementNode.quiverElement", () => {
@@ -460,5 +461,41 @@ describe("ElementNode.accept", () => {
     const result = node.accept(nullVisitor)
 
     expect(result).toBeUndefined()
+  })
+})
+
+describe("ElementNode.replaceTransientNodeWithSelf", () => {
+  it("returns this when transient node scriptRunId differs", () => {
+    const el = text("a", "runA")
+    const t = new TransientNode("runB", text("anchor"), [text("t")], 1)
+    const result = el.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(el)
+  })
+
+  it("returns this when transient node has no transients", () => {
+    const el = text("a", "runA")
+    const t = new TransientNode("runA", text("anchor"), [], 1)
+    const result = el.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(el)
+  })
+
+  it("returns TransientNode anchored to this element with filtered transients", () => {
+    const runId = "cur"
+    const el = text("a", runId)
+    const keep = text("keep", runId)
+    const drop = text("drop", "old")
+    const t = new TransientNode(
+      runId,
+      text("old-anchor", "old"),
+      [keep, drop],
+      42
+    )
+
+    const result = el.replaceTransientNodeWithSelf(t) as TransientNode
+    expect(result).toBeInstanceOf(TransientNode)
+    expect(result.anchor).toBe(el)
+    expect(result.transientNodes).toEqual([keep])
+    expect(result.scriptRunId).toBe(runId)
+    expect(result.deltaMsgReceivedAt).toBe(42)
   })
 })
