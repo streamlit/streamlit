@@ -248,6 +248,7 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None = None,
+        max_size: int | None = None,
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
@@ -441,6 +442,7 @@ class FileUploaderMixin:
         return self._file_uploader(
             label=label,
             type=type,
+            max_size=max_size,
             accept_multiple_files=accept_multiple_files,
             key=key,
             help=help,
@@ -457,6 +459,7 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None = None,
+        max_size: int | None = None,
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
@@ -501,7 +504,7 @@ class FileUploaderMixin:
             normalized_type if normalized_type is not None else []
         )
         file_uploader_proto.max_upload_size_mb = config.get_option(
-            "server.maxUploadSize"
+            max_size if max_size is not None else config.get_option("server.maxUploadSize")
         )
         # Handle directory uploads - they should enable multiple files and set the directory flag
         is_directory_upload = accept_multiple_files == "directory"
