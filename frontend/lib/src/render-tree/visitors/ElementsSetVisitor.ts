@@ -57,8 +57,16 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
     return this.elements
   }
 
-  visitTransientNode(_node: TransientNode): Set<Element> {
-    throw new Error("Method not implemented.")
+  visitTransientNode(node: TransientNode): Set<Element> {
+    // Add all transient elements to the set
+    node.transientNodes.forEach(element => {
+      element.accept(this)
+    })
+
+    // Also visit the anchor ElementNode to collect its element
+    node.anchor?.accept(this)
+
+    return this.elements
   }
 
   /**

@@ -51,6 +51,26 @@ export class TransientNode implements AppNode {
     this.activeScriptHash = undefined
   }
 
+  /**
+   * Updates the transient nodes by applying a function to each transient node.
+   * If the function returns undefined, the transient node is removed from the list.
+   * @param update - A function that takes an ElementNode and returns an ElementNode or undefined.
+   * @returns A new array of transient nodes.
+   */
+  public updateTransientNodes(
+    update: (node: ElementNode) => ElementNode | undefined
+  ): ElementNode[] {
+    const newTransientNodes: ElementNode[] = []
+    this.transientNodes.forEach(element => {
+      const updatedElement = update(element)
+      if (updatedElement) {
+        newTransientNodes.push(updatedElement)
+      }
+    })
+
+    return newTransientNodes
+  }
+
   accept<T>(visitor: AppNodeVisitor<T>): T {
     return visitor.visitTransientNode(this)
   }

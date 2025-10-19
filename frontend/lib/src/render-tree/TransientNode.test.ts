@@ -50,6 +50,42 @@ describe("TransientNode", () => {
     })
   })
 
+  describe("updateTransientNodes", () => {
+    it("maps over transient nodes and filters undefined results", () => {
+      const e1 = text("one")
+      const e2 = text("two")
+      const e3 = text("three")
+      const node = new TransientNode("run-x", text("anchor"), [e1, e2, e3], 10)
+
+      const result = node.updateTransientNodes(el => {
+        if (el.element.text?.body === "two") return el
+        return undefined
+      })
+
+      expect(result).toEqual([e2])
+      // Original list remains unchanged
+      expect(node.transientNodes).toEqual([e1, e2, e3])
+    })
+
+    it("returns newly mapped ElementNodes without mutating original list", () => {
+      const e1 = text("one")
+      const e2 = text("two")
+      const node = new TransientNode("run-y", text("anchor"), [e1, e2], 20)
+
+      const mapped = node.updateTransientNodes(el => {
+        const body = el.element.text?.body ?? ""
+        return text(`${body}!`)
+      })
+
+      expect(mapped).toHaveLength(2)
+      expect(mapped[0].element.text?.body).toBe("one!")
+      expect(mapped[1].element.text?.body).toBe("two!")
+      // Ensure originals are intact
+      expect(node.transientNodes[0].element.text?.body).toBe("one")
+      expect(node.transientNodes[1].element.text?.body).toBe("two")
+    })
+  })
+
   describe("accept + debug", () => {
     it("accepts a visitor and returns its value", () => {
       const node = new TransientNode("run-v", text("a"), [], 1)

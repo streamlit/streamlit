@@ -81,8 +81,29 @@ export class FilterMainScriptElementsVisitor
     )
   }
 
-  visitTransientNode(_node: TransientNode): AppNode | undefined {
-    throw new Error("Method not implemented.")
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // visit both the anchor and the transient nodes to possibly filter them out
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this) as ElementNode | undefined
+    })
+
+    // Everything is filtered out
+    if (!anchorNode && transientNodes.length === 0) {
+      return undefined
+    }
+
+    // All the transient nodes are filtered out, but not the anchor node
+    if (transientNodes.length === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 
   /**
