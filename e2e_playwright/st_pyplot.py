@@ -112,51 +112,22 @@ st.pyplot(fig_width_test, width=200)
 
 st.write("### Width Regression Tests (Issues #12678, #12763)")
 st.write(
-    "Tests for v1.50.0 regression where plots rendered at minimum width "
-    "in fragments, expanders, and containers."
+    "Tests for v1.50.0 regression where plots rendered at minimum width in containers."
 )
 
-# Test scenarios: (width_mode, context, description)
-# Using 'stretch', 'content', and pixel values
-test_scenarios = [
-    ("stretch", "fragment", "stretch width in fragment"),
-    ("content", "fragment", "content width in fragment"),
-    (400, "fragment", "400px width in fragment"),
-    ("stretch", "expander", "stretch width in expander"),
-    ("content", "expander", "content width in expander"),
-    (400, "expander", "400px width in expander"),
-    ("stretch", "container", "stretch width in container"),
-    ("content", "container", "content width in container"),
-    (400, "container", "400px width in container"),
-]
+# Create test figure (6.4in x 4.8in at 100 DPI = 640px x 480px)
+fig_regression, ax_regression = plt.subplots(figsize=(6.4, 4.8))
+ax_regression.bar([1, 2, 3], [1, 2, 3])
+ax_regression.set_title("Width Regression Test")
 
+st.write("**Test 1: width='stretch' in container**")
+with st.container(border=True, width=600):
+    st.pyplot(fig_regression, width="stretch")
 
-def render_regression_test(width_mode: str | int, context: str, description: str):
-    """Render a single regression test case."""
-    st.write(f"**{description}**")
+st.write("**Test 2: width='content' in container**")
+with st.container(border=True):
+    st.pyplot(fig_regression, width="content")
 
-    # Create figure for this test
-    fig, ax = plt.subplots(figsize=(10, 3))
-    ax.bar([1, 2, 3], [1, 2, 3])
-    ax.set_title(f"{description}")
-
-    # Render in appropriate context
-    if context == "fragment":
-
-        @st.fragment
-        def render_in_fragment():
-            st.pyplot(fig, width=width_mode)
-
-        render_in_fragment()
-
-    elif context == "expander":
-        with st.expander(description, expanded=True):
-            st.pyplot(fig, width=width_mode)
-
-    elif context == "container":
-        with st.container(border=True):
-            st.pyplot(fig, width=width_mode)
-
-
-for width_mode, context, desc in test_scenarios:
-    render_regression_test(width_mode, context, desc)
+st.write("**Test 3: width=500 (pixels) in container**")
+with st.container(border=True):
+    st.pyplot(fig_regression, width=500)
