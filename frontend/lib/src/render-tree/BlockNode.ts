@@ -16,8 +16,6 @@
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { notUndefined } from "~lib/util/utils"
-
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { DebugVisitor } from "./visitors/DebugVisitor"
@@ -90,58 +88,6 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       scriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
-  }
-
-  public clearStaleNodes(
-    currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
-  ): BlockNode | undefined {
-    if (!fragmentIdsThisRun?.length) {
-      // If we're not currently running a fragment, then we can remove any blocks
-      // that don't correspond to currentScriptRunId.
-      if (this.scriptRunId !== currentScriptRunId) {
-        return undefined
-      }
-    } else {
-      // Otherwise, we are currently running a fragment, and our behavior
-      // depends on the fragmentId of this BlockNode.
-
-      // The parent block was modified but this element wasn't, so it's stale.
-      if (fragmentIdOfBlock && this.scriptRunId !== currentScriptRunId) {
-        return undefined
-      }
-
-      // This block is modified by the current run, so we indicate this to our children in case
-      // they were not modified by the current run, which means they are stale.
-      if (
-        this.fragmentId &&
-        fragmentIdsThisRun.includes(this.fragmentId) &&
-        this.scriptRunId === currentScriptRunId
-      ) {
-        fragmentIdOfBlock = this.fragmentId
-      }
-    }
-
-    // Recursively clear our children.
-    const newChildren = this.children
-      .map(child => {
-        return child.clearStaleNodes(
-          currentScriptRunId,
-          fragmentIdsThisRun,
-          fragmentIdOfBlock
-        )
-      })
-      .filter(notUndefined)
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      currentScriptRunId,
       this.fragmentId,
       this.deltaMsgReceivedAt
     )

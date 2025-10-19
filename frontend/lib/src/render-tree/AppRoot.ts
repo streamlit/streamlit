@@ -36,6 +36,7 @@ import {
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -272,10 +273,10 @@ export class AppRoot {
   }
 
   private ensureBlockNode(
-    node: BlockNode | undefined,
+    node: AppNode | undefined,
     mainScriptHash: string = this.mainScriptHash
   ): BlockNode {
-    return node ?? new BlockNode(mainScriptHash)
+    return (node as BlockNode) ?? new BlockNode(mainScriptHash)
   }
 
   /**
@@ -312,18 +313,13 @@ export class AppRoot {
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>
   ): AppRoot {
-    const main =
-      this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const event =
-      this.event.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
-    const bottom =
-      this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
+    const visitor = new ClearStaleNodeVisitor(
+      currentScriptRunId,
+      fragmentIdsThisRun
+    )
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
     const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
@@ -336,7 +332,7 @@ export class AppRoot {
       this.mainScriptHash,
       new BlockNode(
         this.mainScriptHash,
-        [main, sidebar, event, bottom],
+        newChildren,
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),

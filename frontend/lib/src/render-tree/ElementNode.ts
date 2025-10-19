@@ -125,28 +125,6 @@ export class ElementNode implements AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(
-    currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
-  ): ElementNode | undefined {
-    if (fragmentIdsThisRun?.length) {
-      // If we're currently running a fragment, nodes unrelated to the fragment
-      // shouldn't be cleared. This can happen when,
-      //   1. This element doesn't correspond to a fragment at all.
-      //   2. This element is a fragment but is in no path that was modified.
-      //   3. This element belongs to a path that was modified, but it was modified in the same run.
-      if (
-        !this.fragmentId ||
-        !fragmentIdOfBlock ||
-        this.scriptRunId === currentScriptRunId
-      ) {
-        return this
-      }
-    }
-    return this.scriptRunId === currentScriptRunId ? this : undefined
-  }
-
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string
