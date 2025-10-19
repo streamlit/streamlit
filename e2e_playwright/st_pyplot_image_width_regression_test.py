@@ -18,124 +18,79 @@ Related issues:
 - #12678: Plots shown tiny in fragments
 - #12763: Images shown tiny with expanders
 
-This test ensures plots/images render at proper width in fragments,
-containers, and expanders, not at tiny sizes like 16px.
+This test ensures plots/images render at proper width across different width modes
+(default/stretch and content) and contexts (fragments, expanders, containers).
 """
 
+import pytest
 from playwright.sync_api import Page, expect
 
 
-def test_pyplot_in_fragment_width(app: Page):
-    """Test that pyplot in fragment renders at reasonable width (not tiny).
+@pytest.mark.parametrize(
+    ("width_mode", "context", "test_index"),
+    [
+        ("default", "fragment", 0),
+        ("content", "fragment", 1),
+        ("default", "expander", 2),
+        ("content", "expander", 3),
+        ("default", "container", 4),
+        ("content", "container", 5),
+    ],
+)
+def test_pyplot_width_in_context(
+    app: Page, width_mode: str, context: str, test_index: int
+):
+    """Test pyplot width calculation across width modes and contexts.
 
-    Regression test for #12678 where plots rendered very small (16px)
-    in fragments on initial load.
+    Regression test for #12678 and #12763 where plots rendered at minimum width
+    in fragments, expanders, and containers when no explicit width was set.
+
+    This test verifies that both width modes work correctly:
+    - default: No width parameter (uses stretch/legacy behavior)
+    - content: Explicit width="content" parameter
+
+    In all contexts: fragments, expanders, containers.
+
+    The bug manifested as plots rendering at minimum width (~16px) on initial load
+    due to incorrect width calculation when the parent container had width: auto.
+    The fix ensures parent containers use width: 100% for default/stretch mode.
+
+    Args:
+        width_mode: The width configuration mode ('default' or 'content')
+        context: The rendering context ('fragment', 'expander', or 'container')
+        test_index: The index of this test case (0-5)
     """
-    # Get all pyplot elements
     pyplot_elements = app.get_by_test_id("stImage")
 
-    # First pyplot is in a fragment (Test 1)
-    first_pyplot = pyplot_elements.first
+    # Get the pyplot element for this test
+    pyplot_element = pyplot_elements.nth(test_index)
 
     # Wait for element to be visible
-    expect(first_pyplot).to_be_visible()
+    expect(pyplot_element).to_be_visible()
 
     # Get the bounding box to check actual rendered width
-    bbox = first_pyplot.bounding_box()
-    assert bbox is not None, "pyplot element should have dimensions"
-
-    # Width should be reasonable, not tiny (16px as mentioned in #12763)
-    # A full-width or content-width plot should be at least 200px wide
-    assert bbox["width"] > 200, (
-        f"pyplot in fragment is too small: {bbox['width']}px. "
-        "Expected > 200px. This suggests the width regression bug from #12678."
+    bbox = pyplot_element.bounding_box()
+    assert bbox is not None, (
+        f"pyplot element (test {test_index}) should have dimensions"
     )
 
-
-def test_pyplot_in_fragment_with_workaround(app: Page):
-    """Test that width='content' workaround works in fragments."""
-    pyplot_elements = app.get_by_test_id("stImage")
-
-    # Second pyplot has width="content" workaround (Test 2)
-    second_pyplot = pyplot_elements.nth(1)
-
-    expect(second_pyplot).to_be_visible()
-
-    bbox = second_pyplot.bounding_box()
-    assert bbox is not None
-
-    # With workaround, should definitely have proper width
+    # Verify width is reasonable (not at minimum width)
+    # Using 200px as threshold - well above minimum (16px) but below typical
+    # container width. The actual width will depend on container size and
+    # width mode, but should never be tiny.
     assert bbox["width"] > 200, (
-        f"pyplot with width='content' is too small: {bbox['width']}px. "
-        "The workaround should ensure proper width rendering."
-    )
-
-
-def test_pyplot_in_expander_width(app: Page):
-    """Test that pyplot in expander renders at reasonable width.
-
-    Regression test for #12763 where images displayed small in expanders.
-    """
-    pyplot_elements = app.get_by_test_id("stImage")
-
-    # Third pyplot is in an expander (Test 3)
-    third_pyplot = pyplot_elements.nth(2)
-
-    expect(third_pyplot).to_be_visible()
-
-    bbox = third_pyplot.bounding_box()
-    assert bbox is not None
-
-    assert bbox["width"] > 200, (
-        f"pyplot in expander is too small: {bbox['width']}px. "
-        "Expected > 200px. This suggests the width regression bug from #12763."
-    )
-
-
-def test_pyplot_in_expander_with_workaround(app: Page):
-    """Test that width='content' workaround works in expanders."""
-    pyplot_elements = app.get_by_test_id("stImage")
-
-    # Fourth pyplot has width="content" in expander (Test 4)
-    fourth_pyplot = pyplot_elements.nth(3)
-
-    expect(fourth_pyplot).to_be_visible()
-
-    bbox = fourth_pyplot.bounding_box()
-    assert bbox is not None
-
-    assert bbox["width"] > 200, (
-        f"pyplot in expander with width='content' is too small: {bbox['width']}px"
-    )
-
-
-def test_pyplot_in_container_width(app: Page):
-    """Test that pyplot in container renders at reasonable width.
-
-    Related to #12678 where containers also showed width issues.
-    """
-    pyplot_elements = app.get_by_test_id("stImage")
-
-    # Fifth pyplot is in a container (Test 5)
-    fifth_pyplot = pyplot_elements.nth(4)
-
-    expect(fifth_pyplot).to_be_visible()
-
-    bbox = fifth_pyplot.bounding_box()
-    assert bbox is not None
-
-    assert bbox["width"] > 200, (
-        f"pyplot in container is too small: {bbox['width']}px. Expected > 200px."
+        f"pyplot with width='{width_mode}' in {context} is too small: {bbox['width']}px. "
+        f"Expected > 200px. This suggests the width regression bug."
     )
 
 
 def test_all_pyplot_elements_present(app: Page):
-    """Test that all 5 pyplot elements are present and visible."""
+    """Test that all 6 pyplot elements are present and visible."""
     pyplot_elements = app.get_by_test_id("stImage")
 
-    # Should have 5 pyplot elements total
-    expect(pyplot_elements).to_have_count(5)
+    # Should have 6 pyplot elements total (2 width modes x 3 contexts)
+    expect(pyplot_elements).to_have_count(6)
 
     # All should be visible
-    for i in range(5):
+    for i in range(6):
         expect(pyplot_elements.nth(i)).to_be_visible()

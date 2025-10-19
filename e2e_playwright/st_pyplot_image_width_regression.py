@@ -18,7 +18,8 @@ Reproduces issues:
 - #12678: Plots shown tiny in fragments
 - #12763: Images shown tiny with expanders
 
-These tests verify the width calculation bug is fixed.
+This app tests width calculation for pyplot elements with different width modes
+(default/stretch and content) across different contexts (fragments, expanders, containers).
 """
 
 import matplotlib.pyplot as plt
@@ -27,57 +28,53 @@ import streamlit as st
 
 st.title("Width Regression Tests")
 
-# Test 1: pyplot in fragment (from #12678 minimal example)
-st.header("Test 1: st.pyplot in fragment")
+# Define test scenarios: (width_mode, context, test_index)
+test_scenarios = [
+    ("default", "fragment", 0),
+    ("content", "fragment", 1),
+    ("default", "expander", 2),
+    ("content", "expander", 3),
+    ("default", "container", 4),
+    ("content", "container", 5),
+]
 
 
-@st.fragment
-def pyplot_in_fragment():
+def render_test_case(width_mode: str, context: str, idx: int):
+    """Render a single test case for the given width mode and context."""
+    st.header(f"Test {idx + 1}: width='{width_mode}' in {context}")
+
+    # Create a figure for this test
     fig, ax = plt.subplots(figsize=(10, 3))
     ax.bar([1, 2, 3], [1, 2, 3])
-    ax.set_title("In Fragment - Should be full width")
-    st.pyplot(fig)
+    ax.set_title(f"width={width_mode} in {context}")
+
+    # Render in appropriate context
+    if context == "fragment":
+
+        @st.fragment
+        def render_in_fragment():
+            if width_mode == "content":
+                st.pyplot(fig, width="content")
+            else:
+                # Default: no width parameter (uses stretch behavior)
+                st.pyplot(fig)
+
+        render_in_fragment()
+
+    elif context == "expander":
+        with st.expander(f"{width_mode} width in expander", expanded=True):
+            if width_mode == "content":
+                st.pyplot(fig, width="content")
+            else:
+                st.pyplot(fig)
+
+    elif context == "container":
+        with st.container(border=True):
+            if width_mode == "content":
+                st.pyplot(fig, width="content")
+            else:
+                st.pyplot(fig)
 
 
-pyplot_in_fragment()
-
-# Test 2: pyplot in fragment with workaround
-st.header("Test 2: st.pyplot in fragment with width='content'")
-
-
-@st.fragment
-def pyplot_in_fragment_workaround():
-    fig, ax = plt.subplots(figsize=(10, 3))
-    ax.bar([1, 2, 3], [1, 2, 3])
-    ax.set_title("In Fragment with workaround")
-    st.pyplot(fig, width="content")
-
-
-pyplot_in_fragment_workaround()
-
-# Test 3: image in expander
-st.header("Test 3: st.image in expander")
-
-with st.expander("Expander with image", expanded=True):
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
-    ax.set_title("In Expander - Should be full width")
-    st.pyplot(fig)
-
-# Test 4: image in expander with workaround
-st.header("Test 4: st.image in expander with width='content'")
-
-with st.expander("Expander with workaround", expanded=True):
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
-    ax.set_title("In Expander with workaround")
-    st.pyplot(fig, width="content")
-
-# Test 5: pyplot in container
-st.header("Test 5: st.pyplot in container")
-
-with st.container(border=True):
-    fig, ax = plt.subplots(figsize=(10, 3))
-    ax.scatter([1, 2, 3], [3, 1, 2])
-    ax.set_title("In Container - Should be full width")
-    st.pyplot(fig)
+for width_mode, context, idx in test_scenarios:
+    render_test_case(width_mode, context, idx)

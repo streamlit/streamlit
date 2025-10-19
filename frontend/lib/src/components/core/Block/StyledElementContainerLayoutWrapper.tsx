@@ -163,9 +163,10 @@ export const StyledElementContainerLayoutWrapper: FC<
       //
       // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
       // Use "100%" when using stretch or no width config to ensure container has dimensions for width calculation (#12678).
-      const isUsingStretchOrDefault =
+      // Note: When widthConfig is not set, this indicates legacy behavior which defaults to stretch.
+      const isUsingStretchOrLegacy =
         !node.element.widthConfig || node.element.widthConfig.useStretch
-      styles.width = isUsingStretchOrDefault ? "100%" : "auto"
+      styles.width = isUsingStretchOrLegacy ? "100%" : "auto"
     }
 
     return styles
