@@ -109,3 +109,54 @@ st.pyplot(fig_width_test, width="stretch")
 
 st.write("width=200 (pixels):")
 st.pyplot(fig_width_test, width=200)
+
+st.write("### Width Regression Tests (Issues #12678, #12763)")
+st.write(
+    "Tests for v1.50.0 regression where plots rendered at minimum width "
+    "in fragments, expanders, and containers."
+)
+
+# Test scenarios: (width_mode, context, description)
+# Using 'stretch', 'content', and pixel values
+test_scenarios = [
+    ("stretch", "fragment", "stretch width in fragment"),
+    ("content", "fragment", "content width in fragment"),
+    (400, "fragment", "400px width in fragment"),
+    ("stretch", "expander", "stretch width in expander"),
+    ("content", "expander", "content width in expander"),
+    (400, "expander", "400px width in expander"),
+    ("stretch", "container", "stretch width in container"),
+    ("content", "container", "content width in container"),
+    (400, "container", "400px width in container"),
+]
+
+
+def render_regression_test(width_mode: str | int, context: str, description: str):
+    """Render a single regression test case."""
+    st.write(f"**{description}**")
+
+    # Create figure for this test
+    fig, ax = plt.subplots(figsize=(10, 3))
+    ax.bar([1, 2, 3], [1, 2, 3])
+    ax.set_title(f"{description}")
+
+    # Render in appropriate context
+    if context == "fragment":
+
+        @st.fragment
+        def render_in_fragment():
+            st.pyplot(fig, width=width_mode)
+
+        render_in_fragment()
+
+    elif context == "expander":
+        with st.expander(description, expanded=True):
+            st.pyplot(fig, width=width_mode)
+
+    elif context == "container":
+        with st.container(border=True):
+            st.pyplot(fig, width=width_mode)
+
+
+for width_mode, context, desc in test_scenarios:
+    render_regression_test(width_mode, context, desc)
