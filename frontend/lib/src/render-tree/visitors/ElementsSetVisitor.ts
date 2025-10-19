@@ -19,6 +19,7 @@ import { Element } from "@streamlit/protobuf"
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -54,6 +55,10 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
       child.accept(this)
     }
     return this.elements
+  }
+
+  visitTransientNode(_node: TransientNode): Set<Element> {
+    throw new Error("Method not implemented.")
   }
 
   /**

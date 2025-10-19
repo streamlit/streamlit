@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { BlockNode, ElementNode } from "~lib/AppNode"
+import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
@@ -80,6 +80,11 @@ export class RenderNodeVisitor
     this.reactElements.push(renderer)
 
     return renderer
+  }
+
+  visitTransientNode(_node: TransientNode): OptionalReactElement {
+    // Transient nodes are rendered outside of the context this visitor is used in
+    return null
   }
 
   visitElementNode(node: ElementNode): OptionalReactElement {

@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -78,6 +79,10 @@ export class FilterMainScriptElementsVisitor
       node.fragmentId,
       node.deltaMsgReceivedAt
     )
+  }
+
+  visitTransientNode(_node: TransientNode): AppNode | undefined {
+    throw new Error("Method not implemented.")
   }
 
   /**

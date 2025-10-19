@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -137,5 +137,9 @@ export class ClearStaleNodeVisitor
       }
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
+  }
+
+  visitTransientNode(_node: TransientNode): AppNode | undefined {
+    throw new Error("Method not implemented.")
   }
 }
