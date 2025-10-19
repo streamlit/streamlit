@@ -86,12 +86,6 @@ export interface AppNode {
   readonly deltaMsgReceivedAt?: number
 
   /**
-   * Return a copy of this node with a new element set at the given index
-   * path. Throws an error if the path is invalid.
-   */
-  setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
-
-  /**
    * Accept a visitor.
    * @param visitor - The visitor to accept.
    * @returns The result of the visitor's visit{AppNodeType} method.

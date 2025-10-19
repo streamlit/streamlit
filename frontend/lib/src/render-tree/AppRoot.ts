@@ -41,6 +41,7 @@ import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
+import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -370,7 +371,12 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        elementNode,
+        scriptRunId
+      ) as BlockNode,
       this.appLogo
     )
   }
@@ -410,7 +416,12 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, blockNode, scriptRunId),
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        blockNode,
+        scriptRunId
+      ) as BlockNode,
       this.appLogo
     )
   }
@@ -435,7 +446,12 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        elementNode,
+        scriptRunId
+      ) as BlockNode,
       this.appLogo
     )
   }
