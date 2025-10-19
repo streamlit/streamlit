@@ -32,6 +32,10 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib.color_util import (
+    StreamlitInvalidColorError,
+    to_int_color_tuple,
+)
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
@@ -502,6 +506,134 @@ class PydeckMixin:
 
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
+        # If user provided a pydeck.Deck, try to inject Streamlit theme colors
+        # as defaults for layers that don't provide any color information.
+        # We parse the spec, update layers in-place, and then re-serialize.
+        if pydeck_obj is not None:
+            try:
+                spec_obj = json.loads(spec)
+            except Exception:
+                spec_obj = None
+
+            if isinstance(spec_obj, dict):
+                # Compute theme color once
+                def _get_theme_color_list() -> list[int]:
+                    try:
+                        chart_colors = config.get_option("theme.chartCategoricalColors")
+                        if chart_colors and len(chart_colors) > 0:
+                            first = chart_colors[0]
+                            tup = to_int_color_tuple(first)
+                            # Always clamp alpha to 160
+                            return [int(tup[0]), int(tup[1]), int(tup[2]), 160]
+                    except (
+                        RuntimeError,
+                        ValueError,
+                        TypeError,
+                        StreamlitInvalidColorError,
+                    ):
+                        pass
+
+                    # fallback color #0068c9 with alpha 160
+                    return [0, 104, 201, 160]
+
+                theme_color_list = _get_theme_color_list()
+
+                layers = spec_obj.get("layers")
+                if isinstance(layers, list):
+                    for layer in layers:
+                        # Only consider dict-like layers
+                        if not isinstance(layer, dict):
+                            continue
+                        layer_type_value = layer.get("@@type") or layer.get("type")
+                        layer_type = (
+                            layer_type_value.split(".")[-1]
+                            if isinstance(layer_type_value, str)
+                            else ""
+                        )
+
+                        existing_color_keys = (
+                            "get_color",
+                            "getColor",
+                            "getFillColor",
+                            "get_fill_color",
+                            "getLineColor",
+                            "get_line_color",
+                            "getSourceColor",
+                            "get_source_color",
+                            "getTargetColor",
+                            "get_target_color",
+                            "colorRange",
+                            "tintColor",
+                        )
+                        if any(key in layer for key in existing_color_keys):
+                            continue
+
+                        def _has_any(keys: tuple[str, ...]) -> bool:
+                            return any(key in layer for key in keys)
+
+                        if layer_type:
+                            if layer_type in {
+                                "ScatterplotLayer",
+                                "PolygonLayer",
+                                "SolidPolygonLayer",
+                                "ColumnLayer",
+                                "GeoJsonLayer",
+                            }:
+                                if not _has_any(("getFillColor", "get_fill_color")):
+                                    layer["getFillColor"] = theme_color_list
+                                continue
+
+                            if layer_type in {
+                                "LineLayer",
+                                "PathLayer",
+                                "PointCloudLayer",
+                                "IconLayer",
+                                "TextLayer",
+                                "TripsLayer",
+                                "GreatCircleLayer",
+                            }:
+                                if not _has_any(("getColor", "get_color")):
+                                    layer["getColor"] = theme_color_list
+                                continue
+
+                            if layer_type == "ArcLayer":
+                                if "getSourceColor" not in layer:
+                                    layer["getSourceColor"] = theme_color_list
+                                if "getTargetColor" not in layer:
+                                    layer["getTargetColor"] = theme_color_list
+                                continue
+
+                            if layer_type in {
+                                "HexagonLayer",
+                                "HeatmapLayer",
+                                "GPUGridLayer",
+                                "GridLayer",
+                                "ScreenGridLayer",
+                                "GridCellLayer",
+                                "ContourLayer",
+                                "H3HexagonLayer",
+                            }:
+                                if "colorRange" not in layer:
+                                    # Deck.gl expects a list of colors for ranges.
+                                    layer["colorRange"] = [
+                                        theme_color_list.copy() for _ in range(6)
+                                    ]
+                                continue
+
+                            if layer_type == "BitmapLayer":
+                                if "tintColor" not in layer:
+                                    layer["tintColor"] = theme_color_list[:3]
+                                continue
+
+                        # Fallback: inject getColor for unknown color-aware layers.
+                        layer["getColor"] = theme_color_list
+
+                try:
+                    spec = json.dumps(spec_obj)
+                except (TypeError, ValueError):
+                    # If serialization fails, preserve original spec (don't lose user data)
+                    pass
+
         pydeck_proto.json = spec
 
         tooltip = _get_pydeck_tooltip(pydeck_obj)
@@ -512,10 +644,10 @@ class PydeckMixin:
         # old mapbox.token config option.
 
         mapbox_token = getattr(pydeck_obj, "mapbox_key", None)
-        if mapbox_token is None or mapbox_token == "":
+        if not isinstance(mapbox_token, str) or mapbox_token == "":
             mapbox_token = config.get_option("mapbox.token")
 
-        if mapbox_token:
+        if isinstance(mapbox_token, str) and mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 
         key = to_key(key)

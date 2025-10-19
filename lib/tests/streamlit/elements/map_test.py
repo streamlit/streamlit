@@ -27,7 +27,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
+from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL, _get_default_color
 from streamlit.errors import StreamlitAPIException
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -341,6 +341,86 @@ class StMapTest(DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.deck_gl_json_chart
             assert c.mapbox_token == "test_mapbox_token"
 
+    def test_default_color_uses_theme_chart_colors(self):
+        """Test that _get_default_color uses theme chart categorical colors."""
+        # Test with default configuration (should use fallback blue)
+        default_color = _get_default_color()
+        assert default_color == (0, 104, 201, 160)  # #0068c9 with alpha 160
+
+        # Test with custom chart categorical colors
+        with patch_config_options(
+            {"theme.chartCategoricalColors": ["#ff0000", "#00ff00"]}
+        ):
+            custom_color = _get_default_color()
+            assert custom_color == (255, 0, 0, 160)  # Red with alpha 160
+
+        # Test with empty chart categorical colors (should fall back to default)
+        with patch_config_options({"theme.chartCategoricalColors": []}):
+            fallback_color = _get_default_color()
+            assert fallback_color == (0, 104, 201, 160)
+
+    def test_map_uses_theme_color_by_default(self):
+        """Test that st.map uses theme colors for default marker color."""
+        # Test with custom theme colors
+        with patch_config_options({"theme.chartCategoricalColors": ["#ff6b35"]}):
+            st.map(mock_df)
+            c = json.loads(
+                self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+            )
+
+            # The color should be applied as getFillColor in the layer
+            layer = c.get("layers")[0]
+            # Since no color column is specified, the color should be the direct tuple value
+            assert layer.get("getFillColor") == [
+                255,
+                107,
+                53,
+                160,
+            ]  # #ff6b35 with alpha 160
+
+    def test_default_color_from_theme(self):
+        """Test that default color uses theme chart colors when available."""
+        # Test with theme chart colors configured
+        with patch_config_options(
+            {"theme.chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"]}
+        ):
+            # Call the function directly
+            color = _get_default_color()
+            # Should use first color (red) with transparency
+            assert color == (255, 0, 0, 160)
+
+        # Test with empty chart colors
+        with patch_config_options({"theme.chartCategoricalColors": []}):
+            color = _get_default_color()
+            # Should fallback to default blue
+            assert color == (0, 104, 201, 160)
+
+        # Test without chart colors configured (None)
+        with patch_config_options({"theme.chartCategoricalColors": None}):
+            color = _get_default_color()
+            # Should fallback to default blue
+            assert color == (0, 104, 201, 160)
+
+    def test_map_uses_theme_color(self):
+        """Test that st.map uses theme color for default markers."""
+        # Test with custom theme color
+        with patch_config_options(
+            {"theme.chartCategoricalColors": ["#ff5722"]}  # Deep orange
+        ):
+            st.map(mock_df)
+            c = json.loads(
+                self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+            )
+            # The color should be applied in the default conversion
+            layer = c.get("layers")[0]
+            # Default color is applied when no color is specified
+            assert layer.get("getFillColor") == [
+                255,
+                87,
+                34,
+                160,
+            ]  # #ff5722 with alpha
+
 
 class StMapWidthHeightTest(DeltaGeneratorTestCase):
     """Test st.map width and height parameter functionality."""
@@ -488,3 +568,52 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
         kwargs = {param_name: invalid_value}
         with pytest.raises(StreamlitAPIException):
             st.map(mock_df, **kwargs)
+
+
+class StMapThemeColorTest(DeltaGeneratorTestCase):
+    """Test st.map theme color functionality."""
+
+    def test_get_default_color_fallback(self):
+        """Test _get_default_color returns fallback when theme colors unavailable."""
+        with patch_config_options({"theme.chartCategoricalColors": None}):
+            default_color = _get_default_color()
+            assert default_color == (0, 104, 201, 160)
+
+    def test_get_default_color_with_theme_colors(self):
+        """Test _get_default_color uses first theme color with alpha 160."""
+        theme_colors = ["#ff0000", "#00ff00", "#0000ff"]  # Red, Green, Blue
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            default_color = _get_default_color()
+            # Should return red (255, 0, 0) with alpha 160
+            assert default_color == (255, 0, 0, 160)
+
+    def test_get_default_color_alpha_override(self):
+        """Test _get_default_color always sets alpha to 160, even for RGBA colors."""
+        # Theme color with different alpha
+        theme_colors = ["#ff000080"]  # Red with alpha 128
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            default_color = _get_default_color()
+            # Should return red (255, 0, 0) with alpha 160 (overridden)
+            assert default_color == (255, 0, 0, 160)
+
+    def test_get_default_color_invalid_color(self):
+        """Test _get_default_color handles invalid theme colors gracefully."""
+        theme_colors = ["invalid_color", "#ff0000"]
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            default_color = _get_default_color()
+            # Should fall back to default blue color
+            assert default_color == (0, 104, 201, 160)
+
+    def test_map_uses_theme_color_by_default(self):
+        """Test that st.map uses theme color when no color specified."""
+        theme_colors = ["#ff0000"]  # Red
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            st.map(mock_df)
+            c = json.loads(
+                self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+            )
+            # The layer should use the theme color
+            layer = c.get("layers")[0]
+            # For a default map, the color should be applied to getFillColor
+            # After JSON round-trip, this will be a list, not tuple
+            assert layer.get("getFillColor") == [255, 0, 0, 160]

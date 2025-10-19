@@ -29,6 +29,7 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
+    StreamlitInvalidColorError,
     is_color_like,
     to_int_color_tuple,
 )
@@ -57,9 +58,32 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
+
+
+def _get_default_color() -> IntColorTuple:
+    """Get the default map marker color from theme chart colors.
+
+    Uses the first color from theme.chartCategoricalColors if available,
+    otherwise falls back to hardcoded blue (which matches default chart color).
+    """
+    try:
+        chart_colors = config.get_option("theme.chartCategoricalColors")
+        if chart_colors and len(chart_colors) > 0:
+            # Use the first chart color with transparency
+            first_color = chart_colors[0]
+            color_tuple = to_int_color_tuple(first_color)
+            # Always set transparency to 160 to match original design
+            return (*color_tuple[:3], 160)
+    except (RuntimeError, ValueError, TypeError, StreamlitInvalidColorError):
+        # If config access fails or color conversion fails, fall back to default
+        pass
+
+    # Fallback to blue (first default chart color) with transparency
+    return (0, 104, 201, 160)  # #0068c9 with alpha 160
+
+
 _ZOOM_LEVELS: Final = [
     360,
     180,
@@ -309,7 +333,7 @@ def to_deckgl_json(
         df, "longitude", lon, _DEFAULT_LON_COL_NAMES
     )
     size_arg, size_col_name = _get_value_and_col_name(df, size, _DEFAULT_SIZE)
-    color_arg, color_col_name = _get_value_and_col_name(df, color, _DEFAULT_COLOR)
+    color_arg, color_col_name = _get_value_and_col_name(df, color, _get_default_color())
 
     # Drop columns we're not using.
     # (Sort for tests)

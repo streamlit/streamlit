@@ -484,3 +484,186 @@ class PyDeckChartHeightTest(DeltaGeneratorTestCase):
 
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 500
+
+
+class PyDeckThemeColorTest(DeltaGeneratorTestCase):
+    """Test st.pydeck_chart theme color functionality."""
+
+    def test_pydeck_injects_theme_color_for_layers_without_color(self):
+        """Test that pydeck_chart injects theme colors for layers without color accessors."""
+        theme_colors = ["#ff0000"]  # Red
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            # Create a layer without any color specification
+            layer_without_color = pdk.Layer("ScatterplotLayer", data=df1)
+
+            st.pydeck_chart(pdk.Deck(layers=[layer_without_color]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            # Should have injected getColor with theme color (red with alpha 160)
+            layer = actual["layers"][0]
+            assert "getFillColor" in layer
+            assert layer["getFillColor"] == [255, 0, 0, 160]
+
+    def test_pydeck_preserves_existing_colors(self):
+        """Test that pydeck_chart doesn't override existing color specifications."""
+        theme_colors = ["#ff0000"]  # Red (should be ignored)
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            # Create a layer with explicit color
+            layer_with_color = pdk.Layer(
+                "ScatterplotLayer",
+                data=df1,
+                get_color=[0, 255, 0, 255],  # Explicit green
+            )
+
+            st.pydeck_chart(pdk.Deck(layers=[layer_with_color]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            # Should preserve the original color, not inject theme color
+            layer = actual["layers"][0]
+            assert layer["getColor"] == [0, 255, 0, 255]  # Original green preserved
+
+    def test_pydeck_theme_color_fallback(self):
+        """Test that pydeck_chart falls back to default blue when theme colors unavailable."""
+        with patch_config_options({"theme.chartCategoricalColors": None}):
+            layer_without_color = pdk.Layer("ScatterplotLayer", data=df1)
+
+            st.pydeck_chart(pdk.Deck(layers=[layer_without_color]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            # Should use fallback blue color with alpha 160
+            layer = actual["layers"][0]
+            assert "getFillColor" in layer
+            assert layer["getFillColor"] == [0, 104, 201, 160]
+
+    def test_pydeck_handles_invalid_theme_colors(self):
+        """Test that pydeck_chart handles invalid theme colors gracefully."""
+        theme_colors = ["invalid_color"]  # Invalid color
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            layer_without_color = pdk.Layer("ScatterplotLayer", data=df1)
+
+            st.pydeck_chart(pdk.Deck(layers=[layer_without_color]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            # Should fall back to default blue color
+            layer = actual["layers"][0]
+            assert "getFillColor" in layer
+            assert layer["getFillColor"] == [0, 104, 201, 160]
+
+    def test_pydeck_respects_different_color_accessors(self):
+        """Test that pydeck_chart respects various color accessor patterns."""
+        theme_colors = ["#ff0000"]  # Red
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            # Test different color accessor variations
+            color_accessors = ["getColor", "getFillColor", "get_fill_color"]
+
+            for accessor in color_accessors:
+                layer_data = {
+                    "@@type": "ScatterplotLayer",
+                    "data": df1.to_dict("records"),
+                }
+                layer_data[accessor] = [0, 255, 0, 255]  # Green
+
+                # Create deck spec manually to test various accessor patterns
+                deck_spec = {
+                    "layers": [layer_data],
+                    "initialViewState": {"latitude": 0, "longitude": 0, "zoom": 1},
+                }
+
+                # Create a mock Deck object
+                mock_deck = mock.Mock()
+                mock_deck.to_json.return_value = json.dumps(deck_spec)
+
+                st.pydeck_chart(mock_deck)
+
+                el = self.get_delta_from_queue().new_element
+                actual = json.loads(el.deck_gl_json_chart.json)
+
+                # Should preserve existing color accessor, not inject getColor
+                layer = actual["layers"][0]
+                assert accessor in layer
+                assert layer[accessor] == [0, 255, 0, 255]
+                assert "getFillColor" not in layer or layer.get("getFillColor") != [
+                    255,
+                    0,
+                    0,
+                    160,
+                ]
+
+    def test_pydeck_injects_theme_color_for_arc_layer(self):
+        """ArcLayer should receive themed source/target colors."""
+        theme_colors = ["#3366ff"]
+        arc_df = pd.DataFrame(
+            {
+                "start_lon": [0],
+                "start_lat": [0],
+                "end_lon": [1],
+                "end_lat": [1],
+            }
+        )
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            arc_layer = pdk.Layer(
+                "ArcLayer",
+                data=arc_df,
+                get_source_position="[start_lon, start_lat]",
+                get_target_position="[end_lon, end_lat]",
+            )
+
+            st.pydeck_chart(pdk.Deck(layers=[arc_layer]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            layer = actual["layers"][0]
+            assert layer["getSourceColor"] == [51, 102, 255, 160]
+            assert layer["getTargetColor"] == [51, 102, 255, 160]
+
+    def test_pydeck_injects_theme_color_for_hexagon_layer(self):
+        """HexagonLayer should receive themed colorRange."""
+        theme_colors = ["#ff00ff"]
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            hex_layer = pdk.Layer(
+                "HexagonLayer",
+                data=df1,
+                get_position="[lon, lat]",
+                radius=100,
+            )
+
+            st.pydeck_chart(pdk.Deck(layers=[hex_layer]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            layer = actual["layers"][0]
+            assert layer["colorRange"] == [[255, 0, 255, 160]] * 6
+
+    def test_pydeck_multiple_layers_mixed_colors(self):
+        """Test pydeck_chart with multiple layers, some with and some without colors."""
+        theme_colors = ["#ff0000"]  # Red
+        with patch_config_options({"theme.chartCategoricalColors": theme_colors}):
+            layer_with_color = pdk.Layer(
+                "ScatterplotLayer",
+                data=df1,
+                get_color=[0, 255, 0, 255],  # Green
+            )
+            layer_without_color = pdk.Layer("HexagonLayer", data=df1)
+
+            st.pydeck_chart(pdk.Deck(layers=[layer_with_color, layer_without_color]))
+
+            el = self.get_delta_from_queue().new_element
+            actual = json.loads(el.deck_gl_json_chart.json)
+
+            # First layer should keep its color
+            assert actual["layers"][0]["getColor"] == [0, 255, 0, 255]
+
+            # Second layer should get theme color injected
+            assert actual["layers"][1]["colorRange"] == [
+                [255, 0, 0, 160]
+            ] * 6
