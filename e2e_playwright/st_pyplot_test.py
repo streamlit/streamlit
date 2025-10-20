@@ -21,6 +21,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_warning,
+    get_element_by_key,
     wait_for_all_images_to_be_loaded,
 )
 from e2e_playwright.shared.react18_utils import take_stable_snapshot
@@ -111,15 +112,11 @@ def test_pyplot_width_regression_stretch(
     Regression test for #12678 where plots rendered at minimum width
     when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage").locator("img")
-    expect(pyplot_elements).to_have_count(14)
     wait_for_all_images_to_be_loaded(app)
 
-    stretch_pyplot = pyplot_elements.nth(11)
-    expect(stretch_pyplot).to_be_visible()
-    take_stable_snapshot(
-        app, stretch_pyplot, assert_snapshot, name="st_pyplot-regression_stretch"
-    )
+    container = get_element_by_key(app, "regression_stretch")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_pyplot-regression_stretch")
 
 
 def test_pyplot_width_regression_content(
@@ -130,15 +127,11 @@ def test_pyplot_width_regression_content(
     Regression test for #12678 where plots rendered at minimum width
     when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage").locator("img")
-    expect(pyplot_elements).to_have_count(14)
     wait_for_all_images_to_be_loaded(app)
 
-    content_pyplot = pyplot_elements.nth(12)
-    expect(content_pyplot).to_be_visible()
-    take_stable_snapshot(
-        app, content_pyplot, assert_snapshot, name="st_pyplot-regression_content"
-    )
+    container = get_element_by_key(app, "regression_content")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_pyplot-regression_content")
 
 
 def test_pyplot_width_regression_pixel(
@@ -149,12 +142,8 @@ def test_pyplot_width_regression_pixel(
     Regression test for #12678 where plots rendered at minimum width
     when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage").locator("img")
-    expect(pyplot_elements).to_have_count(14)
     wait_for_all_images_to_be_loaded(app)
 
-    pixel_pyplot = pyplot_elements.nth(13)
-    expect(pixel_pyplot).to_be_visible()
-    take_stable_snapshot(
-        app, pixel_pyplot, assert_snapshot, name="st_pyplot-regression_pixel"
-    )
+    container = get_element_by_key(app, "regression_pixel")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_pyplot-regression_pixel")

@@ -121,13 +121,13 @@ ax_regression.bar([1, 2, 3], [1, 2, 3])
 ax_regression.set_title("Width Regression Test")
 
 st.write("**Test 1: width='stretch' in container**")
-with st.container(border=True, width=600):
+with st.container(border=True, width=600, key="regression_stretch"):
     st.pyplot(fig_regression, width="stretch")
 
 st.write("**Test 2: width='content' in container**")
-with st.container(border=True):
+with st.container(border=True, key="regression_content"):
     st.pyplot(fig_regression, width="content")
 
 st.write("**Test 3: width=500 (pixels) in container**")
-with st.container(border=True):
+with st.container(border=True, key="regression_pixel"):
     st.pyplot(fig_regression, width=500)
