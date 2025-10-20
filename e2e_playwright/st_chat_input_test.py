@@ -34,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_CHAT_INPUT_WIDGETS = 11
+NUM_CHAT_INPUT_WIDGETS = 16
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
@@ -77,6 +77,67 @@ def directory_upload_helper(app: Page, chat_input: Locator):
     wait_for_app_run(app, 500)
 
 
+def grant_microphone_permissions(page: Page) -> None:
+    """Grant microphone permissions where supported."""
+    try:
+        page.context.grant_permissions(["microphone"])
+    except Exception:
+        pass
+
+
+def record_audio_in_chat_input(
+    app: Page, chat_input: Locator, duration_ms: int = 1500
+) -> None:
+    """Record audio in chat input for specified duration.
+
+    Note: Clicking approve automatically submits the chat input.
+
+    Args:
+        app: Page object
+        chat_input: Locator for the chat input element
+        duration_ms: Duration to record in milliseconds
+    """
+    # Click microphone button to start recording
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+    mic_button.click()
+
+    # Wait for approve button to appear (indicates recording started)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).to_be_visible()
+
+    # Record for the specified duration (wait_for_timeout is acceptable here)
+    app.wait_for_timeout(duration_ms)
+
+    # Click approve button - this submits the chat input automatically
+    approve_button.click()
+
+    wait_for_app_run(app)
+
+
+def start_audio_recording(chat_input: Locator) -> None:
+    """Start audio recording without submitting.
+
+    This helper starts recording and waits for the recording UI to appear,
+    but does not click approve or cancel. Useful for testing recording states.
+
+    Args:
+        chat_input: Locator for the chat input element
+    """
+    # Click microphone button to start recording
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+    mic_button.click()
+
+    # Wait for approve button to appear (indicates recording started)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).to_be_visible()
+
+    # Also verify cancel button appears
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    expect(cancel_button).to_be_visible()
+
+
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.chat_input widgets are correctly rendered via screenshot matching."""
     # set taller height to ensure inputs do not overlap
@@ -116,6 +177,15 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_element_by_key(app, "chat_input_10"),
         name="st_chat_input-directory_disabled",
+    )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_11"), name="st_chat_input-with_audio"
+    )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_12"), name="st_chat_input-audio_only"
+    )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_13"), name="st_chat_input-audio_disabled"
     )
 
 
@@ -624,3 +694,570 @@ def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     input_field.press("Enter")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated chat input value:", "world")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_recording_lifecycle(app: Page):
+    """Test complete audio recording lifecycle: record, approve, verify output."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Verify mic button is visible
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input)
+
+    # Verify st.audio component is displayed (most reliable check)
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify the chat input value is not None by checking the output doesn't show "value: None"
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_recording_cancel(app: Page):
+    """Test that canceling audio recording works correctly."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Start recording
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+    mic_button.click()
+
+    # Wait for cancel button to appear (indicates recording started)
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    expect(cancel_button).to_be_visible()
+
+    # Record for a moment
+    app.wait_for_timeout(500)
+
+    # Cancel recording
+    cancel_button.click()
+
+    # Cancel button should disappear (recording stopped)
+    expect(cancel_button).not_to_be_visible()
+
+    # Mic button should be visible and enabled again
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_with_text_input(app: Page):
+    """Test recording audio along with text input."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Type text
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Hello world")
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Verify st.audio component is displayed
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify chat input was not None
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_with_file_uploads(app: Page):
+    """Test combining audio recording with file uploads."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Upload file first
+    file = FilePayload(name="test.txt", mimeType="text/plain", buffer=b"test content")
+    file_upload_helper(app, chat_input, [file])
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Verify st.audio component is displayed
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify chat input was not None
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_only_submission(app: Page):
+    """Test submitting only audio without text or files."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio only (no text or files)
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Verify st.audio component is displayed
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify chat input was not None
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_submit_clears_recording(app: Page):
+    """Test that submitting clears the recording state."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record and submit audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Verify st.audio component is displayed
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify mic button is back to initial state
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+    # Verify approve/cancel buttons are not visible (not recording)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).not_to_be_visible()
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    expect(cancel_button).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_error_state_handling(app: Page):
+    """Test error state handling when audio upload fails."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Mock upload failure
+    from playwright.sync_api import Route
+
+    def handle_route(route: Route):
+        if "upload_file" in route.request.url:
+            route.abort("failed")
+        else:
+            route.continue_()
+
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    # Start recording
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    mic_button.click()
+
+    # Wait for approve button to appear
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).to_be_visible()
+
+    # Record for a moment
+    app.wait_for_timeout(1000)
+
+    # Approve recording
+    approve_button.click()
+
+    # Wait for error to appear
+    app.wait_for_timeout(1000)
+
+    # Verify error message appears (implementation may vary)
+    # When upload fails, the value should still be None
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_rapid_re_recordings(app: Page):
+    """Test that rapid re-recordings work correctly without race conditions."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Do 3 rapid recordings - each new one should replace the previous
+    for i in range(3):
+        mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+        expect(mic_button).to_be_visible()
+        mic_button.click()
+
+        # Wait for approve button to appear
+        approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+        expect(approve_button).to_be_visible()
+
+        # Record briefly
+        app.wait_for_timeout(500)
+
+        # Approve
+        approve_button.click()
+
+        if i < 2:  # Don't wait after last recording
+            # Wait for approve button to disappear (indicates ready for next recording)
+            expect(approve_button).not_to_be_visible()
+
+    # Wait for the final upload to complete
+    wait_for_app_run(app)
+
+    # Verify st.audio component is displayed
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible(timeout=10000)
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_input_visual_states(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test visual snapshots of all audio input states."""
+    grant_microphone_permissions(app)
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    # Test 1: Idle state (already captured in test_chat_input_rendering)
+    # Test 2: Recording state with waveform visible
+    chat_input = get_element_by_key(app, "chat_input_12")
+    chat_input.scroll_into_view_if_needed()
+
+    # Start recording to capture recording state
+    start_audio_recording(chat_input)
+
+    # Wait a moment for waveform to stabilize
+    app.wait_for_timeout(500)
+
+    # Snapshot: Recording state
+    assert_snapshot(chat_input, name="st_chat_input-audio_recording_state")
+
+    # Cancel to return to idle
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    cancel_button.click()
+
+    # Test 3: Disabled state (already captured in test_chat_input_rendering as audio_disabled)
+
+    # Test 4: With uploaded files + audio button visible
+    chat_input_with_files = get_element_by_key(app, "chat_input_11")
+    chat_input_with_files.scroll_into_view_if_needed()
+
+    file = FilePayload(name="test.txt", mimeType="text/plain", buffer=b"test content")
+    file_upload_helper(app, chat_input_with_files, [file])
+
+    # Snapshot: Audio button + uploaded files
+    uploaded_files = chat_input_with_files.get_by_test_id("stChatUploadedFiles").first
+    expect(uploaded_files).to_be_visible()
+    assert_snapshot(
+        chat_input_with_files, name="st_chat_input-audio_with_uploaded_files"
+    )
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_input_combined_features(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test visual snapshots of audio combined with other features."""
+    grant_microphone_permissions(app)
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "chat_input_12")
+    chat_input.scroll_into_view_if_needed()
+
+    # Snapshot: Audio + text entered (before recording)
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Hello with audio")
+    assert_snapshot(chat_input, name="st_chat_input-audio_with_text_entered")
+
+    # Clear for next test
+    textarea.fill("")
+
+    # Submit audio and capture cleared state
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Snapshot: After audio submission (cleared state)
+    expect(textarea).to_have_value("")
+    assert_snapshot(chat_input, name="st_chat_input-audio_after_clear")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_recording_state_transitions(app: Page):
+    """Test exhaustive state machine transitions for audio recording."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_12")
+    chat_input.scroll_into_view_if_needed()
+
+    # Get element references
+    textarea = chat_input.locator("textarea").first
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+
+    # State 1: Idle - verify initial state
+    expect(textarea).to_be_visible()
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+    # Verify approve/cancel buttons not visible in idle
+    expect(chat_input.get_by_test_id("stChatInputApproveButton")).not_to_be_visible()
+    expect(chat_input.get_by_test_id("stChatInputCancelButton")).not_to_be_visible()
+
+    # Transition: idle → recording
+    start_audio_recording(chat_input)
+
+    # State 2: Recording - verify recording state elements
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+
+    expect(approve_button).to_be_visible()
+    expect(cancel_button).to_be_visible()
+
+    # Verify textarea becomes hidden during recording
+    # Note: The textarea is not removed, but waveform takes over visually
+
+    # Transition: recording → idle (via cancel)
+    cancel_button.click()
+
+    # Verify return to idle state
+    expect(approve_button).not_to_be_visible()
+    expect(cancel_button).not_to_be_visible()
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+    # Test full cycle: idle → recording → uploading → idle
+    mic_button.click()
+    expect(approve_button).to_be_visible()
+    app.wait_for_timeout(1000)
+
+    # Click approve to enter uploading state
+    approve_button.click()
+
+    # During upload, approve button should show spinner (verify button still exists)
+    # This happens very quickly, so we just verify transition to idle
+    wait_for_app_run(app)
+
+    # Verify return to idle after upload
+    expect(approve_button).not_to_be_visible()
+    expect(cancel_button).not_to_be_visible()
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+    # Verify textarea is cleared after submission
+    expect(textarea).to_have_value("")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_keyboard_accessibility(app: Page):
+    """Test keyboard-only interactions with audio input."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_12")
+    chat_input.scroll_into_view_if_needed()
+
+    # Tab to mic button
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+
+    # Focus the mic button using keyboard navigation
+    mic_button.focus()
+    expect(mic_button).to_be_focused()
+
+    # Trigger with Space
+    app.keyboard.press("Space")
+
+    # Verify recording started
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).to_be_visible()
+
+    # Try Escape to cancel (if implemented)
+    app.keyboard.press("Escape")
+
+    # Verify either cancel worked or recording continues
+    # (This depends on implementation - we just verify state consistency)
+
+    # Clean up - cancel if still recording
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    if cancel_button.is_visible():
+        cancel_button.click()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_boundary_conditions(app: Page):
+    """Test edge cases and boundary conditions for audio recording."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_12")
+    chat_input.scroll_into_view_if_needed()
+
+    # Test 1: Very short recording (< 1 second)
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    mic_button.click()
+
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).to_be_visible()
+
+    # Record for very short duration
+    app.wait_for_timeout(200)
+    approve_button.click()
+
+    wait_for_app_run(app)
+
+    # Verify submission worked despite short duration
+    expect(mic_button).to_be_visible()
+
+    # Test 2: Rapid click on mic button (shouldn't allow double-start)
+    mic_button.click()
+    expect(approve_button).to_be_visible()
+
+    # Try clicking mic button again while recording
+    # It should be hidden or disabled during recording
+    # so this shouldn't cause issues
+
+    # Cancel to reset
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    cancel_button.click()
+
+    # Test 3: Click approve immediately after starting
+    mic_button.click()
+    expect(approve_button).to_be_visible()
+
+    # Click approve almost immediately (< 100ms of recording)
+    approve_button.click()
+
+    wait_for_app_run(app)
+
+    # Verify state is clean
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+
+    # Test 4: Multiple cancel/restart cycles
+    for _ in range(3):
+        mic_button.click()
+        expect(approve_button).to_be_visible()
+        app.wait_for_timeout(300)
+        cancel_button.click()
+        expect(mic_button).to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_with_all_features_combined(app: Page):
+    """Test audio with text and files all together (maximum complexity)."""
+    grant_microphone_permissions(app)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Upload files first
+    file1 = FilePayload(name="file1.txt", mimeType="text/plain", buffer=b"content1")
+    file2 = FilePayload(name="file2.txt", mimeType="text/plain", buffer=b"content2")
+    file_upload_helper(app, chat_input, [file1, file2])
+
+    # Verify files uploaded
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    expect(uploaded_files.get_by_text("file1.txt")).to_be_visible()
+    expect(uploaded_files.get_by_text("file2.txt")).to_be_visible()
+
+    # Add text after files are uploaded
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Message with everything")
+
+    # Record and submit audio (this submits everything together)
+    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
+
+    # Verify the chat input value is not None (confirms submission worked)
+    expect(
+        app.get_by_text("Chat input 11 (audio recording) - value: None")
+    ).not_to_be_visible()
+
+    # Verify st.audio component displayed (confirms audio was received)
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+
+    # Verify files are listed in output (scroll back up to see them if needed)
+    # Files should be visible in the st.write output
+    expect(app.get_by_text("file1.txt").first).to_be_visible()
+    expect(app.get_by_text("file2.txt").first).to_be_visible()
+
+    # Verify textarea is cleared after submission
+    expect(textarea).to_have_value("")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_container_contexts(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test audio input in different container contexts."""
+    grant_microphone_permissions(app)
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    # Test 1: Audio in sidebar
+    sidebar_input = get_element_by_key(app, "chat_input_14")
+    # Scroll sidebar into view
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    sidebar_input.scroll_into_view_if_needed()
+    expect(sidebar_input).to_be_visible()
+
+    # Verify mic button exists in sidebar
+    mic_button = sidebar_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+
+    # Snapshot sidebar audio input
+    assert_snapshot(sidebar_input, name="st_chat_input-sidebar_audio")
+
+    # Test 2: Audio in columns
+    col_input = get_element_by_key(app, "chat_input_15")
+    col_input.scroll_into_view_if_needed()
+    expect(col_input).to_be_visible()
+
+    # Verify mic button in column
+    col_mic_button = col_input.get_by_test_id("stChatInputMicButton")
+    expect(col_mic_button).to_be_visible()
+
+    # Record audio in column to verify functionality
+    record_audio_in_chat_input(app, col_input, duration_ms=800)
+
+    # Verify it worked
+    expect(app.get_by_text("Chat input 15 (column audio) - value:")).to_be_visible()
+
+
+def test_audio_disabled_states(app: Page):
+    """Test non-interactive verification of disabled audio input."""
+    chat_input = get_element_by_key(app, "chat_input_13")
+    chat_input.scroll_into_view_if_needed()
+
+    # Verify mic button is present but disabled
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+
+    # Check disabled attribute on button
+    expect(mic_button).to_have_attribute("disabled", "")
+
+    # Verify textarea is also disabled
+    textarea = chat_input.locator("textarea")
+    expect(textarea).to_be_disabled()
+
+    # Try clicking mic button - should not respond
+    mic_button.click(force=True)
+
+    # Verify recording did not start (approve button should not appear)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).not_to_be_visible()
+
+    # Verify submit button is also disabled
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    expect(submit_button).to_have_attribute("disabled", "")

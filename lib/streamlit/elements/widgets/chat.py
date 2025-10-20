@@ -310,6 +310,7 @@ def _pop_audio_file(
 @dataclass
 class ChatInputSerde:
     accept_files: bool = False
+    accept_audio: bool = False
     allowed_types: Sequence[str] | None = None
 
     def deserialize(
@@ -317,7 +318,7 @@ class ChatInputSerde:
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
-        if not self.accept_files:
+        if not self.accept_files and not self.accept_audio:
             return ui_value.data
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
         for file in uploaded_files:
@@ -493,6 +494,7 @@ class ChatMixin:
         max_chars: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
+        accept_audio: Literal[False] = False,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -507,8 +509,26 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_file: Literal[False] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: Literal[True],
+        disabled: bool = False,
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+    ) -> ChatInputValue | None: ...
+
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -525,6 +545,7 @@ class ChatMixin:
         max_chars: int | None = None,
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -587,6 +608,15 @@ class ChatMixin:
                 or type extensions. The correct handling of uploaded files is
                 part of the app developer's responsibility.
 
+        accept_audio : bool
+            Whether to show an audio recording button in the chat input.
+            When enabled, users can record and submit audio messages.
+            Recorded audio is uploaded as a WAV file and can be accessed
+            through the ``audio`` attribute of the returned dict-like object.
+            The ``audio`` attribute will be ``None`` when ``accept_audio=False``
+            or when no audio is recorded.
+            This defaults to ``False``.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
@@ -616,29 +646,33 @@ class ChatMixin:
         None, str, or dict-like
             The user's submission. This is one of the following types:
 
-            - ``None``: If the user didn't submit a message or file in the last
-              rerun, the widget returns ``None``.
-            - A string: When the widget is not configured to accept files and
-              the user submitted a message in the last rerun, the widget
-              returns the user's message as a string.
+            - ``None``: If the user didn't submit a message, file, or audio
+              in the last rerun, the widget returns ``None``.
+            - A string: When the widget is not configured to accept files or
+              audio and the user submitted a message in the last rerun, the
+              widget returns the user's message as a string.
             - A dict-like object: When the widget is configured to accept files
-              and the user submitted a message and/or file(s) in the last
-              rerun, the widget returns a dict-like object with two attributes,
-              ``text`` and ``files``.
+              and/or audio and the user submitted a message and/or file(s)
+              and/or audio in the last rerun, the widget returns a dict-like
+              object with three attributes: ``text``, ``files``, and ``audio``.
 
-            When the widget is configured to accept files and the user submits
-            something in the last rerun, you can access the user's submission
-            with key or attribute notation from the dict-like object. This is
-            shown in Example 3 below.
+            When the widget is configured to accept files or audio and the user
+            submits something in the last rerun, you can access the user's
+            submission with key or attribute notation from the dict-like object.
+            This is shown in Example 3 below.
 
             The ``text`` attribute holds a string, which is the user's message.
             This is an empty string if the user only submitted one or more
-            files.
+            files or audio.
 
             The ``files`` attribute holds a list of UploadedFile objects.
-            The list is empty if the user only submitted a message. Unlike
-            ``st.file_uploader``, this attribute always returns a list, even
-            when the widget is configured to accept only one file at a time.
+            The list is empty if the user only submitted a message or audio.
+            Unlike ``st.file_uploader``, this attribute always returns a list,
+            even when the widget is configured to accept only one file at a time.
+
+            The ``audio`` attribute holds an UploadedFile object representing
+            the recorded audio, or ``None`` if no audio was recorded or when
+            ``accept_audio=False``.
 
             The UploadedFile class is a subclass of BytesIO, and therefore is
             "file-like". This means you can pass an instance of it anywhere a
@@ -719,6 +753,25 @@ class ChatMixin:
         .. output ::
             https://doc-chat-input-session-state.streamlit.app/
             height: 350px
+
+        **Example 5: Enable audio recording**
+
+        You can enable audio recording by setting ``accept_audio=True``.
+        The ``accept_audio`` parameter works independently of ``accept_file``,
+        allowing you to enable audio recording with or without file uploads.
+
+        >>> import streamlit as st
+        >>>
+        >>> prompt = st.chat_input(
+        >>>     "Say or record something",
+        >>>     accept_audio=True,
+        >>> )
+        >>> if prompt:
+        >>>     if prompt.text:
+        >>>         st.write("Text:", prompt.text)
+        >>>     if prompt.audio:
+        >>>         st.audio(prompt.audio)
+        >>>         st.write("Audio file:", prompt.audio.name)
         """
         key = to_key(key)
 
@@ -752,6 +805,7 @@ class ChatMixin:
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=file_type,
+            accept_audio=accept_audio,
             width=width,
         )
 
@@ -796,9 +850,11 @@ class ChatMixin:
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        chat_input_proto.accept_audio = accept_audio
 
         serde = ChatInputSerde(
             accept_files=accept_file in {True, "multiple", "directory"},
+            accept_audio=accept_audio,
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]

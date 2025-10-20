@@ -130,3 +130,80 @@ else:
         file_type=["txt"],
     )
     st.write("Initial chat input value:", dyn_val)
+
+v11 = st.container().chat_input(
+    "Chat input 11 (audio recording)",
+    accept_file="multiple",
+    accept_audio=True,
+    key="chat_input_11",
+)
+st.write("Chat input 11 (audio recording) - value:", v11)
+if v11:
+    st.write("  - text:", v11.text)
+    st.write("  - audio:", v11.audio)
+    st.write("  - files:", v11.files)
+    if v11.audio:
+        st.audio(v11.audio)
+    if v11.files:
+        for file in v11.files:
+            st.write(f"  - file: {file.name}")
+
+# Audio only (no file upload)
+v12 = st.container().chat_input(
+    "Chat input 12 (audio only)",
+    accept_audio=True,
+    key="chat_input_12",
+)
+st.write("Chat input 12 (audio only) - value:", v12)
+if v12:
+    st.write("  - text:", v12.text)
+    st.write("  - audio:", v12.audio)
+    if v12.audio:
+        st.audio(v12.audio)
+
+# Audio with disabled state
+v13 = st.container().chat_input(
+    "Chat input 13 (audio disabled)",
+    accept_audio=True,
+    disabled=True,
+    key="chat_input_13",
+)
+st.write("Chat input 13 (audio disabled) - value:", v13)
+
+# Audio in sidebar
+with st.sidebar:
+    st.subheader("Sidebar Audio Input")
+    v14 = st.chat_input(
+        "Chat input 14 (sidebar audio)",
+        accept_audio=True,
+        key="chat_input_14",
+    )
+    st.write("Chat input 14 (sidebar audio) - value:", v14)
+    if v14:
+        st.write("  - text:", v14.text)
+        st.write("  - audio:", v14.audio)
+        if v14.audio:
+            st.audio(v14.audio)
+
+# Audio in columns
+st.subheader("Audio in Columns")
+col_a, col_b = st.columns(2)
+with col_a:
+    v15 = st.chat_input(
+        "Chat input 15 (column audio)",
+        accept_audio=True,
+        key="chat_input_15",
+    )
+    st.write("Chat input 15 (column audio) - value:", v15)
+    if v15:
+        st.write("  - text:", v15.text)
+        st.write("  - audio:", v15.audio)
+
+with col_b:
+    v16 = st.chat_input(
+        "Chat input 16 (column audio + files)",
+        accept_audio=True,
+        accept_file="multiple",
+        key="chat_input_16",
+    )
+    st.write("Chat input 16 (column audio + files) - value:", v16)
