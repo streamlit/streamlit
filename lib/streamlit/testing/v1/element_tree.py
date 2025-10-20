@@ -676,6 +676,8 @@ class Space(Element):
 
     proto: SpaceProto = field(repr=False)
 
+    key: None = None
+
     def __init__(self, proto: SpaceProto, root: ElementTree) -> None:
         self.proto = proto
         self.root = root
