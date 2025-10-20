@@ -169,7 +169,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             st.altair_chart(chart)
 
@@ -455,7 +455,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.altair_chart(chart, on_select="rerun"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -1210,7 +1210,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         )()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

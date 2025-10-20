@@ -251,7 +251,7 @@ class RadioTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.radio("the label", ["option 1", "option 2"]))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
