@@ -103,68 +103,58 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stImage")
 
 
-def test_pyplot_width_regression_stretch(app: Page):
+def test_pyplot_width_regression_stretch(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test pyplot with stretch width in container.
 
     Regression test for #12678 where plots rendered at minimum width
-    when no explicit width was set. This test uses a container with
-    explicit width to enable deterministic assertions.
+    when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage")
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
     expect(pyplot_elements).to_have_count(14)
+    wait_for_all_images_to_be_loaded(app)
 
-    pyplot_element = pyplot_elements.nth(11)
-    expect(pyplot_element).to_be_visible()
-
-    bbox = pyplot_element.bounding_box()
-    assert bbox is not None
-
-    # Container has width=600, stretch should match container width
-    # Allow some margin for borders/padding (~20px)
-    assert 560 < bbox["width"] <= 600, (
-        f"pyplot with stretch width should match container (600px), "
-        f"got {bbox['width']}px"
+    stretch_pyplot = pyplot_elements.nth(11)
+    expect(stretch_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, stretch_pyplot, assert_snapshot, name="st_pyplot-regression_stretch"
     )
 
 
-def test_pyplot_width_regression_content(app: Page):
+def test_pyplot_width_regression_content(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test pyplot with content width in container.
 
-    Regression test for #12678. Content width should match the figure's
-    natural size (640px from 6.4in at 100 DPI).
+    Regression test for #12678 where plots rendered at minimum width
+    when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage")
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
     expect(pyplot_elements).to_have_count(14)
+    wait_for_all_images_to_be_loaded(app)
 
-    pyplot_element = pyplot_elements.nth(12)
-    expect(pyplot_element).to_be_visible()
-
-    bbox = pyplot_element.bounding_box()
-    assert bbox is not None
-
-    # Figure is 6.4in x 4.8in at 100 DPI = 640px x 480px
-    # Allow some margin for rendering variations
-    assert 620 < bbox["width"] <= 640, (
-        f"pyplot with content width should match figure size (640px), "
-        f"got {bbox['width']}px"
+    content_pyplot = pyplot_elements.nth(12)
+    expect(content_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, content_pyplot, assert_snapshot, name="st_pyplot-regression_content"
     )
 
 
-def test_pyplot_width_regression_pixel(app: Page):
+def test_pyplot_width_regression_pixel(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test pyplot with pixel width in container.
 
-    Regression test for #12678. Explicit pixel width should be respected.
+    Regression test for #12678 where plots rendered at minimum width
+    when no explicit width was set.
     """
-    pyplot_elements = app.get_by_test_id("stImage")
+    pyplot_elements = app.get_by_test_id("stImage").locator("img")
     expect(pyplot_elements).to_have_count(14)
+    wait_for_all_images_to_be_loaded(app)
 
-    pyplot_element = pyplot_elements.nth(13)
-    expect(pyplot_element).to_be_visible()
-
-    bbox = pyplot_element.bounding_box()
-    assert bbox is not None
-
-    # Explicit 500px width
-    assert 480 < bbox["width"] <= 500, (
-        f"pyplot with 500px width should be 500px, got {bbox['width']}px"
+    pixel_pyplot = pyplot_elements.nth(13)
+    expect(pixel_pyplot).to_be_visible()
+    take_stable_snapshot(
+        app, pixel_pyplot, assert_snapshot, name="st_pyplot-regression_pixel"
     )
