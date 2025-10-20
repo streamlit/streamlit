@@ -14,10 +14,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import util
+from streamlit.errors import StreamlitTransientCursorError
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from streamlit.proto.Element_pb2 import Element
 
 
 def make_delta_path(
@@ -94,6 +100,9 @@ class Cursor:
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
+    def get_transient_cursor(self, **props: Any) -> RunningCursor:
+        raise NotImplementedError()
+
     @property
     def props(self) -> Any:
         """Other data in this cursor. This is a temporary measure that will go
@@ -123,6 +132,8 @@ class RunningCursor(Cursor):
         self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
+        self._transient_index: int | None = None
+        self._transient_elements = SparseList["Element"]()
 
     @property
     def root_container(self) -> int:
@@ -137,8 +148,16 @@ class RunningCursor(Cursor):
         return self._index
 
     @property
+    def transient_index(self) -> int:
+        return 0 if self._transient_index is None else self._transient_index
+
+    @property
     def is_locked(self) -> bool:
         return False
+
+    @property
+    def transient_elements(self) -> SparseList[Element]:
+        return self._transient_elements
 
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         locked_cursor = LockedCursor(
@@ -149,8 +168,19 @@ class RunningCursor(Cursor):
         )
 
         self._index += 1
+        self._transient_index = None
+        self._transient_elements = SparseList["Element"]()
 
         return locked_cursor
+
+    def get_transient_cursor(self, **props: Any) -> RunningCursor:
+        self._props = props
+        if self._transient_index is None:
+            self._transient_index = 0
+        else:
+            self._transient_index += 1
+
+        return self
 
 
 class LockedCursor(Cursor):
@@ -201,10 +231,60 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
+    @property
+    def props(self) -> Any:
+        return self._props
+
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         self._props = props
         return self
 
-    @property
-    def props(self) -> Any:
-        return self._props
+    def get_transient_cursor(self, **props: Any) -> RunningCursor:
+        raise StreamlitTransientCursorError()
+
+
+T = TypeVar("T")
+
+
+class SparseList(Generic[T]):
+    def __init__(self) -> None:
+        self._data: dict[int, T] = {}
+
+    def __setitem__(self, index: int, value: T) -> None:
+        if not isinstance(index, int) or index < 0:
+            raise IndexError("SparseList indices must be non-negative integers")
+
+        self._data[index] = value
+
+    def __getitem__(self, index: int) -> T:
+        if index not in self._data:
+            raise KeyError(f"Index {index} is empty")
+
+        return self._data[index]
+
+    def __delitem__(self, index: int) -> None:
+        if index in self._data:
+            del self._data[index]
+        else:
+            raise KeyError(f"Index {index} is empty")
+
+    def __iter__(self) -> Iterator[T]:
+        # Iterate in index order.
+        for index in sorted(self._data):
+            yield self._data[index]
+
+    def __len__(self) -> int:
+        # number of filled items
+        return len(self._data)
+
+    def items(self) -> Iterator[tuple[int, T]]:
+        """Iterate through (index, value) for filled entries."""
+        for index in sorted(self._data):
+            yield index, self._data[index]
+
+    def __contains__(self, index: int) -> bool:
+        return index in self._data
+
+    def __repr__(self) -> str:
+        items = ", ".join(f"{i}: {v}" for i, v in self.items())
+        return f"SparseList({{{items}}})"

@@ -42,6 +42,24 @@ def test_spinner_time(app: Page):
     assert initial_text != updated_text
 
 
+def test_double_spinner(app: Page):
+    """Test that nested spinners appear in the correct order."""
+    get_button(app, "Run double spinner").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(2)
+    expect(spinners.nth(0)).to_have_text("Loading...")
+    expect(spinners.nth(1)).to_have_text("Also loading...")
+
+
+def test_spinner_on_locked_cursor_error(app: Page):
+    """Test that running a spinner on a locked cursor (st.empty) raises an error."""
+    get_button(app, "Run empty with spinner").click()
+    expect(app.get_by_test_id("stException")).to_contain_text(
+        "Unable to update an existing element with st.spinner."
+    )
+
+
 def test_spinner_width_content(app: Page):
     """Test spinner with content width."""
     get_button(app, "Run spinner with content width (default)").click()

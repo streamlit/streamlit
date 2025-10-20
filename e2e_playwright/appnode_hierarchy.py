@@ -38,6 +38,9 @@ mode = st.selectbox(
         "insert_between",
         "long_compute",
         "placeholder_updates",
+        "simple_transient_spinner",
+        "complex_transient_spinner",
+        "chat_transient_spinner",
     ],
     key="scenario_mode",
 )
@@ -75,6 +78,77 @@ def render_placeholder_updates() -> None:
         ph.markdown("placeholder-filled")
 
 
+def render_simple_transient_spinner() -> None:
+    st.button("Rerun")
+    if "has_ran" not in st.session_state:
+        with st.spinner("Spinner (delta path 0 0)"):
+            time.sleep(5)  # Just to make the bug easier to see.
+            st.write("Hello world 1! (delta path 0 1)")
+
+        st.session_state.has_ran = True
+
+    else:
+        st.write("Hello world 2! (delta path 0 0)")
+        time.sleep(5)  # Just to make the bug easier to see.
+
+        del st.session_state.has_ran
+
+
+def render_complex_transient_spinner() -> None:
+    if st.button("Rerun with spinners"):
+        st.session_state.has_ran = True
+    if st.button("Rerun without spinners"):
+        st.session_state.has_ran = False
+
+    if st.session_state.get("has_ran", True):
+        with st.spinner("Loading..."):
+            time.sleep(0.5)
+            for i in range(2):
+                time.sleep(1)
+                st.write(i)
+            "some text"
+        st.button("Rerun 1")
+        with st.spinner("Loading..."):
+            time.sleep(0.5)
+            for i in range(2):
+                time.sleep(0.3)
+                st.write(i)
+            "some text"
+        st.button("Rerun 2")
+    else:
+        for i in range(2):
+            time.sleep(1)
+            st.write(i)
+        "some text"
+        st.button("Rerun 1")
+        for i in range(2):
+            time.sleep(1)
+            st.write(i)
+        "some text"
+        st.button("Rerun 2")
+
+
+def render_chat_transient_spinner() -> None:
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Say something"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                time.sleep(3)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": f"Echo: {prompt}"}
+                )
+
+                st.write(f"Echo: {prompt}")
+
+
 if mode == "swap_element":
     render_swap_element()
 elif mode == "insert_between":
@@ -83,3 +157,9 @@ elif mode == "long_compute":
     render_long_compute()
 elif mode == "placeholder_updates":
     render_placeholder_updates()
+elif mode == "simple_transient_spinner":
+    render_simple_transient_spinner()
+elif mode == "complex_transient_spinner":
+    render_complex_transient_spinner()
+elif mode == "chat_transient_spinner":
+    render_chat_transient_spinner()

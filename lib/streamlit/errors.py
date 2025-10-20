@@ -136,6 +136,16 @@ class StreamlitDuplicateElementId(DuplicateWidgetID):
         )
 
 
+class StreamlitTransientCursorError(StreamlitAPIException):
+    """An exception raised when obtaining a transient cursor on a locked cursor."""
+
+    def __init__(self) -> None:
+        super().__init__("Unable to update an existing element.")
+
+    def set_element_command(self, element_command: str) -> None:
+        self.args = (f"Unable to update an existing element with `{element_command}`.",)
+
+
 class StreamlitDuplicateElementKey(DuplicateWidgetID):
     """An exception raised when the key of an element is not unique."""
 
