@@ -162,11 +162,14 @@ export const StyledElementContainerLayoutWrapper: FC<
       // This also covers st.pyplot() which is a special case of st.image.
       //
       // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
-      // Use "100%" when using stretch or no width config to ensure container has dimensions for width calculation (#12678).
-      // Note: When widthConfig is not set, this indicates legacy behavior which defaults to stretch.
-      const isUsingStretchOrLegacy =
+      // Use "100%" when using stretch or when no width config is set to ensure container has dimensions for width calculation (#12678).
+      //
+      // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
+      // This is consistent with how useLayoutStyles handles missing config for other elements.
+      const isUsingStretch =
         !node.element.widthConfig || node.element.widthConfig.useStretch
-      styles.width = isUsingStretchOrLegacy ? "100%" : "auto"
+
+      styles.width = isUsingStretch ? "100%" : "auto"
     }
 
     return styles
