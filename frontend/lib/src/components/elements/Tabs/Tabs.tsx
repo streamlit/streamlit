@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
@@ -24,7 +31,6 @@ import { isElementStale } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { STALE_STYLES } from "~lib/theme"
 
 import { StyledTabContainer } from "./styled-components"
@@ -42,7 +48,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
 function Tabs(props: Readonly<TabProps>): ReactElement {
   const { widgetsDisabled, node, isStale, width, flex } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
-    useRequiredContext(ScriptRunContext)
+    useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
 
   let allTabLabels: string[] = []

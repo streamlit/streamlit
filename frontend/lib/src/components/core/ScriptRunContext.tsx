@@ -62,12 +62,15 @@ export interface ScriptRunContextProps {
 /**
  * ScriptRunContext provides script execution state throughout the app.
  *
- * Initialize with a default value of null so downstream usages will trigger
- * runtime errors if context expected to exist but does not.
+ * We provide safe default values to prevent crashes during initial render
+ * before the App component has fully initialized. These are the same default
+ * placeholder values as App.tsx.
  */
-export const ScriptRunContext = createContext<ScriptRunContextProps | null>(
-  null
-)
+export const ScriptRunContext = createContext<ScriptRunContextProps>({
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "<null>",
+  fragmentIdsThisRun: [],
+})
 
-// Set the context display name for useRequiredContext error message
+// Set the context display name for React DevTools
 ScriptRunContext.displayName = "ScriptRunContext"

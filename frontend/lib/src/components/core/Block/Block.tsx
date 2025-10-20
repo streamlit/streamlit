@@ -42,7 +42,6 @@ import Popover from "~lib/components/elements/Popover"
 import Tabs, { TabProps } from "~lib/components/elements/Tabs"
 import Form from "~lib/components/widgets/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { getElementId, notNullOrUndefined } from "~lib/util/utils"
 
@@ -301,7 +300,7 @@ const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
-    useRequiredContext(ScriptRunContext)
+    useContext(ScriptRunContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {

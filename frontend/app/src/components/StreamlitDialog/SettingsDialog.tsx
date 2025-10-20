@@ -19,6 +19,7 @@ import React, {
   FC,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -35,7 +36,6 @@ import {
   ThemeConfig,
   ThemeContext,
   UISelectbox,
-  useRequiredContext,
 } from "@streamlit/lib"
 
 import {
@@ -71,8 +71,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   metricsMgr,
   sessionInfo,
 }) {
-  const { activeTheme, availableThemes, setTheme } =
-    useRequiredContext(ThemeContext)
+  const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
 
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)

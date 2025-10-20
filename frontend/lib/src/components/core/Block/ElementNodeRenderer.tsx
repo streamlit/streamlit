@@ -88,7 +88,6 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { getElementId } from "~lib/util/utils"
 
 import { StyledSpace } from "./styled-components"
@@ -721,7 +720,7 @@ const ElementNodeRenderer = (
 ): ReactElement => {
   const { isFullScreen } = useContext(LibContext)
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
-    useRequiredContext(ScriptRunContext)
+    useContext(ScriptRunContext)
   const { node } = props
 
   const elementType = node.element.type || ""

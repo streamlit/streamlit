@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { ThemeConfig } from "~lib/theme"
+import { getDefaultTheme, ThemeConfig } from "~lib/theme"
 
 export interface ThemeContextProps {
   /**
@@ -61,10 +61,17 @@ export interface ThemeContextProps {
 /**
  * ThemeContext provides theme configuration and management throughout the app.
  *
- * Initialize with a default value of null so downstream usages will trigger
- * runtime errors if context expected to exist but does not.
+ * We provide safe default values to prevent crashes during initial render
+ * before the App component has fully initialized. The default theme respects:
+ * 1. Cached user preferences from localStorage
+ * 2. Host-specified theme from query parameters (e.g., embed_options)
+ * 3. System dark mode preference
  */
-export const ThemeContext = createContext<ThemeContextProps | null>(null)
+export const ThemeContext = createContext<ThemeContextProps>({
+  activeTheme: getDefaultTheme(),
+  setTheme: () => {},
+  availableThemes: [],
+})
 
-// Set the context display name for useRequiredContext error message
+// Set the context display name for React DevTools
 ThemeContext.displayName = "ThemeContext"

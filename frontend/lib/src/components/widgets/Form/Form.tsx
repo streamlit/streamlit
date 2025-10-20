@@ -18,6 +18,7 @@ import React, {
   memo,
   ReactElement,
   ReactNode,
+  useContext,
   useEffect,
   useState,
 } from "react"
@@ -73,7 +74,7 @@ function Form(props: Props): ReactElement {
     submitButtons !== undefined && submitButtons.length > 0
 
   // Consume ScriptRunContext to get script run state
-  const { scriptRunState } = useRequiredContext(ScriptRunContext)
+  const { scriptRunState } = useContext(ScriptRunContext)
   const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
