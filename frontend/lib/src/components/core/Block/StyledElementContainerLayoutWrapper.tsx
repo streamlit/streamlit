@@ -85,7 +85,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth = "fit-content"
   if (
@@ -139,9 +139,23 @@ export const StyledElementContainerLayoutWrapper: FC<
         flex: "",
       }
     } else if (node.element.type === "arrowVegaLiteChart") {
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // VegaLite charts with embedded dataframes need a defined parent width
+        // (not fit-content) for proper measurement and rendering due to the resize feature.
+        // Resize is disabled in nested containers, so this is only necessary in the root container.
+        styles.width = "100%"
+      }
       if (isInHorizontalLayout && !node.element.widthConfig) {
         // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
         styles.flex = "1 1 14rem"
+      }
+      return styles
+    } else if (node.element.type === "arrowDataFrame") {
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // Resizable dataframes measure parent container width for the resize feature.
+        // Parent needs defined width (not fit-content) for measurement to work.
+        // Only needed in root where resize is enabled; disabled in nested containers.
+        styles.width = "100%"
       }
       return styles
     } else if (node.element.type === "imgs") {
@@ -156,6 +170,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.type,
     node.element.heightConfig?.useStretch,
     isInHorizontalLayout,
+    isInRoot,
     node.element.widthConfig,
   ])
 

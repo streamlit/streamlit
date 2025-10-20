@@ -815,8 +815,14 @@ function DataFrame({
     }
   }, [allColumns.length, columns.length])
 
+  // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
+  // and not in the root container. This is because the feature requires measurements from the parent container
+  // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
+  // in a nested container.
   const disableResize =
-    isInHorizontalLayout || widthConfig?.useContent ? true : false
+    isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
+      ? true
+      : false
 
   return (
     <StyledResizableContainer
