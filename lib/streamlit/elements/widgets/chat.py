@@ -52,6 +52,7 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
+from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
@@ -74,6 +75,7 @@ if TYPE_CHECKING:
 class ChatInputValue(MutableMapping[str, Any]):
     text: str
     files: list[UploadedFile]
+    audio: UploadedFile | None = None
 
     def __len__(self) -> int:
         return len(vars(self))
@@ -81,7 +83,7 @@ class ChatInputValue(MutableMapping[str, Any]):
     def __iter__(self) -> Iterator[str]:
         return iter(vars(self))
 
-    def __getitem__(self, item: str) -> str | list[UploadedFile]:
+    def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
         try:
             return getattr(self, item)  # type: ignore[no-any-return]
         except AttributeError:
@@ -96,7 +98,7 @@ class ChatInputValue(MutableMapping[str, Any]):
         except AttributeError:
             raise KeyError(f"Invalid key: {key}") from None
 
-    def to_dict(self) -> dict[str, str | list[UploadedFile]]:
+    def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
         return vars(self)
 
 
@@ -197,6 +199,40 @@ def _pop_upload_files(
     return collected_files
 
 
+def _pop_audio_file(
+    audio_file_info: UploadedFileInfoProto | None,
+) -> UploadedFile | None:
+    """Extract and return a single audio file from the protobuf message.
+
+    Similar to _pop_upload_files but handles a single audio file instead of a list.
+    """
+    if audio_file_info is None:
+        return None
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return None
+
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        file_ids=[audio_file_info.file_id],
+    )
+
+    if len(file_recs_list) == 0:
+        return None
+
+    file_rec = file_recs_list[0]
+    uploaded_file = UploadedFile(file_rec, audio_file_info.file_urls)
+
+    if hasattr(ctx.uploaded_file_mgr, "remove_file"):
+        ctx.uploaded_file_mgr.remove_file(
+            session_id=ctx.session_id,
+            file_id=audio_file_info.file_id,
+        )
+
+    return uploaded_file
+
+
 @dataclass
 class ChatInputSerde:
     accept_files: bool = False
@@ -214,9 +250,15 @@ class ChatInputSerde:
             if self.allowed_types and not isinstance(file, DeletedFile):
                 enforce_filename_restriction(file.name, self.allowed_types)
 
+        # Extract audio file separately from the audio_file_info field
+        audio_file = _pop_audio_file(
+            ui_value.audio_file_info if ui_value.HasField("audio_file_info") else None
+        )
+
         return ChatInputValue(
             text=ui_value.data,
             files=uploaded_files,
+            audio=audio_file,
         )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
@@ -604,6 +646,11 @@ class ChatMixin:
             https://doc-chat-input-session-state.streamlit.app/
             height: 350px
         """
+        if accept_file not in {True, False, "multiple", "directory"}:
+            raise StreamlitAPIException(
+                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            )
+
         key = to_key(key)
 
         check_widget_policies(
@@ -613,11 +660,6 @@ class ChatMixin:
             default_value=None,
             writes_allowed=True,
         )
-
-        if accept_file not in {True, False, "multiple", "directory"}:
-            raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
-            )
 
         ctx = get_script_run_ctx()
 
@@ -685,7 +727,7 @@ class ChatMixin:
             accept_files=accept_file in {True, "multiple", "directory"},
             allowed_types=file_type,
         )
-        widget_state = register_widget(  # type: ignore[misc]
+        widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -694,7 +736,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
-        )
+        )  # type: ignore[misc]
 
         validate_width(width)
         layout_config = LayoutConfig(width=width)

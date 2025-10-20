@@ -632,3 +632,61 @@ class ChatTest(DeltaGeneratorTestCase):
         )
         c2 = self.get_delta_from_queue().new_element.chat_input
         assert c2.file_type == [".py", ".md", ".txt"]
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_audio_file(self, deserialize_patch):
+        """Test that audio file is properly handled by ChatInputValue."""
+        rec = UploadedFileRec("audio0", "recording.wav", "audio/wav", b"audio data")
+
+        audio_file = UploadedFile(
+            rec, FileURLsProto(file_id="audio0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="", files=[], audio=audio_file
+        )
+
+        return_val = st.chat_input(accept_file="multiple")
+
+        assert return_val.audio == audio_file
+        assert return_val.audio.name == "recording.wav"
+        assert return_val.audio.type == "audio/wav"
+        assert return_val.audio.getvalue() == b"audio data"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_audio_file_none(self, deserialize_patch):
+        """Test that ChatInputValue handles None audio file correctly."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="hello", files=[], audio=None
+        )
+
+        return_val = st.chat_input(accept_file="multiple")
+
+        assert return_val.audio is None
+        assert return_val.text == "hello"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_with_audio(self, deserialize_patch):
+        """Test ChatInputValue dict-like interface with audio field."""
+        rec = UploadedFileRec("audio0", "recording.wav", "audio/wav", b"audio data")
+        audio_file = UploadedFile(
+            rec, FileURLsProto(file_id="audio0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="test", files=[], audio=audio_file
+        )
+
+        return_val = st.chat_input(accept_file="multiple")
+
+        # Test dict-like access
+        assert return_val["audio"] == audio_file
+        assert return_val["text"] == "test"
+        assert "audio" in return_val
+        assert len(return_val) == 3  # text, files, audio
+
+        # Test to_dict
+        as_dict = return_val.to_dict()
+        assert as_dict["audio"] == audio_file
+        assert as_dict["text"] == "test"
+        assert as_dict["files"] == []
