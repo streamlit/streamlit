@@ -18,6 +18,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -31,18 +32,19 @@ import {
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
 import type {
+  AudioMeta,
   RecordingState,
+  StopResult,
   WaveformController,
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { blend, convertRemToPx } from "~lib/theme/utils"
+import { blend } from "~lib/theme/utils"
 
 const BAR_WIDTH = 4
 const BAR_GAP = 4
 const BAR_RADIUS = 8
 const CURSOR_WIDTH = 0
-const WAVEFORM_PADDING = 4
 const DEFAULT_SAMPLE_RATE = 16000
 
 interface ReadyResolver {
@@ -51,7 +53,7 @@ interface ReadyResolver {
 }
 
 interface UseWaveformControllerParams {
-  containerRef: RefObject<HTMLElement>
+  containerRef?: RefObject<HTMLDivElement>
   sampleRate?: number | null
   events?: WaveformControllerEvents
 }
@@ -63,6 +65,9 @@ export function useWaveformController({
 }: UseWaveformControllerParams): WaveformController {
   const theme = useEmotionTheme()
 
+  const internalMountRef = useRef<HTMLDivElement>(null)
+  const mountRef = containerRef ?? internalMountRef
+
   const [currentState, setCurrentState] = useState<RecordingState>("idle")
   const [currentBlob, setCurrentBlob] = useState<Blob | null>(null)
   const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(false)
@@ -72,16 +77,41 @@ export function useWaveformController({
   const playerRef = useRef<WaveSurferPlayer | null>(null)
   const eventsRef = useRef<WaveformControllerEvents>(events || {})
   const isInitializedRef = useRef(false)
+  const isInitializingRef = useRef(false)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
+  const lastStopResultRef = useRef<StopResult | null>(null)
 
   // Use the provided sample rate if specified; if undefined, fall back to DEFAULT_SAMPLE_RATE; if null, use null.
   const effectiveSampleRate =
     sampleRate === undefined ? DEFAULT_SAMPLE_RATE : sampleRate
 
-  useEffect(() => {
-    eventsRef.current = events || {}
-  }, [events])
+  const destroy = useCallback((): void => {
+    const readyResolvers = readyResolversRef.current
+    readyResolvers.clear()
+    lastStopResultRef.current = null
+    setIsPlaybackPlaying(false)
+
+    if (recordBackendRef.current) {
+      recordBackendRef.current.destroy()
+      recordBackendRef.current = null
+    }
+
+    if (playerRef.current) {
+      playerRef.current.destroy()
+      playerRef.current = null
+    }
+
+    if (wavesurferRef.current) {
+      wavesurferRef.current.destroy()
+      wavesurferRef.current = null
+    }
+
+    isInitializedRef.current = false
+    isPlaybackModeRef.current = false
+    setCurrentState("idle")
+    setCurrentBlob(null)
+  }, [])
 
   const notifyReady = useCallback((): void => {
     const resolvers = Array.from(readyResolversRef.current)
@@ -130,10 +160,25 @@ export function useWaveformController({
     [notifyReady, notifyReadyError]
   )
 
+  // Update eventsRef and reconfigure player events when events prop changes
+  useEffect(() => {
+    eventsRef.current = events || {}
+    // Reconfigure player events to avoid stale closures
+    if (playerRef.current) {
+      configurePlayerEvents(playerRef.current)
+    }
+  }, [events, configurePlayerEvents])
+
   const initializeWaveSurfer = useCallback(async (): Promise<void> => {
-    if (isInitializedRef.current || !containerRef.current) {
+    if (
+      isInitializedRef.current ||
+      isInitializingRef.current ||
+      !mountRef.current
+    ) {
       return
     }
+
+    isInitializingRef.current = true
 
     try {
       const [WaveSurferModule, RecordPluginModule] = await Promise.all([
@@ -144,12 +189,10 @@ export function useWaveformController({
       const RecordPluginClass = RecordPluginModule.default
 
       const ws = WaveSurfer.create({
-        container: containerRef.current,
+        container: mountRef.current,
         waveColor: theme.colors.primary,
         progressColor: theme.colors.bodyText,
-        height:
-          convertRemToPx(theme.sizes.largestElementHeight) -
-          2 * WAVEFORM_PADDING,
+        height: "auto",
         barWidth: BAR_WIDTH,
         barGap: BAR_GAP,
         barRadius: BAR_RADIUS,
@@ -189,32 +232,25 @@ export function useWaveformController({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       eventsRef.current.onError?.(err)
+      throw err
+    } finally {
+      isInitializingRef.current = false
     }
-  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
+  }, [mountRef, theme, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
-    void initializeWaveSurfer()
-    const readyResolvers = readyResolversRef.current
+    initializeWaveSurfer().catch(error => {
+      // eslint-disable-next-line no-console
+      console.error("[useWaveformController] Failed to initialize:", error)
+      eventsRef.current.onError?.(
+        error instanceof Error ? error : new Error(String(error))
+      )
+    })
 
     return (): void => {
-      readyResolvers.clear()
-      setIsPlaybackPlaying(false)
-      if (recordBackendRef.current) {
-        recordBackendRef.current.destroy()
-        recordBackendRef.current = null
-      }
-      if (playerRef.current) {
-        playerRef.current.destroy()
-        playerRef.current = null
-      }
-      if (wavesurferRef.current) {
-        wavesurferRef.current.destroy()
-        wavesurferRef.current = null
-      }
-      isInitializedRef.current = false
-      isPlaybackModeRef.current = false
+      destroy()
     }
-  }, [initializeWaveSurfer])
+  }, [destroy, initializeWaveSurfer])
 
   useEffect(() => {
     const ws = wavesurferRef.current
@@ -273,6 +309,7 @@ export function useWaveformController({
     }
 
     isPlaybackModeRef.current = false
+    lastStopResultRef.current = null
 
     await recordBackendRef.current.startRecording()
     setCurrentState("recording")
@@ -310,8 +347,12 @@ export function useWaveformController({
     theme.colors.secondaryBg,
   ])
 
-  const stop = useCallback(async (): Promise<Blob> => {
+  const stop = useCallback(async (): Promise<StopResult> => {
     if (currentState !== "recording") {
+      if (lastStopResultRef.current) {
+        return lastStopResultRef.current
+      }
+
       throw new Error("Not currently recording")
     }
 
@@ -352,18 +393,34 @@ export function useWaveformController({
       setIsPlaybackPlaying(false)
       enterPlaybackMode()
 
+      const durationMs = playerRef.current?.getDuration() ?? 0
+      const meta: AudioMeta = {
+        durationMs,
+        sampleRate:
+          typeof effectiveSampleRate === "number" ? effectiveSampleRate : null,
+        mimeType: rawBlob.type || "audio/webm",
+        size: rawBlob.size,
+      }
+
+      const stopResult: StopResult = {
+        blob: rawBlob,
+        meta,
+      }
+
+      lastStopResultRef.current = stopResult
+
       eventsRef.current.onRecordReady?.(rawBlob)
-      return rawBlob
+      return stopResult
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       setIsPlaybackPlaying(false)
       throw err
     }
-  }, [currentState, enterPlaybackMode])
+  }, [currentState, enterPlaybackMode, effectiveSampleRate])
 
   const approve = useCallback(
     async (blob?: Blob): Promise<void> => {
-      const blobToUse = blob ?? currentBlob
+      const blobToUse = blob ?? currentBlob ?? lastStopResultRef.current?.blob
       if (!blobToUse) {
         throw new Error("No recorded audio to approve")
       }
@@ -374,6 +431,7 @@ export function useWaveformController({
 
         setCurrentBlob(null)
         setCurrentState("idle")
+        lastStopResultRef.current = null
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
         eventsRef.current.onError?.(err)
@@ -394,26 +452,27 @@ export function useWaveformController({
     setIsPlaybackPlaying(false)
     isPlaybackModeRef.current = false
     eventsRef.current.onCancel?.()
+    lastStopResultRef.current = null
   }, [currentState, resetPlayer])
 
-  const playback = {
-    isPlaying: useCallback((): boolean => {
-      return playerRef.current?.getIsPlaying() ?? false
-    }, []),
+  const playback = useMemo(
+    () => ({
+      isPlaying: (): boolean => {
+        return playerRef.current?.getIsPlaying() ?? false
+      },
 
-    play: useCallback(async (): Promise<void> => {
-      if (!playerRef.current) {
-        throw new Error("Player not initialized")
-      }
-      await playerRef.current.play()
-    }, []),
+      play: async (): Promise<void> => {
+        if (!playerRef.current) {
+          throw new Error("Player not initialized")
+        }
+        await playerRef.current.play()
+      },
 
-    pause: useCallback((): void => {
-      playerRef.current?.pause()
-    }, []),
+      pause: (): void => {
+        playerRef.current?.pause()
+      },
 
-    load: useCallback(
-      async (source: Blob | ArrayBuffer | string): Promise<void> => {
+      load: async (source: Blob | ArrayBuffer | string): Promise<void> => {
         if (!isInitializedRef.current) {
           await initializeWaveSurfer()
         }
@@ -424,17 +483,17 @@ export function useWaveformController({
         await playerRef.current.load(source)
         enterPlaybackMode()
       },
-      [enterPlaybackMode, initializeWaveSurfer]
-    ),
 
-    getCurrentTimeMs: useCallback((): number => {
-      return playerRef.current?.getCurrentTime() ?? 0
-    }, []),
+      getCurrentTimeMs: (): number => {
+        return playerRef.current?.getCurrentTime() ?? 0
+      },
 
-    getDurationMs: useCallback((): number => {
-      return playerRef.current?.getDuration() ?? 0
-    }, []),
-  }
+      getDurationMs: (): number => {
+        return playerRef.current?.getDuration() ?? 0
+      },
+    }),
+    [enterPlaybackMode, initializeWaveSurfer]
+  )
 
   const setEventHandlers = useCallback(
     (newEvents: WaveformControllerEvents): void => {
@@ -446,10 +505,12 @@ export function useWaveformController({
   return {
     state: currentState,
     isPlaybackPlaying,
+    mountRef,
     start,
     stop,
     approve,
     cancel,
+    destroy,
     playback,
     setEventHandlers,
   }
