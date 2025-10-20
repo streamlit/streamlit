@@ -462,7 +462,7 @@ const AudioInput: React.FC<Props> = ({
 
   const stopRecording = useCallback(async () => {
     try {
-      const blob = await stopController()
+      const { blob } = await stopController()
       await approveController(blob)
     } catch {
       setIsError(true)

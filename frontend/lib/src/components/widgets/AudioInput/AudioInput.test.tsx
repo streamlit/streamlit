@@ -92,10 +92,20 @@ describe("AudioInput Recording Journey", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -329,10 +339,20 @@ describe("AudioInput Playback Journey", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -492,10 +512,20 @@ describe("AudioInput Upload & Abort", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -668,10 +698,20 @@ describe("AudioInput Memory Management", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -821,10 +861,20 @@ describe("AudioInput Form Integration", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -929,10 +979,20 @@ describe("AudioInput Error Handling", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
@@ -1033,10 +1093,20 @@ describe("AudioInput Widget State", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn(),
+    destroy: vi.fn(),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
