@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+    from streamlit.proto.Space_pb2 import Space as SpaceProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -667,6 +668,20 @@ class Latex(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "latex"
+
+
+@dataclass(repr=False)
+class Space(Element):
+    """A representation of st.space for testing."""
+
+    proto: SpaceProto = field(repr=False)
+
+    key: None = None
+
+    def __init__(self, proto: SpaceProto, root: ElementTree) -> None:
+        self.proto = proto
+        self.root = root
+        self.type = "space"
 
 
 @dataclass(repr=False)

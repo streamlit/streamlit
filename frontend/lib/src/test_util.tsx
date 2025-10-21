@@ -42,6 +42,7 @@ import { createFormsData } from "./WidgetStateManager"
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isInRoot: false,
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {

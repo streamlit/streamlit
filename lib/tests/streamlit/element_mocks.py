@@ -166,6 +166,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("caption", lambda: st.caption("Caption")),
     ("badge", lambda: st.badge("Badge")),
     ("divider", lambda: st.divider()),
+    ("space", lambda: st.space()),
     ("text", lambda: st.text("Hello")),
     ("code", lambda: st.code("Hello")),
     ("html", lambda: st.html("Hello")),

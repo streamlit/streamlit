@@ -15,3 +15,9 @@
  */
 
 export { encodeToWav } from "./core/encodeToWav"
+export type {
+  WaveformController,
+  WaveformControllerEvents,
+  RecordingState,
+} from "./core/types"
+export { useWaveformController } from "./core/useWaveformController"

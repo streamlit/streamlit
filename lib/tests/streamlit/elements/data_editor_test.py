@@ -53,7 +53,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -1050,3 +1053,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 500
+
+    def test_height_stretch(self):
+        """Test that height='stretch' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert el.height_config.use_stretch is True

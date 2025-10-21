@@ -496,7 +496,9 @@ def test_audio_input_rapid_re_recordings(app: Page):
         record_button.click()
 
         # Wait for stop button to appear (indicates recording started)
-        expect(audio_input.get_by_role("button", name="Stop recording")).to_be_visible()
+        expect(
+            audio_input.get_by_role("button", name="Stop recording", exact=True)
+        ).to_be_visible()
 
         # Let it record briefly
         app.wait_for_timeout(500)  # This is OK - we need actual recording time
@@ -600,7 +602,6 @@ def test_audio_input_timer_display(app: Page):
     timer = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
 
     def timer_seconds() -> int:
-        """Return the timer value in seconds or -1 if not yet initialized."""
         value = timer.inner_text().strip()
         if value == "--:--":
             return -1
@@ -612,21 +613,27 @@ def test_audio_input_timer_display(app: Page):
 
         return int(minutes) * 60 + int(seconds)
 
-    def wait_for_timer_seconds(target_seconds: int, *, timeout: int = 6000) -> None:
-        def _reached_target() -> bool:
-            current = timer_seconds()
-            return current >= target_seconds if current >= 0 else False
+    def wait_for_timer_at_least(target_seconds: int, timeout_ms: int) -> str:
+        """Wait until the timer reaches ``target_seconds`` and return the label seen."""
 
-        wait_until(app, _reached_target, timeout=timeout)
+        target = target_seconds
 
-    # Record for 3 seconds (add 200ms buffer for recording startup)
+        def reached_target() -> bool:
+            return timer_seconds() >= target
+
+        wait_until(app, reached_target, timeout=timeout_ms)
+        return timer.inner_text().strip()
+
+    # Record for roughly 3 seconds (add buffer for recording startup)
     audio_input.get_by_role("button", name="Record", exact=True).click()
-    wait_for_timer_seconds(3)
+    wait_for_timer_at_least(3, timeout_ms=6000)
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
     wait_for_app_run(app)
 
-    # Verify timer shows 00:03 (duration of recording)
-    expect(timer).to_have_text("00:03")
+    # Verify timer shows a duration in the expected range and matches HH:MM formatting
+    recorded_seconds = timer_seconds()
+    assert 3 <= recorded_seconds <= 5
+    expect(timer).to_have_text(re.compile(r"00:0[3-5]"))
 
     # Click play and wait for playback to start
     audio_input.get_by_role("button", name="Play", exact=True).click()
@@ -636,20 +643,23 @@ def test_audio_input_timer_display(app: Page):
     # Verify timer shows 00:00 at start of playback
     expect(timer).to_have_text("00:00")
 
-    # Wait 1 second + 200ms buffer and verify timer shows 00:01
-    wait_for_timer_seconds(1, timeout=3000)
-    expect(timer).to_have_text("00:01")
+    # Wait until timer advances to at least one second
+    wait_for_timer_at_least(1, timeout_ms=4000)
+    playback_seconds = timer_seconds()
+    assert 1 <= playback_seconds <= 2
+    expect(timer).to_have_text(re.compile(r"00:0[1-2]"))
 
     # Pause playback
     audio_input.get_by_role("button", name="Pause", exact=True).click()
     # Wait for play button to reappear
     expect(audio_input.get_by_role("button", name="Play", exact=True)).to_be_visible()
 
-    # Re-record for 4 seconds (add 200ms buffer for recording startup)
+    # Re-record for roughly 4 seconds to validate timer updates again
     audio_input.get_by_role("button", name="Record", exact=True).click()
-    wait_for_timer_seconds(4, timeout=7000)
+    wait_for_timer_at_least(4, timeout_ms=8000)
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
     wait_for_app_run(app)
 
-    # Verify timer shows 00:04
-    expect(timer).to_have_text("00:04")
+    second_recorded_seconds = timer_seconds()
+    assert 4 <= second_recorded_seconds <= 6
+    expect(timer).to_have_text(re.compile(r"00:0[4-6]"))

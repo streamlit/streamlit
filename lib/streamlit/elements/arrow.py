@@ -42,6 +42,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
     LayoutConfig,
     Width,
     validate_height,
@@ -286,7 +287,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: HeightWithoutContent | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -303,7 +304,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: HeightWithoutContent | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -320,7 +321,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: HeightWithoutContent | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -388,13 +389,18 @@ class ArrowMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : int or "auto"
+        height : int, "auto", or "stretch"
             The height of the dataframe element. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
             - An integer specifying the height in pixels: The element has a
               fixed height.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. The element's
+              height will not exceed the parent container's height. When
+              multiple elements with stretch height are in the same container,
+              they share the available vertical space.
 
             Vertical scrolling within the dataframe element is enabled when the
             height does not accommodate all rows.
@@ -669,7 +675,6 @@ class ArrowMixin:
         validate_height(
             height,
             allow_content=False,
-            allow_stretch=False,
             additional_allowed=["auto"],
         )
 

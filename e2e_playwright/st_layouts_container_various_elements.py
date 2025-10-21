@@ -239,3 +239,14 @@ with st.container(horizontal=True, height=300, key="layout-horizontal-text-area"
     st.text_area("Hello", width="stretch", height="stretch")
     st.text_area("Hello", width="stretch")
     st.container(border=True, width="stretch")
+
+with st.container(key="layout-vertical-stretch-height", border=True, height=400):
+    df = pd.DataFrame(
+        {
+            "x": list(range(5)),
+            "y": [i * i for i in range(5)],
+        }
+    )
+    st.dataframe(df, height="stretch")
+    st.dataframe(df, height="stretch")
+    st.markdown("Hello")

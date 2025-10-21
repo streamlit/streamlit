@@ -172,6 +172,7 @@ const getLayoutSubElement = (
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
+  isRoot?: boolean
 }
 
 export const ContainerContentsWrapper = (
@@ -188,7 +189,7 @@ export const ContainerContentsWrapper = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
-    <FlexContextProvider direction={Direction.VERTICAL}>
+    <FlexContextProvider direction={Direction.VERTICAL} isRoot={props.isRoot}>
       <StyledFlexContainerBlock
         {...defaultStyles}
         className={classNames(

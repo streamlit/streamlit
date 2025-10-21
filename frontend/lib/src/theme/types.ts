@@ -101,6 +101,9 @@ export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
 
 export type ThemeConfig = {
   name: string
+  // Display name is used in custom themes for SettingsDialog theme selector
+  // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
+  displayName?: string
   emotion: EmotionTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate

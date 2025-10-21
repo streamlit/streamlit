@@ -519,6 +519,17 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidSizeError(LocalizableStreamlitException):
+    """Exception raised when an invalid size value is provided."""
+
+    def __init__(self, size: Any) -> None:
+        super().__init__(
+            "Invalid size value: {size}. Size must be either an integer (pixels), "
+            "'stretch', 'small', 'medium', or 'large'.",
+            size=repr(size),
+        )
+
+
 class StreamlitValueError(LocalizableStreamlitException):
     """Exception raised when a value is not valid for a parameter."""
 

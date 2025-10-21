@@ -34,6 +34,7 @@ export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
     cursor: disabled ? "not-allowed" : "auto",
+    overflow: "hidden",
   })
 )
 
@@ -42,8 +43,23 @@ export const StyledWaveformInnerDiv = styled.div({
 })
 
 export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
-  ({ show }) => ({
+  ({ show, theme }) => ({
     display: show ? "block" : "none",
+    // CRITICAL: scrollingWaveform creates TWO WaveSurfer instances (recording + playback)
+    // as sibling divs. Stack them with relative positioning so they overlap.
+    position: "relative",
+    height: theme.sizes.largestElementHeight,
+    // Each WaveSurfer child div should be absolutely positioned to stack
+    "& > div": {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      // Use flexbox to center the shadow DOM content vertically
+      display: "flex",
+      alignItems: "center",
+    },
   })
 )
 
@@ -79,6 +95,7 @@ export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
 
 // Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
+  flex: 1,
   height: theme.sizes.largestElementHeight,
   display: "flex",
   justifyContent: "center",
