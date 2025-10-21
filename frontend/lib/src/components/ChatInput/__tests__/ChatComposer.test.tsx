@@ -55,54 +55,56 @@ vi.mock("~lib/components/audio", () => ({
   useWaveformController: vi.fn(() => controllerMock),
 }))
 
+function MockChatAudioRecorder({
+  onCancel,
+  onApprove,
+  controller,
+  disabled,
+}: {
+  onCancel: () => void
+  onApprove: ({ blob, meta }: { blob: Blob; meta: unknown }) => void
+  controller: typeof controllerMock
+  disabled?: boolean
+}): React.ReactElement {
+  useEffect(() => {
+    void controller.start()
+  }, [controller])
+
+  return (
+    <div data-testid="mock-recorder">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={disabled}
+        data-testid="mock-recorder-cancel"
+      >
+        cancel
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onApprove({
+            blob: new Blob(["audio"], { type: "audio/webm" }),
+            meta: {
+              durationMs: 1200,
+              sampleRate: 16000,
+              mimeType: "audio/webm",
+              size: 2048,
+            },
+          })
+        }
+        disabled={disabled}
+        data-testid="mock-recorder-approve"
+      >
+        approve
+      </button>
+    </div>
+  )
+}
+
 vi.mock("../ChatAudioRecorder", () => ({
   __esModule: true,
-  default: ({
-    onCancel,
-    onApprove,
-    controller,
-    disabled,
-  }: {
-    onCancel: () => void
-    onApprove: ({ blob, meta }: { blob: Blob; meta: unknown }) => void
-    controller: typeof controllerMock
-    disabled?: boolean
-  }): React.ReactElement => {
-    useEffect(() => {
-      void controller.start()
-    }, [controller])
-
-    return (
-      <div data-testid="mock-recorder">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={disabled}
-          data-testid="mock-recorder-cancel"
-        >
-          cancel
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            onApprove({
-              blob: new Blob(["audio"], { type: "audio/webm" }),
-              meta: {
-                durationMs: 1200,
-                sampleRate: 16000,
-                mimeType: "audio/webm",
-                size: 2048,
-              },
-            })
-          }
-          disabled={disabled}
-          data-testid="mock-recorder-approve"
-        >
-          approve
-        </button>
-      </div>
-    )
-  },
+  default: MockChatAudioRecorder,
 }))
 
 describe("ChatComposer", () => {
