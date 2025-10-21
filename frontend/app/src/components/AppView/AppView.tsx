@@ -206,6 +206,7 @@ function AppView(props: AppViewProps): ReactElement {
       widgetsDisabled={widgetsDisabled}
       uploadClient={uploadClient}
       height="auto"
+      isRoot={true}
     />
   )
 

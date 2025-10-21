@@ -17,20 +17,18 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     NoReturn,
+    TypeAlias,
     TypeVar,
     cast,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,
@@ -76,6 +74,7 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
+from streamlit.elements.space import SpaceMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -207,6 +206,7 @@ class DeltaGenerator(
     SelectSliderMixin,
     SliderMixin,
     SnowMixin,
+    SpaceMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,

@@ -21,9 +21,19 @@ import re
 import threading
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    TypedDict,
+    Union,
+    cast,
+    overload,
+)
 
-from typing_extensions import Required, TypeAlias
+from typing_extensions import Required
 
 from streamlit import dataframe_util, type_util
 from streamlit.deprecation_util import (

@@ -21,6 +21,7 @@ import { Direction } from "./utils"
 export interface IFlexContext {
   direction: Direction | undefined
   isInHorizontalLayout: boolean
+  isInRoot: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
@@ -49,15 +50,16 @@ FlexContext.displayName = "FlexContext"
  *
  */
 export const FlexContextProvider: FC<
-  PropsWithChildren<{ direction: Direction }>
-> = ({ children, direction }) => {
+  PropsWithChildren<{ direction: Direction; isRoot?: boolean }>
+> = ({ children, direction, isRoot }) => {
   const value = useMemo<IFlexContext>(() => {
     const isInHorizontalLayout = direction === Direction.HORIZONTAL
     return {
       direction,
       isInHorizontalLayout,
+      isInRoot: isRoot ?? false,
     }
-  }, [direction])
+  }, [direction, isRoot])
 
   return <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
 }

@@ -21,12 +21,11 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import config
 from streamlit.deprecation_util import (

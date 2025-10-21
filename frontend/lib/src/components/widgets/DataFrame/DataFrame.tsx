@@ -56,6 +56,7 @@ import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { Quiver } from "~lib/dataframes/Quiver"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
@@ -161,12 +162,16 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
-  const resizableContainerRef = useRef<HTMLDivElement>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
+
+  const {
+    height: measuredContainerHeight,
+    elementRef: resizableContainerRef,
+  } = useCalculatedDimensions()
 
   const gridTheme = useCustomTheme()
 
@@ -705,7 +710,9 @@ function DataFrame({
     fullScreenHeight,
     isFullScreen,
     widthConfig,
-    heightConfig
+    heightConfig,
+    measuredContainerHeight,
+    isInRoot
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -799,7 +806,7 @@ function DataFrame({
         clearTimeout(timeoutId)
       }
     }
-  }, [resizableSize, numRows, glideColumns])
+  }, [resizableSize, numRows, glideColumns, resizableContainerRef])
 
   // Hide the column visibility menu if all columns are visible:
   useEffect(() => {
@@ -814,6 +821,7 @@ function DataFrame({
       data-testid="stDataFrame"
       ref={resizableContainerRef}
       isInHorizontalLayout={isInHorizontalLayout}
+      minHeight={minHeight}
       onPointerDown={e => {
         if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:

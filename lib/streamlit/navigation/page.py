@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import types
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,6 +24,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.util import calc_md5
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @gather_metrics("Page")

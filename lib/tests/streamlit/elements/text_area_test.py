@@ -64,7 +64,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         arg_values = ["some str", 123, {}, SomeObj()]
         proto_values = ["some str", "123", "{}", ".*SomeObj.*"]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.text_area("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_area

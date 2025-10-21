@@ -38,11 +38,10 @@ from typing import (
     Literal,
     NamedTuple,
     Protocol,
-    Union,
+    TypeAlias,
+    TypeGuard,
     overload,
 )
-
-from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit.errors import StreamlitAPIException
 
@@ -149,7 +148,7 @@ _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
     bytearray,
 )
 
-BytesLike: TypeAlias = Union[bytes, bytearray]
+BytesLike: TypeAlias = bytes | bytearray
 
 
 def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:

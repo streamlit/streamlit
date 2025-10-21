@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import TYPE_CHECKING, Callable, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from blinker import ANY, Signal
 from typing_extensions import Self
@@ -52,6 +52,8 @@ from streamlit.util import repr_
 from streamlit.watcher import util
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from watchdog.observers.api import ObservedWatch
 
 _LOGGER: Final = get_logger(__name__)
@@ -372,11 +374,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # Watchdog 5.X is supported Python >=3.9, so watchdog 4.X is used for Python 3.8.
-        # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
-        # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
-        if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
-            changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
+        # Watchdog 5.X emits bytes paths on some platforms, so we normalize to str.
+        if isinstance(changed_path, bytes):
+            changed_path = changed_path.decode("utf-8")
 
         if changed_path.endswith("~"):
             # Files ending with ~ are typically backup files created by editors.

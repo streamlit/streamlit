@@ -33,7 +33,7 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 from urllib import parse
 
 import pytest
@@ -58,7 +58,7 @@ from e2e_playwright.shared.performance import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from types import ModuleType, TracebackType
 
 

@@ -19,6 +19,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 
 import {
+  createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
   render,
@@ -27,7 +28,7 @@ import {
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
-import ThemedSidebar, { createSidebarTheme } from "./ThemedSidebar"
+import ThemedSidebar from "./ThemedSidebar"
 
 function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {

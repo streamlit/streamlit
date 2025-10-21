@@ -73,6 +73,11 @@ class ArrowDataFrameDimensionsTest(DeltaGeneratorTestCase):
                 (WidthConfigFields.USE_STRETCH, "use_stretch", True),
                 (None, None, None),  # auto doesn't set height config
             ),
+            (
+                {"height": "stretch"},
+                (WidthConfigFields.USE_STRETCH, "use_stretch", True),
+                (HeightConfigFields.USE_STRETCH, "use_stretch", True),
+            ),
             # Combinations
             (
                 {"width": 200, "height": 250},

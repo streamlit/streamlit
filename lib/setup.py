@@ -160,7 +160,6 @@ setup(
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
@@ -172,10 +171,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Application Frameworks",
         "Topic :: Software Development :: Widget Sets",
     ],
-    # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
-    # with typing.Protocol. See https://github.com/streamlit/streamlit/issues/5140 and
-    # https://bugs.python.org/issue45121
-    python_requires=">=3.9, !=3.9.7",
+    python_requires=">=3.10",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=find_packages(exclude=["tests", "tests.*"]),

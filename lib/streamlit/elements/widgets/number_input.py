@@ -17,9 +17,7 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -62,7 +60,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Number: TypeAlias = Union[int, float]
+Number: TypeAlias = int | float
 IntOrNone = TypeVar("IntOrNone", int, None)
 FloatOrNone = TypeVar("FloatOrNone", float, None)
 

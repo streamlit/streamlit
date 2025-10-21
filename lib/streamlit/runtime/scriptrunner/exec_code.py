@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from streamlit import util
 from streamlit.delta_generator_singletons import (
@@ -30,6 +30,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
 
     from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
