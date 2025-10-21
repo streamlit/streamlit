@@ -13,8 +13,14 @@
 # limitations under the License.
 
 """Collection of chart commands that are rendered via our vega-lite chart component."""
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+from typing import ...
+from ._color_utils import normalize_chart_colors
 
 from __future__ import annotations
+from ._color_utils import normalize_chart_colors
 
 import json
 import re
@@ -620,7 +626,15 @@ class VegaChartsMixin:
         height: Height = "content",
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
+    # --- normalize built-in color names via theme ---
+    theme = None
+    # You can later replace the following with an actual theme accessor if available.
+    # For now, keep theme=None (the helper still handles hex/RGB correctly).
+    color = normalize_chart_colors(color, theme)
+    # --- end normalization ---
+
         """Display a line chart.
+
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
@@ -850,6 +864,13 @@ class VegaChartsMixin:
         height: Height = "content",
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
+    # --- normalize built-in color names via theme ---
+    theme = None
+    # You can later replace the following with an actual theme accessor if available.
+    # For now, keep theme=None (the helper still handles hex/RGB correctly).
+    color = normalize_chart_colors(color, theme)
+    # --- end normalization ---
+
         """Display an area chart.
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
@@ -1130,6 +1151,13 @@ class VegaChartsMixin:
         height: Height = "content",
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
+    # --- normalize built-in color names via theme ---
+    theme = None
+    # You can later replace the following with an actual theme accessor if available.
+    # For now, keep theme=None (the helper still handles hex/RGB correctly).
+    color = normalize_chart_colors(color, theme)
+    # --- end normalization ---
+
         """Display a bar chart.
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
@@ -1448,6 +1476,13 @@ class VegaChartsMixin:
         height: Height = "content",
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
+    # --- normalize built-in color names via theme ---
+    theme = None
+    # You can later replace the following with an actual theme accessor if available.
+    # For now, keep theme=None (the helper still handles hex/RGB correctly).
+    color = normalize_chart_colors(color, theme)
+    # --- end normalization ---
+
         """Display a scatterplot chart.
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
