@@ -245,8 +245,12 @@ export const FlexBoxContainer = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
+  // Extract pixel width if the container has a fixed width
+  const parentWidth =
+    props.node.deltaBlock.widthConfig?.pixelWidth ?? undefined
+
   return (
-    <FlexContextProvider direction={direction}>
+    <FlexContextProvider direction={direction} parentWidth={parentWidth}>
       <StyledFlexContainerBlock
         {...styles}
         className={classNames(
@@ -286,8 +290,6 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
       minStretchBehavior = "8rem"
-    } else {
-      minStretchBehavior = "fit-content"
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||

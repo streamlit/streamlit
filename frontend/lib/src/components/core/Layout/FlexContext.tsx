@@ -22,6 +22,11 @@ export interface IFlexContext {
   direction: Direction | undefined
   isInHorizontalLayout: boolean
   isInRoot: boolean
+  /**
+   * The width of the parent container in pixels, if the container has a fixed
+   * pixel width set via widthConfig.pixelWidth. Undefined otherwise.
+   */
+  parentWidth?: number
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
@@ -45,21 +50,24 @@ FlexContext.displayName = "FlexContext"
  * @returns direction: The direction of the nearest `st.container` ancestor.
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
+ * @returns parentWidth: The width of the parent container in pixels, if it has
+ *   a fixed pixel width.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
  */
 export const FlexContextProvider: FC<
   PropsWithChildren<{ direction: Direction; isRoot?: boolean }>
-> = ({ children, direction, isRoot }) => {
+> = ({ children, direction, isRoot, parentWidth }) => {
   const value = useMemo<IFlexContext>(() => {
     const isInHorizontalLayout = direction === Direction.HORIZONTAL
     return {
       direction,
       isInHorizontalLayout,
       isInRoot: isRoot ?? false,
+      parentWidth
     }
-  }, [direction, isRoot])
+  }, [direction, isRoot, parentWidth])
 
   return <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
 }

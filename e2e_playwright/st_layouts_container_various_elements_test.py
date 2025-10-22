@@ -33,6 +33,7 @@ CONTAINER_KEYS = [
     # Don't expand this one, doesn't work well with the snapshot.
     "layout-horizontal-expander-dataframe-content-width-large",
     "layout-vertical-stretch-height",
+    "layout-vertical-content-width-container-with-various-elements",
 ]
 
 CONTAINER_KEYS_WITH_EXPANDERS = [

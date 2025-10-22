@@ -21,6 +21,12 @@ import pandas as pd
 import streamlit as st
 
 img: npt.NDArray[np.int64] = np.repeat(0, 75000).reshape(300, 250)
+small_data = pd.DataFrame(
+    {
+        "x": list(range(5)),
+        "y": [i * i for i in range(5)],
+    }
+)
 
 with st.container(
     border=False,
@@ -33,20 +39,14 @@ with st.container(
         border=True,
         horizontal=True,
     ):
-        df = pd.DataFrame(
-            {
-                "x": list(range(5)),
-                "y": [i * i for i in range(5)],
-            }
-        )
-        st.line_chart(df.set_index("x"), width=300)
+        st.line_chart(small_data.set_index("x"), width=300)
 
         with st.container(
             border=False,
             horizontal=False,
         ):
             st.metric(label="Metric", value=156, delta=10, height=100, width=70)
-            st.dataframe(df)
+            st.dataframe(small_data)
 
 with st.container(
     border=True,
@@ -69,34 +69,22 @@ with st.container(
     horizontal=True,
     key="layout-horizontal-expander-dataframe",
 ):
-    df = pd.DataFrame(
-        {
-            "x": list(range(5)),
-            "y": [i * i for i in range(5)],
-        }
-    )
     with st.expander("Expand me"):
         st.title("Hidden Chart")
-        st.bar_chart(df.set_index("x"))
+        st.bar_chart(small_data.set_index("x"))
 
-    st.dataframe(df)
+    st.dataframe(small_data)
 
 with st.container(
     border=True,
     horizontal=True,
     key="layout-horizontal-expander-dataframe-content-width",
 ):
-    df = pd.DataFrame(
-        {
-            "x": list(range(5)),
-            "y": [i * i for i in range(5)],
-        }
-    )
     with st.expander("Expand me"):
         st.title("Hidden Chart")
-        st.bar_chart(df.set_index("x"))
+        st.bar_chart(small_data.set_index("x"))
 
-    st.dataframe(df, use_container_width=False)
+    st.dataframe(small_data, use_container_width=False)
 
 with st.container(
     border=True,
@@ -149,12 +137,6 @@ with st.container(
 
 with st.container(border=True, horizontal=False, key="layout-horizontal-columns"):
     st.title("Columns")
-    df = pd.DataFrame(
-        {
-            "x": list(range(5)),
-            "y": [i * i for i in range(5)],
-        }
-    )
     with st.container(border=False, horizontal=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -163,21 +145,15 @@ with st.container(border=True, horizontal=False, key="layout-horizontal-columns"
                 horizontal=True,
             ):
                 st.info("Very important information", width=150)
-                st.dataframe(df, use_container_width=False)
+                st.dataframe(small_data, width="content")
 
         with col2:
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(small_data, width="stretch")
 
 with st.container(border=True, horizontal=True, key="layout-horizontal-tabs"):
     import altair as alt
 
     st.title("Tabs", width=150)
-    df = pd.DataFrame(
-        {
-            "x": list(range(5)),
-            "y": [i * i for i in range(5)],
-        }
-    )
     tab1, tab2 = st.tabs(["Tab 1", "Tab 2"])
     with tab1:
         with st.container(
@@ -185,13 +161,13 @@ with st.container(border=True, horizontal=True, key="layout-horizontal-tabs"):
             horizontal=True,
         ):
             st.info("This is a tab")
-            st.dataframe(df)
+            st.dataframe(small_data)
     with tab2:
         with st.container(
             border=False,
             horizontal=False,
         ):
-            st.altair_chart(alt.Chart(df).mark_bar().encode(x="x", y="y"))
+            st.altair_chart(alt.Chart(small_data).mark_bar().encode(x="x", y="y"))
             st.warning("This is a warning")
 
 with st.container(
@@ -250,3 +226,12 @@ with st.container(key="layout-vertical-stretch-height", border=True, height=400)
     st.dataframe(df, height="stretch")
     st.dataframe(df, height="stretch")
     st.markdown("Hello")
+
+with st.container(
+    width="content",
+    border=True,
+    key="layout-vertical-content-width-container-with-various-elements",
+    horizontal_alignment="center",
+):
+    st.line_chart(small_data, width="content")
+    st.markdown("Growth in the last 3 months", width="content")

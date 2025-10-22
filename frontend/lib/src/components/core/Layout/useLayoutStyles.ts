@@ -18,6 +18,7 @@ import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
+import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
 import { FlexContext, IFlexContext } from "./FlexContext"
@@ -205,6 +206,38 @@ const getDirection = (
   return flexContext?.direction
 }
 
+/**
+ * Calculate the minimum width for an element, taking into account the parent
+ * container's fixed pixel width if it exists.
+ *
+ * @param minStretchBehavior - The desired minimum width behavior (e.g., "8rem", "14rem")
+ * @param parentWidth - The parent container's width in pixels (if it has a fixed width)
+ * @returns The calculated minimum width as a CSS value
+ */
+const calculateMinWidthWithParentConstraint = (
+  minStretchBehavior: MinFlexElementWidth,
+  parentWidth: number | undefined
+): React.CSSProperties["minWidth"] => {
+  // If there's no parent width or no minStretchBehavior, use the original behavior
+  if (parentWidth === undefined || minStretchBehavior === undefined) {
+    return minStretchBehavior
+  }
+
+  // Convert rem-based minStretchBehavior to pixels
+  const minWidthInPixels = convertRemToPx(minStretchBehavior)
+
+  // Buffer to account for padding/margins (in pixels)
+  const PADDING_BUFFER = 32
+
+  // If parent width is smaller than desired min width, use parent width minus buffer
+  if (parentWidth < minWidthInPixels && parentWidth > PADDING_BUFFER) {
+    return `${parentWidth - PADDING_BUFFER}px`
+  }
+
+  // Otherwise use the original minStretchBehavior
+  return minStretchBehavior
+}
+
 export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -266,7 +299,10 @@ export const useLayoutStyles = ({
       widthConfig.type === DimensionType.STRETCH &&
       minStretchBehavior !== undefined
     ) {
-      minWidth = minStretchBehavior
+      minWidth = calculateMinWidthWithParentConstraint(
+        minStretchBehavior,
+        flexContext?.parentWidth
+      )
     }
 
     const heightConfig = getHeight(element, subElement)

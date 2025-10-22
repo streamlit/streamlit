@@ -29,6 +29,10 @@ CONTAINER_KEYS = [
     "layout-horizontal-columns",
     "layout-horizontal-button-groups",
     "layout-horizontal-line-charts",
+    "layout-vertical-content-width-container-with-stretch-width-dataframes",
+    "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
+    "layout-vertical-content-width-container-with-map",
+    "narrow-fixed-width-container-with-dataframe",
 ]
 
 

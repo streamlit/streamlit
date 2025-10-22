@@ -138,6 +138,9 @@ export const StyledElementContainerLayoutWrapper: FC<
         // (not fit-content) for proper measurement and rendering due to the resize feature.
         // Resize is disabled in nested containers, so this is only necessary in the root container.
         styles.width = "100%"
+        if (!isInHorizontalLayout) {
+          styles.minWidth = minStretchBehavior
+        }
       }
       if (isInHorizontalLayout && !node.element.widthConfig) {
         // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
@@ -150,6 +153,9 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Parent needs defined width (not fit-content) for measurement to work.
         // Only needed in root where resize is enabled; disabled in nested containers.
         styles.width = "100%"
+        if (!isInHorizontalLayout) {
+          styles.minWidth = minStretchBehavior
+        }
       }
       return styles
     } else if (node.element.type === "imgs") {
@@ -166,6 +172,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     isInHorizontalLayout,
     isInRoot,
     node.element.widthConfig,
+    minStretchBehavior,
   ])
 
   let styles = useLayoutStyles({
