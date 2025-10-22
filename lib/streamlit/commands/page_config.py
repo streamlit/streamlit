@@ -44,7 +44,7 @@ ABOUT_KEY: Final = "about"
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
-InitialSideBarState: TypeAlias = Union[Literal["auto", "expanded", "collapsed"], int]
+InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"] | int
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
