@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import shuffle from "lodash/shuffle"
+
 import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 
 describe("fuzzyFilterSelectOptions", () => {
@@ -62,6 +64,17 @@ describe("fuzzyFilterSelectOptions", () => {
 
     const results1 = fuzzyFilterSelectOptions(options, "stre")
     expect(results1.map(it => it.label)).toEqual([
+      "Streamlit",
+      "Another streamlit",
+      "Yet another streamlit",
+      "mistreamlit",
+      "Some estreamlit",
+    ])
+
+    // Randomize options to ensure order is not hiding an issue
+    const randomizedOptions = shuffle(options)
+    const results2 = fuzzyFilterSelectOptions(randomizedOptions, "stre")
+    expect(results2.map(it => it.label)).toEqual([
       "Streamlit",
       "Another streamlit",
       "Yet another streamlit",
