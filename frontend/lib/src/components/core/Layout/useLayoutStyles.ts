@@ -42,6 +42,9 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
+  // This is used for elements with stretch width to define how small the element should shrink
+  // and in horizontal layouts to define how it should take up space relative to other elements
+  // when the container width is limited.
   minStretchBehavior?: MinFlexElementWidth
 }
 
@@ -255,8 +258,9 @@ export const useLayoutStyles = ({
 
     const direction = getDirection(flexContext)
 
-    // Set minWidth only in vertical layouts when element has stretch width
-    // In horizontal layouts, minStretchBehavior is used as flex-basis in getFlex
+    // In vertical layouts, elements with stretch width need this minWidth
+    // to prevent them from potentially becoming too narrow when the container has width="content"
+    // In horizontal layouts, we use minStretchBehavior as flex-basis in getFlex instead.
     if (
       direction === Direction.VERTICAL &&
       widthConfig.type === DimensionType.STRETCH &&
