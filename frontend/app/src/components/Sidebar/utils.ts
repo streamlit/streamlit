@@ -61,3 +61,7 @@ export const saveSidebarState = (
     )
   }
 }
+
+export function clampSidebarWidth(width: number): number {
+  return Math.min(600, Math.max(200, width))
+}

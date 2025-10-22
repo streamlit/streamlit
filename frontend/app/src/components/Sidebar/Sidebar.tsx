@@ -61,6 +61,7 @@ import {
   StyledSidebarHeaderContainer,
   StyledSidebarUserContent,
 } from "./styled-components"
+import { clampSidebarWidth } from "./utils"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
@@ -106,7 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
     // Use initialSidebarWidth if available, otherwise fall back to cached or default
     if (notNullOrUndefined(initialSidebarWidth)) {
-      return cachedSidebarWidth || initialSidebarWidth.toString()
+      const clampedWidth = clampSidebarWidth(initialSidebarWidth)
+      return cachedSidebarWidth || clampedWidth.toString()
     }
     return cachedSidebarWidth || DEFAULT_WIDTH
   })
@@ -127,7 +129,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [])
 
   const initializeSidebarWidth = useCallback((width: number): void => {
-    const newWidth = width.toString()
+    const clampedWidth = clampSidebarWidth(width)
+    const newWidth = clampedWidth.toString()
 
     setSidebarWidth(newWidth)
 
@@ -155,10 +158,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   useExecuteWhenChanged(() => {
     // Collapse the sidebar if the window was narrowed and is now mobile-sized
-    if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
-      if (!isCollapsed) {
-        onToggleCollapse(true, false)
-      }
+    if (
+      innerWidth < lastInnerWidth &&
+      innerWidth <= mediumBreakpointPx &&
+      !isCollapsed
+    ) {
+      onToggleCollapse(true, false)
     }
     setLastInnerWidth(innerWidth)
   }, [innerWidth])
@@ -171,11 +176,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         if (
           current &&
           !current.contains(event.target as Node | null) &&
-          innerWidth <= mediumBreakpointPx
+          innerWidth <= mediumBreakpointPx &&
+          !isCollapsed
         ) {
-          if (!isCollapsed) {
-            onToggleCollapse(true)
-          }
+          onToggleCollapse(true)
         }
       }
     }

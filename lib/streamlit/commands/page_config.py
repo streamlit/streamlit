@@ -191,7 +191,7 @@ def set_page_config(
         - ``"collapsed"``: The sidebar is hidden initially.
         - ``int``: Set the initial sidebar width in pixels. The sidebar will use
           "auto" behavior but start with the specified width. Must be a positive integer.
-          The width is constrained by a minimum of 200px, maximum of 600px or 90% of window width.
+          The width is limited to a minimum of 200px and a maximum of 600px.
 
         In most cases, ``"auto"`` provides the best user experience across
         devices of different sizes.
