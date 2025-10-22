@@ -50,4 +50,23 @@ describe("fuzzyFilterSelectOptions", () => {
       "e2e/scripts/st_experimental_get_query_params.py",
     ])
   })
+
+  it("prioritizes matches well with case insensitivity", () => {
+    const options = [
+      { label: "Streamlit", value: "" },
+      { label: "Another streamlit", value: "" },
+      { label: "Yet another streamlit", value: "" },
+      { label: "Some estreamlit", value: "" },
+      { label: "mistreamlit", value: "" },
+    ]
+
+    const results1 = fuzzyFilterSelectOptions(options, "stre")
+    expect(results1.map(it => it.label)).toEqual([
+      "Streamlit",
+      "Another streamlit",
+      "Yet another streamlit",
+      "mistreamlit",
+      "Some estreamlit",
+    ])
+  })
 })
