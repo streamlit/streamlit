@@ -34,6 +34,10 @@ CONTAINER_KEYS = [
     "layout-horizontal-expander-dataframe-content-width-large",
     "layout-vertical-stretch-height",
     "layout-vertical-content-width-container-with-various-elements",
+    # Moved from st_layouts_container_min_width.py
+    "layout-vertical-content-width-container-with-stretch-width-dataframes",
+    "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
+    "narrow-fixed-width-container-with-dataframe",
 ]
 
 CONTAINER_KEYS_WITH_EXPANDERS = [
@@ -58,7 +62,7 @@ def test_layouts_container_various_elements(
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for the container with map in st_layouts_container_various_elements.py."""
 
-    # Wait for map elements to load
+    # Wait for map elements to load (now we have 2 maps)
     map_elements = app.get_by_test_id("stDeckGlJsonChart")
     expect(map_elements).to_have_count(1, timeout=15000)
     # The map assets can take more time to load, add an extra timeout

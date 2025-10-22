@@ -235,3 +235,51 @@ with st.container(
 ):
     st.line_chart(small_data, width="content")
     st.markdown("Growth in the last 3 months", width="content")
+
+# Additional data for moved containers
+medium_data = pd.DataFrame(
+    {
+        "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+        "Age": [25, 30, 35, 28, 32],
+        "City": ["New York", "London", "Tokyo", "Paris", "Sydney"],
+        "Salary": [50000, 60000, 70000, 55000, 65000],
+        "Department": ["Engineering", "Marketing", "Sales", "HR", "Finance"],
+    }
+)
+chart_data1 = pd.DataFrame({"x": range(10), "y": [i**2 for i in range(10)]})
+
+with st.container(
+    width="content",
+    border=True,
+    key="layout-vertical-content-width-container-with-stretch-width-dataframes",
+):
+    st.dataframe(small_data, width="stretch")
+    st.dataframe(medium_data, width="stretch")
+
+with st.container(
+    horizontal=True,
+    width="content",
+    border=True,
+    gap="medium",
+    key="layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
+):
+    st.metric("Metric", "100", width="stretch")
+    st.dataframe(medium_data, width="stretch")
+    st.line_chart(chart_data1, width="stretch")
+
+with st.container(
+    width="content", border=True, key="layout-vertical-content-width-container-with-map"
+):
+    map_data = pd.DataFrame(
+        {
+            "lat": [37.7749, 37.8044, 37.7599],
+            "lon": [-122.4194, -122.2712, -122.4148],
+        }
+    )
+    st.map(map_data, width="stretch")
+
+# fixed width container with width 100 and a dataframe inside with stretch width
+with st.container(
+    width=100, border=True, key="narrow-fixed-width-container-with-dataframe"
+):
+    st.dataframe(medium_data, width="stretch")
