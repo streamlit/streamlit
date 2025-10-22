@@ -247,7 +247,7 @@ If you are trying to access a Streamlit app running on another server, this coul
           return retry(
             `Connection failed with status ${status}, ` +
               "and response:\n```\n" +
-              (typeof data === "object"
+              (data !== null && typeof data === "object"
                 ? JSON.stringify(data, null, 2)
                 : data) +
               "\n```"
