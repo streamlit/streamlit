@@ -65,7 +65,7 @@ export const FlexContextProvider: FC<
       direction,
       isInHorizontalLayout,
       isInRoot: isRoot ?? false,
-      parentWidth
+      parentWidth,
     }
   }, [direction, isRoot, parentWidth])
 
