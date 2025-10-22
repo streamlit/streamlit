@@ -28,4 +28,10 @@ message WidthConfig {
     uint32 pixel_width = 3;
     float rem_width = 4;
   }
+
+  // Optional scale factor for stretch mode.
+  // Only meaningful when use_stretch=true.
+  // Default: 1.0 (equal distribution with other stretch elements)
+  // Example: 2.0 means this element takes 2x the space of elements with scale=1.0
+  optional float stretch_scale = 5;
 }

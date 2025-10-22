@@ -60,7 +60,7 @@ enum DimensionType {
 }
 
 type LayoutDimensionConfig =
-  | { type: DimensionType.STRETCH }
+  | { type: DimensionType.STRETCH; scale: number } // Scale is always set (min 1.0)
   | { type: DimensionType.CONTENT }
   | { type: DimensionType.PIXEL; pixels: number }
   | { type: DimensionType.REM; rem: number }
@@ -75,7 +75,9 @@ const getWidth = (
   // The current behaviour is for useContainerWidth to take precedence over
   // width, see arrow.py for reference.
   if (subElement?.useContainerWidth) {
-    return { type: DimensionType.STRETCH }
+    // Use scale from widthConfig if available, default to 1.0
+    const scale = element.widthConfig?.stretchScale ?? 1.0
+    return { type: DimensionType.STRETCH, scale }
   }
 
   // We need to support old width configurations for backwards compatibility,
@@ -92,7 +94,10 @@ const getWidth = (
   const isRem = element.widthConfig?.remWidth
 
   if (isStretch) {
-    return { type: DimensionType.STRETCH }
+    // Get scale from proto, defaulting to 1.0 for backwards compatibility
+    // with old messages that don't have stretch_scale set
+    const scale = element.widthConfig?.stretchScale ?? 1.0
+    return { type: DimensionType.STRETCH, scale }
   } else if (isContent) {
     return { type: DimensionType.CONTENT }
   } else if (isRem && isPositiveNumber(element.widthConfig?.remWidth)) {
@@ -137,7 +142,9 @@ const getHeight = (
   const isRem = element.heightConfig?.remHeight
 
   if (isStretch) {
-    return { type: DimensionType.STRETCH }
+    // Get scale from proto, defaulting to 1.0 for backwards compatibility
+    const scale = element.heightConfig?.stretchScale ?? 1.0
+    return { type: DimensionType.STRETCH, scale }
   } else if (isContent) {
     return { type: DimensionType.CONTENT }
   } else if (isRem && isPositiveNumber(element.heightConfig?.remHeight)) {
@@ -172,7 +179,8 @@ const getFlex = (
       case DimensionType.CONTENT:
         return "0 0 fit-content"
       case DimensionType.STRETCH:
-        return `1 1 ${minStretchBehavior ?? "fit-content"}`
+        // Use scale as flex-grow value (scale is always set, minimum 1.0)
+        return `${widthConfig.scale} 1 ${minStretchBehavior ?? "fit-content"}`
       case DimensionType.AUTO:
         return undefined
       default:
@@ -185,7 +193,10 @@ const getFlex = (
       case DimensionType.REM:
         return `0 0 ${heightConfig.rem}rem`
       case DimensionType.CONTENT:
+        return undefined
       case DimensionType.STRETCH:
+        // Use scale as flex-grow value for vertical stretch (scale always set)
+        return `${heightConfig.scale} 1 auto`
       case DimensionType.AUTO:
         return undefined
       default:

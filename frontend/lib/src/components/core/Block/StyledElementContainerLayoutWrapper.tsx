@@ -124,9 +124,11 @@ export const StyledElementContainerLayoutWrapper: FC<
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
       if (node.element.heightConfig?.useStretch) {
+        // Use the scale from heightConfig, defaulting to 1.0 for backwards compatibility
+        const scale = node.element.heightConfig?.stretchScale ?? 1.0
         return {
           height: "100%",
-          flex: "1 1 8rem",
+          flex: `${scale} 1 8rem`,
         }
       } else if (isInHorizontalLayout) {
         return {
@@ -149,6 +151,7 @@ export const StyledElementContainerLayoutWrapper: FC<
       }
       if (isInHorizontalLayout && !node.element.widthConfig) {
         // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
+        // For legacy behavior without widthConfig, use default flex with scale 1
         styles.flex = "1 1 14rem"
       }
       return styles

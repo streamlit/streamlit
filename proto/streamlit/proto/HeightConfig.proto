@@ -28,4 +28,9 @@ message HeightConfig {
     uint32 pixel_height = 3;
     float rem_height = 4;
   }
+
+  // Optional scale factor for stretch mode.
+  // Only meaningful when use_stretch=true.
+  // Default: 1.0 (equal distribution with other stretch elements)
+  optional float stretch_scale = 5;
 }

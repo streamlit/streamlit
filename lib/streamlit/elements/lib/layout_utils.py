@@ -13,8 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
@@ -47,6 +48,36 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
 }
 
+# Pattern for matching "stretch:N" format where N is a number
+_STRETCH_SCALE_PATTERN: Final = re.compile(r"^stretch:(\d+\.?\d*)$")
+
+
+def _parse_stretch_scale(value: str) -> tuple[bool, float | None]:
+    """Parse stretch scale from format 'stretch:N'.
+
+    Parameters
+    ----------
+    value : str
+        The value to parse (e.g., "stretch", "stretch:2", "stretch:1.5")
+
+    Returns
+    -------
+    tuple[bool, float | None]
+        (is_stretch_with_scale, scale_value)
+        - If value is exactly "stretch", returns (False, None)
+        - If value is "stretch:N", returns (True, N as float)
+        - Otherwise returns (False, None)
+    """
+    if value == "stretch":
+        return (False, None)
+
+    match = _STRETCH_SCALE_PATTERN.match(value)
+    if match:
+        scale = float(match.group(1))
+        return (True, scale)
+
+    return (False, None)
+
 
 @dataclass
 class LayoutConfig:
@@ -60,7 +91,11 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
     Parameters
     ----------
     width : Any
-        The width value to validate.
+        The width value to validate. Can be:
+        - int: pixel width (must be positive)
+        - "stretch": fill available space
+        - "stretch:N": fill available space with relative scale N
+        - "content": size to content (if allow_content=True)
     allow_content : bool
         Whether to allow "content" as a valid width value.
 
@@ -73,6 +108,18 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
         raise StreamlitInvalidWidthError(width, allow_content)
 
     if isinstance(width, str):
+        # Check for stretch with scale
+        is_scaled_stretch, scale = _parse_stretch_scale(width)
+
+        if is_scaled_stretch:
+            # Validate scale value
+            if scale is not None and scale <= 0:
+                raise StreamlitInvalidWidthError(width, allow_content)
+            if scale is not None and scale > 100:
+                raise StreamlitInvalidWidthError(width, allow_content)
+            return  # Valid scaled stretch
+
+        # Check standard string values
         valid_strings = ["stretch"]
         if allow_content:
             valid_strings.append("content")
@@ -94,7 +141,11 @@ def validate_height(
     Parameters
     ----------
     height : Any
-        The height value to validate.
+        The height value to validate. Can be:
+        - int: pixel height (must be positive)
+        - "stretch": fill available space (if allow_stretch=True)
+        - "stretch:N": fill available space with relative scale N
+        - "content": size to content (if allow_content=True)
     allow_content : bool
         Whether to allow "content" as a valid height value.
     allow_stretch : bool
@@ -111,6 +162,20 @@ def validate_height(
         raise StreamlitInvalidHeightError(height, allow_content)
 
     if isinstance(height, str):
+        # Check for stretch with scale
+        is_scaled_stretch, scale = _parse_stretch_scale(height)
+
+        if is_scaled_stretch:
+            if not allow_stretch:
+                raise StreamlitInvalidHeightError(height, allow_content)
+            # Validate scale value
+            if scale is not None and scale <= 0:
+                raise StreamlitInvalidHeightError(height, allow_content)
+            if scale is not None and scale > 100:
+                raise StreamlitInvalidHeightError(height, allow_content)
+            return  # Valid scaled stretch
+
+        # Check standard string values
         valid_strings = []
         if allow_stretch:
             valid_strings.append("stretch")
@@ -151,6 +216,18 @@ def validate_space_size(size: SpaceSize) -> None:
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:
+    """Convert width value to WidthConfig proto message.
+
+    Handles:
+    - int/float: pixel width
+    - "stretch": use_stretch=True, scale=1.0 (default scale)
+    - "stretch:N": use_stretch=True, scale=N
+    - "content": use_content=True
+    - "small"/"medium"/"large": rem_width
+
+    Note: All stretch modes set a scale value. Plain "stretch" is treated
+    as "stretch:1" internally for consistency.
+    """
     width_config = WidthConfig()
     if isinstance(width, str) and width in SIZE_TO_REM_MAPPING:
         width_config.rem_width = SIZE_TO_REM_MAPPING[width]
@@ -159,11 +236,20 @@ def get_width_config(width: Width | SpaceSize) -> WidthConfig:
     elif width == "content":
         width_config.use_content = True
     else:
+        # Stretch mode (with or without explicit scale)
+        # Treat "stretch" as "stretch:1" internally
+        is_scaled_stretch, scale = _parse_stretch_scale(width)
         width_config.use_stretch = True
+        width_config.stretch_scale = scale if is_scaled_stretch else 1.0
     return width_config
 
 
 def get_height_config(height: Height | SpaceSize) -> HeightConfig:
+    """Convert height value to HeightConfig proto message.
+
+    Similar to get_width_config but for height dimension.
+    All stretch modes set a scale value (default: 1.0 for plain "stretch").
+    """
     height_config = HeightConfig()
     if isinstance(height, str) and height in SIZE_TO_REM_MAPPING:
         height_config.rem_height = SIZE_TO_REM_MAPPING[height]
@@ -172,7 +258,11 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     elif height == "content":
         height_config.use_content = True
     else:
+        # Stretch mode (with or without explicit scale)
+        # Treat "stretch" as "stretch:1" internally
+        is_scaled_stretch, scale = _parse_stretch_scale(height)
         height_config.use_stretch = True
+        height_config.stretch_scale = scale if is_scaled_stretch else 1.0
     return height_config
 
 
