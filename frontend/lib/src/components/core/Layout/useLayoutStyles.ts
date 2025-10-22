@@ -210,7 +210,7 @@ const getDirection = (
  * Calculate the minimum width for an element, taking into account the parent
  * container's fixed pixel width if it exists.
  *
- * @param minStretchBehavior - The desired minimum width behavior (e.g., "8rem", "14rem")
+ * @param minStretchBehavior - The desired minimum width behavior (e.g., "8rem", "14rem", "fit-content")
  * @param parentWidth - The parent container's width in pixels (if it has a fixed width)
  * @returns The calculated minimum width as a CSS value
  */
@@ -219,7 +219,11 @@ const calculateMinWidthWithParentConstraint = (
   parentWidth: number | undefined
 ): React.CSSProperties["minWidth"] => {
   // If there's no parent width or no minStretchBehavior, use the original behavior
-  if (parentWidth === undefined || minStretchBehavior === undefined) {
+  if (
+    parentWidth === undefined ||
+    minStretchBehavior === undefined ||
+    minStretchBehavior === "fit-content"
+  ) {
     return minStretchBehavior
   }
 

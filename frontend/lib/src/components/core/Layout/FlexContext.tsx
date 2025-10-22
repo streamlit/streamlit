@@ -57,7 +57,11 @@ FlexContext.displayName = "FlexContext"
  *
  */
 export const FlexContextProvider: FC<
-  PropsWithChildren<{ direction: Direction; isRoot?: boolean }>
+  PropsWithChildren<{
+    direction: Direction
+    isRoot?: boolean
+    parentWidth?: number
+  }>
 > = ({ children, direction, isRoot, parentWidth }) => {
   const value = useMemo<IFlexContext>(() => {
     const isInHorizontalLayout = direction === Direction.HORIZONTAL
