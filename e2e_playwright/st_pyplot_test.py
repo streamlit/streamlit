@@ -104,24 +104,9 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stImage")
 
 
-def test_pyplot_width_regression_stretch(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test pyplot with stretch width in container.
-
-    Regression test for #12678 where plots rendered at minimum width
-    when no explicit width was set.
-    """
-    wait_for_all_images_to_be_loaded(app)
-
-    container = get_element_by_key(app, "regression_stretch")
-    expect(container).to_be_visible()
-    assert_snapshot(container, name="st_pyplot-regression_stretch")
-
-
-def test_pyplot_width_regression_content(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+# Some issues with flakiness in webkit where the chart doesn't load fully.
+@pytest.mark.skip_browser("webkit")
+def test_pyplot_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test pyplot with content width in container.
 
     Regression test for #12678 where plots rendered at minimum width
@@ -129,21 +114,14 @@ def test_pyplot_width_regression_content(
     """
     wait_for_all_images_to_be_loaded(app)
 
-    container = get_element_by_key(app, "regression_content")
+    container = get_element_by_key(app, "content-pyplot-in-container")
     expect(container).to_be_visible()
-    assert_snapshot(container, name="st_pyplot-regression_content")
+    assert_snapshot(container, name="st_pyplot-content-width-in-container")
 
-
-def test_pyplot_width_regression_pixel(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test pyplot with pixel width in container.
-
-    Regression test for #12678 where plots rendered at minimum width
-    when no explicit width was set.
-    """
-    wait_for_all_images_to_be_loaded(app)
-
-    container = get_element_by_key(app, "regression_pixel")
+    container = get_element_by_key(app, "pixel-pyplot-in-container")
     expect(container).to_be_visible()
-    assert_snapshot(container, name="st_pyplot-regression_pixel")
+    assert_snapshot(container, name="st_pyplot-pixel-width-in-container")
+
+    container = get_element_by_key(app, "stretch-pyplot-in-container")
+    expect(container).to_be_visible()
+    assert_snapshot(container, name="st_pyplot-stretch-width-in-container")
