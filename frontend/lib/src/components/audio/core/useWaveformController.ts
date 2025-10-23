@@ -427,7 +427,7 @@ export function useWaveformController({
 
       try {
         const wav = await encodeToWav(blobToUse, effectiveSampleRate)
-        eventsRef.current.onApprove?.(wav)
+        await eventsRef.current.onApprove?.(wav)
 
         setCurrentBlob(null)
         setCurrentState("idle")
