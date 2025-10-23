@@ -53,7 +53,7 @@ interface ReadyResolver {
 }
 
 interface UseWaveformControllerParams {
-  containerRef?: RefObject<HTMLDivElement>
+  containerRef: RefObject<HTMLDivElement>
   sampleRate?: number | null
   events?: WaveformControllerEvents
 }
@@ -64,9 +64,6 @@ export function useWaveformController({
   events,
 }: UseWaveformControllerParams): WaveformController {
   const theme = useEmotionTheme()
-
-  const internalMountRef = useRef<HTMLDivElement>(null)
-  const mountRef = containerRef ?? internalMountRef
 
   const [currentState, setCurrentState] = useState<RecordingState>("idle")
   const [currentBlob, setCurrentBlob] = useState<Blob | null>(null)
@@ -173,7 +170,7 @@ export function useWaveformController({
     if (
       isInitializedRef.current ||
       isInitializingRef.current ||
-      !mountRef.current
+      !containerRef.current
     ) {
       return
     }
@@ -189,7 +186,7 @@ export function useWaveformController({
       const RecordPluginClass = RecordPluginModule.default
 
       const ws = WaveSurfer.create({
-        container: mountRef.current,
+        container: containerRef.current,
         waveColor: theme.colors.primary,
         progressColor: theme.colors.bodyText,
         height: "auto",
@@ -236,7 +233,7 @@ export function useWaveformController({
     } finally {
       isInitializingRef.current = false
     }
-  }, [mountRef, theme, effectiveSampleRate, configurePlayerEvents])
+  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
     initializeWaveSurfer().catch(error => {
@@ -505,7 +502,7 @@ export function useWaveformController({
   return {
     state: currentState,
     isPlaybackPlaying,
-    mountRef,
+    mountRef: containerRef,
     start,
     stop,
     approve,
