@@ -46,28 +46,28 @@ def test_serde_deserialize_with_dict():
     """Test deserialize with a dictionary."""
     serde = BidiComponentSerde()
     state = serde.deserialize({"foo": "bar"})
-    assert state == {"value": {"foo": "bar"}}
+    assert state == {"foo": "bar"}
 
 
 def test_serde_deserialize_with_json_string():
     """Test deserialize with a JSON string."""
     serde = BidiComponentSerde()
     state = serde.deserialize('{"foo": "bar"}')
-    assert state == {"value": {"foo": "bar"}}
+    assert state == {"foo": "bar"}
 
 
 def test_serde_deserialize_with_defaults():
     """Test deserialize with default values."""
     serde = BidiComponentSerde(default={"bar": "baz"})
     state = serde.deserialize({"foo": "qux"})
-    assert state == {"value": {"foo": "qux", "bar": "baz"}}
+    assert state == {"foo": "qux", "bar": "baz"}
 
 
 def test_serde_deserialize_with_none():
     """Test deserialize with None."""
     serde = BidiComponentSerde()
     state = serde.deserialize(None)
-    assert state == {"value": {}}
+    assert state == {}
 
 
 def test_serde_serialize():
@@ -86,9 +86,9 @@ def test_serde_deserialize_with_defaults_empty_state():
     result = serde.deserialize(None)
 
     # Should have defaults applied
-    assert result["value"]["count"] == 0
-    assert result["value"]["message"] == "hello"
-    assert result["value"]["enabled"] is True
+    assert result["count"] == 0
+    assert result["message"] == "hello"
+    assert result["enabled"] is True
 
 
 def test_serde_deserialize_with_defaults_partial_state():
@@ -101,9 +101,9 @@ def test_serde_deserialize_with_defaults_partial_state():
     result = serde.deserialize(json.dumps(partial_state))
 
     # Should preserve existing values and add missing defaults
-    assert result["value"]["count"] == 5  # Existing value preserved
-    assert result["value"]["message"] == "custom"  # Existing value preserved
-    assert result["value"]["enabled"] is True  # Default applied
+    assert result["count"] == 5  # Existing value preserved
+    assert result["message"] == "custom"  # Existing value preserved
+    assert result["enabled"] is True  # Default applied
 
 
 def test_serde_deserialize_with_defaults_complete_state():
@@ -116,9 +116,9 @@ def test_serde_deserialize_with_defaults_complete_state():
     result = serde.deserialize(json.dumps(complete_state))
 
     # Should preserve all existing values
-    assert result["value"]["count"] == 10
-    assert result["value"]["message"] == "world"
-    assert result["value"]["extra"] == "data"
+    assert result["count"] == 10
+    assert result["message"] == "world"
+    assert result["extra"] == "data"
 
 
 def test_serde_deserialize_without_defaults():
@@ -130,7 +130,7 @@ def test_serde_deserialize_without_defaults():
     result = serde.deserialize(json.dumps(state))
 
     # Should just return the state as-is
-    assert result["value"]["count"] == 5
+    assert result["count"] == 5
 
 
 def test_serde_deserialize_with_invalid_json():
@@ -142,7 +142,7 @@ def test_serde_deserialize_with_invalid_json():
     result = serde.deserialize("invalid json {")
 
     # Should fall back to empty state with defaults applied
-    assert result["value"]["fallback"] == "value"
+    assert result["fallback"] == "value"
 
 
 def test_serde_deserialize_with_dict_input_and_defaults():
@@ -155,8 +155,8 @@ def test_serde_deserialize_with_dict_input_and_defaults():
     result = serde.deserialize(input_dict)
 
     # Should merge defaults with existing
-    assert result["value"]["existing_key"] == "existing_value"
-    assert result["value"]["default_key"] == "default_value"
+    assert result["existing_key"] == "existing_value"
+    assert result["default_key"] == "default_value"
 
 
 def test_serde_deserialize_with_none_defaults():
@@ -168,8 +168,8 @@ def test_serde_deserialize_with_none_defaults():
     result = serde.deserialize(None)
 
     # Should apply None as a valid default
-    assert result["value"]["nullable"] is None
-    assert result["value"]["string"] == "value"
+    assert result["nullable"] is None
+    assert result["string"] == "value"
 
 
 def test_extract_dataframes_from_dict():

@@ -14,22 +14,13 @@
 
 from __future__ import annotations
 
-from streamlit.components.v2.bidi_component.state import (
-    BidiComponentResult,
-    unwrap_component_state,
-)
+from streamlit.components.v2.bidi_component.state import BidiComponentResult
 
 
-def test_unwrap_component_state() -> None:
-    """Test unwrap_component_state with valid and invalid state structures."""
-    valid_state = {"value": {"foo": "bar"}}
-    assert unwrap_component_state(valid_state) == {"foo": "bar"}
-
-    invalid_state_1 = {"foo": "bar"}  # Missing 'value' key
-    assert unwrap_component_state(invalid_state_1) == {}
-
-    invalid_state_2 = {"value": "not a dict"}
-    assert unwrap_component_state(invalid_state_2) == {}
+def test_bidi_component_result_empty() -> None:
+    """Test empty result handling."""
+    result = BidiComponentResult()
+    assert dict(result) == {}
 
 
 def test_bidi_component_result_merges_state_and_trigger_values() -> None:

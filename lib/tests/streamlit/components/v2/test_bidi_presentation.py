@@ -14,10 +14,16 @@
 
 from __future__ import annotations
 
+import copy
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from streamlit.components.v2.presentation import make_bidi_component_presenter
+from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.state import SessionState
 
 
 class _FakeWStates:
@@ -50,9 +56,9 @@ def test_bidi_presenter_merges_events_when_present() -> None:
         {"event": "bar", "value": 123},
     ]
 
-    base = {"value": {"alpha": 1}}
+    base = {"alpha": 1}
     out = presenter(base, ss)
-    assert out == {"value": {"alpha": 1, "foo": True, "bar": 123}}
+    assert dict(out) == {"alpha": 1, "foo": True, "bar": 123}
 
 
 def test_bidi_presenter_handles_non_list_payload() -> None:
@@ -65,9 +71,9 @@ def test_bidi_presenter_handles_non_list_payload() -> None:
     )
     ss._new_widget_state._payloads[agg_id] = {"event": "foo", "value": "x"}
 
-    base = {"value": {}}
+    base = {}
     out = presenter(base, ss)
-    assert out == {"value": {"foo": "x"}}
+    assert dict(out) == {"foo": "x"}
 
 
 def test_bidi_presenter_returns_base_on_missing_meta_or_wrong_type() -> None:
@@ -95,3 +101,148 @@ def test_bidi_presenter_returns_base_on_non_canonical_state_shape() -> None:
     )
     base = {"not_value": {}}
     assert presenter(base, ss) == base
+
+
+def test_setitem_disallows_setting_created_widget():
+    """Test that __setitem__ disallows setting a created widget."""
+    mock_session_state = MagicMock(spec=SessionState)
+    mock_session_state._key_id_mapper = MagicMock()
+    mock_session_state._key_id_mapper.get_key_from_id.return_value = "test_key"
+    mock_session_state._new_widget_state = MagicMock()
+    mock_session_state._new_widget_state.widget_metadata.get.return_value = MagicMock(
+        value_type="json_trigger_value"
+    )
+
+    mock_ctx = MagicMock()
+    mock_ctx.widget_ids_this_run = {"test_component_id"}
+    mock_ctx.form_ids_this_run = set()
+
+    presenter = make_bidi_component_presenter(
+        aggregator_id="test_aggregator_id",
+        component_id="test_component_id",
+    )
+    write_through_dict = presenter({}, mock_session_state)
+
+    with patch(
+        "streamlit.components.v2.presentation.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        with pytest.raises(StreamlitAPIException) as e:
+            write_through_dict["value"] = "new_value"
+        assert (
+            "`st.session_state.test_key.value` cannot be modified after the component"
+            in str(e.value)
+        )
+
+
+def test_delitem_disallows_deleting_from_created_widget():
+    """Test that __delitem__ disallows deleting from a created widget."""
+    mock_session_state = MagicMock(spec=SessionState)
+    mock_session_state._key_id_mapper = MagicMock()
+    mock_session_state._key_id_mapper.get_key_from_id.return_value = "test_key"
+    mock_session_state._new_widget_state = MagicMock()
+    mock_session_state._new_widget_state.widget_metadata.get.return_value = MagicMock(
+        value_type="json_trigger_value"
+    )
+
+    mock_ctx = MagicMock()
+    mock_ctx.widget_ids_this_run = {"test_component_id"}
+    mock_ctx.form_ids_this_run = set()
+
+    presenter = make_bidi_component_presenter(
+        aggregator_id="test_aggregator_id",
+        component_id="test_component_id",
+    )
+    write_through_dict = presenter({"value": "old_value"}, mock_session_state)
+
+    with patch(
+        "streamlit.components.v2.presentation.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        with pytest.raises(StreamlitAPIException) as e:
+            del write_through_dict["value"]
+        assert (
+            "`st.session_state.test_key.value` cannot be modified after the component"
+            in str(e.value)
+        )
+
+
+def test_setitem_disallows_setting_widget_in_form():
+    """Test that __setitem__ disallows setting a widget in a form."""
+    mock_session_state = MagicMock(spec=SessionState)
+    mock_session_state._key_id_mapper = MagicMock()
+    mock_session_state._key_id_mapper.get_key_from_id.return_value = "test_key"
+    mock_session_state._new_widget_state = MagicMock()
+    mock_session_state._new_widget_state.widget_metadata.get.return_value = MagicMock(
+        value_type="json_trigger_value"
+    )
+
+    mock_ctx = MagicMock()
+    mock_ctx.widget_ids_this_run = set()
+    mock_ctx.form_ids_this_run = {"test_key"}
+
+    presenter = make_bidi_component_presenter(
+        aggregator_id="test_aggregator_id",
+        component_id="test_component_id",
+    )
+    write_through_dict = presenter({}, mock_session_state)
+
+    with patch(
+        "streamlit.components.v2.presentation.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        with pytest.raises(StreamlitAPIException) as e:
+            write_through_dict["value"] = "new_value"
+        assert (
+            "`st.session_state.test_key.value` cannot be modified after the component"
+            in str(e.value)
+        )
+
+
+def test_setitem_allows_setting_before_widget_creation():
+    """Test that __setitem__ allows setting state before widget creation."""
+    mock_session_state = MagicMock(spec=SessionState)
+    mock_session_state._key_id_mapper = MagicMock()
+    mock_session_state._key_id_mapper.get_key_from_id.return_value = "test_key"
+    mock_session_state._new_widget_state = MagicMock()
+    mock_session_state._new_widget_state.widget_metadata.get.return_value = MagicMock(
+        value_type="json_trigger_value"
+    )
+
+    mock_ctx = MagicMock()
+    mock_ctx.widget_ids_this_run = set()
+    mock_ctx.form_ids_this_run = set()
+
+    presenter = make_bidi_component_presenter(
+        aggregator_id="test_aggregator_id",
+        component_id="test_component_id",
+    )
+    write_through_dict = presenter({}, mock_session_state)
+
+    with patch(
+        "streamlit.components.v2.presentation.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        try:
+            write_through_dict["value"] = "new_value"
+        except StreamlitAPIException as e:
+            pytest.fail(f"Setting state before creation raised an exception: {e}")
+
+
+def test_deepcopy_returns_self():
+    """Test that deepcopy returns the same object."""
+    mock_session_state = MagicMock(spec=SessionState)
+    mock_session_state._key_id_mapper = MagicMock()
+    mock_session_state._new_widget_state = MagicMock()
+    mock_session_state._new_widget_state.widget_metadata.get.return_value = MagicMock(
+        value_type="json_trigger_value"
+    )
+
+    presenter = make_bidi_component_presenter(
+        aggregator_id="test_aggregator_id",
+        component_id="test_component_id",
+    )
+    write_through_dict = presenter({}, mock_session_state)
+
+    copied_dict = copy.deepcopy(write_through_dict)
+    assert write_through_dict is copied_dict

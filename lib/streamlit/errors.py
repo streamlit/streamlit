@@ -464,6 +464,18 @@ class BidiComponentMissingContentError(LocalizableStreamlitException):
         )
 
 
+class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
+    """Exception raised when a callback with an invalid name is provided."""
+
+    def __init__(self, callback_name: str) -> None:
+        super().__init__(
+            "The callback name `'{callback_name}'` is not allowed. "
+            "Callback names must follow the pattern `on_{{event_name}}_change` "
+            "where `event_name` is not empty.",
+            callback_name=callback_name,
+        )
+
+
 class BidiComponentInvalidDefaultKeyError(LocalizableStreamlitException):
     """Exception raised when an invalid key is provided in the default dict."""
 

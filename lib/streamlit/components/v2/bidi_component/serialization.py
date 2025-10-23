@@ -188,6 +188,8 @@ class BidiComponentSerde:
     This class handles the conversion of component state between the frontend
     (JSON strings) and the backend (Python objects).
 
+    The canonical shape is a flat mapping of state keys to values.
+
     Parameters
     ----------
     default
@@ -210,14 +212,12 @@ class BidiComponentSerde:
         Returns
         -------
         BidiComponentState
-            The deserialized state, wrapped in an `AttributeDictionary` for
-            convenient access.
+            The deserialized state as a flat mapping.
 
         """
-        # We always normalize the incoming JSON payload into a *dict*.
-        # Any failure to decode (or an unexpected non-mapping structure)
-        # results in an empty mapping so that the returned type adheres to
-        # :class:`BidiComponentState`.
+        # Normalize the incoming JSON payload into a dict. Any failure to decode
+        # (or an unexpected non-mapping structure) results in an empty mapping
+        # so that the returned type adheres to :class:`BidiComponentState`.
 
         deserialized_value: dict[str, Any]
 
@@ -243,8 +243,10 @@ class BidiComponentSerde:
                 if default_key not in deserialized_value:
                     deserialized_value[default_key] = default_value
 
-        state: BidiComponentState = {"value": deserialized_value}
-        return cast("BidiComponentState", AttributeDictionary(state))
+        state: BidiComponentState = cast(
+            "BidiComponentState", AttributeDictionary(deserialized_value)
+        )
+        return state
 
     def serialize(self, value: Any) -> str:
         """Serialize the component's state into a JSON string for the frontend.

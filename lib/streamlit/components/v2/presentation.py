@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict, TypeGuard, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
+from typing_extensions import Self
+
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.state.common import WidgetValuePresenter
 
@@ -28,16 +30,16 @@ if TYPE_CHECKING:
 _LOGGER = get_logger(__name__)
 
 
-class _WrappedValue(TypedDict):
-    value: Mapping[str, object]
-
-
 class _TriggerPayload(TypedDict, total=False):
     event: str
     value: object
 
 
-def make_bidi_component_presenter(aggregator_id: str) -> WidgetValuePresenter:
+def make_bidi_component_presenter(
+    aggregator_id: str,
+    component_id: str | None = None,
+    allowed_state_keys: set[str] | None = None,
+) -> WidgetValuePresenter:
     """Return a presenter that merges trigger events into CCv2 state.
 
     This function returns a callable that takes a component's persistent state
@@ -62,19 +64,25 @@ def make_bidi_component_presenter(aggregator_id: str) -> WidgetValuePresenter:
     """
 
     def _present(base_value: object, session_state: SessionState) -> object:
-        def _is_wrapped_value(obj: object) -> TypeGuard[_WrappedValue]:
-            if not isinstance(obj, dict):
-                return False
+        def _check_modification(k: str) -> None:
+            ctx = get_script_run_ctx()
+            if ctx is not None and component_id is not None:
+                user_key = session_state._key_id_mapper.get_key_from_id(component_id)
+                if (
+                    component_id in ctx.widget_ids_this_run
+                    or user_key in ctx.form_ids_this_run
+                ):
+                    raise StreamlitAPIException(
+                        f"`st.session_state.{user_key}.{k}` cannot be modified after the component"
+                        f" with key `{user_key}` is instantiated."
+                    )
 
-            # The cast is necessary to convince the type checker that key access is safe.
-            obj = cast("dict[str, object]", obj)
+        # Base state must be a flat mapping; otherwise, present as-is.
+        base_map: dict[str, object] | None = None
+        if isinstance(base_value, dict):
+            base_map = cast("dict[str, object]", base_value)
 
-            if "value" not in obj or len(obj) != 1:
-                return False
-
-            return isinstance(obj["value"], dict)
-
-        if _is_wrapped_value(base_value):
+        if base_map is not None:
             # Read the trigger aggregator payloads if present
             try:
                 agg_meta = session_state._new_widget_state.widget_metadata.get(
@@ -110,10 +118,72 @@ def make_bidi_component_presenter(aggregator_id: str) -> WidgetValuePresenter:
                         if isinstance(ev, str):
                             event_to_val[ev] = payload.get("value")
 
-                wrapped = cast("_WrappedValue", base_value)  # type: ignore[redundant-cast]
-                inner: dict[str, object] = dict(wrapped["value"])  # shallow copy
-                inner.update(event_to_val)
-                return {"value": inner}
+                # Merge triggers into a flat view: triggers first, then base
+                flat: dict[str, object] = dict(event_to_val)
+                flat.update(base_map)
+
+                # Return a write-through dict that updates the underlying
+                # component state when users assign nested keys via
+                # st.session_state[component_user_key][name] = value. Using a
+                # dict subclass ensures pretty-printing and JSON serialization
+                # behave as expected for st.write and logs.
+                class _WriteThrough(dict[str, object]):
+                    def __init__(self, data: dict[str, object]) -> None:
+                        super().__init__(data)
+
+                    def __getattr__(self, name: str) -> object:
+                        return self.get(name)
+
+                    def __setattr__(self, name: str, value: object) -> None:
+                        if name.startswith(("__", "_")):
+                            return super().__setattr__(name, value)
+                        self[name] = value
+                        return None
+
+                    def __deepcopy__(self, memo: dict[int, Any]) -> Self:
+                        # This object is a proxy to the real state. Don't copy it.
+                        memo[id(self)] = self
+                        return self
+
+                    def __setitem__(self, k: str, v: object) -> None:
+                        _check_modification(k)
+
+                        if (
+                            allowed_state_keys is not None
+                            and k not in allowed_state_keys
+                        ):
+                            # Silently ignore invalid keys to match permissive session_state semantics
+                            return
+
+                        # Update the underlying stored base state and this dict
+                        super().__setitem__(k, v)
+                        try:
+                            # Store back to session state's widget store as a flat mapping
+                            ss = session_state
+                            # Directly set the value in the new widget state store
+                            if component_id is not None:
+                                ss._new_widget_state.set_from_value(
+                                    component_id, dict(self)
+                                )
+                        except Exception as e:
+                            _LOGGER.debug("Failed to persist CCv2 state update: %s", e)
+
+                    def __delitem__(self, k: str) -> None:
+                        _check_modification(k)
+
+                        super().__delitem__(k)
+                        try:
+                            ss = session_state
+                            if component_id is not None:
+                                ss._new_widget_state.set_from_value(
+                                    component_id, dict(self)
+                                )
+                        except Exception as e:
+                            _LOGGER.debug(
+                                "Failed to persist CCv2 state deletion: %s", e
+                            )
+
+                return _WriteThrough(flat)
             except Exception as e:
                 # On any error, fall back to the base value
                 _LOGGER.debug(

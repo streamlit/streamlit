@@ -23,19 +23,12 @@ class BidiComponentState(TypedDict, total=False):
     """
     The schema for the state of a bidirectional component.
 
-    The state is stored in a dictionary-like object that supports both key and
-    attribute notation. States cannot be programmatically changed or set through
-    Session State.
-
-    Attributes
-    ----------
-    value
-        The current value of the component instance returned from the frontend,
-        or the default value if not yet set. This is a dictionary containing
-        the actual state key-value pairs.
+    The state is a flat dictionary-like object (key -> value) that supports
+    both key and attribute notation via :class:`AttributeDictionary`.
     """
 
-    value: dict[str, Any]
+    # Flat mapping of state key -> value
+    # (kept empty to reflect open set of keys)
 
 
 class BidiComponentResult(AttributeDictionary):
@@ -61,7 +54,9 @@ class BidiComponentResult(AttributeDictionary):
         super().__init__(
             {
                 # The order here matters, because all stateful values will
-                # always be returned, but trigger values may be transient.
+                # always be returned, but trigger values may be transient. This
+                # mirrors presentation behavior in
+                # `make_bidi_component_presenter`.
                 **trigger_vals,
                 **state_vals,
             }
@@ -69,36 +64,10 @@ class BidiComponentResult(AttributeDictionary):
 
 
 def unwrap_component_state(raw_state: Any) -> dict[str, Any]:
-    """Return the inner mapping of a valid :class:`BidiComponentState`.
+    """Return flat mapping when given a dict; otherwise, empty dict.
 
-    A valid component state **must** be a mapping that contains exactly one key:
-    ``"value"``, whose associated value is itself a mapping holding the actual
-    per-key state entries produced by the frontend.
-
-    Any other shape is considered invalid and will be treated as an empty
-    mapping. This strictness ensures we never silently accept malformed data
-    that could mask bugs elsewhere in the stack.
-
-    Parameters
-    ----------
-    raw_state
-        The value retrieved from Session State.
-
-    Returns
-    -------
-    dict[str, Any]
-        The *inner* state mapping if the input adheres to the expected
-        structure; otherwise, an empty ``dict``.
-
+    The new canonical state is flat, so this is effectively an identity for
+    dict inputs and a guard for other types.
     """
 
-    if (
-        isinstance(raw_state, dict)
-        and set(raw_state.keys()) == {"value"}
-        and isinstance(raw_state["value"], dict)
-    ):
-        # Shallow-copy to decouple from the original reference.
-        return dict(raw_state["value"])
-
-    # Any deviation from the expected schema is regarded as invalid.
-    return {}
+    return dict(raw_state) if isinstance(raw_state, dict) else {}

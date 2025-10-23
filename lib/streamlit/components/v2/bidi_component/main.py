@@ -29,7 +29,6 @@ from streamlit.components.v2.bidi_component.serialization import (
 )
 from streamlit.components.v2.bidi_component.state import (
     BidiComponentResult,
-    BidiComponentState,
     unwrap_component_state,
 )
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -48,12 +47,12 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id, to_key
 from streamlit.errors import (
+    BidiComponentInvalidCallbackNameError,
     BidiComponentInvalidDefaultKeyError,
     BidiComponentInvalidIdError,
     BidiComponentMissingContentError,
     BidiComponentUnserializableDataError,
 )
-from streamlit.logger import get_logger
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -64,9 +63,6 @@ if TYPE_CHECKING:
     # Define DeltaGenerator for type checking the dg property
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state.common import WidgetCallback
-
-
-_LOGGER = get_logger(__name__)
 
 
 def _make_trigger_id(base: str, event: str) -> str:
@@ -184,8 +180,7 @@ class BidiComponentMixin:
 
         if ctx is None:
             # Create an empty state with the default value and return it
-            state: BidiComponentState = {"value": {}}
-            return BidiComponentResult(state.get("value", {}), {})
+            return BidiComponentResult({}, {})
 
         # Get the component definition from the registry
         from streamlit.runtime import Runtime
@@ -233,9 +228,8 @@ class BidiComponentMixin:
                 # Not an event callback we recognize - skip.
                 continue
 
-            if not event_name:
-                # Malformed name like "on__change" - ignore for now.
-                continue
+            if not event_name or event_name == "_":
+                raise BidiComponentInvalidCallbackNameError(kwarg_key)
 
             callbacks_by_event[event_name] = kwarg_value
 
@@ -312,7 +306,16 @@ class BidiComponentMixin:
         # With generalized runtime dispatch, we can attach per-key callbacks
         # directly to the state widget by passing the callbacks mapping.
         # We also register a presenter to shape the user-visible session_state.
-        presenter = make_bidi_component_presenter(aggregator_id)
+        # Allowed state keys are the ones that have callbacks registered.
+        allowed_state_keys = (
+            set(callbacks_by_event.keys()) if callbacks_by_event else None
+        )
+        presenter = make_bidi_component_presenter(
+            aggregator_id,
+            computed_id,
+            allowed_state_keys,
+        )
+
         component_state = register_widget(
             bidi_component_proto.id,
             deserializer=serde.deserialize,
