@@ -295,11 +295,10 @@ export const useLayoutStyles = ({
 
     const direction = getDirection(flexContext)
 
-    // In vertical layouts, elements with stretch width need this minWidth
-    // to prevent them from potentially becoming too narrow when the container has width="content"
-    // In horizontal layouts, we use minStretchBehavior as flex-basis in getFlex instead.
+    // Apply min-width protection inside content-width containers to prevent elements
+    // from becoming too narrow when the container shrinks to fit its content.
     if (
-      direction === Direction.VERTICAL &&
+      flexContext?.isInContentWidthContainer &&
       widthConfig.type === DimensionType.STRETCH &&
       minStretchBehavior !== undefined
     ) {
