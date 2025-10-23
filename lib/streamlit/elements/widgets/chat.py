@@ -205,6 +205,7 @@ def _pop_audio_file(
     """Extract and return a single audio file from the protobuf message.
 
     Similar to _pop_upload_files but handles a single audio file instead of a list.
+    Validates that the uploaded file is a WAV file.
     """
     if audio_file_info is None:
         return None
@@ -223,6 +224,21 @@ def _pop_audio_file(
 
     file_rec = file_recs_list[0]
     uploaded_file = UploadedFile(file_rec, audio_file_info.file_urls)
+
+    # Validate that the file is a WAV file by checking extension and MIME type
+    if not uploaded_file.name.lower().endswith(".wav"):
+        raise StreamlitAPIException(
+            f"Invalid file extension for audio input: `{uploaded_file.name}`. "
+            "Only WAV files (.wav) are accepted."
+        )
+
+    # Validate MIME type (browsers may send different variations of WAV MIME types)
+    valid_mime_types = {"audio/wav", "audio/wave", "audio/x-wav"}
+    if uploaded_file.type not in valid_mime_types:
+        raise StreamlitAPIException(
+            f"Invalid MIME type for audio input: `{uploaded_file.type}`. "
+            f"Expected one of {valid_mime_types}."
+        )
 
     if hasattr(ctx.uploaded_file_mgr, "remove_file"):
         ctx.uploaded_file_mgr.remove_file(
