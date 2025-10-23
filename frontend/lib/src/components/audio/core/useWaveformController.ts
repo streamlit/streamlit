@@ -229,20 +229,13 @@ export function useWaveformController({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       eventsRef.current.onError?.(err)
-      throw err
     } finally {
       isInitializingRef.current = false
     }
   }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
-    initializeWaveSurfer().catch(error => {
-      // eslint-disable-next-line no-console
-      console.error("[useWaveformController] Failed to initialize:", error)
-      eventsRef.current.onError?.(
-        error instanceof Error ? error : new Error(String(error))
-      )
-    })
+    void initializeWaveSurfer()
 
     return (): void => {
       destroy()
