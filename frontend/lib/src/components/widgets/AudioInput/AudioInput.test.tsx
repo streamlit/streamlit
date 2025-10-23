@@ -200,7 +200,7 @@ describe("AudioInput Recording Journey", () => {
     })
 
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Verify upload was triggered
@@ -254,7 +254,7 @@ describe("AudioInput Recording Journey", () => {
     const oldBlob = new Blob(["old"])
     act(() => {
       latestEvents?.onRecordReady?.(oldBlob)
-      latestEvents?.onApprove?.(oldBlob)
+      void latestEvents?.onApprove?.(oldBlob)
     })
 
     await waitFor(() => {
@@ -278,7 +278,7 @@ describe("AudioInput Recording Journey", () => {
     // Approve new recording
     const newBlob = new Blob(["new"])
     act(() => {
-      latestEvents?.onApprove?.(newBlob)
+      void latestEvents?.onApprove?.(newBlob)
     })
 
     // Verify old blob URL was revoked when new one created
@@ -415,7 +415,7 @@ describe("AudioInput Playback Journey", () => {
     })
 
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload to complete
@@ -478,7 +478,7 @@ describe("AudioInput Playback Journey", () => {
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
       latestEvents?.onRecordReady?.(testBlob)
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload
@@ -587,7 +587,7 @@ describe("AudioInput Upload & Abort", () => {
     // Trigger upload
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload to start
@@ -617,7 +617,7 @@ describe("AudioInput Upload & Abort", () => {
     // Start first upload
     const testBlob1 = new Blob(["first"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob1)
+      void latestEvents?.onApprove?.(testBlob1)
     })
 
     await waitFor(() => {
@@ -630,7 +630,7 @@ describe("AudioInput Upload & Abort", () => {
     // Trigger second upload (which should abort first)
     const testBlob2 = new Blob(["second"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob2)
+      void latestEvents?.onApprove?.(testBlob2)
     })
 
     // First upload should have been aborted
@@ -648,7 +648,7 @@ describe("AudioInput Upload & Abort", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {
@@ -672,7 +672,7 @@ describe("AudioInput Upload & Abort", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {
@@ -770,7 +770,7 @@ describe("AudioInput Memory Management", () => {
     // Create first recording
     const blob1 = new Blob(["first"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob1)
+      void latestEvents?.onApprove?.(blob1)
     })
 
     await waitFor(() => {
@@ -782,7 +782,7 @@ describe("AudioInput Memory Management", () => {
     // Create second recording
     const blob2 = new Blob(["second"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob2)
+      void latestEvents?.onApprove?.(blob2)
     })
 
     await waitFor(() => {
@@ -804,7 +804,7 @@ describe("AudioInput Memory Management", () => {
     // Create recording
     const blob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob)
+      void latestEvents?.onApprove?.(blob)
     })
 
     await waitFor(() => {
@@ -937,7 +937,7 @@ describe("AudioInput Form Integration", () => {
     // Create recording
     const blob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob)
+      void latestEvents?.onApprove?.(blob)
     })
 
     await waitFor(() => {
@@ -1176,7 +1176,7 @@ describe("AudioInput Widget State", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {
