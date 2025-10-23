@@ -666,11 +666,6 @@ class ChatMixin:
             https://doc-chat-input-session-state.streamlit.app/
             height: 350px
         """
-        if accept_file not in {True, False, "multiple", "directory"}:
-            raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
-            )
-
         key = to_key(key)
 
         check_widget_policies(
@@ -680,6 +675,11 @@ class ChatMixin:
             default_value=None,
             writes_allowed=True,
         )
+
+        if accept_file not in {True, False, "multiple", "directory"}:
+            raise StreamlitAPIException(
+                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            )
 
         ctx = get_script_run_ctx()
 
