@@ -23,7 +23,7 @@ export interface WaveformControllerEvents {
   onError?: (error: Error) => void
   onRecordStart?: () => void
   onRecordReady?: (blob: Blob) => void
-  onApprove?: (wav: Blob) => void | Promise<void>
+  onApprove?: (wav: Blob) => Promise<void>
   onCancel?: () => void
   onProgressMs?: (ms: number) => void
   onPlaybackPlay?: () => void
