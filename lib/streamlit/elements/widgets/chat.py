@@ -240,6 +240,10 @@ def _pop_audio_file(
             f"Expected one of {valid_mime_types}."
         )
 
+    # Remove the file from the manager after creating the UploadedFile object.
+    # Note: remove_file is not part of the UploadedFileManager Protocol, but is
+    # implemented by MemoryUploadedFileManager. We use hasattr to maintain
+    # compatibility with potential alternative implementations.
     if hasattr(ctx.uploaded_file_mgr, "remove_file"):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
