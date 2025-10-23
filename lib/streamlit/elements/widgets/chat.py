@@ -747,7 +747,7 @@ class ChatMixin:
             accept_files=accept_file in {True, "multiple", "directory"},
             allowed_types=file_type,
         )
-        widget_state = register_widget(
+        widget_state = register_widget(  # type: ignore[misc]
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -756,7 +756,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
-        )  # type: ignore[misc]
+        )
 
         validate_width(width)
         layout_config = LayoutConfig(width=width)
