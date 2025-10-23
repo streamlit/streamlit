@@ -31,8 +31,6 @@ export const StyledResizableContainer =
       position: "relative",
       display: disableResize ? "flex" : "inline-block",
       height: "100%",
-      width: "100%",
-      maxWidth: "100%",
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
