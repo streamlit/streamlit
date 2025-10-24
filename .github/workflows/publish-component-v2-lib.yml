@@ -1,0 +1,93 @@
+name: Publish @streamlit/component-v2-lib to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref (branch, sha, or tag) to publish from
+        type: string
+        required: false
+      dry_run:
+        description: Run npm publish in dry-run mode
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: npm-publish-component-v2-lib
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-component-v2-lib:
+    if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node and npm registry
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies (@streamlit/component-v2-lib)
+        working-directory: frontend/component-v2-lib
+        run: yarn install --immutable
+
+      - name: Guard version does not already exist on npm (@streamlit/component-v2-lib)
+        working-directory: frontend/component-v2-lib
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Version to publish: $VERSION"
+          if npm view @streamlit/component-v2-lib@"$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists on npm"; exit 1; fi
+
+      - name: Build, lint, and test (@streamlit/component-v2-lib)
+        working-directory: frontend/component-v2-lib
+        run: |
+          yarn build
+          yarn lint
+          yarn test
+
+      - name: Validate publish contents (@streamlit/component-v2-lib)
+        working-directory: frontend/component-v2-lib
+        run: |
+          npm pack --dry-run
+          test -d dist || (echo "Missing dist folder" && exit 1)
+
+      - name: Publish (dry-run) @streamlit/component-v2-lib
+        if: inputs.dry_run == true
+        working-directory: frontend/component-v2-lib
+        run: npm publish --dry-run --provenance --access public
+
+      - name: Publish (live) @streamlit/component-v2-lib
+        if: inputs.dry_run == false
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: frontend/component-v2-lib
+        run: npm publish --provenance --access public
+
+      - name: Verify published version (@streamlit/component-v2-lib)
+        if: inputs.dry_run == false
+        working-directory: frontend/component-v2-lib
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Published version:" $(npm view @streamlit/component-v2-lib@"$VERSION" version)
