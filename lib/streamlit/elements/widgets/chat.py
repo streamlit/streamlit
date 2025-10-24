@@ -206,6 +206,16 @@ def _pop_audio_file(
 
     Similar to _pop_upload_files but handles a single audio file instead of a list.
     Validates that the uploaded file is a WAV file.
+
+    Parameters
+    ----------
+    audio_file_info : UploadedFileInfoProto or None
+        The protobuf message containing information about the uploaded audio file.
+
+    Returns
+    -------
+    UploadedFile or None
+        The extracted audio file if available, None otherwise.
     """
     if audio_file_info is None:
         return None
@@ -244,7 +254,7 @@ def _pop_audio_file(
     # Note: remove_file is not part of the UploadedFileManager Protocol, but is
     # implemented by MemoryUploadedFileManager. We use hasattr to maintain
     # compatibility with potential alternative implementations.
-    if hasattr(ctx.uploaded_file_mgr, "remove_file"):
+    if audio_file_info and hasattr(ctx.uploaded_file_mgr, "remove_file"):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
             file_id=audio_file_info.file_id,
