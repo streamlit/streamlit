@@ -47,6 +47,9 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
+      - name: Ensure latest npm for Trusted Publishing
+        run: npm install -g npm@latest
+
       - name: Install dependencies (@streamlit/component-v2-lib)
         working-directory: frontend/component-v2-lib
         run: yarn install --immutable
@@ -76,14 +79,12 @@ jobs:
       - name: Publish (dry-run) @streamlit/component-v2-lib
         if: inputs.dry_run == true
         working-directory: frontend/component-v2-lib
-        run: npm publish --dry-run --provenance --access public
+        run: npm publish --dry-run
 
       - name: Publish (live) @streamlit/component-v2-lib
         if: inputs.dry_run == false
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: frontend/component-v2-lib
-        run: npm publish --provenance --access public
+        run: npm publish
 
       - name: Verify published version (@streamlit/component-v2-lib)
         if: inputs.dry_run == false
