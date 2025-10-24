@@ -36,6 +36,7 @@ CONTAINER_KEYS = [
     "layout-vertical-content-width-container-with-various-elements",
     # Moved from st_layouts_container_min_width.py
     "layout-vertical-content-width-container-with-stretch-width-dataframes",
+    "layout-vertical-content-width-container-with-content-width-dataframes",
     "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
     "narrow-fixed-width-container-with-dataframe",
 ]

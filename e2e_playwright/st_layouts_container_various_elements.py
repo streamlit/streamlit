@@ -257,6 +257,14 @@ with st.container(
     st.dataframe(medium_data, width="stretch")
 
 with st.container(
+    width="content",
+    border=True,
+    key="layout-vertical-content-width-container-with-content-width-dataframes",
+):
+    st.dataframe(small_data, width="content")
+    st.dataframe(medium_data, width="content")
+
+with st.container(
     horizontal=True,
     width="content",
     border=True,
