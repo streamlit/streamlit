@@ -132,15 +132,15 @@ export function useWaveformController({
       const playerEvents: PlayerEvents = {
         onPlay: () => {
           setIsPlaybackPlaying(true)
-          eventsRef.current.onPlaybackPlay?.()
+          void eventsRef.current.onPlaybackPlay?.()
         },
         onPause: () => {
           setIsPlaybackPlaying(false)
-          eventsRef.current.onPlaybackPause?.()
+          void eventsRef.current.onPlaybackPause?.()
         },
         onFinish: () => {
           setIsPlaybackPlaying(false)
-          eventsRef.current.onPlaybackFinish?.()
+          void eventsRef.current.onPlaybackFinish?.()
         },
         onReady: () => {
           notifyReady()
@@ -148,7 +148,7 @@ export function useWaveformController({
         onError: (error: Error) => {
           setIsPlaybackPlaying(false)
           notifyReadyError(error)
-          eventsRef.current.onError?.(error)
+          void eventsRef.current.onError?.(error)
         },
       }
 
@@ -206,14 +206,14 @@ export function useWaveformController({
       recordBackend.initialize(ws, RecordPluginClass)
       recordBackend.setEventHandlers({
         onRecordProgress: (ms: number) => {
-          eventsRef.current.onProgressMs?.(ms)
+          void eventsRef.current.onProgressMs?.(ms)
         },
         onPermissionDenied: () => {
-          eventsRef.current.onPermissionDenied?.()
+          void eventsRef.current.onPermissionDenied?.()
           setCurrentState("idle")
         },
         onError: (error: Error) => {
-          eventsRef.current.onError?.(error)
+          void eventsRef.current.onError?.(error)
           setCurrentState("idle")
         },
       })
@@ -228,7 +228,7 @@ export function useWaveformController({
       isInitializedRef.current = true
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      eventsRef.current.onError?.(err)
+      void eventsRef.current.onError?.(err)
     } finally {
       isInitializingRef.current = false
     }
@@ -305,7 +305,7 @@ export function useWaveformController({
     setCurrentState("recording")
     setCurrentBlob(null)
     setIsPlaybackPlaying(false)
-    eventsRef.current.onRecordStart?.()
+    void eventsRef.current.onRecordStart?.()
   }, [currentState, initializeWaveSurfer, theme.colors.primary])
 
   const resetPlayer = useCallback((): void => {
@@ -399,7 +399,7 @@ export function useWaveformController({
 
       lastStopResultRef.current = stopResult
 
-      eventsRef.current.onRecordReady?.(rawBlob)
+      void eventsRef.current.onRecordReady?.(rawBlob)
       return stopResult
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
@@ -424,7 +424,7 @@ export function useWaveformController({
         lastStopResultRef.current = null
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
-        eventsRef.current.onError?.(err)
+        void eventsRef.current.onError?.(err)
         throw err
       }
     },
@@ -441,7 +441,7 @@ export function useWaveformController({
     setCurrentState("idle")
     setIsPlaybackPlaying(false)
     isPlaybackModeRef.current = false
-    eventsRef.current.onCancel?.()
+    void eventsRef.current.onCancel?.()
     lastStopResultRef.current = null
   }, [currentState, resetPlayer])
 

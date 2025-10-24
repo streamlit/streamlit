@@ -19,16 +19,16 @@ import type { RefObject } from "react"
 export type RecordingState = "idle" | "recording"
 
 export interface WaveformControllerEvents {
-  onPermissionDenied?: () => void
-  onError?: (error: Error) => void
-  onRecordStart?: () => void
-  onRecordReady?: (blob: Blob) => void
+  onPermissionDenied?: () => Promise<void>
+  onError?: (error: Error) => Promise<void>
+  onRecordStart?: () => Promise<void>
+  onRecordReady?: (blob: Blob) => Promise<void>
   onApprove?: (wav: Blob) => Promise<void>
-  onCancel?: () => void
-  onProgressMs?: (ms: number) => void
-  onPlaybackPlay?: () => void
-  onPlaybackPause?: () => void
-  onPlaybackFinish?: () => void
+  onCancel?: () => Promise<void>
+  onProgressMs?: (ms: number) => Promise<void>
+  onPlaybackPlay?: () => Promise<void>
+  onPlaybackPause?: () => Promise<void>
+  onPlaybackFinish?: () => Promise<void>
 }
 
 export interface AudioMeta {
