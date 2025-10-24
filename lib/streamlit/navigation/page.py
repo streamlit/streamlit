@@ -159,7 +159,7 @@ class StreamlitPage:
         The title of the page.
 
         The title may contain basic markdown formatting (bold, italics, emoji
-        shortcodes, links, etc.) which will be stripped when setting the browser
+        shortcodes, etc.) which will be stripped when setting the browser
         tab title. Unless declared otherwise in ``st.Page``, the page title is
         inferred from the filename or callable name. For more information, see
         `Overview of multipage apps

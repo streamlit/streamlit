@@ -167,6 +167,10 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
       whiteSpace: "nowrap",
       textOverflow: "ellipsis",
       display: "table-cell",
+
+      p: {
+        display: "inline",
+      },
       /* Pseudo-element to reserve bold width */
       "&::after": {
         content: `"${label}"` /* duplicate text */,

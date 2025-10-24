@@ -17,10 +17,15 @@
 import React, { MouseEvent, ReactElement } from "react"
 
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
-import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
-
-import NavigationTitle from "./NavigationTitle"
 import {
+  DynamicIcon,
+  isMaterialIcon,
+  StreamlitMarkdown,
+  useEmotionTheme,
+} from "@streamlit/lib"
+
+import {
+  StyledSidebarLinkText,
   StyledSidebarNavIcon,
   StyledSidebarNavLink,
   StyledSidebarNavLinkContainer,
@@ -91,12 +96,27 @@ const SidebarNavLink = ({
             />
           </StyledSidebarNavIcon>
         ) : null}
-        <NavigationTitle
-          title={children}
+        <StyledSidebarLinkText
           isActive={isActive}
           isTopNav={isTopNav}
           disabled={disableSidebarNavLinks}
-        />
+          label={children}
+        >
+          <StreamlitMarkdown
+            source={children}
+            allowHTML={false}
+            isLabel={true}
+            boldLabel={isActive}
+            largerLabel={false}
+            disableLinks={true}
+            inheritFont={true}
+            style={{
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+            }}
+          />
+        </StyledSidebarLinkText>
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>
   )
