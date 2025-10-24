@@ -65,7 +65,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
 
     # Wait for map elements to load (now we have 2 maps)
     map_elements = app.get_by_test_id("stDeckGlJsonChart")
-    expect(map_elements).to_have_count(1, timeout=15000)
+    expect(map_elements).to_have_count(2, timeout=15000)
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
     app.wait_for_timeout(10000)
