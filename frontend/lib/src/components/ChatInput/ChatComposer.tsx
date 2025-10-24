@@ -111,13 +111,16 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const waveformContainerRef = useRef<HTMLDivElement>(null)
 
   const [text, setText] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [isRecording, setIsRecording] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const controller = useWaveformController({})
+  const controller = useWaveformController({
+    containerRef: waveformContainerRef,
+  })
 
   // Cleanup controller on unmount
   useEffect(() => {
