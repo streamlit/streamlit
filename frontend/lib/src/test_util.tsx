@@ -43,6 +43,7 @@ const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
   isInRoot: false,
+  isInContentWidthContainer: false,
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
