@@ -61,7 +61,9 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "Version to publish: $VERSION"
           if npm view @streamlit/component-v2-lib@"$VERSION" version >/dev/null 2>&1; then
-            echo "Version $VERSION already exists on npm"; exit 1; fi
+            echo "Version $VERSION already exists on npm"
+            exit 1
+          fi
 
       - name: Build, lint, and test (@streamlit/component-v2-lib)
         working-directory: frontend/component-v2-lib
