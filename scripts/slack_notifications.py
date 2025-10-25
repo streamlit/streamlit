@@ -205,6 +205,49 @@ def send_notification() -> None:
             )
             payload = {"text": text}
 
+    if workflow == "npm_publish":
+        repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
+        run_id = os.getenv("RUN_ID")
+        package_name = os.getenv("PACKAGE_NAME", "")
+        package_version = os.getenv("PACKAGE_VERSION", "")
+        npm_link = (
+            f"https://www.npmjs.com/package/{package_name}/v/{package_version}"
+            if package_name and package_version
+            else None
+        )
+
+        if message_key == "success":
+            lines = [
+                ":package: npm publish succeeded",
+                f"- Package: {package_name}@{package_version}"
+                if package_name and package_version
+                else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+                (f"- npm: {npm_link}" if npm_link else None),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+        else:
+            error_reason = os.getenv("ERROR_REASON", "")
+            lines = [
+                ":x: npm publish failed",
+                f"- Package: {package_name}@{package_version}"
+                if package_name and package_version
+                else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+                (f"- Note: {error_reason}" if error_reason else None),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
     if payload:
         response = requests.post(webhook, json=payload)
 
