@@ -376,13 +376,13 @@ def _apply_row_additions(
             # already exists. In the future, it would be better to
             # require users to provide unique non-None values for the index with
             # some kind of visual indications.
-            df.loc[index_value, :] = new_row
+            df.loc[index_value, :] = pd.Series(new_row, index=df.columns)
             continue
 
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            df.loc[index_stop, :] = new_row
+            df.loc[index_stop, :] = pd.Series(new_row, index=df.columns)
             # Increment to the next range index value
             index_stop += index_step
             continue
