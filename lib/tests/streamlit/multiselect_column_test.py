@@ -15,40 +15,63 @@
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pyarrow as pa
 
 import streamlit as st
+from streamlit.elements.lib.column_config_utils import determine_dataframe_schema
+from streamlit.elements.widgets.data_editor import _apply_row_additions
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class DataEditorMultiselectTest(DeltaGeneratorTestCase):
-    """Tests for DataEditor MultiselectColumn bug."""
+    """Unit tests for _apply_row_additions with list-type cells."""
 
-    def test_multiselect_column_with_list_values(self):
-        """Ensure DataEditor renders correctly with list-of-list column."""
-        data_df = pd.DataFrame(
+    def test_apply_row_additions_with_data_editor_integration(self):
+        """_apply_row_additions should correctly add rows when using a real DataEditor setup."""
+
+        df = pd.DataFrame(
             {
                 "category": [
-                    ["a", "b"],
-                    ["b", "c"],
-                    ["a"],
+                    ["exploration", "visualization"],
+                    ["llm", "visualization"],
+                    ["exploration"],
                 ],
+                "is_active": [True, True, True],
             }
         )
 
         st.data_editor(
-            data_df,
+            df,
             hide_index=True,
             num_rows="dynamic",
             key="data_editor_key",
             column_config={
                 "category": st.column_config.MultiselectColumn(
-                    "Categories",
-                    options=["a", "b", "c"],
+                    "App Categories",
+                    help="The categories of the app",
+                    options=["exploration", "visualization", "llm"],
+                ),
+                "is_active": st.column_config.CheckboxColumn(
+                    "Active",
+                    help="Tick to include this app in the analysis.",
+                    default=True,
+                    required=True,
                 ),
             },
         )
 
-        last_delta = self.get_delta_from_queue()
-        assert last_delta is not None
-        assert last_delta.new_element.WhichOneof("type") == "arrow_data_frame"
+        added_rows = [{"category": ["llm"], "is_active": True}]
+        arrow_table = pa.Table.from_pandas(df)
+        dataframe_schema = determine_dataframe_schema(df, arrow_table.schema)
+
+        _apply_row_additions(df, added_rows, dataframe_schema)
+
+        expected = [
+            ["exploration", "visualization"],
+            ["llm", "visualization"],
+            ["exploration"],
+            ["llm"],
+        ]
+        assert df["category"].tolist() == expected
+        assert df["is_active"].tolist() == [True, True, True, True]
