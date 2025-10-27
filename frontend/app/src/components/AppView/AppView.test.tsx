@@ -33,6 +33,7 @@ import {
   mockTheme,
   NavigationContextProps,
   render,
+  renderWithContexts,
   ThemeContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -78,6 +79,9 @@ function getNavigationContextOutput(
   }
 }
 
+// Store original useContext at module level to avoid issues with spy layering
+const originalUseContext = React.useContext
+
 // Helper to setup context mocks for tests
 function setupContextMocks(options?: {
   appContext?: Partial<AppContextProps>
@@ -87,9 +91,19 @@ function setupContextMocks(options?: {
     () => getAppContextOutput(options?.appContext || {})
   )
 
-  vi.spyOn(LibModule, "useNavigationContext").mockImplementation(() =>
-    getNavigationContextOutput(options?.navigationContext || {})
-  )
+  vi.spyOn(React, "useContext").mockImplementation(context => {
+    if (context === LibModule.NavigationContext) {
+      return getNavigationContextOutput(options?.navigationContext || {})
+    }
+    if (context === ThemeContext) {
+      return {
+        activeTheme: mockTheme,
+        setTheme: vi.fn(),
+        availableThemes: [],
+      }
+    }
+    return originalUseContext(context)
+  })
 
   vi.spyOn(LibModule, "useRequiredContext").mockImplementation(context => {
     if (context === ThemeContext) {
@@ -137,6 +151,39 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     removeScriptFinishedHandler: vi.fn(),
     ...props,
   }
+}
+
+// Helper to render AppView with proper context
+function renderAppView(
+  props: Partial<AppViewProps> = {},
+  overrides?: {
+    appContext?: Partial<AppContextProps>
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): ReturnType<typeof renderWithContexts> {
+  // Setup AppContext mock with overrides if provided
+  if (overrides?.appContext) {
+    setupContextMocks({
+      appContext: overrides.appContext,
+      navigationContext: overrides.navigationContext,
+    })
+  } else if (overrides?.navigationContext) {
+    setupContextMocks({ navigationContext: overrides.navigationContext })
+  }
+
+  const fullProps = getProps(props)
+  const navigationContextValues = {
+    ...getNavigationContextOutput({}),
+    ...(overrides?.navigationContext || {}),
+  }
+  return renderWithContexts(
+    <AppView {...fullProps} />,
+    {}, // libContextProps
+    {}, // themeContextProps
+    navigationContextValues, // navigationContextProps
+    {}, // formsContextProps
+    {} // scriptRunContextProps
+  )
 }
 
 describe("AppView element", () => {
@@ -207,16 +254,17 @@ describe("AppView element", () => {
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
-    setupContextMocks({
-      navigationContext: {
-        appPages: [
-          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-          { pageName: "page2", pageScriptHash: "page2_hash" },
-        ],
-      },
-    })
-
-    render(<AppView {...getProps({})} />)
+    renderAppView(
+      {},
+      {
+        navigationContext: {
+          appPages: [
+            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+            { pageName: "page2", pageScriptHash: "page2_hash" },
+          ],
+        },
+      }
+    )
 
     const sidebarDOMElement = screen.queryByTestId("stSidebar")
     expect(sidebarDOMElement).toBeInTheDocument()
@@ -397,22 +445,19 @@ describe("AppView element", () => {
       })
 
       it("uses 8rem top padding when top nav is showing (>1 page)", () => {
-        setupContextMocks({
-          navigationContext: {
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
+        renderAppView(
+          {
+            embedded: false,
+            navigationPosition: Navigation.Position.TOP,
           },
-        })
-
-        render(
-          <AppView
-            {...getProps({
-              embedded: false,
-              navigationPosition: Navigation.Position.TOP,
-            })}
-          />
+          {
+            navigationContext: {
+              appPages: [
+                { pageName: "page1", pageScriptHash: "hash1" },
+                { pageName: "page2", pageScriptHash: "hash2" },
+              ],
+            },
+          }
         )
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("8rem")
@@ -626,27 +671,24 @@ describe("AppView element", () => {
         })
 
         it("uses 4.5rem top padding when header content exists (navigation)", () => {
-          setupContextMocks({
-            appContext: {
-              showToolbar: false,
+          renderAppView(
+            {
+              embedded: true,
+              showPadding: false,
+              appLogo: null,
+              navigationPosition: Navigation.Position.TOP,
             },
-            navigationContext: {
-              appPages: [
-                { pageName: "page1", pageScriptHash: "hash1" },
-                { pageName: "page2", pageScriptHash: "hash2" },
-              ],
-            },
-          })
-
-          render(
-            <AppView
-              {...getProps({
-                embedded: true,
-                showPadding: false,
-                appLogo: null,
-                navigationPosition: Navigation.Position.TOP,
-              })}
-            />
+            {
+              appContext: {
+                showToolbar: false,
+              },
+              navigationContext: {
+                appPages: [
+                  { pageName: "page1", pageScriptHash: "hash1" },
+                  { pageName: "page2", pageScriptHash: "hash2" },
+                ],
+              },
+            }
           )
 
           const style = getMainBlockContainerStyle()
@@ -964,19 +1006,16 @@ describe("AppView element", () => {
 
   describe("navigation position rendering", () => {
     it("renders sidebar navigation when navigationPosition=SIDEBAR", () => {
-      setupContextMocks({
-        navigationContext: {
-          appPages: [
-            { pageName: "page1", pageScriptHash: "hash1" },
-            { pageName: "page2", pageScriptHash: "hash2" },
-          ],
-        },
-      })
-
-      render(
-        <AppView
-          {...getProps({ navigationPosition: Navigation.Position.SIDEBAR })}
-        />
+      renderAppView(
+        { navigationPosition: Navigation.Position.SIDEBAR },
+        {
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
       )
 
       expect(screen.queryByTestId("stSidebar")).toBeInTheDocument()
@@ -985,19 +1024,16 @@ describe("AppView element", () => {
     })
 
     it("renders top navigation when navigationPosition=TOP", () => {
-      setupContextMocks({
-        navigationContext: {
-          appPages: [
-            { pageName: "page1", pageScriptHash: "hash1" },
-            { pageName: "page2", pageScriptHash: "hash2" },
-          ],
-        },
-      })
-
-      render(
-        <AppView
-          {...getProps({ navigationPosition: Navigation.Position.TOP })}
-        />
+      renderAppView(
+        { navigationPosition: Navigation.Position.TOP },
+        {
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
       )
 
       // Check that nav is in the header area
@@ -1103,19 +1139,16 @@ describe("AppView element", () => {
     })
 
     it("header has solid background when navigation is shown", () => {
-      setupContextMocks({
-        navigationContext: {
-          appPages: [
-            { pageName: "page1", pageScriptHash: "hash1" },
-            { pageName: "page2", pageScriptHash: "hash2" },
-          ],
-        },
-      })
-
-      render(
-        <AppView
-          {...getProps({ navigationPosition: Navigation.Position.TOP })}
-        />
+      renderAppView(
+        { navigationPosition: Navigation.Position.TOP },
+        {
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
       )
 
       const header = screen.getByTestId("stHeader")
@@ -1184,25 +1217,22 @@ describe("AppView element", () => {
 
     it("header shows navigation in embed mode with top nav", () => {
       // Mock embed mode (showToolbar = false) and multiple pages
-      setupContextMocks({
-        appContext: {
-          showToolbar: false, // This simulates embed=true without show_toolbar
+      renderAppView(
+        {
+          navigationPosition: Navigation.Position.TOP,
+          embedded: true,
         },
-        navigationContext: {
-          appPages: [
-            { pageName: "page1", pageScriptHash: "hash1" },
-            { pageName: "page2", pageScriptHash: "hash2" },
-          ],
-        },
-      })
-
-      render(
-        <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            embedded: true,
-          })}
-        />
+        {
+          appContext: {
+            showToolbar: false, // This simulates embed=true without show_toolbar
+          },
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
       )
 
       // Header should be visible
@@ -1420,22 +1450,19 @@ describe("AppView element", () => {
     })
 
     it("shows sidebar when multiple pages exist even with AUTO state", () => {
-      setupContextMocks({
-        appContext: {
-          initialSidebarState: PageConfig.SidebarState.AUTO,
-        },
-        navigationContext: {
-          appPages: [
-            { pageName: "page1", pageScriptHash: "hash1" },
-            { pageName: "page2", pageScriptHash: "hash2" },
-          ],
-        },
-      })
-
-      render(
-        <AppView
-          {...getProps({ navigationPosition: Navigation.Position.SIDEBAR })}
-        />
+      renderAppView(
+        { navigationPosition: Navigation.Position.SIDEBAR },
+        {
+          appContext: {
+            initialSidebarState: PageConfig.SidebarState.AUTO,
+          },
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
       )
 
       // Sidebar should be rendered and expanded initially

@@ -21,8 +21,7 @@ import userEvent from "@testing-library/user-event"
 
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import * as LibModule from "@streamlit/lib"
-import { NavigationContextProps, render } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 
 import SidebarNavLink, { SidebarNavLinkProps } from "./SidebarNavLink"
@@ -54,30 +53,35 @@ function getAppContextOutput(
   }
 }
 
-function getNavigationContextOutput(
-  context: Partial<NavigationContextProps>
-): NavigationContextProps {
-  return {
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
-    ...context,
-  }
-}
-
 // Helper to setup context mocks for tests
 function setupContextMocks(options?: {
   appContext?: Partial<AppContextProps>
-  navigationContext?: Partial<NavigationContextProps>
 }): void {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
     getAppContextOutput(options?.appContext || {})
   )
+}
 
-  vi.spyOn(LibModule, "useNavigationContext").mockReturnValue(
-    getNavigationContextOutput(options?.navigationContext || {})
+// Helper to render SidebarNavLink with proper context
+function renderSidebarNavLink(
+  props: Partial<SidebarNavLinkProps> = {},
+  overrides?: {
+    appContext?: Partial<AppContextProps>
+  }
+): ReturnType<typeof renderWithContexts> {
+  // Setup AppContext mock with overrides if provided
+  if (overrides?.appContext) {
+    setupContextMocks({ appContext: overrides.appContext })
+  }
+
+  const fullProps = getProps(props)
+  return renderWithContexts(
+    <SidebarNavLink {...fullProps} />,
+    {}, // libContextProps
+    {}, // themeContextProps
+    {}, // navigationContextProps
+    {}, // formsContextProps
+    {} // scriptRunContextProps
   )
 }
 
@@ -92,7 +96,7 @@ describe("SidebarNavLink", () => {
   })
 
   it("renders without crashing", () => {
-    render(<SidebarNavLink {...getProps()} />)
+    renderSidebarNavLink()
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     expect(sidebarNavLink).toHaveTextContent("Test")
@@ -100,7 +104,7 @@ describe("SidebarNavLink", () => {
   })
 
   it("has the correct href & text", () => {
-    render(<SidebarNavLink {...getProps()} />)
+    renderSidebarNavLink()
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     expect(sidebarNavLink).toHaveAttribute("href", "https://www.example.com")
@@ -108,7 +112,7 @@ describe("SidebarNavLink", () => {
   })
 
   it("renders with material icon", () => {
-    render(<SidebarNavLink {...getProps({ icon: ":material/page:" })} />)
+    renderSidebarNavLink({ icon: ":material/page:" })
 
     screen.getByTestId("stSidebarNavLink")
 
@@ -117,7 +121,7 @@ describe("SidebarNavLink", () => {
   })
 
   it("renders with emoji icon", () => {
-    render(<SidebarNavLink {...getProps({ icon: "🚀" })} />)
+    renderSidebarNavLink({ icon: "🚀" })
 
     screen.getByTestId("stSidebarNavLink")
 
@@ -126,26 +130,26 @@ describe("SidebarNavLink", () => {
   })
 
   it("renders a non-active page properly", () => {
-    render(<SidebarNavLink {...getProps()} />)
+    renderSidebarNavLink()
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     expect(sidebarNavLink).not.toHaveAttribute("aria-current")
   })
 
   it("renders an active page properly", () => {
-    render(<SidebarNavLink {...getProps({ isActive: true })} />)
+    renderSidebarNavLink({ isActive: true })
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     expect(sidebarNavLink).toHaveAttribute("aria-current", "page")
   })
 
   it("renders when widgets are disabled", () => {
-    // Update the mock to return a context with widgetsDisabled set to true
-    setupContextMocks({
-      appContext: { widgetsDisabled: true },
-    })
-
-    render(<SidebarNavLink {...getProps()} />)
+    renderSidebarNavLink(
+      {},
+      {
+        appContext: { widgetsDisabled: true },
+      }
+    )
 
     screen.getByTestId("stSidebarNavLinkContainer")
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
@@ -155,7 +159,7 @@ describe("SidebarNavLink", () => {
   it("calls onClick when clicked", async () => {
     const user = userEvent.setup()
     const onClick = vi.fn()
-    render(<SidebarNavLink {...getProps({ onClick })} />)
+    renderSidebarNavLink({ onClick })
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     await user.click(sidebarNavLink)
@@ -165,27 +169,26 @@ describe("SidebarNavLink", () => {
 
   describe("when isTopNav is true", () => {
     it("renders successfully with isTopNav prop", () => {
-      render(<SidebarNavLink {...getProps({ isTopNav: true })} />)
+      renderSidebarNavLink({ isTopNav: true })
 
       const sidebarNavLink = screen.getByTestId("stTopNavLink")
       expect(sidebarNavLink).toHaveTextContent("Test")
     })
 
     it("maintains active state functionality for top nav", () => {
-      render(
-        <SidebarNavLink {...getProps({ isTopNav: true, isActive: true })} />
-      )
+      renderSidebarNavLink({ isTopNav: true, isActive: true })
 
       const sidebarNavLink = screen.getByTestId("stTopNavLink")
       expect(sidebarNavLink).toHaveAttribute("aria-current", "page")
     })
 
     it("handles disabled state for top nav", () => {
-      setupContextMocks({
-        appContext: { widgetsDisabled: true },
-      })
-
-      render(<SidebarNavLink {...getProps({ isTopNav: true })} />)
+      renderSidebarNavLink(
+        { isTopNav: true },
+        {
+          appContext: { widgetsDisabled: true },
+        }
+      )
 
       screen.getByTestId("stTopNavLinkContainer")
       const sidebarNavLink = screen.getByTestId("stTopNavLink")

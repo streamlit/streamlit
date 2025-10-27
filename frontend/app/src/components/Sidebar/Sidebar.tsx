@@ -17,6 +17,7 @@
 import React, {
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -41,9 +42,9 @@ import {
   BaseButtonKind,
   DynamicIcon,
   IsSidebarContext,
+  NavigationContext,
   useEmotionTheme,
   useExecuteWhenChanged,
-  useNavigationContext,
   useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
@@ -89,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
   const { hideSidebarNav } = useAppContext()
-  const { appPages, navSections } = useNavigationContext()
+  const { appPages, navSections } = useContext(NavigationContext)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const sidebarRef = useRef<HTMLDivElement>(null)

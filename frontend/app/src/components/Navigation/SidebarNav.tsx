@@ -19,6 +19,7 @@ import React, {
   ReactElement,
   ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -28,7 +29,7 @@ import { getLogger } from "loglevel"
 
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { isMobile, useNavigationContext } from "@streamlit/lib"
+import { isMobile, NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
@@ -143,7 +144,7 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const { expandSidebarNav } = useAppContext()
   const { pageLinkBaseUrl, appPages, onPageChange, currentPageScriptHash } =
-    useNavigationContext()
+    useContext(NavigationContext)
 
   const localStorageKey = `stSidebarSectionsState-${pageLinkBaseUrl}`
   const [expandedSections, setExpandedSections] = useState<Record<

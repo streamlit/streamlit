@@ -18,8 +18,6 @@ import { createContext } from "react"
 
 import { IAppPage } from "@streamlit/protobuf"
 
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-
 export interface NavigationContextProps {
   /**
    * Part of URL construction for an app page in a multi-page app.
@@ -75,20 +73,17 @@ export interface NavigationContextProps {
 /**
  * NavigationContext provides multi-page app navigation state and controls.
  *
- * Initialize with a default value of null so downstream usages will trigger
- * runtime errors if context expected to exist but does not.
+ * We provide safe default values to prevent crashes during initial render
+ * before the App component has fully initialized. These match the default
+ * behavior for a single-page app with no navigation.
  */
-export const NavigationContext = createContext<NavigationContextProps | null>(
-  null
-)
+export const NavigationContext = createContext<NavigationContextProps>({
+  pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: () => {},
+  navSections: [],
+  appPages: [],
+})
 
-// Set the context display name for useRequiredContext error message
+// Set the context display name for React DevTools
 NavigationContext.displayName = "NavigationContext"
-
-/**
- * Custom hook to access NavigationContext values in components.
- * Throws an error if used outside of a NavigationContext.Provider.
- */
-export const useNavigationContext = (): NavigationContextProps => {
-  return useRequiredContext(NavigationContext)
-}

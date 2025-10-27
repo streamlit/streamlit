@@ -26,8 +26,11 @@ import userEvent from "@testing-library/user-event"
 
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import * as LibModule from "@streamlit/lib"
-import { mockEndpoints, NavigationContextProps, render } from "@streamlit/lib"
+import {
+  mockEndpoints,
+  NavigationContextProps,
+  renderWithContexts,
+} from "@streamlit/lib"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -61,8 +64,24 @@ function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
   )
 }
 
-function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
-  return render(<SidebarWrapper {...props} />)
+function renderSidebar(
+  props: Partial<SidebarProps> = {},
+  options?: {
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): RenderResult {
+  const navigationContextValues = {
+    ...getNavigationContextOutput({}),
+    ...(options?.navigationContext || {}),
+  }
+  return renderWithContexts(
+    <SidebarWrapper {...props} />,
+    {}, // LibContext
+    {}, // ThemeContext
+    navigationContextValues, // NavigationContext
+    {}, // FormsContext
+    {} // ScriptRunContext
+  )
 }
 
 // Helper function to create mock app context with overrides
@@ -103,10 +122,6 @@ function setupContextMocks(options?: {
 }): void {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
     getAppContextOutput(options?.appContext || {})
-  )
-
-  vi.spyOn(LibModule, "useNavigationContext").mockReturnValue(
-    getNavigationContextOutput(options?.navigationContext || {})
   )
 }
 
@@ -213,8 +228,7 @@ describe("Sidebar Component", () => {
   describe("Collapse Button Visibility", () => {
     it("shows/hides the collapse arrow when hovering over top of sidebar", async () => {
       const user = userEvent.setup()
-      setupContextMocks({ navigationContext: { appPages: SAMPLE_PAGES } })
-      renderSidebar()
+      renderSidebar({}, { navigationContext: { appPages: SAMPLE_PAGES } })
 
       const collapseButton = screen.getByTestId("stSidebarCollapseButton")
 
@@ -229,10 +243,10 @@ describe("Sidebar Component", () => {
 
   describe("Sidebar Navigation", () => {
     it("renders SidebarNav component when multiple pages exist", () => {
-      setupContextMocks({
-        navigationContext: { appPages: SAMPLE_PAGES_WITH_URLS },
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        { navigationContext: { appPages: SAMPLE_PAGES_WITH_URLS } }
+      )
 
       expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
 
@@ -264,8 +278,7 @@ describe("Sidebar Component", () => {
         expectedPadding: "1.5rem",
       },
     ])("$description", ({ appPages, expectedPadding }) => {
-      setupContextMocks({ navigationContext: { appPages } })
-      renderSidebar()
+      renderSidebar({}, { navigationContext: { appPages } })
 
       expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
         `padding-top: ${expectedPadding}`
@@ -285,13 +298,15 @@ describe("Sidebar Component", () => {
           sectionHeader: "Section 1",
         },
       ]
-      setupContextMocks({
-        navigationContext: {
-          appPages: appPagesWithSection,
-          navSections: ["Section 1"],
-        },
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        {
+          navigationContext: {
+            appPages: appPagesWithSection,
+            navSections: ["Section 1"],
+          },
+        }
+      )
 
       expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
     })
@@ -304,13 +319,15 @@ describe("Sidebar Component", () => {
           sectionHeader: "Section 1",
         },
       ]
-      setupContextMocks({
-        navigationContext: {
-          appPages: appPagesWithSection,
-          navSections: ["Section 1"],
-        },
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        {
+          navigationContext: {
+            appPages: appPagesWithSection,
+            navSections: ["Section 1"],
+          },
+        }
+      )
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })

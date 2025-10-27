@@ -31,10 +31,7 @@ export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { LibContext } from "./components/core/LibContext"
 export type { LibConfig, LibContextProps } from "./components/core/LibContext"
-export {
-  NavigationContext,
-  useNavigationContext,
-} from "./components/core/NavigationContext"
+export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
 export { ScriptRunContext } from "./components/core/ScriptRunContext"

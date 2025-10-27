@@ -43,10 +43,10 @@ import {
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
+  NavigationContext,
   Profiler,
   ThemeContext,
   useExecuteWhenChanged,
-  useNavigationContext,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -134,7 +134,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { activeTheme } = useContext(ThemeContext)
 
-  const { appPages, navSections, pageLinkBaseUrl } = useNavigationContext()
+  const { appPages, navSections, pageLinkBaseUrl } =
+    useContext(NavigationContext)
 
   const { innerWidth } = useWindowDimensionsContext()
 

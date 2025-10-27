@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { useNavigationContext } from "@streamlit/lib"
+import { NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -38,7 +38,7 @@ export interface Props {
 
 const TopNav: React.FC<Props> = ({ endpoints }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
-    useNavigationContext()
+    useContext(NavigationContext)
   const { data, itemKey } = useMemo((): {
     data: (IAppPage | IAppPage[])[]
     itemKey: (item: IAppPage | IAppPage[]) => string

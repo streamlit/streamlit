@@ -20,12 +20,10 @@ import { screen } from "@testing-library/react"
 
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import * as LibModule from "@streamlit/lib"
 import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  NavigationContextProps,
   render,
   ThemeConfig,
 } from "@streamlit/lib"
@@ -61,29 +59,11 @@ function getAppContextOutput(
   }
 }
 
-function getNavigationContextOutput(
-  context: Partial<NavigationContextProps> = {}
-): NavigationContextProps {
-  return {
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
-    ...context,
-  }
-}
-
 function setupContextMocks(options?: {
   appContext?: Partial<AppContextProps>
-  navigationContext?: Partial<NavigationContextProps>
 }): void {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
     getAppContextOutput(options?.appContext || {})
-  )
-
-  vi.spyOn(LibModule, "useNavigationContext").mockReturnValue(
-    getNavigationContextOutput(options?.navigationContext || {})
   )
 }
 
