@@ -68,11 +68,6 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
     let cancelled = false
 
     const startRecording = async (): Promise<void> => {
-      // Wait for the ref to be committed to the DOM
-      await new Promise(resolve =>
-        requestAnimationFrame(() => resolve(undefined))
-      )
-
       if (cancelled) {
         return
       }
