@@ -34,8 +34,8 @@ import {
 export interface ChatAudioRecorderProps {
   controller: WaveformController
   isRecording: boolean
-  onStart: () => void | Promise<void>
-  onApprove: (payload: { blob: Blob; meta: AudioMeta }) => void | Promise<void>
+  onStart: () => Promise<void>
+  onApprove: (payload: { blob: Blob; meta: AudioMeta }) => Promise<void>
   onCancel: () => void
   disabled?: boolean
   strings?: {

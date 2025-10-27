@@ -212,7 +212,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
     [controlsDisabled, handleSubmit]
   )
 
-  const handleRecordingStart = useCallback(() => {
+  const handleRecordingStart = useCallback(async () => {
     // Called when recording actually starts (after permissions granted)
   }, [])
 
