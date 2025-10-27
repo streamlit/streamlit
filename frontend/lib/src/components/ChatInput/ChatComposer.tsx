@@ -82,9 +82,6 @@ export interface ChatComposerProps {
     send: string
     attach: string
     mic: string
-    recordingLabel: string
-    cancel: string
-    approve: string
   }
 }
 
@@ -92,9 +89,6 @@ const DEFAULT_STRINGS: Required<NonNullable<ChatComposerProps["strings"]>> = {
   send: "Send",
   attach: "Attach file",
   mic: "Record audio",
-  recordingLabel: "Recording audio message",
-  cancel: "Cancel",
-  approve: "Approve",
 }
 
 const ChatComposer: React.FC<ChatComposerProps> = ({
@@ -325,12 +319,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           onApprove={handleRecordingApprove}
           onCancel={handleRecordingCancel}
           disabled={disabled || isSubmitting}
-          strings={{
-            recordingLabel: composerStrings.recordingLabel,
-            cancel: composerStrings.cancel,
-            approve: composerStrings.approve,
-            micTooltip: composerStrings.mic,
-          }}
         />
       ) : null}
     </StyledChatComposer>

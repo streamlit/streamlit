@@ -38,21 +38,6 @@ export interface ChatAudioRecorderProps {
   onApprove: (payload: { blob: Blob; meta: AudioMeta }) => Promise<void>
   onCancel: () => void
   disabled?: boolean
-  strings?: {
-    recordingLabel: string
-    cancel: string
-    approve: string
-    micTooltip: string
-  }
-}
-
-const DEFAULT_STRINGS: Required<
-  NonNullable<ChatAudioRecorderProps["strings"]>
-> = {
-  recordingLabel: "Recording audio",
-  cancel: "Cancel",
-  approve: "Approve",
-  micTooltip: "Record audio",
 }
 
 const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
@@ -62,14 +47,9 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
   onApprove,
   onCancel,
   disabled = false,
-  strings,
 }) => {
   const [pending, setPending] = useState(false)
   const isMountedRef = useRef(true)
-  const mergedStrings = useMemo(
-    () => ({ ...DEFAULT_STRINGS, ...strings }),
-    [strings]
-  )
 
   // Cleanup on unmount
   useEffect(() => {
@@ -179,7 +159,7 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
     <StyledChatAudioContainer
       className="stChatAudio__container"
       role="group"
-      aria-label={mergedStrings.recordingLabel}
+      aria-label="Recording audio"
       data-testid="chat-audio-recorder"
     >
       <StyledChatAudioWave
@@ -192,11 +172,11 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
           type="button"
           className="stChatAudio__cancel"
           onClick={handleCancel}
-          aria-label={mergedStrings.cancel}
+          aria-label="Cancel"
           disabled={pending || disabled}
           $variant="cancel"
         >
-          {mergedStrings.cancel}
+          Cancel
         </StyledChatAudioButton>
         <StyledChatAudioButton
           type="button"
@@ -207,11 +187,11 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
               onCancel()
             })
           }}
-          aria-label={mergedStrings.approve}
+          aria-label="Approve"
           disabled={pending || disabled}
           $variant="approve"
         >
-          {mergedStrings.approve}
+          Approve
         </StyledChatAudioButton>
       </StyledChatAudioControls>
     </StyledChatAudioContainer>

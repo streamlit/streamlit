@@ -171,11 +171,9 @@ describe("ChatAudioRecorder", () => {
     await waitFor(() => expect(controller.start).toHaveBeenCalled())
     const group = screen.getByRole("group", { name: /recording/i })
     expect(group).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: /cancel recording/i })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: /approve recording/i })
+      screen.getByRole("button", { name: /approve/i })
     ).toBeInTheDocument()
   })
 
