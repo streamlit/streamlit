@@ -171,7 +171,7 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
           onClick={handleCancel}
           aria-label="Cancel"
           disabled={pending || disabled}
-          $variant="cancel"
+          variant="cancel"
         >
           Cancel
         </StyledChatAudioButton>
@@ -186,7 +186,7 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
           }}
           aria-label="Approve"
           disabled={pending || disabled}
-          $variant="approve"
+          variant="approve"
         >
           Approve
         </StyledChatAudioButton>

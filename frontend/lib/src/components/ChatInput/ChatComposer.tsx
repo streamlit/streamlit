@@ -253,7 +253,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
     <StyledChatComposer
       className={`stChatComposer${isRecording ? " stChatComposer--recording" : ""}`}
       data-testid="chat-composer"
-      $isRecording={isRecording}
     >
       <StyledComposerRow>
         <StyledComposerInput
@@ -265,7 +264,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           aria-label={placeholder}
           disabled={controlsDisabled}
           data-testid="chat-composer-input"
-          $isRecording={isRecording}
         />
         <StyledComposerActions>
           <StyledComposerButton
@@ -296,7 +294,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
             aria-label={composerStrings.send}
             disabled={controlsDisabled || !hasPendingContent}
             data-testid="chat-composer-send"
-            $variant="primary"
+            variant="primary"
           >
             <Send size="20" aria-hidden />
           </StyledComposerButton>

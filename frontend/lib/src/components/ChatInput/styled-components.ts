@@ -16,14 +16,12 @@
 
 import styled from "@emotion/styled"
 
-export const StyledChatComposer = styled.div<{ $isRecording: boolean }>(
-  ({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing.md,
-    width: "100%",
-  })
-)
+export const StyledChatComposer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.md,
+  width: "100%",
+}))
 
 export const StyledComposerRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -31,40 +29,37 @@ export const StyledComposerRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledComposerInput = styled.textarea<{ $isRecording: boolean }>(
-  ({ theme, $isRecording }) => ({
-    flex: 1,
-    minHeight: theme.sizes.minElementHeight,
-    maxHeight: `calc(${theme.sizes.minElementHeight} * 4)`,
-    resize: "vertical",
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.chatInput,
-    border: `${theme.sizes.borderWidth} solid ${
-      theme.colors.widgetBorderColor ?? theme.colors.borderColor
-    }`,
-    backgroundColor: theme.colors.secondaryBg,
-    color: theme.colors.bodyText,
-    font: "inherit",
-    lineHeight: theme.lineHeights.inputWidget,
-    opacity: $isRecording ? 0.6 : 1,
-    transition:
-      "border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
-    "::placeholder": {
-      color: theme.colors.fadedText60,
-    },
-    ":disabled": {
-      cursor: "not-allowed",
-      backgroundColor: theme.colors.fadedText10,
-      color: theme.colors.fadedText40,
-    },
-    ":focus-visible": {
-      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-      outlineOffset: 2,
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.bgColor,
-    },
-  })
-)
+export const StyledComposerInput = styled.textarea(({ theme }) => ({
+  flex: 1,
+  minHeight: theme.sizes.minElementHeight,
+  maxHeight: `calc(${theme.sizes.minElementHeight} * 4)`,
+  resize: "vertical",
+  padding: theme.spacing.md,
+  borderRadius: theme.radii.chatInput,
+  border: `${theme.sizes.borderWidth} solid ${
+    theme.colors.widgetBorderColor ?? theme.colors.borderColor
+  }`,
+  backgroundColor: theme.colors.secondaryBg,
+  color: theme.colors.bodyText,
+  font: "inherit",
+  lineHeight: theme.lineHeights.inputWidget,
+  transition:
+    "border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
+  "::placeholder": {
+    color: theme.colors.fadedText60,
+  },
+  ":disabled": {
+    cursor: "not-allowed",
+    backgroundColor: theme.colors.fadedText10,
+    color: theme.colors.fadedText40,
+  },
+  ":focus-visible": {
+    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+    outlineOffset: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.bgColor,
+  },
+}))
 
 export const StyledComposerActions = styled.div(({ theme }) => ({
   display: "inline-flex",
@@ -75,40 +70,38 @@ export const StyledComposerActions = styled.div(({ theme }) => ({
 type ComposerButtonVariant = "default" | "primary"
 
 export const StyledComposerButton = styled.button<{
-  $variant?: ComposerButtonVariant
-}>(({ theme, $variant = "default" }) => {
-  const isPrimary = $variant === "primary"
-  return {
-    width: theme.sizes.minElementHeight,
-    height: theme.sizes.minElementHeight,
-    borderRadius: theme.radii.full,
-    border: `${theme.sizes.borderWidth} solid ${
-      isPrimary ? theme.colors.primary : theme.colors.borderColor
-    }`,
-    backgroundColor: isPrimary ? theme.colors.primary : theme.colors.bgColor,
-    color: isPrimary ? theme.colors.white : theme.colors.bodyText,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    transition: "background-color 0.2s ease, border-color 0.2s ease",
-    padding: theme.spacing.none,
-    ":hover": {
-      borderColor: theme.colors.primary,
-    },
-    ":focus": {
-      outline: "none",
-    },
-    ":focus-visible": {
-      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-      outlineOffset: 2,
-    },
-    ":disabled": {
-      cursor: "not-allowed",
-      opacity: 0.5,
-    },
-  }
-})
+  variant?: ComposerButtonVariant
+}>(({ theme, variant = "default" }) => ({
+  width: theme.sizes.minElementHeight,
+  height: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.full,
+  border: `${theme.sizes.borderWidth} solid ${
+    variant === "primary" ? theme.colors.primary : theme.colors.borderColor
+  }`,
+  backgroundColor:
+    variant === "primary" ? theme.colors.primary : theme.colors.bgColor,
+  color: variant === "primary" ? theme.colors.white : theme.colors.bodyText,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  transition: "background-color 0.2s ease, border-color 0.2s ease",
+  padding: theme.spacing.none,
+  ":hover": {
+    borderColor: theme.colors.primary,
+  },
+  ":focus": {
+    outline: "none",
+  },
+  ":focus-visible": {
+    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+    outlineOffset: 2,
+  },
+  ":disabled": {
+    cursor: "not-allowed",
+    opacity: 0.5,
+  },
+}))
 
 export const StyledHiddenFileInput = styled.input({
   display: "none",
@@ -146,35 +139,33 @@ export const StyledChatAudioControls = styled.div(({ theme }) => ({
 type RecorderButtonVariant = "cancel" | "approve"
 
 export const StyledChatAudioButton = styled.button<{
-  $variant: RecorderButtonVariant
-}>(({ theme, $variant }) => {
-  const isApprove = $variant === "approve"
-  return {
-    minWidth: "6rem",
-    minHeight: theme.sizes.smallElementHeight,
-    borderRadius: theme.radii.full,
-    border: `${theme.sizes.borderWidth} solid ${
-      isApprove ? theme.colors.primary : theme.colors.borderColor
-    }`,
-    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-    fontWeight: theme.fontWeights.bold,
-    backgroundColor: isApprove ? theme.colors.primary : theme.colors.bgColor,
-    color: isApprove ? theme.colors.white : theme.colors.bodyText,
-    cursor: "pointer",
-    transition: "background-color 0.2s ease, border-color 0.2s ease",
-    ":hover": {
-      borderColor: theme.colors.primary,
-    },
-    ":focus": {
-      outline: "none",
-    },
-    ":focus-visible": {
-      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-      outlineOffset: 2,
-    },
-    ":disabled": {
-      opacity: 0.5,
-      cursor: "not-allowed",
-    },
-  }
-})
+  variant: RecorderButtonVariant
+}>(({ theme, variant }) => ({
+  minWidth: "6rem",
+  minHeight: theme.sizes.smallElementHeight,
+  borderRadius: theme.radii.full,
+  border: `${theme.sizes.borderWidth} solid ${
+    variant === "approve" ? theme.colors.primary : theme.colors.borderColor
+  }`,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  fontWeight: theme.fontWeights.bold,
+  backgroundColor:
+    variant === "approve" ? theme.colors.primary : theme.colors.bgColor,
+  color: variant === "approve" ? theme.colors.white : theme.colors.bodyText,
+  cursor: "pointer",
+  transition: "background-color 0.2s ease, border-color 0.2s ease",
+  ":hover": {
+    borderColor: theme.colors.primary,
+  },
+  ":focus": {
+    outline: "none",
+  },
+  ":focus-visible": {
+    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+    outlineOffset: 2,
+  },
+  ":disabled": {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+}))

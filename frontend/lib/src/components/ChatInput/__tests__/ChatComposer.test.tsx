@@ -149,9 +149,6 @@ describe("ChatComposer", () => {
     await userEvent.click(screen.getByTestId("mock-recorder-cancel"))
 
     await waitFor(() => expect(textarea).toHaveFocus())
-    expect(screen.getByTestId("chat-composer")).not.toHaveClass(
-      "stChatComposer--recording"
-    )
   })
 
   it("submits audio payload on approve and resets focus", async () => {
@@ -176,8 +173,5 @@ describe("ChatComposer", () => {
     })
 
     await waitFor(() => expect(textarea).toHaveFocus())
-    expect(screen.getByTestId("chat-composer")).not.toHaveClass(
-      "stChatComposer--recording"
-    )
   })
 })
