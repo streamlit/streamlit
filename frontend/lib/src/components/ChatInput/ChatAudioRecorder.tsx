@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 
 import type { AudioMeta, WaveformController } from "~lib/components/audio"
 
@@ -178,12 +172,7 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
         <StyledChatAudioButton
           type="button"
           className="stChatAudio__approve"
-          onClick={() => {
-            handleApprove().catch(_error => {
-              // Error is already handled in handleApprove
-              onCancel()
-            })
-          }}
+          onClick={handleApprove}
           aria-label="Approve"
           disabled={pending || disabled}
           variant="approve"
