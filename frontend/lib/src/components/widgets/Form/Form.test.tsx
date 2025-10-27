@@ -59,6 +59,8 @@ describe("Form", () => {
       {},
       // ThemeContext overrides
       {},
+      // NavigationContext overrides
+      {},
       // FormsContext overrides
       {
         formsData: defaultFormsData(),
@@ -76,6 +78,7 @@ describe("Form", () => {
     // Start with script RUNNING, no submit button
     const { rerenderWithContexts } = renderWithContexts(
       <Form {...props} />,
+      {},
       {},
       {},
       // FormsContext overrides
@@ -99,6 +102,7 @@ describe("Form", () => {
       {},
       {},
       {},
+      {},
       // ScriptRunContext overrides
       {
         scriptRunState: ScriptRunState.NOT_RUNNING,
@@ -109,6 +113,7 @@ describe("Form", () => {
     // If the app restarts, we continue to show the error...
     rerenderWithContexts(
       <Form {...props} />,
+      {},
       {},
       {},
       {},
@@ -128,6 +133,7 @@ describe("Form", () => {
     ])
     rerenderWithContexts(
       <Form {...props} />,
+      {},
       {},
       {},
       // FormsContext overrides

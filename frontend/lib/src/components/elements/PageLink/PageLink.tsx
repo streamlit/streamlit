@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useContext } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { useNavigationContext } from "~lib/components/core/NavigationContext"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
@@ -37,7 +37,7 @@ export interface Props {
 }
 
 function PageLink(props: Readonly<Props>): ReactElement {
-  const { onPageChange, currentPageScriptHash } = useContext(LibContext)
+  const { onPageChange, currentPageScriptHash } = useNavigationContext()
 
   const { colors } = useEmotionTheme()
 

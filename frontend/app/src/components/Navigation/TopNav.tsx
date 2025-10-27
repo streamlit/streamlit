@@ -19,6 +19,7 @@ import React, { useCallback, useMemo } from "react"
 import Overflow from "rc-overflow"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { useNavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -32,20 +33,12 @@ import { groupPagesBySection, processNavigationStructure } from "./utils"
 import { SidebarNavLink } from "./index"
 
 export interface Props {
-  currentPageScriptHash: string
-  appPages: IAppPage[]
-  onPageChange: (pageScriptHash: string) => void
-  pageLinkBaseUrl: string
   endpoints: StreamlitEndpoints
 }
 
-const TopNav: React.FC<Props> = ({
-  endpoints,
-  pageLinkBaseUrl,
-  currentPageScriptHash,
-  appPages,
-  onPageChange,
-}) => {
+const TopNav: React.FC<Props> = ({ endpoints }) => {
+  const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
+    useNavigationContext()
   const { data, itemKey } = useMemo((): {
     data: (IAppPage | IAppPage[])[]
     itemKey: (item: IAppPage | IAppPage[]) => string

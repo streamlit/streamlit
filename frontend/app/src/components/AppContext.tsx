@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
+import { IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
 export interface AppContextProps {
   /**
@@ -26,41 +26,6 @@ export interface AppContextProps {
    * @see Sidebar
    */
   initialSidebarState: PageConfig.SidebarState
-
-  /**
-   * Part of URL construction for an app page in a multi-page app;
-   * this is set from the host communication manager via host message.
-   * Pulled from appContext in SidebarNav
-   * @see SidebarNav
-   */
-  pageLinkBaseUrl: string
-
-  /**
-   * The current page of a multi-page app.
-   * Pulled from appContext in SidebarNavLink
-   * @see SidebarNavLink
-   */
-  currentPageScriptHash: string
-
-  /**
-   * Change the page in a multi-page app.
-   * @see SidebarNav
-   */
-  onPageChange: (pageScriptHash: string) => void
-
-  /**
-   * The nav sections in a multi-page app.
-   * Pulled from appContext in SidebarNav
-   * @see SidebarNav
-   */
-  navSections: string[]
-
-  /**
-   * The pages in a multi-page app.
-   * Pulled from appContext in SidebarNav
-   * @see SidebarNav
-   */
-  appPages: IAppPage[]
 
   /**
    * The app logo (displayed in top left corner of app)
@@ -81,16 +46,18 @@ export interface AppContextProps {
   sidebarChevronDownshift: number
 
   /**
-   * Whether to expand the sidebar nav.
+   * Whether to expand the sidebar nav section by default.
    * Pulled from appContext in SidebarNav
    * @see SidebarNav
    */
   expandSidebarNav: boolean
 
   /**
-   * Whether to hide the sidebar nav. Can also be configured via host message.
+   * Whether to hide the sidebar nav. Can be configured via host message.
+   * Used to control visibility of multi-page app navigation in sidebar.
    * Pulled from appContext in Sidebar
    * @see Sidebar
+   * @see AppView
    */
   hideSidebarNav: boolean
 
@@ -122,11 +89,6 @@ export interface AppContextProps {
 
 export const AppContext = createContext<AppContextProps | null>({
   initialSidebarState: PageConfig.SidebarState.AUTO,
-  pageLinkBaseUrl: "",
-  currentPageScriptHash: "",
-  onPageChange: () => {},
-  navSections: [],
-  appPages: [],
   appLogo: null,
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,

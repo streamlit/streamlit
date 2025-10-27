@@ -99,6 +99,8 @@ describe("ElementNodeRenderer Block Component", () => {
         {},
         // ThemeContext overrides
         {},
+        // NavigationContext overrides
+        {},
         // FormsContext overrides
         {},
         // ScriptRunContext overrides
@@ -127,6 +129,8 @@ describe("ElementNodeRenderer Block Component", () => {
         // LibContext overrides
         {},
         // ThemeContext overrides
+        {},
+        // NavigationContext overrides
         {},
         // FormsContext overrides
         {},
@@ -159,6 +163,8 @@ describe("ElementNodeRenderer Block Component", () => {
         {},
         // ThemeContext overrides
         {},
+        // NavigationContext overrides
+        {},
         // FormsContext overrides
         {},
         // ScriptRunContext overrides
@@ -186,6 +192,8 @@ describe("ElementNodeRenderer Block Component", () => {
         // LibContext overrides
         {},
         // ThemeContext overrides
+        {},
+        // NavigationContext overrides
         {},
         // FormsContext overrides
         {},

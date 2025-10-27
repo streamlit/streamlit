@@ -159,6 +159,8 @@ describe("FormSubmitButton", () => {
       {},
       // ThemeContext overrides
       {},
+      // NavigationContext overrides
+      {},
       // FormsContext overrides
       {
         formsData: formsDataOverride,

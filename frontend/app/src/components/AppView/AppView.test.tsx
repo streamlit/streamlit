@@ -21,6 +21,7 @@ import { fireEvent, screen } from "@testing-library/react"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import * as LibModule from "@streamlit/lib"
 import {
   AppRoot,
   BlockNode,
@@ -29,7 +30,10 @@ import {
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
+  mockTheme,
+  NavigationContextProps,
   render,
+  ThemeContext,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -45,14 +49,11 @@ import AppView, { AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
-function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
+function getAppContextOutput(
+  context: Partial<AppContextProps>
+): AppContextProps {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
     appLogo: null,
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
@@ -62,6 +63,44 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     showToolbar: true,
     ...context,
   }
+}
+
+function getNavigationContextOutput(
+  context: Partial<NavigationContextProps> = {}
+): NavigationContextProps {
+  return {
+    pageLinkBaseUrl: "",
+    currentPageScriptHash: FAKE_SCRIPT_HASH,
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+    ...context,
+  }
+}
+
+// Helper to setup context mocks for tests
+function setupContextMocks(options?: {
+  appContext?: Partial<AppContextProps>
+  navigationContext?: Partial<NavigationContextProps>
+}): void {
+  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockImplementation(
+    () => getAppContextOutput(options?.appContext || {})
+  )
+
+  vi.spyOn(LibModule, "useNavigationContext").mockImplementation(() =>
+    getNavigationContextOutput(options?.navigationContext || {})
+  )
+
+  vi.spyOn(LibModule, "useRequiredContext").mockImplementation(context => {
+    if (context === ThemeContext) {
+      return {
+        activeTheme: mockTheme,
+        setTheme: vi.fn(),
+        availableThemes: [],
+      }
+    }
+    throw new Error(`Unmocked context: ${context.displayName}`)
+  })
 }
 
 const buildMediaURL = vi.fn((url: string) => url)
@@ -93,13 +132,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     embedded: false,
     showPadding: false,
     disableScrolling: false,
-    hideSidebarNav: false,
-    appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
-    navSections: [],
-    onPageChange: vi.fn(),
-    expandSidebarNav: false,
     navigationPosition: Navigation.Position.SIDEBAR,
-    currentPageScriptHash: "",
     addScriptFinishedHandler: vi.fn(),
     removeScriptFinishedHandler: vi.fn(),
     ...props,
@@ -108,11 +141,8 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
 describe("AppView element", () => {
   beforeEach(() => {
-    // Mock the useAppContext hook to return default values
-    vi.spyOn(
-      StreamlitContextProviderModule,
-      "useAppContext"
-    ).mockImplementation(() => getContextOutput({}))
+    // Setup default context mocks
+    setupContextMocks()
   })
 
   afterEach(() => {
@@ -120,14 +150,14 @@ describe("AppView element", () => {
   })
 
   it("renders without crashing", () => {
-    render(<AppView {...getProps()} />)
+    render(<AppView {...getProps({})} />)
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
-    const props = getProps()
+    const props = getProps({})
     render(<AppView {...props} />)
 
     const sidebar = screen.queryByTestId("stSidebar")
@@ -177,33 +207,33 @@ describe("AppView element", () => {
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
-    render(
-      <AppView
-        {...getProps({
-          appPages: [
-            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-            { pageName: "page2", pageScriptHash: "page2_hash" },
-          ],
-        })}
-      />
-    )
+    setupContextMocks({
+      navigationContext: {
+        appPages: [
+          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+          { pageName: "page2", pageScriptHash: "page2_hash" },
+        ],
+      },
+    })
+
+    render(<AppView {...getProps({})} />)
 
     const sidebarDOMElement = screen.queryByTestId("stSidebar")
     expect(sidebarDOMElement).toBeInTheDocument()
   })
 
   it("does not render a sidebar when there are no elements, multiple pages, and hideSidebarNav is true", () => {
-    render(
-      <AppView
-        {...getProps({
-          hideSidebarNav: true,
-          appPages: [
-            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-            { pageName: "page2", pageScriptHash: "page2_hash" },
-          ],
-        })}
-      />
-    )
+    setupContextMocks({
+      appContext: { hideSidebarNav: true },
+      navigationContext: {
+        appPages: [
+          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+          { pageName: "page2", pageScriptHash: "page2_hash" },
+        ],
+      },
+    })
+
+    render(<AppView {...getProps({})} />)
 
     const sidebar = screen.queryByTestId("stSidebar")
     expect(sidebar).not.toBeInTheDocument()
@@ -239,15 +269,20 @@ describe("AppView element", () => {
       new BlockProto({ allowEmpty: true })
     )
 
+    setupContextMocks({
+      navigationContext: {
+        appPages: [
+          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+          { pageName: "page2", pageScriptHash: "page2_hash" },
+        ],
+      },
+    })
+
     const props = getProps({
       elements: new AppRoot(
         FAKE_SCRIPT_HASH,
         new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
       ),
-      appPages: [
-        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-        { pageName: "page2", pageScriptHash: "page2_hash" },
-      ],
     })
     render(<AppView {...props} />)
 
@@ -256,14 +291,17 @@ describe("AppView element", () => {
   })
 
   it("does not render the sidebar if there are no elements, multiple pages but hideSidebarNav is true", () => {
-    const props = getProps({
-      hideSidebarNav: true,
-      appPages: [
-        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-        { pageName: "page2", pageScriptHash: "page2_hash" },
-      ],
+    setupContextMocks({
+      appContext: { hideSidebarNav: true },
+      navigationContext: {
+        appPages: [
+          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+          { pageName: "page2", pageScriptHash: "page2_hash" },
+        ],
+      },
     })
-    render(<AppView {...props} />)
+
+    render(<AppView {...getProps({})} />)
 
     const sidebar = screen.queryByTestId("stSidebar")
     expect(sidebar).not.toBeInTheDocument()
@@ -351,7 +389,7 @@ describe("AppView element", () => {
         vi.spyOn(
           StreamlitContextProviderModule,
           "useAppContext"
-        ).mockReturnValue(getContextOutput({ showToolbar: true }))
+        ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
 
         render(<AppView {...getProps({ embedded: false })} />)
         const style = getMainBlockContainerStyle()
@@ -359,15 +397,20 @@ describe("AppView element", () => {
       })
 
       it("uses 8rem top padding when top nav is showing (>1 page)", () => {
+        setupContextMocks({
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        })
+
         render(
           <AppView
             {...getProps({
               embedded: false,
               navigationPosition: Navigation.Position.TOP,
-              appPages: [
-                { pageName: "page1", pageScriptHash: "hash1" },
-                { pageName: "page2", pageScriptHash: "hash2" },
-              ],
             })}
           />
         )
@@ -376,12 +419,17 @@ describe("AppView element", () => {
       })
 
       it("uses 6rem top padding when top nav is not showing (single page)", () => {
+        setupContextMocks({
+          navigationContext: {
+            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
+          },
+        })
+
         render(
           <AppView
             {...getProps({
               embedded: false,
               navigationPosition: Navigation.Position.TOP,
-              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
             })}
           />
         )
@@ -409,6 +457,12 @@ describe("AppView element", () => {
           new BlockProto({ allowEmpty: true })
         )
 
+        setupContextMocks({
+          navigationContext: {
+            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
+          },
+        })
+
         render(
           <AppView
             {...getProps({
@@ -417,7 +471,6 @@ describe("AppView element", () => {
                 new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
               ),
               embedded: false, // Non-embedded
-              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
             })}
           />
         )
@@ -450,10 +503,6 @@ describe("AppView element", () => {
                 showPadding: true,
                 appLogo: logo,
                 navigationPosition: Navigation.Position.TOP,
-                appPages: [
-                  { pageName: "page1", pageScriptHash: "hash1" },
-                  { pageName: "page2", pageScriptHash: "hash2" },
-                ],
               })}
             />
           )
@@ -469,10 +518,6 @@ describe("AppView element", () => {
                 embedded: true,
                 showPadding: true,
                 navigationPosition: Navigation.Position.TOP,
-                appPages: [
-                  { pageName: "page1", pageScriptHash: "hash1" },
-                  { pageName: "page2", pageScriptHash: "hash2" },
-                ],
               })}
             />
           )
@@ -487,7 +532,7 @@ describe("AppView element", () => {
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
-          ).mockReturnValue(getContextOutput({ showToolbar: true }))
+          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
 
           render(<AppView {...getProps({ embedded: true })} />)
           const style = getMainBlockContainerStyle()
@@ -498,7 +543,7 @@ describe("AppView element", () => {
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
-          ).mockReturnValue(getContextOutput({ showToolbar: true }))
+          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
 
           // Create elements that would trigger hasHeader=true
           const logo = LogoProto.create({
@@ -511,10 +556,6 @@ describe("AppView element", () => {
                 embedded: true,
                 appLogo: logo,
                 navigationPosition: Navigation.Position.TOP,
-                appPages: [
-                  { pageName: "page1", pageScriptHash: "hash1" },
-                  { pageName: "page2", pageScriptHash: "hash2" },
-                ],
               })}
             />
           )
@@ -529,7 +570,7 @@ describe("AppView element", () => {
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
-          ).mockReturnValue(getContextOutput({ showToolbar: true }))
+          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
 
           render(
             <AppView {...getProps({ embedded: true, showPadding: true })} />
@@ -544,7 +585,7 @@ describe("AppView element", () => {
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
-          ).mockReturnValue(getContextOutput({ showToolbar: false }))
+          ).mockReturnValue(getAppContextOutput({ showToolbar: false }))
         })
 
         it("uses 2.25rem top padding when no header content", () => {
@@ -553,8 +594,7 @@ describe("AppView element", () => {
               {...getProps({
                 embedded: true,
                 showPadding: false,
-                appLogo: null,
-                appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no nav
+                appLogo: null, // Single page, no nav
                 navigationPosition: Navigation.Position.SIDEBAR,
               })}
             />
@@ -586,6 +626,18 @@ describe("AppView element", () => {
         })
 
         it("uses 4.5rem top padding when header content exists (navigation)", () => {
+          setupContextMocks({
+            appContext: {
+              showToolbar: false,
+            },
+            navigationContext: {
+              appPages: [
+                { pageName: "page1", pageScriptHash: "hash1" },
+                { pageName: "page2", pageScriptHash: "hash2" },
+              ],
+            },
+          })
+
           render(
             <AppView
               {...getProps({
@@ -593,10 +645,6 @@ describe("AppView element", () => {
                 showPadding: false,
                 appLogo: null,
                 navigationPosition: Navigation.Position.TOP,
-                appPages: [
-                  { pageName: "page1", pageScriptHash: "hash1" },
-                  { pageName: "page2", pageScriptHash: "hash2" },
-                ],
               })}
             />
           )
@@ -631,7 +679,7 @@ describe("AppView element", () => {
             StreamlitContextProviderModule,
             "useAppContext"
           ).mockReturnValue(
-            getContextOutput({
+            getAppContextOutput({
               showToolbar: false,
               initialSidebarState: PageConfig.SidebarState.COLLAPSED,
             })
@@ -675,7 +723,7 @@ describe("AppView element", () => {
           vi.spyOn(
             StreamlitContextProviderModule,
             "useAppContext"
-          ).mockReturnValue(getContextOutput({ showToolbar: false }))
+          ).mockReturnValue(getAppContextOutput({ showToolbar: false }))
 
           const props = getProps({
             elements: new AppRoot(
@@ -719,7 +767,7 @@ describe("AppView element", () => {
         vi.spyOn(
           StreamlitContextProviderModule,
           "useAppContext"
-        ).mockReturnValue(getContextOutput({ showToolbar: true }))
+        ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
 
         const logo = LogoProto.create({
           image: "https://example.com/logo.png",
@@ -767,7 +815,7 @@ describe("AppView element", () => {
     })
 
     it("doesn't render if no logo provided", () => {
-      render(<AppView {...getProps()} />)
+      render(<AppView {...getProps({})} />)
       expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
     })
 
@@ -858,7 +906,7 @@ describe("AppView element", () => {
   })
 
   it("does not render a Scroll To Bottom container when no bottom container is present", () => {
-    const props = getProps()
+    const props = getProps({})
     render(<AppView {...props} />)
 
     const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
@@ -916,15 +964,18 @@ describe("AppView element", () => {
 
   describe("navigation position rendering", () => {
     it("renders sidebar navigation when navigationPosition=SIDEBAR", () => {
+      setupContextMocks({
+        navigationContext: {
+          appPages: [
+            { pageName: "page1", pageScriptHash: "hash1" },
+            { pageName: "page2", pageScriptHash: "hash2" },
+          ],
+        },
+      })
+
       render(
         <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.SIDEBAR,
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.SIDEBAR })}
         />
       )
 
@@ -934,15 +985,18 @@ describe("AppView element", () => {
     })
 
     it("renders top navigation when navigationPosition=TOP", () => {
+      setupContextMocks({
+        navigationContext: {
+          appPages: [
+            { pageName: "page1", pageScriptHash: "hash1" },
+            { pageName: "page2", pageScriptHash: "hash2" },
+          ],
+        },
+      })
+
       render(
         <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.TOP })}
         />
       )
 
@@ -962,13 +1016,7 @@ describe("AppView element", () => {
     it("renders neither sidebar nor top nav when navigationPosition=HIDDEN", () => {
       render(
         <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.HIDDEN,
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.HIDDEN })}
         />
       )
 
@@ -980,10 +1028,7 @@ describe("AppView element", () => {
     it("does not render top nav with single page when navigationPosition=TOP", () => {
       render(
         <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.TOP })}
         />
       )
 
@@ -1031,8 +1076,7 @@ describe("AppView element", () => {
       render(
         <AppView
           {...getProps({
-            appLogo: null,
-            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no nav
+            appLogo: null, // Single page, no nav
             navigationPosition: Navigation.Position.SIDEBAR,
           })}
         />
@@ -1059,15 +1103,18 @@ describe("AppView element", () => {
     })
 
     it("header has solid background when navigation is shown", () => {
+      setupContextMocks({
+        navigationContext: {
+          appPages: [
+            { pageName: "page1", pageScriptHash: "hash1" },
+            { pageName: "page2", pageScriptHash: "hash2" },
+          ],
+        },
+      })
+
       render(
         <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.TOP })}
         />
       )
 
@@ -1085,7 +1132,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           showToolbar: false, // This simulates embed=true without show_toolbar
           initialSidebarState: PageConfig.SidebarState.COLLAPSED, // Ensure sidebar starts collapsed
         })
@@ -1136,24 +1183,23 @@ describe("AppView element", () => {
     })
 
     it("header shows navigation in embed mode with top nav", () => {
-      // Mock embed mode (showToolbar = false)
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getContextOutput({
+      // Mock embed mode (showToolbar = false) and multiple pages
+      setupContextMocks({
+        appContext: {
           showToolbar: false, // This simulates embed=true without show_toolbar
-        })
-      )
+        },
+        navigationContext: {
+          appPages: [
+            { pageName: "page1", pageScriptHash: "hash1" },
+            { pageName: "page2", pageScriptHash: "hash2" },
+          ],
+        },
+      })
 
       render(
         <AppView
           {...getProps({
             navigationPosition: Navigation.Position.TOP,
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
             embedded: true,
           })}
         />
@@ -1173,7 +1219,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           showToolbar: false, // This simulates embed=true without show_toolbar
         })
       )
@@ -1200,7 +1246,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           showToolbar: true, // This simulates embed=true&embed_options=show_toolbar
         })
       )
@@ -1229,7 +1275,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           initialSidebarState: PageConfig.SidebarState.AUTO,
         })
       )
@@ -1272,7 +1318,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         })
       )
@@ -1290,7 +1336,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         })
       )
@@ -1334,7 +1380,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           initialSidebarState: PageConfig.SidebarState.EXPANDED,
         })
       )
@@ -1374,24 +1420,21 @@ describe("AppView element", () => {
     })
 
     it("shows sidebar when multiple pages exist even with AUTO state", () => {
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getContextOutput({
+      setupContextMocks({
+        appContext: {
           initialSidebarState: PageConfig.SidebarState.AUTO,
-        })
-      )
+        },
+        navigationContext: {
+          appPages: [
+            { pageName: "page1", pageScriptHash: "hash1" },
+            { pageName: "page2", pageScriptHash: "hash2" },
+          ],
+        },
+      })
 
       render(
         <AppView
-          {...getProps({
-            appPages: [
-              { pageName: "page1", pageScriptHash: "hash1" },
-              { pageName: "page2", pageScriptHash: "hash2" },
-            ],
-            navigationPosition: Navigation.Position.SIDEBAR,
-          })}
+          {...getProps({ navigationPosition: Navigation.Position.SIDEBAR })}
         />
       )
 
@@ -1406,7 +1449,7 @@ describe("AppView element", () => {
         StreamlitContextProviderModule,
         "useAppContext"
       ).mockReturnValue(
-        getContextOutput({
+        getAppContextOutput({
           initialSidebarState: PageConfig.SidebarState.AUTO,
         })
       )
@@ -1502,15 +1545,15 @@ describe("AppView element", () => {
     const mockSidebarContext = (
       initialSidebarState: PageConfig.SidebarState,
       pageLinkBaseUrl = ""
-    ): ReturnType<typeof vi.spyOn> => {
-      return vi
-        .spyOn(StreamlitContextProviderModule, "useAppContext")
-        .mockImplementation(() =>
-          getContextOutput({
-            initialSidebarState,
-            pageLinkBaseUrl,
-          })
-        )
+    ): void => {
+      setupContextMocks({
+        appContext: {
+          initialSidebarState,
+        },
+        navigationContext: {
+          pageLinkBaseUrl,
+        },
+      })
     }
 
     const renderAppViewWithSidebar = (): ReturnType<typeof render> => {

@@ -126,6 +126,8 @@ describe("useWidgetManagerElementState hook", () => {
       {},
       // ThemeContext overrides
       {},
+      // NavigationContext overrides
+      {},
       // FormsContext overrides
       {
         formsData: createFormsData(),

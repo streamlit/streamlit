@@ -18,14 +18,18 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import * as LibModule from "@streamlit/lib"
 import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
+  NavigationContextProps,
   render,
   ThemeConfig,
 } from "@streamlit/lib"
-import { CustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig, PageConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
@@ -34,12 +38,6 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     endpoints: mockEndpoints(),
     hasElements: true,
-    appPages: [],
-    navSections: [],
-    onPageChange: vi.fn(),
-    currentPageScriptHash: "",
-    hideSidebarNav: false,
-    expandSidebarNav: false,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
     appLogo: null,
@@ -47,7 +45,57 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   }
 }
 
+function getAppContextOutput(
+  context: Partial<AppContextProps> = {}
+): AppContextProps {
+  return {
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
+    widgetsDisabled: false,
+    gitInfo: null,
+    showToolbar: true,
+    ...context,
+  }
+}
+
+function getNavigationContextOutput(
+  context: Partial<NavigationContextProps> = {}
+): NavigationContextProps {
+  return {
+    pageLinkBaseUrl: "",
+    currentPageScriptHash: "",
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: [],
+    ...context,
+  }
+}
+
+function setupContextMocks(options?: {
+  appContext?: Partial<AppContextProps>
+  navigationContext?: Partial<NavigationContextProps>
+}): void {
+  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+    getAppContextOutput(options?.appContext || {})
+  )
+
+  vi.spyOn(LibModule, "useNavigationContext").mockReturnValue(
+    getNavigationContextOutput(options?.navigationContext || {})
+  )
+}
+
 describe("ThemedSidebar Component", () => {
+  beforeEach(() => {
+    setupContextMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("should render without crashing", () => {
     render(<ThemedSidebar {...getProps()} />)
 

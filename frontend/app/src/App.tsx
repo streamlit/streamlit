@@ -2225,22 +2225,11 @@ export class App extends PureComponent<Props, State> {
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
               appLogo={elements.logo}
-              appPages={appPages}
-              navSections={navSections}
-              onPageChange={this.onPageChange}
-              hideSidebarNav={
-                hideSidebarNav ||
-                hostHideSidebarNav ||
-                effectiveNavigationPosition === Navigation.Position.TOP
-              }
-              expandSidebarNav={expandSidebarNav}
               navigationPosition={effectiveNavigationPosition}
-              pageLinkBaseUrl={this.state.pageLinkBaseUrl}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}
               showPadding={showPadding}
               disableScrolling={disableScrolling}
-              currentPageScriptHash={currentPageScriptHash}
               addScriptFinishedHandler={this.addScriptFinishedHandler}
               removeScriptFinishedHandler={this.removeScriptFinishedHandler}
               topRightContent={
