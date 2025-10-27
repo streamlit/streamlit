@@ -213,18 +213,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
-  /**
-   * Context Provider Ordering (Outer → Inner):
-   * 1. AppContext - Changes least frequently (app-level config)
-   * 2. LibContext - Changes moderately (fullscreen, locale, etc.)
-   * 3. ThemeContext - Changes when user switches theme (infrequent, user-initiated)
-   * 4. FormsContext - Changes when forms are modified (moderate frequency)
-   * 5. ScriptRunContext - Changes most frequently (every script run)
-   *
-   * Performance: More frequently changing contexts are innermost to minimize
-   * cascading re-renders. When ScriptRunContext changes (every script run),
-   * only its consumers re-render, not FormsContext or ThemeContext consumers.
-   */
   return (
     <AppContext.Provider value={appContextProps}>
       <LibContext.Provider value={libContextProps}>

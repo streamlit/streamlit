@@ -96,9 +96,10 @@ describe("Form", () => {
     // is still missing.
     rerenderWithContexts(
       <Form {...props} />,
-      undefined,
-      undefined,
-      undefined,
+      {},
+      {},
+      {},
+      // ScriptRunContext overrides
       {
         scriptRunState: ScriptRunState.NOT_RUNNING,
       }
@@ -108,9 +109,10 @@ describe("Form", () => {
     // If the app restarts, we continue to show the error...
     rerenderWithContexts(
       <Form {...props} />,
-      undefined,
-      undefined,
-      undefined,
+      {},
+      {},
+      {},
+      // ScriptRunContext overrides
       {
         scriptRunState: ScriptRunState.RUNNING,
       }
@@ -124,9 +126,15 @@ describe("Form", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
       { formId } as any,
     ])
-    rerenderWithContexts(<Form {...props} />, undefined, undefined, {
-      formsData: formsDataWithButton,
-    })
+    rerenderWithContexts(
+      <Form {...props} />,
+      {},
+      {},
+      // FormsContext overrides
+      {
+        formsData: formsDataWithButton,
+      }
+    )
     expect(screen.getByTestId("stForm")).toBeInTheDocument()
     expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
   })

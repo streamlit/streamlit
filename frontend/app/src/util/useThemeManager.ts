@@ -75,19 +75,21 @@ export function useThemeManager(): [
 
   const updateTheme = useCallback(
     (newTheme: ThemeConfig): void => {
-      if (newTheme !== theme) {
-        setTheme(newTheme)
-
-        // Only save to localStorage if it is not Auto since auto is the default.
-        // Important to not save since it can change depending on time of day.
-        if (newTheme.name === AUTO_THEME_NAME) {
-          removeCachedTheme()
-        } else {
-          setCachedTheme(newTheme)
+      setTheme(prevTheme => {
+        if (newTheme !== prevTheme) {
+          // Only save to localStorage if it is not Auto since auto is the default.
+          // Important to not save since it can change depending on time of day.
+          if (newTheme.name === AUTO_THEME_NAME) {
+            removeCachedTheme()
+          } else {
+            setCachedTheme(newTheme)
+          }
+          return newTheme
         }
-      }
+        return prevTheme
+      })
     },
-    [setTheme, theme]
+    [setTheme]
   )
 
   const updateAutoTheme = useCallback((): void => {
