@@ -19,7 +19,6 @@ import React, {
   KeyboardEvent,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
@@ -78,17 +77,6 @@ export interface ChatComposerProps {
   acceptAudio?: boolean
   disabled?: boolean
   placeholder?: string
-  strings?: {
-    send: string
-    attach: string
-    mic: string
-  }
-}
-
-const DEFAULT_STRINGS: Required<NonNullable<ChatComposerProps["strings"]>> = {
-  send: "Send",
-  attach: "Attach file",
-  mic: "Record audio",
 }
 
 const ChatComposer: React.FC<ChatComposerProps> = ({
@@ -96,13 +84,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   acceptAudio = false,
   disabled = false,
   placeholder = "Send a message",
-  strings,
 }) => {
-  const composerStrings = useMemo(
-    () => ({ ...DEFAULT_STRINGS, ...strings }),
-    [strings]
-  )
-
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const waveformContainerRef = useRef<HTMLDivElement>(null)
@@ -127,7 +109,9 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   const controlsDisabled = !canInteract || isRecording
 
   const focusInput = useCallback(() => {
-    inputRef.current?.focus()
+    requestAnimationFrame(() => {
+      inputRef.current?.focus()
+    })
   }, [])
 
   const handleChange = useCallback(
@@ -267,7 +251,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           <StyledComposerButton
             type="button"
             onClick={handleAttachClick}
-            aria-label={composerStrings.attach}
+            aria-label="Attach file"
             disabled={controlsDisabled}
             data-testid="chat-composer-attach"
           >
@@ -277,7 +261,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
             <StyledComposerButton
               type="button"
               onClick={handleMicClick}
-              aria-label={composerStrings.mic}
+              aria-label="Record audio"
               disabled={controlsDisabled || isRecording}
               data-testid="chat-composer-mic"
             >
@@ -289,7 +273,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
             onClick={() => {
               void handleSubmit()
             }}
-            aria-label={composerStrings.send}
+            aria-label="Send"
             disabled={controlsDisabled || !hasPendingContent}
             data-testid="chat-composer-send"
             variant="primary"
