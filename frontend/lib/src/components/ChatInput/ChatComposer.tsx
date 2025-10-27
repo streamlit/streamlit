@@ -127,9 +127,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   const controlsDisabled = !canInteract || isRecording
 
   const focusInput = useCallback(() => {
-    requestAnimationFrame(() => {
-      inputRef.current?.focus()
-    })
+    inputRef.current?.focus()
   }, [])
 
   const handleChange = useCallback(
