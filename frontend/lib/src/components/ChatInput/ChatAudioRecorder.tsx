@@ -154,15 +154,11 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
       await Promise.resolve(onApprove({ blob, meta }))
     } catch {
       controller.cancel()
+      onCancel()
+    } finally {
       if (isMountedRef.current) {
         setPending(false)
       }
-      onCancel()
-      return
-    }
-
-    if (isMountedRef.current) {
-      setPending(false)
     }
   }, [controller, disabled, onApprove, onCancel, pending])
 
