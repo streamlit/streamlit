@@ -24,6 +24,7 @@ import React, {
 
 import type { AudioMeta, WaveformController } from "~lib/components/audio"
 
+import { LOG } from "./logger"
 import {
   StyledChatAudioButton,
   StyledChatAudioContainer,
@@ -89,9 +90,10 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
       }
     }
 
-    startRecording().catch(_error => {
-      // Errors are already handled in the try-catch above
-      // This catch prevents unhandled promise rejection
+    startRecording().catch(error => {
+      // Errors are handled internally by calling onCancel()
+      // Log for debugging and monitoring
+      LOG.error("Error starting audio recording:", error)
     })
 
     return () => {
