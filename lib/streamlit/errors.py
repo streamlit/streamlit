@@ -41,6 +41,17 @@ class CustomComponentError(Error):
     pass
 
 
+class StreamlitComponentRegistryError(Error):
+    """Exceptions raised while discovering or registering Streamlit components.
+
+    These errors occur during Streamlit startup when scanning installed
+    distributions for component metadata and registering them with the component
+    registry.
+    """
+
+    pass
+
+
 class DeprecationError(Error):
     pass
 
@@ -425,6 +436,67 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
             message,
             page=page,
             directory=directory,
+        )
+
+
+# Bidirectional Components
+class BidiComponentInvalidIdError(LocalizableStreamlitException):
+    """Exception raised when an invalid ID component is provided."""
+
+    def __init__(self, part: str, delimiter: str) -> None:
+        super().__init__(
+            "The `{part}` of a bidirectional component's ID must not contain "
+            "the delimiter sequence `{delimiter}`.",
+            part=part,
+            delimiter=delimiter,
+        )
+
+
+class BidiComponentMissingContentError(LocalizableStreamlitException):
+    """Exception raised when a component is missing required content."""
+
+    def __init__(self, component_name: str) -> None:
+        super().__init__(
+            "Component `{component_name}` must have either JavaScript content "
+            "(`js_content` or `js_url`) or HTML content (`html_content`), or both. "
+            "Please ensure the component definition includes at least one of these.",
+            component_name=component_name,
+        )
+
+
+class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
+    """Exception raised when a callback with an invalid name is provided."""
+
+    def __init__(self, callback_name: str) -> None:
+        super().__init__(
+            "The callback name `'{callback_name}'` is not allowed. "
+            "Callback names must follow the pattern `on_{{event_name}}_change` "
+            "where `event_name` is not empty.",
+            callback_name=callback_name,
+        )
+
+
+class BidiComponentInvalidDefaultKeyError(LocalizableStreamlitException):
+    """Exception raised when an invalid key is provided in the default dict."""
+
+    def __init__(self, state_key: str, available_keys: list[str]) -> None:
+        super().__init__(
+            "Key `'{state_key}'` in `default` is not a valid state name. "
+            "Valid state names are those with corresponding `on_{{state_name}}_change` "
+            "callbacks. Available state names: `{available_keys}`",
+            state_key=state_key,
+            available_keys=available_keys or "none",
+        )
+
+
+class BidiComponentUnserializableDataError(LocalizableStreamlitException):
+    """Exception raised when data provided to a bidirectional component cannot be serialized."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The `data` provided to the bidirectional component could not be serialized. "
+            "Please ensure the data is JSON-serializable, or is a supported data structure "
+            "like a pandas DataFrame."
         )
 
 

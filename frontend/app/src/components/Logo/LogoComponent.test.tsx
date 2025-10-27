@@ -27,6 +27,9 @@ const mockEndpoints = {
   setStaticConfigUrl: vi.fn(),
   sendClientErrorToHost: vi.fn(),
   checkSourceUrlResponse: vi.fn(),
+  buildBidiComponentURL: vi.fn(
+    (componentName: string, path: string) => `${componentName}/${path}`
+  ),
   buildComponentURL: vi.fn(
     (componentName: string, path: string) => `${componentName}/${path}`
   ),

@@ -815,6 +815,15 @@ function DataFrame({
     }
   }, [allColumns.length, columns.length])
 
+  // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
+  // and not in the root container. This is because the feature requires measurements from the parent container
+  // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
+  // in a nested container.
+  const disableResize =
+    isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
+      ? true
+      : false
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -822,6 +831,7 @@ function DataFrame({
       ref={resizableContainerRef}
       isInHorizontalLayout={isInHorizontalLayout}
       minHeight={minHeight}
+      disableResize={disableResize}
       onPointerDown={e => {
         if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
@@ -986,7 +996,7 @@ function DataFrame({
         // dataframes in horizontal layouts, so it is disabled. The
         // resize handles are also disabled so that the dataframe cannot be
         // stretched beyond the container width.
-        maxWidth={isInHorizontalLayout ? undefined : maxWidth}
+        maxWidth={disableResize ? undefined : maxWidth}
         size={resizableSize}
         enable={{
           top: false,
@@ -994,7 +1004,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: isInHorizontalLayout ? false : true,
+          bottomRight: disableResize ? false : true,
           bottomLeft: false,
           topLeft: false,
         }}

@@ -24,6 +24,7 @@ import {
   Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
+  BidiComponent as BidiComponentProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
@@ -160,6 +161,10 @@ const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
 const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+
+const BidiComponent = lazy(
+  () => import("~lib/components/widgets/BidiComponent")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -552,7 +557,6 @@ const RawElementNodeRenderer = (
         />
       )
     }
-
     case "componentInstance":
       return (
         <ComponentInstance
@@ -691,6 +695,18 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "bidiComponent": {
+      const bidiComponentProto = node.element
+        .bidiComponent as BidiComponentProto
+
+      return (
+        <BidiComponent
+          key={bidiComponentProto.id}
+          element={bidiComponentProto}
+          {...widgetProps}
+        />
+      )
+    }
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
