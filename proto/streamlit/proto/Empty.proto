@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "EmptyProto";
 
+package streamlit.proto;
+
 // A python empty.
 message Empty {
 }

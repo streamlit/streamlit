@@ -16,6 +16,26 @@
 
 syntax = "proto3";
 
+python - <<'PY'
+from pathlib import Path
+pdir = Path('proto/streamlit/proto')
+files = sorted(pdir.glob('*.proto'))
+changed=[]
+for p in files:
+    s = p.read_text(encoding='utf-8')
+    # Only act if syntax exists and package not already present in first 12 lines
+    header = '\n'.join(s.splitlines()[:12])
+    if 'syntax = "proto3";' in header and 'package ' not in header:
+        s = s.replace('syntax = "proto3";\n', 'syntax = "proto3";\npackage streamlit;\n\n', 1)
+        p.write_text(s, encoding='utf-8')
+        changed.append(str(p))
+print("Updated files (added package streamlit;):")
+for c in changed: print("  ", c)
+if not changed:
+    print("No files needed package insertion.")
+PY
+
+
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ElementProto";
 
