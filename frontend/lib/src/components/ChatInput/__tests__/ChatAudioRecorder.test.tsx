@@ -159,12 +159,6 @@ describe("ChatAudioRecorder", () => {
         onStart={vi.fn()}
         onApprove={vi.fn()}
         onCancel={vi.fn()}
-        strings={{
-          recordingLabel: "Recording",
-          cancel: "Cancel recording",
-          approve: "Approve recording",
-          micTooltip: "Mic",
-        }}
       />
     )
 
