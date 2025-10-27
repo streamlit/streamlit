@@ -236,7 +236,6 @@ with st.container(
     st.line_chart(small_data, width="content")
     st.markdown("Growth in the last 3 months", width="content")
 
-# Additional data for moved containers
 medium_data = pd.DataFrame(
     {
         "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
