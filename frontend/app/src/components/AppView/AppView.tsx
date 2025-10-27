@@ -45,9 +45,9 @@ import {
   IGuestToHostMessage,
   NavigationContext,
   Profiler,
+  SidebarConfigContext,
   ThemeContext,
   useExecuteWhenChanged,
-  useSidebarConfigContext,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -134,8 +134,9 @@ function AppView(props: AppViewProps): ReactElement {
   const { appPages, navSections, pageLinkBaseUrl } =
     useContext(NavigationContext)
 
-  const { initialSidebarState, appLogo, hideSidebarNav } =
-    useSidebarConfigContext()
+  const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
+    SidebarConfigContext
+  )
 
   const { innerWidth } = useWindowDimensionsContext()
 

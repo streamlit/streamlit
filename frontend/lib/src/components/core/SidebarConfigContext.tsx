@@ -18,8 +18,6 @@ import { createContext } from "react"
 
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-
 export interface SidebarConfigContextProps {
   /**
    * The initial sidebar state from page config (AUTO, EXPANDED, or COLLAPSED).
@@ -73,19 +71,17 @@ export interface SidebarConfigContextProps {
 /**
  * SidebarConfigContext provides sidebar configuration throughout the app.
  *
- * Initialize with a default value of null so downstream usages will trigger
- * runtime errors if context expected to exist but does not.
+ * We provide safe default values to prevent crashes during initial render
+ * before the App component has fully initialized. These match the default
+ * behavior when no explicit configuration is provided.
  */
-export const SidebarConfigContext =
-  createContext<SidebarConfigContextProps | null>(null)
+export const SidebarConfigContext = createContext<SidebarConfigContextProps>({
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+})
 
-// Set the context display name for useRequiredContext error message
+// Set the context display name for React DevTools
 SidebarConfigContext.displayName = "SidebarConfigContext"
-
-/**
- * Custom hook to access SidebarConfigContext values in components.
- * Throws an error if used outside of a SidebarConfigContext.Provider.
- */
-export const useSidebarConfigContext = (): SidebarConfigContextProps => {
-  return useRequiredContext(SidebarConfigContext)
-}

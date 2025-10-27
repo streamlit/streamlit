@@ -31,7 +31,7 @@ import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   isMobile,
   NavigationContext,
-  useSidebarConfigContext,
+  SidebarConfigContext,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -145,7 +145,7 @@ const SidebarNav = ({
   hasSidebarElements,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
-  const { expandSidebarNav } = useSidebarConfigContext()
+  const { expandSidebarNav } = useContext(SidebarConfigContext)
   const { pageLinkBaseUrl, appPages, onPageChange, currentPageScriptHash } =
     useContext(NavigationContext)
 

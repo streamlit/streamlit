@@ -36,10 +36,7 @@ export type { NavigationContextProps } from "./components/core/NavigationContext
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
 export { ScriptRunContext } from "./components/core/ScriptRunContext"
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
-export {
-  SidebarConfigContext,
-  useSidebarConfigContext,
-} from "./components/core/SidebarConfigContext"
+export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
 export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
 export { ThemeContext } from "./components/core/ThemeContext"
 export type { ThemeContextProps } from "./components/core/ThemeContext"

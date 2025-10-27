@@ -42,10 +42,10 @@ import {
   DynamicIcon,
   IsSidebarContext,
   NavigationContext,
+  SidebarConfigContext,
   useEmotionTheme,
   useExecuteWhenChanged,
   useScrollbarGutterSize,
-  useSidebarConfigContext,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -88,7 +88,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages, navSections } = useContext(NavigationContext)
-  const { hideSidebarNav, appLogo } = useSidebarConfigContext()
+
+  const { hideSidebarNav, appLogo } = useContext(SidebarConfigContext)
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 

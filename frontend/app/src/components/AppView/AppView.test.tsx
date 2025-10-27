@@ -29,6 +29,7 @@ import {
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
+  mockTheme,
   NavigationContextProps,
   render,
   renderWithContexts,
@@ -165,7 +166,7 @@ describe("AppView element", () => {
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it("renders without crashing", () => {
@@ -819,9 +820,7 @@ describe("AppView element", () => {
 
     it("uses iconImage if provided", () => {
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: fullAppLogo },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: fullAppLogo } })
       const collapsedLogo = screen.getByTestId("stHeaderLogo")
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
@@ -832,9 +831,7 @@ describe("AppView element", () => {
 
     it("defaults to image if no iconImage", () => {
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: imageOnly },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: imageOnly } })
 
       const collapsedLogo = screen.getByTestId("stHeaderLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -844,9 +841,7 @@ describe("AppView element", () => {
     })
 
     it("default no link with image size medium", () => {
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: imageOnly },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: imageOnly } })
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
       expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
         height: "1.5rem",
@@ -854,9 +849,7 @@ describe("AppView element", () => {
     })
 
     it("link with image if provided", () => {
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: imageWithLink },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: imageWithLink } })
       expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
         "href",
         "www.example.com"
@@ -864,18 +857,15 @@ describe("AppView element", () => {
     })
 
     it("renders logo - large size when specified", () => {
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: imageWithSize },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: imageWithSize } })
       expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
         height: "2rem",
       })
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: imageOnly },
-      })
+      const props = getProps({})
+      renderAppView(props, { sidebarConfigContext: { appLogo: imageOnly } })
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
@@ -1096,9 +1086,7 @@ describe("AppView element", () => {
         image: "https://example.com/logo.png",
       })
 
-      renderAppView(getProps(), {
-        sidebarConfigContext: { appLogo: logo },
-      })
+      renderAppView({}, { sidebarConfigContext: { appLogo: logo } })
 
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
@@ -1264,7 +1252,7 @@ describe("AppView element", () => {
   })
 
   describe("sidebar flicker prevention", () => {
-    it("does not render sidebar when initialSidebarState is AUTO on initial render", () => {
+    it("responds to initialSidebarState changes from AUTO to COLLAPSED", () => {
       const sidebarElement = new ElementNode(
         makeElementWithInfoText("sidebar content"),
         ForwardMsgMetadata.create({}),
@@ -1296,7 +1284,8 @@ describe("AppView element", () => {
       const { rerenderWithContexts } = renderWithContexts(
         <AppView {...props} />,
         {}, // LibContext
-        { initialSidebarState: PageConfig.SidebarState.AUTO } // SidebarConfigContext
+        { initialSidebarState: PageConfig.SidebarState.AUTO }, // SidebarConfigContext
+        { activeTheme: mockTheme, setTheme: vi.fn(), availableThemes: [] } // ThemeContext
       )
 
       // Sidebar should be rendered and expanded when initialSidebarState is AUTO
@@ -1512,9 +1501,9 @@ describe("AppView element", () => {
 
     const renderAppViewWithSidebar = (
       initialSidebarState: PageConfig.SidebarState
-    ): void => {
-      renderAppView(
-        { ...getProps({ elements: elementsWithSidebar }) },
+    ): ReturnType<typeof renderWithContexts> => {
+      return renderAppView(
+        { elements: elementsWithSidebar },
         { sidebarConfigContext: { initialSidebarState } }
       )
     }

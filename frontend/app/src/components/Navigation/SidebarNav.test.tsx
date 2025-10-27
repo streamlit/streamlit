@@ -19,8 +19,6 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import * as LibModule from "@streamlit/lib"
 import {
   mockEndpoints,
@@ -162,17 +160,6 @@ function getSidebarConfigContextOutput(
   }
 }
 
-function getAppContextOutput(
-  context: Partial<AppContextProps>
-): AppContextProps {
-  return {
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
-    ...context,
-  }
-}
-
 function getNavigationContextOutput(
   context: Partial<NavigationContextProps>
 ): NavigationContextProps {
@@ -186,31 +173,14 @@ function getNavigationContextOutput(
   }
 }
 
-// Helper to setup context mocks for tests
-function setupContextMocks(options?: {
-  appContext?: Partial<AppContextProps>
-  sidebarConfigContext?: Partial<SidebarConfigContextProps>
-  navigationContext?: Partial<NavigationContextProps>
-}): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getAppContextOutput(options?.appContext || {})
-  )
-}
-
 // Helper to render SidebarNav with proper context
 function renderSidebarNav(
   props: Partial<Props> = {},
   overrides?: {
-    appContext?: Partial<AppContextProps>
     sidebarConfigContext?: Partial<SidebarConfigContextProps>
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {
-  // Setup AppContext mock with overrides if provided
-  if (overrides?.appContext) {
-    setupContextMocks({ appContext: overrides.appContext })
-  }
-
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
     overrides?.sidebarConfigContext || {}
   )
@@ -232,7 +202,6 @@ function renderSidebarNav(
 
 describe("SidebarNav", () => {
   beforeEach(() => {
-    setupContextMocks()
     vi.spyOn(LibModule, "isMobile").mockReturnValue(false)
   })
 

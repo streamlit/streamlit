@@ -24,8 +24,6 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   mockEndpoints,
   NavigationContextProps,
@@ -114,25 +112,6 @@ function getNavigationContextOutput(
   }
 }
 
-// Helper function to create mock app context with overrides
-function getAppContextOutput(
-  context: Partial<AppContextProps> = {}
-): AppContextProps {
-  return {
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
-    ...context,
-  }
-}
-
-// Helper function to setup AppContext mock
-function setupAppContextMock(context: Partial<AppContextProps> = {}): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getAppContextOutput(context)
-  )
-}
-
 // Test data constants
 const LOGO_IMAGE_URL =
   "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -160,11 +139,6 @@ const SAMPLE_PAGES_WITH_URLS = [
 describe("Sidebar Component", () => {
   beforeEach(() => {
     window.localStorage.clear()
-    setupAppContextMock()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   it("should render without crashing", () => {
