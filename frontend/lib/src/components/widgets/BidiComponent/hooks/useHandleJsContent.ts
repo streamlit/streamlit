@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useContext, useEffect, useMemo } from "react"
+import React, { useContext, useEffect, useMemo, useRef } from "react"
 
 import { v4 as uuidv4 } from "uuid"
 
@@ -209,9 +209,15 @@ export const useHandleJsContent = ({
     return getBidiComponentURL(componentName, jsSourcePath)
   }, [componentName, jsSourcePath, getBidiComponentURL])
 
+  // Lifecycle refs to ensure we only run the user-written JS cleanup function
+  // when the component is unmounted by Streamlit.
+  const cleanupRef = useRef<OptionalComponentCleanupFunction>()
+  const scriptElementRef = useRef<HTMLScriptElement>()
+  const unmountedRef = useRef(false)
+
+  // Initialization/update effect: runs when inputs change
   useEffect(() => {
     const { current: containerRefCurrent } = containerRef
-
     if (
       skip ||
       (!inlineJsContent && !externalJsSourcePathUrl) ||
@@ -219,10 +225,6 @@ export const useHandleJsContent = ({
     ) {
       return
     }
-
-    let isMounted = true
-    let cleanup: OptionalComponentCleanupFunction
-    let scriptElement: HTMLScriptElement | undefined
 
     const run = async (): Promise<void> => {
       try {
@@ -232,7 +234,7 @@ export const useHandleJsContent = ({
             `st-bidi-${componentName}`
           )
 
-          cleanup = await loadAndRunModule({
+          cleanupRef.current = await loadAndRunModule({
             componentId,
             componentIdForWidgetMgr: id,
             componentName,
@@ -250,7 +252,7 @@ export const useHandleJsContent = ({
           try {
             // Load the script
             await new Promise<void>((resolve, reject) => {
-              scriptElement = document.createElement("script")
+              const scriptElement = document.createElement("script")
               scriptElement.type = "module"
               scriptElement.src = scriptUrl
               scriptElement.async = true
@@ -262,10 +264,11 @@ export const useHandleJsContent = ({
                   )
                 )
               document.head.appendChild(scriptElement)
+              scriptElementRef.current = scriptElement
             })
 
-            // Run the module
-            cleanup = await loadAndRunModule({
+            // Run the module and store the cleanup function
+            cleanupRef.current = await loadAndRunModule({
               componentId,
               componentIdForWidgetMgr: id,
               componentName,
@@ -285,32 +288,13 @@ export const useHandleJsContent = ({
           }
         }
       } catch (error) {
-        if (isMounted) {
+        if (!unmountedRef.current) {
           handleError(error, setError)
         }
       }
     }
 
     void run()
-
-    // Cleanup function
-    return () => {
-      isMounted = false
-
-      if (cleanup) {
-        void Promise.resolve(cleanup)
-          .then(result => {
-            result?.()
-          })
-          .catch(error => {
-            LOG.error(`Failed to run cleanup for element ${id}`, error)
-          })
-      }
-
-      if (scriptElement?.parentNode) {
-        scriptElement.parentNode.removeChild(scriptElement)
-      }
-    }
   }, [
     componentId,
     componentName,
@@ -329,4 +313,27 @@ export const useHandleJsContent = ({
     // theme-dependent JS logic can be applied at the proper lifecycle time.
     theme,
   ])
+
+  // Unmount-only cleanup effect
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true
+
+      const maybeCleanup = cleanupRef.current
+      if (maybeCleanup) {
+        void Promise.resolve(maybeCleanup)
+          .then(result => {
+            result?.()
+          })
+          .catch(error => {
+            LOG.error("Failed to run custom component cleanup", error)
+          })
+      }
+
+      const scriptElement = scriptElementRef.current
+      if (scriptElement?.parentNode) {
+        scriptElement.parentNode.removeChild(scriptElement)
+      }
+    }
+  }, [])
 }
