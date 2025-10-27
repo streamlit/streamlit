@@ -250,3 +250,9 @@ with st.container(key="layout-vertical-stretch-height", border=True, height=400)
     st.dataframe(df, height="stretch")
     st.dataframe(df, height="stretch")
     st.markdown("Hello")
+
+flex = st.container(horizontal=True, horizontal_alignment="distribute")
+
+for card in range(6):
+    tile = flex.container(height=120, width="stretch").container(width=200)
+    tile.title(f":balloon: {card + 1}")
