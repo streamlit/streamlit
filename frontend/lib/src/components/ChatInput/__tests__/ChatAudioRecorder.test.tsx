@@ -170,11 +170,9 @@ describe("ChatAudioRecorder", () => {
 
     await waitFor(() => expect(controller.start).toHaveBeenCalled())
     const group = screen.getByRole("group", { name: /recording/i })
-    expect(group).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: /approve/i })
-    ).toBeInTheDocument()
+    expect(group).toBeVisible()
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeVisible()
+    expect(screen.getByRole("button", { name: /approve/i })).toBeVisible()
   })
 
   it("does not render UI when isRecording is false", () => {
