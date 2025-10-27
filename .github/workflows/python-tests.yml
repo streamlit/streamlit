@@ -101,7 +101,7 @@ jobs:
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_${{ matrix.python_version }}
           path: lib/${{ env.COVERAGE_FILE }}
@@ -145,7 +145,7 @@ jobs:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_integration
           path: lib/${{ env.COVERAGE_FILE }}
@@ -209,7 +209,7 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_min_deps
           path: lib/${{ env.COVERAGE_FILE }}
@@ -274,18 +274,18 @@ jobs:
         working-directory: lib
 
       - name: Upload combined coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_data
           path: lib/.coverage
           include-hidden-files: true
       - name: Upload combined coverage JSON
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_json
           path: lib/coverage.json
       - name: Upload combined coverage HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_report
           path: lib/htmlcov

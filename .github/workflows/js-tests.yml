@@ -69,12 +69,12 @@ jobs:
       - name: Run frontend tests
         run: make frontend-tests
       - name: Upload coverage json-summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: vitest_coverage_json
           path: frontend/coverage/coverage-summary.json
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: vitest_coverage_html
           path: frontend/coverage
