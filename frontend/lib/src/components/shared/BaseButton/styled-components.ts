@@ -319,16 +319,18 @@ export const StyledSegmentedControlButton = styled(
     // When containerWidth is true, the buttons will stretch to fill the container.
     flex: containerWidth ? "1 1 fit-content" : "",
     maxWidth: "100%",
-    marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 
     "&:first-child": {
       borderTopLeftRadius: theme.radii.button,
       borderBottomLeftRadius: theme.radii.button,
     },
+    "&:not(:first-child)": {
+      // Remove left border on all buttons except the first to avoid double borders.
+      borderLeft: "0",
+    },
     "&:last-child": {
       borderTopRightRadius: theme.radii.button,
       borderBottomRightRadius: theme.radii.button,
-      marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:focus-visible": {
       // Make sure the focus ring isn't below the previous/next button.
