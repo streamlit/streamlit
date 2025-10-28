@@ -249,7 +249,8 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         assert len(df) == 5
-        assert len(df["col5"].tolist()) == 5
+        assert df.loc[3, "col5"] == ["x", "y"]
+        assert df.loc[4, "col5"] == ["z"]
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
