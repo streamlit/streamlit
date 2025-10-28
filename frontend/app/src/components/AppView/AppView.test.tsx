@@ -21,7 +21,6 @@ import { fireEvent, screen } from "@testing-library/react"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import * as LibModule from "@streamlit/lib"
 import {
   AppRoot,
   BlockNode,
@@ -30,11 +29,9 @@ import {
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
-  mockTheme,
   NavigationContextProps,
   render,
   renderWithContexts,
-  ThemeContext,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -79,42 +76,11 @@ function getNavigationContextOutput(
   }
 }
 
-// Store original useContext at module level to avoid issues with spy layering
-const originalUseContext = React.useContext
-
-// Helper to setup context mocks for tests
-function setupContextMocks(options?: {
-  appContext?: Partial<AppContextProps>
-  navigationContext?: Partial<NavigationContextProps>
-}): void {
+// Helper to setup AppContext mock for tests
+function setupAppContextMocks(appContext?: Partial<AppContextProps>): void {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockImplementation(
-    () => getAppContextOutput(options?.appContext || {})
+    () => getAppContextOutput(appContext || {})
   )
-
-  vi.spyOn(React, "useContext").mockImplementation(context => {
-    if (context === LibModule.NavigationContext) {
-      return getNavigationContextOutput(options?.navigationContext || {})
-    }
-    if (context === ThemeContext) {
-      return {
-        activeTheme: mockTheme,
-        setTheme: vi.fn(),
-        availableThemes: [],
-      }
-    }
-    return originalUseContext(context)
-  })
-
-  vi.spyOn(LibModule, "useRequiredContext").mockImplementation(context => {
-    if (context === ThemeContext) {
-      return {
-        activeTheme: mockTheme,
-        setTheme: vi.fn(),
-        availableThemes: [],
-      }
-    }
-    throw new Error(`Unmocked context: ${context.displayName}`)
-  })
 }
 
 const buildMediaURL = vi.fn((url: string) => url)
@@ -162,20 +128,12 @@ function renderAppView(
   }
 ): ReturnType<typeof renderWithContexts> {
   // Setup AppContext mock with overrides if provided
-  if (overrides?.appContext) {
-    setupContextMocks({
-      appContext: overrides.appContext,
-      navigationContext: overrides.navigationContext,
-    })
-  } else if (overrides?.navigationContext) {
-    setupContextMocks({ navigationContext: overrides.navigationContext })
-  }
+  setupAppContextMocks(overrides?.appContext || {})
 
   const fullProps = getProps(props)
-  const navigationContextValues = {
-    ...getNavigationContextOutput({}),
-    ...(overrides?.navigationContext || {}),
-  }
+  const navigationContextValues = getNavigationContextOutput(
+    overrides?.navigationContext || {}
+  )
   return renderWithContexts(
     <AppView {...fullProps} />,
     {}, // libContextProps
@@ -189,7 +147,7 @@ function renderAppView(
 describe("AppView element", () => {
   beforeEach(() => {
     // Setup default context mocks
-    setupContextMocks()
+    setupAppContextMocks()
   })
 
   afterEach(() => {
@@ -271,17 +229,18 @@ describe("AppView element", () => {
   })
 
   it("does not render a sidebar when there are no elements, multiple pages, and hideSidebarNav is true", () => {
-    setupContextMocks({
-      appContext: { hideSidebarNav: true },
-      navigationContext: {
-        appPages: [
-          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-          { pageName: "page2", pageScriptHash: "page2_hash" },
-        ],
-      },
-    })
-
-    render(<AppView {...getProps({})} />)
+    renderAppView(
+      {},
+      {
+        appContext: { hideSidebarNav: true },
+        navigationContext: {
+          appPages: [
+            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+            { pageName: "page2", pageScriptHash: "page2_hash" },
+          ],
+        },
+      }
+    )
 
     const sidebar = screen.queryByTestId("stSidebar")
     expect(sidebar).not.toBeInTheDocument()
@@ -317,39 +276,40 @@ describe("AppView element", () => {
       new BlockProto({ allowEmpty: true })
     )
 
-    setupContextMocks({
-      navigationContext: {
-        appPages: [
-          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-          { pageName: "page2", pageScriptHash: "page2_hash" },
-        ],
+    renderAppView(
+      {
+        elements: new AppRoot(
+          FAKE_SCRIPT_HASH,
+          new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+        ),
       },
-    })
-
-    const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
-    })
-    render(<AppView {...props} />)
+      {
+        navigationContext: {
+          appPages: [
+            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+            { pageName: "page2", pageScriptHash: "page2_hash" },
+          ],
+        },
+      }
+    )
 
     const sidebarDOMElement = screen.queryByTestId("stSidebar")
     expect(sidebarDOMElement).toBeInTheDocument()
   })
 
   it("does not render the sidebar if there are no elements, multiple pages but hideSidebarNav is true", () => {
-    setupContextMocks({
-      appContext: { hideSidebarNav: true },
-      navigationContext: {
-        appPages: [
-          { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-          { pageName: "page2", pageScriptHash: "page2_hash" },
-        ],
-      },
-    })
-
-    render(<AppView {...getProps({})} />)
+    renderAppView(
+      {},
+      {
+        appContext: { hideSidebarNav: true },
+        navigationContext: {
+          appPages: [
+            { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+            { pageName: "page2", pageScriptHash: "page2_hash" },
+          ],
+        },
+      }
+    )
 
     const sidebar = screen.queryByTestId("stSidebar")
     expect(sidebar).not.toBeInTheDocument()
@@ -464,19 +424,16 @@ describe("AppView element", () => {
       })
 
       it("uses 6rem top padding when top nav is not showing (single page)", () => {
-        setupContextMocks({
-          navigationContext: {
-            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
+        renderAppView(
+          {
+            embedded: false,
+            navigationPosition: Navigation.Position.TOP,
           },
-        })
-
-        render(
-          <AppView
-            {...getProps({
-              embedded: false,
-              navigationPosition: Navigation.Position.TOP,
-            })}
-          />
+          {
+            navigationContext: {
+              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
+            },
+          }
         )
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
@@ -502,22 +459,19 @@ describe("AppView element", () => {
           new BlockProto({ allowEmpty: true })
         )
 
-        setupContextMocks({
-          navigationContext: {
-            appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
+        renderAppView(
+          {
+            elements: new AppRoot(
+              FAKE_SCRIPT_HASH,
+              new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+            ),
+            embedded: false, // Non-embedded
           },
-        })
-
-        render(
-          <AppView
-            {...getProps({
-              elements: new AppRoot(
-                FAKE_SCRIPT_HASH,
-                new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
-              ),
-              embedded: false, // Non-embedded
-            })}
-          />
+          {
+            navigationContext: {
+              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
+            },
+          }
         )
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem") // Should be 6rem, not affected by sidebar
@@ -1570,16 +1524,10 @@ describe("AppView element", () => {
     })
 
     const mockSidebarContext = (
-      initialSidebarState: PageConfig.SidebarState,
-      pageLinkBaseUrl = ""
+      initialSidebarState: PageConfig.SidebarState
     ): void => {
-      setupContextMocks({
-        appContext: {
-          initialSidebarState,
-        },
-        navigationContext: {
-          pageLinkBaseUrl,
-        },
+      setupAppContextMocks({
+        initialSidebarState,
       })
     }
 

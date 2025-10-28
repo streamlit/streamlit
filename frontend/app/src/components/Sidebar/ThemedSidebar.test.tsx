@@ -18,16 +18,14 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  render,
+  renderWithContexts,
   ThemeConfig,
 } from "@streamlit/lib"
-import { CustomThemeConfig, PageConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
@@ -43,47 +41,30 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   }
 }
 
-function getAppContextOutput(
-  context: Partial<AppContextProps> = {}
-): AppContextProps {
-  return {
-    initialSidebarState: PageConfig.SidebarState.AUTO,
-    appLogo: null,
-    sidebarChevronDownshift: 0,
-    expandSidebarNav: false,
-    hideSidebarNav: false,
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
-    ...context,
-  }
-}
-
-function setupContextMocks(options?: {
-  appContext?: Partial<AppContextProps>
-}): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getAppContextOutput(options?.appContext || {})
+// Helper to render ThemedSidebar with default context values
+function renderThemedSidebar(
+  props: Partial<SidebarProps> = {}
+): ReturnType<typeof renderWithContexts> {
+  const fullProps = getProps(props)
+  return renderWithContexts(
+    <ThemedSidebar {...fullProps} />,
+    {}, // LibContextProps
+    {}, // ThemeContextProps
+    {}, // NavigationContextProps
+    {}, // FormsContextProps
+    {} // ScriptRunContextProps
   )
 }
 
 describe("ThemedSidebar Component", () => {
-  beforeEach(() => {
-    setupContextMocks()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("should render without crashing", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,

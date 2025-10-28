@@ -201,10 +201,9 @@ function renderSidebarNav(
   }
 
   const fullProps = getProps(props)
-  const navigationContextValues = {
-    ...getNavigationContextOutput({}),
-    ...(overrides?.navigationContext || {}),
-  }
+  const navigationContextValues = getNavigationContextOutput(
+    overrides?.navigationContext || {}
+  )
   return renderWithContexts(
     <SidebarNav {...fullProps} />,
     {}, // libContextProps

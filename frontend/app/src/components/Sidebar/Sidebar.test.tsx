@@ -48,6 +48,7 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
+// Wrapper component to access AppContext values
 function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
   const appContext = StreamlitContextProviderModule.useAppContext()
   return (
@@ -115,13 +116,10 @@ function getNavigationContextOutput(
   }
 }
 
-// Helper function to setup context mocks
-function setupContextMocks(options?: {
-  appContext?: Partial<AppContextProps>
-  navigationContext?: Partial<NavigationContextProps>
-}): void {
+// Helper function to setup AppContext mock
+function setupAppContextMock(context: Partial<AppContextProps> = {}): void {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getAppContextOutput(options?.appContext || {})
+    getAppContextOutput(context)
   )
 }
 
@@ -152,7 +150,7 @@ const SAMPLE_PAGES_WITH_URLS = [
 describe("Sidebar Component", () => {
   beforeEach(() => {
     window.localStorage.clear()
-    setupContextMocks()
+    setupAppContextMock()
   })
 
   afterEach(() => {
@@ -160,7 +158,7 @@ describe("Sidebar Component", () => {
   })
 
   it("should render without crashing", () => {
-    renderSidebar({})
+    renderSidebar()
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
@@ -179,7 +177,7 @@ describe("Sidebar Component", () => {
     ])(
       "should render $state correctly",
       ({ state, isCollapsed, expectedAria }) => {
-        setupContextMocks({ appContext: { initialSidebarState: state } })
+        setupAppContextMock({ initialSidebarState: state })
         renderSidebar({ isCollapsed })
 
         expect(screen.getByTestId("stSidebar")).toHaveAttribute(
@@ -257,11 +255,8 @@ describe("Sidebar Component", () => {
     })
 
     it("can hide SidebarNav with the hideSidebarNav option", () => {
-      setupContextMocks({
-        appContext: { hideSidebarNav: true },
-        navigationContext: { appPages: SAMPLE_PAGES },
-      })
-      renderSidebar()
+      setupAppContextMock({ hideSidebarNav: true })
+      renderSidebar({}, { navigationContext: { appPages: SAMPLE_PAGES } })
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
@@ -334,7 +329,7 @@ describe("Sidebar Component", () => {
   })
 
   it("applies scrollbarGutter style to sidebar content", () => {
-    renderSidebar({})
+    renderSidebar()
 
     const sidebarContent = screen.getByTestId("stSidebarContent")
     const styles = window.getComputedStyle(sidebarContent)
@@ -384,7 +379,7 @@ describe("Sidebar Component", () => {
           expectedUrl: LOGO_IMAGE_URL,
         },
       ])("$description", ({ logo, expectedUrl }) => {
-        setupContextMocks({ appContext: { appLogo: logo } })
+        setupAppContextMock({ appLogo: logo })
         const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
         renderSidebar({ isCollapsed: true })
 
@@ -395,9 +390,9 @@ describe("Sidebar Component", () => {
     })
 
     it("renders logo's image param when sidebar expanded", () => {
-      setupContextMocks({ appContext: { appLogo: testLogos.fullAppLogo } })
+      setupAppContextMock({ appLogo: testLogos.fullAppLogo })
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderSidebar({})
+      renderSidebar()
 
       const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
@@ -434,7 +429,7 @@ describe("Sidebar Component", () => {
       ])(
         "renders logo - $description",
         ({ logo, expectLink, expectedHeight, expectedHref }) => {
-          setupContextMocks({ appContext: { appLogo: logo } })
+          setupAppContextMock({ appLogo: logo })
           renderSidebar()
 
           const sidebar = screen.getByTestId("stSidebar")
@@ -454,7 +449,7 @@ describe("Sidebar Component", () => {
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
-      setupContextMocks({ appContext: { appLogo: testLogos.fullAppLogo } })
+      setupAppContextMock({ appLogo: testLogos.fullAppLogo })
       renderSidebar()
 
       const sidebarLogo = within(
@@ -480,7 +475,7 @@ describe("Sidebar Component", () => {
     })
 
     it("should initialize with default width when no localStorage value exists", () => {
-      renderSidebar({})
+      renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 256px")
@@ -489,7 +484,7 @@ describe("Sidebar Component", () => {
     it("should initialize with saved width when localStorage value exists", () => {
       window.localStorage.setItem("sidebarWidth", "320")
 
-      renderSidebar({})
+      renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 320px")
