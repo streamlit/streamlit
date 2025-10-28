@@ -122,18 +122,22 @@ const AudioInput: React.FC<Props> = ({
     events: {
       onPermissionDenied: async () => {
         setHasNoMicPermissions(true)
+        return Promise.resolve()
       },
       onError: async () => {
         setIsError(true)
+        return Promise.resolve()
       },
       onRecordStart: async () => {
         setRecordingTime(STARTING_TIME_STRING)
         setProgressTime(STARTING_TIME_STRING)
+        return Promise.resolve()
       },
       onRecordReady: async () => {
         const duration = formatTime(controller.playback.getDurationMs())
         setRecordingTime(duration)
         setProgressTime(duration)
+        return Promise.resolve()
       },
       onApprove: async (wav: Blob) => {
         await transcodeAndUploadFileRef.current?.(wav)
@@ -141,15 +145,19 @@ const AudioInput: React.FC<Props> = ({
       onCancel: async () => {
         setRecordingTime(STARTING_TIME_STRING)
         setProgressTime(STARTING_TIME_STRING)
+        return Promise.resolve()
       },
       onProgressMs: async (ms: number) => {
         setRecordingTime(formatTime(ms))
+        return Promise.resolve()
       },
       onPlaybackPause: async () => {
         setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
+        return Promise.resolve()
       },
       onPlaybackFinish: async () => {
         setProgressTime(formatTime(controller.playback.getDurationMs()))
+        return Promise.resolve()
       },
     },
   })
