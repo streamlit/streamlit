@@ -130,12 +130,11 @@ function renderAppView(
   // Setup AppContext mock with overrides if provided
   setupAppContextMocks(overrides?.appContext || {})
 
-  const fullProps = getProps(props)
   const navigationContextValues = getNavigationContextOutput(
     overrides?.navigationContext || {}
   )
   return renderWithContexts(
-    <AppView {...fullProps} />,
+    <AppView {...getProps(props)} />,
     {}, // libContextProps
     {}, // themeContextProps
     navigationContextValues, // navigationContextProps
@@ -155,15 +154,14 @@ describe("AppView element", () => {
   })
 
   it("renders without crashing", () => {
-    render(<AppView {...getProps({})} />)
+    render(<AppView {...getProps()} />)
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
-    const props = getProps({})
-    render(<AppView {...props} />)
+    render(<AppView {...getProps()} />)
 
     const sidebar = screen.queryByTestId("stSidebar")
     expect(sidebar).not.toBeInTheDocument()
@@ -811,7 +809,7 @@ describe("AppView element", () => {
     })
 
     it("doesn't render if no logo provided", () => {
-      render(<AppView {...getProps({})} />)
+      render(<AppView {...getProps()} />)
       expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
     })
 
@@ -902,7 +900,7 @@ describe("AppView element", () => {
   })
 
   it("does not render a Scroll To Bottom container when no bottom container is present", () => {
-    const props = getProps({})
+    const props = getProps()
     render(<AppView {...props} />)
 
     const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
