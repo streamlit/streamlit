@@ -54,7 +54,7 @@ class BidiComponentCallable(Protocol):
     Parameters
     ----------
     key : str or None
-        An optional string or integer to use as the unique key for the
+        An optional string to use as the unique key for the
         component instance. If this is omitted, an internal key is generated
         for the component instance based on its mounting parameters. No two
         Streamlit elements may have the same key.
