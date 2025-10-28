@@ -625,6 +625,74 @@ describe("BidiComponent", () => {
       )
     })
 
+    it("should re-run JS when element data changes without early cleanup", async () => {
+      const jsContent = `
+        export default function({ data, parentElement }) {
+          const count = Number(parentElement.dataset.runCount || "0") + 1;
+          parentElement.dataset.runCount = String(count);
+
+          return () => {
+            const inv = JSON.parse(parentElement.dataset.cleanupInvocations || "[]");
+            inv.push("cleanup");
+            parentElement.dataset.cleanupInvocations = JSON.stringify(inv);
+          };
+        }
+      `
+
+      const element1 = createMockElement({
+        jsContent,
+        componentName: "DataChangeComponent",
+        id: "data-change",
+        json: JSON.stringify({ value: 1 }),
+      })
+
+      const { rerender, unmount } = renderWithContexts(
+        <BidiComponent
+          element={element1}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+        />,
+        {}
+      )
+
+      const container = screen.getByTestId("stBidiComponentRegular")
+      await waitFor(() => {
+        expect(container.dataset.runCount).toBe("1")
+      })
+
+      const element2 = createMockElement({
+        isolateStyles: false,
+        jsContent,
+        componentName: "DataChangeComponent",
+        id: "data-change",
+        json: JSON.stringify({ value: 2 }),
+      })
+
+      rerender(
+        <BidiComponent
+          element={element2}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+        />
+      )
+
+      await waitFor(() => {
+        expect(container.dataset.runCount).toBe("2")
+      })
+
+      // Verify cleanup not called before unmount
+      expect(container.dataset.cleanupInvocations).toBeUndefined()
+
+      unmount()
+
+      await waitFor(() => {
+        const inv = JSON.parse(
+          (container.dataset.cleanupInvocations as string) || "[]"
+        )
+        expect(inv).toEqual(["cleanup"])
+      })
+    })
+
     it("should handle inline JavaScript content with valid module execution", async () => {
       // Create a valid JavaScript module that will execute
       const jsContent = `
