@@ -32,20 +32,23 @@ class BidiComponentState(TypedDict, total=False):
 
 
 class BidiComponentResult(AttributeDictionary):
-    """Rich return object for ``st._bidi_component``.
+    """The schema for the custom component result object.
 
-    It behaves like a regular :class:`dict` *and* allows attribute-style
-    access to its keys, mirroring the behaviour of
-    :class:`streamlit.util.AttributeDictionary`. It surfaces both trigger and
-    state values as top-level entries so they can be accessed via either key or
-    attribute access.
+    The custom component result object is a dictionary-like object that
+    supports both key and attribute notation. It contains all of the
+    component's state and trigger values.
 
-    Parameters
+    Attributes
     ----------
-    state_vals : dict[str, Any] or None
-        A dictionary of state values from the component.
-    trigger_vals : dict[str, Any] or None
-        A dictionary of trigger values from the component.
+    <state_keys> : Any
+        All state values from the component. State values are persistent across
+        app reruns until explicitly changed. You can have multiple state keys
+        as attributes.
+    <trigger_keys> : Any
+        All trigger values from the component. Trigger values are transient and
+        reset to ``None`` after one script run. You can have multiple trigger
+        keys as attributes.
+
     """
 
     def __init__(
@@ -53,6 +56,15 @@ class BidiComponentResult(AttributeDictionary):
         state_vals: dict[str, Any] | None = None,
         trigger_vals: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize a BidiComponentResult.
+
+        Parameters
+        ----------
+        state_vals : dict[str, Any] or None
+            A dictionary of state values from the component.
+        trigger_vals : dict[str, Any] or None
+            A dictionary of trigger values from the component.
+        """
         if state_vals is None:
             state_vals = {}
         if trigger_vals is None:
