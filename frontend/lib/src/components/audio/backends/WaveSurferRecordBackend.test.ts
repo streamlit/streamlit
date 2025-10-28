@@ -81,8 +81,7 @@ describe("WaveSurferRecordBackend", () => {
     expect(() =>
       backend.initialize(
         mockWaveSurfer as unknown as WaveSurfer,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        MockRecordPluginClass as any
+        MockRecordPluginClass as unknown as typeof RecordPlugin
       )
     ).toThrow("Plugin load failed")
     expect(onError).toHaveBeenCalledTimes(1)
@@ -105,8 +104,7 @@ describe("WaveSurferRecordBackend", () => {
     expect(() =>
       backend.initialize(
         mockWaveSurfer as unknown as WaveSurfer,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        MockRecordPluginClass as any
+        MockRecordPluginClass as unknown as typeof RecordPlugin
       )
     ).toThrow("Microphone permission denied")
     expect(onPermissionDenied).toHaveBeenCalledTimes(1)
@@ -118,8 +116,7 @@ describe("WaveSurferRecordBackend", () => {
     backend.setEventHandlers({ onError })
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     mockRecordPlugin.startRecording.mockRejectedValueOnce(
@@ -137,8 +134,7 @@ describe("WaveSurferRecordBackend", () => {
     backend.setEventHandlers({ onPermissionDenied, onError })
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     const permissionError = new Error("Permission denied")
@@ -158,8 +154,7 @@ describe("WaveSurferRecordBackend", () => {
     backend.setEventHandlers({ onError })
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     mockRecordPlugin.startRecording.mockRejectedValueOnce("String error")
@@ -173,8 +168,7 @@ describe("WaveSurferRecordBackend", () => {
   it("retries without constraints when device rejects sample rate", async () => {
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     const constraintError = new Error("Overconstrained")
@@ -200,8 +194,7 @@ describe("WaveSurferRecordBackend", () => {
   it("cleans up resources on destroy", async () => {
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     // Start recording
@@ -220,8 +213,7 @@ describe("WaveSurferRecordBackend", () => {
     backend.setEventHandlers({ onRecordProgress })
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      MockRecordPluginClass as any
+      MockRecordPluginClass as unknown as typeof RecordPlugin
     )
 
     const progressHandlers = mockEventHandlers.get("record-progress")
