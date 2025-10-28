@@ -330,8 +330,9 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:focus-visible": {
-      // Make sure the focus ring isn't below the previous/next button.
+    "&:hover, &:focus-visible": {
+      // Make sure the hover/focus state is above adjacent buttons to ensure
+      // consistent border appearance on both sides.
       zIndex: theme.zIndices.priority,
     },
   }
