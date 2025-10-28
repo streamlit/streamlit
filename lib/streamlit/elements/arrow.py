@@ -389,18 +389,20 @@ class ArrowMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : int, "auto", or "stretch"
+        height : "auto", "stretch", or int
             The height of the dataframe element. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The dataframe will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
             - An integer specifying the height in pixels: The element has a
               fixed height.
-            - ``"stretch"``: The height of the element expands to fill the
-              available vertical space in its parent container. The element's
-              height will not exceed the parent container's height. When
-              multiple elements with stretch height are in the same container,
-              they share the available vertical space.
 
             Vertical scrolling within the dataframe element is enabled when the
             height does not accommodate all rows.
