@@ -233,15 +233,16 @@ def component(
         If you register multiple components with the same name, a warning is
         logged and the last-registered component is used. Because this can lead
         to unexpected behavior, ensure that component names are unique. If you
-        intend to have multiple instances of a component in one app, be
-        especially careful when wrapping a component definition together with
-        its mounting command.
+        intend to have multiple instances of a component in one app, avoid
+        wrapping a component definition together with its mounting command so
+        you don't re-register your component with each instance.
 
     html : str or None
         Inline HTML markup for the component root. This can be one of the
         following strings:
 
-        - Raw HTML.
+        - Raw HTML. This doesn't require any ``<html>``, ``<head>``, or
+          ``<body>`` tags; just provide the inner HTML.
         - A path or glob to an HTML file, relative to the component's
           asset directory.
 
@@ -346,7 +347,7 @@ def component(
 
         CSS = """
         a {
-            color: var(--st-link-color) !important;
+            color: var(--st-link-color);
         }
         """
 

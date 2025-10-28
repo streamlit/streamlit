@@ -35,8 +35,8 @@ class BidiComponentResult(AttributeDictionary):
     """The schema for the custom component result object.
 
     The custom component result object is a dictionary-like object that
-    supports both key and attribute notation. It contains the component's
-    ``DeltaGenerator`` as well as all state and trigger values.
+    supports both key and attribute notation. It contains all of the
+    component's state and trigger values.
 
     Attributes
     ----------

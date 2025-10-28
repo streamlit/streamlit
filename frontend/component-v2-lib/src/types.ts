@@ -212,6 +212,9 @@ export type OptionalComponentCleanupFunction = ComponentCleanupFunction | void
  *
  * @template TDataShape - The expected shape of the `data` parameter passed
  *   from Python. Defaults to `unknown`.
+ *
+ * @returns OptionalComponentCleanupFunction - An optional cleanup function
+ *   that Streamlit will call when the component is unmounted.
  */
 export type Component<
   TComponentState extends ComponentState = ComponentState,

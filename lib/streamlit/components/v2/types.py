@@ -261,20 +261,26 @@ class BidiComponentCallable(Protocol):
 
         import streamlit as st
 
+        with open("tailwind.js", "r") as f:
+            TAILWIND_SCRIPT = f.read()
+
         HTML = """
-            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded">
                 Click me!
             </button>
         """
-        JS = """
-            export default function(component) {
-                const { setTriggerValue, parentElement } = component;
-                const button = parentElement.querySelector('button');
-                button.onclick = () => {
-                    setTriggerValue('clicked', true);
-                };
-            }
-        """
+        JS = (
+            TAILWIND_SCRIPT
+            + """
+                export default function(component) {
+                    const { setTriggerValue, parentElement } = component;
+                    const button = parentElement.querySelector('button');
+                    button.onclick = () => {
+                        setTriggerValue('clicked', true);
+                    };
+                }
+            """
+        )
         my_component = st.components.v2.component(
             "my_tailwind_button",
             html=HTML,
