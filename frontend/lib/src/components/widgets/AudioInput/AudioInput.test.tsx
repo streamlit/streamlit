@@ -179,11 +179,11 @@ describe("AudioInput Recording Journey", () => {
     // Simulate recording progress
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(1500)
+      void latestEvents?.onProgressMs?.(1500)
     })
 
     // Verify stop button appears
@@ -196,7 +196,7 @@ describe("AudioInput Recording Journey", () => {
     const testBlob = new Blob(["test audio"], { type: "audio/wav" })
     act(() => {
       controllerState = "idle"
-      latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
     })
 
     act(() => {
@@ -217,11 +217,11 @@ describe("AudioInput Recording Journey", () => {
 
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(2000)
+      void latestEvents?.onProgressMs?.(2000)
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -230,7 +230,7 @@ describe("AudioInput Recording Journey", () => {
     // Cancel recording
     act(() => {
       controllerState = "idle"
-      latestEvents?.onCancel?.()
+      void latestEvents?.onCancel?.()
     })
 
     // Verify state reset
@@ -253,7 +253,7 @@ describe("AudioInput Recording Journey", () => {
     // Simulate existing recording
     const oldBlob = new Blob(["old"])
     act(() => {
-      latestEvents?.onRecordReady?.(oldBlob)
+      void latestEvents?.onRecordReady?.(oldBlob)
       void latestEvents?.onApprove?.(oldBlob)
     })
 
@@ -300,17 +300,17 @@ describe("AudioInput Recording Journey", () => {
 
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(1234)
+      void latestEvents?.onProgressMs?.(1234)
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:01"))
 
     act(() => {
-      latestEvents?.onProgressMs?.(5678)
+      void latestEvents?.onProgressMs?.(5678)
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:05"))
@@ -319,7 +319,7 @@ describe("AudioInput Recording Journey", () => {
     act(() => {
       controllerState = "idle"
       controller.playback.getDurationMs = vi.fn().mockReturnValue(5678)
-      latestEvents?.onRecordReady?.(new Blob())
+      void latestEvents?.onRecordReady?.(new Blob())
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:05"))
@@ -411,7 +411,7 @@ describe("AudioInput Playback Journey", () => {
     ).mockReturnValue(5000)
 
     act(() => {
-      latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
     })
 
     act(() => {
@@ -435,7 +435,7 @@ describe("AudioInput Playback Journey", () => {
     ).mockReturnValue(1500)
     act(() => {
       isPlaybackPlaying = false
-      latestEvents?.onPlaybackPause?.()
+      void latestEvents?.onPlaybackPause?.()
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -448,7 +448,7 @@ describe("AudioInput Playback Journey", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onPlaybackFinish?.()
+      void latestEvents?.onPlaybackFinish?.()
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -477,7 +477,7 @@ describe("AudioInput Playback Journey", () => {
     // Setup recording
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
       void latestEvents?.onApprove?.(testBlob)
     })
 
@@ -1033,7 +1033,7 @@ describe("AudioInput Error Handling", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onPermissionDenied?.()
+      void latestEvents?.onPermissionDenied?.()
     })
 
     await waitFor(() => {
@@ -1053,7 +1053,7 @@ describe("AudioInput Error Handling", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onError?.(new Error("Test error"))
+      void latestEvents?.onError?.(new Error("Test error"))
     })
 
     await waitFor(() => {
