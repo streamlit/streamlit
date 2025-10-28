@@ -418,12 +418,16 @@ class PlotlyMixin:
                 ``px.line(df, x="x", y="y", render_mode="svg")``.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
         use_container_width : bool or None
             Whether to override the figure's native width with the width of
@@ -437,10 +441,9 @@ class PlotlyMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
