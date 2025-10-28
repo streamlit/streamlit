@@ -137,7 +137,7 @@ class BidiComponentCallable(Protocol):
         You are responsible for ensuring the component's inner HTML content is
         responsive to the ``<div>`` wrapper.
 
-    isolate_styles : bool or optional
+    isolate_styles : bool
         Whether to sandbox the component styles in a shadow root. If this is
         ``True`` (default), the component's HTML is mounted inside a shadow DOM
         and, in your component's JavaScript, ``parentElement`` returns a
