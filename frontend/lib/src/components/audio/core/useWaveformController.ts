@@ -77,7 +77,6 @@ export function useWaveformController({
   const isInitializingRef = useRef(false)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
-  const lastStopResultRef = useRef<StopResult | null>(null)
 
   // Use the provided sample rate if specified; if undefined, fall back to DEFAULT_SAMPLE_RATE; if null, use null.
   const effectiveSampleRate =
@@ -86,7 +85,6 @@ export function useWaveformController({
   const destroy = useCallback((): void => {
     const readyResolvers = readyResolversRef.current
     readyResolvers.clear()
-    lastStopResultRef.current = null
     setIsPlaybackPlaying(false)
 
     if (recordBackendRef.current) {
@@ -299,7 +297,6 @@ export function useWaveformController({
     }
 
     isPlaybackModeRef.current = false
-    lastStopResultRef.current = null
 
     await recordBackendRef.current.startRecording()
     setCurrentState("recording")
@@ -339,10 +336,6 @@ export function useWaveformController({
 
   const stop = useCallback(async (): Promise<StopResult> => {
     if (currentState !== "recording") {
-      if (lastStopResultRef.current) {
-        return lastStopResultRef.current
-      }
-
       throw new Error("Not currently recording")
     }
 
@@ -397,8 +390,6 @@ export function useWaveformController({
         meta,
       }
 
-      lastStopResultRef.current = stopResult
-
       void eventsRef.current.onRecordReady?.(rawBlob)
       return stopResult
     } catch (error) {
@@ -410,7 +401,7 @@ export function useWaveformController({
 
   const approve = useCallback(
     async (blob?: Blob): Promise<void> => {
-      const blobToUse = blob ?? currentBlob ?? lastStopResultRef.current?.blob
+      const blobToUse = blob ?? currentBlob
       if (!blobToUse) {
         throw new Error("No recorded audio to approve")
       }
@@ -421,7 +412,6 @@ export function useWaveformController({
 
         setCurrentBlob(null)
         setCurrentState("idle")
-        lastStopResultRef.current = null
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
         void eventsRef.current.onError?.(err)
@@ -442,7 +432,6 @@ export function useWaveformController({
     setIsPlaybackPlaying(false)
     isPlaybackModeRef.current = false
     void eventsRef.current.onCancel?.()
-    lastStopResultRef.current = null
   }, [currentState, resetPlayer])
 
   const playback = useMemo(
