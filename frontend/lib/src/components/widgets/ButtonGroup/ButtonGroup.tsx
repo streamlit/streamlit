@@ -227,10 +227,9 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
-        // Adding an empty pseudo-element after the last button in the group.
-        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        // This is only needed if the button group has content width.
-        "::after": segmentedControlNoStretch,
+        // Removed ::after pseudo-element to avoid flexbox width calculation issues
+        // with negative margins. Without the ::after forcing precise calculations,
+        // the negative margin timing issue is less likely to trigger wrapping.
         width,
       }
     default:
