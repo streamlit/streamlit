@@ -424,7 +424,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -438,7 +440,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -452,7 +456,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -466,7 +472,9 @@ describe("DateInput widget", () => {
       it("falls back to en-US locale", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 

@@ -81,7 +81,9 @@ describe("Balloons element", () => {
         }
 
         renderWithContexts(<Balloons scriptRunId="51522269" />, {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libContext: {
+            libConfig: { resourceCrossOriginMode: "anonymous" },
+          },
         })
 
         const balloonImages = screen.getAllByRole("img")
@@ -107,7 +109,9 @@ describe("Balloons element", () => {
         }
 
         renderWithContexts(<Balloons scriptRunId="51522269" />, {
-          libConfig: { resourceCrossOriginMode: undefined },
+          libContext: {
+            libConfig: { resourceCrossOriginMode: undefined },
+          },
         })
 
         const balloonImages = screen.getAllByRole("img")

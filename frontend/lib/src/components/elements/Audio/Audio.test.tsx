@@ -156,7 +156,9 @@ describe("Audio Element", () => {
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<Audio {...props} />, {
-          libConfig: { resourceCrossOriginMode },
+          libContext: {
+            libConfig: { resourceCrossOriginMode },
+          },
         })
         const audioElement = screen.getByTestId("stAudio")
         expect(audioElement).not.toHaveAttribute("crossOrigin")
@@ -237,7 +239,9 @@ describe("Audio Element", () => {
         ({ expected, resourceCrossOriginMode, url }) => {
           const props = getProps({ url })
           renderWithContexts(<Audio {...props} />, {
-            libConfig: { resourceCrossOriginMode },
+            libContext: {
+              libConfig: { resourceCrossOriginMode },
+            },
           })
           const audioElement = screen.getByTestId("stAudio")
           if (expected) {

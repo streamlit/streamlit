@@ -153,21 +153,11 @@ describe("FormSubmitButton", () => {
       formsWithUploads: new Set(["mockFormId"]),
     }
 
-    renderWithContexts(
-      <FormSubmitButton {...getProps()} />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {},
-      // FormsContext overrides
-      {
+    renderWithContexts(<FormSubmitButton {...getProps()} />, {
+      formsContext: {
         formsData: formsDataOverride,
-      }
-    )
+      },
+    })
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toBeDisabled()

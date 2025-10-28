@@ -145,118 +145,104 @@ export function mockWindowLocation(hostname: string): void {
 }
 
 /**
+ * Options for overriding context values in renderWithContexts.
+ * All properties are optional - only provide the contexts you need to override.
+ */
+export interface RenderWithContextsOptions {
+  libContext?: Partial<LibContextProps>
+  sidebarConfigContext?: Partial<SidebarConfigContextProps>
+  themeContext?: Partial<ThemeContextProps>
+  navigationContext?: Partial<NavigationContextProps>
+  formsContext?: Partial<FormsContextProps>
+  scriptRunContext?: Partial<ScriptRunContextProps>
+}
+
+/**
  * Extended RenderResult that includes a rerender function supporting context updates
  */
 export interface RenderWithContextsResult extends RenderResult {
   /**
    * Re-render the component with updated context values.
-   *
-   * Parameter order matches the provider nesting order (outer → inner):
-   * LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+   * Merges new context props with existing ones (shallow merge).
    *
    * @param component The component to render (usually the same component with updated props)
-   * @param newLibContextProps New LibContext overrides to merge with existing values
-   * @param newSidebarConfigContextProps New SidebarConfigContext overrides to merge with existing values
-   * @param newThemeContextProps New ThemeContext overrides to merge with existing values
-   * @param newNavigationContextProps New NavigationContext overrides to merge with existing values
-   * @param newFormsContextProps New FormsContext overrides to merge with existing values
-   * @param newScriptRunContextProps New ScriptRunContext overrides to merge with existing values
+   * @param options Context overrides to merge with existing values
    */
   rerenderWithContexts: (
     component: ReactElement,
-    newLibContextProps?: Partial<LibContextProps>,
-    newSidebarConfigContextProps?: Partial<SidebarConfigContextProps>,
-    newThemeContextProps?: Partial<ThemeContextProps>,
-    newNavigationContextProps?: Partial<NavigationContextProps>,
-    newFormsContextProps?: Partial<FormsContextProps>,
-    newScriptRunContextProps?: Partial<ScriptRunContextProps>
+    options?: RenderWithContextsOptions
   ) => void
 }
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContext.Provider, SidebarConfigContext.Provider, ThemeContext.Provider, NavigationContext.Provider, FormsContext.Provider, and ScriptRunContext.Provider.
- *
- * Parameter order matches the provider nesting order (outer → inner):
- * LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
+ * wrapped in Providers for LibContext, SidebarConfigContext, ThemeContext,
+ * NavigationContext, FormsContext, and ScriptRunContext.
  *
  * Returns an extended RenderResult with a `rerenderWithContexts` method that
  * allows updating context values during re-renders.
+ *
+ * @param component The React component to render
+ * @param options Context overrides (all optional)
+ * @returns Extended render result with rerenderWithContexts method
+ *
+ * @example
+ * renderWithContexts(<MyComponent />, {
+ *   navigationContext: { appPages: [...] },
+ *   themeContext: { activeTheme: customTheme }
+ * })
  */
 export const renderWithContexts = (
   component: ReactElement,
-  overrideLibContextProps: Partial<LibContextProps> = {},
-  overrideSidebarConfigContextProps: Partial<SidebarConfigContextProps> = {},
-  overrideThemeContextProps: Partial<ThemeContextProps> = {},
-  overrideNavigationContextProps: Partial<NavigationContextProps> = {},
-  overrideFormsContextProps: Partial<FormsContextProps> = {},
-  overrideScriptRunContextProps: Partial<ScriptRunContextProps> = {}
+  options: RenderWithContextsOptions = {}
 ): RenderWithContextsResult => {
-  const defaultLibContextProps = {
+  // Track current context values across rerenders.
+  // The Wrapper component below reads these on each render,
+  // so updating them in rerenderWithContexts will affect subsequent renders.
+  let currentLibContextProps: LibContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
     libConfig: {},
     locale: "en-US",
     componentRegistry: new ComponentRegistry(mockEndpoints()),
+    ...options.libContext,
   }
 
-  const defaultSidebarConfigContextProps = {
+  let currentSidebarConfigContextProps: SidebarConfigContextProps = {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
+    ...options.sidebarConfigContext,
   }
 
-  const defaultThemeContextProps = {
+  let currentThemeContextProps: ThemeContextProps = {
     activeTheme: mockTheme,
     setTheme: vi.fn(),
     availableThemes: [],
+    ...options.themeContext,
   }
 
-  const defaultNavigationContextProps = {
+  let currentNavigationContextProps: NavigationContextProps = {
     pageLinkBaseUrl: "",
     currentPageScriptHash: "",
     onPageChange: vi.fn(),
     navSections: [],
     appPages: [],
+    ...options.navigationContext,
   }
 
-  const defaultFormsContextProps = {
+  let currentFormsContextProps: FormsContextProps = {
     formsData: createFormsData(),
+    ...options.formsContext,
   }
 
-  const defaultScriptRunContextProps = {
+  let currentScriptRunContextProps: ScriptRunContextProps = {
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
     fragmentIdsThisRun: [],
-  }
-
-  // Track current context values across rerenders
-  // Order matches provider nesting: LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
-  let currentLibContextProps = {
-    ...defaultLibContextProps,
-    ...overrideLibContextProps,
-  }
-  let currentSidebarConfigContextProps = {
-    ...defaultSidebarConfigContextProps,
-    ...overrideSidebarConfigContextProps,
-  }
-  let currentThemeContextProps = {
-    ...defaultThemeContextProps,
-    ...overrideThemeContextProps,
-  }
-  let currentNavigationContextProps = {
-    ...defaultNavigationContextProps,
-    ...overrideNavigationContextProps,
-  }
-  let currentFormsContextProps = {
-    ...defaultFormsContextProps,
-    ...overrideFormsContextProps,
-  }
-  let currentScriptRunContextProps = {
-    ...defaultScriptRunContextProps,
-    ...overrideScriptRunContextProps,
+    ...options.scriptRunContext,
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
@@ -295,49 +281,43 @@ export const renderWithContexts = (
     ...result,
     rerenderWithContexts: (
       newComponent: ReactElement,
-      newLibContextProps?: Partial<LibContextProps>,
-      newSidebarConfigContextProps?: Partial<SidebarConfigContextProps>,
-      newThemeContextProps?: Partial<ThemeContextProps>,
-      newNavigationContextProps?: Partial<NavigationContextProps>,
-      newFormsContextProps?: Partial<FormsContextProps>,
-      newScriptRunContextProps?: Partial<ScriptRunContextProps>
+      newOptions?: RenderWithContextsOptions
     ): void => {
       // Update context values if provided
-      // Order matches provider nesting: LibContext → SidebarConfigContext → ThemeContext → NavigationContext → FormsContext → ScriptRunContext
-      if (newLibContextProps) {
+      if (newOptions?.libContext) {
         currentLibContextProps = {
           ...currentLibContextProps,
-          ...newLibContextProps,
+          ...newOptions.libContext,
         }
       }
-      if (newSidebarConfigContextProps) {
+      if (newOptions?.sidebarConfigContext) {
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
-          ...newSidebarConfigContextProps,
+          ...newOptions.sidebarConfigContext,
         }
       }
-      if (newThemeContextProps) {
+      if (newOptions?.themeContext) {
         currentThemeContextProps = {
           ...currentThemeContextProps,
-          ...newThemeContextProps,
+          ...newOptions.themeContext,
         }
       }
-      if (newNavigationContextProps) {
+      if (newOptions?.navigationContext) {
         currentNavigationContextProps = {
           ...currentNavigationContextProps,
-          ...newNavigationContextProps,
+          ...newOptions.navigationContext,
         }
       }
-      if (newFormsContextProps) {
+      if (newOptions?.formsContext) {
         currentFormsContextProps = {
           ...currentFormsContextProps,
-          ...newFormsContextProps,
+          ...newOptions.formsContext,
         }
       }
-      if (newScriptRunContextProps) {
+      if (newOptions?.scriptRunContext) {
         currentScriptRunContextProps = {
           ...currentScriptRunContextProps,
-          ...newScriptRunContextProps,
+          ...newOptions.scriptRunContext,
         }
       }
       // Use the original rerender with the wrapper

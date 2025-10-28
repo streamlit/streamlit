@@ -147,15 +147,10 @@ function renderAppView(
     overrides?.navigationContext || {}
   )
 
-  return renderWithContexts(
-    <AppView {...getProps(props)} />,
-    {}, // libContextProps
-    sidebarConfigContextValues, // sidebarConfigContextProps
-    {}, // themeContextProps
-    navigationContextValues, // navigationContextProps
-    {}, // formsContextProps
-    {} // scriptRunContextProps
-  )
+  return renderWithContexts(<AppView {...getProps(props)} />, {
+    sidebarConfigContext: sidebarConfigContextValues,
+    navigationContext: navigationContextValues,
+  })
 }
 
 describe("AppView element", () => {
@@ -1282,9 +1277,16 @@ describe("AppView element", () => {
       // Use renderWithContexts to get the rerender with ability to update context values
       const { rerenderWithContexts } = renderWithContexts(
         <AppView {...props} />,
-        {}, // LibContext
-        { initialSidebarState: PageConfig.SidebarState.AUTO }, // SidebarConfigContext
-        { activeTheme: mockTheme, setTheme: vi.fn(), availableThemes: [] } // ThemeContext
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.AUTO,
+          },
+          themeContext: {
+            activeTheme: mockTheme,
+            setTheme: vi.fn(),
+            availableThemes: [],
+          },
+        }
       )
 
       // Sidebar should be rendered and expanded when initialSidebarState is AUTO
@@ -1293,11 +1295,11 @@ describe("AppView element", () => {
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
 
       // Now simulate receiving page config with collapsed state
-      rerenderWithContexts(
-        <AppView {...props} />,
-        {},
-        { initialSidebarState: PageConfig.SidebarState.COLLAPSED }
-      )
+      rerenderWithContexts(<AppView {...props} />, {
+        sidebarConfigContext: {
+          initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+        },
+      })
 
       // Now sidebar should be rendered but collapsed
       const sidebarAfterConfig = screen.getByTestId("stSidebar")

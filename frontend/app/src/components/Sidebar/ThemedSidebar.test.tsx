@@ -44,14 +44,7 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
 function renderThemedSidebar(
   props: Partial<SidebarProps> = {}
 ): ReturnType<typeof renderWithContexts> {
-  return renderWithContexts(
-    <ThemedSidebar {...getProps(props)} />,
-    {}, // LibContextProps
-    {}, // ThemeContextProps
-    {}, // NavigationContextProps
-    {}, // FormsContextProps
-    {} // ScriptRunContextProps
-  )
+  return renderWithContexts(<ThemedSidebar {...getProps(props)} />)
 }
 
 describe("ThemedSidebar Component", () => {

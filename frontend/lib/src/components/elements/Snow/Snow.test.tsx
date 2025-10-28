@@ -88,7 +88,9 @@ describe("Snow element", () => {
         }
 
         renderWithContexts(<Snow scriptRunId="51522269" />, {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libContext: {
+            libConfig: { resourceCrossOriginMode: "anonymous" },
+          },
         })
 
         const snowImages = screen.getAllByRole("img")
@@ -114,7 +116,9 @@ describe("Snow element", () => {
         }
 
         renderWithContexts(<Snow scriptRunId="51522269" />, {
-          libConfig: { resourceCrossOriginMode: undefined },
+          libContext: {
+            libConfig: { resourceCrossOriginMode: undefined },
+          },
         })
 
         const snowImages = screen.getAllByRole("img")

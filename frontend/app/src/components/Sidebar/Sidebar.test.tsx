@@ -74,15 +74,10 @@ function renderSidebar(
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
     options?.sidebarConfigContext || {}
   )
-  return renderWithContexts(
-    <SidebarWrapper {...props} />,
-    {}, // LibContext
-    sidebarConfigContextValues, // SidebarConfigContext
-    {}, // ThemeContext
-    navigationContextValues, // NavigationContext
-    {}, // FormsContext
-    {} // ScriptRunContext
-  )
+  return renderWithContexts(<SidebarWrapper {...props} />, {
+    sidebarConfigContext: sidebarConfigContextValues,
+    navigationContext: navigationContextValues,
+  })
 }
 
 function getSidebarConfigContextOutput(

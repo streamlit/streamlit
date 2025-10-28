@@ -88,15 +88,9 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Settings")).toBeVisible()
   })
@@ -107,15 +101,9 @@ describe("SettingsDialog", () => {
       allowRunOnSave: true,
     })
     const themeContext = getThemeContext()
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     await user.click(screen.getByText("Run on save"))
 
@@ -129,15 +117,9 @@ describe("SettingsDialog", () => {
     const user = userEvent.setup()
     const props = getProps()
     const themeContext = getThemeContext()
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
     expect(screen.getByText("Wide mode")).toBeVisible()
 
     await user.click(screen.getByText("Wide mode"))
@@ -153,15 +135,9 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Choose app theme")).toBeVisible()
 
@@ -178,15 +154,9 @@ describe("SettingsDialog", () => {
       activeTheme: customTheme,
     })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const selectbox = screen.getByRole("combobox")
     expect(selectbox).toBeVisible()
@@ -210,15 +180,9 @@ describe("SettingsDialog", () => {
       activeTheme: customThemeLight,
     })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_LIGHT_NAME)).toBeVisible()
@@ -247,15 +211,9 @@ describe("SettingsDialog", () => {
       activeTheme: customThemeDark,
     })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_DARK_NAME)).toBeVisible()
@@ -278,15 +236,9 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Light")).toBeVisible()
 
@@ -305,15 +257,9 @@ describe("SettingsDialog", () => {
       availableThemes,
     })
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Dark")).toBeVisible()
 
@@ -327,15 +273,9 @@ describe("SettingsDialog", () => {
     })
     const themeContext = getThemeContext()
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const versionRegex = /Made with Streamlit\s*42\.42\.42/
     const versionText = screen.getByText(versionRegex)
@@ -349,15 +289,9 @@ describe("SettingsDialog", () => {
     const props = getProps({ sessionInfo })
     const themeContext = getThemeContext()
 
-    renderWithContexts(
-      <SettingsDialog {...props} />,
-      // LibContext
-      {},
-      // SidebarConfigContext
-      {},
-      // ThemeContext
-      themeContext
-    )
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const versionRegex = /^Made with Streamlit.*/
     const nonExistentText = screen.queryByText(versionRegex)

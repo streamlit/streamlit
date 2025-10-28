@@ -338,11 +338,13 @@ describe("BidiComponent", () => {
           fragmentId={mockFragmentId}
         />,
         {
-          componentRegistry: {
-            getBidiComponentURL: vi.fn(
-              (componentName, path) => `/components/${componentName}/${path}`
-            ),
-          } as unknown as ComponentRegistry,
+          libContext: {
+            componentRegistry: {
+              getBidiComponentURL: vi.fn(
+                (componentName, path) => `/components/${componentName}/${path}`
+              ),
+            } as unknown as ComponentRegistry,
+          },
         }
       )
 
@@ -1049,9 +1051,11 @@ describe("BidiComponent", () => {
           fragmentId={mockFragmentId}
         />,
         {
-          componentRegistry: {
-            getBidiComponentURL: mockGetBidiComponentURL,
-          } as unknown as ComponentRegistry,
+          libContext: {
+            componentRegistry: {
+              getBidiComponentURL: mockGetBidiComponentURL,
+            } as unknown as ComponentRegistry,
+          },
         }
       )
 

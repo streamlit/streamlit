@@ -266,7 +266,9 @@ describe("ImageList Element", () => {
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<ImageList {...props} />, {
-          libConfig: { resourceCrossOriginMode },
+          libContext: {
+            libConfig: { resourceCrossOriginMode },
+          },
         })
         const images = screen.getAllByRole("img")
         expect(images).toHaveLength(2)
@@ -414,7 +416,9 @@ describe("ImageList Element", () => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const props = getProps({ imgs: imgs as any })
           renderWithContexts(<ImageList {...props} />, {
-            libConfig: { resourceCrossOriginMode },
+            libContext: {
+              libConfig: { resourceCrossOriginMode },
+            },
           })
           const images = screen.getAllByRole("img")
           expect(images).toHaveLength(2)

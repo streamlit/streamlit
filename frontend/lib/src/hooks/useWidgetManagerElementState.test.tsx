@@ -120,21 +120,9 @@ describe("useWidgetManagerElementState hook", () => {
       )
     }
 
-    renderWithContexts(
-      <TestComponent />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {},
-      // FormsContext overrides
-      {
-        formsData: createFormsData(),
-      }
-    )
+    renderWithContexts(<TestComponent />, {
+      formsContext: { formsData: createFormsData() },
+    })
 
     // verify default value
     const inputElement: HTMLInputElement =

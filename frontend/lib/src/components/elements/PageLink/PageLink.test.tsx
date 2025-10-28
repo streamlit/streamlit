@@ -88,19 +88,11 @@ describe("PageLink", () => {
     const user = userEvent.setup()
     const props = getProps()
 
-    renderWithContexts(
-      <PageLink {...props} />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
         onPageChange: mockOnPageChange,
-      }
-    )
+      },
+    })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
@@ -111,19 +103,11 @@ describe("PageLink", () => {
     const user = userEvent.setup()
     const props = getProps({}, { disabled: true })
 
-    renderWithContexts(
-      <PageLink {...props} />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
         onPageChange: mockOnPageChange,
-      }
-    )
+      },
+    })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
@@ -134,19 +118,11 @@ describe("PageLink", () => {
     const user = userEvent.setup()
     const props = getProps({ page: "http://example.com", external: true })
 
-    renderWithContexts(
-      <PageLink {...props} />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
         onPageChange: mockOnPageChange,
-      }
-    )
+      },
+    })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
@@ -197,19 +173,11 @@ describe("PageLink", () => {
 
   it("renders a current page link properly", () => {
     const props = getProps({ pageScriptHash: "main_page_hash" })
-    renderWithContexts(
-      <PageLink {...props} />,
-      // LibContext overrides
-      {},
-      // SidebarConfigContext overrides
-      {},
-      // ThemeContext overrides
-      {},
-      // NavigationContext overrides
-      {
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
         currentPageScriptHash: "main_page_hash",
-      }
-    )
+      },
+    })
 
     const currentPageBgColor = lightTheme.emotion.colors.darkenedBgMix15
 

@@ -262,7 +262,9 @@ describe("Video Element", () => {
       async ({ resourceCrossOriginMode }) => {
         const props = getProps({ url: "/media/mockVideoFile.mp4" })
         renderWithContexts(<Video {...props} />, {
-          libConfig: { resourceCrossOriginMode },
+          libContext: {
+            libConfig: { resourceCrossOriginMode },
+          },
         })
         const videoElement = await screen.findByTestId("stVideo")
         expect(videoElement).not.toHaveAttribute("crossOrigin")
@@ -278,7 +280,9 @@ describe("Video Element", () => {
         subtitles: [{ url: "https://mock.subtitle.url" }],
       })
       renderWithContexts(<Video {...props} />, {
-        libConfig: { resourceCrossOriginMode: undefined },
+        libContext: {
+          libConfig: { resourceCrossOriginMode: undefined },
+        },
       })
       const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
@@ -361,7 +365,9 @@ describe("Video Element", () => {
         async ({ expected, resourceCrossOriginMode, url }) => {
           const props = getProps({ url })
           renderWithContexts(<Video {...props} />, {
-            libConfig: { resourceCrossOriginMode },
+            libContext: {
+              libConfig: { resourceCrossOriginMode },
+            },
           })
           const videoElement = await screen.findByTestId("stVideo")
           if (expected) {

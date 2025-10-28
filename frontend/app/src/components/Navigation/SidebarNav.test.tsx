@@ -189,15 +189,10 @@ function renderSidebarNav(
     overrides?.navigationContext || {}
   )
 
-  return renderWithContexts(
-    <SidebarNav {...getProps(props)} />,
-    {}, // libContextProps
-    sidebarConfigContextValues, // sidebarConfigContextProps
-    {}, // themeContextProps
-    navigationContextValues, // navigationContextProps
-    {}, // formsContextProps
-    {} // scriptRunContextProps
-  )
+  return renderWithContexts(<SidebarNav {...getProps(props)} />, {
+    sidebarConfigContext: sidebarConfigContextValues,
+    navigationContext: navigationContextValues,
+  })
 }
 
 describe("SidebarNav", () => {
