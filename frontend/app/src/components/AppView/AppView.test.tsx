@@ -166,7 +166,7 @@ describe("AppView element", () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it("renders without crashing", () => {
@@ -1538,7 +1538,7 @@ describe("AppView element", () => {
     it("restores expanded state from localStorage on initial load", () => {
       window.localStorage.setItem("stSidebarCollapsed-", "false")
 
-      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
+      renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
