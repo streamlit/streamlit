@@ -201,12 +201,6 @@ function getButtonGroupOverridesStyle(
     margin: "0 0",
   }
   const width = containerWidth ? "100%" : "auto"
-  const segmentedControlNoStretch = containerWidth
-    ? {}
-    : {
-        content: "''",
-        flex: 10000,
-      }
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -227,9 +221,6 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
-        // Removed ::after pseudo-element to avoid flexbox width calculation issues
-        // with negative margins. Without the ::after forcing precise calculations,
-        // the negative margin timing issue is less likely to trigger wrapping.
         width,
       }
     default:
