@@ -16,6 +16,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type WaveSurfer from "wavesurfer.js"
+import type RecordPlugin from "wavesurfer.js/dist/plugins/record"
 
 import { WaveSurferRecordBackend } from "./WaveSurferRecordBackend"
 
