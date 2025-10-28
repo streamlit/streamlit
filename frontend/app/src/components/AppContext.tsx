@@ -16,8 +16,6 @@
 
 import { createContext } from "react"
 
-import { IGitInfo } from "@streamlit/protobuf"
-
 export interface AppContextProps {
   /**
    * Whether to disable widgets and sidebar page navigation links, based on connection
@@ -30,13 +28,6 @@ export interface AppContextProps {
   widgetsDisabled: boolean
 
   /**
-   * The latest state of the git information related to the app.
-   * Pulled from appContext in DeployDialog
-   * @see DeployDialog
-   */
-  gitInfo: IGitInfo | null
-
-  /**
    * Whether to show the toolbar in the app header.
    * Can be configured via host message.
    * Pulled from appContext in Header
@@ -47,7 +38,6 @@ export interface AppContextProps {
 
 export const AppContext = createContext<AppContextProps | null>({
   widgetsDisabled: false,
-  gitInfo: null,
   showToolbar: true,
 })
 AppContext.displayName = "AppContext"

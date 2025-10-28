@@ -38,7 +38,6 @@ const getMockAppContext = (
 ): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
   showToolbar: true,
   widgetsDisabled: false,
-  gitInfo: null,
   ...overrides,
 })
 

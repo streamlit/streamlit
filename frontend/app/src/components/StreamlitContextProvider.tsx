@@ -40,12 +40,11 @@ import {
   ThemeContextProps,
   useRequiredContext,
 } from "@streamlit/lib"
-import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
 // Type for AppContext props
 type AppContextValues = {
   widgetsDisabled: boolean
-  gitInfo: IGitInfo | null
   showToolbar: boolean
 }
 
@@ -111,7 +110,6 @@ export type StreamlitContextProviderProps = PropsWithChildren<
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // AppContext
   widgetsDisabled,
-  gitInfo,
   showToolbar,
   // LibContext
   isFullScreen,
@@ -148,10 +146,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   const appContextProps = useMemo<AppContextProps>(
     () => ({
       widgetsDisabled,
-      gitInfo,
       showToolbar,
     }),
-    [widgetsDisabled, gitInfo, showToolbar]
+    [widgetsDisabled, showToolbar]
   )
 
   // Memoized object for LibContext values

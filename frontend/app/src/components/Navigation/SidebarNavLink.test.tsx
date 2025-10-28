@@ -41,7 +41,6 @@ function getAppContextOutput(
 ): AppContextProps {
   return {
     widgetsDisabled: false,
-    gitInfo: null,
     showToolbar: true,
     ...context,
   }

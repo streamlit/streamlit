@@ -1816,6 +1816,7 @@ export class App extends PureComponent<Props, State> {
       isDeployErrorModalOpen:
         this.state.dialog?.type === DialogType.DEPLOY_ERROR,
       metricsMgr: this.metricsMgr,
+      gitInfo: this.state.gitInfo,
     }
     this.openDialog(deployDialogProps)
   }
@@ -2190,7 +2191,6 @@ export class App extends PureComponent<Props, State> {
         widgetsDisabled={
           inputsDisabled || connectionState !== ConnectionState.CONNECTED
         }
-        gitInfo={this.state.gitInfo}
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}
