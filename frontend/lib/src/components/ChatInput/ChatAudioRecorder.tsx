@@ -133,6 +133,10 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
     }
   }, [controller, disabled, onApprove, onCancel, pending])
 
+  const handleApproveClick = useCallback(() => {
+    void handleApprove()
+  }, [handleApprove])
+
   // Don't render anything if not recording - keeps component mounted but hidden
   if (!isRecording) {
     return (
@@ -172,7 +176,7 @@ const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
         <StyledChatAudioButton
           type="button"
           className="stChatAudio__approve"
-          onClick={handleApprove}
+          onClick={handleApproveClick}
           aria-label="Approve"
           disabled={pending || disabled}
           variant="approve"
