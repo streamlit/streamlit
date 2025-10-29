@@ -385,13 +385,15 @@ class LayoutsMixin:
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown around each column.
 
-        width : int or "stretch"
-            The desired width of the columns expressed in pixels. If this is
-            ``"stretch"`` (default), Streamlit sets the width of the columns to
-            match the width of the parent container. Otherwise, this must be an
-            integer. If the specified width is greater than the width of the
-            parent container, Streamlit sets the width of the columns to match
-            the width of the parent container.
+        width : "stretch" or int
+            The width of the column group. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the column group matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The column group has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the column group matches the
+              width of the parent container.
 
         Returns
         -------
