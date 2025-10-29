@@ -135,7 +135,7 @@ describe("ChatComposer", () => {
     expect(textarea).toBeDisabled()
     expect(screen.getByTestId("chat-composer-send")).toBeDisabled()
     expect(screen.getByTestId("chat-composer-attach")).toBeDisabled()
-    expect(screen.getByTestId("mock-recorder")).toBeInTheDocument()
+    expect(screen.getByTestId("mock-recorder")).toBeVisible()
   })
 
   it("returns focus to input when recording is cancelled", async () => {
