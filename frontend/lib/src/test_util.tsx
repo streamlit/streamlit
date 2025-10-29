@@ -36,7 +36,6 @@ import { ComponentRegistry } from "./components/widgets/CustomComponent/Componen
 import { mockEndpoints } from "./mocks/mocks"
 import { mockTheme } from "./mocks/mockTheme"
 import { ScriptRunState } from "./ScriptRunState"
-import { baseTheme } from "./theme"
 import { createFormsData } from "./WidgetStateManager"
 
 const flexContextValue = {
@@ -117,7 +116,7 @@ export const renderWithContexts = (
   const defaultLibContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
-    activeTheme: baseTheme,
+    activeTheme: mockTheme,
     setTheme: vi.fn(),
     availableThemes: [],
     onPageChange: vi.fn(),
@@ -145,7 +144,7 @@ export const renderWithContexts = (
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
-    <ThemeProvider theme={baseTheme.emotion}>
+    <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
           <LibContext.Provider value={currentLibContextProps}>
