@@ -23,11 +23,8 @@ const useDownloadUrl = (
   url: string | null,
   filename: string
 ): (() => void) => {
-  const {
-    libConfig: {
-      enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
-    },
-  } = useContext(LibContext)
+  // Default to false, if no libConfig, e.g. for tests
+  const { enforceDownloadInNewTab = false } = useContext(LibContext)
 
   const downloadUrl = useCallback(() => {
     if (!url) return

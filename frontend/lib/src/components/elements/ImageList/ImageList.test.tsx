@@ -267,7 +267,7 @@ describe("ImageList Element", () => {
         const props = getProps()
         renderWithContexts(<ImageList {...props} />, {
           libContext: {
-            libConfig: { resourceCrossOriginMode },
+            resourceCrossOriginMode,
           },
         })
         const images = screen.getAllByRole("img")
@@ -417,7 +417,7 @@ describe("ImageList Element", () => {
           const props = getProps({ imgs: imgs as any })
           renderWithContexts(<ImageList {...props} />, {
             libContext: {
-              libConfig: { resourceCrossOriginMode },
+              resourceCrossOriginMode,
             },
           })
           const images = screen.getAllByRole("img")

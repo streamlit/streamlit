@@ -65,7 +65,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     heightConfig,
     widgetMgr,
   } = props
-  const { libConfig } = useContext(LibContext)
+  const { mapboxToken: contextMapboxToken } = useContext(LibContext)
   const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
@@ -93,7 +93,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     widgetMgr,
   })
 
-  const mapboxToken = element.mapboxToken || libConfig.mapboxToken
+  const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)

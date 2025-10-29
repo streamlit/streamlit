@@ -19,7 +19,9 @@ import React, { useMemo } from "react"
 import { renderHook } from "@testing-library/react"
 
 import {
+  ComponentRegistry,
   LibContext,
+  mockEndpoints,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,
@@ -33,11 +35,17 @@ const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
 ): React.FC<{ children: React.ReactNode }> => {
   return ({ children }: { children: React.ReactNode }): JSX.Element => {
-    const libContextValue = useMemo(
-      () =>
-        ({
-          libConfig: { resourceCrossOriginMode },
-        }) as unknown as LibContextProps,
+    const libContextValue: LibContextProps = useMemo(
+      () => ({
+        isFullScreen: false,
+        setFullScreen: () => {},
+        resourceCrossOriginMode,
+        mapboxToken: undefined,
+        disableFullscreenMode: undefined,
+        enforceDownloadInNewTab: undefined,
+        locale: "en-US",
+        componentRegistry: new ComponentRegistry(mockEndpoints()),
+      }),
       []
     )
     return (

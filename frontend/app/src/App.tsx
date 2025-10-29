@@ -2193,13 +2193,17 @@ export class App extends PureComponent<Props, State> {
         activeTheme={this.props.theme.activeTheme}
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
-        libConfig={libConfig}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
+        // LibConfig properties
+        mapboxToken={libConfig.mapboxToken}
+        disableFullscreenMode={libConfig.disableFullscreenMode}
+        enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
+        resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
       >
         <Hotkeys
           keyName="r,c,esc"
