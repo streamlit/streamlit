@@ -67,6 +67,7 @@ export interface SidebarProps {
   hasElements: boolean
   isCollapsed: boolean
   onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
+  widgetsDisabled: boolean
 }
 
 const DEFAULT_WIDTH = "256"
@@ -82,6 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   hasElements,
   isCollapsed,
   onToggleCollapse,
+  widgetsDisabled,
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
@@ -280,6 +282,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             endpoints={endpoints}
             collapseSidebar={toggleCollapse}
             hasSidebarElements={hasElements}
+            widgetsDisabled={widgetsDisabled}
           />
         )}
         <StyledSidebarUserContent

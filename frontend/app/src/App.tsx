@@ -2188,9 +2188,6 @@ export class App extends PureComponent<Props, State> {
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
         hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-        widgetsDisabled={
-          inputsDisabled || connectionState !== ConnectionState.CONNECTED
-        }
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}
@@ -2203,7 +2200,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
-        showToolbar={showToolbar}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2231,6 +2227,10 @@ export class App extends PureComponent<Props, State> {
               disableScrolling={disableScrolling}
               addScriptFinishedHandler={this.addScriptFinishedHandler}
               removeScriptFinishedHandler={this.removeScriptFinishedHandler}
+              widgetsDisabled={
+                inputsDisabled || connectionState !== ConnectionState.CONNECTED
+              }
+              showToolbar={showToolbar}
               topRightContent={
                 <>
                   {!hideTopBar && (
