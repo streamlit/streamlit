@@ -1773,7 +1773,7 @@ class VegaChartsMixin:
               and uses ``"content"`` for the following multi-view charts:
 
                 - Facet charts: the spec contains ``"facet"`` or encodings for
-                ``"row"``, ``"column"``, or ``"facet"``.
+                  ``"row"``, ``"column"``, or ``"facet"``.
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
@@ -1992,7 +1992,7 @@ class VegaChartsMixin:
               and uses ``"content"`` for the following multi-view charts:
 
                 - Facet charts: the spec contains ``"facet"`` or encodings for
-                ``"row"``, ``"column"``, or ``"facet"``.
+                  ``"row"``, ``"column"``, or ``"facet"``.
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
