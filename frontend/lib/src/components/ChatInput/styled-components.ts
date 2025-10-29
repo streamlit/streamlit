@@ -55,7 +55,7 @@ export const StyledComposerInput = styled.textarea(({ theme }) => ({
   },
   ":focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    outlineOffset: 2,
+    outlineOffset: "0.125rem",
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.bgColor,
   },
@@ -95,7 +95,7 @@ export const StyledComposerButton = styled.button<{
   },
   ":focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    outlineOffset: 2,
+    outlineOffset: "0.125rem",
   },
   ":disabled": {
     cursor: "not-allowed",
@@ -161,7 +161,7 @@ export const StyledChatAudioButton = styled.button<{
   },
   ":focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    outlineOffset: 2,
+    outlineOffset: "0.125rem",
   },
   ":disabled": {
     opacity: 0.5,
