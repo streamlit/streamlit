@@ -354,9 +354,12 @@ export const StyledSegmentedControlButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-    zIndex: theme.zIndices.priority,
+    // Use a much higher z-index to ensure active button is always on top
+    // This needs to be higher than the priority z-index used by hovered buttons
+    zIndex: theme.zIndices.priority + 1,
     "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
+      zIndex: theme.zIndices.priority + 1,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       borderColor: theme.colors.borderColor,
@@ -364,6 +367,12 @@ export const StyledSegmentedControlButtonActive = styled(
       color: theme.colors.fadedText40,
       cursor: "not-allowed",
     },
+    // Preserve the active button's colored borders even when adjacent buttons are hovered
+    // Override the border-hiding rules from StyledSegmentedControlButton
+    borderLeftColor: `${theme.colors.primary} !important`,
+    borderRightColor: `${theme.colors.primary} !important`,
+    borderTopColor: `${theme.colors.primary} !important`,
+    borderBottomColor: `${theme.colors.primary} !important`,
   }
 })
 
