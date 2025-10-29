@@ -22,7 +22,10 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { FormsContext } from "~lib/components/core/FormsContext"
-import { FlexContextProvider } from "~lib/components/core/Layout/FlexContext"
+import {
+  FlexContext,
+  FlexContextProvider,
+} from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
 import {
@@ -178,6 +181,8 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
 export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
+  const parentContext = useContext(FlexContext)
+
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
@@ -189,7 +194,11 @@ export const ContainerContentsWrapper = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
-    <FlexContextProvider direction={Direction.VERTICAL} isRoot={props.isRoot}>
+    <FlexContextProvider
+      direction={Direction.VERTICAL}
+      isRoot={props.isRoot}
+      parentContext={parentContext}
+    >
       <StyledFlexContainerBlock
         {...defaultStyles}
         className={classNames(
@@ -212,6 +221,7 @@ export const FlexBoxContainer = (
   props: FlexBoxContainerProps
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
+  const parentContext = useContext(FlexContext)
 
   const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
     props.node
@@ -245,8 +255,25 @@ export const FlexBoxContainer = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
+  // Extract pixel width if the container has a fixed width
+  const parentWidth =
+    props.node.deltaBlock.widthConfig?.pixelWidth ?? undefined
+
+  // Determine width configuration for FlexContext
+  const hasContentWidth =
+    props.node.deltaBlock.widthConfig?.useContent ?? false
+  const hasFixedWidth =
+    (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
+    (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
+
   return (
-    <FlexContextProvider direction={direction}>
+    <FlexContextProvider
+      direction={direction}
+      parentWidth={parentWidth}
+      hasContentWidth={hasContentWidth}
+      hasFixedWidth={hasFixedWidth}
+      parentContext={parentContext}
+    >
       <StyledFlexContainerBlock
         {...styles}
         className={classNames(
@@ -286,8 +313,6 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
       minStretchBehavior = "8rem"
-    } else {
-      minStretchBehavior = "fit-content"
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||

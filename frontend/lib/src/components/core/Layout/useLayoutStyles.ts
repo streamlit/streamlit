@@ -18,6 +18,7 @@ import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
+import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
 import { FlexContext, IFlexContext } from "./FlexContext"
@@ -42,6 +43,9 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
+  // This is used for elements with stretch width to define how small the element should shrink
+  // and in horizontal layouts to define how it should take up space relative to other elements
+  // when the container width is limited.
   minStretchBehavior?: MinFlexElementWidth
 }
 
@@ -202,11 +206,44 @@ const getDirection = (
   return flexContext?.direction
 }
 
+/**
+ * Calculate the minimum width for an element, taking into account the parent
+ * container's fixed pixel width if it exists.
+ *
+ * @param minStretchBehavior - The desired minimum width behavior (e.g., "8rem", "14rem", "fit-content")
+ * @param parentWidth - The parent container's width in pixels (if it has a fixed width)
+ * @returns The calculated minimum width as a CSS value
+ */
+const calculateMinWidthWithParentConstraint = (
+  minStretchBehavior: MinFlexElementWidth,
+  parentWidth: number | undefined,
+  buffer: number = 32
+): React.CSSProperties["minWidth"] => {
+  // If there's no parent width or no minStretchBehavior, use the original behavior
+  if (
+    parentWidth === undefined ||
+    minStretchBehavior === undefined ||
+    minStretchBehavior === "fit-content"
+  ) {
+    return minStretchBehavior
+  }
+
+  const minWidthInPixels = convertRemToPx(minStretchBehavior)
+
+  // If parent width is smaller than desired min width, use parent width minus buffer
+  if (parentWidth < minWidthInPixels && parentWidth > buffer) {
+    return `${parentWidth - buffer}px`
+  }
+
+  return minStretchBehavior
+}
+
 export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
+  minWidth?: React.CSSProperties["minWidth"]
 }
 
 /**
@@ -230,6 +267,7 @@ export const useLayoutStyles = ({
 
     const widthConfig = getWidth(element, subElement)
     let width: React.CSSProperties["width"]
+    let minWidth: React.CSSProperties["minWidth"]
 
     switch (widthConfig.type) {
       case DimensionType.STRETCH:
@@ -249,6 +287,21 @@ export const useLayoutStyles = ({
         break
       default:
         assertNever(widthConfig)
+    }
+
+    const direction = getDirection(flexContext)
+
+    // Apply min-width protection inside content-width containers to prevent elements
+    // from becoming too narrow when the container shrinks to fit its content.
+    if (
+      flexContext?.isInContentWidthContainer &&
+      widthConfig.type === DimensionType.STRETCH &&
+      minStretchBehavior !== undefined
+    ) {
+      minWidth = calculateMinWidthWithParentConstraint(
+        minStretchBehavior,
+        flexContext?.parentWidth
+      )
     }
 
     const heightConfig = getHeight(element, subElement)
@@ -279,15 +332,16 @@ export const useLayoutStyles = ({
     const flex = getFlex(
       widthConfig,
       heightConfig,
-      getDirection(flexContext),
+      direction,
       minStretchBehavior
     )
 
-    const calculatedStyles = {
+    const calculatedStyles: UseLayoutStylesShape = {
       width,
       height,
       overflow,
       flex,
+      minWidth,
     }
 
     return {

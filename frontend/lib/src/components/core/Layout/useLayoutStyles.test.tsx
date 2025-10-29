@@ -24,10 +24,16 @@ import { FlexContextProvider } from "./FlexContext"
 import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
 import { Direction, MinFlexElementWidth } from "./utils"
 
-function withFlexContextProvider(direction: Direction) {
+function withFlexContextProvider(
+  direction: Direction,
+  isInContentWidthContainer: boolean = false
+) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <FlexContextProvider direction={direction}>
+      <FlexContextProvider
+        direction={direction}
+        hasContentWidth={isInContentWidthContainer}
+      >
         {children}
       </FlexContextProvider>
     )

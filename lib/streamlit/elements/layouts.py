@@ -62,7 +62,7 @@ class LayoutsMixin:
         *,
         border: bool | None = None,
         key: Key | None = None,
-        width: WidthWithoutContent = "stretch",
+        width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
         horizontal_alignment: HorizontalAlignment = "left",
@@ -92,11 +92,13 @@ class LayoutsMixin:
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
 
-        width : "stretch" or int
+        width : "stretch", "content", or int
             The width of the container. This can be one of the following:
 
             - ``"stretch"`` (default): The width of the container matches the
               width of the parent container.
+            - ``"content"``: The width of the container matches the width of
+              its content.
             - An integer specifying the width in pixels: The container has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
@@ -298,7 +300,7 @@ class LayoutsMixin:
             block_proto.flex_container.justify = get_justify(vertical_alignment)
             block_proto.flex_container.align = get_align(horizontal_alignment)
 
-        validate_width(width)
+        validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
         if isinstance(height, int) or border:

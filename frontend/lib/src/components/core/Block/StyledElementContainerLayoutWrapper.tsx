@@ -80,23 +80,17 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow"
+    "width" | "height" | "overflow" | "minWidth" | "flex"
   > & {
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
   const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
-  let minStretchBehavior: MinFlexElementWidth = "fit-content"
-  if (
-    isInHorizontalLayout &&
-    LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  let minStretchBehavior: MinFlexElementWidth
+  if (LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (
-    isInHorizontalLayout &&
-    MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "8rem"
   }
 
