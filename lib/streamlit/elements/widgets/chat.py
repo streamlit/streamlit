@@ -248,6 +248,12 @@ def _pop_audio_file(
     -------
     UploadedFile or None
         The extracted audio file if available, None otherwise.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the uploaded audio file does not have a `.wav` extension or its MIME type is not
+        one of the accepted WAV types (`audio/wav`, `audio/wave`, `audio/x-wav`).
     """
     if audio_file_info is None:
         return None
