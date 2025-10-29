@@ -79,6 +79,11 @@ st.write("value 12:", v12)
 v13 = st.text_area("text area 13 (height=60)", "default text", height=60)
 st.write("value 13:", v13)
 
+# gh-12867: Test very small height that would produce negative calculation
+# height=10: 10 - 30 (labelAndPadding) = -20, should clamp to 0 then use minHeight
+v13_5 = st.text_area("text area 13.5 (height=10)", "default text", height=10)
+st.write("value 13.5:", v13_5)
+
 if "text_area_14" not in st.session_state:
     st.session_state["text_area_14"] = "xyz"
 
