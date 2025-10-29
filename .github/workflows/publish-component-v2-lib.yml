@@ -99,8 +99,21 @@ jobs:
         if: inputs.dry_run == false
         working-directory: frontend/component-v2-lib
         run: |
+          set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
-          echo "Published version:" $(npm view @streamlit/component-v2-lib@"$VERSION" version)
+          echo "Verifying published version: $VERSION"
+          ATTEMPTS=6
+          DELAY=10
+          for i in $(seq 1 $ATTEMPTS); do
+            if npm view @streamlit/component-v2-lib@"$VERSION" version >/dev/null 2>&1; then
+              echo "Published version:" $(npm view @streamlit/component-v2-lib@"$VERSION" version)
+              exit 0
+            fi
+            echo "Waiting for npm registry propagation... attempt $i/$ATTEMPTS"
+            sleep $DELAY
+          done
+          echo "Failed to verify version $VERSION on npm after $ATTEMPTS attempts."
+          exit 1
 
       - name: Set up Python for Slack notifications
         if: always() && inputs.dry_run == false
