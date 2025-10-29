@@ -353,10 +353,15 @@ class PydeckMixin:
         pydeck_obj : pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
         width : "stretch" or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - An integer: Set the chart width to this many pixels.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
             the parent container. This can be one of the following:
@@ -369,16 +374,21 @@ class PydeckMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and specify an integer width instead of ``use_container_width=False``.
-        height : "stretch" or int
-            How to size the chart's height. Can be one of:
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
-            - ``"stretch"``: Expand to the height of the parent container. When outside of a container,
-            the default height is 6.25rem.
-            - An integer: Set the chart height to this many pixels. Defaults to 500.
+        height : "stretch" or int
+            The height of the chart element. This can be one of the following:
+
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled. This is ``500`` by default.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This controls
             whether or not the chart behaves like an input widget.

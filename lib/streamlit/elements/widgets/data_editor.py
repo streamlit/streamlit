@@ -691,20 +691,22 @@ class DataEditorMixin:
               of the parent container.
 
         height : int, "auto", or "stretch"
-            The height of the data editor. This can be one of the following:
+            The height of the editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"stretch"``: The height of the editor expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The editor will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
-            - ``"stretch"``: The height of the editor expands to fill the
-              available vertical space in its parent container. The editor's
-              height will not exceed the parent container's height. When
-              multiple elements with stretch height are in the same container,
-              they share the available vertical space.
 
-            Vertical scrolling within the data editor is enabled when the
-            height does not accommodate all rows.
+            Vertical scrolling within the editor is enabled when the height
+            does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
