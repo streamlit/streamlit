@@ -71,6 +71,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+# Audio file validation constants
+_ACCEPTED_AUDIO_EXTENSION: str = ".wav"
+_ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
+    {
+        "audio/wav",
+        "audio/wave",
+        "audio/x-wav",
+    }
+)
+
+
 @dataclass
 class ChatInputValue(MutableMapping[str, Any]):
     text: str
@@ -236,18 +247,17 @@ def _pop_audio_file(
     uploaded_file = UploadedFile(file_rec, audio_file_info.file_urls)
 
     # Validate that the file is a WAV file by checking extension and MIME type
-    if not uploaded_file.name.lower().endswith(".wav"):
+    if not uploaded_file.name.lower().endswith(_ACCEPTED_AUDIO_EXTENSION):
         raise StreamlitAPIException(
             f"Invalid file extension for audio input: `{uploaded_file.name}`. "
-            "Only WAV files (.wav) are accepted."
+            f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted."
         )
 
     # Validate MIME type (browsers may send different variations of WAV MIME types)
-    valid_mime_types = {"audio/wav", "audio/wave", "audio/x-wav"}
-    if uploaded_file.type not in valid_mime_types:
+    if uploaded_file.type not in _ACCEPTED_AUDIO_MIME_TYPES:
         raise StreamlitAPIException(
             f"Invalid MIME type for audio input: `{uploaded_file.type}`. "
-            f"Expected one of {valid_mime_types}."
+            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}."
         )
 
     # Remove the file from the manager after creating the UploadedFile object.
