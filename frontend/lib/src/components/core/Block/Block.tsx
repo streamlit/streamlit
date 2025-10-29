@@ -67,7 +67,8 @@ import {
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { libConfig } = useContext(LibContext)
+  const { disableFullscreenMode: contextDisableFullscreenMode } =
+    useContext(LibContext)
 
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
@@ -79,7 +80,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     <>
       {props.node.children?.map((node: AppNode, index: number): ReactNode => {
         const disableFullscreenMode =
-          libConfig.disableFullscreenMode || props.disableFullscreenMode
+          contextDisableFullscreenMode || props.disableFullscreenMode
 
         // Base case: render a leaf node.
         if (node instanceof ElementNode) {

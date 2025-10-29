@@ -23,6 +23,9 @@ import ReactMarkdown from "react-markdown"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
+import type { LibContextProps } from "~lib/components/core/LibContext"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { mockEndpoints } from "~lib/mocks/mocks"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { getMarkdownBgColors } from "~lib/theme/getColors"
@@ -609,10 +612,16 @@ describe("CustomMediaTag", () => {
   // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
   const createMockLibContextValue = (
     resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): any => {
+  ): LibContextProps => {
     return {
-      libConfig: { resourceCrossOriginMode },
+      isFullScreen: false,
+      setFullScreen: () => {},
+      resourceCrossOriginMode,
+      mapboxToken: undefined,
+      disableFullscreenMode: undefined,
+      enforceDownloadInNewTab: undefined,
+      locale: "en-US",
+      componentRegistry: new ComponentRegistry(mockEndpoints()),
     }
   }
 

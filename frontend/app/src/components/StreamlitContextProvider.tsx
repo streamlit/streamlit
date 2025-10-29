@@ -21,7 +21,6 @@ import {
   FormsContext,
   FormsContextProps,
   FormsData,
-  LibConfig,
   LibContext,
   LibContextProps,
   NavigationContext,
@@ -41,9 +40,13 @@ import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 type LibContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
-  libConfig: LibConfig
   locale: typeof window.navigator.language
   componentRegistry: ComponentRegistry
+  // Properties from LibConfig
+  mapboxToken?: string
+  disableFullscreenMode?: boolean
+  enforceDownloadInNewTab?: boolean
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 // Type for NavigationContext props
@@ -99,9 +102,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // LibContext
   isFullScreen,
   setFullScreen,
-  libConfig,
   locale,
   componentRegistry,
+  mapboxToken,
+  disableFullscreenMode,
+  enforceDownloadInNewTab,
+  resourceCrossOriginMode,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -132,11 +138,23 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     () => ({
       isFullScreen,
       setFullScreen,
-      libConfig,
       locale,
       componentRegistry,
+      mapboxToken,
+      disableFullscreenMode,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
     }),
-    [isFullScreen, setFullScreen, libConfig, locale, componentRegistry]
+    [
+      isFullScreen,
+      setFullScreen,
+      locale,
+      componentRegistry,
+      mapboxToken,
+      disableFullscreenMode,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
+    ]
   )
 
   // Memoized object for NavigationContext values

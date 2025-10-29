@@ -263,7 +263,7 @@ describe("Video Element", () => {
         const props = getProps({ url: "/media/mockVideoFile.mp4" })
         renderWithContexts(<Video {...props} />, {
           libContext: {
-            libConfig: { resourceCrossOriginMode },
+            resourceCrossOriginMode,
           },
         })
         const videoElement = await screen.findByTestId("stVideo")
@@ -281,7 +281,7 @@ describe("Video Element", () => {
       })
       renderWithContexts(<Video {...props} />, {
         libContext: {
-          libConfig: { resourceCrossOriginMode: undefined },
+          resourceCrossOriginMode: undefined,
         },
       })
       const videoElement = await screen.findByTestId("stVideo")
@@ -366,7 +366,7 @@ describe("Video Element", () => {
           const props = getProps({ url })
           renderWithContexts(<Video {...props} />, {
             libContext: {
-              libConfig: { resourceCrossOriginMode },
+              resourceCrossOriginMode,
             },
           })
           const videoElement = await screen.findByTestId("stVideo")

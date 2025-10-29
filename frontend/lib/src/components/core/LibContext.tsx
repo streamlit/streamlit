@@ -16,49 +16,21 @@
 
 import { createContext } from "react"
 
+import { LibConfig } from "@streamlit/connection"
+
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 /**
- * The lib config contains various configurations that the host platform can
- * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
- * API, and changes need to be backwards-compatible meaning that an old host configuration
- * should still work with a new frontend versions.
+ * LibContextProps extends LibConfig (from @streamlit/connection) with additional
+ * properties specific to the lib package's context needs.
  */
-export type LibConfig = {
-  /**
-   * the mapbox token that can be configured by a platform
-   */
-  mapboxToken?: string
-
-  /**
-   * Whether to disable the full screen mode all elements / widgets.
-   */
-  disableFullscreenMode?: boolean
-
-  enforceDownloadInNewTab?: boolean
-
-  /**
-   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
-   * It is only applied when window.__streamlit.BACKEND_BASE_URL is set.
-   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
-   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
-   */
-  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
-}
-
-export interface LibContextProps {
+export interface LibContextProps extends LibConfig {
   /** True if the app is in full-screen mode. */
   isFullScreen: boolean
 
   /** Function that sets the `isFullScreen` property. */
   setFullScreen: (value: boolean) => void
-
-  /**
-   * The lib-specific configuration from the apps host which is requested via the
-   * _stcore/host-config endpoint.
-   */
-  libConfig: LibConfig
 
   /**
    * The current locale of the app. Defaults to the browser's locale.
@@ -93,9 +65,13 @@ const noOpEndpoints: StreamlitEndpoints = {
 export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
-  libConfig: {},
   locale: window.navigator.language,
   // This should be overwritten
   componentRegistry: new ComponentRegistry(noOpEndpoints),
+  // Flattened libConfig properties:
+  mapboxToken: undefined,
+  disableFullscreenMode: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
 })
 LibContext.displayName = "LibContext"
