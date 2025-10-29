@@ -216,7 +216,8 @@ const getDirection = (
  */
 const calculateMinWidthWithParentConstraint = (
   minStretchBehavior: MinFlexElementWidth,
-  parentWidth: number | undefined
+  parentWidth: number | undefined,
+  buffer: number = 32
 ): React.CSSProperties["minWidth"] => {
   // If there's no parent width or no minStretchBehavior, use the original behavior
   if (
@@ -227,18 +228,13 @@ const calculateMinWidthWithParentConstraint = (
     return minStretchBehavior
   }
 
-  // Convert rem-based minStretchBehavior to pixels
   const minWidthInPixels = convertRemToPx(minStretchBehavior)
 
-  // Buffer to account for padding/margins (in pixels)
-  const PADDING_BUFFER = 32
-
   // If parent width is smaller than desired min width, use parent width minus buffer
-  if (parentWidth < minWidthInPixels && parentWidth > PADDING_BUFFER) {
-    return `${parentWidth - PADDING_BUFFER}px`
+  if (parentWidth < minWidthInPixels && parentWidth > buffer) {
+    return `${parentWidth - buffer}px`
   }
 
-  // Otherwise use the original minStretchBehavior
   return minStretchBehavior
 }
 
