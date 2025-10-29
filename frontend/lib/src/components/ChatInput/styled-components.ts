@@ -141,7 +141,6 @@ type RecorderButtonVariant = "cancel" | "approve"
 export const StyledChatAudioButton = styled.button<{
   variant: RecorderButtonVariant
 }>(({ theme, variant }) => ({
-  minWidth: "6rem",
   minHeight: theme.sizes.smallElementHeight,
   borderRadius: theme.radii.full,
   border: `${theme.sizes.borderWidth} solid ${
