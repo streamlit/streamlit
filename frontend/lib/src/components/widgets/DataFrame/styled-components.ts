@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { getLuminance } from "color2k"
 
 export interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -78,6 +79,13 @@ export const StyledResizableContainer =
             height: theme.iconSizes.base,
           },
         },
+      },
+      // Fix for issue #12852: Make datetime picker icon visible in dark mode
+      // The calendar picker indicator needs to be inverted in dark mode
+      // to be visible against dark backgrounds. We detect dark mode by
+      // checking the luminance of the background color.
+      "& ::-webkit-calendar-picker-indicator": {
+        filter: getLuminance(theme.colors.bgColor) < 0.5 ? "invert(1)" : "none",
       },
     })
   )
