@@ -34,9 +34,10 @@ import { SidebarNavLink } from "./index"
 
 export interface Props {
   endpoints: StreamlitEndpoints
+  widgetsDisabled: boolean
 }
 
-const TopNav: React.FC<Props> = ({ endpoints }) => {
+const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
   const { data, itemKey } = useMemo((): {
@@ -72,6 +73,7 @@ const TopNav: React.FC<Props> = ({ endpoints }) => {
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}
             currentPageScriptHash={currentPageScriptHash}
+            widgetsDisabled={widgetsDisabled}
           />
         )
       }
@@ -89,13 +91,20 @@ const TopNav: React.FC<Props> = ({ endpoints }) => {
                 onPageChange(item.pageScriptHash)
               }
             }}
+            widgetsDisabled={widgetsDisabled}
           >
             {String(item.pageName)}
           </SidebarNavLink>
         </StyledTopNavLinkContainer>
       )
     },
-    [onPageChange, endpoints, pageLinkBaseUrl, currentPageScriptHash]
+    [
+      onPageChange,
+      endpoints,
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      widgetsDisabled,
+    ]
   )
 
   const renderRest = useCallback(
@@ -121,10 +130,17 @@ const TopNav: React.FC<Props> = ({ endpoints }) => {
           endpoints={endpoints}
           pageLinkBaseUrl={pageLinkBaseUrl}
           currentPageScriptHash={currentPageScriptHash}
+          widgetsDisabled={widgetsDisabled}
         />
       )
     },
-    [onPageChange, endpoints, pageLinkBaseUrl, currentPageScriptHash]
+    [
+      onPageChange,
+      endpoints,
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      widgetsDisabled,
+    ]
   )
 
   return (

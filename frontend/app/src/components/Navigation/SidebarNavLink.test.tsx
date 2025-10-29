@@ -19,8 +19,6 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import { render } from "@streamlit/lib"
 
 import SidebarNavLink, { SidebarNavLinkProps } from "./SidebarNavLink"
@@ -33,36 +31,11 @@ const getProps = (
   icon: "",
   onClick: vi.fn(),
   children: "Test",
+  widgetsDisabled: false,
   ...props,
 })
 
-function getAppContextOutput(
-  context: Partial<AppContextProps> = {}
-): AppContextProps {
-  return {
-    widgetsDisabled: false,
-    showToolbar: true,
-    ...context,
-  }
-}
-
-// Helper to setup AppContext mock
-function setupAppContextMock(context: Partial<AppContextProps> = {}): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getAppContextOutput(context)
-  )
-}
-
 describe("SidebarNavLink", () => {
-  beforeEach(() => {
-    // Default mock implementation
-    setupAppContextMock()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("renders without crashing", () => {
     render(<SidebarNavLink {...getProps()} />)
 
@@ -112,8 +85,7 @@ describe("SidebarNavLink", () => {
   })
 
   it("renders when widgets are disabled", () => {
-    setupAppContextMock({ widgetsDisabled: true })
-    render(<SidebarNavLink {...getProps()} />)
+    render(<SidebarNavLink {...getProps({ widgetsDisabled: true })} />)
 
     screen.getByTestId("stSidebarNavLinkContainer")
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
@@ -149,8 +121,11 @@ describe("SidebarNavLink", () => {
     })
 
     it("handles disabled state for top nav", () => {
-      setupAppContextMock({ widgetsDisabled: true })
-      render(<SidebarNavLink {...getProps({ isTopNav: true })} />)
+      render(
+        <SidebarNavLink
+          {...getProps({ isTopNav: true, widgetsDisabled: true })}
+        />
+      )
 
       screen.getByTestId("stTopNavLinkContainer")
       const sidebarNavLink = screen.getByTestId("stTopNavLink")

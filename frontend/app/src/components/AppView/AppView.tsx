@@ -35,7 +35,6 @@ import {
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
@@ -94,6 +93,10 @@ export interface AppViewProps {
   addScriptFinishedHandler: (func: () => void) => void
 
   removeScriptFinishedHandler: (func: () => void) => void
+
+  widgetsDisabled: boolean
+
+  showToolbar: boolean
 }
 
 /**
@@ -114,6 +117,8 @@ function AppView(props: AppViewProps): ReactElement {
     disableScrolling,
     addScriptFinishedHandler,
     removeScriptFinishedHandler,
+    widgetsDisabled,
+    showToolbar,
   } = props
 
   useEffect(() => {
@@ -126,8 +131,6 @@ function AppView(props: AppViewProps): ReactElement {
     window.addEventListener("hashchange", listener, false)
     return () => window.removeEventListener("hashchange", listener, false)
   }, [sendMessageToHost])
-
-  const { widgetsDisabled, showToolbar } = useAppContext()
 
   const { activeTheme } = useContext(ThemeContext)
 
@@ -288,6 +291,7 @@ function AppView(props: AppViewProps): ReactElement {
               hasElements={hasSidebarElements}
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
+              widgetsDisabled={widgetsDisabled}
             >
               <StyledSidebarBlockContainer>
                 {renderBlock(elements.sidebar)}
@@ -303,11 +307,15 @@ function AppView(props: AppViewProps): ReactElement {
             navigation={
               navigationPosition === Navigation.Position.TOP &&
               shouldShowNavigation(appPages, navSections) ? (
-                <TopNav endpoints={endpoints} />
+                <TopNav
+                  endpoints={endpoints}
+                  widgetsDisabled={widgetsDisabled}
+                />
               ) : null
             }
             rightContent={topRightContent}
             logoComponent={logoElement}
+            showToolbar={showToolbar}
           />
           <Component
             tabIndex={0}

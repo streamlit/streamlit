@@ -47,6 +47,7 @@ interface TopNavSectionProps {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
   hideChevron?: boolean
+  widgetsDisabled: boolean
 }
 
 const TopNavSection = ({
@@ -57,6 +58,7 @@ const TopNavSection = ({
   pageLinkBaseUrl,
   currentPageScriptHash,
   hideChevron = false,
+  widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useTheme()
@@ -110,6 +112,7 @@ const TopNavSection = ({
                         pageLinkBaseUrl,
                         item
                       )}
+                      widgetsDisabled={widgetsDisabled}
                     >
                       {pageName}
                     </SidebarNavLink>

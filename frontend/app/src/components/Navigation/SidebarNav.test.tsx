@@ -144,6 +144,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   collapseSidebar: vi.fn(),
   hasSidebarElements: false,
   endpoints: mockEndpoints(),
+  widgetsDisabled: false,
   ...props,
 })
 
