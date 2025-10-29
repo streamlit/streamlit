@@ -84,6 +84,27 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
 
 @dataclass
 class ChatInputValue(MutableMapping[str, Any]):
+    """Represents the value returned by `st.chat_input` after user interaction.
+
+    This dataclass contains the user's input text, any files uploaded, and optionally
+    an audio recording. It provides a dict-like interface for accessing and modifying
+    its attributes.
+
+    Attributes
+    ----------
+    text : str
+        The text input provided by the user.
+    files : list[UploadedFile]
+        A list of files uploaded by the user.
+    audio : UploadedFile or None, optional
+        An audio recording uploaded by the user, if any.
+
+    Notes
+    -----
+    - Supports dict-like access via `__getitem__`, `__setitem__`, and `__delitem__`.
+    - Use `to_dict()` to convert the value to a standard dictionary.
+    """
+
     text: str
     files: list[UploadedFile]
     audio: UploadedFile | None = None
