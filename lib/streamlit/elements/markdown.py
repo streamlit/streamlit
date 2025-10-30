@@ -370,6 +370,7 @@ class MarkdownMixin:
             "primary",
         ] = "blue",
         width: Width = "content",
+        help: str | None = None,
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -398,6 +399,14 @@ class MarkdownMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        help : str or None
+            A tooltip that gets displayed when the badge is hovered over. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown, including
+            the Markdown directives described in the ``body`` parameter of
+            ``st.markdown``.
 
         icon : str or None
             An optional emoji or icon to display next to the badge label. If
@@ -465,6 +474,9 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
+
+        if help is not None:
+            badge_proto.help = help
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)

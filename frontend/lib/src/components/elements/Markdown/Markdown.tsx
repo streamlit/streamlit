@@ -18,6 +18,7 @@ import React, { memo, ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import {
   InlineTooltipIcon,
@@ -34,9 +35,24 @@ export interface MarkdownProps {
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
+  // Determine if the markdown is a single badge only (e.g ":blue-badge[Text]")
+  const isSingleBadgeOnly =
+    element.elementType === MarkdownProto.Type.NATIVE &&
+    /^:\w+-badge\[[^\]]+\]$/.test(element.body.trim())
+
   return (
     <div className="stMarkdown" data-testid="stMarkdown">
-      {element.help ? (
+      {element.help && isSingleBadgeOnly ? (
+        // Only wrap a single badge in BaseButtonTooltip
+        <BaseButtonTooltip help={element.help} containerWidth={false}>
+          <StreamlitMarkdown
+            isCaption={element.isCaption}
+            source={element.body}
+            allowHTML={element.allowHtml}
+          />
+        </BaseButtonTooltip>
+      ) : element.help ? (
+        // For other Markdown with help, show the inline tooltip
         <StyledLabelHelpWrapper
           isLatex={element.elementType === MarkdownProto.Type.LATEX}
         >
@@ -51,6 +67,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           ></InlineTooltipIcon>
         </StyledLabelHelpWrapper>
       ) : (
+        // No help provided, render markdown normally
         <StreamlitMarkdown
           isCaption={element.isCaption}
           source={element.body}

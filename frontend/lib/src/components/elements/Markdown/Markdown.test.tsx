@@ -61,3 +61,66 @@ describe("Markdown element with help", () => {
     expect(helpText).toBeInTheDocument()
   })
 })
+
+describe("Markdown badge with help", () => {
+  it("renders a badge with BaseButtonTooltip when help is provided", async () => {
+    const user = userEvent.setup()
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Testing Badge]",
+      help: "Tooltip text",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+    render(<Markdown element={element} />)
+
+    // Expect at least one badge to render (wrapped + unwrapped)
+    const badges = screen.getAllByText("Testing Badge")
+    expect(badges.length).toBeGreaterThanOrEqual(1)
+
+    // Tooltip hover target should exist
+    const hoverTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(hoverTarget).toBeInTheDocument()
+
+    // Hover over to trigger tooltip
+    await user.hover(hoverTarget)
+
+    // Tooltip text should appear
+    const tooltip = await screen.findByText("Tooltip text")
+    expect(tooltip).toBeInTheDocument()
+  })
+
+  it("renders badge without tooltip when help is not provided", () => {
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Testing Badge]",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+    render(<Markdown element={element} />)
+
+    expect(screen.getByText("Testing Badge")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders multiple badges or badges with text using inline tooltip", async () => {
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Badge 1] :grey-badge[Badge 2]",
+      help: "Multiple badges tooltip",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+    render(<Markdown element={element} />)
+
+    // Inline tooltip icons should exist
+    const inlineTooltips = screen.getAllByTestId("stTooltipHoverTarget")
+    expect(inlineTooltips.length).toBeGreaterThan(0)
+
+    // Verify both badges render
+    expect(screen.getByText("Badge 1")).toBeInTheDocument()
+    expect(screen.getByText("Badge 2")).toBeInTheDocument()
+  })
+})
