@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { Element } from "@streamlit/protobuf"
-
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
@@ -88,12 +86,6 @@ export interface AppNode {
   readonly deltaMsgReceivedAt?: number
 
   /**
-   * Return the AppNode for the given index path, or undefined if the path
-   * is invalid.
-   */
-  getIn(path: number[]): AppNode | undefined
-
-  /**
    * Return a copy of this node with a new element set at the given index
    * path. Throws an error if the path is invalid.
    */
@@ -114,13 +106,6 @@ export interface AppNode {
     fragmentIdsThisRun?: Array<string>,
     fragmentIdOfBlock?: string
   ): AppNode | undefined
-
-  /**
-   * Return a Set of all the Elements contained in the tree.
-   * If an existing Set is passed in, that Set will be mutated and returned.
-   * Otherwise, a new Set will be created and will be returned.
-   */
-  getElements(elementSet?: Set<Element>): Set<Element>
 
   /**
    * Accept a visitor.

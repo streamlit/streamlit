@@ -42,7 +42,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    HeightWithoutContent,
+    Height,
     LayoutConfig,
     Width,
     validate_height,
@@ -287,7 +287,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -304,7 +304,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -321,7 +321,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -389,7 +389,7 @@ class ArrowMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : "auto", "stretch", or int
+        height : int, "auto", "content", or "stretch"
             The height of the dataframe element. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
@@ -403,6 +403,9 @@ class ArrowMixin:
               container.
             - An integer specifying the height in pixels: The element has a
               fixed height.
+            - ``"content"``: The height of the element matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
 
             Vertical scrolling within the dataframe element is enabled when the
             height does not accommodate all rows.
@@ -676,7 +679,7 @@ class ArrowMixin:
         validate_width(width, allow_content=True)
         validate_height(
             height,
-            allow_content=False,
+            allow_content=True,
             additional_allowed=["auto"],
         )
 

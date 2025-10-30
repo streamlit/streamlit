@@ -29,6 +29,8 @@ import {
   makeProto,
   text,
 } from "./test-utils"
+import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
+import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -70,7 +72,9 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = empty.main.getIn([0]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
+        0,
+      ]) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -115,7 +119,9 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = empty.main.getIn([0]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
+        0,
+      ]) as ElementNode
       expect(child.element.alert).toBeDefined()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -131,7 +137,9 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = empty.main.getIn([0]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
+        0,
+      ]) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -184,7 +192,9 @@ describe("AppRoot", () => {
       ).filterMainScriptElements(FAKE_SCRIPT_HASH)
 
       // We should now only have a single element, inside a single block
-      expect(newRoot.main.getIn([1, 1])).toBeTextNode("newElement!")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 1])
+      ).toBeTextNode("newElement!")
       expect(newRoot.getElements().size).toBe(3)
     })
 
@@ -200,7 +210,9 @@ describe("AppRoot", () => {
       ).filterMainScriptElements(FAKE_SCRIPT_HASH)
 
       // We should now only have a single element, inside a single block
-      expect(newRoot.main.getIn([1, 1])).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 1])
+      ).toBeUndefined()
       expect(newRoot.getElements().size).toBe(2)
     })
   })
@@ -216,17 +228,30 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as ElementNode
       expect(newNode).toBeTextNode("newElement!")
 
       // Check that our new scriptRunId has been set only on the touched nodes
       expect(newRoot.main.scriptRunId).toBe("new_session_id")
       expect(newRoot.main.fragmentId).toBe(undefined)
       expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
-      expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-      expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
-      expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-      expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [0])?.scriptRunId
+      ).toBe(NO_SCRIPT_RUN_ID)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1])?.scriptRunId
+      ).toBe("new_session_id")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 0])
+          ?.scriptRunId
+      ).toBe(NO_SCRIPT_RUN_ID)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 1])
+          ?.scriptRunId
+      ).toBe("new_session_id")
       expect(newNode.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
       expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     })
@@ -239,17 +264,30 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode).toBeDefined()
 
       // Check that our new scriptRunId has been set only on the touched nodes
       expect(newRoot.main.scriptRunId).toBe("new_session_id")
       expect(newRoot.main.fragmentId).toBe(undefined)
       expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
-      expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-      expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
-      expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-      expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [0])?.scriptRunId
+      ).toBe(NO_SCRIPT_RUN_ID)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1])?.scriptRunId
+      ).toBe("new_session_id")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 0])
+          ?.scriptRunId
+      ).toBe(NO_SCRIPT_RUN_ID)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 1])
+          ?.scriptRunId
+      ).toBe("new_session_id")
       expect(newNode.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
       expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     })
@@ -275,7 +313,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1, 0])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode).toBeDefined()
       expect(newNode.deltaBlock.type).toBe("expandable")
       expect(newNode.children.length).toBe(1)
@@ -290,7 +331,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+      const replacedBlock = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot2.main,
+        [1, 1]
+      ) as BlockNode
       expect(replacedBlock).toBeDefined()
       expect(replacedBlock.deltaBlock.type).toBe("tabContainer")
       expect(replacedBlock.children.length).toBe(0)
@@ -317,7 +361,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1, 0])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode).toBeDefined()
       expect(newNode.deltaBlock.type).toBe("expandable")
       expect(newNode.children.length).toBe(1)
@@ -336,7 +383,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+      const replacedBlock = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot2.main,
+        [1, 1]
+      ) as BlockNode
       expect(replacedBlock).toBeDefined()
       expect(replacedBlock.deltaBlock.type).toBe("expandable")
       expect(replacedBlock.children.length).toBe(1)
@@ -353,13 +403,17 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1], NEW_FAKE_SCRIPT_HASH)
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as ElementNode
       expect(newNode).toBeDefined()
 
       // Check that our new other nodes are not affected by the new script hash
-      expect(newRoot.main.getIn([1, 0])?.activeScriptHash).toBe(
-        FAKE_SCRIPT_HASH
-      )
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 0])
+          ?.activeScriptHash
+      ).toBe(FAKE_SCRIPT_HASH)
       expect(newNode.activeScriptHash).toBe(NEW_FAKE_SCRIPT_HASH)
     })
 
@@ -372,13 +426,17 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1], NEW_FAKE_SCRIPT_HASH)
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode).toBeDefined()
 
       // Check that our new scriptRunId has been set only on the touched nodes
-      expect(newRoot.main.getIn([1, 0])?.activeScriptHash).toBe(
-        FAKE_SCRIPT_HASH
-      )
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1, 0])
+          ?.activeScriptHash
+      ).toBe(FAKE_SCRIPT_HASH)
       expect(newNode.activeScriptHash).toBe(NEW_FAKE_SCRIPT_HASH)
     })
 
@@ -393,7 +451,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as ElementNode
       expect(newNode.fragmentId).toBe("myFragmentId")
     })
 
@@ -408,7 +469,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode.fragmentId).toBe("myFragmentId")
     })
 
@@ -424,7 +488,10 @@ describe("AppRoot", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-      const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as BlockNode
       expect(newNode.deltaMsgReceivedAt).toBe(timestamp)
     })
   })
@@ -442,7 +509,9 @@ describe("AppRoot", () => {
       ).clearStaleNodes("new_session_id", [])
 
       // We should now only have a single element, inside a single block
-      expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [0, 0])
+      ).toBeTextNode("newElement!")
       expect(newRoot.getElements().size).toBe(1)
     })
 
@@ -572,20 +641,57 @@ describe("AppRoot", () => {
 
       const pruned = root.clearStaleNodes("new_session_id", ["my_fragment_id"])
 
-      expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
-      expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(3)
-      expect(pruned.main.getIn([0, 0])).toBeTextNode("oldElement!")
-      expect(pruned.main.getIn([0, 1])).toBeTextNode("oldElement2!")
-      expect(pruned.main.getIn([0, 2])).toBeTextNode("oldElement4!")
-
-      expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
-      expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(1)
-      expect(pruned.main.getIn([1, 0])).toBeTextNode("newElement!")
-
-      expect(pruned.main.getIn([2])).toBeInstanceOf(BlockNode)
-      expect((pruned.main.getIn([2]) as BlockNode).children).toHaveLength(1)
       expect(
-        (pruned.main.getIn([2, 0]) as BlockNode).deltaBlock.tab?.label
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0])
+      ).toBeInstanceOf(BlockNode)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
+            0,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(3)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 0])
+      ).toBeTextNode("oldElement!")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 1])
+      ).toBeTextNode("oldElement2!")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 2])
+      ).toBeTextNode("oldElement4!")
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1])
+      ).toBeInstanceOf(BlockNode)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
+            1,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(1)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1, 0])
+      ).toBeTextNode("newElement!")
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [2])
+      ).toBeInstanceOf(BlockNode)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
+            2,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(1)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [2, 0]
+          ) as BlockNode
+        ).deltaBlock.tab?.label
       ).toContain("tab1")
     })
 
@@ -636,30 +742,110 @@ describe("AppRoot", () => {
           forwardMsgMetadata([0, 1, 3])
         )
 
-      expect((newRoot.main.getIn([1]) as BlockNode).children).toHaveLength(4)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [
+            1,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(4)
 
       const pruned = newRoot.clearStaleNodes("new_session_id", [
         "my_fragment_id",
       ])
 
-      expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
-      expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(1)
-      expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0])
+      ).toBeInstanceOf(BlockNode)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
+            0,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(1)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1])
+      ).toBeInstanceOf(BlockNode)
       // the stale nested fragment child should have been pruned
-      expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(3)
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
+            1,
+          ]) as BlockNode
+        ).children
+      ).toHaveLength(3)
     })
   })
 
   describe("AppRoot.getElements", () => {
-    it("returns all elements", () => {
+    it("returns all elements using ElementsSetVisitor", () => {
       // We have elements at main.[0] and main.[1, 0]
       expect(ROOT.getElements()).toEqual(
         new Set([
-          (ROOT.main.getIn([0]) as ElementNode).element,
-          (ROOT.main.getIn([1, 0]) as ElementNode).element,
+          (
+            GetNodeByDeltaPathVisitor.getNodeAtPath(ROOT.main, [
+              0,
+            ]) as ElementNode
+          ).element,
+          (
+            GetNodeByDeltaPathVisitor.getNodeAtPath(
+              ROOT.main,
+              [1, 0]
+            ) as ElementNode
+          ).element,
         ])
       )
     })
+  })
+
+  it("uses visitor pattern internally", () => {
+    // Create a more complex structure to test visitor traversal
+    const delta1 = makeProto(DeltaProto, {
+      newElement: { text: { body: "main_element" } },
+    })
+    const delta2 = makeProto(DeltaProto, {
+      newElement: { text: { body: "sidebar_element" } },
+    })
+
+    const rootWithElements = ROOT.applyDelta(
+      "test_run",
+      delta1,
+      forwardMsgMetadata([0, 0]) // main section
+    ).applyDelta(
+      "test_run",
+      delta2,
+      forwardMsgMetadata([1, 0]) // sidebar section
+    )
+
+    const elements = rootWithElements.getElements()
+
+    // Should find elements from main, sidebar, and the original ROOT elements
+    // one new insert overwrote an existing main element; the sidebar insert
+    // added a new one
+    expect(elements.size).toBe(3)
+
+    // Verify we can find the sidebar element specifically
+    const elementsArray = Array.from(elements)
+    const sidebarElement = elementsArray.find(
+      el => el.text?.body === "sidebar_element"
+    )
+
+    expect(sidebarElement).toBeDefined()
+  })
+
+  it("demonstrates visitor pattern flexibility", () => {
+    // Show that we can use ElementsSetVisitor directly on parts of the tree
+    const mainElements = ElementsSetVisitor.collectElements(ROOT.main)
+    const sidebarElements = ElementsSetVisitor.collectElements(ROOT.sidebar)
+
+    // Should have elements in main, none in sidebar for basic ROOT
+    expect(mainElements.size).toBe(2) // The original elements from ROOT
+    expect(sidebarElements.size).toBe(0)
+
+    // Combined should equal getElements() result
+    const combinedSize = mainElements.size + sidebarElements.size
+    expect(ROOT.getElements().size).toBe(combinedSize)
   })
 
   describe("AppRoot.debug", () => {

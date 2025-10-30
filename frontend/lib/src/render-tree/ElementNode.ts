@@ -31,7 +31,6 @@ import {
   WrappedNamedDataset,
 } from "~lib/components/elements/ArrowVegaLiteChart"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { isNullOrUndefined } from "~lib/util/utils"
 
 import { AppNode } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
@@ -122,10 +121,6 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  public getIn(): AppNode | undefined {
-    return undefined
-  }
-
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
@@ -160,14 +155,6 @@ export class ElementNode implements AppNode {
       }
     }
     return this.scriptRunId === currentScriptRunId ? this : undefined
-  }
-
-  public getElements(elements?: Set<Element>): Set<Element> {
-    if (isNullOrUndefined(elements)) {
-      elements = new Set<Element>()
-    }
-    elements.add(this.element)
-    return elements
   }
 
   public arrowAddRows(
