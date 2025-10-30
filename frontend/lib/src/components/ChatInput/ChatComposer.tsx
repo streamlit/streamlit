@@ -24,9 +24,9 @@ import React, {
 } from "react"
 
 import { AttachFile, Mic, Send } from "@emotion-icons/material-outlined"
-import { LOG } from "~lib/log"
 
 import { type AudioMeta, useWaveformController } from "~lib/components/audio"
+import { LOG } from "~lib/components/ChatInput/logger"
 
 import ChatAudioRecorder, {
   type ChatAudioRecorderRef,

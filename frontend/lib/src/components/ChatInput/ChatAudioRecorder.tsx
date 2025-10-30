@@ -24,7 +24,7 @@ import React, {
 } from "react"
 
 import type { AudioMeta, WaveformController } from "~lib/components/audio"
-import { LOG } from "~lib/log"
+import { LOG } from "~lib/components/ChatInput/logger"
 
 import {
   StyledChatAudioButton,
