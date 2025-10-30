@@ -71,14 +71,14 @@ const defaultScriptRunContextValue = {
 
 const defaultThemeContextValue = {
   activeTheme: mockTheme,
-  setTheme: vi.fn(),
+  setTheme: () => {},
   availableThemes: [],
 }
 
 const defaultNavigationContextValue = {
   pageLinkBaseUrl: "",
   currentPageScriptHash: "",
-  onPageChange: vi.fn(),
+  onPageChange: () => {},
   navSections: [],
   appPages: [],
 }
