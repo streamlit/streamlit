@@ -24,6 +24,7 @@ import React, {
 } from "react"
 
 import { AttachFile, Mic, Send } from "@emotion-icons/material-outlined"
+import { LOG } from "~lib/log"
 
 import { type AudioMeta, useWaveformController } from "~lib/components/audio"
 
@@ -159,6 +160,8 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
       })
       setFiles([])
       resetState()
+    } catch (error) {
+      LOG.error("ChatComposer: Failed to submit chat", error)
     } finally {
       setIsSubmitting(false)
     }
@@ -179,10 +182,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
 
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
-        handleSubmit().catch(_error => {
-          // Error already handled in handleSubmit's finally block
-          // Just log for debugging if needed
-        })
+        handleSubmit()
       }
     },
     [controlsDisabled, handleSubmit]
@@ -221,6 +221,8 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
         setFiles([])
         setText("")
         focusInput()
+      } catch (error) {
+        LOG.error("ChatComposer: Failed to submit audio recording", error)
       } finally {
         setIsSubmitting(false)
         setIsRecording(false)
