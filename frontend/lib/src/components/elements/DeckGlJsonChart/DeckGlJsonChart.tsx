@@ -33,7 +33,7 @@ import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
@@ -65,7 +65,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     heightConfig,
     widgetMgr,
   } = props
-  const { mapboxToken: contextMapboxToken } = useContext(LibContext)
+  const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,

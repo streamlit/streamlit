@@ -16,7 +16,7 @@
 
 import { useCallback, useContext } from "react"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 
 const useDownloadUrl = (
@@ -24,7 +24,7 @@ const useDownloadUrl = (
   filename: string
 ): (() => void) => {
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibContext)
+  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
 
   const downloadUrl = useCallback(() => {
     if (!url) return

@@ -20,8 +20,8 @@ import {
   FormsContext,
   FormsContextProps,
   FormsData,
-  LibContext,
-  LibContextProps,
+  LibConfigContext,
+  LibConfigContextProps,
   NavigationContext,
   NavigationContextProps,
   ScriptRunContext,
@@ -32,13 +32,19 @@ import {
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
+  ViewStateContext,
+  ViewStateContextProps,
 } from "@streamlit/lib"
 import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
-// Type for LibContext props
-type LibContextValues = {
+// Type for ViewStateContext props
+type ViewStateContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
+}
+
+// Type for LibConfigContext props
+type LibConfigContextValues = {
   locale: typeof window.navigator.language
   // Selected libConfig properties
   mapboxToken?: string
@@ -83,7 +89,8 @@ type FormsContextValues = {
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  LibContextValues &
+  ViewStateContextValues &
+    LibConfigContextValues &
     NavigationContextValues &
     SidebarConfigContextValues &
     ThemeContextValues &
@@ -96,9 +103,10 @@ export type StreamlitContextProviderProps = PropsWithChildren<
  * This centralizes the context values in one place.
  */
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
-  // LibContext
+  // ViewStateContext
   isFullScreen,
   setFullScreen,
+  // LibConfigContext
   locale,
   mapboxToken,
   enforceDownloadInNewTab,
@@ -128,24 +136,24 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
-  // Memoized object for LibContext values
-  const libContextProps = useMemo<LibContextProps>(
+  // Memoized object for ViewStateContext values
+  const viewStateContextProps = useMemo<ViewStateContextProps>(
     () => ({
       isFullScreen,
       setFullScreen,
+    }),
+    [isFullScreen, setFullScreen]
+  )
+
+  // Memoized object for LibConfigContext values
+  const libConfigContextProps = useMemo<LibConfigContextProps>(
+    () => ({
       locale,
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
     }),
-    [
-      isFullScreen,
-      setFullScreen,
-      locale,
-      mapboxToken,
-      enforceDownloadInNewTab,
-      resourceCrossOriginMode,
-    ]
+    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
   )
 
   // Memoized object for NavigationContext values
@@ -211,19 +219,21 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   }
 
   return (
-    <LibContext.Provider value={libContextProps}>
+    <LibConfigContext.Provider value={libConfigContextProps}>
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
-          <NavigationContext.Provider value={navigationContextProps}>
-            <FormsContext.Provider value={formsContextProps}>
-              <ScriptRunContext.Provider value={scriptRunContextProps}>
-                {children}
-              </ScriptRunContext.Provider>
-            </FormsContext.Provider>
-          </NavigationContext.Provider>
+          <ViewStateContext.Provider value={viewStateContextProps}>
+            <NavigationContext.Provider value={navigationContextProps}>
+              <FormsContext.Provider value={formsContextProps}>
+                <ScriptRunContext.Provider value={scriptRunContextProps}>
+                  {children}
+                </ScriptRunContext.Provider>
+              </FormsContext.Provider>
+            </NavigationContext.Provider>
+          </ViewStateContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>
-    </LibContext.Provider>
+    </LibConfigContext.Provider>
   )
 }
 

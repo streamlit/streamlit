@@ -22,8 +22,8 @@ import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
-import type { LibContextProps } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import type { LibConfigContextProps } from "~lib/components/core/LibConfigContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { getMarkdownBgColors } from "~lib/theme/getColors"
@@ -607,13 +607,11 @@ describe("CustomMediaTag", () => {
     alt: "Test image",
   }
 
-  // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
-  const createMockLibContextValue = (
+  // Create minimal mock for LibConfigContext focusing only on what CustomMediaTag needs
+  const createMockLibConfigContextValue = (
     resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
-  ): LibContextProps => {
+  ): LibConfigContextProps => {
     return {
-      isFullScreen: false,
-      setFullScreen: () => {},
       resourceCrossOriginMode,
       mapboxToken: undefined,
       enforceDownloadInNewTab: undefined,
@@ -628,13 +626,13 @@ describe("CustomMediaTag", () => {
   ] as const)(
     "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
-      const mockContextValue = createMockLibContextValue(
+      const mockContextValue = createMockLibConfigContextValue(
         resourceCrossOriginMode
       )
       render(
-        <LibContext.Provider value={mockContextValue}>
+        <LibConfigContext.Provider value={mockContextValue}>
           <CustomMediaTag node={mockNode} {...mockProps} />
-        </LibContext.Provider>
+        </LibConfigContext.Provider>
       )
 
       const imgElement = screen.getByRole("img")
@@ -743,13 +741,13 @@ describe("CustomMediaTag", () => {
         const node = { tagName } as any
         const props = { src, ...extraProps }
 
-        const mockContextValue = createMockLibContextValue(
+        const mockContextValue = createMockLibConfigContextValue(
           resourceCrossOriginMode
         )
         const { container } = render(
-          <LibContext.Provider value={mockContextValue}>
+          <LibConfigContext.Provider value={mockContextValue}>
             <CustomMediaTag node={node} {...props} />
-          </LibContext.Provider>
+          </LibConfigContext.Provider>
         )
 
         const element =

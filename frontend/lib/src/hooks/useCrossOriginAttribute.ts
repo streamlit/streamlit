@@ -16,7 +16,7 @@
 
 import { useContext } from "react"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 
 /**
@@ -38,7 +38,7 @@ import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 export const useCrossOriginAttribute = (
   url?: string
 ): undefined | "anonymous" | "use-credentials" => {
-  const { resourceCrossOriginMode } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibConfigContext)
 
   if (!url) {
     return undefined
