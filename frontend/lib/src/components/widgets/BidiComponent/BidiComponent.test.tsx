@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
 
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { mockEndpoints } from "~lib/mocks/mocks"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -33,6 +34,19 @@ vi.mock("~lib/WidgetStateManager")
 describe("BidiComponent", () => {
   let mockWidgetMgr: WidgetStateManager
   let mockFragmentId: string | undefined
+  let mockComponentRegistry: ComponentRegistry
+
+  // Helper function to create a mock ComponentRegistry with optional custom getBidiComponentURL
+  const createMockComponentRegistry = (
+    getBidiComponentURL?: (componentName: string, path: string) => string
+  ): ComponentRegistry => {
+    const registry = new ComponentRegistry(mockEndpoints())
+    if (getBidiComponentURL) {
+      // Override the getBidiComponentURL method
+      registry.getBidiComponentURL = getBidiComponentURL
+    }
+    return registry
+  }
 
   beforeEach(() => {
     // Clear all mocks before each test
@@ -50,6 +64,7 @@ describe("BidiComponent", () => {
     vi.spyOn(mockWidgetMgr, "setTriggerValue").mockImplementation(vi.fn())
 
     mockFragmentId = "test-fragment"
+    mockComponentRegistry = createMockComponentRegistry()
   })
 
   afterEach(() => {
@@ -103,8 +118,8 @@ describe("BidiComponent", () => {
             element={element}
             widgetMgr={mockWidgetMgr}
             fragmentId={mockFragmentId}
-          />,
-          {}
+            componentRegistry={mockComponentRegistry}
+          />
         )
 
         expect(screen.getByTestId(expectedVisible)).toBeVisible()
@@ -127,8 +142,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify the HTML content is actually injected into the DOM
@@ -158,8 +173,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       const container = screen.getByTestId("stBidiComponentIsolated")
@@ -201,8 +216,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify all nested elements are properly injected
@@ -240,8 +255,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       const container = screen.getByTestId("stBidiComponentRegular")
@@ -275,8 +290,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify CSS is injected into the document
@@ -308,8 +323,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       const container = screen.getByTestId("stBidiComponentIsolated")
@@ -331,21 +346,17 @@ describe("BidiComponent", () => {
         cssSourcePath: "styles.css",
       })
 
+      const customRegistry = createMockComponentRegistry(
+        (componentName, path) => `/components/${componentName}/${path}`
+      )
+
       renderWithContexts(
         <BidiComponent
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {
-          libContext: {
-            componentRegistry: {
-              getBidiComponentURL: vi.fn(
-                (componentName, path) => `/components/${componentName}/${path}`
-              ),
-            } as unknown as ComponentRegistry,
-          },
-        }
+          componentRegistry={customRegistry}
+        />
       )
 
       await waitFor(() => {
@@ -380,8 +391,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Component should render successfully with mixed data
@@ -441,8 +452,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Component should render successfully
@@ -469,8 +480,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Component should render successfully with the widget manager
@@ -497,8 +508,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Component should render without errors when widget state is configured
@@ -522,8 +533,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       expect(screen.getByTestId("stBidiComponentRegular")).toBeVisible()
@@ -547,8 +558,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Component should still render even with bad JSON in widget state
@@ -573,8 +584,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       const errorHeading = await screen.findByText(/BidiComponent Error/)
@@ -600,8 +611,8 @@ describe("BidiComponent", () => {
             element={element}
             widgetMgr={mockWidgetMgr}
             fragmentId={mockFragmentId}
-          />,
-          {}
+            componentRegistry={mockComponentRegistry}
+          />
         )
       }).not.toThrow()
 
@@ -653,8 +664,8 @@ describe("BidiComponent", () => {
           element={element1}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       const container = screen.getByTestId("stBidiComponentRegular")
@@ -675,6 +686,7 @@ describe("BidiComponent", () => {
           element={element2}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
         />
       )
 
@@ -728,8 +740,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       expect(screen.getByTestId("stBidiComponentRegular")).toBeVisible()
@@ -779,8 +791,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify setJsonValue was called with merged state
@@ -819,8 +831,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify setJsonValue was called with only the new value (fallback behavior)
@@ -856,8 +868,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify setTriggerValue was called with the correct aggregator ID
@@ -896,8 +908,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Wait for the module to execute
@@ -929,8 +941,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Wait a bit to ensure the module is loaded
@@ -966,8 +978,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Should show error message
@@ -993,8 +1005,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Should show error about missing default export
@@ -1020,8 +1032,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Should show error about default export not being a function
@@ -1044,19 +1056,17 @@ describe("BidiComponent", () => {
         componentName: "ExternalJSComponent",
       })
 
+      const customRegistry = createMockComponentRegistry(
+        mockGetBidiComponentURL
+      )
+
       renderWithContexts(
         <BidiComponent
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {
-          libContext: {
-            componentRegistry: {
-              getBidiComponentURL: mockGetBidiComponentURL,
-            } as unknown as ComponentRegistry,
-          },
-        }
+          componentRegistry={customRegistry}
+        />
       )
 
       // Wait for the getBidiComponentURL to be called
@@ -1085,8 +1095,8 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       expect(screen.getByTestId("stBidiComponentRegular")).toBeVisible()
@@ -1101,6 +1111,7 @@ describe("BidiComponent", () => {
           element={element}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
         />
       )
 
@@ -1126,8 +1137,8 @@ describe("BidiComponent", () => {
           element={element1}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
-        />,
-        {}
+          componentRegistry={mockComponentRegistry}
+        />
       )
 
       // Verify first content is rendered
@@ -1141,6 +1152,7 @@ describe("BidiComponent", () => {
           element={element2}
           widgetMgr={mockWidgetMgr}
           fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
         />
       )
 

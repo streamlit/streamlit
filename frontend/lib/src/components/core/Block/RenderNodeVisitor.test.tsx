@@ -17,6 +17,7 @@
 import React from "react"
 
 import { BlockNode } from "~lib/AppNode"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { block, text, textInput } from "~lib/render-tree/test-utils"
@@ -41,6 +42,7 @@ const createMockProps = (node: BlockNode): BlockPropsWithoutWidth => ({
     formsWithPendingRequestsChanged: () => {},
   }),
   widgetsDisabled: false,
+  componentRegistry: new ComponentRegistry(mockEndpoints()),
 })
 
 describe("RenderNodeVisitor", () => {
@@ -48,7 +50,7 @@ describe("RenderNodeVisitor", () => {
     it("creates visitor with initial state", () => {
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       expect(visitor.reactElements).toEqual([])
       expect(visitor.reactElements).toHaveLength(0)
@@ -60,7 +62,7 @@ describe("RenderNodeVisitor", () => {
       const elementNode = text("test element")
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result = visitor.visitElementNode(elementNode)
 
@@ -75,7 +77,7 @@ describe("RenderNodeVisitor", () => {
       const elementNode2 = text("element 2")
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result1 = visitor.visitElementNode(elementNode1)
       const result2 = visitor.visitElementNode(elementNode2)
@@ -93,7 +95,7 @@ describe("RenderNodeVisitor", () => {
 
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result1 = visitor.visitElementNode(element1)
       const result2 = visitor.visitElementNode(element2)
@@ -111,7 +113,7 @@ describe("RenderNodeVisitor", () => {
 
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result = visitor.visitElementNode(element)
 
@@ -130,7 +132,7 @@ describe("RenderNodeVisitor", () => {
       const blockNode = block([text("child")])
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result = visitor.visitBlockNode(blockNode)
 
@@ -145,7 +147,7 @@ describe("RenderNodeVisitor", () => {
       const blockNode2 = block([text("child2")])
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result1 = visitor.visitBlockNode(blockNode1)
       const result2 = visitor.visitBlockNode(blockNode2)
@@ -160,7 +162,7 @@ describe("RenderNodeVisitor", () => {
       const blockNode = block([])
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result = visitor.visitBlockNode(blockNode)
 
@@ -170,11 +172,14 @@ describe("RenderNodeVisitor", () => {
       expect((result as React.ReactElement).key).toBe("0")
     })
 
-    it("passes disableFullscreenMode prop correctly", () => {
+    it("passes disableFullscreenMode prop from props correctly", () => {
       const blockNode = block([])
       const mockBlock = block([])
-      const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, true)
+      const mockProps = {
+        ...createMockProps(mockBlock),
+        disableFullscreenMode: true,
+      }
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const result = visitor.visitBlockNode(blockNode)
 
@@ -193,7 +198,7 @@ describe("RenderNodeVisitor", () => {
 
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
-      const visitor = new RenderNodeVisitor(mockProps, false)
+      const visitor = new RenderNodeVisitor(mockProps)
 
       const elementResult = visitor.visitElementNode(elementNode)
       const blockResult = visitor.visitBlockNode(blockNode)
@@ -214,7 +219,7 @@ describe("RenderNodeVisitor", () => {
       const emptyBlock = block([])
       const mockProps = createMockProps(emptyBlock)
 
-      const result = RenderNodeVisitor.collectReactElements(mockProps, false)
+      const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toEqual([])
     })
@@ -228,7 +233,7 @@ describe("RenderNodeVisitor", () => {
       ])
       const mockProps = createMockProps(parentBlock)
 
-      const result = RenderNodeVisitor.collectReactElements(mockProps, false)
+      const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toHaveLength(3)
       result.forEach(element => {
@@ -237,11 +242,14 @@ describe("RenderNodeVisitor", () => {
       })
     })
 
-    it("handles disableFullscreenMode flag", () => {
+    it("passes disableFullscreenMode from props", () => {
       const parentBlock = block([text("element")])
-      const mockProps = createMockProps(parentBlock)
+      const mockProps = {
+        ...createMockProps(parentBlock),
+        disableFullscreenMode: true,
+      }
 
-      const result = RenderNodeVisitor.collectReactElements(mockProps, true)
+      const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toHaveLength(1)
       expect(result[0]).not.toBeNull()
@@ -255,8 +263,8 @@ describe("RenderNodeVisitor", () => {
       const parentBlock = block([text("element")])
       const mockProps = createMockProps(parentBlock)
 
-      const result1 = RenderNodeVisitor.collectReactElements(mockProps, false)
-      const result2 = RenderNodeVisitor.collectReactElements(mockProps, false)
+      const result1 = RenderNodeVisitor.collectReactElements(mockProps)
+      const result2 = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result1).toHaveLength(1)
       expect(result2).toHaveLength(1)
@@ -275,7 +283,7 @@ describe("RenderNodeVisitor", () => {
       ])
       const mockProps = createMockProps(parentBlock)
 
-      const result = RenderNodeVisitor.collectReactElements(mockProps, false)
+      const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       // Should have 4 elements: 2 text elements + 2 block elements
       expect(result).toHaveLength(4)
@@ -295,7 +303,7 @@ describe("RenderNodeVisitor", () => {
       ])
       const mockProps = createMockProps(testBlock)
 
-      const result = RenderNodeVisitor.collectReactElements(mockProps, false)
+      const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toHaveLength(3)
       result.forEach(element => {

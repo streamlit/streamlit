@@ -17,7 +17,6 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
-  ComponentRegistry,
   FormsContext,
   FormsContextProps,
   FormsData,
@@ -41,10 +40,8 @@ type LibContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
   locale: typeof window.navigator.language
-  componentRegistry: ComponentRegistry
-  // Properties from LibConfig
+  // Selected libConfig properties
   mapboxToken?: string
-  disableFullscreenMode?: boolean
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
@@ -103,9 +100,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   isFullScreen,
   setFullScreen,
   locale,
-  componentRegistry,
   mapboxToken,
-  disableFullscreenMode,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   // NavigationContext
@@ -139,9 +134,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       isFullScreen,
       setFullScreen,
       locale,
-      componentRegistry,
       mapboxToken,
-      disableFullscreenMode,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
     }),
@@ -149,9 +142,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       isFullScreen,
       setFullScreen,
       locale,
-      componentRegistry,
       mapboxToken,
-      disableFullscreenMode,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
     ]

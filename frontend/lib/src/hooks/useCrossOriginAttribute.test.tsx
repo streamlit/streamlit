@@ -19,9 +19,7 @@ import React from "react"
 import { renderHook } from "@testing-library/react"
 
 import {
-  ComponentRegistry,
   LibContext,
-  mockEndpoints,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,
@@ -43,10 +41,8 @@ const getWrapper = (
       setFullScreen: vi.fn(),
       resourceCrossOriginMode,
       mapboxToken: undefined,
-      disableFullscreenMode: undefined,
       enforceDownloadInNewTab: undefined,
       locale: "en-US",
-      componentRegistry: new ComponentRegistry(mockEndpoints()),
     }
 
     return (

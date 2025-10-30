@@ -25,6 +25,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { ScriptRunState } from "~lib/ScriptRunState"
@@ -82,6 +83,7 @@ function getProps(
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
+    componentRegistry: new ComponentRegistry(endpoints),
     ...props,
   }
 }

@@ -18,14 +18,15 @@ import { createContext } from "react"
 
 import { LibConfig } from "@streamlit/connection"
 
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-
 /**
  * LibContextProps extends LibConfig (from @streamlit/connection) with additional
  * properties specific to the lib package's context needs.
+ *
+ * Note: disableFullscreenMode is intentionally omitted from LibConfig and passed
+ * as a prop instead for better performance (avoids unnecessary re-renders).
  */
-export interface LibContextProps extends LibConfig {
+export interface LibContextProps
+  extends Omit<LibConfig, "disableFullscreenMode"> {
   /** True if the app is in full-screen mode. */
   isFullScreen: boolean
 
@@ -37,40 +38,14 @@ export interface LibContextProps extends LibConfig {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language
    */
   locale: typeof window.navigator.language
-
-  /**
-   * The app's ComponentRegistry instance. Dispatches "Custom Component"
-   * iframe messages to ComponentInstances.
-   * Pulled from context in ComponentInstance
-   * @see ComponentInstance
-   */
-  componentRegistry: ComponentRegistry
-}
-
-const noOpEndpoints: StreamlitEndpoints = {
-  setStaticConfigUrl: () => {},
-  sendClientErrorToHost: () => {},
-  checkSourceUrlResponse: () => Promise.resolve(),
-  buildComponentURL: () => "",
-  buildBidiComponentURL: () => "",
-  buildMediaURL: () => "",
-  buildDownloadUrl: () => "",
-  buildFileUploadURL: () => "",
-  buildAppPageURL: () => "",
-  uploadFileUploaderFile: () =>
-    Promise.reject(new Error("unimplemented endpoint")),
-  deleteFileAtURL: () => Promise.reject(new Error("unimplemented endpoint")),
 }
 
 export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
   locale: window.navigator.language,
-  // This should be overwritten
-  componentRegistry: new ComponentRegistry(noOpEndpoints),
-  // Flattened libConfig properties:
+  // Selected libConfig properties:
   mapboxToken: undefined,
-  disableFullscreenMode: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
 })
