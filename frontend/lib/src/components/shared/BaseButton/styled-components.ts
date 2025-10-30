@@ -330,20 +330,22 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:hover, &:focus-visible": {
+    "&:hover:not(:disabled), &:focus-visible:not(:disabled)": {
       // Elevate hovered/focused button above adjacent buttons so all its borders
       // render on top with consistent darker appearance from hover background.
       zIndex: theme.zIndices.priority,
     },
-    // Hide the left border of the next button when this button is hovered to prevent
-    // double-layering of semi-transparent borders
-    "&:hover + button, &:focus-visible + button": {
-      borderLeftColor: theme.colors.transparent,
-    },
-    // Hide this button's right border when the next button is hovered
-    "&:has(+ button:hover), &:has(+ button:focus-visible)": {
-      borderRightColor: theme.colors.transparent,
-    },
+    // Hide the left border of the next button when this non-disabled button is hovered
+    // to prevent double-layering of semi-transparent borders while preserving disabled styles
+    "&:hover:not(:disabled) + button:not(:disabled), &:focus-visible:not(:disabled) + button:not(:disabled)":
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    // Hide this button's right border only when both buttons are non-disabled and the next button is hovered
+    "&:not(:disabled):has(+ button:hover:not(:disabled)), &:not(:disabled):has(+ button:focus-visible:not(:disabled))":
+      {
+        borderRightColor: theme.colors.transparent,
+      },
   }
 })
 
