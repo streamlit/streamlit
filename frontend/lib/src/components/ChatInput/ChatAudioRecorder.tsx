@@ -14,11 +14,18 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react"
 
 import type { AudioMeta, WaveformController } from "~lib/components/audio"
+import { LOG } from "~lib/log"
 
-import { LOG } from "./logger"
 import {
   StyledChatAudioButton,
   StyledChatAudioContainer,
@@ -29,163 +36,171 @@ import {
 export interface ChatAudioRecorderProps {
   controller: WaveformController
   isRecording: boolean
-  onStart: () => Promise<void>
+  onStart?: () => Promise<void>
   onApprove: (payload: { blob: Blob; meta: AudioMeta }) => Promise<void>
   onCancel: () => void
   disabled?: boolean
 }
 
-const ChatAudioRecorder: React.FC<ChatAudioRecorderProps> = ({
-  controller,
-  isRecording,
-  onStart,
-  onApprove,
-  onCancel,
-  disabled = false,
-}) => {
-  const [pending, setPending] = useState(false)
-  const isMountedRef = useRef(true)
+export interface ChatAudioRecorderRef {
+  startRecording: () => Promise<void>
+}
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-      controller.destroy()
-    }
-  }, [controller])
+const ChatAudioRecorder = forwardRef<
+  ChatAudioRecorderRef,
+  ChatAudioRecorderProps
+>(
+  (
+    {
+      controller,
+      isRecording,
+      onStart,
+      onApprove,
+      onCancel,
+      disabled = false,
+    },
+    ref
+  ) => {
+    const [pending, setPending] = useState(false)
+    const isMountedRef = useRef(true)
+    const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Start recording when isRecording becomes true
-  useEffect(() => {
-    if (!isRecording) {
-      return
-    }
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => {
+        isMountedRef.current = false
+        abortControllerRef.current?.abort()
+        controller.destroy()
+      }
+    }, [controller])
 
-    let cancelled = false
+    const startRecording = useCallback(async (): Promise<void> => {
+      // Cancel any previous recording attempt and create new controller
+      abortControllerRef.current?.abort()
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
 
-    const startRecording = async (): Promise<void> => {
-      if (cancelled) {
+      setPending(true)
+      try {
+        await controller.start()
+        if (!abortController.signal.aborted && onStart) {
+          await Promise.resolve(onStart())
+        }
+      } catch (error) {
+        LOG.error("ChatAudioRecorder: Failed to start recording", error)
+        if (!abortController.signal.aborted) {
+          onCancel()
+        }
+      } finally {
+        if (!abortController.signal.aborted && isMountedRef.current) {
+          setPending(false)
+        }
+      }
+    }, [controller, onStart, onCancel])
+
+    // Expose startRecording method to parent via ref
+    useImperativeHandle(
+      ref,
+      () => ({
+        startRecording,
+      }),
+      [startRecording]
+    )
+
+    const handleCancel = useCallback(() => {
+      if (pending || disabled) {
         return
       }
 
       setPending(true)
       try {
-        await controller.start()
-        if (!cancelled) {
-          await Promise.resolve(onStart())
-        }
-      } catch {
-        if (!cancelled) {
-          onCancel()
-        }
+        controller.cancel()
       } finally {
-        if (!cancelled && isMountedRef.current) {
+        if (isMountedRef.current) {
+          setPending(false)
+        }
+        onCancel()
+      }
+    }, [controller, disabled, onCancel, pending])
+
+    const handleApprove = useCallback(async () => {
+      if (pending || disabled) {
+        return
+      }
+
+      setPending(true)
+      try {
+        const { blob, meta } = await controller.stop()
+        if (!blob) {
+          throw new Error("No audio data available")
+        }
+        await Promise.resolve(onApprove({ blob, meta }))
+      } catch {
+        controller.cancel()
+        onCancel()
+      } finally {
+        if (isMountedRef.current) {
           setPending(false)
         }
       }
+    }, [controller, disabled, onApprove, onCancel, pending])
+
+    const handleApproveClick = useCallback(() => {
+      void handleApprove()
+    }, [handleApprove])
+
+    // Don't render anything if not recording - keeps component mounted but hidden
+    if (!isRecording) {
+      return (
+        <div style={{ display: "none" }}>
+          <StyledChatAudioWave
+            className="stChatAudio__wave"
+            ref={controller.mountRef}
+            aria-hidden
+          />
+        </div>
+      )
     }
 
-    startRecording().catch(error => {
-      // Errors are handled internally by calling onCancel()
-      // Log for debugging and monitoring
-      LOG.error("Error starting audio recording:", error)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [isRecording, controller, onStart, onCancel])
-
-  const handleCancel = useCallback(() => {
-    if (pending || disabled) {
-      return
-    }
-
-    setPending(true)
-    try {
-      controller.cancel()
-    } finally {
-      if (isMountedRef.current) {
-        setPending(false)
-      }
-      onCancel()
-    }
-  }, [controller, disabled, onCancel, pending])
-
-  const handleApprove = useCallback(async () => {
-    if (pending || disabled) {
-      return
-    }
-
-    setPending(true)
-    try {
-      const { blob, meta } = await controller.stop()
-      if (!blob) {
-        throw new Error("No audio data available")
-      }
-      await Promise.resolve(onApprove({ blob, meta }))
-    } catch {
-      controller.cancel()
-      onCancel()
-    } finally {
-      if (isMountedRef.current) {
-        setPending(false)
-      }
-    }
-  }, [controller, disabled, onApprove, onCancel, pending])
-
-  const handleApproveClick = useCallback(() => {
-    void handleApprove()
-  }, [handleApprove])
-
-  // Don't render anything if not recording - keeps component mounted but hidden
-  if (!isRecording) {
     return (
-      <div style={{ display: "none" }}>
+      <StyledChatAudioContainer
+        className="stChatAudio__container"
+        role="group"
+        aria-label="Recording audio"
+        data-testid="chat-audio-recorder"
+      >
         <StyledChatAudioWave
           className="stChatAudio__wave"
           ref={controller.mountRef}
           aria-hidden
         />
-      </div>
+        <StyledChatAudioControls className="stChatAudio__controls">
+          <StyledChatAudioButton
+            type="button"
+            className="stChatAudio__cancel"
+            onClick={handleCancel}
+            aria-label="Cancel"
+            disabled={pending || disabled}
+            variant="cancel"
+          >
+            Cancel
+          </StyledChatAudioButton>
+          <StyledChatAudioButton
+            type="button"
+            className="stChatAudio__approve"
+            onClick={handleApproveClick}
+            aria-label="Approve"
+            disabled={pending || disabled}
+            variant="approve"
+          >
+            Approve
+          </StyledChatAudioButton>
+        </StyledChatAudioControls>
+      </StyledChatAudioContainer>
     )
   }
+)
 
-  return (
-    <StyledChatAudioContainer
-      className="stChatAudio__container"
-      role="group"
-      aria-label="Recording audio"
-      data-testid="chat-audio-recorder"
-    >
-      <StyledChatAudioWave
-        className="stChatAudio__wave"
-        ref={controller.mountRef}
-        aria-hidden
-      />
-      <StyledChatAudioControls className="stChatAudio__controls">
-        <StyledChatAudioButton
-          type="button"
-          className="stChatAudio__cancel"
-          onClick={handleCancel}
-          aria-label="Cancel"
-          disabled={pending || disabled}
-          variant="cancel"
-        >
-          Cancel
-        </StyledChatAudioButton>
-        <StyledChatAudioButton
-          type="button"
-          className="stChatAudio__approve"
-          onClick={handleApproveClick}
-          aria-label="Approve"
-          disabled={pending || disabled}
-          variant="approve"
-        >
-          Approve
-        </StyledChatAudioButton>
-      </StyledChatAudioControls>
-    </StyledChatAudioContainer>
-  )
-}
+ChatAudioRecorder.displayName = "ChatAudioRecorder"
 
 export default ChatAudioRecorder

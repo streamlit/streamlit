@@ -28,7 +28,9 @@ import { LOG } from "~lib/log"
 
 import { type AudioMeta, useWaveformController } from "~lib/components/audio"
 
-import ChatAudioRecorder from "./ChatAudioRecorder"
+import ChatAudioRecorder, {
+  type ChatAudioRecorderRef,
+} from "./ChatAudioRecorder"
 import {
   StyledChatComposer,
   StyledComposerActions,
@@ -89,6 +91,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const waveformContainerRef = useRef<HTMLDivElement>(null)
+  const audioRecorderRef = useRef<ChatAudioRecorderRef>(null)
 
   const [text, setText] = useState("")
   const [files, setFiles] = useState<File[]>([])
@@ -188,15 +191,13 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
     [controlsDisabled, handleSubmit]
   )
 
-  const handleRecordingStart = useCallback(async () => {
-    // Called when recording actually starts (after permissions granted)
-  }, [])
-
-  const handleMicClick = useCallback(() => {
+  const handleMicClick = useCallback(async () => {
     if (!acceptAudio || controlsDisabled || isRecording) {
       return
     }
+
     setIsRecording(true)
+    await audioRecorderRef.current?.startRecording()
   }, [acceptAudio, controlsDisabled, isRecording])
 
   const handleRecordingCancel = useCallback(() => {
@@ -295,9 +296,9 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
 
       {acceptAudio ? (
         <ChatAudioRecorder
+          ref={audioRecorderRef}
           controller={controller}
           isRecording={isRecording}
-          onStart={handleRecordingStart}
           onApprove={handleRecordingApprove}
           onCancel={handleRecordingCancel}
           disabled={disabled || isSubmitting}
