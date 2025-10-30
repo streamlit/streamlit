@@ -55,6 +55,9 @@ from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStatePro
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
+from streamlit.runtime.memory_uploaded_file_manager import (
+    MemoryUploadedFileManager,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -222,7 +225,11 @@ def _pop_upload_files(
             uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
             collected_files.append(uploaded_file)
 
-            if hasattr(ctx.uploaded_file_mgr, "remove_file"):
+            # Remove file from manager after creating UploadedFile object.
+            # Only MemoryUploadedFileManager implements remove_file.
+            # This explicit type check ensures we only use this cleanup logic
+            # with manager types we've explicitly approved.
+            if isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
                 ctx.uploaded_file_mgr.remove_file(
                     session_id=ctx.session_id,
                     file_id=f.file_id,
@@ -288,10 +295,10 @@ def _pop_audio_file(
         )
 
     # Remove the file from the manager after creating the UploadedFile object.
-    # Note: remove_file is not part of the UploadedFileManager Protocol, but is
-    # implemented by MemoryUploadedFileManager. We use hasattr to maintain
-    # compatibility with potential alternative implementations.
-    if audio_file_info and hasattr(ctx.uploaded_file_mgr, "remove_file"):
+    # Only MemoryUploadedFileManager implements remove_file (not part of the
+    # UploadedFileManager Protocol). This explicit type check ensures we only
+    # use this cleanup logic with manager types we've explicitly approved.
+    if audio_file_info and isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
             file_id=audio_file_info.file_id,
