@@ -125,16 +125,6 @@ export class ElementNode implements AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public filterMainScriptElements(
-    mainScriptHash: string
-  ): AppNode | undefined {
-    if (this.activeScriptHash !== mainScriptHash) {
-      return undefined
-    }
-
-    return this
-  }
-
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,

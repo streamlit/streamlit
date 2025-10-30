@@ -92,12 +92,6 @@ export interface AppNode {
   setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
 
   /**
-   * Recursively remove children nodes whose activeScriptHash is no longer
-   * associated with the mainScriptHash.
-   */
-  filterMainScriptElements(mainScriptHash: string): AppNode | undefined
-
-  /**
    * Recursively remove children nodes whose scriptRunId is no longer current.
    * If this node should no longer exist, return undefined.
    */

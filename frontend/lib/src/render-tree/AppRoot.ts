@@ -38,6 +38,7 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
+import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
 interface LogoMetadata {
@@ -270,22 +271,28 @@ export class AppRoot {
     }
   }
 
+  private ensureBlockNode(
+    node: BlockNode | undefined,
+    mainScriptHash: string = this.mainScriptHash
+  ): BlockNode {
+    return node ?? new BlockNode(mainScriptHash)
+  }
+
+  /**
+   * Clears all nodes that are not associated with the mainScriptHash.
+   * @param mainScriptHash - The hash of the main script.
+   * @returns A new AppRoot with the filtered nodes.
+   */
   filterMainScriptElements(mainScriptHash: string): AppRoot {
-    // clears all nodes that are not associated with the mainScriptHash
-    // Get the current script run id from one of the children
     const currentScriptRunId = this.main.scriptRunId
-    const main =
-      this.main.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const sidebar =
-      this.sidebar.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const event =
-      this.event.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
-    const bottom =
-      this.bottom.filterMainScriptElements(mainScriptHash) ||
-      new BlockNode(mainScriptHash)
+    const visitor = new FilterMainScriptElementsVisitor(mainScriptHash)
+    const newChildren = this.root.children.map(child =>
+      this.ensureBlockNode(
+        child.accept(visitor) as BlockNode | undefined,
+        mainScriptHash
+      )
+    )
+
     const appLogo =
       this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
 
@@ -293,7 +300,7 @@ export class AppRoot {
       mainScriptHash,
       new BlockNode(
         mainScriptHash,
-        [main, sidebar, event, bottom],
+        newChildren,
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),

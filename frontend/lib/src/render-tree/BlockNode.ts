@@ -95,26 +95,6 @@ export class BlockNode implements AppNode {
     )
   }
 
-  filterMainScriptElements(mainScriptHash: string): AppNode | undefined {
-    if (this.activeScriptHash !== mainScriptHash) {
-      return undefined
-    }
-
-    // Recursively clear our children.
-    const newChildren = this.children
-      .map(child => child.filterMainScriptElements(mainScriptHash))
-      .filter(notUndefined)
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      this.scriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
-  }
-
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
