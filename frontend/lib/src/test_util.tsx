@@ -31,7 +31,10 @@ import {
 } from "./components/core/FormsContext"
 import { FlexContext } from "./components/core/Layout/FlexContext"
 import { Direction } from "./components/core/Layout/utils"
-import { LibContext, LibContextProps } from "./components/core/LibContext"
+import {
+  LibConfigContext,
+  LibConfigContextProps,
+} from "./components/core/LibConfigContext"
 import {
   NavigationContext,
   NavigationContextProps,
@@ -49,6 +52,10 @@ import {
   ThemeContextProps,
 } from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
+import {
+  ViewStateContext,
+  ViewStateContextProps,
+} from "./components/core/ViewStateContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 import { mockTheme } from "./mocks/mockTheme"
 import { ScriptRunState } from "./ScriptRunState"
@@ -59,6 +66,18 @@ const flexContextValue = {
   isInHorizontalLayout: false,
   isInRoot: false,
   isInContentWidthContainer: false,
+}
+
+const defaultViewStateContextValue = {
+  isFullScreen: false,
+  setFullScreen: vi.fn(),
+}
+
+const defaultLibConfigContextValue = {
+  locale: "en-US",
+  mapboxToken: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
 }
 
 const defaultScriptRunContextValue = {
@@ -94,21 +113,25 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          <SidebarConfigContext.Provider
-            value={defaultSidebarConfigContextValue}
-          >
-            <ThemeContext.Provider value={defaultThemeContextValue}>
-              <NavigationContext.Provider
-                value={defaultNavigationContextValue}
+          <LibConfigContext.Provider value={defaultLibConfigContextValue}>
+            <ViewStateContext.Provider value={defaultViewStateContextValue}>
+              <SidebarConfigContext.Provider
+                value={defaultSidebarConfigContextValue}
               >
-                <ScriptRunContext.Provider
-                  value={defaultScriptRunContextValue}
-                >
-                  {children}
-                </ScriptRunContext.Provider>
-              </NavigationContext.Provider>
-            </ThemeContext.Provider>
-          </SidebarConfigContext.Provider>
+                <ThemeContext.Provider value={defaultThemeContextValue}>
+                  <NavigationContext.Provider
+                    value={defaultNavigationContextValue}
+                  >
+                    <ScriptRunContext.Provider
+                      value={defaultScriptRunContextValue}
+                    >
+                      {children}
+                    </ScriptRunContext.Provider>
+                  </NavigationContext.Provider>
+                </ThemeContext.Provider>
+              </SidebarConfigContext.Provider>
+            </ViewStateContext.Provider>
+          </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -147,12 +170,15 @@ export function mockWindowLocation(hostname: string): void {
  * All properties are optional - only provide the contexts you need to override.
  */
 export interface RenderWithContextsOptions {
-  libContext?: Partial<LibContextProps>
+  viewStateContext?: Partial<ViewStateContextProps>
+  libConfigContext?: Partial<LibConfigContextProps>
   sidebarConfigContext?: Partial<SidebarConfigContextProps>
   themeContext?: Partial<ThemeContextProps>
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
+  // Deprecated: Use viewStateContext and libConfigContext instead
+  libContext?: Partial<LibConfigContextProps & ViewStateContextProps>
 }
 
 /**
@@ -174,8 +200,8 @@ export interface RenderWithContextsResult extends RenderResult {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in Providers for LibContext, SidebarConfigContext, ThemeContext,
- * NavigationContext, FormsContext, and ScriptRunContext.
+ * wrapped in Providers for ViewStateContext, LibConfigContext, SidebarConfigContext,
+ * ThemeContext, NavigationContext, FormsContext, and ScriptRunContext.
  *
  * Returns an extended RenderResult with a `rerenderWithContexts` method that
  * allows updating context values during re-renders.
@@ -187,7 +213,8 @@ export interface RenderWithContextsResult extends RenderResult {
  * @example
  * renderWithContexts(<MyComponent />, {
  *   navigationContext: { appPages: [...] },
- *   themeContext: { activeTheme: customTheme }
+ *   themeContext: { activeTheme: customTheme },
+ *   viewStateContext: { isFullScreen: true }
  * })
  */
 export const renderWithContexts = (
@@ -197,15 +224,26 @@ export const renderWithContexts = (
   // Track current context values across rerenders.
   // The Wrapper component below reads these on each render,
   // so updating them in rerenderWithContexts will affect subsequent renders.
-  let currentLibContextProps: LibContextProps = {
+
+  // Support deprecated libContext option for backward compatibility
+  const deprecatedLibContext = options.libContext || {}
+
+  // Use let to allow reassignment in rerenderWithContexts
+  let currentViewStateContextProps: ViewStateContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
+    ...deprecatedLibContext,
+    ...options.viewStateContext,
+  }
+
+  let currentLibConfigContextProps: LibConfigContextProps = {
     // Flattened libConfig properties:
     mapboxToken: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
     locale: "en-US",
-    ...options.libContext,
+    ...deprecatedLibContext,
+    ...options.libConfigContext,
   }
 
   let currentSidebarConfigContextProps: SidebarConfigContextProps = {
@@ -249,25 +287,27 @@ export const renderWithContexts = (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          <LibContext.Provider value={currentLibContextProps}>
-            <SidebarConfigContext.Provider
-              value={currentSidebarConfigContextProps}
-            >
-              <ThemeContext.Provider value={currentThemeContextProps}>
-                <NavigationContext.Provider
-                  value={currentNavigationContextProps}
-                >
-                  <FormsContext.Provider value={currentFormsContextProps}>
-                    <ScriptRunContext.Provider
-                      value={currentScriptRunContextProps}
-                    >
-                      {children}
-                    </ScriptRunContext.Provider>
-                  </FormsContext.Provider>
-                </NavigationContext.Provider>
-              </ThemeContext.Provider>
-            </SidebarConfigContext.Provider>
-          </LibContext.Provider>
+          <LibConfigContext.Provider value={currentLibConfigContextProps}>
+            <ViewStateContext.Provider value={currentViewStateContextProps}>
+              <SidebarConfigContext.Provider
+                value={currentSidebarConfigContextProps}
+              >
+                <ThemeContext.Provider value={currentThemeContextProps}>
+                  <NavigationContext.Provider
+                    value={currentNavigationContextProps}
+                  >
+                    <FormsContext.Provider value={currentFormsContextProps}>
+                      <ScriptRunContext.Provider
+                        value={currentScriptRunContextProps}
+                      >
+                        {children}
+                      </ScriptRunContext.Provider>
+                    </FormsContext.Provider>
+                  </NavigationContext.Provider>
+                </ThemeContext.Provider>
+              </SidebarConfigContext.Provider>
+            </ViewStateContext.Provider>
+          </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -284,9 +324,26 @@ export const renderWithContexts = (
       newOptions?: RenderWithContextsOptions
     ): void => {
       // Update context values if provided
+      if (newOptions?.viewStateContext) {
+        currentViewStateContextProps = {
+          ...currentViewStateContextProps,
+          ...newOptions.viewStateContext,
+        }
+      }
+      if (newOptions?.libConfigContext) {
+        currentLibConfigContextProps = {
+          ...currentLibConfigContextProps,
+          ...newOptions.libConfigContext,
+        }
+      }
+      // Support deprecated libContext option for backward compatibility
       if (newOptions?.libContext) {
-        currentLibContextProps = {
-          ...currentLibContextProps,
+        currentViewStateContextProps = {
+          ...currentViewStateContextProps,
+          ...newOptions.libContext,
+        }
+        currentLibConfigContextProps = {
+          ...currentLibConfigContextProps,
           ...newOptions.libContext,
         }
       }
