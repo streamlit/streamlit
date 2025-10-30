@@ -80,7 +80,7 @@ describe("Markdown badge with help", () => {
 
     // Tooltip hover target should exist
     const hoverTarget = screen.getByTestId("stTooltipHoverTarget")
-    expect(hoverTarget).toBeInTheDocument()
+    expect(hoverTarget).toBeVisible()
 
     // Hover over to trigger tooltip
     await user.hover(hoverTarget)
