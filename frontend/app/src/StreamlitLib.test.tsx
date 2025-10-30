@@ -300,16 +300,12 @@ describe("StreamlitLibExample", () => {
 
     // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
     // LibContextProps extends LibConfig, so this verifies the inheritance is valid
-    const libConfig: ConnectionLibConfig = {
+    const libConfigCheck: Partial<LibContextProps> = {
       mapboxToken: "test",
       disableFullscreenMode: false,
       enforceDownloadInNewTab: true,
       resourceCrossOriginMode: "anonymous",
-    }
-
-    // This assignment will fail at compile-time if LibContextProps doesn't properly extend LibConfig
-    // We're assigning to Partial<LibContextProps> to allow missing the non-LibConfig properties
-    const libContextPartial: Partial<LibContextProps> = libConfig
+    } as ConnectionLibConfig
 
     // This test passes if TypeScript compilation succeeds
     expect(true).toBe(true)
