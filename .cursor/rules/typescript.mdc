@@ -253,7 +253,7 @@ const initialTab = props.defaultTab ?? "overview"
 - Avoid creating new objects/arrays inline in JSX props each render; memoize when it affects memoized children.
 - Keep dependency arrays minimal but complete. Split Effects if different concerns require different deps.
 
-### Testing guidance (-> @typescript.mdc)
+### Testing guidance (see [TypeScript Test Guide](#typescript-test-guide))
 
 - Unit test render-time derivations directly (no Effects involved).
 - For Effects that fetch or subscribe, test cleanup and race handling (use fake timers/abort signals).
