@@ -352,6 +352,13 @@ class ButtonMixin:
             operations (like data conversion or file operations) when the button
             is inside an unexecuted conditional block.
 
+            **Caching with callables:** Callables work seamlessly with
+            ``@st.cache_data``. Decorate your callable with ``@st.cache_data``
+            to cache the result after the first execution, making subsequent
+            runs instant. This combines the benefits of deferred execution
+            (skipping work in unexecuted blocks) with caching (avoiding
+            redundant computation in executed blocks).
+
             If you use direct data (not a callable), consider using caching to
             prevent unnecessary recomputation. See Examples 1 and 4 below.
 
@@ -589,6 +596,11 @@ class ButtonMixin:
         block that doesn't execute, the callable won't be invoked, saving
         processing time.
 
+        **Best practice:** Combine deferred execution with caching by decorating
+        your callable with ``@st.cache_data``. This way, the expensive operation
+        runs only once (when first executed), and subsequent runs use the cached
+        result instantly.
+
         >>> import streamlit as st
         >>> import pandas as pd
         >>>
@@ -596,17 +608,21 @@ class ButtonMixin:
         >>> def get_data():
         >>>     return pd.DataFrame({"col1": [1, 2, 3], "col2": ["A", "B", "C"]})
         >>>
+        >>> @st.cache_data  # Cache the conversion result
         >>> def convert_to_csv():
         >>>     # This function is only called when st.download_button() executes
+        >>>     # After first execution, returns cached result instantly
         >>>     df = get_data()
         >>>     return df.to_csv(index=False).encode("utf-8")
         >>>
-        >>> st.download_button(
-        ...     label="Download CSV",
-        ...     data=convert_to_csv,  # Pass the function, don't call it
-        ...     file_name="data.csv",
-        ...     mime="text/csv",
-        ... )
+        >>> # Conditional download - only processes if condition is True
+        >>> if st.checkbox("Show download"):
+        >>>     st.download_button(
+        ...         label="Download CSV",
+        ...         data=convert_to_csv,  # Pass the function, don't call it
+        ...         file_name="data.csv",
+        ...         mime="text/csv",
+        ...     )
 
         .. output::
            https://doc-download-button-callable.streamlit.app/
