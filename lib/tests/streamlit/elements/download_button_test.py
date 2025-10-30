@@ -14,6 +14,7 @@
 
 """download_button unit test."""
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -85,3 +86,79 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_callable_data_string(self):
+        """Test that it can be called with a callable returning string data."""
+
+        def get_data():
+            return "hello from callable"
+
+        st.download_button("the label", data=get_data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.label == "the label"
+        assert "/media/" in c.url
+
+    def test_callable_data_bytes(self):
+        """Test that it can be called with a callable returning bytes data."""
+
+        def get_data():
+            return b"bytes from callable"
+
+        st.download_button("the label", data=get_data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.label == "the label"
+        assert "/media/" in c.url
+
+    def test_callable_invoked(self):
+        """Test that the callable is actually invoked when creating the download button."""
+        invocation_count = []
+
+        def get_data():
+            invocation_count.append(1)
+            return "data"
+
+        st.download_button("the label", data=get_data)
+
+        assert len(invocation_count) == 1
+
+    def test_callable_with_exception(self):
+        """Test error handling when callable raises an exception."""
+
+        def get_data():
+            raise ValueError("Error in callable")
+
+        with pytest.raises(ValueError, match="Error in callable"):
+            st.download_button("the label", data=get_data)
+
+    def test_callable_deferred_execution(self):
+        """Test that callable is NOT invoked until st.download_button() executes.
+
+        This test ensures deferred execution - the callable should not be
+        invoked when it's just defined or passed as an argument, only when
+        the download button is actually created.
+        """
+        invocation_count = []
+
+        def get_data():
+            invocation_count.append(1)
+            return "deferred data"
+
+        # Callable is defined but not yet passed to download_button
+        assert len(invocation_count) == 0, (
+            "Callable should not be invoked on definition"
+        )
+
+        # Pass callable to download_button - this is when it should be invoked
+        st.download_button("the label", data=get_data)
+
+        # Now it should have been called exactly once
+        assert len(invocation_count) == 1, (
+            "Callable should be invoked when download_button executes"
+        )
+
+        # Verify the button was created correctly
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.label == "the label"
+        assert "/media/" in c.url

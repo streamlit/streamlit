@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 17
+DOWNLOAD_BUTTON_ELEMENTS = 18
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):

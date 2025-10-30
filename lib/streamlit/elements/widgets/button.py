@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -72,7 +73,14 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
-DownloadButtonDataType: TypeAlias = str | bytes | TextIO | BinaryIO | io.RawIOBase
+DownloadButtonDataType: TypeAlias = (
+    str
+    | bytes
+    | TextIO
+    | BinaryIO
+    | io.RawIOBase
+    | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
+)
 
 
 @dataclass
@@ -330,12 +338,22 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, or file
-            The contents of the file to be downloaded.
+        data : str, bytes, file, or callable
+            The contents of the file to be downloaded. This can be:
 
-            To prevent unncecessary recomputation, use caching when converting
-            your data for download. For more information, see the Example 1
-            below.
+            - A string, bytes, or file object (``str``, ``bytes``,
+              ``io.TextIOWrapper``, ``io.BytesIO``, ``io.BufferedReader``, or
+              ``io.RawIOBase``)
+            - A callable that returns any of the above types
+
+            When ``data`` is a callable, it will be invoked when
+            ``st.download_button()`` executes. This enables deferred data
+            processing, which can improve performance by skipping expensive
+            operations (like data conversion or file operations) when the button
+            is inside an unexecuted conditional block.
+
+            If you use direct data (not a callable), consider using caching to
+            prevent unnecessary recomputation. See Examples 1 and 4 below.
 
         file_name: str
             An optional string to use as the name of the file to be downloaded,
@@ -557,6 +575,41 @@ class ButtonMixin:
 
         .. output::
            https://doc-download-button-file.streamlit.app/
+           height: 200px
+
+        **Example 4: Download with deferred data loading using a callable**
+
+        You can pass a callable to the ``data`` argument to defer data
+        processing until ``st.download_button()`` executes. This is useful
+        when you have expensive data conversions that should only run when
+        needed.
+
+        The callable is invoked when the button code executes, not when the
+        module is imported. This means if the button is inside a conditional
+        block that doesn't execute, the callable won't be invoked, saving
+        processing time.
+
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
+        >>> @st.cache_data
+        >>> def get_data():
+        >>>     return pd.DataFrame({"col1": [1, 2, 3], "col2": ["A", "B", "C"]})
+        >>>
+        >>> def convert_to_csv():
+        >>>     # This function is only called when st.download_button() executes
+        >>>     df = get_data()
+        >>>     return df.to_csv(index=False).encode("utf-8")
+        >>>
+        >>> st.download_button(
+        ...     label="Download CSV",
+        ...     data=convert_to_csv,  # Pass the function, don't call it
+        ...     file_name="data.csv",
+        ...     mime="text/csv",
+        ... )
+
+        .. output::
+           https://doc-download-button-callable.streamlit.app/
            height: 200px
 
         """
@@ -933,8 +986,16 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
+
+        # If data is callable, invoke it to get the actual data
+        actual_data = data() if callable(data) else data
+
         marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
+            self.dg._get_delta_path_str(),
+            actual_data,
+            download_button_proto,
+            mime,
+            file_name,
         )
         download_button_proto.disabled = disabled
 
