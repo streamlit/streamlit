@@ -33,7 +33,7 @@ import {
   FileUploadClient,
   FormsData,
   AppConfig as LibAppConfig,
-  LibContextProps,
+  LibConfigContextProps,
   render,
   ScriptRunState,
   SessionInfo,
@@ -306,7 +306,7 @@ describe("StreamlitLibExample", () => {
 
     // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
     // LibContextProps extends LibConfig, so this verifies the inheritance is valid
-    const libConfigCheck: Partial<LibContextProps> = {
+    const libConfigCheck: Partial<LibConfigContextProps> = {
       mapboxToken: "test",
       disableFullscreenMode: false,
       enforceDownloadInNewTab: true,

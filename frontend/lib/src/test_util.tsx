@@ -114,11 +114,13 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
           <LibConfigContext.Provider value={defaultLibConfigContextValue}>
-            <ViewStateContext.Provider value={defaultViewStateContextValue}>
-              <SidebarConfigContext.Provider
-                value={defaultSidebarConfigContextValue}
-              >
-                <ThemeContext.Provider value={defaultThemeContextValue}>
+            <SidebarConfigContext.Provider
+              value={defaultSidebarConfigContextValue}
+            >
+              <ThemeContext.Provider value={defaultThemeContextValue}>
+                <ViewStateContext.Provider
+                  value={defaultViewStateContextValue}
+                >
                   <NavigationContext.Provider
                     value={defaultNavigationContextValue}
                   >
@@ -128,9 +130,9 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
                       {children}
                     </ScriptRunContext.Provider>
                   </NavigationContext.Provider>
-                </ThemeContext.Provider>
-              </SidebarConfigContext.Provider>
-            </ViewStateContext.Provider>
+                </ViewStateContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
           </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
@@ -177,8 +179,6 @@ export interface RenderWithContextsOptions {
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
-  // Deprecated: Use viewStateContext and libConfigContext instead
-  libContext?: Partial<LibConfigContextProps & ViewStateContextProps>
 }
 
 /**
@@ -225,24 +225,19 @@ export const renderWithContexts = (
   // The Wrapper component below reads these on each render,
   // so updating them in rerenderWithContexts will affect subsequent renders.
 
-  // Support deprecated libContext option for backward compatibility
-  const deprecatedLibContext = options.libContext || {}
-
   // Use let to allow reassignment in rerenderWithContexts
   let currentViewStateContextProps: ViewStateContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
-    ...deprecatedLibContext,
     ...options.viewStateContext,
   }
 
   let currentLibConfigContextProps: LibConfigContextProps = {
+    locale: "en-US",
     // Flattened libConfig properties:
     mapboxToken: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
-    locale: "en-US",
-    ...deprecatedLibContext,
     ...options.libConfigContext,
   }
 
@@ -288,11 +283,13 @@ export const renderWithContexts = (
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
           <LibConfigContext.Provider value={currentLibConfigContextProps}>
-            <ViewStateContext.Provider value={currentViewStateContextProps}>
-              <SidebarConfigContext.Provider
-                value={currentSidebarConfigContextProps}
-              >
-                <ThemeContext.Provider value={currentThemeContextProps}>
+            <SidebarConfigContext.Provider
+              value={currentSidebarConfigContextProps}
+            >
+              <ThemeContext.Provider value={currentThemeContextProps}>
+                <ViewStateContext.Provider
+                  value={currentViewStateContextProps}
+                >
                   <NavigationContext.Provider
                     value={currentNavigationContextProps}
                   >
@@ -304,9 +301,9 @@ export const renderWithContexts = (
                       </ScriptRunContext.Provider>
                     </FormsContext.Provider>
                   </NavigationContext.Provider>
-                </ThemeContext.Provider>
-              </SidebarConfigContext.Provider>
-            </ViewStateContext.Provider>
+                </ViewStateContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
           </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
@@ -334,17 +331,6 @@ export const renderWithContexts = (
         currentLibConfigContextProps = {
           ...currentLibConfigContextProps,
           ...newOptions.libConfigContext,
-        }
-      }
-      // Support deprecated libContext option for backward compatibility
-      if (newOptions?.libContext) {
-        currentViewStateContextProps = {
-          ...currentViewStateContextProps,
-          ...newOptions.libContext,
-        }
-        currentLibConfigContextProps = {
-          ...currentLibConfigContextProps,
-          ...newOptions.libContext,
         }
       }
       if (newOptions?.sidebarConfigContext) {

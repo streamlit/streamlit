@@ -246,7 +246,7 @@ describe("LogoComponent", () => {
             })}
           />,
           {
-            libContext: {
+            libConfigContext: {
               resourceCrossOriginMode: "anonymous",
             },
           }
@@ -282,7 +282,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libContext: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -325,7 +325,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libContext: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -357,7 +357,7 @@ describe("LogoComponent", () => {
             })}
           />,
           {
-            libContext: { resourceCrossOriginMode: undefined },
+            libConfigContext: { resourceCrossOriginMode: undefined },
           }
         )
 
@@ -383,7 +383,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libContext: {
+          libConfigContext: {
             resourceCrossOriginMode: "use-credentials",
           },
         }

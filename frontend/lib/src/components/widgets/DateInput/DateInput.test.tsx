@@ -425,7 +425,7 @@ describe("DateInput widget", () => {
         const user = userEvent.setup()
         const props = getProps()
         renderWithContexts(<DateInput {...props} />, {
-          libContext: { locale },
+          libConfigContext: { locale },
         })
 
         await user.click(await screen.findByLabelText("Select a date."))
@@ -441,7 +441,7 @@ describe("DateInput widget", () => {
         const user = userEvent.setup()
         const props = getProps()
         renderWithContexts(<DateInput {...props} />, {
-          libContext: { locale },
+          libConfigContext: { locale },
         })
 
         await user.click(await screen.findByLabelText("Select a date."))
@@ -457,7 +457,7 @@ describe("DateInput widget", () => {
         const user = userEvent.setup()
         const props = getProps()
         renderWithContexts(<DateInput {...props} />, {
-          libContext: { locale },
+          libConfigContext: { locale },
         })
 
         await user.click(await screen.findByLabelText("Select a date."))
@@ -473,7 +473,7 @@ describe("DateInput widget", () => {
         const user = userEvent.setup()
         const props = getProps()
         renderWithContexts(<DateInput {...props} />, {
-          libContext: { locale },
+          libConfigContext: { locale },
         })
 
         await user.click(await screen.findByLabelText("Select a date."))

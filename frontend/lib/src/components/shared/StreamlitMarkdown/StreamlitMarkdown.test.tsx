@@ -613,7 +613,7 @@ describe("CustomMediaTag", () => {
     "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
       renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
-        libContext: {
+        libConfigContext: {
           resourceCrossOriginMode,
         },
       })
@@ -727,7 +727,7 @@ describe("CustomMediaTag", () => {
         const { container } = renderWithContexts(
           <CustomMediaTag node={node} {...props} />,
           {
-            libContext: {
+            libConfigContext: {
               resourceCrossOriginMode,
             },
           }

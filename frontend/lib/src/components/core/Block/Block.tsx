@@ -286,6 +286,9 @@ export const BlockNodeRenderer = (
 
   const childProps = { ...props, ...{ node } }
 
+  // Disable fullscreen mode if already disabled by parent
+  // (e.g., via libConfig or ancestor dialog/popover),
+  // or if this block itself is a dialog or popover
   const disableFullscreenMode =
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||

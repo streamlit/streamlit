@@ -81,7 +81,7 @@ describe("Balloons element", () => {
         }
 
         renderWithContexts(<Balloons scriptRunId="51522269" />, {
-          libContext: {
+          libConfigContext: {
             resourceCrossOriginMode: "anonymous",
           },
         })
@@ -109,7 +109,7 @@ describe("Balloons element", () => {
         }
 
         renderWithContexts(<Balloons scriptRunId="51522269" />, {
-          libContext: {
+          libConfigContext: {
             resourceCrossOriginMode: undefined,
           },
         })

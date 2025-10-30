@@ -505,7 +505,7 @@ export class App extends PureComponent<Props, State> {
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
-        // Set the streamlit-lib specific config settings in LibContext:
+        // Set the streamlit-lib specific config settings in LibConfigContext:
         this.setLibConfig(libConfig)
       },
     })
