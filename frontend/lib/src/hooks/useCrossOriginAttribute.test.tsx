@@ -41,7 +41,6 @@ const getWrapper = (
         setFullScreen: () => {},
         resourceCrossOriginMode,
         mapboxToken: undefined,
-        disableFullscreenMode: undefined,
         enforceDownloadInNewTab: undefined,
         locale: "en-US",
         componentRegistry: new ComponentRegistry(mockEndpoints()),

@@ -151,8 +151,7 @@ describe("FlexBoxContainer Block Component", () => {
           widgetMgr={undefined}
           // @ts-expect-error
           uploadClient={undefined}
-        />,
-        {}
+        />
       )
       const verticalBlock = screen.getByTestId("stVerticalBlock")
       expect(verticalBlock).toBeVisible()

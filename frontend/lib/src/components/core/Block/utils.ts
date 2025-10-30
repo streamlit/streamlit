@@ -17,6 +17,7 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -141,6 +142,12 @@ export interface BaseBlockProps {
    * to use it, for example, in Dialogs to prevent fullscreen issues.
    */
   disableFullscreenMode?: boolean
+
+  /**
+   * The app's ComponentRegistry instance. Dispatches "Custom Component"
+   * iframe messages to ComponentInstances.
+   */
+  componentRegistry: ComponentRegistry
 }
 
 /**

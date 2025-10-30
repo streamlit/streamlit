@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useContext, useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
 
 import { v4 as uuidv4 } from "uuid"
 
@@ -24,7 +24,6 @@ import {
   OptionalComponentCleanupFunction,
 } from "@streamlit/component-v2-lib"
 
-import { LibContext } from "~lib/components/core/LibContext"
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { blobUrlManager } from "~lib/components/widgets/BidiComponent/utils/blobUrl"
 import {
@@ -196,11 +195,8 @@ export const useHandleJsContent = ({
     jsSourcePath,
     theme,
     widgetMgr,
-  } = useRequiredContext(BidiComponentContext)
-
-  const {
     componentRegistry: { getBidiComponentURL },
-  } = useContext(LibContext)
+  } = useRequiredContext(BidiComponentContext)
 
   const externalJsSourcePathUrl = useMemo(() => {
     if (!jsSourcePath) {

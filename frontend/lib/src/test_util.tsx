@@ -50,8 +50,6 @@ import {
 } from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-import { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
-import { mockEndpoints } from "./mocks/mocks"
 import { mockTheme } from "./mocks/mockTheme"
 import { ScriptRunState } from "./ScriptRunState"
 import { createFormsData } from "./WidgetStateManager"
@@ -204,11 +202,9 @@ export const renderWithContexts = (
     setFullScreen: vi.fn(),
     // Flattened libConfig properties:
     mapboxToken: undefined,
-    disableFullscreenMode: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
     locale: "en-US",
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
     ...options.libContext,
   }
 

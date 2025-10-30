@@ -33,7 +33,6 @@ import {
   MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
-import { LibContext } from "~lib/components/core/LibContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
@@ -67,9 +66,6 @@ import {
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { disableFullscreenMode: contextDisableFullscreenMode } =
-    useContext(LibContext)
-
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
@@ -79,8 +75,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   return (
     <>
       {props.node.children?.map((node: AppNode, index: number): ReactNode => {
-        const disableFullscreenMode =
-          contextDisableFullscreenMode || props.disableFullscreenMode
+        const disableFullscreenMode = props.disableFullscreenMode
 
         // Base case: render a leaf node.
         if (node instanceof ElementNode) {

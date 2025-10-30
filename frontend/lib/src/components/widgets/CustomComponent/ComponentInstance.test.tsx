@@ -107,10 +107,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     expect(registerListener).toHaveBeenCalledTimes(1)
   })
@@ -131,10 +129,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     unmount()
     expect(deregisterListener).toHaveBeenCalledTimes(1)
@@ -152,10 +148,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -184,10 +178,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -209,10 +201,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -233,10 +223,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const skeleton = screen.getByTestId("stSkeleton")
     expect(skeleton).toBeInTheDocument()
@@ -258,10 +246,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        libContext: { componentRegistry },
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
 
@@ -283,10 +269,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -319,10 +303,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -357,10 +339,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -384,10 +364,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -434,10 +412,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -466,6 +442,7 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
+          componentRegistry={componentRegistry}
         />
       )
 
@@ -491,10 +468,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -530,6 +505,7 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
+          componentRegistry={componentRegistry}
         />
       )
 
@@ -550,10 +526,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
@@ -588,10 +562,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       expect(
         screen.getByText("Unrecognized SpecialArg type: undefined")
@@ -610,10 +582,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       // Advance past our warning timeout, and force a re-render.
       await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
@@ -641,10 +611,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       expect(checkSourceUrlResponseSpy).toHaveBeenCalledWith(
@@ -671,10 +639,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       // Advance past our warning timeout, and force a re-render.
       await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
@@ -706,10 +672,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -770,10 +734,8 @@ describe("ComponentInstance", () => {
           }
           // Also verify that we can pass a fragmentID down to setBytesValue.
           fragmentId="myFragmentId"
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -838,10 +800,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          libContext: { componentRegistry },
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_VALUE
@@ -883,10 +843,8 @@ describe("ComponentInstance", () => {
                 formsDataChanged: vi.fn(),
               })
             }
-          />,
-          {
-            libContext: { componentRegistry },
-          }
+            componentRegistry={componentRegistry}
+          />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET COMPONENT_READY
@@ -942,10 +900,8 @@ describe("ComponentInstance", () => {
                 formsDataChanged: vi.fn(),
               })
             }
-          />,
-          {
-            libContext: { componentRegistry },
-          }
+            componentRegistry={componentRegistry}
+          />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET IFRAME_HEIGHT
