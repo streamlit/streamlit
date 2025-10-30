@@ -19,4 +19,3 @@ rules/*
 !rules/overview.mdc
 !rules/make_commands.mdc
 !rules/new_feature.mdc
-!rules/you_might_not_need_an_effect.mdc
