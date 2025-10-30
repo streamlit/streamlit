@@ -121,6 +121,6 @@ describe("Markdown badge with help", () => {
 
     // Verify both badges render
     expect(screen.getByText("Badge 1")).toBeVisible()
-    expect(screen.getByText("Badge 2")).toBeInTheDocument()
+    expect(screen.getByText("Badge 2")).toBeVisible()
   })
 })
