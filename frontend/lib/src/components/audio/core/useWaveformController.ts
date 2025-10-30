@@ -155,7 +155,10 @@ export function useWaveformController({
     [notifyReady, notifyReadyError]
   )
 
-  // Update eventsRef and reconfigure player events when events prop changes
+  // Update eventsRef and reconfigure player events when events prop changes.
+  // useEffect is required here (not useExecuteWhenChanged) because we're performing
+  // a side effect: mutating the WaveSurfer player instance by setting event handlers.
+  // This must happen after render commits to ensure the player is in a stable state.
   useEffect(() => {
     eventsRef.current = events || {}
     // Reconfigure player events to avoid stale closures
