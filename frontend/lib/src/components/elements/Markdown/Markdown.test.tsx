@@ -99,7 +99,7 @@ describe("Markdown badge with help", () => {
     })
     render(<Markdown element={element} />)
 
-    expect(screen.getByText("Testing Badge")).toBeInTheDocument()
+    expect(screen.getByText("Testing Badge")).toBeVisible()
     expect(
       screen.queryByTestId("stTooltipHoverTarget")
     ).not.toBeInTheDocument()
