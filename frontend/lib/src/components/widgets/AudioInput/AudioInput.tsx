@@ -120,44 +120,36 @@ const AudioInput: React.FC<Props> = ({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
     events: {
-      onPermissionDenied: async () => {
+      onPermissionDenied: () => {
         setHasNoMicPermissions(true)
-        return Promise.resolve()
       },
-      onError: async () => {
+      onError: () => {
         setIsError(true)
-        return Promise.resolve()
       },
-      onRecordStart: async () => {
+      onRecordStart: () => {
         setRecordingTime(STARTING_TIME_STRING)
         setProgressTime(STARTING_TIME_STRING)
-        return Promise.resolve()
       },
-      onRecordReady: async () => {
+      onRecordReady: () => {
         const duration = formatTime(controller.playback.getDurationMs())
         setRecordingTime(duration)
         setProgressTime(duration)
-        return Promise.resolve()
       },
       onApprove: async (wav: Blob) => {
         await transcodeAndUploadFileRef.current?.(wav)
       },
-      onCancel: async () => {
+      onCancel: () => {
         setRecordingTime(STARTING_TIME_STRING)
         setProgressTime(STARTING_TIME_STRING)
-        return Promise.resolve()
       },
-      onProgressMs: async (ms: number) => {
+      onProgressMs: (ms: number) => {
         setRecordingTime(formatTime(ms))
-        return Promise.resolve()
       },
-      onPlaybackPause: async () => {
+      onPlaybackPause: () => {
         setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
-        return Promise.resolve()
       },
-      onPlaybackFinish: async () => {
+      onPlaybackFinish: () => {
         setProgressTime(formatTime(controller.playback.getDurationMs()))
-        return Promise.resolve()
       },
     },
   })
