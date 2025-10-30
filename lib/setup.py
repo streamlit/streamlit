@@ -48,7 +48,7 @@ INSTALL_REQUIRES = [
     "protobuf>=3.20, <7",
     # pyarrow v22 is causing 2 test failures in dataframe_util_test.py and arrow_dataframe_test.py.
     # temporarily restrict to <22 to avoid breaking changes.
-    "pyarrow>=7.0, <22",
+    "pyarrow>=7.0, <23",
     "requests>=2.27, <3",
     "tenacity>=8.1.0, <10",
     # Starting from Python 3.11, Python has built in support for reading TOML files.
