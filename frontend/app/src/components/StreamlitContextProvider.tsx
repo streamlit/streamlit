@@ -17,15 +17,10 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
-  AppContext,
-  AppContextProps,
-} from "@streamlit/app/src/components/AppContext"
-import {
   ComponentRegistry,
   FormsContext,
   FormsContextProps,
   FormsData,
-  LibConfig,
   LibContext,
   LibContextProps,
   NavigationContext,
@@ -38,23 +33,20 @@ import {
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
-  useRequiredContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
-
-// Type for AppContext props
-type AppContextValues = {
-  widgetsDisabled: boolean
-  showToolbar: boolean
-}
 
 // Type for LibContext props
 type LibContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
-  libConfig: LibConfig
   locale: typeof window.navigator.language
   componentRegistry: ComponentRegistry
+  // Properties from LibConfig
+  mapboxToken?: string
+  disableFullscreenMode?: boolean
+  enforceDownloadInNewTab?: boolean
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 // Type for NavigationContext props
@@ -94,8 +86,7 @@ type FormsContextValues = {
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  AppContextValues &
-    LibContextValues &
+  LibContextValues &
     NavigationContextValues &
     SidebarConfigContextValues &
     ThemeContextValues &
@@ -108,15 +99,15 @@ export type StreamlitContextProviderProps = PropsWithChildren<
  * This centralizes the context values in one place.
  */
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
-  // AppContext
-  widgetsDisabled,
-  showToolbar,
   // LibContext
   isFullScreen,
   setFullScreen,
-  libConfig,
   locale,
   componentRegistry,
+  mapboxToken,
+  disableFullscreenMode,
+  enforceDownloadInNewTab,
+  resourceCrossOriginMode,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -142,25 +133,28 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
-  // Memoized object for AppContext values
-  const appContextProps = useMemo<AppContextProps>(
-    () => ({
-      widgetsDisabled,
-      showToolbar,
-    }),
-    [widgetsDisabled, showToolbar]
-  )
-
   // Memoized object for LibContext values
   const libContextProps = useMemo<LibContextProps>(
     () => ({
       isFullScreen,
       setFullScreen,
-      libConfig,
       locale,
       componentRegistry,
+      mapboxToken,
+      disableFullscreenMode,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
     }),
-    [isFullScreen, setFullScreen, libConfig, locale, componentRegistry]
+    [
+      isFullScreen,
+      setFullScreen,
+      locale,
+      componentRegistry,
+      mapboxToken,
+      disableFullscreenMode,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
+    ]
   )
 
   // Memoized object for NavigationContext values
@@ -226,30 +220,20 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   }
 
   return (
-    <AppContext.Provider value={appContextProps}>
-      <LibContext.Provider value={libContextProps}>
-        <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
-          <ThemeContext.Provider value={themeContextProps}>
-            <NavigationContext.Provider value={navigationContextProps}>
-              <FormsContext.Provider value={formsContextProps}>
-                <ScriptRunContext.Provider value={scriptRunContextProps}>
-                  {children}
-                </ScriptRunContext.Provider>
-              </FormsContext.Provider>
-            </NavigationContext.Provider>
-          </ThemeContext.Provider>
-        </SidebarConfigContext.Provider>
-      </LibContext.Provider>
-    </AppContext.Provider>
+    <LibContext.Provider value={libContextProps}>
+      <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
+        <ThemeContext.Provider value={themeContextProps}>
+          <NavigationContext.Provider value={navigationContextProps}>
+            <FormsContext.Provider value={formsContextProps}>
+              <ScriptRunContext.Provider value={scriptRunContextProps}>
+                {children}
+              </ScriptRunContext.Provider>
+            </FormsContext.Provider>
+          </NavigationContext.Provider>
+        </ThemeContext.Provider>
+      </SidebarConfigContext.Provider>
+    </LibContext.Provider>
   )
-}
-
-/**
- * Custom hook to access AppContext values in components.
- * Throws an error if used outside of an AppContext.Provider.
- */
-export const useAppContext = (): AppContextProps => {
-  return useRequiredContext(AppContext)
 }
 
 export default memo(StreamlitContextProvider)

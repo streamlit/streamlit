@@ -202,7 +202,11 @@ export const renderWithContexts = (
   let currentLibContextProps: LibContextProps = {
     isFullScreen: false,
     setFullScreen: vi.fn(),
-    libConfig: {},
+    // Flattened libConfig properties:
+    mapboxToken: undefined,
+    disableFullscreenMode: undefined,
+    enforceDownloadInNewTab: undefined,
+    resourceCrossOriginMode: undefined,
     locale: "en-US",
     componentRegistry: new ComponentRegistry(mockEndpoints()),
     ...options.libContext,

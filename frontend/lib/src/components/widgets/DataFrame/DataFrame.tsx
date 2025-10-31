@@ -178,9 +178,8 @@ function DataFrame({
   const { getRowThemeOverride, onItemHovered: handleRowHover } =
     useRowHover(gridTheme)
 
-  const {
-    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = useContext(LibContext)
+  // Default to false, if no libConfig, e.g. for tests
+  const { enforceDownloadInNewTab = false } = useContext(LibContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)

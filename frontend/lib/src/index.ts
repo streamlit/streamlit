@@ -17,6 +17,7 @@
 // We add some polyfills in order to support older browsers for the exports below
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
+export type { LibConfig } from "@streamlit/connection"
 export { AppRoot, BlockNode, ElementNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
@@ -30,7 +31,7 @@ export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { LibContext } from "./components/core/LibContext"
-export type { LibConfig, LibContextProps } from "./components/core/LibContext"
+export type { LibContextProps } from "./components/core/LibContext"
 export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"

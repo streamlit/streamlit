@@ -32,7 +32,7 @@ import {
   FileUploadClient,
   FormsData,
   AppConfig as LibAppConfig,
-  LibConfig as LibLibConfig,
+  LibContextProps,
   render,
   ScriptRunState,
   SessionInfo,
@@ -294,12 +294,20 @@ describe("StreamlitLibExample", () => {
     expect(await screen.findByText("Hello, world!")).toBeInTheDocument()
   })
 
-  it("sees app config as the same structure", () => {
+  it("sees config types as compatible structures", () => {
+    // Verify AppConfig is structurally identical between packages
     const appConfig: ConnectionAppConfig = {} as LibAppConfig
-    const libConfig: ConnectionLibConfig = {} as LibLibConfig
 
-    // Creating a test to ensure this just passes. The above will break
-    // the typechecker if the structures are not the same.
+    // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
+    // LibContextProps extends LibConfig, so this verifies the inheritance is valid
+    const libConfigCheck: Partial<LibContextProps> = {
+      mapboxToken: "test",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "anonymous",
+    } as ConnectionLibConfig
+
+    // This test passes if TypeScript compilation succeeds
     expect(true).toBe(true)
   })
 })

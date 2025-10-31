@@ -16,7 +16,6 @@
 
 import React, { ReactElement, ReactNode, useContext } from "react"
 
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   BaseButton,
   BaseButtonKind,
@@ -41,6 +40,7 @@ export interface HeaderProps {
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode
+  showToolbar: boolean
 }
 
 const Header = ({
@@ -50,8 +50,8 @@ const Header = ({
   navigation,
   rightContent,
   logoComponent,
+  showToolbar,
 }: HeaderProps): ReactElement => {
-  const { showToolbar } = useAppContext()
   const { activeTheme } = useContext(ThemeContext)
 
   const shouldShowLogo = logoComponent && !isSidebarOpen

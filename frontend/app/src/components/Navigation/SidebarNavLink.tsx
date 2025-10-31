@@ -16,7 +16,6 @@
 
 import React, { MouseEvent, ReactElement } from "react"
 
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
 
 import {
@@ -34,6 +33,7 @@ export interface SidebarNavLinkProps {
   isTopNav?: boolean
   isInDropdown?: boolean
   children: string
+  widgetsDisabled: boolean
 }
 
 const SidebarNavLink = ({
@@ -44,11 +44,12 @@ const SidebarNavLink = ({
   isTopNav,
   isInDropdown,
   children,
+  widgetsDisabled,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
   // disable sidebar nav links
-  const { widgetsDisabled: disableSidebarNavLinks } = useAppContext()
+  const disableSidebarNavLinks = widgetsDisabled
 
   // Determine the appropriate test ID based on context
   let navLinkTestId: string

@@ -114,7 +114,7 @@ describe("ChatMessage", () => {
           })
           renderWithContexts(<ChatMessage {...props} />, {
             libContext: {
-              libConfig: { resourceCrossOriginMode: "anonymous" },
+              resourceCrossOriginMode: "anonymous",
             },
           })
 
@@ -144,7 +144,7 @@ describe("ChatMessage", () => {
           })
           renderWithContexts(<ChatMessage {...props} />, {
             libContext: {
-              libConfig: { resourceCrossOriginMode: undefined },
+              resourceCrossOriginMode: undefined,
             },
           })
 

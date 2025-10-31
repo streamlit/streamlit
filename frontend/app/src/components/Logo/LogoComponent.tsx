@@ -46,7 +46,7 @@ const LogoComponent = ({
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
-  const { libConfig } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibContext)
 
   if (!appLogo) {
     return null
@@ -70,7 +70,7 @@ const LogoComponent = ({
   const source = endpoints.buildMediaURL(displayImage)
 
   const crossOrigin = getCrossOriginAttribute(
-    libConfig.resourceCrossOriginMode,
+    resourceCrossOriginMode,
     displayImage
   )
 

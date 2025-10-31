@@ -2188,22 +2188,22 @@ export class App extends PureComponent<Props, State> {
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
         hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-        widgetsDisabled={
-          inputsDisabled || connectionState !== ConnectionState.CONNECTED
-        }
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
-        libConfig={libConfig}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
-        showToolbar={showToolbar}
+        // LibConfig properties
+        mapboxToken={libConfig.mapboxToken}
+        disableFullscreenMode={libConfig.disableFullscreenMode}
+        enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
+        resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2231,6 +2231,10 @@ export class App extends PureComponent<Props, State> {
               disableScrolling={disableScrolling}
               addScriptFinishedHandler={this.addScriptFinishedHandler}
               removeScriptFinishedHandler={this.removeScriptFinishedHandler}
+              widgetsDisabled={
+                inputsDisabled || connectionState !== ConnectionState.CONNECTED
+              }
+              showToolbar={showToolbar}
               topRightContent={
                 <>
                   {!hideTopBar && (

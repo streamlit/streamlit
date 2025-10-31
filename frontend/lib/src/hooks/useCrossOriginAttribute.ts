@@ -38,11 +38,11 @@ import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 export const useCrossOriginAttribute = (
   url?: string
 ): undefined | "anonymous" | "use-credentials" => {
-  const { libConfig } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibContext)
 
   if (!url) {
     return undefined
   }
 
-  return getCrossOriginAttribute(libConfig.resourceCrossOriginMode, url)
+  return getCrossOriginAttribute(resourceCrossOriginMode, url)
 }

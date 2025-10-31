@@ -18,7 +18,6 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import { render } from "@streamlit/lib"
 
 import Header, { HeaderProps } from "./Header"
@@ -27,36 +26,11 @@ const getProps = (propOverrides: Partial<HeaderProps> = {}): HeaderProps => ({
   hasSidebar: false,
   isSidebarOpen: false,
   onToggleSidebar: vi.fn(),
+  showToolbar: true,
   ...propOverrides,
 })
 
-// Helper function to create mock app context with overrides
-const getMockAppContext = (
-  overrides: Partial<
-    ReturnType<typeof StreamlitContextProviderModule.useAppContext>
-  > = {}
-): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
-  showToolbar: true,
-  widgetsDisabled: false,
-  ...overrides,
-})
-
-// Helper function to setup app context mock
-const mockAppContext = (
-  overrides: Partial<
-    ReturnType<typeof StreamlitContextProviderModule.useAppContext>
-  > = {}
-): void => {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getMockAppContext(overrides)
-  )
-}
-
 describe("Header", () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("renders a Header without crashing", () => {
     render(<Header {...getProps()} />)
 
@@ -65,22 +39,27 @@ describe("Header", () => {
 
   describe("Toolbar visibility", () => {
     it("renders toolbar when showToolbar is true and rightContent exists", () => {
-      mockAppContext({ showToolbar: true })
-      render(<Header {...getProps({ rightContent: <div>Right</div> })} />)
+      render(
+        <Header
+          {...getProps({ showToolbar: true, rightContent: <div>Right</div> })}
+        />
+      )
 
       expect(screen.getByTestId("stToolbar")).toBeVisible()
     })
 
     it("renders toolbar with navigation when showToolbar is false but navigation exists", () => {
-      mockAppContext({ showToolbar: false })
-      render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
+      render(
+        <Header
+          {...getProps({ showToolbar: false, navigation: <div>Nav</div> })}
+        />
+      )
 
       expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
     })
 
     it("does not render toolbar when no content exists", () => {
-      mockAppContext({ showToolbar: true })
-      render(<Header {...getProps()} />)
+      render(<Header {...getProps({ showToolbar: true })} />)
 
       expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
     })
@@ -88,17 +67,15 @@ describe("Header", () => {
 
   describe("Right content visibility", () => {
     it("does not show right content when showToolbar is false", () => {
-      mockAppContext({ showToolbar: false })
       const rightContent = <div data-testid="test-right">Right Content</div>
-      render(<Header {...getProps({ rightContent })} />)
+      render(<Header {...getProps({ showToolbar: false, rightContent })} />)
 
       expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
     })
 
     it("renders right content in the right section when showToolbar is true", () => {
-      mockAppContext({ showToolbar: true })
       const rightContent = <div data-testid="test-right">Right Content</div>
-      render(<Header {...getProps({ rightContent })} />)
+      render(<Header {...getProps({ showToolbar: true, rightContent })} />)
 
       expect(screen.getByTestId("test-right")).toBeInTheDocument()
       expect(screen.getByTestId("stToolbar")).toContainElement(
@@ -219,15 +196,12 @@ describe("Header", () => {
 
   describe("Embed mode behavior", () => {
     describe("When embed=true (showToolbar=false)", () => {
-      beforeEach(() => {
-        mockAppContext({ showToolbar: false })
-      })
-
       it("should show logo when provided and sidebar is closed", () => {
         const logo = <div data-testid="test-logo">Logo</div>
         render(
           <Header
             {...getProps({
+              showToolbar: false,
               logoComponent: logo,
               hasSidebar: true,
               isSidebarOpen: false,
@@ -241,7 +215,13 @@ describe("Header", () => {
 
       it("should show sidebar expand button when sidebar exists and is closed", () => {
         render(
-          <Header {...getProps({ hasSidebar: true, isSidebarOpen: false })} />
+          <Header
+            {...getProps({
+              showToolbar: false,
+              hasSidebar: true,
+              isSidebarOpen: false,
+            })}
+          />
         )
 
         expect(screen.getByTestId("stExpandSidebarButton")).toBeInTheDocument()
@@ -250,7 +230,7 @@ describe("Header", () => {
 
       it("should show navigation when provided", () => {
         const navigation = <div data-testid="test-nav">Navigation</div>
-        render(<Header {...getProps({ navigation })} />)
+        render(<Header {...getProps({ showToolbar: false, navigation })} />)
 
         expect(screen.getByTestId("test-nav")).toBeInTheDocument()
         expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
@@ -258,7 +238,7 @@ describe("Header", () => {
 
       it("should NOT show rightContent (toolbar/app menu) even if provided", () => {
         const rightContent = <div data-testid="test-right">Toolbar</div>
-        render(<Header {...getProps({ rightContent })} />)
+        render(<Header {...getProps({ showToolbar: false, rightContent })} />)
 
         expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
         // But toolbar should still not render because no other content exists
@@ -273,6 +253,7 @@ describe("Header", () => {
         render(
           <Header
             {...getProps({
+              showToolbar: false,
               logoComponent: logo,
               hasSidebar: true,
               isSidebarOpen: false,
@@ -291,10 +272,6 @@ describe("Header", () => {
     })
 
     describe("When embed=true&embed_options=show_toolbar (showToolbar=true)", () => {
-      beforeEach(() => {
-        mockAppContext({ showToolbar: true })
-      })
-
       it("should show all content including rightContent", () => {
         const logo = <div data-testid="test-logo">Logo</div>
         const navigation = <div data-testid="test-nav">Navigation</div>
@@ -303,6 +280,7 @@ describe("Header", () => {
         render(
           <Header
             {...getProps({
+              showToolbar: true,
               logoComponent: logo,
               hasSidebar: true,
               isSidebarOpen: false,
@@ -379,9 +357,8 @@ describe("Header", () => {
       )
 
       it("should have solid background when rightContent is shown (and showToolbar=true)", () => {
-        mockAppContext({ showToolbar: true })
         const rightContent = <div data-testid="test-right">Toolbar</div>
-        render(<Header {...getProps({ rightContent })} />)
+        render(<Header {...getProps({ showToolbar: true, rightContent })} />)
 
         const header = screen.getByTestId("stHeader")
         expect(header).not.toHaveStyle("background-color: rgba(0, 0, 0, 0)")

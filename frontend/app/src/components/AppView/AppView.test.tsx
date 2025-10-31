@@ -18,9 +18,7 @@ import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import {
   AppRoot,
   BlockNode,
@@ -49,16 +47,6 @@ import AppView, { AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
-function getAppContextOutput(
-  context: Partial<AppContextProps>
-): AppContextProps {
-  return {
-    widgetsDisabled: false,
-    showToolbar: true,
-    ...context,
-  }
-}
-
 function getSidebarConfigContextOutput(
   context: Partial<SidebarConfigContextProps>
 ): SidebarConfigContextProps {
@@ -83,13 +71,6 @@ function getNavigationContextOutput(
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     ...context,
   }
-}
-
-// Helper to setup AppContext mock for tests
-function setupAppContextMocks(appContext?: Partial<AppContextProps>): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockImplementation(
-    () => getAppContextOutput(appContext || {})
-  )
 }
 
 const buildMediaURL = vi.fn((url: string) => url)
@@ -118,6 +99,8 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     }),
     wideMode: false,
     embedded: false,
+    widgetsDisabled: false,
+    showToolbar: true,
     showPadding: false,
     disableScrolling: false,
     navigationPosition: Navigation.Position.SIDEBAR,
@@ -131,14 +114,10 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 function renderAppView(
   props: Partial<AppViewProps> = {},
   overrides?: {
-    appContext?: Partial<AppContextProps>
     sidebarConfigContext?: Partial<SidebarConfigContextProps>
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {
-  // Setup AppContext mock with overrides if provided
-  setupAppContextMocks(overrides?.appContext || {})
-
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
     overrides?.sidebarConfigContext || {}
   )
@@ -154,15 +133,6 @@ function renderAppView(
 }
 
 describe("AppView element", () => {
-  beforeEach(() => {
-    // Setup default context mocks
-    setupAppContextMocks()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
     const appViewContainer = screen.getByTestId("stAppViewContainer")
@@ -402,12 +372,9 @@ describe("AppView element", () => {
       })
 
       it("uses 6rem top padding regardless of showToolbar", () => {
-        vi.spyOn(
-          StreamlitContextProviderModule,
-          "useAppContext"
-        ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
-
-        render(<AppView {...getProps({ embedded: false })} />)
+        render(
+          <AppView {...getProps({ embedded: false, showToolbar: true })} />
+        )
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
       })
@@ -536,12 +503,9 @@ describe("AppView element", () => {
 
       describe("with show_toolbar option", () => {
         it("uses 6rem top padding when showToolbar=true", () => {
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
-
-          render(<AppView {...getProps({ embedded: true })} />)
+          render(
+            <AppView {...getProps({ embedded: true, showToolbar: true })} />
+          )
           const style = getMainBlockContainerStyle()
           expect(style.paddingTop).toEqual("6rem")
         })
@@ -556,9 +520,9 @@ describe("AppView element", () => {
             {
               embedded: true,
               navigationPosition: Navigation.Position.TOP,
+              showToolbar: true,
             },
             {
-              appContext: { showToolbar: true },
               sidebarConfigContext: { appLogo: logo },
             }
           )
@@ -570,13 +534,14 @@ describe("AppView element", () => {
 
       describe("with both show_padding and show_toolbar options", () => {
         it("uses 6rem top padding when both showPadding=true and showToolbar=true", () => {
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(getAppContextOutput({ showToolbar: true }))
-
           render(
-            <AppView {...getProps({ embedded: true, showPadding: true })} />
+            <AppView
+              {...getProps({
+                embedded: true,
+                showPadding: true,
+                showToolbar: true,
+              })}
+            />
           )
           const style = getMainBlockContainerStyle()
           expect(style.paddingTop).toEqual("6rem")
@@ -584,19 +549,13 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        beforeEach(() => {
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(getAppContextOutput({ showToolbar: false }))
-        })
-
         it("uses 2.25rem top padding when no header content", () => {
           render(
             <AppView
               {...getProps({
                 embedded: true,
                 showPadding: false,
+                showToolbar: false,
                 navigationPosition: Navigation.Position.SIDEBAR,
               })}
             />
@@ -616,9 +575,9 @@ describe("AppView element", () => {
             {
               embedded: true,
               showPadding: false,
+              showToolbar: false,
             },
             {
-              appContext: { showToolbar: false },
               sidebarConfigContext: { appLogo: logo },
             }
           )
@@ -634,11 +593,9 @@ describe("AppView element", () => {
               embedded: true,
               showPadding: false,
               navigationPosition: Navigation.Position.TOP,
+              showToolbar: false,
             },
             {
-              appContext: {
-                showToolbar: false,
-              },
               sidebarConfigContext: {
                 appLogo: null,
               },
@@ -685,12 +642,14 @@ describe("AppView element", () => {
             showPadding: false,
           })
 
-          renderAppView(props, {
-            appContext: { showToolbar: false },
-            sidebarConfigContext: {
-              initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-            },
-          })
+          renderAppView(
+            { ...props, showToolbar: false },
+            {
+              sidebarConfigContext: {
+                initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+              },
+            }
+          )
           const style = getMainBlockContainerStyle()
           expect(style.paddingTop).toEqual("4.5rem")
           expect(style.paddingBottom).toEqual("1rem")
@@ -716,12 +675,8 @@ describe("AppView element", () => {
             new BlockProto({ allowEmpty: true })
           )
 
-          vi.spyOn(
-            StreamlitContextProviderModule,
-            "useAppContext"
-          ).mockReturnValue(getAppContextOutput({ showToolbar: false }))
-
           const props = getProps({
+            showToolbar: false,
             elements: new AppRoot(
               FAKE_SCRIPT_HASH,
               new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
@@ -767,9 +722,9 @@ describe("AppView element", () => {
           {
             embedded: true,
             showPadding: false,
+            showToolbar: true,
           },
           {
-            appContext: { showToolbar: true },
             sidebarConfigContext: { appLogo: logo },
           }
         )
@@ -1142,15 +1097,15 @@ describe("AppView element", () => {
       })
 
       // Mock embed mode (showToolbar = false)
-      renderAppView(props, {
-        appContext: {
-          showToolbar: false, // This simulates embed=true without show_toolbar
-        },
-        sidebarConfigContext: {
-          initialSidebarState: PageConfig.SidebarState.COLLAPSED, // Ensure sidebar starts collapsed
-          appLogo: logo,
-        },
-      })
+      renderAppView(
+        { ...props, showToolbar: false },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED, // Ensure sidebar starts collapsed
+            appLogo: logo,
+          },
+        }
+      )
 
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
@@ -1168,11 +1123,9 @@ describe("AppView element", () => {
         {
           navigationPosition: Navigation.Position.TOP,
           embedded: true,
+          showToolbar: false,
         },
         {
-          appContext: {
-            showToolbar: false, // This simulates embed=true without show_toolbar
-          },
           navigationContext: {
             appPages: [
               { pageName: "page1", pageScriptHash: "hash1" },
@@ -1191,20 +1144,11 @@ describe("AppView element", () => {
     })
 
     it("header does NOT show toolbar actions in embed mode without show_toolbar", () => {
-      // Mock embed mode (showToolbar = false)
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          showToolbar: false, // This simulates embed=true without show_toolbar
-        })
-      )
-
       render(
         <AppView
           {...getProps({
             embedded: true,
+            showToolbar: false,
             topRightContent: <div data-testid="toolbar-actions">Toolbar</div>,
           })}
         />
@@ -1218,20 +1162,11 @@ describe("AppView element", () => {
     })
 
     it("header shows toolbar actions in embed mode WITH show_toolbar", () => {
-      // Mock embed mode with show_toolbar (showToolbar = true)
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getAppContextOutput({
-          showToolbar: true, // This simulates embed=true&embed_options=show_toolbar
-        })
-      )
-
       render(
         <AppView
           {...getProps({
             embedded: true,
+            showToolbar: true,
             topRightContent: <div data-testid="toolbar-actions">Toolbar</div>,
           })}
         />
