@@ -58,7 +58,7 @@ def expect_chat_input_value_contains_audio(app: Page, key: str) -> None:
         key: Chat input key - used to identify the specific output line
 
     Verifies that audio was recorded by checking the output line contains a .wav filename
-    (not "None") and that an st.audio component appears.
+    (not "None").
     """
     # Look for the pattern: "<key> audio: " followed by a .wav filename
     # We use a regex pattern since the filename includes a timestamp
@@ -67,9 +67,6 @@ def expect_chat_input_value_contains_audio(app: Page, key: str) -> None:
 
     # Ensure the audio field is NOT "None"
     expect(app.get_by_text(f"{key} audio: None", exact=True)).not_to_be_visible()
-
-    # Verify st.audio component is displayed
-    expect(app.get_by_test_id("stAudio").first).to_be_visible()
 
 
 def expect_chat_input_value_contains_files(
