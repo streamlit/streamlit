@@ -626,9 +626,12 @@ function ChatInput({
                       paddingLeft: theme.spacing.none,
                       paddingBottom: theme.spacing.sm,
                       paddingTop: theme.spacing.sm,
-                      // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
-                      // and some additional margin between the icon and the text (spacing.sm).
-                      paddingRight: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+                      // Calculate the right padding to account for button(s) on the right
+                      // Each button is: iconSizes.xl + 2 * spacing.sm
+                      // When acceptAudio is true, there are 2 buttons (mic + send) with extra margin
+                      paddingRight: acceptAudio
+                        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + 2 * ${theme.spacing.sm})`
+                        : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
                     },
                   },
                 }}
