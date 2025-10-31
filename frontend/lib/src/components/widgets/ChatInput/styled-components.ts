@@ -117,13 +117,23 @@ export const StyledSendIconButtonContainer =
     paddingRight: isRecording ? theme.spacing.sm : 0,
   }))
 
-export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
-  position: "absolute",
-  bottom: "0px",
-  // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
-  // and some additional margin between the icon and the text (spacing.sm).
-  right: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
-}))
+interface StyledInputInstructionsContainerProps {
+  acceptAudio?: boolean
+}
+
+export const StyledInputInstructionsContainer =
+  styled.div<StyledInputInstructionsContainerProps>(
+    ({ theme, acceptAudio }) => ({
+      position: "absolute",
+      bottom: "0px",
+      // Calculate the right padding to account for button(s) on the right
+      // Each button is: iconSizes.xl + 2 * spacing.sm
+      // When acceptAudio is true, there are 2 buttons (mic + send), otherwise just 1 (send)
+      right: acceptAudio
+        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + ${theme.spacing.sm})`
+        : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+    })
+  )
 
 interface StyledWaveformContainerProps {
   isRecording: boolean

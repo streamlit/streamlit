@@ -638,7 +638,7 @@ function ChatInput({
             {/* Input instructions - hidden during recording */}
             {controller.state !== "recording" &&
               width > theme.breakpoints.hideWidgetDetails && (
-                <StyledInputInstructionsContainer>
+                <StyledInputInstructionsContainer acceptAudio={acceptAudio}>
                   <InputInstructions
                     dirty={dirty}
                     value={value}
