@@ -104,17 +104,17 @@ describe("AudioInput Recording Journey", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -351,17 +351,17 @@ describe("AudioInput Playback Journey", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -524,17 +524,17 @@ describe("AudioInput Upload & Abort", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -710,17 +710,17 @@ describe("AudioInput Memory Management", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -873,17 +873,17 @@ describe("AudioInput Form Integration", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -991,17 +991,17 @@ describe("AudioInput Error Handling", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -1105,17 +1105,17 @@ describe("AudioInput Widget State", () => {
       },
     }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    destroy: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {

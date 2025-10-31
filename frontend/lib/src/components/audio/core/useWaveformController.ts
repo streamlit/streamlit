@@ -484,6 +484,13 @@ export function useWaveformController({
     []
   )
 
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      destroy()
+    }
+  }, [destroy])
+
   return {
     state: currentState,
     isPlaybackPlaying,

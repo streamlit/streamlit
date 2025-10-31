@@ -111,64 +111,9 @@ const AudioInput: React.FC<Props> = ({
   const uploadAbortControllerRef = useRef<AbortController | null>(null)
   const currentBlobUrlRef = useRef<string | null>(null)
   const playbackTimerRef = useRef<number | null>(null)
-  const transcodeAndUploadFileRef = useRef<(wav: Blob) => Promise<void>>()
 
   const widgetId = element.id
   const widgetFormId = element.formId
-
-  const controller = useWaveformController({
-    containerRef,
-    sampleRate: element.sampleRate ?? undefined,
-    events: {
-      onPermissionDenied: () => {
-        setHasNoMicPermissions(true)
-      },
-      onError: () => {
-        setIsError(true)
-      },
-      onRecordStart: () => {
-        setRecordingTime(STARTING_TIME_STRING)
-        setProgressTime(STARTING_TIME_STRING)
-      },
-      onRecordReady: () => {
-        const duration = formatTime(controller.playback.getDurationMs())
-        setRecordingTime(duration)
-        setProgressTime(duration)
-      },
-      onApprove: async (wav: Blob) => {
-        await transcodeAndUploadFileRef.current?.(wav)
-      },
-      onCancel: () => {
-        setRecordingTime(STARTING_TIME_STRING)
-        setProgressTime(STARTING_TIME_STRING)
-      },
-      onProgressMs: (ms: number) => {
-        setRecordingTime(formatTime(ms))
-      },
-      onPlaybackPause: () => {
-        setProgressTime(formatTime(controller.playback.getCurrentTimeMs()))
-      },
-      onPlaybackFinish: () => {
-        setProgressTime(formatTime(controller.playback.getDurationMs()))
-      },
-    },
-  })
-
-  const {
-    state,
-    isPlaybackPlaying,
-    start: startController,
-    stop: stopController,
-    approve: approveController,
-    cancel: cancelController,
-    playback: {
-      play: playbackPlayFn,
-      pause: playbackPauseFn,
-      load: playbackLoadFn,
-      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
-      getDurationMs: playbackGetDurationMsFn,
-    },
-  } = controller
 
   const transcodeAndUploadFile = useCallback(
     async (wavBlob: Blob) => {
@@ -199,6 +144,7 @@ const AudioInput: React.FC<Props> = ({
           }
           currentBlobUrlRef.current = blobUrl
         } catch {
+          // Blob URL creation failed - error state will be set below
           setIsError(true)
           setIsUploading(false)
           if (notNullOrUndefined(widgetFormId))
@@ -247,6 +193,7 @@ const AudioInput: React.FC<Props> = ({
             setDeleteFileUrl(upload.fileUrl.deleteUrl)
           }
         } catch {
+          // File upload failed - set error state unless request was cancelled
           if (!abortController.signal.aborted) {
             setIsError(true)
           }
@@ -258,6 +205,7 @@ const AudioInput: React.FC<Props> = ({
           }
         }
       } catch {
+        // Unexpected error during upload process - cleanup and set error state
         if (!abortController.signal.aborted) {
           setIsError(true)
           setIsUploading(false)
@@ -277,7 +225,70 @@ const AudioInput: React.FC<Props> = ({
     ]
   )
 
-  transcodeAndUploadFileRef.current = transcodeAndUploadFile
+  const controllerRef = useRef<ReturnType<
+    typeof useWaveformController
+  > | null>(null)
+
+  const controller = useWaveformController({
+    containerRef,
+    sampleRate: element.sampleRate ?? undefined,
+    events: {
+      onPermissionDenied: () => {
+        setHasNoMicPermissions(true)
+      },
+      onError: () => {
+        setIsError(true)
+      },
+      onRecordStart: () => {
+        setRecordingTime(STARTING_TIME_STRING)
+        setProgressTime(STARTING_TIME_STRING)
+      },
+      onRecordReady: () => {
+        const duration = formatTime(
+          controllerRef.current?.playback.getDurationMs() ?? 0
+        )
+        setRecordingTime(duration)
+        setProgressTime(duration)
+      },
+      onApprove: transcodeAndUploadFile,
+      onCancel: () => {
+        setRecordingTime(STARTING_TIME_STRING)
+        setProgressTime(STARTING_TIME_STRING)
+      },
+      onProgressMs: (ms: number) => {
+        setRecordingTime(formatTime(ms))
+      },
+      onPlaybackPause: () => {
+        setProgressTime(
+          formatTime(controllerRef.current?.playback.getCurrentTimeMs() ?? 0)
+        )
+      },
+      onPlaybackFinish: () => {
+        setProgressTime(
+          formatTime(controllerRef.current?.playback.getDurationMs() ?? 0)
+        )
+      },
+    },
+  })
+
+  // Update the ref after controller is initialized
+  controllerRef.current = controller
+
+  const {
+    state,
+    isPlaybackPlaying,
+    start: startController,
+    stop: stopController,
+    approve: approveController,
+    cancel: cancelController,
+    playback: {
+      play: playbackPlayFn,
+      pause: playbackPauseFn,
+      load: playbackLoadFn,
+      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
+      getDurationMs: playbackGetDurationMsFn,
+    },
+  } = controller
 
   const handleClear = useCallback(
     async ({
@@ -384,6 +395,7 @@ const AudioInput: React.FC<Props> = ({
           setProgressTime(formatTime(durationMs))
         }
       } catch {
+        // Playback loading failed - likely a corrupted recording or browser issue
         if (!cancelled) {
           setIsError(true)
         }
@@ -418,6 +430,10 @@ const AudioInput: React.FC<Props> = ({
         cancelAnimationFrame(playbackTimerRef.current)
         playbackTimerRef.current = null
       }
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current)
+        currentBlobUrlRef.current = null
+      }
     }
   }, [])
 
@@ -436,6 +452,7 @@ const AudioInput: React.FC<Props> = ({
         await playbackPlayFn()
       }
     } catch {
+      // Playback control error - set error state for user feedback
       setIsError(true)
     }
   }, [
@@ -465,6 +482,7 @@ const AudioInput: React.FC<Props> = ({
       const { blob } = await stopController()
       await approveController(blob)
     } catch {
+      // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }
   }, [approveController, stopController])
