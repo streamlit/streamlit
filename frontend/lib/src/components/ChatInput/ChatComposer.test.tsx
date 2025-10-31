@@ -86,7 +86,7 @@ vi.mock("./ChatAudioRecorder", () => {
     }, [isRecording, onRecordingStateChange])
 
     // Expose the ref API
-    useImperativeHandle<MockRef, MockRef>(
+    useImperativeHandle(
       ref,
       () => ({
         startRecording: async () => {
