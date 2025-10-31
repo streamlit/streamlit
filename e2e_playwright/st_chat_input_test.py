@@ -187,6 +187,16 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_element_by_key(app, "chat_input_13"), name="st_chat_input-audio_disabled"
     )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_14"), name="st_chat_input-sidebar_audio"
+    )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_15"), name="st_chat_input-column_audio"
+    )
+    assert_snapshot(
+        get_element_by_key(app, "chat_input_16"),
+        name="st_chat_input-column_audio_with_files",
+    )
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
@@ -1198,7 +1208,7 @@ def test_audio_with_all_features_combined(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_container_contexts(app: Page, assert_snapshot: ImageCompareFunction):
+def test_audio_container_contexts(app: Page):
     """Test audio input in different container contexts."""
     grant_microphone_permissions(app)
     app.set_viewport_size({"width": 750, "height": 2000})
@@ -1215,9 +1225,6 @@ def test_audio_container_contexts(app: Page, assert_snapshot: ImageCompareFuncti
     # Verify mic button exists in sidebar
     mic_button = sidebar_input.get_by_test_id("stChatInputMicButton")
     expect(mic_button).to_be_visible()
-
-    # Snapshot sidebar audio input
-    assert_snapshot(sidebar_input, name="st_chat_input-sidebar_audio")
 
     # Test 2: Audio in columns
     col_input = get_element_by_key(app, "chat_input_15")
