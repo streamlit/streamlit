@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     rerun_app,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -703,6 +704,16 @@ def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     expect(chat_input_area).to_have_value("")
+
+    # Wait for height to visually reset to compact state (single line)
+    # This ensures React state updates and browser paint have completed
+    def check_compact_height() -> bool:
+        box = chat_input_area.bounding_box()
+        # Compact textarea should be roughly 40-50px (minElementHeight)
+        return box["height"] < 60 if box else False
+
+    wait_until(app, check_compact_height)
+
     assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")
 
 
