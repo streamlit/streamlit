@@ -113,7 +113,7 @@ export const StyledSendIconButtonContainer =
     bottom: isRecording ? undefined : 0,
     marginBottom: isRecording ? 0 : `-${theme.sizes.borderWidth}`,
     pointerEvents: "none",
-    gap: isRecording ? theme.spacing.sm : 0,
+    gap: 0,
     paddingRight: isRecording ? theme.spacing.sm : 0,
   }))
 
@@ -128,9 +128,9 @@ export const StyledInputInstructionsContainer =
       bottom: "0px",
       // Calculate the right padding to account for button(s) on the right
       // Each button is: iconSizes.xl + 2 * spacing.sm
-      // When acceptAudio is true, there are 2 buttons (mic + send) with gap between them
+      // When acceptAudio is true, there are 2 buttons (mic + send)
       right: acceptAudio
-        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + 2 * ${theme.spacing.sm})`
+        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + ${theme.spacing.sm})`
         : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
     })
   )
