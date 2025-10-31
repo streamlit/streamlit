@@ -201,9 +201,9 @@ with col_a:
 
 with col_b:
     v16 = st.chat_input(
-        "Chat input 16 (column audio + files)",
+        "Chat input 16 (w/ files)",
         accept_audio=True,
         accept_file="multiple",
         key="chat_input_16",
     )
-    st.write("Chat input 16 (column audio + files) - value:", v16)
+    st.write("Chat input 16 (w/ files) - value:", v16)
