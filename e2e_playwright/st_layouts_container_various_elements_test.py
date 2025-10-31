@@ -47,6 +47,8 @@ CONTAINER_KEYS_WITH_EXPANDERS = [
 ]
 
 
+# Flaky in CI on Chromium. See workflow: https://github.com/streamlit/streamlit/actions/runs/18964912763/job/54180100557
+@pytest.mark.skip_browser("chromium")
 def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
