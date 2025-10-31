@@ -136,15 +136,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
-  // Memoized object for ViewStateContext values
-  const viewStateContextProps = useMemo<ViewStateContextProps>(
-    () => ({
-      isFullScreen,
-      setFullScreen,
-    }),
-    [isFullScreen, setFullScreen]
-  )
-
   // Memoized object for LibConfigContext values
   const libConfigContextProps = useMemo<LibConfigContextProps>(
     () => ({
@@ -154,24 +145,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       resourceCrossOriginMode,
     }),
     [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
-  )
-
-  // Memoized object for NavigationContext values
-  const navigationContextProps = useMemo<NavigationContextProps>(
-    () => ({
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    }),
-    [
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    ]
   )
 
   // Memoized object for SidebarConfigContext values
@@ -202,6 +175,33 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [activeTheme, setTheme, availableThemes]
   )
 
+  // Memoized object for NavigationContext values
+  const navigationContextProps = useMemo<NavigationContextProps>(
+    () => ({
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    }),
+    [
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    ]
+  )
+
+  // Memoized object for ViewStateContext values
+  const viewStateContextProps = useMemo<ViewStateContextProps>(
+    () => ({
+      isFullScreen,
+      setFullScreen,
+    }),
+    [isFullScreen, setFullScreen]
+  )
+
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
@@ -222,15 +222,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     <LibConfigContext.Provider value={libConfigContextProps}>
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
-          <ViewStateContext.Provider value={viewStateContextProps}>
-            <NavigationContext.Provider value={navigationContextProps}>
-              <FormsContext.Provider value={formsContextProps}>
-                <ScriptRunContext.Provider value={scriptRunContextProps}>
+          <NavigationContext.Provider value={navigationContextProps}>
+            <ViewStateContext.Provider value={viewStateContextProps}>
+              <ScriptRunContext.Provider value={scriptRunContextProps}>
+                <FormsContext.Provider value={formsContextProps}>
                   {children}
-                </ScriptRunContext.Provider>
-              </FormsContext.Provider>
-            </NavigationContext.Provider>
-          </ViewStateContext.Provider>
+                </FormsContext.Provider>
+              </ScriptRunContext.Provider>
+            </ViewStateContext.Provider>
+          </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>
     </LibConfigContext.Provider>

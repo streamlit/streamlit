@@ -68,11 +68,6 @@ const flexContextValue = {
   isInContentWidthContainer: false,
 }
 
-const defaultViewStateContextValue = {
-  isFullScreen: false,
-  setFullScreen: vi.fn(),
-}
-
 const defaultLibConfigContextValue = {
   locale: "en-US",
   mapboxToken: undefined,
@@ -80,10 +75,12 @@ const defaultLibConfigContextValue = {
   resourceCrossOriginMode: undefined,
 }
 
-const defaultScriptRunContextValue = {
-  scriptRunState: ScriptRunState.NOT_RUNNING,
-  scriptRunId: "script run 123",
-  fragmentIdsThisRun: [],
+const defaultSidebarConfigContextValue = {
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
 }
 
 const defaultThemeContextValue = {
@@ -100,12 +97,15 @@ const defaultNavigationContextValue = {
   appPages: [],
 }
 
-const defaultSidebarConfigContextValue = {
-  initialSidebarState: PageConfig.SidebarState.AUTO,
-  appLogo: null,
-  sidebarChevronDownshift: 0,
-  expandSidebarNav: false,
-  hideSidebarNav: false,
+const defaultViewStateContextValue = {
+  isFullScreen: false,
+  setFullScreen: vi.fn(),
+}
+
+const defaultScriptRunContextValue = {
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "script run 123",
+  fragmentIdsThisRun: [],
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -226,12 +226,6 @@ export const renderWithContexts = (
   // so updating them in rerenderWithContexts will affect subsequent renders.
 
   // Use let to allow reassignment in rerenderWithContexts
-  let currentViewStateContextProps: ViewStateContextProps = {
-    isFullScreen: false,
-    setFullScreen: vi.fn(),
-    ...options.viewStateContext,
-  }
-
   let currentLibConfigContextProps: LibConfigContextProps = {
     locale: "en-US",
     // Flattened libConfig properties:
@@ -266,9 +260,10 @@ export const renderWithContexts = (
     ...options.navigationContext,
   }
 
-  let currentFormsContextProps: FormsContextProps = {
-    formsData: createFormsData(),
-    ...options.formsContext,
+  let currentViewStateContextProps: ViewStateContextProps = {
+    isFullScreen: false,
+    setFullScreen: vi.fn(),
+    ...options.viewStateContext,
   }
 
   let currentScriptRunContextProps: ScriptRunContextProps = {
@@ -276,6 +271,11 @@ export const renderWithContexts = (
     scriptRunId: "script run 123",
     fragmentIdsThisRun: [],
     ...options.scriptRunContext,
+  }
+
+  let currentFormsContextProps: FormsContextProps = {
+    formsData: createFormsData(),
+    ...options.formsContext,
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
@@ -287,21 +287,21 @@ export const renderWithContexts = (
               value={currentSidebarConfigContextProps}
             >
               <ThemeContext.Provider value={currentThemeContextProps}>
-                <ViewStateContext.Provider
-                  value={currentViewStateContextProps}
+                <NavigationContext.Provider
+                  value={currentNavigationContextProps}
                 >
-                  <NavigationContext.Provider
-                    value={currentNavigationContextProps}
+                  <ViewStateContext.Provider
+                    value={currentViewStateContextProps}
                   >
-                    <FormsContext.Provider value={currentFormsContextProps}>
-                      <ScriptRunContext.Provider
-                        value={currentScriptRunContextProps}
-                      >
+                    <ScriptRunContext.Provider
+                      value={currentScriptRunContextProps}
+                    >
+                      <FormsContext.Provider value={currentFormsContextProps}>
                         {children}
-                      </ScriptRunContext.Provider>
-                    </FormsContext.Provider>
-                  </NavigationContext.Provider>
-                </ViewStateContext.Provider>
+                      </FormsContext.Provider>
+                    </ScriptRunContext.Provider>
+                  </ViewStateContext.Provider>
+                </NavigationContext.Provider>
               </ThemeContext.Provider>
             </SidebarConfigContext.Provider>
           </LibConfigContext.Provider>
