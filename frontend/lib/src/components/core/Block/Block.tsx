@@ -74,7 +74,11 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   assignDividerColor(props.node, useEmotionTheme())
 
   const disableFullscreenMode =
+<<<<<<< HEAD
     contextDisableFullscreenMode || props.disableFullscreenMode
+=======
+    libConfig.disableFullscreenMode || props.disableFullscreenMode
+>>>>>>> ba942cf2b (Create RenderNodeVisitor (#12814))
 
   return (
     <>
