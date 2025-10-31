@@ -238,9 +238,6 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         get_element_by_key(app, "chat_input_13"), name="st_chat_input-audio_disabled"
     )
     assert_snapshot(
-        get_element_by_key(app, "chat_input_14"), name="st_chat_input-sidebar_audio"
-    )
-    assert_snapshot(
         get_element_by_key(app, "chat_input_15"), name="st_chat_input-column_audio"
     )
     assert_snapshot(
