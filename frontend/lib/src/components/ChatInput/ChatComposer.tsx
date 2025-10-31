@@ -185,7 +185,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
 
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
-        handleSubmit()
+        void handleSubmit()
       }
     },
     [controlsDisabled, handleSubmit]
@@ -199,6 +199,12 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
     setIsRecording(true)
     await audioRecorderRef.current?.startRecording()
   }, [acceptAudio, controlsDisabled, isRecording])
+
+  // Memoized wrapper for async handleMicClick to avoid creating new functions on each render.
+  // Uses void operator to satisfy no-misused-promises lint rule.
+  const handleMicClickWrapper = useCallback(() => {
+    void handleMicClick()
+  }, [handleMicClick])
 
   const handleRecordingCancel = useCallback(() => {
     setIsRecording(false)
@@ -263,7 +269,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           {acceptAudio ? (
             <StyledComposerButton
               type="button"
-              onClick={handleMicClick}
+              onClick={handleMicClickWrapper}
               aria-label="Record audio"
               disabled={controlsDisabled || isRecording}
               data-testid="chat-composer-mic"
