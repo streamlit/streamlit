@@ -40,7 +40,7 @@ import {
 
 import { useWaveformController } from "~lib/components/audio"
 import { LOG } from "~lib/components/ChatInput/logger"
-import { StyledChatAudioWave } from "./styled-components"
+
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
@@ -67,6 +67,7 @@ import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
+  StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
   StyledInputInstructionsContainer,
