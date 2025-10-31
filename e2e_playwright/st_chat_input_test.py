@@ -34,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_CHAT_INPUT_WIDGETS = 16
+NUM_CHAT_INPUT_WIDGETS = 17
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
