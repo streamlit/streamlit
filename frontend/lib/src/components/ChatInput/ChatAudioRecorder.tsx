@@ -35,15 +35,16 @@ import {
 
 export interface ChatAudioRecorderProps {
   controller: WaveformController
-  isRecording: boolean
   onStart?: () => Promise<void>
   onApprove: (payload: { blob: Blob; meta: AudioMeta }) => Promise<void>
   onCancel: () => void
+  onRecordingStateChange?: (isRecording: boolean) => void
   disabled?: boolean
 }
 
 export interface ChatAudioRecorderRef {
   startRecording: () => Promise<void>
+  readonly isRecording: boolean
 }
 
 const ChatAudioRecorder = forwardRef<
@@ -53,17 +54,23 @@ const ChatAudioRecorder = forwardRef<
   (
     {
       controller,
-      isRecording,
       onStart,
       onApprove,
       onCancel,
+      onRecordingStateChange,
       disabled = false,
     },
     ref
   ) => {
+    const [isRecording, setIsRecording] = useState(false)
     const [pending, setPending] = useState(false)
     const isMountedRef = useRef(true)
     const abortControllerRef = useRef<AbortController | null>(null)
+
+    // Notify parent of recording state changes
+    useEffect(() => {
+      onRecordingStateChange?.(isRecording)
+    }, [isRecording, onRecordingStateChange])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -80,6 +87,7 @@ const ChatAudioRecorder = forwardRef<
       const abortController = new AbortController()
       abortControllerRef.current = abortController
 
+      setIsRecording(true)
       setPending(true)
       try {
         await controller.start()
@@ -89,6 +97,7 @@ const ChatAudioRecorder = forwardRef<
       } catch (error) {
         LOG.error("ChatAudioRecorder: Failed to start recording", error)
         if (!abortController.signal.aborted) {
+          setIsRecording(false)
           onCancel()
         }
       } finally {
@@ -98,13 +107,14 @@ const ChatAudioRecorder = forwardRef<
       }
     }, [controller, onStart, onCancel])
 
-    // Expose startRecording method to parent via ref
+    // Expose startRecording method and isRecording state to parent via ref
     useImperativeHandle(
       ref,
       () => ({
         startRecording,
+        isRecording,
       }),
-      [startRecording]
+      [startRecording, isRecording]
     )
 
     const handleCancel = useCallback(() => {
@@ -118,6 +128,7 @@ const ChatAudioRecorder = forwardRef<
       } finally {
         if (isMountedRef.current) {
           setPending(false)
+          setIsRecording(false)
         }
         onCancel()
       }
@@ -141,6 +152,7 @@ const ChatAudioRecorder = forwardRef<
       } finally {
         if (isMountedRef.current) {
           setPending(false)
+          setIsRecording(false)
         }
       }
     }, [controller, disabled, onApprove, onCancel, pending])

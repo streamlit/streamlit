@@ -196,7 +196,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
       return
     }
 
-    setIsRecording(true)
     await audioRecorderRef.current?.startRecording()
   }, [acceptAudio, controlsDisabled, isRecording])
 
@@ -207,7 +206,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   }, [handleMicClick])
 
   const handleRecordingCancel = useCallback(() => {
-    setIsRecording(false)
     focusInput()
   }, [focusInput])
 
@@ -232,7 +230,6 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
         LOG.error("ChatComposer: Failed to submit audio recording", error)
       } finally {
         setIsSubmitting(false)
-        setIsRecording(false)
       }
     },
     [files, focusInput, sendChatSubmit, text]
@@ -304,9 +301,9 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
         <ChatAudioRecorder
           ref={audioRecorderRef}
           controller={controller}
-          isRecording={isRecording}
           onApprove={handleRecordingApprove}
           onCancel={handleRecordingCancel}
+          onRecordingStateChange={setIsRecording}
           disabled={disabled || isSubmitting}
         />
       ) : null}

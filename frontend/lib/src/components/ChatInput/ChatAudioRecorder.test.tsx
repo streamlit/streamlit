@@ -22,7 +22,9 @@ import userEvent from "@testing-library/user-event"
 import type { AudioMeta, WaveformController } from "~lib/components/audio"
 import { render } from "~lib/test_util"
 
-import ChatAudioRecorder from "src/components/ChatInput/ChatAudioRecorder"
+import ChatAudioRecorder, {
+  type ChatAudioRecorderRef,
+} from "src/components/ChatInput/ChatAudioRecorder"
 
 describe("ChatAudioRecorder", () => {
   const baseMeta: AudioMeta = {
@@ -63,39 +65,36 @@ describe("ChatAudioRecorder", () => {
     }
   }
 
-  it("starts recording when isRecording becomes true and handles failures by cancelling", async () => {
+  it("exposes startRecording method via ref and handles failures by cancelling", async () => {
     const onCancel = vi.fn()
     const onStart = vi.fn()
     const controller = createController({
       startImplementation: () => Promise.reject(new Error("mic")),
     })
 
-    const { rerender, unmount } = render(
+    const ref = React.createRef<ChatAudioRecorderRef>()
+
+    const { unmount } = render(
       <ChatAudioRecorder
+        ref={ref}
         controller={controller}
-        isRecording={false}
         onStart={onStart}
         onApprove={vi.fn()}
         onCancel={onCancel}
       />
     )
 
-    // Should not start recording when isRecording is false
+    // Should not start recording until explicitly called via ref
     expect(controller.start).not.toHaveBeenCalled()
+    expect(ref.current?.isRecording).toBe(false)
 
-    // Re-render with isRecording true
-    rerender(
-      <ChatAudioRecorder
-        controller={controller}
-        isRecording={true}
-        onStart={onStart}
-        onApprove={vi.fn()}
-        onCancel={onCancel}
-      />
-    )
+    // Explicitly start recording via ref API
+    await ref.current?.startRecording()
 
-    await waitFor(() => expect(controller.start).toHaveBeenCalled())
+    expect(controller.start).toHaveBeenCalled()
     await waitFor(() => expect(onCancel).toHaveBeenCalled())
+    expect(ref.current?.isRecording).toBe(false)
+
     unmount()
     expect(controller.destroy).toHaveBeenCalled()
   })
@@ -105,22 +104,33 @@ describe("ChatAudioRecorder", () => {
     const onStart = vi.fn()
     const controller = createController()
 
+    const ref = React.createRef<ChatAudioRecorderRef>()
+
     render(
       <ChatAudioRecorder
+        ref={ref}
         controller={controller}
-        isRecording={true}
         onStart={onStart}
         onApprove={vi.fn()}
         onCancel={onCancel}
       />
     )
 
-    await waitFor(() => expect(controller.start).toHaveBeenCalled())
+    // Start recording via ref API
+    await ref.current?.startRecording()
+
+    expect(controller.start).toHaveBeenCalled()
+
+    // Wait for isRecording to become true
+    await waitFor(() => expect(ref.current?.isRecording).toBe(true))
 
     await userEvent.click(screen.getByRole("button", { name: /cancel/i }))
 
     expect(controller.cancel).toHaveBeenCalled()
     expect(onCancel).toHaveBeenCalled()
+
+    // Wait for isRecording to become false
+    await waitFor(() => expect(ref.current?.isRecording).toBe(false))
   })
 
   it("approves recording and sends blob/meta payload", async () => {
@@ -128,17 +138,25 @@ describe("ChatAudioRecorder", () => {
     const onStart = vi.fn()
     const controller = createController()
 
+    const ref = React.createRef<ChatAudioRecorderRef>()
+
     render(
       <ChatAudioRecorder
+        ref={ref}
         controller={controller}
-        isRecording={true}
         onStart={onStart}
         onApprove={onApprove}
         onCancel={vi.fn()}
       />
     )
 
-    await waitFor(() => expect(controller.start).toHaveBeenCalled())
+    // Start recording via ref API
+    await ref.current?.startRecording()
+
+    expect(controller.start).toHaveBeenCalled()
+
+    // Wait for isRecording to become true
+    await waitFor(() => expect(ref.current?.isRecording).toBe(true))
 
     await userEvent.click(screen.getByRole("button", { name: /approve/i }))
 
@@ -147,35 +165,47 @@ describe("ChatAudioRecorder", () => {
       blob: expect.any(Blob),
       meta: baseMeta,
     })
+    await waitFor(() => expect(ref.current?.isRecording).toBe(false))
   })
 
   it("exposes accessible labels", async () => {
     const controller = createController()
 
+    const ref = React.createRef<ChatAudioRecorderRef>()
+
     render(
       <ChatAudioRecorder
+        ref={ref}
         controller={controller}
-        isRecording={true}
         onStart={vi.fn()}
         onApprove={vi.fn()}
         onCancel={vi.fn()}
       />
     )
 
-    await waitFor(() => expect(controller.start).toHaveBeenCalled())
+    // Start recording via ref API
+    await ref.current?.startRecording()
+
+    expect(controller.start).toHaveBeenCalled()
+
+    // Wait for isRecording to become true
+    await waitFor(() => expect(ref.current?.isRecording).toBe(true))
+
     const group = screen.getByRole("group", { name: /recording/i })
     expect(group).toBeVisible()
     expect(screen.getByRole("button", { name: /cancel/i })).toBeVisible()
     expect(screen.getByRole("button", { name: /approve/i })).toBeVisible()
   })
 
-  it("does not render UI when isRecording is false", () => {
+  it("does not render UI when not recording", () => {
     const controller = createController()
+
+    const ref = React.createRef<ChatAudioRecorderRef>()
 
     render(
       <ChatAudioRecorder
+        ref={ref}
         controller={controller}
-        isRecording={false}
         onStart={vi.fn()}
         onApprove={vi.fn()}
         onCancel={vi.fn()}
@@ -183,6 +213,7 @@ describe("ChatAudioRecorder", () => {
     )
 
     // Should not show buttons when not recording
+    expect(ref.current?.isRecording).toBe(false)
     expect(
       screen.queryByRole("button", { name: /cancel/i })
     ).not.toBeInTheDocument()

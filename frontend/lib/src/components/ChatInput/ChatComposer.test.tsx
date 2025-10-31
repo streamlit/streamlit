@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React, { useEffect } from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
@@ -55,57 +53,93 @@ vi.mock("~lib/components/audio", () => ({
   useWaveformController: vi.fn(() => controllerMock),
 }))
 
-function MockChatAudioRecorder({
-  onCancel,
-  onApprove,
-  controller,
-  disabled,
-}: {
-  onCancel: () => void
-  onApprove: ({ blob, meta }: { blob: Blob; meta: unknown }) => void
-  controller: typeof controllerMock
-  disabled?: boolean
-}): React.ReactElement {
-  useEffect(() => {
-    void controller.start()
-  }, [controller])
+vi.mock("./ChatAudioRecorder", () => {
+  const React = require("react")
+  const { forwardRef, useImperativeHandle, useState, useEffect } = React
 
-  return (
-    <div data-testid="mock-recorder">
-      <button
-        type="button"
-        onClick={onCancel}
-        disabled={disabled}
-        data-testid="mock-recorder-cancel"
-      >
-        cancel
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onApprove({
-            blob: new Blob(["audio"], { type: "audio/webm" }),
-            meta: {
-              durationMs: 1200,
-              sampleRate: 16000,
-              mimeType: "audio/webm",
-              size: 2048,
-            },
-          })
-        }
-        disabled={disabled}
-        data-testid="mock-recorder-approve"
-      >
-        approve
-      </button>
-    </div>
-  )
-}
+  const MockChatAudioRecorder = forwardRef((props, ref) => {
+    const {
+      onCancel,
+      onApprove,
+      onRecordingStateChange,
+      controller,
+      disabled,
+    } = props
+    const [isRecording, setIsRecording] = useState(false)
 
-vi.mock("../ChatAudioRecorder", () => ({
-  __esModule: true,
-  default: MockChatAudioRecorder,
-}))
+    // Notify parent of recording state changes
+    useEffect(() => {
+      onRecordingStateChange?.(isRecording)
+    }, [isRecording, onRecordingStateChange])
+
+    // Expose the ref API
+    useImperativeHandle(
+      ref,
+      () => ({
+        startRecording: async () => {
+          setIsRecording(true)
+          await controller.start()
+        },
+        isRecording,
+      }),
+      [controller, isRecording]
+    )
+
+    const handleCancel = () => {
+      setIsRecording(false)
+      onCancel()
+    }
+
+    const handleApprove = () => {
+      setIsRecording(false)
+      onApprove({
+        blob: new Blob(["audio"], { type: "audio/webm" }),
+        meta: {
+          durationMs: 1200,
+          sampleRate: 16000,
+          mimeType: "audio/webm",
+          size: 2048,
+        },
+      })
+    }
+
+    if (!isRecording) {
+      return null
+    }
+
+    return React.createElement(
+      "div",
+      { "data-testid": "mock-recorder" },
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: handleCancel,
+          disabled,
+          "data-testid": "mock-recorder-cancel",
+        },
+        "cancel"
+      ),
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: handleApprove,
+          disabled,
+          "data-testid": "mock-recorder-approve",
+        },
+        "approve"
+      )
+    )
+  })
+
+  MockChatAudioRecorder.displayName = "MockChatAudioRecorder"
+
+  return {
+    __esModule: true,
+    default: MockChatAudioRecorder,
+  }
+})
 
 describe("ChatComposer", () => {
   beforeEach(() => {
@@ -129,13 +163,17 @@ describe("ChatComposer", () => {
     const micButton = screen.getByTestId("chat-composer-mic")
     await userEvent.click(micButton)
 
+    // Wait for the mock recorder to appear (indicating recording has started)
+    await waitFor(() =>
+      expect(screen.getByTestId("mock-recorder")).toBeVisible()
+    )
+
     expect(screen.getByTestId("chat-composer")).toHaveClass(
       "stChatComposer--recording"
     )
     expect(textarea).toBeDisabled()
     expect(screen.getByTestId("chat-composer-send")).toBeDisabled()
     expect(screen.getByTestId("chat-composer-attach")).toBeDisabled()
-    expect(screen.getByTestId("mock-recorder")).toBeVisible()
   })
 
   it("returns focus to input when recording is cancelled", async () => {
