@@ -137,3 +137,14 @@ export const StyledWaveformContainer =
     alignItems: "center",
     minWidth: 0, // Allow flex item to shrink below content size if needed
   }))
+
+export const StyledChatAudioWave = styled.div(({ theme }) => ({
+  position: "relative",
+  minHeight: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+  "& > div": {
+    position: "absolute",
+    inset: 0,
+  },
+}))
