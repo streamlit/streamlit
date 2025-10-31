@@ -128,9 +128,9 @@ export const StyledInputInstructionsContainer =
       bottom: "0px",
       // Calculate the right padding to account for button(s) on the right
       // Each button is: iconSizes.xl + 2 * spacing.sm
-      // When acceptAudio is true, there are 2 buttons (mic + send), otherwise just 1 (send)
+      // When acceptAudio is true, there are 2 buttons (mic + send) with gap between them
       right: acceptAudio
-        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + ${theme.spacing.sm})`
+        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + 2 * ${theme.spacing.sm})`
         : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
     })
   )
