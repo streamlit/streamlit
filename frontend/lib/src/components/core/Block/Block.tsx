@@ -33,7 +33,6 @@ import {
   MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
-import { LibContext } from "~lib/components/core/LibContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
@@ -67,23 +66,10 @@ import {
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { disableFullscreenMode: contextDisableFullscreenMode } =
-    useContext(LibContext)
-
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  const disableFullscreenMode =
-    contextDisableFullscreenMode || props.disableFullscreenMode
-
-  return (
-    <>
-      {RenderNodeVisitor.collectReactElements(
-        props,
-        Boolean(disableFullscreenMode)
-      )}
-    </>
-  )
+  return <>{RenderNodeVisitor.collectReactElements(props)}</>
 }
 
 /**
@@ -300,6 +286,9 @@ export const BlockNodeRenderer = (
 
   const childProps = { ...props, ...{ node } }
 
+  // Disable fullscreen mode if already disabled by parent
+  // (e.g., via libConfig or ancestor dialog/popover),
+  // or if this block itself is a dialog or popover
   const disableFullscreenMode =
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||

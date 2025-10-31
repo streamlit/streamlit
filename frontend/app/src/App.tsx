@@ -505,7 +505,7 @@ export class App extends PureComponent<Props, State> {
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
-        // Set the streamlit-lib specific config settings in LibContext:
+        // Set the streamlit-lib specific config settings in LibConfigContext:
         this.setLibConfig(libConfig)
       },
     })
@@ -2198,10 +2198,8 @@ export class App extends PureComponent<Props, State> {
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
-        componentRegistry={this.componentRegistry}
         // LibConfig properties
         mapboxToken={libConfig.mapboxToken}
-        disableFullscreenMode={libConfig.disableFullscreenMode}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
       >
@@ -2235,6 +2233,8 @@ export class App extends PureComponent<Props, State> {
                 inputsDisabled || connectionState !== ConnectionState.CONNECTED
               }
               showToolbar={showToolbar}
+              disableFullscreenMode={libConfig.disableFullscreenMode}
+              componentRegistry={this.componentRegistry}
               topRightContent={
                 <>
                   {!hideTopBar && (

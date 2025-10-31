@@ -70,9 +70,9 @@ import {
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { LibContext } from "~lib/components/core/LibContext"
 import Maybe from "~lib/components/core/Maybe"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
@@ -201,6 +201,7 @@ const RawElementNodeRenderer = (
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
+    componentRegistry: props.componentRegistry,
   }
 
   switch (node.element.type) {
@@ -718,7 +719,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen } = useContext(LibContext)
+  const { isFullScreen } = useContext(ViewStateContext)
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const { node } = props

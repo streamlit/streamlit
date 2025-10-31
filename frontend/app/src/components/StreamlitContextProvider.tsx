@@ -17,12 +17,11 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
-  ComponentRegistry,
   FormsContext,
   FormsContextProps,
   FormsData,
-  LibContext,
-  LibContextProps,
+  LibConfigContext,
+  LibConfigContextProps,
   NavigationContext,
   NavigationContextProps,
   ScriptRunContext,
@@ -33,23 +32,24 @@ import {
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
+  ViewStateContext,
+  ViewStateContextProps,
 } from "@streamlit/lib"
 import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
-// Type for LibContext props
-type LibContextValues = {
+type ViewStateContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
+}
+
+type LibConfigContextValues = {
   locale: typeof window.navigator.language
-  componentRegistry: ComponentRegistry
-  // Properties from LibConfig
+  // Selected libConfig properties
   mapboxToken?: string
-  disableFullscreenMode?: boolean
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
-// Type for NavigationContext props
 type NavigationContextValues = {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
@@ -58,7 +58,6 @@ type NavigationContextValues = {
   appPages: IAppPage[]
 }
 
-// Type for SidebarConfigContext props
 type SidebarConfigContextValues = {
   initialSidebarState: PageConfig.SidebarState
   appLogo: Logo | null
@@ -67,14 +66,12 @@ type SidebarConfigContextValues = {
   hideSidebarNav: boolean
 }
 
-// Type for ThemeContext props
 type ThemeContextValues = {
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
 }
 
-// Type for ScriptRunContext props
 type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
@@ -86,7 +83,8 @@ type FormsContextValues = {
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  LibContextValues &
+  ViewStateContextValues &
+    LibConfigContextValues &
     NavigationContextValues &
     SidebarConfigContextValues &
     ThemeContextValues &
@@ -99,13 +97,12 @@ export type StreamlitContextProviderProps = PropsWithChildren<
  * This centralizes the context values in one place.
  */
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
-  // LibContext
+  // ViewStateContext
   isFullScreen,
   setFullScreen,
+  // LibConfigContext
   locale,
-  componentRegistry,
   mapboxToken,
-  disableFullscreenMode,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   // NavigationContext
@@ -133,46 +130,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
-  // Memoized object for LibContext values
-  const libContextProps = useMemo<LibContextProps>(
+  // Memoized object for LibConfigContext values
+  const libConfigContextProps = useMemo<LibConfigContextProps>(
     () => ({
-      isFullScreen,
-      setFullScreen,
       locale,
-      componentRegistry,
       mapboxToken,
-      disableFullscreenMode,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
     }),
-    [
-      isFullScreen,
-      setFullScreen,
-      locale,
-      componentRegistry,
-      mapboxToken,
-      disableFullscreenMode,
-      enforceDownloadInNewTab,
-      resourceCrossOriginMode,
-    ]
-  )
-
-  // Memoized object for NavigationContext values
-  const navigationContextProps = useMemo<NavigationContextProps>(
-    () => ({
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    }),
-    [
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    ]
+    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
   )
 
   // Memoized object for SidebarConfigContext values
@@ -203,6 +169,33 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [activeTheme, setTheme, availableThemes]
   )
 
+  // Memoized object for NavigationContext values
+  const navigationContextProps = useMemo<NavigationContextProps>(
+    () => ({
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    }),
+    [
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    ]
+  )
+
+  // Memoized object for ViewStateContext values
+  const viewStateContextProps = useMemo<ViewStateContextProps>(
+    () => ({
+      isFullScreen,
+      setFullScreen,
+    }),
+    [isFullScreen, setFullScreen]
+  )
+
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
@@ -219,20 +212,31 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
+  /**
+   * Providers conceptually grouped by stability (most to least) as follows:
+   * Layer 1: App-level static configuration providers:
+   *   LibConfigContext & SidebarConfigContext
+   * Layer 2: User theme preference provider:
+   *   ThemeContext
+   * Layer 3: App interaction providers:
+   *   NavigationContext, ViewStateContext, ScriptRunContext, FormsContext
+   */
   return (
-    <LibContext.Provider value={libContextProps}>
+    <LibConfigContext.Provider value={libConfigContextProps}>
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
           <NavigationContext.Provider value={navigationContextProps}>
-            <FormsContext.Provider value={formsContextProps}>
+            <ViewStateContext.Provider value={viewStateContextProps}>
               <ScriptRunContext.Provider value={scriptRunContextProps}>
-                {children}
+                <FormsContext.Provider value={formsContextProps}>
+                  {children}
+                </FormsContext.Provider>
               </ScriptRunContext.Provider>
-            </FormsContext.Provider>
+            </ViewStateContext.Provider>
           </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>
-    </LibContext.Provider>
+    </LibConfigContext.Provider>
   )
 }
 

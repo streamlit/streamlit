@@ -19,14 +19,12 @@ import React from "react"
 import { renderHook } from "@testing-library/react"
 
 import {
-  ComponentRegistry,
-  LibContext,
-  mockEndpoints,
+  LibConfigContext,
+  LibConfigContextProps,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import type { LibContextProps } from "@streamlit/lib"
 
 import { useCrossOriginAttribute } from "./useCrossOriginAttribute"
 
@@ -38,23 +36,19 @@ const getWrapper = (
     // useMemo is not needed here as there is no performance benefit
     // new wrapper is created for each test
     // eslint-disable-next-line @eslint-react/no-unstable-context-value
-    const libContextValue: LibContextProps = {
-      isFullScreen: false,
-      setFullScreen: vi.fn(),
+    const libConfigContextValue: LibConfigContextProps = {
       resourceCrossOriginMode,
       mapboxToken: undefined,
-      disableFullscreenMode: undefined,
       enforceDownloadInNewTab: undefined,
       locale: "en-US",
-      componentRegistry: new ComponentRegistry(mockEndpoints()),
     }
 
     return (
-      <LibContext.Provider value={libContextValue}>
+      <LibConfigContext.Provider value={libConfigContextValue}>
         <ThemeProvider theme={mockTheme.emotion}>
           <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
         </ThemeProvider>
-      </LibContext.Provider>
+      </LibConfigContext.Provider>
     )
   }
 }

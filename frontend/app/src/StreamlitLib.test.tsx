@@ -27,12 +27,13 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  ComponentRegistry,
   ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
   FormsData,
   AppConfig as LibAppConfig,
-  LibContextProps,
+  LibConfigContextProps,
   render,
   ScriptRunState,
   SessionInfo,
@@ -133,6 +134,8 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
+  private readonly componentRegistry: ComponentRegistry
+
   public constructor(props: Props) {
     super(props)
 
@@ -141,6 +144,8 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    this.componentRegistry = new ComponentRegistry(this.endpoints)
 
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
@@ -238,6 +243,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
+        componentRegistry={this.componentRegistry}
         height="auto"
       />
     )
@@ -300,7 +306,7 @@ describe("StreamlitLibExample", () => {
 
     // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
     // LibContextProps extends LibConfig, so this verifies the inheritance is valid
-    const libConfigCheck: Partial<LibContextProps> = {
+    const libConfigCheck: Partial<LibConfigContextProps> = {
       mapboxToken: "test",
       disableFullscreenMode: false,
       enforceDownloadInNewTab: true,

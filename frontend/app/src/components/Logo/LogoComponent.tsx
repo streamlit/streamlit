@@ -23,7 +23,7 @@ import {
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { getCrossOriginAttribute, LibContext } from "@streamlit/lib"
+import { getCrossOriginAttribute, LibConfigContext } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
@@ -46,7 +46,7 @@ const LogoComponent = ({
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
-  const { resourceCrossOriginMode } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibConfigContext)
 
   if (!appLogo) {
     return null

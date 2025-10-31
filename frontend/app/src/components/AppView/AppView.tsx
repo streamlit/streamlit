@@ -39,6 +39,7 @@ import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
   BlockNode,
+  ComponentRegistry,
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
@@ -97,6 +98,10 @@ export interface AppViewProps {
   widgetsDisabled: boolean
 
   showToolbar: boolean
+
+  disableFullscreenMode?: boolean
+
+  componentRegistry: ComponentRegistry
 }
 
 /**
@@ -119,6 +124,8 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
     widgetsDisabled,
     showToolbar,
+    disableFullscreenMode,
+    componentRegistry,
   } = props
 
   useEffect(() => {
@@ -195,6 +202,8 @@ function AppView(props: AppViewProps): ReactElement {
       widgetMgr={widgetMgr}
       widgetsDisabled={widgetsDisabled}
       uploadClient={uploadClient}
+      disableFullscreenMode={disableFullscreenMode}
+      componentRegistry={componentRegistry}
       height="auto"
       isRoot={true}
     />

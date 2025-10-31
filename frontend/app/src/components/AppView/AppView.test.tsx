@@ -22,6 +22,7 @@ import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
 import {
   AppRoot,
   BlockNode,
+  ComponentRegistry,
   ElementNode,
   FileUploadClient,
   makeElementWithInfoText,
@@ -106,6 +107,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     navigationPosition: Navigation.Position.SIDEBAR,
     addScriptFinishedHandler: vi.fn(),
     removeScriptFinishedHandler: vi.fn(),
+    componentRegistry: new ComponentRegistry(mockEndpointProp),
     ...props,
   }
 }

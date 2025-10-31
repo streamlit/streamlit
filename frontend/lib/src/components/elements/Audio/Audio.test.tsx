@@ -156,7 +156,7 @@ describe("Audio Element", () => {
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<Audio {...props} />, {
-          libContext: {
+          libConfigContext: {
             resourceCrossOriginMode,
           },
         })
@@ -239,7 +239,7 @@ describe("Audio Element", () => {
         ({ expected, resourceCrossOriginMode, url }) => {
           const props = getProps({ url })
           renderWithContexts(<Audio {...props} />, {
-            libContext: {
+            libConfigContext: {
               resourceCrossOriginMode,
             },
           })

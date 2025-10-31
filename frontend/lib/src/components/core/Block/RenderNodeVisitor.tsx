@@ -47,14 +47,12 @@ export class RenderNodeVisitor
   implements AppNodeVisitor<OptionalReactElement>
 {
   private readonly props: BlockPropsWithoutWidth
-  private readonly disableFullscreenMode: boolean
   private readonly elementKeySet: Set<string>
   public readonly reactElements: OptionalReactElement[]
   private index: number
 
-  constructor(props: BlockPropsWithoutWidth, disableFullscreenMode: boolean) {
+  constructor(props: BlockPropsWithoutWidth) {
     this.props = props
-    this.disableFullscreenMode = disableFullscreenMode
     this.elementKeySet = new Set<string>()
     this.reactElements = [] as OptionalReactElement[]
     // Initialize index to 0 as we will use it as a key in the React component
@@ -74,7 +72,6 @@ export class RenderNodeVisitor
     // guarantee it doesn't get overwritten by {...childProps}.
     const childProps = {
       ...this.props,
-      disableFullscreenMode: this.disableFullscreenMode,
       node,
     }
 
@@ -90,7 +87,6 @@ export class RenderNodeVisitor
     // guarantee it doesn't get overwritten by {...childProps}.
     const childProps = {
       ...this.props,
-      disableFullscreenMode: this.disableFullscreenMode,
       node,
     }
 
@@ -128,14 +124,13 @@ export class RenderNodeVisitor
    * }
    */
   static collectReactElements(
-    props: BlockPropsWithoutWidth,
-    disableFullscreenMode: boolean
+    props: BlockPropsWithoutWidth
   ): OptionalReactElement[] {
     if (!props.node.children) {
       return []
     }
 
-    const visitor = new RenderNodeVisitor(props, disableFullscreenMode)
+    const visitor = new RenderNodeVisitor(props)
     // Visit all the children nodes and collect the react elements
     props.node.children.forEach(childNode => childNode.accept(visitor))
 

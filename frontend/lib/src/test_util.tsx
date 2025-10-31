@@ -31,7 +31,10 @@ import {
 } from "./components/core/FormsContext"
 import { FlexContext } from "./components/core/Layout/FlexContext"
 import { Direction } from "./components/core/Layout/utils"
-import { LibContext, LibContextProps } from "./components/core/LibContext"
+import {
+  LibConfigContext,
+  LibConfigContextProps,
+} from "./components/core/LibConfigContext"
 import {
   NavigationContext,
   NavigationContextProps,
@@ -49,9 +52,11 @@ import {
   ThemeContextProps,
 } from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
+import {
+  ViewStateContext,
+  ViewStateContextProps,
+} from "./components/core/ViewStateContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-import { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
-import { mockEndpoints } from "./mocks/mocks"
 import { mockTheme } from "./mocks/mockTheme"
 import { ScriptRunState } from "./ScriptRunState"
 import { createFormsData } from "./WidgetStateManager"
@@ -63,10 +68,19 @@ const flexContextValue = {
   isInContentWidthContainer: false,
 }
 
-const defaultScriptRunContextValue = {
-  scriptRunState: ScriptRunState.NOT_RUNNING,
-  scriptRunId: "script run 123",
-  fragmentIdsThisRun: [],
+const defaultLibConfigContextValue = {
+  locale: "en-US",
+  mapboxToken: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
+}
+
+const defaultSidebarConfigContextValue = {
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
 }
 
 const defaultThemeContextValue = {
@@ -83,12 +97,15 @@ const defaultNavigationContextValue = {
   appPages: [],
 }
 
-const defaultSidebarConfigContextValue = {
-  initialSidebarState: PageConfig.SidebarState.AUTO,
-  appLogo: null,
-  sidebarChevronDownshift: 0,
-  expandSidebarNav: false,
-  hideSidebarNav: false,
+const defaultViewStateContextValue = {
+  isFullScreen: false,
+  setFullScreen: vi.fn(),
+}
+
+const defaultScriptRunContextValue = {
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "script run 123",
+  fragmentIdsThisRun: [],
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -96,21 +113,27 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          <SidebarConfigContext.Provider
-            value={defaultSidebarConfigContextValue}
-          >
-            <ThemeContext.Provider value={defaultThemeContextValue}>
-              <NavigationContext.Provider
-                value={defaultNavigationContextValue}
-              >
-                <ScriptRunContext.Provider
-                  value={defaultScriptRunContextValue}
+          <LibConfigContext.Provider value={defaultLibConfigContextValue}>
+            <SidebarConfigContext.Provider
+              value={defaultSidebarConfigContextValue}
+            >
+              <ThemeContext.Provider value={defaultThemeContextValue}>
+                <ViewStateContext.Provider
+                  value={defaultViewStateContextValue}
                 >
-                  {children}
-                </ScriptRunContext.Provider>
-              </NavigationContext.Provider>
-            </ThemeContext.Provider>
-          </SidebarConfigContext.Provider>
+                  <NavigationContext.Provider
+                    value={defaultNavigationContextValue}
+                  >
+                    <ScriptRunContext.Provider
+                      value={defaultScriptRunContextValue}
+                    >
+                      {children}
+                    </ScriptRunContext.Provider>
+                  </NavigationContext.Provider>
+                </ViewStateContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
+          </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -149,7 +172,8 @@ export function mockWindowLocation(hostname: string): void {
  * All properties are optional - only provide the contexts you need to override.
  */
 export interface RenderWithContextsOptions {
-  libContext?: Partial<LibContextProps>
+  viewStateContext?: Partial<ViewStateContextProps>
+  libConfigContext?: Partial<LibConfigContextProps>
   sidebarConfigContext?: Partial<SidebarConfigContextProps>
   themeContext?: Partial<ThemeContextProps>
   navigationContext?: Partial<NavigationContextProps>
@@ -176,8 +200,8 @@ export interface RenderWithContextsResult extends RenderResult {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in Providers for LibContext, SidebarConfigContext, ThemeContext,
- * NavigationContext, FormsContext, and ScriptRunContext.
+ * wrapped in Providers for ViewStateContext, LibConfigContext, SidebarConfigContext,
+ * ThemeContext, NavigationContext, FormsContext, and ScriptRunContext.
  *
  * Returns an extended RenderResult with a `rerenderWithContexts` method that
  * allows updating context values during re-renders.
@@ -189,7 +213,8 @@ export interface RenderWithContextsResult extends RenderResult {
  * @example
  * renderWithContexts(<MyComponent />, {
  *   navigationContext: { appPages: [...] },
- *   themeContext: { activeTheme: customTheme }
+ *   themeContext: { activeTheme: customTheme },
+ *   viewStateContext: { isFullScreen: true }
  * })
  */
 export const renderWithContexts = (
@@ -199,17 +224,15 @@ export const renderWithContexts = (
   // Track current context values across rerenders.
   // The Wrapper component below reads these on each render,
   // so updating them in rerenderWithContexts will affect subsequent renders.
-  let currentLibContextProps: LibContextProps = {
-    isFullScreen: false,
-    setFullScreen: vi.fn(),
+
+  // Use let to allow reassignment in rerenderWithContexts
+  let currentLibConfigContextProps: LibConfigContextProps = {
+    locale: "en-US",
     // Flattened libConfig properties:
     mapboxToken: undefined,
-    disableFullscreenMode: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
-    locale: "en-US",
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
-    ...options.libContext,
+    ...options.libConfigContext,
   }
 
   let currentSidebarConfigContextProps: SidebarConfigContextProps = {
@@ -237,9 +260,10 @@ export const renderWithContexts = (
     ...options.navigationContext,
   }
 
-  let currentFormsContextProps: FormsContextProps = {
-    formsData: createFormsData(),
-    ...options.formsContext,
+  let currentViewStateContextProps: ViewStateContextProps = {
+    isFullScreen: false,
+    setFullScreen: vi.fn(),
+    ...options.viewStateContext,
   }
 
   let currentScriptRunContextProps: ScriptRunContextProps = {
@@ -249,11 +273,16 @@ export const renderWithContexts = (
     ...options.scriptRunContext,
   }
 
+  let currentFormsContextProps: FormsContextProps = {
+    formsData: createFormsData(),
+    ...options.formsContext,
+  }
+
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          <LibContext.Provider value={currentLibContextProps}>
+          <LibConfigContext.Provider value={currentLibConfigContextProps}>
             <SidebarConfigContext.Provider
               value={currentSidebarConfigContextProps}
             >
@@ -261,17 +290,21 @@ export const renderWithContexts = (
                 <NavigationContext.Provider
                   value={currentNavigationContextProps}
                 >
-                  <FormsContext.Provider value={currentFormsContextProps}>
+                  <ViewStateContext.Provider
+                    value={currentViewStateContextProps}
+                  >
                     <ScriptRunContext.Provider
                       value={currentScriptRunContextProps}
                     >
-                      {children}
+                      <FormsContext.Provider value={currentFormsContextProps}>
+                        {children}
+                      </FormsContext.Provider>
                     </ScriptRunContext.Provider>
-                  </FormsContext.Provider>
+                  </ViewStateContext.Provider>
                 </NavigationContext.Provider>
               </ThemeContext.Provider>
             </SidebarConfigContext.Provider>
-          </LibContext.Provider>
+          </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -288,10 +321,16 @@ export const renderWithContexts = (
       newOptions?: RenderWithContextsOptions
     ): void => {
       // Update context values if provided
-      if (newOptions?.libContext) {
-        currentLibContextProps = {
-          ...currentLibContextProps,
-          ...newOptions.libContext,
+      if (newOptions?.viewStateContext) {
+        currentViewStateContextProps = {
+          ...currentViewStateContextProps,
+          ...newOptions.viewStateContext,
+        }
+      }
+      if (newOptions?.libConfigContext) {
+        currentLibConfigContextProps = {
+          ...currentLibConfigContextProps,
+          ...newOptions.libConfigContext,
         }
       }
       if (newOptions?.sidebarConfigContext) {

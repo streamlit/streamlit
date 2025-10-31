@@ -24,7 +24,7 @@ import React, {
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -48,7 +48,7 @@ function DownloadButton(props: Props): ReactElement {
   const { help, label, icon, ignoreRerun, type, url } = element
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibContext)
+  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
 
   let kind = BaseButtonKind.SECONDARY
   if (type === "primary") {
