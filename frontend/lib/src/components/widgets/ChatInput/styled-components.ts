@@ -114,6 +114,7 @@ export const StyledSendIconButtonContainer =
     marginBottom: isRecording ? 0 : `-${theme.sizes.borderWidth}`,
     pointerEvents: "none",
     gap: isRecording ? theme.spacing.sm : 0,
+    paddingRight: isRecording ? theme.spacing.sm : 0,
   }))
 
 export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
