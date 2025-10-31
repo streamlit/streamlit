@@ -144,19 +144,14 @@ def record_audio_in_chat_input(
         chat_input: Locator for the chat input element
         duration_ms: Duration to record in milliseconds
     """
-    # Click microphone button to start recording
-    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
-    expect(mic_button).to_be_visible()
-    mic_button.click()
-
-    # Wait for approve button to appear (indicates recording started)
-    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
-    expect(approve_button).to_be_visible()
+    # Start recording
+    start_audio_recording(chat_input)
 
     # Record for the specified duration (wait_for_timeout is acceptable here)
     app.wait_for_timeout(duration_ms)
 
     # Click approve button - this submits the chat input automatically
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
     approve_button.click()
 
     wait_for_app_run(app)
