@@ -165,7 +165,7 @@ describe("ChatComposer", () => {
     const sendChatSubmit = vi.fn().mockResolvedValue(undefined)
     render(<ChatComposer sendChatSubmit={sendChatSubmit} />)
 
-    expect(screen.queryByTestId("chat-composer-mic")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("chat-composer-mic")).toBeNull()
   })
 
   it("enters recording mode and disables controls when mic is clicked", async () => {

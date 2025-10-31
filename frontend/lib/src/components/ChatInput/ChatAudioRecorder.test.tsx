@@ -214,12 +214,8 @@ describe("ChatAudioRecorder", () => {
 
     // Should not show buttons when not recording
     expect(ref.current?.isRecording).toBe(false)
-    expect(
-      screen.queryByRole("button", { name: /cancel/i })
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: /approve/i })
-    ).not.toBeInTheDocument()
-    expect(screen.queryByRole("group")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /cancel/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /approve/i })).toBeNull()
+    expect(screen.queryByRole("group")).toBeNull()
   })
 })
