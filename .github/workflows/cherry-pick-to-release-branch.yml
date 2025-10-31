@@ -43,8 +43,9 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: cherry-pick-to-release-branch-${{ inputs.release_version || github.sha }}
+  group: cherry-pick-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: false
+
 
 jobs:
   cherry-pick:
