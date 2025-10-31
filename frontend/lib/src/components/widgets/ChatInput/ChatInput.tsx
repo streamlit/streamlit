@@ -40,7 +40,6 @@ import {
 
 import { useWaveformController } from "~lib/components/audio"
 import { LOG } from "~lib/components/ChatInput/logger"
-
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
