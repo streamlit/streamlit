@@ -237,7 +237,7 @@ const initialTab = props.defaultTab ?? "overview"
 ### Review heuristics (quick scans)
 
 - Search for `useEffect` followed by immediate `setState` of values derivable from render inputs.
-  +- Effects that only read props/state and don’t touch external systems are candidates for removal.
+  - Effects that only read props/state and don’t touch external systems are candidates for removal.
 - Multiple Effects updating each other’s state in a chain indicate a missing render-time computation or misplaced event logic.
 - Effects creating event listeners/timers without `return` cleanup are bugs.
 
