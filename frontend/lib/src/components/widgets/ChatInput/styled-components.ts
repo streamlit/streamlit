@@ -108,14 +108,12 @@ export const StyledSendIconButtonContainer =
     display: "flex",
     alignItems: isRecording ? "center" : "flex-end",
     height: "100%",
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    // Negative margin to offset the parent border width when we align button to end
+    position: isRecording ? "static" : "absolute",
+    right: isRecording ? undefined : 0,
+    bottom: isRecording ? undefined : 0,
     marginBottom: isRecording ? 0 : `-${theme.sizes.borderWidth}`,
     pointerEvents: "none",
-    gap: isRecording ? theme.spacing.twoXS : 0,
-    paddingRight: isRecording ? theme.spacing.sm : 0,
+    gap: isRecording ? theme.spacing.sm : 0,
   }))
 
 export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
