@@ -55,21 +55,7 @@ def test_layouts_container_various_elements(
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
         expect(locator).to_be_visible()
-
-        # Use higher threshold for container with charts and content width to prevent flakiness.
-        if (
-            key
-            == "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts"
-        ):
-            assert_snapshot(
-                locator,
-                name=f"st_layouts_container_various_elements-{key}",
-                image_threshold=0.2,
-            )
-        else:
-            assert_snapshot(
-                locator, name=f"st_layouts_container_various_elements-{key}"
-            )
+        assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox

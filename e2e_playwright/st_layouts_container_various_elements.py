@@ -264,15 +264,18 @@ with st.container(
     st.dataframe(medium_data, width="content")
 
 with st.container(
-    horizontal=True,
-    width="content",
-    border=True,
-    gap="medium",
+    width=700,
     key="layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
 ):
-    st.metric("Metric", "100", width="stretch")
-    st.dataframe(medium_data, width="stretch")
-    st.line_chart(chart_data1, width="stretch")
+    with st.container(
+        horizontal=True,
+        width="content",
+        border=True,
+        gap="medium",
+    ):
+        st.metric("Metric", "100", width="stretch")
+        st.dataframe(medium_data, width="stretch")
+        st.line_chart(chart_data1, width="stretch")
 
 with st.container(
     width="content", border=True, key="layout-vertical-content-width-container-with-map"
