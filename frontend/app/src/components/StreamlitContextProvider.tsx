@@ -37,13 +37,11 @@ import {
 } from "@streamlit/lib"
 import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
-// Type for ViewStateContext props
 type ViewStateContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
 }
 
-// Type for LibConfigContext props
 type LibConfigContextValues = {
   locale: typeof window.navigator.language
   // Selected libConfig properties
@@ -52,7 +50,6 @@ type LibConfigContextValues = {
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
-// Type for NavigationContext props
 type NavigationContextValues = {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
@@ -61,7 +58,6 @@ type NavigationContextValues = {
   appPages: IAppPage[]
 }
 
-// Type for SidebarConfigContext props
 type SidebarConfigContextValues = {
   initialSidebarState: PageConfig.SidebarState
   appLogo: Logo | null
@@ -70,14 +66,12 @@ type SidebarConfigContextValues = {
   hideSidebarNav: boolean
 }
 
-// Type for ThemeContext props
 type ThemeContextValues = {
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
 }
 
-// Type for ScriptRunContext props
 type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
@@ -218,6 +212,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
+  /**
+   * Providers conceptually grouped by stability (most to least) as follows:
+   * Layer 1: App-level static configuration providers:
+   *   LibConfigContext & SidebarConfigContext
+   * Layer 2: User theme preference provider:
+   *   ThemeContext
+   * Layer 3: App interaction providers:
+   *   NavigationContext, ViewStateContext, ScriptRunContext, FormsContext
+   */
   return (
     <LibConfigContext.Provider value={libConfigContextProps}>
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
