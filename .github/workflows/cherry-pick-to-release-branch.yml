@@ -12,13 +12,35 @@ on:
         required: true
         type: string
       dry_run:
-        description: "Run without pushing or sending Slack notifications"
+        description: "Run without pushing / PR or Slack"
         required: false
         type: boolean
         default: false
+      create_pr:
+        description: "Create a PR instead of pushing directly"
+        required: false
+        type: boolean
+        default: true
+      pr_reviewers:
+        description: "Comma-separated GitHub usernames to request review from"
+        required: false
+        type: string
+      pr_labels:
+        description: "Comma-separated labels to add to the PR"
+        required: false
+        type: string
+      commit_author_name:
+        description: "Override author name (optional)"
+        required: false
+        type: string
+      commit_author_email:
+        description: "Override author email (optional)"
+        required: false
+        type: string
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: cherry-pick-to-release-branch-${{ inputs.release_version || github.sha }}
@@ -26,15 +48,28 @@ concurrency:
 
 jobs:
   cherry-pick:
-    name: Cherry-pick ${{ inputs.cherry_pick_sha }} to release/${{ inputs.release_version }}
+    name: Cherry-pick ${{ inputs.cherry_pick_sha }} → release/${{ inputs.release_version }}
     if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+
+    env:
+      REL_VER: ${{ inputs.release_version }}
+      SHA: ${{ inputs.cherry_pick_sha }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      CREATE_PR: ${{ inputs.create_pr }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           persist-credentials: true
+
+      - name: Git safe setup
+        run: |
+          git config --global safe.directory '*'
+          git config --global init.defaultBranch main
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -44,64 +79,93 @@ jobs:
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
-      - name: Set up uv
+      - name: Set up uv (only if Slack is enabled)
+        if: ${{ env.SLACK_WEBHOOK != '' && inputs.dry_run != true }}
         uses: astral-sh/setup-uv@v7
 
-      - name: Install Python deps for slack notifications
+      - name: Install Python deps for Slack (conditional)
+        if: ${{ env.SLACK_WEBHOOK != '' && inputs.dry_run != true }}
         run: |
           uv pip install --system requests
 
-      - name: Configure Git
+      - name: Configure Git identity
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          NAME="${{ inputs.commit_author_name || github.actor }}"
+          EMAIL="${{ inputs.commit_author_email || format('{0}@users.noreply.github.com', github.actor) }}"
+          git config user.name "$NAME"
+          git config user.email "$EMAIL"
+          echo "Using author: $NAME <$EMAIL>"
 
-      - name: Define variables
+      - name: Define variables & validate inputs
         id: vars
         run: |
           set -euo pipefail
 
-          REL_VER='${{ inputs.release_version }}'
-          # Validate release version format before use
           if ! echo "${REL_VER}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::release_version must be full semver (i.j.k). Got '${REL_VER}'" >&2
             exit 1
           fi
-
-          REL_BRANCH="release/${REL_VER}"
-          SHA='${{ inputs.cherry_pick_sha }}'
           if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
             echo "::error::cherry_pick_sha must be a valid Git commit SHA. Got '${SHA}'" >&2
             exit 1
           fi
 
-          echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
+          REL_BRANCH="release/${REL_VER}"
 
-      - name: Validate inputs and repository state
+          echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(echo "${SHA}" | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure release branch exists remotely
         run: |
           set -euo pipefail
-          # Ensure target branch exists on origin by attempting a shallow fetch of that branch
-          if ! git fetch --no-tags --depth=1 origin "${{ steps.vars.outputs.release_branch }}"; then
+          if ! git ls-remote --heads origin "${{ steps.vars.outputs.release_branch }}" >/dev/null; then
             echo "::error::Branch '${{ steps.vars.outputs.release_branch }}' does not exist on origin" >&2
             exit 1
           fi
 
-      - name: Checkout release branch
+      - name: Verify commit exists in remote history
+        run: |
+          set -euo pipefail
+          # fetch the specific object if needed
+          git fetch --no-tags origin "${SHA}:${SHA}" || true
+          if ! git cat-file -e "${SHA}^{commit}" 2>/dev/null; then
+            echo "::error::Commit '${SHA}' not found in remote. Ensure the SHA is from this repository." >&2
+            exit 1
+          fi
+
+      - name: Checkout release branch (tracking)
         run: |
           set -euo pipefail
           git checkout -B "${{ steps.vars.outputs.release_branch }}" "origin/${{ steps.vars.outputs.release_branch }}"
           echo "Checked out '${{ steps.vars.outputs.release_branch }}'"
 
-      - name: Attempt cherry-pick
+      - name: Create work branch
+        id: workbranch
+        run: |
+          set -euo pipefail
+          WB="cp-${{ steps.vars.outputs.short_sha }}-to-${{ steps.vars.outputs.release_branch##*/ }}"
+          git checkout -b "$WB"
+          echo "work_branch=$WB" >> "$GITHUB_OUTPUT"
+
+      - name: Attempt cherry-pick (-x to keep trailer)
         id: cp
         run: |
           set +e
-          git cherry-pick "${{ inputs.cherry_pick_sha }}"
+          git cherry-pick -x "${SHA}"
           status=$?
           set -e
           if [ $status -ne 0 ]; then
             conflict_files=$(git diff --name-only --diff-filter=U || true)
+            # Save conflict metadata for artifacts
+            mkdir -p artifacts
+            printf "%s\n" "$conflict_files" > artifacts/conflict-files.txt || true
+            # Create a patch up to conflict point for local help
+            git diff > artifacts/work-in-progress.diff || true
+            git status --porcelain=v1 > artifacts/git-status.txt || true
+
+            # Abort to leave repo clean for subsequent steps
             git cherry-pick --abort || true
+
             {
               echo "status=failed"
               if [ -n "$conflict_files" ]; then
@@ -115,11 +179,48 @@ jobs:
             echo "status=success" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Push release branch
-        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+      - name: Upload conflict artifacts (if any)
+        if: ${{ steps.cp.outputs.status == 'failed' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cherry-pick-conflicts-${{ steps.vars.outputs.short_sha }}
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Push work branch (only on success & not dry run & if creating PR)
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true && inputs.create_pr == true }}
         run: |
           set -euo pipefail
-          git push origin "${{ steps.vars.outputs.release_branch }}:${{ steps.vars.outputs.release_branch }}"
+          git push --set-upstream origin "${{ steps.workbranch.outputs.work_branch }}"
+
+      - name: Push directly to release branch (only on success & not dry run & if not creating PR)
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true && inputs.create_pr != true }}
+        run: |
+          set -euo pipefail
+          git push origin "${{ steps.workbranch.outputs.work_branch }}:${{ steps.vars.outputs.release_branch }}"
+
+      - name: Create PR (optional)
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true && inputs.create_pr == true }}
+        uses: peter-evans/create-pull-request@v6
+        id: cpr
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.workbranch.outputs.work_branch }}
+          base: ${{ steps.vars.outputs.release_branch }}
+          title: "Cherry-pick ${{ steps.vars.outputs.short_sha }} → ${{ steps.vars.outputs.release_branch }}"
+          commit-message: "Cherry-pick ${{ steps.vars.outputs.short_sha }} → ${{ steps.vars.outputs.release_branch }}"
+          body: |
+            This PR cherry-picks commit `${{ env.SHA }}` into `release/${{ env.REL_VER }}`.
+
+            - Source commit: https://github.com/${{ github.repository }}/commit/${{ env.SHA }}
+            - Target branch: `${{ steps.vars.outputs.release_branch }}`
+            - Triggered by: @${{ github.actor }}
+
+            If CI is green, please **Merge** to include in the release.
+          labels: ${{ inputs.pr_labels }}
+          reviewers: ${{ inputs.pr_reviewers }}
+          draft: false
 
       - name: Write step summary
         env:
@@ -129,27 +230,43 @@ jobs:
           STATUS: ${{ steps.cp.outputs.status }}
           ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
           DRY_RUN: ${{ inputs.dry_run }}
+          CREATE_PR: ${{ inputs.create_pr }}
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+          WORK_BRANCH: ${{ steps.workbranch.outputs.work_branch }}
         run: |
           {
             echo "## Cherry-Pick to Release Branch"
             echo "- Release version: ${RELEASE_VERSION}"
             echo "- Release branch: \`${RELEASE_BRANCH}\`"
+            echo "- Work branch: \`${WORK_BRANCH}\`"
             echo "- Commit: \`${CHERRY_PICK_SHA}\`"
             echo "- Status: ${STATUS:-unknown}"
             if [ "${DRY_RUN}" = "true" ]; then
-              echo "- Dry run: true (no push, no Slack)"
-            elif [ "${STATUS}" = "success" ]; then
-              echo "- Pushed: yes"
+              echo "- Dry run: true (no push, no PR, no Slack)"
             else
-              echo "- Pushed: no"
+              if [ "${STATUS}" = "success" ]; then
+                if [ "${CREATE_PR}" = "true" ]; then
+                  echo "- PR: ${PR_URL:-_not created_}"
+                else
+                  echo "- Pushed directly to \`${RELEASE_BRANCH}\`: yes"
+                fi
+              else
+                echo "- Pushed/PR: no"
+              fi
             fi
             if [ -n "${ERROR_REASON:-}" ]; then
               echo "- Note: ${ERROR_REASON}"
+              echo ""
+              echo "### Conflict help"
+              echo "If conflicts occurred, download the artifact and resolve locally:"
+              echo "1. \`git fetch origin ${WORK_BRANCH} && git checkout ${WORK_BRANCH}\`"
+              echo "2. Re-run \`git cherry-pick -x ${CHERRY_PICK_SHA}\` and resolve"
+              echo "3. \`git push origin ${WORK_BRANCH}\` (if PR) or push to release branch directly"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Slack notification - success
-        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+        if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true && env.SLACK_WEBHOOK != '' }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
@@ -157,11 +274,13 @@ jobs:
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
           CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
           RUN_ID: ${{ github.run_id }}
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+          WORK_BRANCH: ${{ steps.workbranch.outputs.work_branch }}
         run: |
           python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
 
       - name: Slack notification - failure
-        if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
+        if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true && env.SLACK_WEBHOOK != '' }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           REPO: ${{ github.repository }}
