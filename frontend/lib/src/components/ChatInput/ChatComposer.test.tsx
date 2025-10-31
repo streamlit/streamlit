@@ -57,81 +57,96 @@ vi.mock("./ChatAudioRecorder", () => {
   const React = require("react")
   const { forwardRef, useImperativeHandle, useState, useEffect } = React
 
-  const MockChatAudioRecorder = forwardRef((props, ref) => {
-    const {
-      onCancel,
-      onApprove,
-      onRecordingStateChange,
-      controller,
-      disabled,
-    } = props
-    const [isRecording, setIsRecording] = useState(false)
+  interface MockProps {
+    controller: typeof controllerMock
+    onApprove: (payload: { blob: Blob; meta: unknown }) => void
+    onCancel: () => void
+    onRecordingStateChange?: (isRecording: boolean) => void
+    disabled?: boolean
+  }
 
-    // Notify parent of recording state changes
-    useEffect(() => {
-      onRecordingStateChange?.(isRecording)
-    }, [isRecording, onRecordingStateChange])
+  interface MockRef {
+    startRecording: () => Promise<void>
+    readonly isRecording: boolean
+  }
 
-    // Expose the ref API
-    useImperativeHandle(
-      ref,
-      () => ({
-        startRecording: async () => {
-          setIsRecording(true)
-          await controller.start()
-        },
-        isRecording,
-      }),
-      [controller, isRecording]
-    )
+  const MockChatAudioRecorder = forwardRef<MockRef, MockProps>(
+    (props, ref) => {
+      const {
+        onCancel,
+        onApprove,
+        onRecordingStateChange,
+        controller,
+        disabled,
+      } = props
+      const [isRecording, setIsRecording] = useState(false)
 
-    const handleCancel = () => {
-      setIsRecording(false)
-      onCancel()
-    }
+      // Notify parent of recording state changes
+      useEffect(() => {
+        onRecordingStateChange?.(isRecording)
+      }, [isRecording, onRecordingStateChange])
 
-    const handleApprove = () => {
-      setIsRecording(false)
-      onApprove({
-        blob: new Blob(["audio"], { type: "audio/webm" }),
-        meta: {
-          durationMs: 1200,
-          sampleRate: 16000,
-          mimeType: "audio/webm",
-          size: 2048,
-        },
-      })
-    }
-
-    if (!isRecording) {
-      return null
-    }
-
-    return React.createElement(
-      "div",
-      { "data-testid": "mock-recorder" },
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          onClick: handleCancel,
-          disabled,
-          "data-testid": "mock-recorder-cancel",
-        },
-        "cancel"
-      ),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          onClick: handleApprove,
-          disabled,
-          "data-testid": "mock-recorder-approve",
-        },
-        "approve"
+      // Expose the ref API
+      useImperativeHandle(
+        ref,
+        () => ({
+          startRecording: async () => {
+            setIsRecording(true)
+            await controller.start()
+          },
+          isRecording,
+        }),
+        [controller, isRecording]
       )
-    )
-  })
+
+      const handleCancel = (): void => {
+        setIsRecording(false)
+        onCancel()
+      }
+
+      const handleApprove = (): void => {
+        setIsRecording(false)
+        onApprove({
+          blob: new Blob(["audio"], { type: "audio/webm" }),
+          meta: {
+            durationMs: 1200,
+            sampleRate: 16000,
+            mimeType: "audio/webm",
+            size: 2048,
+          },
+        })
+      }
+
+      if (!isRecording) {
+        return null
+      }
+
+      return React.createElement(
+        "div",
+        { "data-testid": "mock-recorder" },
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: handleCancel,
+            disabled,
+            "data-testid": "mock-recorder-cancel",
+          },
+          "cancel"
+        ),
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: handleApprove,
+            disabled,
+            "data-testid": "mock-recorder-approve",
+          },
+          "approve"
+        )
+      )
+    }
+  )
 
   MockChatAudioRecorder.displayName = "MockChatAudioRecorder"
 
