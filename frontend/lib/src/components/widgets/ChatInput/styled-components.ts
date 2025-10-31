@@ -140,6 +140,7 @@ export const StyledWaveformContainer =
 
 export const StyledChatAudioWave = styled.div(({ theme }) => ({
   position: "relative",
+  width: "100%",
   minHeight: theme.sizes.minElementHeight,
   borderRadius: theme.radii.default,
   overflow: "hidden",
