@@ -34,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_CHAT_INPUT_WIDGETS = 17
+NUM_CHAT_INPUT_WIDGETS = 16
 
 
 def expect_chat_input_value_contains_text(app: Page, key: str, text: str) -> None:
@@ -230,10 +230,10 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         get_element_by_key(app, "chat_input_13"), name="st_chat_input-audio_disabled"
     )
     assert_snapshot(
-        get_element_by_key(app, "chat_input_15"), name="st_chat_input-column_audio"
+        get_element_by_key(app, "chat_input_14"), name="st_chat_input-column_audio"
     )
     assert_snapshot(
-        get_element_by_key(app, "chat_input_16"),
+        get_element_by_key(app, "chat_input_15"),
         name="st_chat_input-column_audio_with_files",
     )
 
@@ -1221,21 +1221,8 @@ def test_audio_container_contexts(app: Page):
     grant_microphone_permissions(app)
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    # Test 1: Audio in sidebar
-    sidebar_input = get_element_by_key(app, "chat_input_14")
-    # Scroll sidebar into view
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
-
-    sidebar_input.scroll_into_view_if_needed()
-    expect(sidebar_input).to_be_visible()
-
-    # Verify mic button exists in sidebar
-    mic_button = sidebar_input.get_by_test_id("stChatInputMicButton")
-    expect(mic_button).to_be_visible()
-
-    # Test 2: Audio in columns
-    col_input = get_element_by_key(app, "chat_input_15")
+    # Audio in columns
+    col_input = get_element_by_key(app, "chat_input_14")
     col_input.scroll_into_view_if_needed()
     expect(col_input).to_be_visible()
 
@@ -1247,7 +1234,7 @@ def test_audio_container_contexts(app: Page):
     record_audio_in_chat_input(app, col_input, duration_ms=800)
 
     # Verify it worked - check for audio output in new format
-    expect(app.get_by_text("chat_input_15 audio:", exact=False)).to_be_visible()
+    expect(app.get_by_text("chat_input_14 audio:", exact=False)).to_be_visible()
 
 
 def test_audio_disabled_states(app: Page):

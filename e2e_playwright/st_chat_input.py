@@ -175,11 +175,12 @@ if v13:
     if v13.audio:
         st.audio(v13.audio)
 
-# Audio in sidebar
-with st.sidebar:
-    st.subheader("Sidebar Audio Input")
+# Audio in columns
+st.subheader("Audio in Columns")
+col_a, col_b = st.columns(2)
+with col_a:
     v14 = st.chat_input(
-        "Chat input 14 (sidebar audio)",
+        "Chat input 14 (column audio)",
         accept_audio=True,
         key="chat_input_14",
     )
@@ -191,35 +192,18 @@ with st.sidebar:
         if v14.audio:
             st.audio(v14.audio)
 
-# Audio in columns
-st.subheader("Audio in Columns")
-col_a, col_b = st.columns(2)
-with col_a:
+with col_b:
     v15 = st.chat_input(
-        "Chat input 15 (column audio)",
+        "Chat input 15 (w/ files)",
         accept_audio=True,
+        accept_file="multiple",
         key="chat_input_15",
     )
 
     if v15:
         st.write(f"chat_input_15 text: {v15.text}")
         st.write(f"chat_input_15 audio: {v15.audio.name if v15.audio else None}")
+        st.write(f"chat_input_15 files: {len(v15.files) if v15.files else 0} files")
 
         if v15.audio:
             st.audio(v15.audio)
-
-with col_b:
-    v16 = st.chat_input(
-        "Chat input 16 (w/ files)",
-        accept_audio=True,
-        accept_file="multiple",
-        key="chat_input_16",
-    )
-
-    if v16:
-        st.write(f"chat_input_16 text: {v16.text}")
-        st.write(f"chat_input_16 audio: {v16.audio.name if v16.audio else None}")
-        st.write(f"chat_input_16 files: {len(v16.files) if v16.files else 0} files")
-
-        if v16.audio:
-            st.audio(v16.audio)
