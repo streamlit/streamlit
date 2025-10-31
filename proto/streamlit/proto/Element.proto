@@ -74,6 +74,7 @@ import "streamlit/proto/Heading.proto";
 import "streamlit/proto/BidiComponent.proto";
 import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/WidthConfig.proto";
+import "streamlit/proto/TextAlignmentConfig.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -81,6 +82,7 @@ message Element {
   // Layout configuration for elements
   optional streamlit.HeightConfig height_config = 57;
   optional streamlit.WidthConfig width_config = 58;
+  optional streamlit.TextAlignmentConfig text_alignment_config = 61;
 
   // An element can be one of the following element types.
   oneof type {
@@ -142,7 +144,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 61
+    // Next ID: 62
   }
 
   reserved 9;
