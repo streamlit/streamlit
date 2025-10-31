@@ -137,16 +137,17 @@ v11 = st.container().chat_input(
     accept_audio=True,
     key="chat_input_11",
 )
-st.write("Chat input 11 (audio recording) - value:", v11)
+
 if v11:
-    st.write("  - text:", v11.text)
-    st.write("  - audio:", v11.audio)
-    st.write("  - files:", v11.files)
-    if v11.audio:
-        st.audio(v11.audio)
-    if v11.files:
-        for file in v11.files:
-            st.write(f"  - file: {file.name}")
+    if isinstance(v11, str):
+        st.write(f"chat_input_11 text: {v11}")
+    else:
+        st.write(f"chat_input_11 text: {v11.text}")
+        st.write(f"chat_input_11 audio: {v11.audio.name if v11.audio else None}")
+        st.write(f"chat_input_11 files: {len(v11.files) if v11.files else 0} files")
+
+        if v11.audio:
+            st.audio(v11.audio)
 
 # Audio only (no file upload)
 v12 = st.container().chat_input(
@@ -154,12 +155,16 @@ v12 = st.container().chat_input(
     accept_audio=True,
     key="chat_input_12",
 )
-st.write("Chat input 12 (audio only) - value:", v12)
+
 if v12:
-    st.write("  - text:", v12.text)
-    st.write("  - audio:", v12.audio)
-    if v12.audio:
-        st.audio(v12.audio)
+    if isinstance(v12, str):
+        st.write(f"chat_input_12 text: {v12}")
+    else:
+        st.write(f"chat_input_12 text: {v12.text}")
+        st.write(f"chat_input_12 audio: {v12.audio.name if v12.audio else None}")
+
+        if v12.audio:
+            st.audio(v12.audio)
 
 # Audio with disabled state
 v13 = st.container().chat_input(
@@ -168,7 +173,16 @@ v13 = st.container().chat_input(
     disabled=True,
     key="chat_input_13",
 )
-st.write("Chat input 13 (audio disabled) - value:", v13)
+
+if v13:
+    if isinstance(v13, str):
+        st.write(f"chat_input_13 text: {v13}")
+    else:
+        st.write(f"chat_input_13 text: {v13.text}")
+        st.write(f"chat_input_13 audio: {v13.audio.name if v13.audio else None}")
+
+        if v13.audio:
+            st.audio(v13.audio)
 
 # Audio in sidebar
 with st.sidebar:
@@ -178,12 +192,16 @@ with st.sidebar:
         accept_audio=True,
         key="chat_input_14",
     )
-    st.write("Chat input 14 (sidebar audio) - value:", v14)
+
     if v14:
-        st.write("  - text:", v14.text)
-        st.write("  - audio:", v14.audio)
-        if v14.audio:
-            st.audio(v14.audio)
+        if isinstance(v14, str):
+            st.write(f"chat_input_14 text: {v14}")
+        else:
+            st.write(f"chat_input_14 text: {v14.text}")
+            st.write(f"chat_input_14 audio: {v14.audio.name if v14.audio else None}")
+
+            if v14.audio:
+                st.audio(v14.audio)
 
 # Audio in columns
 st.subheader("Audio in Columns")
@@ -194,10 +212,16 @@ with col_a:
         accept_audio=True,
         key="chat_input_15",
     )
-    st.write("Chat input 15 (column audio) - value:", v15)
+
     if v15:
-        st.write("  - text:", v15.text)
-        st.write("  - audio:", v15.audio)
+        if isinstance(v15, str):
+            st.write(f"chat_input_15 text: {v15}")
+        else:
+            st.write(f"chat_input_15 text: {v15.text}")
+            st.write(f"chat_input_15 audio: {v15.audio.name if v15.audio else None}")
+
+            if v15.audio:
+                st.audio(v15.audio)
 
 with col_b:
     v16 = st.chat_input(
@@ -206,4 +230,14 @@ with col_b:
         accept_file="multiple",
         key="chat_input_16",
     )
-    st.write("Chat input 16 (w/ files) - value:", v16)
+
+    if v16:
+        if isinstance(v16, str):
+            st.write(f"chat_input_16 text: {v16}")
+        else:
+            st.write(f"chat_input_16 text: {v16.text}")
+            st.write(f"chat_input_16 audio: {v16.audio.name if v16.audio else None}")
+            st.write(f"chat_input_16 files: {len(v16.files) if v16.files else 0} files")
+
+            if v16.audio:
+                st.audio(v16.audio)

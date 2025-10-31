@@ -37,6 +37,56 @@ from e2e_playwright.shared.app_utils import (
 NUM_CHAT_INPUT_WIDGETS = 17
 
 
+def expect_chat_input_value_contains_text(app: Page, key: str, text: str) -> None:
+    """Assert that chat input value's text field contains the expected text.
+
+    Args:
+        app: Page object
+        key: Chat input key - used to identify the specific output line
+        text: Expected text content
+    """
+    # Look for the simple format: "<key> text: <value>"
+    expected_line = f"{key} text: {text}"
+    expect(app.get_by_text(expected_line)).to_be_visible()
+
+
+def expect_chat_input_value_contains_audio(app: Page, key: str) -> None:
+    """Assert that chat input value has an audio field populated (not None).
+
+    Args:
+        app: Page object
+        key: Chat input key - used to identify the specific output line
+
+    Verifies that audio was recorded by checking the output line contains a .wav filename
+    (not "None") and that an st.audio component appears.
+    """
+    # Look for the pattern: "<key> audio: " followed by a .wav filename
+    # We use a regex pattern since the filename includes a timestamp
+    audio_line_locator = app.get_by_text(f"{key} audio:", exact=False)
+    expect(audio_line_locator).to_be_visible()
+
+    # Ensure the audio field is NOT "None"
+    expect(app.get_by_text(f"{key} audio: None", exact=True)).not_to_be_visible()
+
+    # Verify st.audio component is displayed
+    expect(app.get_by_test_id("stAudio").first).to_be_visible()
+
+
+def expect_chat_input_value_contains_files(
+    app: Page, key: str, file_count: int
+) -> None:
+    """Assert that chat input value contains the expected number of uploaded files.
+
+    Args:
+        app: Page object
+        key: Chat input key - used to identify the specific output line
+        file_count: Expected number of files
+    """
+    # Look for the simple format: "<key> files: <N> files"
+    expected_line = f"{key} files: {file_count} files"
+    expect(app.get_by_text(expected_line)).to_be_visible()
+
+
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
 
@@ -721,14 +771,8 @@ def test_audio_recording_lifecycle(app: Page):
     # Record audio
     record_audio_in_chat_input(app, chat_input)
 
-    # Verify st.audio component is displayed (most reliable check)
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify the chat input value is not None by checking the output doesn't show "value: None"
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).not_to_be_visible()
+    # Verify audio was submitted successfully
+    expect_chat_input_value_contains_audio(app, "chat_input_11")
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
@@ -777,14 +821,9 @@ def test_audio_with_text_input(app: Page):
     # Record audio
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
 
-    # Verify st.audio component is displayed
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify chat input was not None
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).not_to_be_visible()
+    # Verify both text and audio were submitted successfully
+    expect_chat_input_value_contains_text(app, "chat_input_11", "Hello world")
+    expect_chat_input_value_contains_audio(app, "chat_input_11")
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
@@ -802,14 +841,9 @@ def test_audio_with_file_uploads(app: Page):
     # Record audio
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
 
-    # Verify st.audio component is displayed
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify chat input was not None
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).not_to_be_visible()
+    # Verify audio and file were submitted successfully
+    expect_chat_input_value_contains_audio(app, "chat_input_11")
+    expect_chat_input_value_contains_files(app, "chat_input_11", 1)
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
@@ -823,14 +857,8 @@ def test_audio_only_submission(app: Page):
     # Record audio only (no text or files)
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
 
-    # Verify st.audio component is displayed
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify chat input was not None
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).not_to_be_visible()
+    # Verify audio was submitted successfully
+    expect_chat_input_value_contains_audio(app, "chat_input_11")
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
@@ -896,11 +924,9 @@ def test_audio_error_state_handling(app: Page):
     # Wait for error to appear
     app.wait_for_timeout(1000)
 
-    # Verify error message appears (implementation may vary)
-    # When upload fails, the value should still be None
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).to_be_visible()
+    # Verify that no output appears (upload failed, so v11 is None and nothing is printed)
+    # With the new format, we only output when v11 has a value
+    expect(app.get_by_text("chat_input_11 text:", exact=False)).not_to_be_visible()
 
 
 @pytest.mark.only_browser("chromium")
@@ -1189,19 +1215,12 @@ def test_audio_with_all_features_combined(app: Page):
     # Record and submit audio (this submits everything together)
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
 
-    # Verify the chat input value is not None (confirms submission worked)
-    expect(
-        app.get_by_text("Chat input 11 (audio recording) - value: None")
-    ).not_to_be_visible()
-
-    # Verify st.audio component displayed (confirms audio was received)
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify files are listed in output (scroll back up to see them if needed)
-    # Files should be visible in the st.write output
-    expect(app.get_by_text("file1.txt").first).to_be_visible()
-    expect(app.get_by_text("file2.txt").first).to_be_visible()
+    # Verify text, audio, and files were all submitted successfully
+    expect_chat_input_value_contains_text(
+        app, "chat_input_11", "Message with everything"
+    )
+    expect_chat_input_value_contains_audio(app, "chat_input_11")
+    expect_chat_input_value_contains_files(app, "chat_input_11", 2)
 
     # Verify textarea is cleared after submission
     expect(textarea).to_have_value("")
@@ -1238,8 +1257,8 @@ def test_audio_container_contexts(app: Page):
     # Record audio in column to verify functionality
     record_audio_in_chat_input(app, col_input, duration_ms=800)
 
-    # Verify it worked
-    expect(app.get_by_text("Chat input 15 (column audio) - value:")).to_be_visible()
+    # Verify it worked - check for audio output in new format
+    expect(app.get_by_text("chat_input_15 audio:", exact=False)).to_be_visible()
 
 
 def test_audio_disabled_states(app: Page):
