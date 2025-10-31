@@ -71,7 +71,7 @@ vi.mock("./ChatAudioRecorder", () => {
   }
 
   const MockChatAudioRecorder = forwardRef<MockRef, MockProps>(
-    (props, ref) => {
+    (props: MockProps, ref: React.Ref<MockRef>) => {
       const {
         onCancel,
         onApprove,
