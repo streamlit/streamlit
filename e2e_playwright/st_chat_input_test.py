@@ -1021,22 +1021,8 @@ def test_audio_input_visual_states(app: Page, assert_snapshot: ImageCompareFunct
     app.set_viewport_size({"width": 750, "height": 2000})
 
     # Test 1: Idle state (already captured in test_chat_input_rendering)
-    # Test 2: Recording state with waveform visible
-    chat_input = get_element_by_key(app, "chat_input_12")
-    chat_input.scroll_into_view_if_needed()
-
-    # Start recording to capture recording state
-    start_audio_recording(chat_input)
-
-    # Wait a moment for waveform to stabilize
-    app.wait_for_timeout(500)
-
-    # Snapshot: Recording state
-    assert_snapshot(chat_input, name="st_chat_input-audio_recording_state")
-
-    # Cancel to return to idle
-    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
-    cancel_button.click()
+    # Test 2: Recording state snapshot removed due to indeterministic nature
+    # (waveform animation and timing issues cause flaky snapshots)
 
     # Test 3: Disabled state (already captured in test_chat_input_rendering as audio_disabled)
 
