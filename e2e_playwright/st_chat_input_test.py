@@ -504,6 +504,11 @@ def test_uploads_and_deletes_multiple_files(
     file_upload_helper(app, chat_input, files)
 
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+
+    # Wait for file names to be visible before taking snapshot
+    expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+    expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
+
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
@@ -778,7 +783,7 @@ def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(
         dynamic_chat_input,
         name="st_chat_input-dynamic_updated",
-        image_threshold=0.03,  # Allow 3% difference (default is 0.2%)
+        image_threshold=0.05,  # Allow 5% difference to handle Firefox rendering variance
     )
 
     # Ensure we can still interact normally
