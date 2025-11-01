@@ -690,3 +690,15 @@ class ChatTest(DeltaGeneratorTestCase):
         assert as_dict["audio"] == audio_file
         assert as_dict["text"] == "test"
         assert as_dict["files"] == []
+
+    def test_chat_input_accept_audio_false(self):
+        """Test that accept_audio=False correctly sets the proto field."""
+        st.chat_input(accept_audio=False)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_audio is False
+
+    def test_chat_input_accept_audio_true(self):
+        """Test that accept_audio=True correctly sets the proto field."""
+        st.chat_input(accept_audio=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_audio is True
