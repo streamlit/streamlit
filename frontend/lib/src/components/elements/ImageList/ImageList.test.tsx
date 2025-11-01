@@ -266,8 +266,8 @@ describe("ImageList Element", () => {
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<ImageList {...props} />, {
-          libContext: {
-            libConfig: { resourceCrossOriginMode },
+          libConfigContext: {
+            resourceCrossOriginMode,
           },
         })
         const images = screen.getAllByRole("img")
@@ -416,8 +416,8 @@ describe("ImageList Element", () => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const props = getProps({ imgs: imgs as any })
           renderWithContexts(<ImageList {...props} />, {
-            libContext: {
-              libConfig: { resourceCrossOriginMode },
+            libConfigContext: {
+              resourceCrossOriginMode,
             },
           })
           const images = screen.getAllByRole("img")

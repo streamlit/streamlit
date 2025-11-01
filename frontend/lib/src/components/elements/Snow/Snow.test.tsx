@@ -88,8 +88,8 @@ describe("Snow element", () => {
         }
 
         renderWithContexts(<Snow scriptRunId="51522269" />, {
-          libContext: {
-            libConfig: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: {
+            resourceCrossOriginMode: "anonymous",
           },
         })
 
@@ -116,8 +116,8 @@ describe("Snow element", () => {
         }
 
         renderWithContexts(<Snow scriptRunId="51522269" />, {
-          libContext: {
-            libConfig: { resourceCrossOriginMode: undefined },
+          libConfigContext: {
+            resourceCrossOriginMode: undefined,
           },
         })
 

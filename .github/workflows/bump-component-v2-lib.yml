@@ -1,0 +1,111 @@
+name: Bump @streamlit/component-v2-lib version and open PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: New semver to set (x.y.z)
+        type: string
+        required: true
+      dry_run:
+        description: Run without pushing branch or creating PR
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: bump-component-v2-lib
+  cancel-in-progress: true
+
+jobs:
+  bump-component-v2-lib-and-pr:
+    if: github.repository == 'streamlit/streamlit'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Compute next version (@streamlit/component-v2-lib)
+        id: compute
+        working-directory: frontend/component-v2-lib
+        run: |
+          set -euo pipefail
+          CURR=$(node -p "require('./package.json').version")
+          echo "current=$CURR" >> $GITHUB_OUTPUT
+          NEXT="${{ inputs.new_version }}"
+          if ! echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid semver: $NEXT"; exit 1; fi
+          if [ "$NEXT" = "$CURR" ]; then echo "new_version equals current"; exit 1; fi
+          npm version "${{ inputs.new_version }}" --no-git-tag-version
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+
+      - name: Create branch and commit (@streamlit/component-v2-lib)
+        if: inputs.dry_run != true
+        env:
+          NEXT: ${{ steps.compute.outputs.next }}
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git checkout -b "chore/bump-component-v2-lib-to-v${NEXT}"
+          git add frontend/component-v2-lib/package.json
+          git commit -m "[chore] Bump @streamlit/component-v2-lib to v${NEXT}"
+          git push origin "chore/bump-component-v2-lib-to-v${NEXT}"
+
+      - name: Create PR to develop (@streamlit/component-v2-lib)
+        if: inputs.dry_run != true
+        id: create_pr
+        uses: actions/github-script@v8
+        env:
+          NEXT: ${{ steps.compute.outputs.next }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `[chore] Bump @streamlit/component-v2-lib to v${process.env.NEXT}`;
+            const body = `Automated PR to bump @streamlit/component-v2-lib to v${process.env.NEXT}.`;
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head: `chore/bump-component-v2-lib-to-v${process.env.NEXT}`,
+              base: 'develop',
+              body,
+              draft: false,
+            });
+            const pr = created.data;
+            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore','impact:internal'] });
+            core.setOutput('pr_url', pr.html_url);
+
+      - name: Summary (@streamlit/component-v2-lib)
+        env:
+          CURR: ${{ steps.compute.outputs.current }}
+          NEXT: ${{ steps.compute.outputs.next }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## @streamlit/component-v2-lib version bump";
+            echo "- current: ${CURR}";
+            echo "- next: ${NEXT}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no branch/PR created)";
+            else
+              echo "- PR: ${PR_URL:-n/a}";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

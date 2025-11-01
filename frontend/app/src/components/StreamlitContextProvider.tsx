@@ -17,17 +17,11 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
-  AppContext,
-  AppContextProps,
-} from "@streamlit/app/src/components/AppContext"
-import {
-  ComponentRegistry,
   FormsContext,
   FormsContextProps,
   FormsData,
-  LibConfig,
-  LibContext,
-  LibContextProps,
+  LibConfigContext,
+  LibConfigContextProps,
   NavigationContext,
   NavigationContextProps,
   ScriptRunContext,
@@ -38,26 +32,24 @@ import {
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
-  useRequiredContext,
+  ViewStateContext,
+  ViewStateContextProps,
 } from "@streamlit/lib"
 import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
-// Type for AppContext props
-type AppContextValues = {
-  widgetsDisabled: boolean
-  showToolbar: boolean
-}
-
-// Type for LibContext props
-type LibContextValues = {
+type ViewStateContextValues = {
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
-  libConfig: LibConfig
-  locale: typeof window.navigator.language
-  componentRegistry: ComponentRegistry
 }
 
-// Type for NavigationContext props
+type LibConfigContextValues = {
+  locale: typeof window.navigator.language
+  // Selected libConfig properties
+  mapboxToken?: string
+  enforceDownloadInNewTab?: boolean
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+}
+
 type NavigationContextValues = {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
@@ -66,7 +58,6 @@ type NavigationContextValues = {
   appPages: IAppPage[]
 }
 
-// Type for SidebarConfigContext props
 type SidebarConfigContextValues = {
   initialSidebarState: PageConfig.SidebarState
   appLogo: Logo | null
@@ -75,14 +66,12 @@ type SidebarConfigContextValues = {
   hideSidebarNav: boolean
 }
 
-// Type for ThemeContext props
 type ThemeContextValues = {
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
 }
 
-// Type for ScriptRunContext props
 type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
@@ -94,8 +83,8 @@ type FormsContextValues = {
 }
 
 export type StreamlitContextProviderProps = PropsWithChildren<
-  AppContextValues &
-    LibContextValues &
+  ViewStateContextValues &
+    LibConfigContextValues &
     NavigationContextValues &
     SidebarConfigContextValues &
     ThemeContextValues &
@@ -108,15 +97,14 @@ export type StreamlitContextProviderProps = PropsWithChildren<
  * This centralizes the context values in one place.
  */
 const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
-  // AppContext
-  widgetsDisabled,
-  showToolbar,
-  // LibContext
+  // ViewStateContext
   isFullScreen,
   setFullScreen,
-  libConfig,
+  // LibConfigContext
   locale,
-  componentRegistry,
+  mapboxToken,
+  enforceDownloadInNewTab,
+  resourceCrossOriginMode,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -142,43 +130,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
-  // Memoized object for AppContext values
-  const appContextProps = useMemo<AppContextProps>(
+  // Memoized object for LibConfigContext values
+  const libConfigContextProps = useMemo<LibConfigContextProps>(
     () => ({
-      widgetsDisabled,
-      showToolbar,
-    }),
-    [widgetsDisabled, showToolbar]
-  )
-
-  // Memoized object for LibContext values
-  const libContextProps = useMemo<LibContextProps>(
-    () => ({
-      isFullScreen,
-      setFullScreen,
-      libConfig,
       locale,
-      componentRegistry,
+      mapboxToken,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
     }),
-    [isFullScreen, setFullScreen, libConfig, locale, componentRegistry]
-  )
-
-  // Memoized object for NavigationContext values
-  const navigationContextProps = useMemo<NavigationContextProps>(
-    () => ({
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    }),
-    [
-      pageLinkBaseUrl,
-      currentPageScriptHash,
-      onPageChange,
-      navSections,
-      appPages,
-    ]
+    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
   )
 
   // Memoized object for SidebarConfigContext values
@@ -209,6 +169,33 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [activeTheme, setTheme, availableThemes]
   )
 
+  // Memoized object for NavigationContext values
+  const navigationContextProps = useMemo<NavigationContextProps>(
+    () => ({
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    }),
+    [
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      onPageChange,
+      navSections,
+      appPages,
+    ]
+  )
+
+  // Memoized object for ViewStateContext values
+  const viewStateContextProps = useMemo<ViewStateContextProps>(
+    () => ({
+      isFullScreen,
+      setFullScreen,
+    }),
+    [isFullScreen, setFullScreen]
+  )
+
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
@@ -225,31 +212,32 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
+  /**
+   * Providers conceptually grouped by stability (most to least) as follows:
+   * Layer 1: App-level static configuration providers:
+   *   LibConfigContext & SidebarConfigContext
+   * Layer 2: User theme preference provider:
+   *   ThemeContext
+   * Layer 3: App interaction providers:
+   *   NavigationContext, ViewStateContext, ScriptRunContext, FormsContext
+   */
   return (
-    <AppContext.Provider value={appContextProps}>
-      <LibContext.Provider value={libContextProps}>
-        <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
-          <ThemeContext.Provider value={themeContextProps}>
-            <NavigationContext.Provider value={navigationContextProps}>
-              <FormsContext.Provider value={formsContextProps}>
-                <ScriptRunContext.Provider value={scriptRunContextProps}>
+    <LibConfigContext.Provider value={libConfigContextProps}>
+      <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
+        <ThemeContext.Provider value={themeContextProps}>
+          <NavigationContext.Provider value={navigationContextProps}>
+            <ViewStateContext.Provider value={viewStateContextProps}>
+              <ScriptRunContext.Provider value={scriptRunContextProps}>
+                <FormsContext.Provider value={formsContextProps}>
                   {children}
-                </ScriptRunContext.Provider>
-              </FormsContext.Provider>
-            </NavigationContext.Provider>
-          </ThemeContext.Provider>
-        </SidebarConfigContext.Provider>
-      </LibContext.Provider>
-    </AppContext.Provider>
+                </FormsContext.Provider>
+              </ScriptRunContext.Provider>
+            </ViewStateContext.Provider>
+          </NavigationContext.Provider>
+        </ThemeContext.Provider>
+      </SidebarConfigContext.Provider>
+    </LibConfigContext.Provider>
   )
-}
-
-/**
- * Custom hook to access AppContext values in components.
- * Throws an error if used outside of an AppContext.Provider.
- */
-export const useAppContext = (): AppContextProps => {
-  return useRequiredContext(AppContext)
 }
 
 export default memo(StreamlitContextProvider)

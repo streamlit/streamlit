@@ -51,6 +51,7 @@ export interface Props {
   endpoints: StreamlitEndpoints
   collapseSidebar: () => void
   hasSidebarElements: boolean
+  widgetsDisabled: boolean
 }
 
 // We make the sidebar nav collapsible when there are more than 12 pages.
@@ -65,6 +66,7 @@ interface NavLinkProps {
   page: IAppPage
   isActive: boolean
   onClick: (e: MouseEvent) => void
+  widgetsDisabled: boolean
 }
 
 function NavLink({
@@ -72,6 +74,7 @@ function NavLink({
   page,
   isActive,
   onClick,
+  widgetsDisabled,
 }: NavLinkProps): ReactElement {
   const pageName = page.pageName as string
 
@@ -82,6 +85,7 @@ function NavLink({
         pageUrl={pageUrl}
         icon={page.icon}
         onClick={onClick}
+        widgetsDisabled={widgetsDisabled}
       >
         {pageName}
       </SidebarNavLink>
@@ -143,6 +147,7 @@ const SidebarNav = ({
   endpoints,
   collapseSidebar,
   hasSidebarElements,
+  widgetsDisabled,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
   const { expandSidebarNav } = useContext(SidebarConfigContext)
@@ -279,6 +284,7 @@ const SidebarNav = ({
               collapseSidebar()
             }
           }}
+          widgetsDisabled={widgetsDisabled}
         />
       )
     },
@@ -288,6 +294,7 @@ const SidebarNav = ({
       endpoints,
       onPageChange,
       pageLinkBaseUrl,
+      widgetsDisabled,
     ]
   )
 

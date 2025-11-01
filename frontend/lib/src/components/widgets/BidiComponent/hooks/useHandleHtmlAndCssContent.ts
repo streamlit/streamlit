@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { useContext, useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
 
-import { LibContext } from "~lib/components/core/LibContext"
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { handleError } from "~lib/components/widgets/BidiComponent/utils/error"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
@@ -99,11 +98,8 @@ export const useHandleHtmlAndCssContent = ({
     cssContent,
     cssSourcePath,
     componentName,
-  } = useRequiredContext(BidiComponentContext)
-
-  const {
     componentRegistry: { getBidiComponentURL },
-  } = useContext(LibContext)
+  } = useRequiredContext(BidiComponentContext)
 
   /**
    * Calculate this in a useMemo to reduce unnecessary re-runs of the useEffect

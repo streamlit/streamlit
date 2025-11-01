@@ -21,10 +21,14 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
+  TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
 import { UNICODE } from "~lib/mocks/arrow"
-import { isNullOrUndefined } from "~lib/util/utils"
+import {
+  GENERATED_ELEMENT_ID_PREFIX,
+  isNullOrUndefined,
+} from "~lib/util/utils"
 
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
@@ -38,6 +42,29 @@ export function text(
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
   const element = makeProto(Element, { text: { body: textArg } })
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
+}
+
+/** Create a text input element node with the given properties. */
+export function textInput(
+  label: string,
+  id: string = "some_id",
+  scriptRunId = NO_SCRIPT_RUN_ID
+): ElementNode {
+  const element = makeProto(Element, {
+    textInput: {
+      id: `${GENERATED_ELEMENT_ID_PREFIX}-${id}-key`,
+      label,
+      default: "",
+      placeholder: "Placeholder",
+      type: TextInputProto.Type.DEFAULT,
+    },
+  })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),

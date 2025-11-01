@@ -113,8 +113,8 @@ describe("ChatMessage", () => {
             avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
           })
           renderWithContexts(<ChatMessage {...props} />, {
-            libContext: {
-              libConfig: { resourceCrossOriginMode: "anonymous" },
+            libConfigContext: {
+              resourceCrossOriginMode: "anonymous",
             },
           })
 
@@ -143,8 +143,8 @@ describe("ChatMessage", () => {
             avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
           })
           renderWithContexts(<ChatMessage {...props} />, {
-            libContext: {
-              libConfig: { resourceCrossOriginMode: undefined },
+            libConfigContext: {
+              resourceCrossOriginMode: undefined,
             },
           })
 

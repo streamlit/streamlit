@@ -36,6 +36,7 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
     hasElements: true,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
+    widgetsDisabled: false,
     ...props,
   }
 }

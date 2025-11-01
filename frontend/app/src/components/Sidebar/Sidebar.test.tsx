@@ -56,6 +56,7 @@ function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
       // Defaulted props for Sidebar itself
       isCollapsed={false}
       onToggleCollapse={vi.fn()}
+      widgetsDisabled={false}
       {...props}
     />
   )

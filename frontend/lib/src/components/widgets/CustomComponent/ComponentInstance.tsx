@@ -17,7 +17,6 @@
 import React, {
   memo,
   ReactElement,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -35,7 +34,6 @@ import {
 } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { LibContext } from "~lib/components/core/LibContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import { Kind } from "~lib/components/shared/AlertContainer"
@@ -76,6 +74,7 @@ export interface Props {
   element: ComponentInstanceProto
   width: number
   fragmentId?: string
+  componentRegistry: ComponentRegistry
 }
 
 /**
@@ -186,11 +185,16 @@ function compareDataframeArgs(
  */
 function ComponentInstance(props: Props): ReactElement {
   const theme = useEmotionTheme()
-  const { componentRegistry: registry } = useContext(LibContext)
-
   const [componentError, setComponentError] = useState<Error>()
 
-  const { disabled, element, widgetMgr, width, fragmentId } = props
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    width,
+    fragmentId,
+    componentRegistry: registry,
+  } = props
   const { componentName, jsonArgs, specialArgs, url } = element
 
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(

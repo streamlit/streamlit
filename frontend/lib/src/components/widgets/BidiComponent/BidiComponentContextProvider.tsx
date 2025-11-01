@@ -25,6 +25,7 @@ import {
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { parseBidiComponentData } from "~lib/components/widgets/BidiComponent/utils/parseBidiComponentData"
 import { extractComponentsV2Theme } from "~lib/components/widgets/BidiComponent/utils/theme"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
@@ -33,10 +34,11 @@ export type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
   widgetMgr: WidgetStateManager
   fragmentId: string | undefined
+  componentRegistry: ComponentRegistry
 }>
 
 export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps> =
-  memo(({ element, children, widgetMgr, fragmentId }) => {
+  memo(({ element, children, widgetMgr, fragmentId, componentRegistry }) => {
     const {
       arrowData,
       bytes,
@@ -113,6 +115,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
     const contextValue = useMemo<BidiComponentContextShape>(() => {
       return {
         componentName,
+        componentRegistry,
         cssContent: cssContent?.trim(),
         cssSourcePath: cssSourcePath || undefined,
         data: parsedData,
@@ -128,6 +131,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
       }
     }, [
       componentName,
+      componentRegistry,
       cssContent,
       cssSourcePath,
       fragmentId,
