@@ -485,10 +485,10 @@ def test_uploads_and_deletes_single_file(
 
 
 def test_uploads_and_deletes_multiple_files(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading multiple files at once works correctly."""
-    chat_input = get_element_by_key(themed_app, "chat_input_5")
+    chat_input = get_element_by_key(app, "chat_input_5")
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
@@ -501,7 +501,7 @@ def test_uploads_and_deletes_multiple_files(
         FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2),
     ]
 
-    file_upload_helper(themed_app, chat_input, files)
+    file_upload_helper(app, chat_input, files)
 
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
@@ -512,7 +512,7 @@ def test_uploads_and_deletes_multiple_files(
     # Delete one uploaded file
     uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
 
-    wait_for_app_run(themed_app)
+    wait_for_app_run(app)
 
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
     expect(uploaded_file_names).to_have_count(1)
@@ -744,11 +744,9 @@ def test_height_resets_after_submit(
     assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")
 
 
-def test_dynamic_chat_input_props(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_dynamic_chat_input_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the chat input can be updated dynamically while keeping the state."""
-    dynamic_chat_input = get_element_by_key(themed_app, "dynamic_chat_input_with_key")
+    dynamic_chat_input = get_element_by_key(app, "dynamic_chat_input_with_key")
     expect(dynamic_chat_input).to_be_visible()
 
     # Initial state (placeholder is rendered as attribute, not visible text)
@@ -761,13 +759,13 @@ def test_dynamic_chat_input_props(
     input_field = dynamic_chat_input.locator("textarea").first
     input_field.fill("hello")
     input_field.press("Enter")
-    wait_for_app_run(themed_app)
+    wait_for_app_run(app)
 
     # Ensure the markdown entry is present (prefix match)
-    expect_prefixed_markdown(themed_app, "Initial chat input value:", "hello")
+    expect_prefixed_markdown(app, "Initial chat input value:", "hello")
 
     # Click the toggle to update the chat input props
-    click_toggle(themed_app, "Update chat input props")
+    click_toggle(app, "Update chat input props")
 
     # New chat input is rendered with updated placeholder text
     expect(dynamic_chat_input.locator("textarea")).to_have_attribute(
@@ -781,8 +779,8 @@ def test_dynamic_chat_input_props(
     input_field = dynamic_chat_input.locator("textarea").first
     input_field.fill("world")
     input_field.press("Enter")
-    wait_for_app_run(themed_app)
-    expect_prefixed_markdown(themed_app, "Updated chat input value:", "world")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Updated chat input value:", "world")
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
