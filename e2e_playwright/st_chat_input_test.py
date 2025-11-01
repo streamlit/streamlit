@@ -91,8 +91,13 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
     expect(upload_button).to_be_visible()
     upload_button.scroll_into_view_if_needed()
 
+    # Ensure button is ready to be clicked (WebKit specific issue)
+    expect(upload_button).to_be_enabled()
+    app.wait_for_timeout(100)  # Small delay to ensure button is fully ready
+
     with app.expect_file_chooser() as fc_info:
-        upload_button.click()
+        # Use force=True for WebKit to ensure the click triggers file chooser
+        upload_button.click(force=True)
         file_chooser = fc_info.value
         file_chooser.set_files(files=files)
 
