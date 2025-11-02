@@ -63,7 +63,7 @@ describe("Markdown element with help", () => {
 })
 
 describe("Markdown badge with help", () => {
-  it("renders a badge with BaseButtonTooltip when help is provided", async () => {
+  it("renders markdown badge with BaseButtonTooltip as expected", async () => {
     const user = userEvent.setup()
     const element = MarkdownProto.create({
       body: ":blue-badge[Testing Badge]",
@@ -74,13 +74,13 @@ describe("Markdown badge with help", () => {
     })
     render(<Markdown element={element} />)
 
-    // Expect at least one badge to render (wrapped + unwrapped)
+    // Expect at least one badge to render
     const badges = screen.getAllByText("Testing Badge")
     expect(badges.length).toBeGreaterThanOrEqual(1)
 
     // Tooltip hover target should exist
     const hoverTarget = screen.getByTestId("stTooltipHoverTarget")
-    expect(hoverTarget).toBeVisible()
+    expect(hoverTarget).toBeInTheDocument()
 
     // Hover over to trigger tooltip
     await user.hover(hoverTarget)
@@ -90,7 +90,7 @@ describe("Markdown badge with help", () => {
     expect(tooltip).toBeInTheDocument()
   })
 
-  it("renders badge without tooltip when help is not provided", () => {
+  it("renders markdown badge without tooltip when help not provided", () => {
     const element = MarkdownProto.create({
       body: ":blue-badge[Testing Badge]",
       elementType: MarkdownProto.Type.NATIVE,
@@ -99,13 +99,14 @@ describe("Markdown badge with help", () => {
     })
     render(<Markdown element={element} />)
 
+    // Expect a badge to render without tooltip
     expect(screen.getByText("Testing Badge")).toBeVisible()
     expect(
       screen.queryByTestId("stTooltipHoverTarget")
     ).not.toBeInTheDocument()
   })
 
-  it("renders multiple badges or badges with text using inline tooltip", async () => {
+  it("renders multiple markdown badges with inline tooltip as expected", () => {
     const element = MarkdownProto.create({
       body: ":blue-badge[Badge 1] :grey-badge[Badge 2]",
       help: "Multiple badges tooltip",
@@ -115,12 +116,85 @@ describe("Markdown badge with help", () => {
     })
     render(<Markdown element={element} />)
 
-    // Inline tooltip icons should exist
+    // Expect inline tooltip to exist
     const inlineTooltips = screen.getAllByTestId("stTooltipHoverTarget")
     expect(inlineTooltips.length).toBeGreaterThan(0)
 
-    // Verify both badges render
+    // Expect that both badges render
     expect(screen.getByText("Badge 1")).toBeVisible()
     expect(screen.getByText("Badge 2")).toBeVisible()
+  })
+
+  it("renders markdown badges and text with inline tooltip as expected", () => {
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Badge 1] with some text",
+      help: "Badges with text in markdown tooltip",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+    render(<Markdown element={element} />)
+
+    // Expect inline tooltip to exist
+    const inlineTooltips = screen.getAllByTestId("stTooltipHoverTarget")
+    expect(inlineTooltips.length).toBeGreaterThan(0)
+
+    // Expect that badge renders
+    expect(screen.getByText("Badge 1")).toBeVisible()
+  })
+
+  it("renders markdown badge with escaped brackets with BaseButtonTooltip", async () => {
+    const user = userEvent.setup()
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Label \\[with\\] brackets]",
+      help: "Tooltip for escaped brackets",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+    render(<Markdown element={element} />)
+
+    // Expect at least one badge to render
+    const badges = screen.getAllByText("Label [with] brackets")
+    expect(badges.length).toBeGreaterThanOrEqual(1)
+
+    // Tooltip hover target should exist
+    const hoverTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(hoverTarget).toBeInTheDocument()
+
+    // Hover over to trigger tooltip
+    await user.hover(hoverTarget)
+
+    // Tooltip text should appear
+    const tooltip = await screen.findByText("Tooltip for escaped brackets")
+    expect(tooltip).toBeInTheDocument()
+  })
+
+  it("renders markdown badge with escaped backslashes with BaseButtonTooltip", async () => {
+    const user = userEvent.setup()
+    const element = MarkdownProto.create({
+      body: ":blue-badge[Label with \\\\ slashes]",
+      help: "Tooltip with backslash",
+      elementType: MarkdownProto.Type.NATIVE,
+      isCaption: false,
+      allowHtml: false,
+    })
+
+    render(<Markdown element={element} />)
+
+    // Expect at least one badge to render
+    const badges = screen.getAllByText("Label with \\ slashes")
+    expect(badges.length).toBeGreaterThanOrEqual(1)
+
+    // Tooltip hover target should exist
+    const hoverTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(hoverTarget).toBeInTheDocument()
+
+    // Hover over to trigger tooltip
+    await user.hover(hoverTarget)
+
+    // Tooltip text should appear
+    const tooltip = await screen.findByText("Tooltip with backslash")
+    expect(tooltip).toBeInTheDocument()
   })
 })

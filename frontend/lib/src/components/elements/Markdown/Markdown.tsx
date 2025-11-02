@@ -38,8 +38,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // Determine if the markdown is a single badge only (e.g ":blue-badge[Text]")
   const isSingleBadgeOnly =
     element.elementType === MarkdownProto.Type.NATIVE &&
-    /^:\w+-badge\[[^\]]+\]$/.test(element.body.trim())
-
+    /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/.test(element.body.trim())
   return (
     <div className="stMarkdown" data-testid="stMarkdown">
       {element.help && isSingleBadgeOnly ? (

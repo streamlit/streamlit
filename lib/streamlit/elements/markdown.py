@@ -400,14 +400,6 @@ class MarkdownMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        help : str or None
-            A tooltip that gets displayed when the badge is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
-
-            The tooltip can optionally contain GitHub-flavored Markdown, including
-            the Markdown directives described in the ``body`` parameter of
-            ``st.markdown``.
-
         icon : str or None
             An optional emoji or icon to display next to the badge label. If
             ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
@@ -445,6 +437,14 @@ class MarkdownMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        help : str or None
+            A tooltip that gets displayed when the badge is hovered over. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown, including
+            the Markdown directives described in the ``body`` parameter of
+            ``st.markdown``.
 
         Examples
         --------
