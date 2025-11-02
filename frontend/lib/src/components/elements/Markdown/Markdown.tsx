@@ -31,14 +31,18 @@ export interface MarkdownProps {
   element: MarkdownProto
 }
 
+// Regex that matches a single badge in markdown (e.g., ":blue-badge[Label]")
+// with support for escaped brackets and backslashes inside the label text.
+const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
+
 /**
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  // Determine if the markdown is a single badge only (e.g ":blue-badge[Text]")
+  // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
     element.elementType === MarkdownProto.Type.NATIVE &&
-    /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/.test(element.body.trim())
+    SINGLE_BADGE_REGEX.test(element.body.trim())
   return (
     <div className="stMarkdown" data-testid="stMarkdown">
       {element.help && isSingleBadgeOnly ? (
