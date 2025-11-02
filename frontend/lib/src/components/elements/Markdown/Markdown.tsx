@@ -44,6 +44,7 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
+    !!element.help &&
     element.elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(element.body.trim())
   return (
