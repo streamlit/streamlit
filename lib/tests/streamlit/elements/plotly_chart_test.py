@@ -503,3 +503,149 @@ class PlotlyChartWidthTest(DeltaGeneratorTestCase):
             assert el.width_config.WhichOneof("width_spec") == "pixel_width"
             # Should use the explicit width from the figure
             assert el.width_config.pixel_width == 600
+
+
+class PlotlyChartHeightTest(DeltaGeneratorTestCase):
+    """Test plotly_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            (
+                "content",
+                "pixel_height",
+                450,
+            ),  # Content height resolves to 450px default
+            ("stretch", "use_stretch", True),
+            (300, "pixel_height", 300),
+        ]
+    )
+    def test_plotly_chart_height_combinations(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test plotly chart with various height combinations."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, height=height)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            ("height", "invalid_height"),
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_height_validation_errors(self, param_name: str, invalid_value: str | int):
+        """Test that invalid height values raise validation errors."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        with pytest.raises(StreamlitAPIException):
+            st.plotly_chart(data, height=invalid_value)
+
+    def test_content_height_with_various_data_types(self):
+        """Test content height handling with different plotly-accepted data types."""
+        import plotly.graph_objs as go
+
+        with self.subTest("matplotlib_figure"):
+            import matplotlib.pyplot as plt
+
+            # Create a matplotlib figure
+            fig, ax = plt.subplots(figsize=(8, 6))  # 6 inches * 100 dpi = 600px height
+            ax.plot([1, 2, 3, 4], [10, 15, 13, 17])
+            ax.set_title("Matplotlib Figure")
+
+            st.plotly_chart(fig, height="content")
+            plt.close(fig)  # Clean up
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Matplotlib figures get converted, may not preserve exact height
+            # but should still resolve to a reasonable value
+            assert el.height_config.pixel_height >= 100
+
+        with self.subTest("data_list"):
+            # Create plotly data as a list (no explicit height in layout)
+            data = [go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])]
+            st.plotly_chart(data, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # No explicit height, should default to 450
+            assert el.height_config.pixel_height == 450
+
+        with self.subTest("data_dict"):
+            # Create plotly data as a dictionary (no explicit height)
+            data_dict = {
+                "data": [{"x": [1, 2, 3, 4], "y": [10, 15, 13, 17], "type": "scatter"}],
+                "layout": {"title": "Dict Data"},
+            }
+            st.plotly_chart(data_dict, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # No explicit height, should default to 450
+            assert el.height_config.pixel_height == 450
+
+        with self.subTest("plotly_figure_with_height_350"):
+            # Create plotly figure with explicit height
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+            fig.update_layout(width=600, height=350, title="Figure with Height")
+            st.plotly_chart(fig, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Should use the explicit height from the figure
+            assert el.height_config.pixel_height == 350
+
+        with self.subTest("plotly_figure_with_height_50"):
+            # Create plotly figure with small explicit height to test content resolution
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+            fig.update_layout(width=600, height=50)
+            st.plotly_chart(fig, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Should use the explicit height from the figure
+            assert el.height_config.pixel_height == 50
+
+        with self.subTest("height_with_selections"):
+            # Test that height parameter works correctly with selections activated
+            trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+            data = [trace0]
+
+            st.plotly_chart(
+                data,
+                height="content",
+                on_select="rerun",
+                key="test_key_height_selections",
+            )
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            assert (
+                el.height_config.pixel_height == 450
+            )  # Content height defaults to 450px
+            assert len(el.plotly_chart.selection_mode) > 0  # Selections are activated

@@ -37,8 +37,10 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
+    validate_height,
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -324,6 +326,53 @@ def _resolve_content_width(width: Width, figure: Any) -> Width:
     return 700
 
 
+def _resolve_content_height(height: Height, figure: Any) -> Height:
+    """Resolve "content" height by inspecting the figure's layout height.
+
+    For content height, we check if the plotly figure has an explicit height
+    in its layout. If so, we use that as a pixel height. If not, we default
+    to 450 pixels which matches the plotly.js default height.
+
+    Args
+    ----
+    height : Height
+        The original height parameter
+    figure : Any
+        The plotly figure object (Figure, dict, or other supported formats)
+
+    Returns
+    -------
+    Height
+        The resolved height (either original height, figure height as pixels, or 450)
+    """
+
+    if height != "content":
+        return height
+
+    # Extract height from the figure's layout
+    # plotly.tools.mpl_to_plotly() returns Figure objects with .layout attribute
+    # plotly.tools.return_figure_from_figure_or_data() returns dictionaries
+    figure_height = None
+    if isinstance(figure, dict):
+        figure_height = figure.get("layout", {}).get("height")
+    else:
+        # Handle Figure objects from matplotlib conversion
+        try:
+            figure_height = figure.layout.height
+        except (AttributeError, TypeError):
+            _LOGGER.debug("Could not parse height from figure")
+
+    if (
+        figure_height is not None
+        and isinstance(figure_height, (int, float))
+        and figure_height > 0
+    ):
+        return int(figure_height)
+
+    # Default to 450 pixels (plotly.js default) when no height is specified
+    return 450
+
+
 class PlotlyMixin:
     @overload
     def plotly_chart(
@@ -332,6 +381,7 @@ class PlotlyMixin:
         use_container_width: bool | None = None,
         *,
         width: Width = "stretch",
+        height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
@@ -350,6 +400,7 @@ class PlotlyMixin:
         use_container_width: bool | None = None,
         *,
         width: Width = "stretch",
+        height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
@@ -368,6 +419,7 @@ class PlotlyMixin:
         use_container_width: bool | None = None,
         *,
         width: Width = "stretch",
+        height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -428,6 +480,13 @@ class PlotlyMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        height : "stretch", "content", or int
+            How to size the chart's height. Can be one of:
+
+            - ``"content"`` (default): Size the chart to fit its contents.
+            - ``"stretch"``: Expand to the height of the parent container.
+            - An integer: Set the chart height to this many pixels.
 
         use_container_width : bool or None
             Whether to override the figure's native width with the width of
@@ -595,6 +654,7 @@ class PlotlyMixin:
                 width = "content"
 
         validate_width(width, allow_content=True)
+        validate_height(height, allow_content=True)
 
         import plotly.io
         import plotly.tools
@@ -671,10 +731,12 @@ class PlotlyMixin:
             is_selection_activated=is_selection_activated,
             theme=theme,
             width=width,
+            height=height,
         )
 
-        # Handle "content" width by inspecting the figure's natural width
+        # Handle "content" width and height by inspecting the figure's natural dimensions
         final_width = _resolve_content_width(width, figure)
+        final_height = _resolve_content_height(height, figure)
 
         if is_selection_activated:
             # Selections are activated, treat plotly chart as a widget:
@@ -693,13 +755,13 @@ class PlotlyMixin:
                 value_type="string_value",
             )
 
-            layout_config = LayoutConfig(width=final_width)
+            layout_config = LayoutConfig(width=final_width, height=final_height)
             self.dg._enqueue(
                 "plotly_chart", plotly_chart_proto, layout_config=layout_config
             )
             return widget_state.value
 
-        layout_config = LayoutConfig(width=final_width)
+        layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
             "plotly_chart", plotly_chart_proto, layout_config=layout_config
         )

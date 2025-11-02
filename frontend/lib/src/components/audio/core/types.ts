@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { RefObject } from "react"
+
 export type RecordingState = "idle" | "recording"
 
 export interface WaveformControllerEvents {
@@ -21,7 +23,7 @@ export interface WaveformControllerEvents {
   onError?: (error: Error) => void
   onRecordStart?: () => void
   onRecordReady?: (blob: Blob) => void
-  onApprove?: (wav: Blob) => void
+  onApprove?: (wav: Blob) => Promise<void>
   onCancel?: () => void
   onProgressMs?: (ms: number) => void
   onPlaybackPlay?: () => void
@@ -29,17 +31,32 @@ export interface WaveformControllerEvents {
   onPlaybackFinish?: () => void
 }
 
+export interface AudioMeta {
+  durationMs: number
+  sampleRate: number | null
+  mimeType: string
+  size: number
+}
+
+export interface StopResult {
+  blob: Blob
+  meta: AudioMeta
+}
+
 export interface WaveformController {
   readonly state: RecordingState
   readonly isPlaybackPlaying: boolean
+  readonly mountRef: RefObject<HTMLDivElement>
 
   start(): Promise<void>
 
-  stop(): Promise<Blob>
+  stop(): Promise<StopResult>
 
   approve(blob?: Blob): Promise<void>
 
   cancel(): void
+
+  destroy(): void
 
   playback: {
     isPlaying(): boolean

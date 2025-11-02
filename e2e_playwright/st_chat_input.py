@@ -130,3 +130,80 @@ else:
         file_type=["txt"],
     )
     st.write("Initial chat input value:", dyn_val)
+
+v11 = st.container().chat_input(
+    "Chat input 11 (audio recording)",
+    accept_file="multiple",
+    accept_audio=True,
+    key="chat_input_11",
+)
+
+if v11:
+    st.write(f"chat_input_11 text: {v11.text}")
+    st.write(f"chat_input_11 audio: {v11.audio.name if v11.audio else None}")
+    st.write(f"chat_input_11 files: {len(v11.files) if v11.files else 0} files")
+
+    if v11.audio:
+        st.audio(v11.audio)
+
+# Audio only (no file upload)
+v12 = st.container().chat_input(
+    "Chat input 12 (audio only)",
+    accept_audio=True,
+    key="chat_input_12",
+)
+
+if v12:
+    st.write(f"chat_input_12 text: {v12.text}")
+    st.write(f"chat_input_12 audio: {v12.audio.name if v12.audio else None}")
+
+    if v12.audio:
+        st.audio(v12.audio)
+
+# Audio with disabled state
+v13 = st.container().chat_input(
+    "Chat input 13 (audio disabled)",
+    accept_audio=True,
+    disabled=True,
+    key="chat_input_13",
+)
+
+if v13:
+    st.write(f"chat_input_13 text: {v13.text}")
+    st.write(f"chat_input_13 audio: {v13.audio.name if v13.audio else None}")
+
+    if v13.audio:
+        st.audio(v13.audio)
+
+# Audio in columns
+st.subheader("Audio in Columns")
+col_a, col_b = st.columns(2)
+with col_a:
+    v14 = st.chat_input(
+        "Chat input 14 (column audio)",
+        accept_audio=True,
+        key="chat_input_14",
+    )
+
+    if v14:
+        st.write(f"chat_input_14 text: {v14.text}")
+        st.write(f"chat_input_14 audio: {v14.audio.name if v14.audio else None}")
+
+        if v14.audio:
+            st.audio(v14.audio)
+
+with col_b:
+    v15 = st.chat_input(
+        "Chat input 15 (w/ files)",
+        accept_audio=True,
+        accept_file="multiple",
+        key="chat_input_15",
+    )
+
+    if v15:
+        st.write(f"chat_input_15 text: {v15.text}")
+        st.write(f"chat_input_15 audio: {v15.audio.name if v15.audio else None}")
+        st.write(f"chat_input_15 files: {len(v15.files) if v15.files else 0} files")
+
+        if v15.audio:
+            st.audio(v15.audio)
