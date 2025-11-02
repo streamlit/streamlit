@@ -33,6 +33,9 @@ export interface MarkdownProps {
 
 // Regex that matches a single badge in markdown (e.g., ":blue-badge[Label]")
 // with support for escaped brackets and backslashes inside the label text.
+// The pattern (?:\\.|[^\]\\])* matches either an escaped character (e.g., \] or \\)
+// or any character except a closing bracket or backslash, allowing for proper parsing
+// of badge labels that may contain escaped brackets or backslashes.
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
 /**
