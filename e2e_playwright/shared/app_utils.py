@@ -539,6 +539,17 @@ def get_markdown(
     return markdown_element
 
 
+def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
+    """Get a text element with the given text."""
+    if isinstance(text, str):
+        text = re.compile(text)
+
+    text_element = locator.get_by_test_id("stText").filter(has_text=text)
+
+    expect(text_element).to_be_visible()
+    return text_element
+
+
 def expect_prefixed_markdown(
     locator: FrameLocator | Locator | Page,
     expected_prefix: str,
