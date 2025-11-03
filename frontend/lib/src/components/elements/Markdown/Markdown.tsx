@@ -31,11 +31,10 @@ export interface MarkdownProps {
   element: MarkdownProto
 }
 
-// Regex that matches a single badge in markdown (e.g., ":blue-badge[Label]")
-// with support for escaped brackets and backslashes inside the label text.
-// The pattern (?:\\.|[^\]\\])* matches either an escaped character (e.g., \] or \\)
-// or any character except a closing bracket or backslash, allowing for proper parsing
-// of badge labels that may contain escaped brackets or backslashes.
+// Regex matching a single badge (e.g. ":blue-badge[Label]"), supporting escaped
+// brackets and backslashes in the label text via inner pattern (?:\\.|[^\]\\])*.
+// Matches: :blue-badge[Label], :red-badge[Bracket\]], :green-badge[Backslash\\]
+// Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
 /**
@@ -44,35 +43,36 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
-    !!element.help &&
     element.elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(element.body.trim())
   return (
     <div className="stMarkdown" data-testid="stMarkdown">
-      {element.help && isSingleBadgeOnly ? (
-        // Only wrap a single badge in BaseButtonTooltip
-        <BaseButtonTooltip help={element.help} containerWidth={false}>
-          <StreamlitMarkdown
-            isCaption={element.isCaption}
-            source={element.body}
-            allowHTML={element.allowHtml}
-          />
-        </BaseButtonTooltip>
-      ) : element.help ? (
-        // For other Markdown with help, show the inline tooltip
-        <StyledLabelHelpWrapper
-          isLatex={element.elementType === MarkdownProto.Type.LATEX}
-        >
-          <StreamlitMarkdown
-            isCaption={element.isCaption}
-            source={element.body}
-            allowHTML={element.allowHtml}
-          />
-          <InlineTooltipIcon
-            content={element.help}
+      {element.help ? (
+        // For single badge markdown with help, show the BaseButtonTooltip
+        isSingleBadgeOnly ? (
+          <BaseButtonTooltip help={element.help} containerWidth={false}>
+            <StreamlitMarkdown
+              isCaption={element.isCaption}
+              source={element.body}
+              allowHTML={element.allowHtml}
+            />
+          </BaseButtonTooltip>
+        ) : (
+          // For other markdown with help, show the inline tooltip
+          <StyledLabelHelpWrapper
             isLatex={element.elementType === MarkdownProto.Type.LATEX}
-          ></InlineTooltipIcon>
-        </StyledLabelHelpWrapper>
+          >
+            <StreamlitMarkdown
+              isCaption={element.isCaption}
+              source={element.body}
+              allowHTML={element.allowHtml}
+            />
+            <InlineTooltipIcon
+              content={element.help}
+              isLatex={element.elementType === MarkdownProto.Type.LATEX}
+            ></InlineTooltipIcon>
+          </StyledLabelHelpWrapper>
+        )
       ) : (
         // No help provided, render markdown normally
         <StreamlitMarkdown
