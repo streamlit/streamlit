@@ -101,3 +101,15 @@ st.html(
     """,
     width=300,
 )
+
+# Test that JavaScript executes when explicitly allowed
+st.html(
+    """
+    <div id="x">initial</div>
+    <script>
+      document.getElementById('x').textContent = 'OK'
+      window.__st_html_flag__ = 'ran'
+    </script>
+    """,
+    unsafe_allow_javascript=True,
+)
