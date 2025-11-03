@@ -19,44 +19,84 @@ import { transparentize } from "color2k"
 
 import { hasLightBackgroundColor } from "~lib/theme"
 
+export const StyledAssistantAvatarWrapper = styled.div(({ theme }) => ({
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    display: "none",
+  },
+}))
+
+export const StyledUserAvatarWrapper = styled.div(({ theme }) => ({
+  // User avatar always visible
+}))
+
 export interface StyledChatMessageContainerProps {
   background: boolean
+  isUserMessage: boolean
 }
 
 export const StyledChatMessageContainer =
-  styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
+  styled.div<StyledChatMessageContainerProps>(
+    ({ theme, background, isUserMessage }) => {
+      const lightTheme = hasLightBackgroundColor(theme)
+      return {
+        width: "100%",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: isUserMessage ? 0 : theme.spacing.md,
+        paddingTop: theme.spacing.md,
+        paddingBottom: theme.spacing.md,
+        borderRadius: theme.radii.default,
+        justifyContent: isUserMessage ? "flex-end" : "flex-start",
+        [`@media (max-width: ${theme.breakpoints.md})`]: {
+          gap: 0,
+        },
+        ...(background && !isUserMessage
+          ? {
+              backgroundColor: lightTheme
+                ? transparentize(theme.colors.gray20, 0.5)
+                : transparentize(theme.colors.gray90, 0.5),
+            }
+          : {}),
+      }
+    }
+  )
+
+export interface StyledMessageContentProps {
+  isUserMessage: boolean
+  background: boolean
+}
+
+export const StyledMessageContent = styled.div<StyledMessageContentProps>(
+  ({ theme, isUserMessage, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
-      width: "100%",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: theme.spacing.sm,
-      padding: theme.spacing.lg,
-      paddingRight: background ? theme.spacing.lg : 0,
-      borderRadius: theme.radii.default,
-      ...(background
+      color: theme.colors.bodyText,
+      margin: isUserMessage ? "0" : "auto",
+      flexGrow: isUserMessage ? 0 : 1,
+      maxWidth: isUserMessage ? "70%" : "none",
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        maxWidth: isUserMessage ? "80%" : "none",
+      },
+      // Ensure the size of the message has an interpreted width as
+      // the amount defined by flex layout and disregard its contents
+      // they will handle their overflow.
+      //
+      // Unintuitively, setting the min width to 0 tells the browser
+      // that it can shrink past the content's width to the desired size.
+      // https://makandracards.com/makandra/66994-css-flex-and-min-width
+      minWidth: 0,
+      ...(background && isUserMessage
         ? {
             backgroundColor: lightTheme
               ? transparentize(theme.colors.gray20, 0.5)
               : transparentize(theme.colors.gray90, 0.5),
+            borderRadius: theme.radii.default,
+            padding: theme.spacing.lg,
           }
         : {}),
     }
-  })
-
-export const StyledMessageContent = styled.div(({ theme }) => ({
-  color: theme.colors.bodyText,
-  margin: "auto",
-  flexGrow: 1,
-  // Ensure the size of the message has an interpreted width as
-  // the amount defined by flex layout and disregard its contents
-  // they will handle their overflow.
-  //
-  // Unintuitively, setting the min width to 0 tells the browser
-  // that it can shrink past the content's width to the desired size.
-  // https://makandracards.com/makandra/66994-css-flex-and-min-width
-  minWidth: 0,
-}))
+  }
+)
 
 export const StyledAvatarBackground = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
@@ -73,7 +113,7 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
     flexShrink: 0,
     width: theme.sizes.chatAvatarSize,
     height: theme.sizes.chatAvatarSize,
-    borderRadius: theme.radii.default,
+    borderRadius: theme.radii.full,
     alignItems: "center",
     justifyContent: "center",
   }
@@ -92,7 +132,7 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
       height: theme.sizes.chatAvatarSize,
       // Ensure the avatar always respects the width/height
       flexShrink: 0,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.full,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: background,
@@ -107,7 +147,7 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
     height: theme.sizes.chatAvatarSize,
     // Ensure the avatar always respects the width/height
     flexShrink: 0,
-    borderRadius: theme.radii.default,
+    borderRadius: theme.radii.full,
     objectFit: "cover",
     display: "flex",
   }

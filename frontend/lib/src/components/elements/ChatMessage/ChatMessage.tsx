@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { Face, SmartToy } from "@emotion-icons/material-outlined"
+import { Face } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -29,6 +29,7 @@ import {
   StyledAvatarBackground,
   StyledAvatarIcon,
   StyledAvatarImage,
+  StyledAssistantAvatarWrapper,
   StyledChatMessageContainer,
   StyledMessageContent,
 } from "./styled-components"
@@ -75,7 +76,11 @@ function ChatMessageAvatar(
               data-testid="stChatMessageAvatarAssistant"
               background={theme.colors.orangeColor}
             >
-              <Icon content={SmartToy} size="lg" />
+              <DynamicIcon
+                iconValue=":material/auto_awesome_filled:"
+                size="lg"
+                color={theme.colors.bgColor}
+              />
             </StyledAvatarIcon>
           )
         } else if (avatar.startsWith(":material")) {
@@ -111,22 +116,30 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
   children,
 }): ReactElement => {
   const { avatar, avatarType, name } = element
+  const isUserMessage = ["user", "human"].includes(name.toLowerCase())
 
   return (
     <StyledChatMessageContainer
       className="stChatMessage"
       data-testid="stChatMessage"
-      background={["user", "human"].includes(name.toLowerCase())}
+      background={isUserMessage}
+      isUserMessage={isUserMessage}
     >
-      <ChatMessageAvatar
-        name={name}
-        avatar={avatar}
-        avatarType={avatarType}
-        endpoints={endpoints}
-      />
+      {!isUserMessage && (
+        <StyledAssistantAvatarWrapper>
+          <ChatMessageAvatar
+            name={name}
+            avatar={avatar}
+            avatarType={avatarType}
+            endpoints={endpoints}
+          />
+        </StyledAssistantAvatarWrapper>
+      )}
       <StyledMessageContent
         data-testid="stChatMessageContent"
         aria-label={`Chat message from ${name}`}
+        isUserMessage={isUserMessage}
+        background={isUserMessage}
       >
         {children}
       </StyledMessageContent>

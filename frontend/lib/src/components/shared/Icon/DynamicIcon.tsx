@@ -55,6 +55,14 @@ export function getFilledStarIconSrc(): string {
   return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDBfMTg2MF84NDMpIj48cGF0aCBkPSJNOS45OTk5NCAxNC4zOTE2TDEzLjQ1ODMgMTYuNDgzM0MxNC4wOTE2IDE2Ljg2NjYgMTQuODY2NiAxNi4zIDE0LjY5OTkgMTUuNTgzM0wxMy43ODMzIDExLjY1TDE2Ljg0MTYgOC45OTk5N0MxNy4zOTk5IDguNTE2NjMgMTcuMDk5OSA3LjU5OTk3IDE2LjM2NjYgNy41NDE2M0wxMi4zNDE2IDcuMTk5OTdMMTAuNzY2NiAzLjQ4MzNDMTAuNDgzMyAyLjgwODMgOS41MTY2MSAyLjgwODMgOS4yMzMyNyAzLjQ4MzNMNy42NTgyNyA3LjE5MTYzTDMuNjMzMjcgNy41MzMzQzIuODk5OTQgNy41OTE2MyAyLjU5OTk0IDguNTA4MyAzLjE1ODI3IDguOTkxNjNMNi4yMTY2MSAxMS42NDE2TDUuMjk5OTQgMTUuNTc1QzUuMTMzMjcgMTYuMjkxNiA1LjkwODI3IDE2Ljg1ODMgNi41NDE2MSAxNi40NzVMOS45OTk5NCAxNC4zOTE2WiIgZmlsbD0iI0ZBQ0EyQiIvPjwvZz48ZGVmcz48Y2xpcFBhdGggaWQ9ImNsaXAwXzE4NjBfODQzIj48cmVjdCB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIGZpbGw9IndoaXRlIi8+PC9jbGlwUGF0aD48L2RlZnM+PC9zdmc+"
 }
 
+/**
+ *
+ * @returns returns an img tag with a filled auto_awesome icon svg as base64 data
+ */
+export function getFilledAutoAwesomeIconSrc(): string {
+  return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij4KICA8cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTE5IDlsMS4yNS0yLjc1TDIzIDVsLTIuNzUtMS4yNUwxOSAxbC0xLjI1IDIuNzVMMTUgNWwyLjc1IDEuMjVMMTkgOXptLTcuNS41TDkgNCA2LjUgOS41IDEgMTJsNS41IDIuNUw5IDIwbDIuNS01LjVMMTcgMTJsLTUuNS0yLjV6TTE5IDE1bC0xLjI1IDIuNzVMMTUgMTlsMi43NSAxLjI1TDE5IDIzbDEuMjUtMi43NUwyMyAxOWwtMi43NS0xLjI1TDE5IDE1eiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg=="
+}
+
 export interface DynamicIconProps {
   iconValue: string
   size?: IconSize
@@ -77,6 +85,15 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
+                data-testid={props.testid || "stImageIcon"}
+              />
+            </StyledDynamicIcon>
+          )
+        case "auto_awesome_filled":
+          return (
+            <StyledDynamicIcon {...props}>
+              <StyledImageIcon
+                src={getFilledAutoAwesomeIconSrc()}
                 data-testid={props.testid || "stImageIcon"}
               />
             </StyledDynamicIcon>
