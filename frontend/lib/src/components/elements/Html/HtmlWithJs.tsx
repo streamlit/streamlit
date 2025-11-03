@@ -14,16 +14,53 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useRef } from "react"
+import { FC, memo, useEffect, useMemo, useRef } from "react"
 
+import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"
 
 export interface HtmlWithJsProps {
   body: string
 }
 
+/**
+ * Local sanitizer for the "unsafe allow JavaScript" path.
+ *
+ * - Based on the shared HTML profile `SANITIZE_HTML_BASE_OPTIONS`.
+ * - Extends allow-lists to keep <script>/<style> and common script attributes
+ *   (ADD_TAGS/ADD_ATTR).
+ */
+const SANITIZE_HTML_ALLOW_SCRIPTS_OPTIONS = {
+  ...SANITIZE_HTML_BASE_OPTIONS,
+  ADD_TAGS: ["script", "style"],
+  ADD_ATTR: [
+    "src",
+    "type",
+    "async",
+    "defer",
+    "nonce",
+    "crossorigin",
+    "referrerpolicy",
+    "integrity",
+  ],
+}
+
+/**
+ * Sanitizes an HTML string while retaining <script> and related attributes.
+ * Intended only for the unsafeAllowJavascript path where scripts are executed
+ * programmatically after insertion.
+ */
+function sanitizeHtmlStringAllowingScripts(html: string): string {
+  return dompurify.sanitize(html, SANITIZE_HTML_ALLOW_SCRIPTS_OPTIONS)
+}
+
 const HtmlWithJs: FC<HtmlWithJsProps> = ({ body }) => {
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const sanitizedBody = useMemo(
+    () => sanitizeHtmlStringAllowingScripts(body),
+    [body]
+  )
 
   useEffect(() => {
     const container = containerRef.current
@@ -31,19 +68,11 @@ const HtmlWithJs: FC<HtmlWithJsProps> = ({ body }) => {
       return
     }
 
-    // Reset and inject raw HTML
-    container.innerHTML = ""
-    container.innerHTML = body
+    // Inject sanitized HTML. Our DOMPurify hooks will add rel="noopener noreferrer"
+    // to links with target="_blank" for security.
+    container.innerHTML = sanitizedBody
 
-    // Post-process links opened in new tabs for security
-    const anchors = container.querySelectorAll<HTMLAnchorElement>(
-      'a[target="_blank"]'
-    )
-    anchors.forEach(a => {
-      a.setAttribute("rel", "noopener noreferrer")
-    })
-
-    // Execute scripts by cloning them so the browser runs them
+    // Execute scripts: Cloning <script> elements causes the browser to run them.
     const scripts = Array.from(
       container.querySelectorAll<HTMLScriptElement>("script")
     )
@@ -51,30 +80,28 @@ const HtmlWithJs: FC<HtmlWithJsProps> = ({ body }) => {
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script")
 
-      // Copy attributes (type, src, async, defer, nonce, etc.)
+      // Copy attributes (type, src, async, defer, nonce, etc.).
       for (const { name, value } of Array.from(oldScript.attributes)) {
         try {
           newScript.setAttribute(name, value)
         } catch {
-          // Best-effort; ignore invalid attributes
+          // Best-effort - ignore invalid attributes.
         }
       }
 
-      if (oldScript.src) {
-        newScript.src = oldScript.src
-      } else {
+      if (!oldScript.src) {
         newScript.textContent = oldScript.textContent
       }
 
-      // Replace to trigger execution
+      // Replace to trigger JS execution.
       oldScript.parentNode?.replaceChild(newScript, oldScript)
     })
 
-    // Cleanup on dependency change
+    // Cleanup on dependency change.
     return () => {
       container.innerHTML = ""
     }
-  }, [body])
+  }, [sanitizedBody])
 
   return <HtmlContainer ref={containerRef} />
 }

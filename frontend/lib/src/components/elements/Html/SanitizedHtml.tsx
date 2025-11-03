@@ -16,50 +16,23 @@
 
 import { memo, ReactElement, useMemo } from "react"
 
-import dompurify from "dompurify"
-
+import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"
+
+/**
+ * Sanitizes an HTML string for safe rendering (no script execution).
+ */
+function sanitizeHtmlString(html: string): string {
+  return dompurify.sanitize(html, SANITIZE_HTML_BASE_OPTIONS)
+}
 
 export interface SanitizedHtmlProps {
   body: string
 }
-
-// preserve target=_blank and set security attributes (see https://github.com/cure53/DOMPurify/issues/317)
-const TEMPORARY_ATTRIBUTE = "data-temp-href-target"
-dompurify.addHook("beforeSanitizeAttributes", function (node) {
-  if (
-    node instanceof HTMLElement &&
-    node.hasAttribute("target") &&
-    node.getAttribute("target") === "_blank"
-  ) {
-    node.setAttribute(TEMPORARY_ATTRIBUTE, "_blank")
-  }
-})
-dompurify.addHook("afterSanitizeAttributes", function (node) {
-  if (node instanceof HTMLElement && node.hasAttribute(TEMPORARY_ATTRIBUTE)) {
-    node.setAttribute("target", "_blank")
-    // according to https://html.spec.whatwg.org/multipage/links.html#link-type-noopener,
-    // noreferrer implies noopener, but we set it just to be sure in case some browsers
-    // do not implement the spec accordingly.
-    node.setAttribute("rel", "noopener noreferrer")
-    node.removeAttribute(TEMPORARY_ATTRIBUTE)
-  }
-})
-
-const sanitizeString = (html: string): string => {
-  const sanitizationOptions = {
-    // Default to permit HTML, SVG and MathML, this limits to HTML only
-    USE_PROFILES: { html: true },
-    // glue elements like style, script or others to document.body and prevent unintuitive browser behavior in several edge-cases
-    FORCE_BODY: true,
-  }
-  return dompurify.sanitize(html, sanitizationOptions)
-}
-
 function SanitizedHtml({
   body,
 }: Readonly<SanitizedHtmlProps>): ReactElement | null {
-  const sanitizedHtml = useMemo(() => sanitizeString(body), [body])
+  const sanitizedHtml = useMemo(() => sanitizeHtmlString(body), [body])
 
   if (!sanitizedHtml) {
     return null
