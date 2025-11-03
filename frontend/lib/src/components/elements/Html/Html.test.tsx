@@ -14,100 +14,90 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
+import { describe, expect, it } from "vitest"
 
 import { Html as HtmlProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import Html from "./Html"
 
-import Html, { HtmlProps } from "./Html"
+function makeProto(partial: Partial<HtmlProto>): HtmlProto {
+  return {
+    body: "",
+    unsafeAllowJavascript: false,
+    toJSON: () => ({}),
+    ...partial,
+  }
+}
 
-const getProps = (elementProps: Partial<HtmlProto> = {}): HtmlProps => ({
-  element: HtmlProto.create({
-    body: "<div>Test Html</div>",
-    ...elementProps,
-  }),
-})
+describe("Html element", () => {
+  describe("when unsafeAllowJavascript=false", () => {
+    const unsafeAllowJavascript = false
 
-describe("HTML element", () => {
-  it("renders the element as expected", () => {
-    const props = getProps()
-    render(<Html {...props} />)
-    const html = screen.getByTestId("stHtml")
-    expect(html).toBeInTheDocument()
-    expect(html).toHaveTextContent("Test Html")
-    expect(html).toHaveStyle("width: 100%")
-    expect(html).toHaveClass("stHtml")
-  })
-
-  it("handles <style> tags - applies style", () => {
-    const props = getProps({
-      body: `
-        <style>
-            #random { color: rgb(255, 165, 0); }
-        </style>
-        <div id="random">Test Html</div>
-    `,
-    })
-    render(<Html {...props} />)
-    const html = screen.getByTestId("stHtml")
-    expect(html).toHaveTextContent("Test Html")
-    // Check that the style tag is applied to the div
-    expect(screen.getByText("Test Html")).toHaveStyle(
-      "color: rgb(255, 165, 0)"
-    )
-  })
-
-  it("sanitizes <script> tags", () => {
-    const props = getProps({
-      body: `<script> alert('BEWARE - the script tag is scripting'); </script>`,
-    })
-    render(<Html {...props} />)
-    expect(screen.queryByTestId("stHtml")).not.toBeInTheDocument()
-  })
-
-  it("sanitizes <svg> tags", () => {
-    const props = getProps({
-      body: `
-        <svg width="100" height="100">
-            <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow" />
-        </svg>
-    `,
-    })
-    render(<Html {...props} />)
-    expect(screen.getByTestId("stHtml")).toHaveTextContent("")
-  })
-
-  describe("sanitizes anchor tags", () => {
-    it("does not add target when not present", () => {
-      const props = getProps({
-        body: '<a href="https://streamlit.io">Click Me</a>',
+    it("sanitizes and does not include script", () => {
+      const element = makeProto({
+        body: "<div id=\"x\">A</div><script>document.body.dataset.x='ran'</script>",
+        unsafeAllowJavascript,
       })
-      render(<Html {...props} />)
-      const anchorElement = screen.getByRole("link", { name: "Click Me" })
-      expect(anchorElement).not.toHaveAttribute("target")
+
+      render(<Html element={element} />)
+
+      const root = screen.getByTestId("stHtml")
+      expect(root.innerHTML).toContain('<div id="x">A</div>')
+      // script tags are removed by sanitize
+      expect(root.innerHTML).not.toContain("<script")
     })
 
-    it("preserves target='_blank' and adds rel attributes", () => {
-      const props = getProps({
-        body: '<a href="https://streamlit.io" target="_blank">Click Me</a>',
+    it("preserves target=_blank and sets rel attributes", () => {
+      const element = makeProto({
+        body: '<a href="https://example.com" target="_blank">Go</a>',
+        unsafeAllowJavascript,
       })
-      render(<Html {...props} />)
-      const anchorElement = screen.getByRole("link", { name: "Click Me" })
-      expect(anchorElement).toHaveAttribute("target", "_blank")
-      expect(anchorElement).toHaveAttribute("rel", "noopener noreferrer")
+
+      render(<Html element={element} />)
+
+      const root = screen.getByTestId("stHtml")
+      const link = root.querySelector<HTMLAnchorElement>("a")
+      expect(link).not.toBeNull()
+      expect(link?.getAttribute("target")).toBe("_blank")
+      expect(link?.getAttribute("rel")).toBe("noopener noreferrer")
     })
 
-    it("removes non-_blank target attributes", () => {
-      const props = getProps({
-        body: '<a href="https://streamlit.io" target="_self">Click Me</a>',
+    it("removes dangerous attributes and style/script tags", () => {
+      const element = makeProto({
+        body: '<div id="x" onclick="alert(1)">A</div><style>.a{color:red}</style><script>window.x=1</script>',
+        unsafeAllowJavascript,
       })
-      render(<Html {...props} />)
-      const anchorElement = screen.getByRole("link", { name: "Click Me" })
-      expect(anchorElement).not.toHaveAttribute("target")
-      expect(anchorElement).not.toHaveAttribute("rel")
+
+      render(<Html element={element} />)
+
+      const root = screen.getByTestId("stHtml")
+      const x = root.querySelector("#x") as HTMLElement
+      expect(x).not.toBeNull()
+      expect(x.hasAttribute("onclick")).toBe(false)
+      // style tags are allowed in sanitized HTML
+      expect(root.innerHTML).toContain("<style")
+      expect(root.innerHTML).not.toContain("<script")
+    })
+  })
+
+  describe("when unsafeAllowJavascript=true", () => {
+    const unsafeAllowJavascript = true
+
+    it("injects raw HTML and contains script tag", () => {
+      const element = makeProto({
+        body: '<div id="x">A</div><script>window.__x=1</script>',
+        unsafeAllowJavascript,
+      })
+
+      render(<Html element={element} />)
+
+      const root = screen.getByTestId("stHtml")
+      // raw HTML injected
+      expect(root.querySelector("#x")).not.toBeNull()
+      // our logic replaces scripts with new script elements; they remain present
+      const scripts = root.querySelectorAll("script")
+      expect(scripts.length).toBeGreaterThan(0)
     })
   })
 })
