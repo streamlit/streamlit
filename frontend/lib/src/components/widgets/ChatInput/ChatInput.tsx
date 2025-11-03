@@ -25,7 +25,13 @@ import React, {
   useState,
 } from "react"
 
-import { Check, Close, Mic, Send } from "@emotion-icons/material-rounded"
+import {
+  Check,
+  Close,
+  ErrorOutline,
+  Mic,
+  Send,
+} from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -70,6 +76,7 @@ import {
   StyledChatInput,
   StyledChatInputContainer,
   StyledInputInstructionsContainer,
+  StyledRecordingError,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
   StyledWaveformContainer,
@@ -119,6 +126,7 @@ function ChatInput({
   const [files, setFiles] = useState<UploadFileInfo[]>([])
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [recordingError, setRecordingError] = useState<string | null>(null)
 
   // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
@@ -415,6 +423,16 @@ function ChatInput({
   const controllerEvents = useMemo(
     () => ({
       onApprove: handleAudioApprove,
+      onPermissionDenied: () => {
+        setRecordingError("Microphone access denied")
+      },
+      onError: (error: Error) => {
+        setRecordingError("Recording failed")
+        LOG.error("Recording error", error)
+      },
+      onRecordStart: () => {
+        setRecordingError(null)
+      },
     }),
     [handleAudioApprove]
   )
@@ -450,6 +468,11 @@ function ChatInput({
 
     setValue(targetValue)
     autoExpand.updateScrollHeight()
+
+    // Clear recording error when user starts typing
+    if (recordingError) {
+      setRecordingError(null)
+    }
   }
 
   const handleMicClick = useCallback(
@@ -461,7 +484,6 @@ function ChatInput({
         return
       }
 
-      // Error handling is done via controller events (onError, onPermissionDenied)
       await controller.start()
     },
     [acceptAudio, disabled, controller]
@@ -475,10 +497,7 @@ function ChatInput({
   }, [controller])
 
   const handleRecordingApprove = useCallback(async () => {
-    // Stop recording and get the blob
     const { blob } = await controller.stop()
-    // Approve the recording (encodes to WAV and triggers onApprove event which handles upload)
-    // Error handling is done via controller events (onError) and in the onApprove handler for upload errors
     await controller.approve(blob)
   }, [controller])
 
@@ -670,11 +689,7 @@ function ChatInput({
                   </StyledSendIconButton>
                   {/* Approve button (✓ icon or spinner during upload) */}
                   <StyledSendIconButton
-                    onClick={() => {
-                      handleRecordingApprove().catch(_error => {
-                        // Error handling is done via controller events
-                      })
-                    }}
+                    onClick={handleRecordingApprove}
                     disabled={disabled || audioUploading}
                     extended={autoExpand.isExtended}
                     data-testid="stChatInputApproveButton"
@@ -691,11 +706,7 @@ function ChatInput({
                   {/* Mic button */}
                   {acceptAudio && (
                     <StyledSendIconButton
-                      onClick={(e: React.MouseEvent) => {
-                        handleMicClick(e).catch(_error => {
-                          // Error handling is done via controller events
-                        })
-                      }}
+                      onClick={handleMicClick}
                       disabled={disabled || audioUploading}
                       extended={autoExpand.isExtended}
                       data-testid="stChatInputMicButton"
@@ -716,6 +727,12 @@ function ChatInput({
               )}
             </StyledSendIconButtonContainer>
           </StyledChatInput>
+        )}
+        {recordingError && (
+          <StyledRecordingError data-testid="stChatInputRecordingError">
+            <Icon content={ErrorOutline} size="sm" />
+            {recordingError}
+          </StyledRecordingError>
         )}
       </StyledChatInputContainer>
     </>

@@ -158,3 +158,14 @@ export const StyledChatAudioWave = styled.div(({ theme }) => ({
     inset: 0,
   },
 }))
+
+export const StyledRecordingError = styled.small(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.fontSizes.sm,
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+  marginTop: theme.spacing.twoXS,
+}))

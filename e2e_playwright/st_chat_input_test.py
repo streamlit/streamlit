@@ -1309,3 +1309,73 @@ def test_audio_disabled_states(app: Page):
     # Verify submit button is also disabled
     submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
     expect(submit_button).to_have_attribute("disabled", "")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_chat_input_permission_denied_error(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that permission denied error is displayed in chat input."""
+    # Don't grant permissions - let it fail
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Try to click mic without permissions
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    mic_button.click()
+
+    # Wait for error message to appear
+    app.wait_for_timeout(500)
+    error_message = chat_input.get_by_test_id("stChatInputRecordingError")
+    expect(error_message).to_be_visible()
+    expect(error_message).to_contain_text("Microphone access denied")
+
+    # Take snapshot of error state
+    assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
+
+    # Verify error clears when user types
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Some text")
+    expect(error_message).not_to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that recording errors are displayed in chat input."""
+    from playwright.sync_api import Route
+
+    grant_microphone_permissions(app)
+
+    # Mock recording failure by intercepting audio upload
+    def handle_route(route: Route):
+        if "upload_file" in route.request.url:
+            route.abort("failed")
+        else:
+            route.continue_()
+
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Start recording
+    start_audio_recording(chat_input)
+    app.wait_for_timeout(1000)
+
+    # Try to approve (will fail upload)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    approve_button.click()
+    app.wait_for_timeout(1000)
+
+    # Verify error appears
+    error_message = chat_input.get_by_test_id("stChatInputRecordingError")
+    expect(error_message).to_be_visible()
+    expect(error_message).to_contain_text("Recording failed")
+
+    # Take snapshot
+    assert_snapshot(chat_input, name="st_chat_input-recording_error")
+
+    # Verify error clears when user starts typing
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Error cleared")
+    expect(error_message).not_to_be_visible()

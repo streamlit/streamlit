@@ -398,7 +398,18 @@ export function useWaveformController({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       setIsPlaybackPlaying(false)
-      throw err
+      setCurrentState("idle")
+      eventsRef.current.onError(err)
+      // Return a dummy result to avoid breaking the flow
+      return {
+        blob: new Blob(),
+        meta: {
+          durationMs: 0,
+          sampleRate: null,
+          mimeType: "audio/webm",
+          size: 0,
+        },
+      }
     }
   }, [currentState, enterPlaybackMode, effectiveSampleRate])
 
@@ -406,7 +417,9 @@ export function useWaveformController({
     async (blob?: Blob): Promise<void> => {
       const blobToUse = blob ?? currentBlob
       if (!blobToUse) {
-        throw new Error("No recorded audio to approve")
+        const err = new Error("No recorded audio to approve")
+        eventsRef.current.onError(err)
+        return
       }
 
       try {
@@ -417,8 +430,7 @@ export function useWaveformController({
         setCurrentState("idle")
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
-        void eventsRef.current.onError?.(err)
-        throw err
+        eventsRef.current.onError(err)
       }
     },
     [currentBlob, effectiveSampleRate]
