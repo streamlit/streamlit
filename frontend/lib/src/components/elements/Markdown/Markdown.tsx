@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
@@ -26,8 +26,6 @@ import {
 } from "~lib/components/shared/TooltipIcon"
 
 export interface MarkdownProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
-  help?: string
   element: MarkdownProto
 }
 
@@ -41,46 +39,47 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
+  const { allowHtml, body, elementType, help, isCaption } = element
+
+  const isLatex = elementType === MarkdownProto.Type.LATEX
+
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
-    element.elementType === MarkdownProto.Type.NATIVE &&
-    SINGLE_BADGE_REGEX.test(element.body.trim())
+    elementType === MarkdownProto.Type.NATIVE &&
+    SINGLE_BADGE_REGEX.test(body.trim())
+
+  const markdown = (
+    <StreamlitMarkdown
+      isCaption={isCaption}
+      source={body}
+      allowHTML={allowHtml}
+    />
+  )
+
+  let content: ReactElement
+  if (help && isSingleBadgeOnly) {
+    // For single badge markdown with help, show the BaseButtonTooltip
+    content = (
+      <BaseButtonTooltip help={help} containerWidth={false}>
+        {markdown}
+      </BaseButtonTooltip>
+    )
+  } else if (help) {
+    // For other markdown with help, show the inline tooltip
+    content = (
+      <StyledLabelHelpWrapper isLatex={isLatex}>
+        {markdown}
+        <InlineTooltipIcon content={help} isLatex={isLatex} />
+      </StyledLabelHelpWrapper>
+    )
+  } else {
+    // No help provided, render markdown normally
+    content = markdown
+  }
+
   return (
     <div className="stMarkdown" data-testid="stMarkdown">
-      {element.help ? (
-        // For single badge markdown with help, show the BaseButtonTooltip
-        isSingleBadgeOnly ? (
-          <BaseButtonTooltip help={element.help} containerWidth={false}>
-            <StreamlitMarkdown
-              isCaption={element.isCaption}
-              source={element.body}
-              allowHTML={element.allowHtml}
-            />
-          </BaseButtonTooltip>
-        ) : (
-          // For other markdown with help, show the inline tooltip
-          <StyledLabelHelpWrapper
-            isLatex={element.elementType === MarkdownProto.Type.LATEX}
-          >
-            <StreamlitMarkdown
-              isCaption={element.isCaption}
-              source={element.body}
-              allowHTML={element.allowHtml}
-            />
-            <InlineTooltipIcon
-              content={element.help}
-              isLatex={element.elementType === MarkdownProto.Type.LATEX}
-            ></InlineTooltipIcon>
-          </StyledLabelHelpWrapper>
-        )
-      ) : (
-        // No help provided, render markdown normally
-        <StreamlitMarkdown
-          isCaption={element.isCaption}
-          source={element.body}
-          allowHTML={element.allowHtml}
-        />
-      )}
+      {content}
     </div>
   )
 }
