@@ -125,10 +125,32 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         _LOGGER.debug("MediaFileHandler: GET %s", abspath)
 
         try:
-            # abspath is the hash as used `get_absolute_path`
+            # abspath is the hash/file_id from get_absolute_path
             media_file = cls._storage.get_file(abspath)
         except Exception:
             _LOGGER.exception("MediaFileHandler: Missing file %s", abspath)
+            return None
+
+        # Check if this is a lazy file that needs materialization
+        if media_file.is_lazy and not media_file.is_materialized:
+            _LOGGER.debug("MediaFileHandler: Materializing lazy file %s", abspath)
+            try:
+                # Extract file_id without extension for materialize_file call
+                file_id = abspath.split(".")[0] if "." in abspath else abspath
+                content = cls._storage.materialize_file(file_id)
+            except Exception:
+                _LOGGER.exception(
+                    "MediaFileHandler: Failed to materialize lazy file %s", abspath
+                )
+                return None
+        else:
+            # Regular file or already materialized lazy file
+            content = media_file.content
+
+        if content is None:
+            _LOGGER.error(
+                "MediaFileHandler: File %s has no content (not materialized?)", abspath
+            )
             return None
 
         _LOGGER.debug(
@@ -137,12 +159,12 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         # If there is no start and end, just return the full content
         if start is None and end is None:
-            return media_file.content
+            return content
 
         if start is None:
             start = 0
         if end is None:
-            end = len(media_file.content)
+            end = len(content)
 
         # content is bytes that work just by slicing supplied by start and end
-        return media_file.content[start:end]
+        return content[start:end]

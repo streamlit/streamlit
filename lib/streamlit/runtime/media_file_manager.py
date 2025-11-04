@@ -17,11 +17,15 @@
 from __future__ import annotations
 
 import collections
+import hashlib
 import threading
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -231,3 +235,87 @@ class MediaFileManager:
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
+
+    def add_lazy(
+        self,
+        element_id: str,
+        callable_fn: Callable[[], bytes],
+        mimetype: str,
+        coordinates: str,
+        file_name: str | None = None,
+    ) -> str:
+        """Add a lazy file (with deferred data generation) and return its URL.
+
+        The callable is NOT invoked here - it will be invoked on-demand when
+        the user actually downloads the file.
+
+        Parameters
+        ----------
+        element_id : str
+            The unique widget element ID (used to generate stable file ID).
+        callable_fn : Callable[[], bytes]
+            Function that generates file content when invoked.
+        mimetype : str
+            The MIME type of the file.
+        coordinates : str
+            Unique string identifying the element's location.
+        file_name : str or None
+            Optional filename for download.
+
+        Returns
+        -------
+        str
+            The URL that the frontend can use to fetch the lazy file.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            # Generate stable file ID based on element_id, not content
+            # This allows us to create the ID without invoking the callable
+            file_id = self._generate_lazy_file_id(element_id, mimetype, file_name)
+
+            # Store the lazy file in storage (callable not invoked yet)
+            self._storage.load_lazy_file(
+                file_id, callable_fn, mimetype, MediaFileKind.DOWNLOADABLE, file_name
+            )
+
+            # Track metadata and session/coordinate mapping
+            metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
+            self._file_metadata[file_id] = metadata
+            self._files_by_session_and_coord[session_id][coordinates] = file_id
+
+            return self._storage.get_url(file_id)
+
+    def _generate_lazy_file_id(
+        self,
+        element_id: str,
+        mimetype: str,
+        filename: str | None = None,
+    ) -> str:
+        """Generate a stable file ID for a lazy file without invoking callable.
+
+        Uses element_id (widget key) + mimetype + filename to create a
+        deterministic hash, similar to how regular files use content hash.
+
+        Parameters
+        ----------
+        element_id : str
+            The unique widget element ID.
+        mimetype : str
+            The MIME type of the file.
+        filename : str or None
+            Optional filename.
+
+        Returns
+        -------
+        str
+            A stable hash-based file ID.
+        """
+        filehash = hashlib.new("sha224", usedforsecurity=False)
+        filehash.update(element_id.encode())
+        filehash.update(mimetype.encode())
+
+        if filename is not None:
+            filehash.update(filename.encode())
+
+        return filehash.hexdigest()
