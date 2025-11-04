@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
 
 env:
   FLAKY_VERIFY_LABEL: flaky-verify
