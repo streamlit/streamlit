@@ -150,7 +150,11 @@ export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
   return Math.round(remFontSize * 8) / 8
 }
 
-export const parseFont = (font: string): string => {
+export const parseFont = (
+  font: string,
+  // fallbackFont is the default streamlit font to use if the custom font fails to load
+  fallbackFont: string = fonts.sansSerif
+): string => {
   // Try to map a short font family to our default
   // font families
   const fontMap: Record<string, string> = {
@@ -166,8 +170,10 @@ export const parseFont = (font: string): string => {
     return fontMap[fontKey]
   }
 
-  // If the font is not in the map, return the font as is:
-  return font
+  // Always append Streamlit's default font as the final fallback, ensuring
+  // that if custom fonts fail to load (including any user-specified fallbacks),
+  // Streamlit's default fonts are used instead of the browser's defaults.
+  return `${font}, ${fallbackFont}`
 }
 
 /**
@@ -937,16 +943,20 @@ export const createEmotionTheme = (
     // Default values for the generic fonts
     ...genericFonts,
     // Override properties if configured
-    bodyFont: bodyFont ? parseFont(bodyFont) : genericFonts.bodyFont,
-    codeFont: codeFont ? parseFont(codeFont) : genericFonts.codeFont,
+    bodyFont: bodyFont
+      ? parseFont(bodyFont, fonts.sansSerif)
+      : genericFonts.bodyFont,
+    codeFont: codeFont
+      ? parseFont(codeFont, fonts.monospace)
+      : genericFonts.codeFont,
     headingFont: headingFont
-      ? parseFont(headingFont)
+      ? parseFont(headingFont, fonts.sansSerif)
       : genericFonts.headingFont,
   }
 
   // Handle headingFont fallback
   if (bodyFont && !headingFont) {
-    fontsOverride.headingFont = parseFont(bodyFont)
+    fontsOverride.headingFont = parseFont(bodyFont, fonts.sansSerif)
   }
 
   return {
