@@ -107,6 +107,26 @@ export class WaveSurferRecordBackend {
     this.recordPlugin.on("record-progress", (time: number) => {
       this.events.onRecordProgress?.(time)
     })
+
+    // Listen for device-error event from WaveSurfer Record plugin
+    // This fires when getUserMedia fails (e.g., permission denied)
+    // @ts-expect-error - device-error is not in the official type definitions but is emitted by the plugin
+    this.recordPlugin.on("device-error", (error: Error) => {
+      this.isRecording = false
+
+      // Check if this is a permission denied error
+      // WaveSurfer may wrap the native error, so check both the error name and message
+      const isPermissionDenied =
+        error.name === "NotAllowedError" ||
+        error.name === "PermissionDeniedError" ||
+        error.message?.toLowerCase().includes("permission denied")
+
+      if (isPermissionDenied) {
+        this.events.onPermissionDenied?.()
+      } else {
+        this.events.onError?.(error)
+      }
+    })
   }
 
   setEventHandlers(events: RecordBackendEvents): void {
@@ -154,10 +174,14 @@ export class WaveSurferRecordBackend {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
 
-      if (
+      // Check if this is a permission denied error
+      // WaveSurfer may wrap the native error, so check both the error name and message
+      const isPermissionDenied =
         err.name === "NotAllowedError" ||
-        err.name === "PermissionDeniedError"
-      ) {
+        err.name === "PermissionDeniedError" ||
+        err.message?.toLowerCase().includes("permission denied")
+
+      if (isPermissionDenied) {
         this.events.onPermissionDenied?.()
         throw new Error("Microphone permission denied")
       }

@@ -408,6 +408,7 @@ function ChatInput({
         submitChatInput(audioInfo)
       } catch (error) {
         LOG.error("Audio upload failed:", error)
+        setRecordingError("Recording failed")
         // Refocus on input after error
         if (chatInputRef.current) {
           chatInputRef.current.focus()

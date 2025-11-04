@@ -441,15 +441,22 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(audio_input, name="st_audio_input-error_state")
 
 
-def test_permission_denied_state(app: Page, assert_snapshot: ImageCompareFunction):
+def test_permission_denied_state(
+    app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that permission denied state is displayed."""
-    # Don't grant permissions - let it fail
-    audio_input = get_audio_input_by_label(app, "Audio Input 1")
+    app_with_microphone_permission_denied.on(
+        "console", lambda msg: print(f"CONSOLE[{msg.type}]: {msg.text}")
+    )
 
-    # Try to record without permissions
+    audio_input = get_audio_input_by_label(
+        app_with_microphone_permission_denied, "Audio Input 1"
+    )
+
+    # Try to record - should trigger permission denied
     record_button = audio_input.get_by_role("button", name="Record", exact=True)
     record_button.click()
-    app.wait_for_timeout(500)
+    app_with_microphone_permission_denied.wait_for_timeout(2000)
 
     # Verify permission denied message appears
     expect(

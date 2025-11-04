@@ -1313,11 +1313,12 @@ def test_audio_disabled_states(app: Page):
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_chat_input_permission_denied_error(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that permission denied error is displayed in chat input."""
-    # Don't grant permissions - let it fail
-    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input = get_element_by_key(
+        app_with_microphone_permission_denied, "chat_input_11"
+    )
     chat_input.scroll_into_view_if_needed()
 
     # Try to click mic without permissions
@@ -1325,7 +1326,7 @@ def test_chat_input_permission_denied_error(
     mic_button.click()
 
     # Wait for error message to appear
-    app.wait_for_timeout(500)
+    app_with_microphone_permission_denied.wait_for_timeout(500)
     error_message = chat_input.get_by_test_id("stChatInputRecordingError")
     expect(error_message).to_be_visible()
     expect(error_message).to_contain_text("Microphone access denied")

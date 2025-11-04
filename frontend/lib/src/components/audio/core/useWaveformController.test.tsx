@@ -45,16 +45,16 @@ vi.mock("~lib/theme/utils", () => ({
 describe("useWaveformController", () => {
   let mockContainerRef: { current: HTMLDivElement | null }
   let mockEvents: {
-    onPermissionDenied?: () => Promise<void>
-    onError?: (error: Error) => Promise<void>
-    onRecordStart?: () => Promise<void>
-    onRecordReady?: (blob: Blob) => Promise<void>
+    onPermissionDenied: () => void
+    onError: (error: Error) => void
+    onRecordStart?: () => void
+    onRecordReady?: (blob: Blob) => void
     onApprove?: (wav: Blob) => Promise<void>
-    onCancel?: () => Promise<void>
-    onProgressMs?: (ms: number) => Promise<void>
-    onPlaybackPlay?: () => Promise<void>
-    onPlaybackPause?: () => Promise<void>
-    onPlaybackFinish?: () => Promise<void>
+    onCancel?: () => void
+    onProgressMs?: (ms: number) => void
+    onPlaybackPlay?: () => void
+    onPlaybackPause?: () => void
+    onPlaybackFinish?: () => void
   }
 
   const wrapper = ({ children }: { children: ReactNode }): ReactNode => (
@@ -64,16 +64,16 @@ describe("useWaveformController", () => {
   beforeEach(() => {
     mockContainerRef = { current: document.createElement("div") }
     mockEvents = {
-      onPermissionDenied: vi.fn().mockResolvedValue(undefined),
-      onError: vi.fn().mockResolvedValue(undefined),
-      onRecordStart: vi.fn().mockResolvedValue(undefined),
-      onRecordReady: vi.fn().mockResolvedValue(undefined),
+      onPermissionDenied: vi.fn(),
+      onError: vi.fn(),
+      onRecordStart: vi.fn(),
+      onRecordReady: vi.fn(),
       onApprove: vi.fn().mockResolvedValue(undefined),
-      onCancel: vi.fn().mockResolvedValue(undefined),
-      onProgressMs: vi.fn().mockResolvedValue(undefined),
-      onPlaybackPlay: vi.fn().mockResolvedValue(undefined),
-      onPlaybackPause: vi.fn().mockResolvedValue(undefined),
-      onPlaybackFinish: vi.fn().mockResolvedValue(undefined),
+      onCancel: vi.fn(),
+      onProgressMs: vi.fn(),
+      onPlaybackPlay: vi.fn(),
+      onPlaybackPause: vi.fn(),
+      onPlaybackFinish: vi.fn(),
     }
   })
 
@@ -141,6 +141,7 @@ describe("useWaveformController", () => {
     )
 
     const newEvents = {
+      onPermissionDenied: vi.fn(),
       onError: vi.fn(),
     }
 

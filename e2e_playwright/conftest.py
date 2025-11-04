@@ -595,6 +595,37 @@ def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
     return page
 
 
+@pytest.fixture
+def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
+    """Fixture that opens the app with getUserMedia mocked to deny microphone permissions.
+
+    This fixture is used for testing microphone permission denied error handling in audio
+    components. It injects a script that overrides navigator.mediaDevices.getUserMedia
+    to always reject with a NotAllowedError before the app loads.
+    """
+    # Add init script BEFORE navigating to the page
+    page.add_init_script("""
+        // Override getUserMedia to always reject with NotAllowedError
+        // Must use DOMException to match browser behavior
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+            writable: false,
+            configurable: true,
+            value: async function() {
+                const error = new DOMException(
+                    'Permission denied',
+                    'NotAllowedError'
+                );
+                throw error;
+            }
+        });
+    """)
+
+    # Now navigate to the app
+    page.goto(f"http://localhost:{app_port}/")
+    wait_for_app_loaded(page)
+    return page
+
+
 class ImageCompareFunction(Protocol):
     def __call__(
         self,
