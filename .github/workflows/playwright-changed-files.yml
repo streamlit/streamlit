@@ -197,11 +197,11 @@ jobs:
         uses: actions/upload-artifact@v5
         if: always()
         with:
-          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v5
         with:
-          name: coverage_report_e2e
+          name: coverage_report_e2e${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/htmlcov
           retention-days: 14
