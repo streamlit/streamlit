@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -72,7 +73,14 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
-DownloadButtonDataType: TypeAlias = str | bytes | TextIO | BinaryIO | io.RawIOBase
+DownloadButtonDataType: TypeAlias = (
+    str
+    | bytes
+    | TextIO
+    | BinaryIO
+    | io.RawIOBase
+    | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
+)
 
 
 @dataclass
@@ -934,7 +942,12 @@ class ButtonMixin:
         download_button_proto.default = False
         download_button_proto.type = type
         marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
+            self.dg._get_delta_path_str(),
+            data,
+            download_button_proto,
+            mime,
+            file_name,
+            element_id,
         )
         download_button_proto.disabled = disabled
 
@@ -1194,7 +1207,63 @@ def marshall_file(
     proto_download_button: DownloadButtonProto,
     mimetype: str | None,
     file_name: str | None = None,
+    element_id: str | None = None,
 ) -> None:
+    # Check if data is a callable for deferred loading
+    if callable(data):
+        if not runtime.exists():
+            # When running in "raw mode", we can't use lazy loading
+            proto_download_button.url = ""
+            return
+
+        if element_id is None:
+            raise StreamlitAPIException(
+                "Lazy download button requires a valid element_id"
+            )
+
+        # Set default mimetype if not provided
+        final_mimetype = mimetype or "application/octet-stream"
+
+        # Create a wrapper that converts the callable's result to bytes
+        def callable_wrapper() -> bytes:
+            result = data()
+            result_as_bytes: bytes
+
+            if isinstance(result, str):
+                result_as_bytes = result.encode()
+            elif isinstance(result, io.TextIOWrapper):
+                string_data = result.read()
+                result_as_bytes = string_data.encode()
+            elif isinstance(result, bytes):
+                result_as_bytes = result
+            elif isinstance(result, io.BytesIO):
+                result.seek(0)
+                result_as_bytes = result.getvalue()
+            elif isinstance(result, io.BufferedReader):
+                result.seek(0)
+                result_as_bytes = result.read()
+            elif isinstance(result, io.RawIOBase):
+                result.seek(0)
+                result_as_bytes = result.read() or b""
+            else:
+                raise StreamlitAPIException(
+                    f"Callable returned invalid data format: {type(result)}"
+                )
+
+            return result_as_bytes
+
+        # Add lazy file to media file manager (callable not invoked yet)
+        file_url = runtime.get_instance().media_file_mgr.add_lazy(
+            element_id=element_id,
+            callable_fn=callable_wrapper,
+            mimetype=final_mimetype,
+            coordinates=coordinates,
+            file_name=file_name,
+        )
+        proto_download_button.url = file_url
+        return
+
+    # Original logic for non-callable data
     data_as_bytes: bytes
     if isinstance(data, str):
         data_as_bytes = data.encode()
