@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: ""
+      base_ref:
+        description: Base branch to compare against (e.g., develop, or parent branch in a stack)
+        required: false
+        type: string
+        default: "develop"
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -40,7 +45,7 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Checkout Streamlit code (PR head)
         if: inputs.ref == ''
         uses: actions/checkout@v5
@@ -51,9 +56,14 @@ jobs:
           fetch-depth: 2
       - name: Get changed files
         id: changed-files
+        env:
+          BASE_REF: ${{ inputs.base_ref || 'develop' }}
         run: |
-          # Get all changed files using git diff-tree
-          git_output=$(git diff-tree --no-commit-id --name-only -r HEAD^ HEAD)
+          # Fetch base branch for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
+
+          # Get all changed files comparing against base branch
+          git_output=$(git diff --name-only "${BASE_REF}...HEAD")
 
           # Filter files in e2e_playwright directory and find relevant test files
           # Includes both changed test files and test files for changed app scripts
@@ -135,6 +145,7 @@ jobs:
         id: changed-nodeids
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          BASE_REF: ${{ inputs.base_ref || 'develop' }}
         run: |
           python3 - << 'PY'
           import json
@@ -157,7 +168,8 @@ jobs:
 
           def get_added_line_ranges(repo_path: str, file_rel: str):
             # Returns list of (start, end) inclusive line ranges for additions in new file
-            cmd = ['git', 'diff', '--unified=0', '--no-color', 'HEAD^', 'HEAD', '--', os.path.join('e2e_playwright', file_rel)]
+            base_ref = os.environ.get('BASE_REF', 'develop')
+            cmd = ['git', 'diff', '--unified=0', '--no-color', f'{base_ref}...HEAD', '--', os.path.join('e2e_playwright', file_rel)]
             proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
             ranges = []
             for line in proc.stdout.splitlines():

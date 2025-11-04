@@ -31,11 +31,14 @@ jobs:
     outputs:
       runs: ${{ steps.compute.outputs.runs }}
       pr-number: ${{ steps.compute.outputs.pr_number }}
+      base-ref: ${{ steps.compute.outputs.base_ref }}
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
       - name: Compute inputs and matrix
         id: compute
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Resolve runs
           runs_input="${{ inputs.runs }}"
@@ -46,10 +49,15 @@ jobs:
 
           # Resolve PR number from input or event
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr_number }}" ]]; then
-            echo "pr_number=${{ inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+            pr_number="${{ inputs.pr_number }}"
           else
-            echo "pr_number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            pr_number="${{ github.event.pull_request.number }}"
           fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+          # Get base branch for the PR
+          base_ref=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.ref')
+          echo "base_ref=$base_ref" >> "$GITHUB_OUTPUT"
 
           # Build JSON array for matrix
           json="["
@@ -74,6 +82,7 @@ jobs:
           gh workflow run playwright-changed-files.yml \
             --ref ${{ github.ref_name }} \
             -f ref=refs/pull/${{ needs.verify.outputs.pr-number }}/merge \
+            -f base_ref=${{ needs.verify.outputs.base-ref }} \
             --repo streamlit/streamlit
         env:
           GH_TOKEN: ${{ github.token }}
