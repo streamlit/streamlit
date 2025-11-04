@@ -493,6 +493,8 @@ def test_uploads_and_deletes_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading multiple files at once works correctly."""
+    # Use a taller viewport to avoid elements being outside the viewport in WebKit
+    app.set_viewport_size({"width": 750, "height": 1500})
     chat_input = get_element_by_key(app, "chat_input_5")
 
     file_name1 = "file1.txt"
@@ -509,6 +511,7 @@ def test_uploads_and_deletes_multiple_files(
     file_upload_helper(app, chat_input, files)
 
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files.scroll_into_view_if_needed()
 
     # Wait for file names to be visible before taking snapshot
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
@@ -519,8 +522,11 @@ def test_uploads_and_deletes_multiple_files(
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
     expect(uploaded_file_names).to_have_count(2)
 
-    # Delete one uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    # Delete one uploaded file (ensure button is in viewport for WebKit)
+    delete_button = uploaded_files.get_by_test_id("stChatInputDeleteBtn").first
+    expect(delete_button).to_be_visible()
+    delete_button.scroll_into_view_if_needed()
+    delete_button.click()
 
     wait_for_app_run(app)
 
