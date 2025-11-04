@@ -63,14 +63,11 @@ jobs:
   e2e-changed-files-matrix:
     needs: verify
     if: needs.verify.outputs.pr-number != ''
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
-    steps:
-      - name: Call changed-files workflow (iteration ${{ matrix.iteration }})
-        uses: ./.github/workflows/playwright-changed-files.yml
-        with:
-          ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
-        secrets: inherit
+    uses: ./.github/workflows/playwright-changed-files.yml
+    with:
+      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
+    secrets: inherit
