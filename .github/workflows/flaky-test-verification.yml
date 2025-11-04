@@ -63,11 +63,16 @@ jobs:
   e2e-changed-files-matrix:
     needs: verify
     if: needs.verify.outputs.pr-number != ''
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
-    uses: ./.github/workflows/playwright-changed-files.yml
-    with:
-      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
-    secrets: inherit
+    steps:
+      - name: Trigger changed-files workflow (iteration ${{ matrix.iteration }})
+        run: |
+          gh workflow run playwright-changed-files.yml \
+            -f ref=refs/pull/${{ needs.verify.outputs.pr-number }}/merge \
+            --repo streamlit/streamlit
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -10,6 +10,13 @@ on:
         required: false
         type: string
         default: ""
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref (branch, SHA) or PR merge ref to checkout
+        required: false
+        type: string
+        default: ""
 
 # Avoid duplicate workflows on same branch
 concurrency:
