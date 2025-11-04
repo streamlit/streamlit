@@ -578,7 +578,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
 
-    # Wait for the file to actually appear in the uploaded files list
+    # Verify the file appears in the uploaded files list
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
 
     uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
