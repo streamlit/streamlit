@@ -26,7 +26,7 @@ jobs:
   verify:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == env.FLAKY_VERIFY_LABEL)
+      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
     runs-on: ubuntu-latest
     outputs:
       runs: ${{ steps.compute.outputs.runs }}
