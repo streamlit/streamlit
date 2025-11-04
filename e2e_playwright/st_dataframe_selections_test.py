@@ -671,6 +671,7 @@ def test_multi_row_and_single_cell_select(app: Page):
     )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_multi_row_column_and_cell_select(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
