@@ -28,9 +28,9 @@ on:
         type: string
         default: "develop"
 
-# Avoid duplicate workflows on same branch
+# Avoid duplicate workflows on same branch (but allow parallel runs when called via workflow_call)
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-playwright-changed-files
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}-playwright-changed-files
   cancel-in-progress: true
 
 jobs:
