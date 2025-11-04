@@ -79,4 +79,5 @@ jobs:
     with:
       ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
       base_ref: ${{ needs.verify.outputs.base-ref }}
+      iteration: ${{ matrix.iteration }}
     secrets: inherit

@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: "develop"
+      iteration:
+        description: Iteration number for matrix runs (used for unique concurrency groups)
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       ref:
@@ -27,9 +32,17 @@ on:
         required: false
         type: string
         default: "develop"
+      iteration:
+        description: Iteration number for matrix runs (used for unique concurrency groups)
+        required: false
+        type: string
+        default: ""
 
-# Note: No workflow-level concurrency control to allow parallel matrix runs when called via workflow_call.
-# For pull_request triggers, GitHub automatically handles duplicate runs via PR-level concurrency.
+# Concurrency control: cancel duplicate runs on same branch
+# When called via workflow_call with iteration input, include it to allow parallel matrix runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.iteration }}-playwright-changed-files
+  cancel-in-progress: true
 
 jobs:
   playwright-e2e-tests-changed-files:
