@@ -18,7 +18,7 @@ on:
         type: string
         default: ""
       base_ref:
-        description: Base branch to compare against (e.g., develop, or parent branch in a stack)
+        description: Base branch/SHA to compare against (e.g., develop, commit SHA, or parent in stack)
         required: false
         type: string
         default: "develop"
@@ -59,10 +59,14 @@ jobs:
         env:
           BASE_REF: ${{ inputs.base_ref || 'develop' }}
         run: |
-          # Fetch base branch for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
+          # Fetch base branch/SHA for comparison
+          # If BASE_REF looks like a branch name (no slashes or is develop/main), fetch it
+          if [[ "$BASE_REF" == "develop" ]] || [[ "$BASE_REF" == "main" ]] || [[ "$BASE_REF" != */* ]]; then
+            git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
+          fi
+          # If it's a SHA, git already has it (we used fetch-depth: 0)
 
-          # Get all changed files comparing against base branch
+          # Get all changed files comparing against base
           git_output=$(git diff --name-only "${BASE_REF}...HEAD")
 
           # Filter files in e2e_playwright directory and find relevant test files

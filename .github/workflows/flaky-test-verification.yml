@@ -55,9 +55,10 @@ jobs:
           fi
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
 
-          # Get base branch for the PR
-          base_ref=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.ref')
-          echo "base_ref=$base_ref" >> "$GITHUB_OUTPUT"
+          # Get base ref/SHA for the PR
+          # Use base SHA for comparison since Graphite uses special base refs like "graphite-base/12922"
+          base_sha=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.sha')
+          echo "base_ref=$base_sha" >> "$GITHUB_OUTPUT"
 
           # Build JSON array for matrix
           json="["
