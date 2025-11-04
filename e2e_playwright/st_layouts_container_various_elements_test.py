@@ -34,7 +34,6 @@ CONTAINER_KEYS = [
     "layout-horizontal-expander-dataframe-content-width-large",
     "layout-vertical-stretch-height",
     "layout-vertical-content-width-container-with-various-elements",
-    # Moved from st_layouts_container_min_width.py
     "layout-vertical-content-width-container-with-stretch-width-dataframes",
     "layout-vertical-content-width-container-with-content-width-dataframes",
     "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
@@ -47,8 +46,6 @@ CONTAINER_KEYS_WITH_EXPANDERS = [
 ]
 
 
-# Flaky in CI on Chromium. See workflow: https://github.com/streamlit/streamlit/actions/runs/18964912763/job/54180100557
-@pytest.mark.skip_browser("chromium")
 def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
