@@ -72,6 +72,7 @@ jobs:
       - name: Trigger changed-files workflow (iteration ${{ matrix.iteration }})
         run: |
           gh workflow run playwright-changed-files.yml \
+            --ref ${{ github.ref_name }} \
             -f ref=refs/pull/${{ needs.verify.outputs.pr-number }}/merge \
             --repo streamlit/streamlit
         env:
