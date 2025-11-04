@@ -411,6 +411,19 @@ function DateInput({
                     borderBottomWidth: sizes.borderWidth,
                     paddingRight: spacing.twoXS,
 
+                    borderTopColor:
+                      theme.colors.widgetBorderColor ??
+                      theme.colors.secondaryBg,
+                    borderRightColor:
+                      theme.colors.widgetBorderColor ??
+                      theme.colors.secondaryBg,
+                    borderBottomColor:
+                      theme.colors.widgetBorderColor ??
+                      theme.colors.secondaryBg,
+                    borderLeftColor:
+                      theme.colors.widgetBorderColor ??
+                      theme.colors.secondaryBg,
+
                     // Baseweb has an error prop for the input, but its coloring doesn't reconcile
                     // with our dark theme - we handle error state coloring manually here
                     ...(error && {

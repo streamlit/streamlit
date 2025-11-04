@@ -89,6 +89,15 @@ function TimeInput({
               borderRightWidth: theme.sizes.borderWidth,
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
+
+              borderTopColor:
+                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+              borderRightColor:
+                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+              borderBottomColor:
+                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+              borderLeftColor:
+                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
             },
           },
 
