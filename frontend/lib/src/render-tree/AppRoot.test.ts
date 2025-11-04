@@ -776,6 +776,56 @@ describe("AppRoot", () => {
         ).children
       ).toHaveLength(3)
     })
+
+    it("uses ClearStaleNodeVisitor internally", () => {
+      // Create a more complex tree with multiple nodes
+      const delta1 = makeProto(DeltaProto, {
+        newElement: { text: { body: "element1" } },
+      })
+      const delta2 = makeProto(DeltaProto, {
+        newElement: { text: { body: "element2" } },
+      })
+
+      // Add elements with different script run IDs
+      const rootWithElements = ROOT.applyDelta(
+        "run_id_1",
+        delta1,
+        forwardMsgMetadata([0, 0])
+      ).applyDelta("run_id_2", delta2, forwardMsgMetadata([0, 1]))
+
+      // Before clearing: should have both elements
+      expect(rootWithElements.getElements().size).toBe(2) // 2 new elements
+
+      // Clear stale nodes - only keep elements from run_id_2
+      const clearedRoot = rootWithElements.clearStaleNodes("run_id_2", [])
+
+      // After clearing: should only have element2 (from run_id_2)
+      expect(clearedRoot.getElements().size).toBe(1)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(clearedRoot.main, [0])
+      ).toBeTextNode("element2")
+    })
+
+    it("preserves non-stale nodes during visitor traversal", () => {
+      const delta = makeProto(DeltaProto, {
+        newElement: { text: { body: "current_element" } },
+      })
+      const currentRunId = "current_run"
+
+      const rootWithCurrent = ROOT.applyDelta(
+        currentRunId,
+        delta,
+        forwardMsgMetadata([0, 0])
+      )
+
+      // Clear stale nodes with same run ID - element should be preserved
+      const clearedRoot = rootWithCurrent.clearStaleNodes(currentRunId, [])
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(clearedRoot.main, [0])
+      ).toBeTextNode("current_element")
+      expect(clearedRoot.getElements().size).toBe(1)
+    })
   })
 
   describe("AppRoot.getElements", () => {
@@ -797,78 +847,65 @@ describe("AppRoot", () => {
         ])
       )
     })
-  })
-
-  it("uses visitor pattern internally", () => {
-    // Create a more complex structure to test visitor traversal
-    const delta1 = makeProto(DeltaProto, {
-      newElement: { text: { body: "main_element" } },
+    it("uses visitor pattern internally", () => {
+      // Create a more complex structure to test visitor traversal
+      const delta1 = makeProto(DeltaProto, {
+        newElement: { text: { body: "main_element" } },
+      })
+      const delta2 = makeProto(DeltaProto, {
+        newElement: { text: { body: "sidebar_element" } },
+      })
+      const rootWithElements = ROOT.applyDelta(
+        "test_run",
+        delta1,
+        forwardMsgMetadata([0, 0]) // main section
+      ).applyDelta(
+        "test_run",
+        delta2,
+        forwardMsgMetadata([1, 0]) // sidebar section
+      )
+      const elements = rootWithElements.getElements()
+      // Should find elements from main, sidebar, and the original ROOT elements
+      // one new insert overwrote an existing main element; the sidebar insert
+      // added a new one
+      expect(elements.size).toBe(3)
+      // Verify we can find the sidebar element specifically
+      const elementsArray = Array.from(elements)
+      const sidebarElement = elementsArray.find(
+        el => el.text?.body === "sidebar_element"
+      )
+      expect(sidebarElement).toBeDefined()
     })
-    const delta2 = makeProto(DeltaProto, {
-      newElement: { text: { body: "sidebar_element" } },
+
+    it("demonstrates visitor pattern flexibility", () => {
+      // Show that we can use ElementsSetVisitor directly on parts of the tree
+      const mainElements = ElementsSetVisitor.collectElements(ROOT.main)
+      const sidebarElements = ElementsSetVisitor.collectElements(ROOT.sidebar)
+      // Should have elements in main, none in sidebar for basic ROOT
+      expect(mainElements.size).toBe(2) // The original elements from ROOT
+      expect(sidebarElements.size).toBe(0)
+      // Combined should equal getElements() result
+      const combinedSize = mainElements.size + sidebarElements.size
+      expect(ROOT.getElements().size).toBe(combinedSize)
     })
-
-    const rootWithElements = ROOT.applyDelta(
-      "test_run",
-      delta1,
-      forwardMsgMetadata([0, 0]) // main section
-    ).applyDelta(
-      "test_run",
-      delta2,
-      forwardMsgMetadata([1, 0]) // sidebar section
-    )
-
-    const elements = rootWithElements.getElements()
-
-    // Should find elements from main, sidebar, and the original ROOT elements
-    // one new insert overwrote an existing main element; the sidebar insert
-    // added a new one
-    expect(elements.size).toBe(3)
-
-    // Verify we can find the sidebar element specifically
-    const elementsArray = Array.from(elements)
-    const sidebarElement = elementsArray.find(
-      el => el.text?.body === "sidebar_element"
-    )
-
-    expect(sidebarElement).toBeDefined()
-  })
-
-  it("demonstrates visitor pattern flexibility", () => {
-    // Show that we can use ElementsSetVisitor directly on parts of the tree
-    const mainElements = ElementsSetVisitor.collectElements(ROOT.main)
-    const sidebarElements = ElementsSetVisitor.collectElements(ROOT.sidebar)
-
-    // Should have elements in main, none in sidebar for basic ROOT
-    expect(mainElements.size).toBe(2) // The original elements from ROOT
-    expect(sidebarElements.size).toBe(0)
-
-    // Combined should equal getElements() result
-    const combinedSize = mainElements.size + sidebarElements.size
-    expect(ROOT.getElements().size).toBe(combinedSize)
   })
 
   describe("AppRoot.debug", () => {
     it("prints labeled child sections with tree output", () => {
       const out = ROOT.debug()
-
       // Header
       expect(out.startsWith("AppRoot\n")).toBe(true)
-
       // main
       expect(out).toContain("├── main:\n")
       expect(out).toContain("│   └── BlockNode [2 children]")
       expect(out).toContain('ElementNode [text] "1"')
       expect(out).toContain('ElementNode [text] "2"')
-
       // sidebar
       expect(out).toContain("├── sidebar:\n")
       expect(out).toContain("│   └── BlockNode [0 children]")
-
       // event
       expect(out).toContain("├── event:\n")
       expect(out).toContain("│   └── BlockNode [0 children]")
-
       // bottom
       expect(out).toContain("└── bottom:\n")
       expect(out).toContain("    └── BlockNode [0 children]")

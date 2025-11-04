@@ -99,7 +99,7 @@ const defaultNavigationContextValue = {
 
 const defaultViewStateContextValue = {
   isFullScreen: false,
-  setFullScreen: vi.fn(),
+  setFullScreen: () => {},
 }
 
 const defaultScriptRunContextValue = {

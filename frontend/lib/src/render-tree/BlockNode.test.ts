@@ -17,6 +17,7 @@
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { block, text } from "./test-utils"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
+import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 // prettier-ignore
 const BLOCK = block([
@@ -31,9 +32,14 @@ function getIn(node: AppNode, path: number[]): AppNode | undefined {
 }
 
 describe("BlockNode", () => {
-  describe("BlockNode.setIn", () => {
+  describe("BlockNode.setIn (via SetNodeByDeltaPathVisitor)", () => {
     it("handles shallow paths", () => {
-      const newBlock = BLOCK.setIn([0], text("new"), NO_SCRIPT_RUN_ID)
+      const newBlock = SetNodeByDeltaPathVisitor.setNodeAtPath(
+        BLOCK,
+        [0],
+        text("new"),
+        NO_SCRIPT_RUN_ID
+      )
       expect(getIn(newBlock, [0])).toBeTextNode("new")
 
       // Check BLOCK..newBlock diff is as expected.
@@ -42,7 +48,12 @@ describe("BlockNode", () => {
     })
 
     it("handles deep paths", () => {
-      const newBlock = BLOCK.setIn([1, 1], text("new"), NO_SCRIPT_RUN_ID)
+      const newBlock = SetNodeByDeltaPathVisitor.setNodeAtPath(
+        BLOCK,
+        [1, 1],
+        text("new"),
+        NO_SCRIPT_RUN_ID
+      )
       expect(getIn(newBlock, [1, 1])).toBeTextNode("new")
 
       // Check BLOCK..newBlock diff is as expected
@@ -54,9 +65,14 @@ describe("BlockNode", () => {
     })
 
     it("throws an error for invalid paths", () => {
-      expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
-        "Bad 'setIn' index 2 (should be between [0, 1])"
-      )
+      expect(() =>
+        SetNodeByDeltaPathVisitor.setNodeAtPath(
+          BLOCK,
+          [1, 2],
+          text("new"),
+          NO_SCRIPT_RUN_ID
+        )
+      ).toThrow("Bad delta path index 2 (should be between [0, 1])")
     })
   })
 

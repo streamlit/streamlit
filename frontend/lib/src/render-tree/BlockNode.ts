@@ -16,8 +16,6 @@
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { notUndefined } from "~lib/util/utils"
-
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { DebugVisitor } from "./visitors/DebugVisitor"
@@ -58,93 +56,6 @@ export class BlockNode implements AppNode {
   /** True if this Block has no children. */
   public get isEmpty(): boolean {
     return this.children.length === 0
-  }
-
-  public setIn(path: number[], node: AppNode, scriptRunId: string): BlockNode {
-    if (path.length === 0) {
-      throw new Error(`empty path!`)
-    }
-
-    const childIndex = path[0]
-    if (childIndex < 0 || childIndex > this.children.length) {
-      throw new Error(
-        `Bad 'setIn' index ${childIndex} (should be between [0, ${this.children.length}])`
-      )
-    }
-
-    const newChildren = this.children.slice()
-    if (path.length === 1) {
-      // Base case
-      newChildren[childIndex] = node
-    } else {
-      // Pop the current element off our path, and recurse into our children
-      newChildren[childIndex] = newChildren[childIndex].setIn(
-        path.slice(1),
-        node,
-        scriptRunId
-      )
-    }
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      scriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
-  }
-
-  public clearStaleNodes(
-    currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
-  ): BlockNode | undefined {
-    if (!fragmentIdsThisRun?.length) {
-      // If we're not currently running a fragment, then we can remove any blocks
-      // that don't correspond to currentScriptRunId.
-      if (this.scriptRunId !== currentScriptRunId) {
-        return undefined
-      }
-    } else {
-      // Otherwise, we are currently running a fragment, and our behavior
-      // depends on the fragmentId of this BlockNode.
-
-      // The parent block was modified but this element wasn't, so it's stale.
-      if (fragmentIdOfBlock && this.scriptRunId !== currentScriptRunId) {
-        return undefined
-      }
-
-      // This block is modified by the current run, so we indicate this to our children in case
-      // they were not modified by the current run, which means they are stale.
-      if (
-        this.fragmentId &&
-        fragmentIdsThisRun.includes(this.fragmentId) &&
-        this.scriptRunId === currentScriptRunId
-      ) {
-        fragmentIdOfBlock = this.fragmentId
-      }
-    }
-
-    // Recursively clear our children.
-    const newChildren = this.children
-      .map(child => {
-        return child.clearStaleNodes(
-          currentScriptRunId,
-          fragmentIdsThisRun,
-          fragmentIdOfBlock
-        )
-      })
-      .filter(notUndefined)
-
-    return new BlockNode(
-      this.activeScriptHash,
-      newChildren,
-      this.deltaBlock,
-      currentScriptRunId,
-      this.fragmentId,
-      this.deltaMsgReceivedAt
-    )
   }
 
   /**
