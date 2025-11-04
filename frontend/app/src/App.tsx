@@ -2261,6 +2261,11 @@ export class App extends PureComponent<Props, State> {
                   )}
                   {!hideTopBar && (
                     <MainMenu
+                      versionInfo={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
@@ -2271,6 +2276,7 @@ export class App extends PureComponent<Props, State> {
                       screenCastState={this.props.screenCast.currentState}
                       hostMenuItems={hostMenuItems}
                       developmentMode={developmentMode}
+                      // developmentMode={false}
                       sendMessageToHost={
                         this.hostCommunicationMgr.sendMessageToHost
                       }

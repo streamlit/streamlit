@@ -16,7 +16,12 @@
 
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
-import { MoreVert } from "@emotion-icons/material-rounded"
+import {
+  DarkMode,
+  LightMode,
+  MoreVert,
+} from "@emotion-icons/material-outlined"
+import { Contrast } from "@emotion-icons/open-iconic"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 
@@ -26,18 +31,15 @@ import {
   BaseButton,
   BaseButtonKind,
   convertRemToPx,
-  EmotionTheme,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
 
 import {
   StyledCoreItem,
-  StyledDevItem,
   StyledMainMenuContainer,
   StyledMenuContainer,
   StyledMenuDivider,
@@ -45,6 +47,8 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
+  StyledThemeSelectorButton,
+  StyledThemeSelectorContainer,
 } from "./styled-components"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
@@ -53,6 +57,9 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
 }
 
 export interface Props {
+  /** The version of Streamlit. */
+  versionInfo: string | undefined
+
   /** True if we're connected to the Streamlit server. */
   isServerConnected: boolean
 
@@ -103,32 +110,25 @@ export interface MenuItemProps {
   $isHighlighted: boolean
 }
 
-export interface SubMenuProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  menuItems: any[]
-  closeMenu: () => void
-  isDevMenu: boolean
-  metricsMgr: MetricsManager
-}
-
 // BaseWeb provides a very basic list item (or option) for its dropdown
 // menus. We want to customize it to our liking. We want to support:
 //  * Shortcuts
 //  * Red coloring for the stop recording
 //  * Dividers (There's no special MenuListItem divider, so items have
 //    a hasDividerAbove property to add the border properly.
+//  * Theme items with special button styling
 // Unfortunately, because we are overriding the component, we need to
 // implement some of the built in-features, namely:
 //  * A11y for selected and disabled
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem,
+
+function buildUnifiedMenuItemComponent(
   metricsMgr: MetricsManager
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
-  const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
+  const UnifiedMenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
       {
         item,
@@ -140,6 +140,50 @@ function buildMenuItemComponent(
       },
       ref
     ) => {
+      // Check if this is a theme container item
+      if (item.isThemeContainer) {
+        const { themeButtons } = item
+
+        return (
+          <StyledMenuItem
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Need any for ref compatibility with BaseWeb
+            ref={ref as any}
+            role="option"
+            aria-selected={ariaSelected}
+            isDisabled={false}
+            isRecording={false}
+            style={{ padding: "0", listStyle: "none" }}
+          >
+            <StyledThemeSelectorContainer>
+              {themeButtons.map(
+                (button: {
+                  label: string
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Icon type is complex
+                  icon: any
+                  onClick: () => void
+                }) => (
+                  <StyledThemeSelectorButton
+                    key={button.label}
+                    onClick={() => {
+                      metricsMgr.enqueue("menuClick", {
+                        label: button.label,
+                      })
+                      button.onClick()
+                      // Trigger the BaseWeb menu item selection to close the menu
+                      onClick({} as MouseEvent<HTMLLIElement>)
+                    }}
+                  >
+                    <Icon content={button.icon} size="lg" />
+                    <span>{button.label}</span>
+                  </StyledThemeSelectorButton>
+                )
+              )}
+            </StyledThemeSelectorContainer>
+          </StyledMenuItem>
+        )
+      }
+
+      // Regular menu item
       const {
         label,
         shortcut,
@@ -183,26 +227,32 @@ function buildMenuItemComponent(
             {...itemProps}
             {...interactiveProps}
           >
-            <StyledMenuItemType {...itemStyleProps}>
+            <StyledCoreItem {...itemStyleProps}>
               <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
               {shortcut && (
                 <StyledMenuItemShortcut {...itemProps}>
                   {shortcut}
                 </StyledMenuItemShortcut>
               )}
-            </StyledMenuItemType>
+            </StyledCoreItem>
           </StyledMenuItem>
         </>
       )
     }
   )
-  MenuItem.displayName = "MenuItem"
-  return MenuItem
+  UnifiedMenuItem.displayName = "UnifiedMenuItem"
+  return UnifiedMenuItem
 }
 
-const SubMenu = (props: SubMenuProps): ReactElement => {
+interface UnifiedMenuProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Menu items can have various shapes
+  menuItems: any[]
+  closeMenu: () => void
+  metricsMgr: MetricsManager
+}
+
+const UnifiedMenu = (props: UnifiedMenuProps): ReactElement => {
   const { colors, sizes, spacing } = useEmotionTheme()
-  const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
 
   return (
     <StatefulMenu
@@ -212,10 +262,11 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
         props.closeMenu()
       }}
       overrides={{
-        Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
+        Option: buildUnifiedMenuItemComponent(props.metricsMgr),
         List: {
           props: {
             "data-testid": "stMainMenuList",
+            role: "listbox",
           },
           style: {
             backgroundColor: "inherit",
@@ -225,7 +276,7 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
             borderLeftRadius: 0,
             borderRightRadius: 0,
 
-            paddingBottom: spacing.sm,
+            paddingBottom: spacing.xs,
             paddingTop: spacing.sm,
 
             ":focus": {
@@ -239,43 +290,43 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
   )
 }
 
-function getDevMenuItems(
-  theme: EmotionTheme,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  coreDevMenuItems: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any[] {
-  const devMenuItems = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const preferredDevMenuOrder: any[] = [
-    coreDevMenuItems.developerOptions,
-    coreDevMenuItems.clearCache,
-  ]
+// function getDevMenuItems(
+//   theme: EmotionTheme,
+//   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+//   coreDevMenuItems: Record<string, any>
+//   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+// ): any[] {
+//   const devMenuItems = []
+//   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+//   const preferredDevMenuOrder: any[] = [
+//     coreDevMenuItems.developerOptions,
+//     coreDevMenuItems.clearCache,
+//   ]
 
-  let devLastMenuItem = null
+//   let devLastMenuItem = null
 
-  for (const devMenuItem of preferredDevMenuOrder) {
-    if (devMenuItem) {
-      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
-        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
-          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
-        } else {
-          devMenuItems.push(devMenuItem)
-        }
-      }
+//   for (const devMenuItem of preferredDevMenuOrder) {
+//     if (devMenuItem) {
+//       if (devMenuItem !== coreDevMenuItems.DIVIDER) {
+//         if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
+//           devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
+//         } else {
+//           devMenuItems.push(devMenuItem)
+//         }
+//       }
 
-      devLastMenuItem = devMenuItem
-    }
-  }
+//       devLastMenuItem = devMenuItem
+//     }
+//   }
 
-  if (notNullOrUndefined(devLastMenuItem)) {
-    devLastMenuItem.styleProps = {
-      margin: `0 0 -${theme.spacing.sm} 0`,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-    }
-  }
-  return devMenuItems
-}
+//   if (notNullOrUndefined(devLastMenuItem)) {
+//     devLastMenuItem.styleProps = {
+//       margin: `0 0 -${theme.spacing.sm} 0`,
+//       padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
+//     }
+//   }
+//   return devMenuItems
+// }
 
 function getPreferredMenuOrder(
   props: Props,
@@ -318,10 +369,15 @@ function getPreferredMenuOrder(
     }
     return preferredMenuOrder
   }
+
   return [
     coreMenuItems.rerun,
-    coreMenuItems.settings,
+    // coreMenuItems.settings,
+    coreMenuItems.autoRerun,
     coreMenuItems.DIVIDER,
+    ...(props.developmentMode
+      ? [coreMenuItems.clearCache, coreMenuItems.DIVIDER]
+      : []),
     coreMenuItems.print,
     ...(ScreenCastRecorder.isSupportedBrowser()
       ? [coreMenuItems.recordScreencast]
@@ -331,6 +387,7 @@ function getPreferredMenuOrder(
     coreMenuItems.community,
     ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
     coreMenuItems.about,
+    coreMenuItems.versionInfo,
   ]
 }
 
@@ -372,23 +429,14 @@ function MainMenu(props: Readonly<Props>): ReactElement {
           label: "Report a bug",
         },
       }),
-    settings: { onClick: props.settingsCallback, label: "Settings" },
-    ...(props.menuItems?.aboutSectionMd && {
-      about: { onClick: props.aboutCallback, label: "About" },
-    }),
-  }
-
-  const coreDevMenuItems = {
-    DIVIDER: { isDivider: true },
-    developerOptions: {
-      label: "Developer options",
-      noHighlight: true,
-      interactions: {},
-      styleProps: {
-        fontSize: convertRemToPx(theme.fontSizes.twoSm),
-        margin: `-${theme.spacing.sm} 0 0 0`,
-        padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-        pointerEvents: "none",
+    // settings: { onClick: props.settingsCallback, label: "Settings" },
+    // ...(props.menuItems?.aboutSectionMd && {
+    //   about: { onClick: props.aboutCallback, label: "About" },
+    // }),
+    autoRerun: {
+      label: "Auto rerun",
+      onClick: () => {
+        // TODO: Implement auto-rerun logic
       },
     },
     clearCache: {
@@ -397,7 +445,40 @@ function MainMenu(props: Readonly<Props>): ReactElement {
       label: "Clear cache",
       shortcut: "c",
     },
-  }
+    versionInfo: {
+      label: `Made with Streamlit ${props.versionInfo}`,
+      noHighlight: true,
+      interactions: {},
+      styleProps: {
+        fontSize: convertRemToPx(theme.fontSizes.twoSm),
+        color: theme.colors.fadedText60,
+        cursor: "default",
+        padding: `${theme.spacing.none} ${theme.spacing.lg} ${theme.spacing.threeXS} ${theme.spacing.lg}`,
+        lineHeight: theme.lineHeights.menuItem,
+      },
+    },
+  } as const
+
+  // const coreDevMenuItems = {
+  //   DIVIDER: { isDivider: true },
+  //   developerOptions: {
+  //     label: "Developer options",
+  //     noHighlight: true,
+  //     interactions: {},
+  //     styleProps: {
+  //       fontSize: convertRemToPx(theme.fontSizes.twoSm),
+  //       margin: `-${theme.spacing.sm} 0 0 0`,
+  //       padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
+  //       pointerEvents: "none",
+  //     },
+  //   },
+  //   clearCache: {
+  //     disabled: isServerDisconnected,
+  //     onClick: props.clearCacheCallback,
+  //     label: "Clear cache",
+  //     shortcut: "c",
+  //   },
+  // }
 
   const hostMenuItems = props.hostMenuItems.map(item => {
     if (item.type === "separator") {
@@ -429,9 +510,41 @@ function MainMenu(props: Readonly<Props>): ReactElement {
     coreMenuItems
   )
 
+  // Create theme container item with all three theme buttons
+  const themeContainerItem = {
+    isThemeContainer: true,
+    padding: theme.spacing.sm,
+    themeButtons: [
+      {
+        label: "System",
+        icon: Contrast,
+        onClick: () => {
+          // TODO: Implement system theme logic
+        },
+      },
+      {
+        label: "Light",
+        icon: LightMode,
+        onClick: () => {
+          // TODO: Implement light theme logic
+        },
+      },
+      {
+        label: "Dark",
+        icon: DarkMode,
+        onClick: () => {
+          // TODO: Implement dark theme logic
+        },
+      },
+    ],
+    onClick: () => {
+      // No-op for the container itself, individual buttons have their own onClick
+    },
+  }
+
   // Remove empty entries, and add dividers into menu options as needed.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const menuItems: any[] = []
+  const menuItems: any[] = [themeContainerItem]
   let lastMenuItem = null
   for (const menuItem of preferredMenuOrder) {
     if (menuItem) {
@@ -439,7 +552,12 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         if (lastMenuItem === coreMenuItems.DIVIDER) {
           menuItems.push({ ...menuItem, hasDividerAbove: true })
         } else {
-          menuItems.push(menuItem)
+          // Add divider above first regular menu item after theme container
+          if (menuItems.length === 1) {
+            menuItems.push({ ...menuItem, hasDividerAbove: true })
+          } else {
+            menuItems.push(menuItem)
+          }
         }
       }
 
@@ -447,13 +565,8 @@ function MainMenu(props: Readonly<Props>): ReactElement {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const devMenuItems: any[] = props.developmentMode
-    ? getDevMenuItems(theme, coreDevMenuItems)
-    : []
-
-  if (menuItems.length == 0 && devMenuItems.length == 0) {
-    // Don't show an empty menu.
+  if (menuItems.length === 1) {
+    // Don't show an empty menu (only theme container).
     return <></>
   }
 
@@ -463,22 +576,11 @@ function MainMenu(props: Readonly<Props>): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <StyledMenuContainer>
-          {menuItems.length != 0 && (
-            <SubMenu
-              menuItems={menuItems}
-              closeMenu={close}
-              isDevMenu={false}
-              metricsMgr={props.metricsMgr}
-            />
-          )}
-          {devMenuItems.length != 0 && (
-            <SubMenu
-              menuItems={devMenuItems}
-              closeMenu={close}
-              isDevMenu={true}
-              metricsMgr={props.metricsMgr}
-            />
-          )}
+          <UnifiedMenu
+            menuItems={menuItems}
+            closeMenu={close}
+            metricsMgr={props.metricsMgr}
+          />
         </StyledMenuContainer>
       )}
       overrides={{

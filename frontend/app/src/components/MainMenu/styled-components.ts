@@ -46,7 +46,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  margin: `${theme.spacing.sm} ${theme.spacing.none}`,
+  margin: `${theme.spacing.sm} ${theme.spacing.sm}`,
 }))
 
 export interface ItemProps {
@@ -118,17 +118,23 @@ export const StyledCoreItem = styled.li<ItemStyleProps>(
 
     const margin = styleProps?.margin || 0
     const padding =
-      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.lg}`
     const backgroundColor = styleProps?.backgroundColor || theme.colors.bgColor
     const fontSize = styleProps?.fontSize || theme.fontSizes.md
+    const color = styleProps?.color || theme.colors.bodyText
+    const cursor = styleProps?.cursor || "pointer"
+    const lineHeight = styleProps?.lineHeight || theme.lineHeights.base
 
     return {
+      color,
       margin,
       padding,
+      lineHeight,
       backgroundColor,
       fontSize,
       ...(highlightedStyles || {}),
       display: "block",
+      cursor,
     }
   }
 )
@@ -193,3 +199,68 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
 export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
 })
+
+export const StyledThemeSelectorContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing.threeXS,
+  padding: `${theme.spacing.none} ${theme.spacing.sm}`,
+}))
+
+export const StyledThemeSelectorButton = styled.button(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing.twoXS,
+  padding: `${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.xs} ${theme.spacing.sm}`,
+  borderRadius: theme.radii.default,
+  cursor: "pointer",
+  color: theme.colors.bodyText,
+  backgroundColor: theme.colors.transparent,
+  boxShadow: "none",
+  border: "none",
+  outline: "none",
+  minWidth: "58px",
+  minHeight: "50px",
+  fontSize: theme.fontSizes.sm,
+  "&:hover, &:focus, &:focus-visible, &:active": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+}))
+
+export const StyledThemeItem = styled.li<ItemStyleProps>(
+  ({ isHighlighted, styleProps, theme }) => {
+    const highlightedStyles = isHighlighted && {
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix15,
+      },
+    }
+
+    const margin = styleProps?.margin || 0
+    const padding =
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.lg}`
+    const backgroundColor = styleProps?.backgroundColor || theme.colors.bgColor
+    const fontSize = styleProps?.fontSize || theme.fontSizes.md
+    const color = styleProps?.color || theme.colors.bodyText
+    const cursor = styleProps?.cursor || "pointer"
+    const lineHeight = styleProps?.lineHeight || theme.lineHeights.base
+
+    return {
+      color,
+      margin,
+      padding,
+      lineHeight,
+      backgroundColor,
+      fontSize,
+      ...(highlightedStyles || {}),
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.md,
+      cursor,
+    }
+  }
+)
