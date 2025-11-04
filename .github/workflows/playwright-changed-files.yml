@@ -145,109 +145,6 @@ jobs:
           else
             echo "run_tests=true" >> $GITHUB_OUTPUT
           fi
-      - name: Get changed test nodeids
-        id: changed-nodeids
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-          BASE_REF: ${{ inputs.base_ref || 'develop' }}
-        run: |
-          python3 - << 'PY'
-          import json
-          import os
-          import re
-          import subprocess
-          import sys
-
-          changed = os.environ.get('CHANGED_FILES', '').strip()
-          if not changed:
-            print('no changed files')
-            print('all_changed_nodeids=')
-            print('all_changed_nodeids_count=0')
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write('all_changed_nodeids=\n')
-              f.write('all_changed_nodeids_count=0\n')
-            sys.exit(0)
-
-          files = [p for p in changed.split(' ') if p]
-
-          def get_added_line_ranges(repo_path: str, file_rel: str):
-            # Returns list of (start, end) inclusive line ranges for additions in new file
-            base_ref = os.environ.get('BASE_REF', 'develop')
-            cmd = ['git', 'diff', '--unified=0', '--no-color', f'{base_ref}...HEAD', '--', os.path.join('e2e_playwright', file_rel)]
-            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-            ranges = []
-            for line in proc.stdout.splitlines():
-              if line.startswith('@@'):
-                # Example: @@ -12,0 +13,5 @@
-                m = re.search(r'\+([0-9]+)(?:,([0-9]+))?', line)
-                if not m:
-                  continue
-                start = int(m.group(1))
-                count = int(m.group(2) or '1')
-                if count == 0:
-                  continue
-                ranges.append((start, start + count - 1))
-            return ranges
-
-          import ast
-
-          def collect_test_nodes(abs_path: str, rel_path: str):
-            # Returns list of tuples: (nodeid, start, end)
-            with open(abs_path, 'r', encoding='utf-8') as fh:
-              source = fh.read()
-            tree = ast.parse(source)
-            nodes = []
-            # module-level tests
-            for n in tree.body:
-              if isinstance(n, ast.FunctionDef) and n.name.startswith('test_'):
-                start = getattr(n, 'lineno', None)
-                end = getattr(n, 'end_lineno', None)
-                if start and end:
-                  nodes.append((f"{rel_path}::" + n.name, start, end))
-              elif isinstance(n, ast.ClassDef) and n.name.startswith('Test'):
-                for m in n.body:
-                  if isinstance(m, ast.FunctionDef) and m.name.startswith('test_'):
-                    start = getattr(m, 'lineno', None)
-                    end = getattr(m, 'end_lineno', None)
-                    if start and end:
-                      nodes.append((f"{rel_path}::" + n.name + '::' + m.name, start, end))
-            return nodes
-
-          nodeids = []
-          for rel in files:
-            abs_path = os.path.join('e2e_playwright', rel)
-            if not os.path.isfile(abs_path):
-              continue
-            if not abs_path.endswith('_test.py'):
-              # Only derive nodeids for test files
-              continue
-            ranges = get_added_line_ranges('.', rel)
-            if not ranges:
-              # If we cannot detect specific changed lines, skip; we'll fallback to file-level
-              continue
-            tests = collect_test_nodes(abs_path, rel)
-            for nodeid, start, end in tests:
-              for rstart, rend in ranges:
-                if not (end < rstart or start > rend):
-                  nodeids.append(nodeid)
-                  break
-
-          # Deduplicate while preserving order
-          seen = set()
-          nodeids_unique = []
-          for nid in nodeids:
-            if nid not in seen:
-              seen.add(nid)
-              nodeids_unique.append(nid)
-
-          joined = ' '.join(nodeids_unique)
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-            f.write(f'all_changed_nodeids={joined}\n')
-            f.write(f'all_changed_nodeids_count={len(nodeids_unique)}\n')
-          PY
-      - name: Use output
-        run: |
-          echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
@@ -272,21 +169,14 @@ jobs:
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
       - name: Run changed playwright tests
-        if: steps.changed-nodeids.outputs.all_changed_nodeids_count != '0' || steps.check_changed_files.outputs.run_tests == 'true'
+        if: steps.check_changed_files.outputs.run_tests == 'true'
         env:
-          NODEIDS: ${{ steps.changed-nodeids.outputs.all_changed_nodeids }}
-          NODEIDS_COUNT: ${{ steps.changed-nodeids.outputs.all_changed_nodeids_count }}
           FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          if [[ -n "$NODEIDS" && "$NODEIDS_COUNT" != "0" ]]; then
-            echo "Running specific changed tests: $NODEIDS"
-            pytest $NODEIDS --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
-          else
-            echo "Running changed files: $FILES"
-            pytest $FILES --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
-          fi
+          echo "Running changed test files: $FILES"
+          pytest $FILES --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()
