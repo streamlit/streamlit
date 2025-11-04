@@ -571,15 +571,16 @@ def test_file_upload_error_message_file_too_large(app: Page):
         buffer=b"x" * (2 * 1024 * 1024),  # 2MB
     )
 
-    expect(app.get_by_text(file_name1)).not_to_be_attached()
     chat_input = get_element_by_key(app, "chat_input_4")
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
-    expect(app.get_by_text(file_name1)).to_be_visible()
-
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
+
+    # Wait for the file to actually appear in the uploaded files list
+    expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
     uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
     expect(uploaded_file).to_be_visible()
 
@@ -588,6 +589,10 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # Reset hovering to not cause issues with the upload tooltip being
     # shown over the uploaded file tooltip hover target:
     reset_hovering(app)
+
+    # Wait for the upload button tooltip to disappear before checking the error tooltip
+    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
+
     expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
 
 
