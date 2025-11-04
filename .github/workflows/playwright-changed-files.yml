@@ -10,6 +10,11 @@ on:
         required: false
         type: string
         default: ""
+      base_ref:
+        description: Base branch/SHA to compare against (e.g., develop, commit SHA, or parent in stack)
+        required: false
+        type: string
+        default: "develop"
   workflow_dispatch:
     inputs:
       ref:
