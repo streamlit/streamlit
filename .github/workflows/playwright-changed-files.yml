@@ -28,10 +28,8 @@ on:
         type: string
         default: "develop"
 
-# Avoid duplicate workflows on same branch (but allow parallel runs when called via workflow_call)
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}-playwright-changed-files
-  cancel-in-progress: true
+# Note: No workflow-level concurrency control to allow parallel matrix runs when called via workflow_call.
+# For pull_request triggers, GitHub automatically handles duplicate runs via PR-level concurrency.
 
 jobs:
   playwright-e2e-tests-changed-files:
