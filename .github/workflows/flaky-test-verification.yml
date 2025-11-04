@@ -17,7 +17,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 env:
   FLAKY_VERIFY_LABEL: flaky-verify
@@ -72,18 +71,12 @@ jobs:
   e2e-changed-files-matrix:
     needs: verify
     if: needs.verify.outputs.pr-number != ''
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
-    steps:
-      - name: Trigger changed-files workflow (iteration ${{ matrix.iteration }})
-        run: |
-          gh workflow run playwright-changed-files.yml \
-            --ref ${{ github.ref_name }} \
-            -f ref=refs/pull/${{ needs.verify.outputs.pr-number }}/merge \
-            -f base_ref=${{ needs.verify.outputs.base-ref }} \
-            --repo streamlit/streamlit
-        env:
-          GH_TOKEN: ${{ github.token }}
+    uses: ./.github/workflows/playwright-changed-files.yml
+    with:
+      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
+      base_ref: ${{ needs.verify.outputs.base-ref }}
+    secrets: inherit
