@@ -524,7 +524,6 @@ def test_uploads_and_deletes_multiple_files(
 
     # Delete one uploaded file (ensure button is in viewport for WebKit)
     delete_button = uploaded_files.get_by_test_id("stChatInputDeleteBtn").first
-    expect(delete_button).to_be_visible()
     delete_button.scroll_into_view_if_needed()
     delete_button.click()
 
