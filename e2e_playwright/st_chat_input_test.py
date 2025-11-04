@@ -590,7 +590,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # shown over the uploaded file tooltip hover target:
     reset_hovering(app)
 
-    # Wait for the upload button tooltip to disappear before checking the error tooltip
+    # Ensure the upload button tooltip has disappeared before checking the error tooltip
     expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
 
     expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
