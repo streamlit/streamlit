@@ -15,6 +15,7 @@
 """download_button unit test."""
 
 import io
+from unittest.mock import patch
 
 from parameterized import parameterized
 
@@ -163,3 +164,13 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c2 = self.get_delta_from_queue().new_element.download_button
         assert not c2.is_deferred
         assert "/media/" in c2.url
+
+    @patch("streamlit.elements.widgets.button.runtime.exists", return_value=False)
+    def test_callable_when_no_runtime(self, _mock_runtime_exists):
+        """Test that callable with no runtime sets empty values safely."""
+        st.download_button("Download", data=lambda: "content")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.url == ""
+        assert c.deferred_file_id == ""
+        assert not c.is_deferred
