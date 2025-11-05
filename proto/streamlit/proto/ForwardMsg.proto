@@ -94,6 +94,9 @@ message ForwardMsg {
     // and cached in the frontend. The client should substitute the message
     // with the given hash for this one.
     string ref_hash = 11;
+
+    // Response for a deferred file request
+    DeferredFileResponse deferred_file_response = 25;
   }
 
   // The ID of the last BackMsg that we received before sending this
@@ -102,7 +105,13 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 25
+  // Next: 26
+}
+
+message DeferredFileResponse {
+  string file_id = 1;
+  string url = 2;
+  string error_msg = 3;
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

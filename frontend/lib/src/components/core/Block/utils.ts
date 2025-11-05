@@ -133,6 +133,15 @@ export interface BaseBlockProps {
   uploadClient: FileUploadClient
 
   /**
+   * Optional function to request a deferred file. Used by the DownloadButton
+   * component to execute deferred callables and get download URLs.
+   */
+  requestDeferredFile?: (fileId: string) => Promise<{
+    url: string
+    errorMsg?: string
+  }>
+
+  /**
    * If true, all widgets will be disabled and the app will be non-interactive.
    * This is generally set when the frontend is disconnected from the backend.
    */

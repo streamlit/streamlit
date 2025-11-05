@@ -17,11 +17,20 @@
 from __future__ import annotations
 
 import collections
+import io
 import threading
-from typing import Final
+import uuid
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
+from streamlit.runtime.media_file_storage import (
+    MediaFileKind,
+    MediaFileStorage,
+    MediaFileStorageError,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -89,6 +98,10 @@ class MediaFileManager:
         self._files_by_session_and_coord: dict[str, dict[str, str]] = (
             collections.defaultdict(dict)
         )
+
+        # Dict of [file_id -> deferred callable metadata]
+        # Used for deferred download button execution
+        self._deferred_callables: dict[str, dict[str, Any]] = {}
 
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which
@@ -231,3 +244,128 @@ class MediaFileManager:
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
+
+    def add_deferred(
+        self,
+        data_callable: Callable[[], bytes | str],
+        mimetype: str,
+        coordinates: str,
+        file_name: str | None = None,
+    ) -> str:
+        """Register a callable for deferred execution. Returns placeholder file_id.
+
+        The callable will be executed later when execute_deferred() is called,
+        typically when the user clicks a download button.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        data_callable : Callable[[], bytes | str]
+            A callable that returns the file data when invoked.
+        mimetype : str
+            The mime type for the file. E.g. "text/csv".
+        coordinates : str
+            Unique string identifying an element's location.
+        file_name : str or None
+            Optional file_name. Used to set the filename in the response header.
+
+        Returns
+        -------
+        str
+            A placeholder file_id that can be used to execute the callable later.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            # Generate a unique placeholder ID for this deferred callable
+            file_id = uuid.uuid4().hex
+
+            # Store the callable with its metadata
+            self._deferred_callables[file_id] = {
+                "callable": data_callable,
+                "mimetype": mimetype,
+                "filename": file_name,
+                "coordinates": coordinates,
+            }
+
+            # Track this deferred file by session and coordinate
+            self._files_by_session_and_coord[session_id][coordinates] = file_id
+
+            return file_id
+
+    def execute_deferred(self, file_id: str) -> str:
+        """Execute a deferred callable and return the URL to the generated file.
+
+        This method retrieves the callable registered with add_deferred(),
+        executes it, stores the result, and returns a URL to access it.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        file_id : str
+            The placeholder file_id returned by add_deferred().
+
+        Returns
+        -------
+        str
+            The URL that can be used to download the generated file.
+
+        Raises
+        ------
+        MediaFileStorageError
+            If the file_id is not found or if the callable execution fails.
+        """
+        # Retrieve deferred callable metadata while holding lock
+        with self._lock:
+            if file_id not in self._deferred_callables:
+                raise MediaFileStorageError(f"Deferred file {file_id} not found")
+
+            deferred = self._deferred_callables[file_id]
+
+        # Execute callable outside lock to avoid blocking other operations
+        try:
+            data = deferred["callable"]()
+        except Exception as e:
+            raise MediaFileStorageError(f"Callable execution failed: {e}") from e
+
+        # Convert data to bytes if needed
+        data_as_bytes: bytes
+        if isinstance(data, str):
+            data_as_bytes = data.encode()
+        elif isinstance(data, bytes):
+            data_as_bytes = data
+        elif isinstance(data, io.BytesIO):
+            data.seek(0)
+            data_as_bytes = data.getvalue()
+        elif isinstance(data, io.BufferedReader):
+            data.seek(0)
+            data_as_bytes = data.read()
+        elif isinstance(data, io.RawIOBase):
+            data.seek(0)
+            read_data = data.read()
+            data_as_bytes = read_data if read_data else b""
+        else:
+            raise MediaFileStorageError(
+                f"Callable returned unsupported type: {type(data)}"
+            )
+
+        # Store the generated data and get the actual file_id
+        with self._lock:
+            actual_file_id = self._storage.load_and_get_id(
+                data_as_bytes,
+                deferred["mimetype"],
+                MediaFileKind.DOWNLOADABLE,
+                deferred["filename"],
+            )
+
+            # Create metadata for the actual file
+            metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
+            self._file_metadata[actual_file_id] = metadata
+
+            # Clean up the deferred callable reference
+            del self._deferred_callables[file_id]
+
+            # Return the URL to access the file
+            return self._storage.get_url(actual_file_id)

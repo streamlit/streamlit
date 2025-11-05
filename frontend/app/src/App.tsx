@@ -252,6 +252,15 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
+  // Map of pending deferred file requests: fileId -> Promise resolver
+  private readonly pendingDeferredFileRequests = new Map<
+    string,
+    PromiseWithResolvers<{
+      url: string
+      errorMsg?: string
+    }>
+  >()
+
   private readonly appNavigation: AppNavigation
 
   private isInitializingConnectionManager: boolean = true
@@ -868,6 +877,11 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        deferredFileResponse: (deferredFileResponse: {
+          fileId: string
+          url: string
+          errorMsg: string
+        }) => this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -2054,6 +2068,63 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  requestDeferredFile = (
+    fileId: string
+  ): Promise<{ url: string; errorMsg?: string }> => {
+    const isConnected = this.isServerConnected()
+    const isSessionInfoSet = this.sessionInfo.isSet
+
+    if (!isConnected || !isSessionInfoSet) {
+      return Promise.reject(
+        new Error("Not connected to server or session not initialized")
+      )
+    }
+
+    const resolver = Promise.withResolvers<{
+      url: string
+      errorMsg?: string
+    }>()
+
+    this.pendingDeferredFileRequests.set(fileId, resolver)
+
+    const backMsg = new BackMsg({
+      deferredFileRequest: {
+        fileId,
+        sessionId: this.sessionInfo.current.sessionId,
+      },
+    })
+
+    backMsg.type = "deferredFileRequest"
+    this.sendBackMsg(backMsg)
+
+    // Timeout after 60 seconds
+    setTimeout(() => {
+      const pendingResolver = this.pendingDeferredFileRequests.get(fileId)
+      if (pendingResolver) {
+        this.pendingDeferredFileRequests.delete(fileId)
+        pendingResolver.reject(new Error("Deferred file request timeout"))
+      }
+    }, 60000)
+
+    return resolver.promise
+  }
+
+  handleDeferredFileResponse = (response: {
+    fileId: string
+    url: string
+    errorMsg: string
+  }): void => {
+    const resolver = this.pendingDeferredFileRequests.get(response.fileId)
+
+    if (resolver) {
+      this.pendingDeferredFileRequests.delete(response.fileId)
+      resolver.resolve({
+        url: response.url,
+        errorMsg: response.errorMsg || undefined,
+      })
+    }
+  }
+
   handleKeyDown = (keyName: string): void => {
     switch (keyName) {
       case "c":
@@ -2222,6 +2293,7 @@ export class App extends PureComponent<Props, State> {
               elements={elements}
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
+              requestDeferredFile={this.requestDeferredFile}
               navigationPosition={effectiveNavigationPosition}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}

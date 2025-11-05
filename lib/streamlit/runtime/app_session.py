@@ -53,7 +53,7 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -304,6 +304,8 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                self._handle_deferred_file_request(msg.deferred_file_request)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -921,6 +923,29 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
+
+    def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
+        """Handle a deferred_file_request BackMsg sent by the client.
+
+        Execute the deferred callable and send the URL back to the frontend.
+        """
+        response = ForwardMsg()
+        response.deferred_file_response.file_id = request.file_id
+
+        try:
+            # Execute the deferred callable and get the URL
+            url = runtime.get_instance().media_file_mgr.execute_deferred(
+                request.file_id
+            )
+            response.deferred_file_response.url = url
+        except Exception as e:
+            # Send error response if callable execution fails
+            _LOGGER.exception(
+                "Error executing deferred callable for file_id %s", request.file_id
+            )
+            response.deferred_file_response.error_msg = str(e)
+
+        self._enqueue_forward_msg(response)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -72,7 +73,14 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
-DownloadButtonDataType: TypeAlias = str | bytes | TextIO | BinaryIO | io.RawIOBase
+DownloadButtonDataType: TypeAlias = (
+    str
+    | bytes
+    | TextIO
+    | BinaryIO
+    | io.RawIOBase
+    | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
+)
 
 
 @dataclass
@@ -1195,6 +1203,29 @@ def marshall_file(
     mimetype: str | None,
     file_name: str | None = None,
 ) -> None:
+    # Check if data is a callable (for deferred downloads)
+    if callable(data):
+        if not runtime.exists():
+            # When running in "raw mode", we can't access the MediaFileManager.
+            proto_download_button.url = ""
+            proto_download_button.deferred_file_id = ""
+            proto_download_button.is_deferred = False
+            return
+
+        # Register the callable for deferred execution
+        mimetype = mimetype or "application/octet-stream"
+        file_id = runtime.get_instance().media_file_mgr.add_deferred(
+            data,
+            mimetype,
+            coordinates,
+            file_name=file_name,
+        )
+        proto_download_button.deferred_file_id = file_id
+        proto_download_button.is_deferred = True
+        proto_download_button.url = ""  # No URL yet, will be generated on click
+        return
+
+    # Existing logic for non-callable data
     data_as_bytes: bytes
     if isinstance(data, str):
         data_as_bytes = data.encode()
