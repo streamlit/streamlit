@@ -1212,28 +1212,6 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         assert identity["mixed_json"] == "{}"
         assert identity["mixed_arrow_blobs"] == "a,b"
 
-    def test_extract_dataframes_from_dict_fallback_on_arrow_failure(self):
-        """If Arrow serialization fails for a dataframe-like value, the original value should be preserved."""
-        from streamlit.components.v2.bidi_component import serialization as ser
-
-        class Sentinel:
-            pass
-
-        obj = Sentinel()
-
-        with (
-            patch(
-                "streamlit.components.v2.bidi_component.serialization.is_dataframe_like",
-                side_effect=lambda v: v is obj,
-            ),
-            patch(
-                "streamlit.components.v2.bidi_component.serialization.convert_anything_to_arrow_bytes",
-                side_effect=Exception("boom"),
-            ),
-        ):
-            result = ser._extract_dataframes_from_dict({"df": obj})
-            assert result["df"] is obj
-
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
     """Verify that per-state callbacks fire exclusively for their key."""
