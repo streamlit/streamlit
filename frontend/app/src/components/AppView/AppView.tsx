@@ -51,7 +51,7 @@ import {
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { Navigation } from "@streamlit/protobuf"
+import { DeferredFileResponse, Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
@@ -79,10 +79,7 @@ export interface AppViewProps {
 
   uploadClient: FileUploadClient
 
-  requestDeferredFile?: (fileId: string) => Promise<{
-    url: string
-    errorMsg?: string
-  }>
+  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 
   navigationPosition: Navigation.Position
 

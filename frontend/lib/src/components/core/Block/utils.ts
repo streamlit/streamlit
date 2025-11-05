@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  DeferredFileResponse,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
@@ -136,10 +140,7 @@ export interface BaseBlockProps {
    * Optional function to request a deferred file. Used by the DownloadButton
    * component to execute deferred callables and get download URLs.
    */
-  requestDeferredFile?: (fileId: string) => Promise<{
-    url: string
-    errorMsg?: string
-  }>
+  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 
   /**
    * If true, all widgets will be disabled and the app will be non-interactive.

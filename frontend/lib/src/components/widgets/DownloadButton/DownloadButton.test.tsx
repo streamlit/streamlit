@@ -19,7 +19,10 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import {
+  DeferredFileResponse,
+  DownloadButton as DownloadButtonProto,
+} from "@streamlit/protobuf"
 
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
@@ -197,10 +200,12 @@ describe("DownloadButton widget", () => {
 
     it("handles successful deferred download", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue({
-        url: "/media/generated_file",
-        errorMsg: undefined,
-      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "/media/generated_file",
+          errorMsg: "",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
 
       const props = getProps(
         {
@@ -235,14 +240,16 @@ describe("DownloadButton widget", () => {
           new Promise(resolve =>
             setTimeout(
               () =>
-                resolve({
-                  url: "/media/generated_file",
-                  errorMsg: undefined,
-                }),
+                resolve(
+                  DeferredFileResponse.create({
+                    url: "/media/generated_file",
+                    errorMsg: "",
+                  })
+                ),
               100
             )
           )
-      ) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
+      ) as (fileId: string) => Promise<DeferredFileResponse>
 
       const props = getProps(
         {
@@ -274,10 +281,12 @@ describe("DownloadButton widget", () => {
 
     it("displays error message when deferred download fails", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue({
-        url: "",
-        errorMsg: "Callable execution failed: Test error",
-      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "",
+          errorMsg: "Callable execution failed: Test error",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
 
       const props = getProps(
         {
@@ -309,7 +318,7 @@ describe("DownloadButton widget", () => {
         .fn()
         .mockRejectedValue(new Error("Network error")) as (
         fileId: string
-      ) => Promise<{ url: string; errorMsg?: string }>
+      ) => Promise<DeferredFileResponse>
 
       const props = getProps(
         {
@@ -336,10 +345,12 @@ describe("DownloadButton widget", () => {
     it("clears error after 5 seconds", async () => {
       vi.useFakeTimers()
       const user = userEvent.setup({ delay: null })
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue({
-        url: "",
-        errorMsg: "Test error",
-      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "",
+          errorMsg: "Test error",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
 
       const props = getProps(
         {
