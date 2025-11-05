@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -34,14 +34,14 @@ if TYPE_CHECKING:
     assert_type(radio("foo", []), None)
 
     assert_type(radio("foo", [1, 2, 3]), int)
-    assert_type(radio("foo", [1, 2, 3], index=None), Union[int, None])
+    assert_type(radio("foo", [1, 2, 3], index=None), int | None)
     assert_type(radio("foo", [1.0, 2.0, 3.0]), float)
-    assert_type(radio("foo", [1.0, 2.0, 3.0], index=None), Union[float, None])
+    assert_type(radio("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(radio("foo", [1.0, 2, 3.0]), float)
-    assert_type(radio("foo", [1.0, 2, 3.0], index=None), Union[float, None])
+    assert_type(radio("foo", [1.0, 2, 3.0], index=None), float | None)
     assert_type(radio("foo", ["foo", "bar"]), str)
-    assert_type(radio("foo", ["foo", "bar"], index=None), Union[str, None])
+    assert_type(radio("foo", ["foo", "bar"], index=None), str | None)
     assert_type(radio("foo", Alfred), Alfred)
     assert_type(radio("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
-    assert_type(radio("foo", Alfred, index=None), Union[Alfred, None])
+    assert_type(radio("foo", Alfred, index=None), Alfred | None)
     assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)

@@ -24,6 +24,7 @@ import {
   Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
+  BidiComponent as BidiComponentProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
@@ -69,8 +70,9 @@ import {
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { LibContext } from "~lib/components/core/LibContext"
 import Maybe from "~lib/components/core/Maybe"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
@@ -88,6 +90,7 @@ import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
 import { getElementId } from "~lib/util/utils"
 
+import { StyledSpace } from "./styled-components"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import {
   BaseBlockProps,
@@ -161,6 +164,10 @@ const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
+const BidiComponent = lazy(
+  () => import("~lib/components/widgets/BidiComponent")
+)
+
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
 }
@@ -194,6 +201,7 @@ const RawElementNodeRenderer = (
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
+    componentRegistry: props.componentRegistry,
   }
 
   switch (node.element.type) {
@@ -377,6 +385,9 @@ const RawElementNodeRenderer = (
         <Snow scriptRunId={node.scriptRunId} />
       )
 
+    case "space":
+      return <StyledSpace className="stSpace" data-testid="stSpace" />
+
     case "spinner":
       return (
         <Spinner
@@ -548,7 +559,6 @@ const RawElementNodeRenderer = (
         />
       )
     }
-
     case "componentInstance":
       return (
         <ComponentInstance
@@ -687,6 +697,18 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "bidiComponent": {
+      const bidiComponentProto = node.element
+        .bidiComponent as BidiComponentProto
+
+      return (
+        <BidiComponent
+          key={bidiComponentProto.id}
+          element={bidiComponentProto}
+          {...widgetProps}
+        />
+      )
+    }
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
@@ -697,8 +719,9 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const { isFullScreen } = useContext(ViewStateContext)
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
   const { node } = props
 
   const elementType = node.element.type || ""

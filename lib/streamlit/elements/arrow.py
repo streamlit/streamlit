@@ -16,9 +16,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    TypedDict,
+    cast,
+    overload,
+)
 
 from streamlit import dataframe_util
 from streamlit.deprecation_util import (
@@ -35,6 +42,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
     validate_height,
@@ -279,7 +287,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -296,7 +304,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -313,7 +321,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -381,13 +389,23 @@ class ArrowMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : int or "auto"
+        height : int, "auto", "content", or "stretch"
             The height of the dataframe element. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The dataframe will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
             - An integer specifying the height in pixels: The element has a
               fixed height.
+            - ``"content"``: The height of the element matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
 
             Vertical scrolling within the dataframe element is enabled when the
             height does not accommodate all rows.
@@ -399,10 +417,15 @@ class ArrowMixin:
             this is ``False``, Streamlit sets the dataframe's width according
             to ``width``.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
+
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
             (default), the visibility of index columns is automatically
-            determined based on the data.
+            determined based on the data and other configurations.
 
         column_order : Iterable[str] or None
             The ordered list of columns to display. If this is ``None``
@@ -489,11 +512,6 @@ class ArrowMixin:
             The height of each row in the dataframe in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``.
 
         Returns
         -------
@@ -661,8 +679,7 @@ class ArrowMixin:
         validate_width(width, allow_content=True)
         validate_height(
             height,
-            allow_content=False,
-            allow_stretch=False,
+            allow_content=True,
             additional_allowed=["auto"],
         )
 
@@ -679,6 +696,7 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
+        has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
@@ -701,6 +719,7 @@ class ArrowMixin:
             data_df = dataframe_util.convert_anything_to_pandas_df(
                 data, ensure_copy=False
             )
+            has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
@@ -709,6 +728,18 @@ class ArrowMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
             )
+
+        elif (
+            # Hide index column if row selections are activated and the dataframe has a range index.
+            # The range index usually does not add a lot of value.
+            is_selection_activated
+            and selection_mode in ["multi-row", "single-row"]
+            and has_range_index
+        ):
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
+
         marshall_column_config(proto, column_config_mapping)
 
         # Create layout configuration
@@ -785,15 +816,16 @@ class ArrowMixin:
             Whether to show borders around the table and between cells. This can be one
             of the following:
 
-            - ``True`` (default): Show borders around the table and between cells
-            - ``False``: Show no borders
-            - ``"horizontal"``: Show only horizontal borders between rows
+            - ``True`` (default): Show borders around the table and between cells.
+            - ``False``: Don't show any borders.
+            - ``"horizontal"``: Show only horizontal borders between rows.
 
         Examples
         --------
-        **Example 1: Display a confusion matrix**
+        **Example 1: Display a confusion matrix as a static table**
 
         >>> import pandas as pd
+        >>> import streamlit as st
         >>>
         >>> confusion_matrix = pd.DataFrame(
         ...     {
@@ -807,8 +839,8 @@ class ArrowMixin:
         >>> st.table(confusion_matrix)
 
         .. output::
-           https://doc-table.streamlit.app/
-           height: 480px
+           https://doc-table-confusion.streamlit.app/
+           height: 250px
 
         **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
@@ -828,7 +860,7 @@ class ArrowMixin:
         >>> st.table(product_data, border="horizontal")
 
         .. output::
-           https://doc-table-markdown.streamlit.app/
+           https://doc-table-horizontal-border.streamlit.app/
            height: 200px
 
         """

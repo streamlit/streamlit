@@ -29,7 +29,7 @@ def test_plotly_has_consistent_visuals(
 ):
     snapshot_names = [
         "st_plotly_chart-none_theme",
-        "st_plotly_chart-streamlit_theme_use_container_width",
+        "st_plotly_chart-streamlit_theme",
         "st_plotly_chart-candlestick_streamlit_theme",
         "st_plotly_chart-sunburst_custom_color",
         "st_plotly_chart-contour_heatmap_together",
@@ -41,73 +41,14 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-layout_customization",
         "st_plotly_chart-template_customization",
         "st_plotly_chart-histogram_chart",
+        "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(16)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(14)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
             name=name,
         )
-
-
-def test_plotly_has_correct_visuals(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    snapshot_names = [
-        "st_plotly_chart-line_chart_specific_height_width",
-        "st_plotly_chart-use_container_width_false_and_specified_height",
-        "st_plotly_chart-none_theme_and_use_container_width",
-    ]
-    plotly_indices = [13, 14, 15]
-    for i, name in enumerate(snapshot_names):
-        assert_snapshot(
-            themed_app.get_by_test_id("stPlotlyChart").nth(plotly_indices[i]),
-            name=name,
-        )
-
-
-def test_plotly_use_container_width_false_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 14
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_fullscreen",
-    )
-
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_exited_fullscreen",
-    )
-
-
-def test_plotly_use_container_width_true_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 15
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_fullscreen",
-    )
-
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_exited_fullscreen",
-    )
 
 
 def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFunction):
@@ -146,6 +87,10 @@ def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFu
     reset_button = app.locator('[data-title="Reset axes"]').nth(0)
     reset_button.hover()
     reset_button.click()
+
+    wait_for_app_loaded(app)
+    # Give time for CSS styles to resettle after the reset button click
+    app.wait_for_timeout(200)
 
     assert_snapshot(
         chart,
@@ -194,7 +139,7 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_loaded(app)
 
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(16)
+    expect(plotly_elements).to_have_count(14)
 
     # Take a snapshot of the single mark chart, shows it applies the first color
     # from chartCategoricalColors (orange):

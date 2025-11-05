@@ -14,21 +14,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -276,6 +274,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs"] = ...,
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -288,6 +287,7 @@ class ButtonGroupMixin:
         options: Literal["faces", "stars"] = ...,
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -300,6 +300,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -330,6 +331,14 @@ class ButtonGroupMixin:
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
+
+        default : int or None
+            Default feedback value. This must be consistent with the feedback
+            type in ``options``:
+
+            - 0 or 1 if ``options="thumbs"``.
+            - Between 0 and 4, inclusive, if ``options="faces"`` or
+              ``options="stars"``.
 
         disabled : bool
             An optional boolean that disables the feedback widget if set
@@ -407,7 +416,17 @@ class ButtonGroupMixin:
                 f"The argument passed was '{options}'."
             )
         transformed_options, options_indices = get_mapped_options(options)
-        serde = _SingleSelectSerde[int](options_indices)
+
+        if default is not None and (default < 0 or default >= len(transformed_options)):
+            raise StreamlitAPIException(
+                f"The default value in '{options}' must be a number between 0 and {len(transformed_options) - 1}."
+                f" The passed default value is {default}"
+            )
+
+        _default: list[int] | None = (
+            [options_indices[default]] if default is not None else None
+        )
+        serde = _SingleSelectSerde[int](options_indices, default_value=_default)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -417,7 +436,7 @@ class ButtonGroupMixin:
 
         sentiment = self._button_group(
             transformed_options,
-            default=None,
+            default=_default,
             key=key,
             selection_mode="single",
             disabled=disabled,
@@ -596,6 +615,8 @@ class ButtonGroupMixin:
             If the ``selection_mode`` is ``multi``, this is a list of selected
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
+
+            This contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -824,6 +845,8 @@ class ButtonGroupMixin:
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         **Example 1: Multi-select segmented control**
@@ -1047,7 +1070,10 @@ class ButtonGroupMixin:
             # "feedback" in errors
             "feedback" if style == "borderless" else style,
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity for segmented_control, pills and feedback,
+            # and only include kwargs that can invalidate the current selection.
+            # We whitelist the formatted options and the click mode (single vs multi).
+            key_as_main_identity={"options", "click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,

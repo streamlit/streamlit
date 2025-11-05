@@ -14,52 +14,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Combine all cursor rule files into a single copilot-instructions.md file.
+"""Combine configured AGENTS.md files into a single copilot-instructions.md file.
 
-This script reads all .mdc files from the .cursor/rules directory
+This script reads a curated list of AGENTS.md files from the repository
 and combines them into a single copilot-instructions.md file with markdown
-dividers (---) separating each rule.
-
-Only includes .mdc files that are not gitignored.
+dividers (---) separating each section.
 """
 
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Final
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BASE_DIR = SCRIPT_DIR.parent
-RULES_DIR = BASE_DIR / ".cursor" / "rules"
 OUTPUT_FILE = BASE_DIR / ".github" / "copilot-instructions.md"
 
-# Rule file extensions to process
-RULE_EXTENSIONS: Final[set[str]] = {".mdc"}
-
-
-def is_gitignored(file_path: Path) -> bool:
-    """Check if a file is gitignored using git check-ignore.
-
-    Returns True if the file is gitignored, False otherwise.
-    """
-    try:
-        # Run git check-ignore on the file
-        result = subprocess.run(
-            ["git", "check-ignore", str(file_path)],
-            cwd=BASE_DIR,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        # git check-ignore returns 0 if the file is ignored, 1 if not ignored
-        return result.returncode == 0
-    except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-        # If git command fails, assume file is not ignored
-        return False
+# List of AGENTS.md files to include (relative to repo root)
+# Follows the order here:
+AGENTS_FILES: Final[list[str]] = [
+    # Repo Overview:
+    "AGENTS.md",
+    # Protobuf Guide:
+    "proto/streamlit/proto/AGENTS.md",
+    # Python Development Guide:
+    "lib/AGENTS.md",
+    # Streamlit Lib Python Guide:
+    "lib/streamlit/AGENTS.md",
+    # Python Unit Test Guide:
+    "lib/tests/AGENTS.md",
+    # TypeScript Development Guide:
+    "frontend/AGENTS.md",
+    # E2E Playwright Guide:
+    "e2e_playwright/AGENTS.md",
+]
 
 
 def convert_frontmatter_to_comment(content: str) -> str:
@@ -109,31 +99,27 @@ def indent_markdown_headings(content: str) -> str:
     return heading_pattern.sub(add_heading_level, content)
 
 
-def get_rule_files() -> list[Path]:
-    """Get all rule files from the .cursor/rules directory that are not gitignored."""
-    if not RULES_DIR.exists():
-        raise FileNotFoundError(f"Rules directory not found: {RULES_DIR}")
+def get_agents_files() -> list[Path]:
+    """Get all configured AGENTS.md files that exist in the repository."""
+    files: list[Path] = []
+    for rel_path in AGENTS_FILES:
+        path = (BASE_DIR / rel_path).resolve()
+        if path.exists() and path.is_file():
+            files.append(path)
+        else:
+            print(f"Warning: AGENTS file not found, skipping: {rel_path}")
 
-    rule_files = []
-    for file_path in RULES_DIR.iterdir():
-        if file_path.is_file() and file_path.suffix in RULE_EXTENSIONS:
-            # Only include files that are not gitignored
-            if not is_gitignored(file_path):
-                rule_files.append(file_path)
-            else:
-                print(f"Skipping gitignored file: {file_path.name}")
-
-    # Sort files by name for consistent output
-    return sorted(rule_files)
+    return files
 
 
-def read_rule_file(file_path: Path) -> str:
-    """Read and return the content of a rule file with frontmatter converted to comments and headings indented."""
+def read_agents_file(file_path: Path) -> str:
+    """Read and return the content of an AGENTS file with headings indented.
+
+    We also convert YAML frontmatter to HTML comments if present (harmless if absent).
+    """
     try:
         content = file_path.read_text(encoding="utf-8").strip()
-        # Convert frontmatter to HTML comments
         content = convert_frontmatter_to_comment(content)
-        # Indent all markdown headings by one level
         content = indent_markdown_headings(content)
         return content
     except Exception as e:
@@ -141,33 +127,35 @@ def read_rule_file(file_path: Path) -> str:
         return ""
 
 
-def combine_rule_files() -> None:
-    """Combine all rule files into a single copilot-instructions.md file."""
-    rule_files = get_rule_files()
+def combine_agents_files() -> None:
+    """Combine all configured AGENTS files into a single copilot-instructions.md file."""
+    agent_files = get_agents_files()
 
-    if not rule_files:
-        print("No rule files found in .cursor/rules directory")
+    if not agent_files:
+        print("No AGENTS.md files found from configured list")
         return
 
-    print(f"Found {len(rule_files)} rule files:")
-    for file_path in rule_files:
-        print(f"  - {file_path.name}")
+    print(f"Found {len(agent_files)} AGENTS files:")
+    for file_path in agent_files:
+        # Show path relative to repo root for readability
+        rel = file_path.relative_to(BASE_DIR)
+        print(f"  - {rel}")
 
-    # Combine all rule files
-    combined_content = []
+    # Combine all files
+    combined_content: list[str] = []
 
     # Add header
-    combined_content.append("# Streamlit Library Rules")
+    combined_content.append("# Streamlit Library Development Rules")
     combined_content.append("")
 
-    # Process each rule file
-    for i, file_path in enumerate(rule_files):
-        content = read_rule_file(file_path)
+    # Process each file
+    for i, file_path in enumerate(agent_files):
+        content = read_agents_file(file_path)
         if content:
             combined_content.append(content)
 
             # Add divider between files (except for the last one)
-            if i < len(rule_files) - 1:
+            if i < len(agent_files) - 1:
                 combined_content.append("")
                 combined_content.append("---")
                 combined_content.append("")
@@ -176,14 +164,14 @@ def combine_rule_files() -> None:
     output_content = "\n".join(combined_content) + "\n"
     OUTPUT_FILE.write_text(output_content, encoding="utf-8")
 
-    print(f"Successfully combined {len(rule_files)} rule files into {OUTPUT_FILE}")
+    print(f"Successfully combined {len(agent_files)} AGENTS files into {OUTPUT_FILE}")
     print(f"Total output size: {len(output_content):,} characters")
 
 
 def main() -> None:
     """Main function."""
     try:
-        combine_rule_files()
+        combine_agents_files()
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

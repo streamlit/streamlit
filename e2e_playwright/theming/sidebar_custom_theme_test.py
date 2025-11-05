@@ -38,6 +38,8 @@ def configure_sidebar_custom_theme():
     os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT"] = "bold, serif"
     os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_SIZE"] = "0.625rem"
     os.environ["STREAMLIT_THEME_SIDEBAR_LINK_COLOR"] = "#90EE90"
+    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_TEXT_COLOR"] = "#601EF9"
+    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_BACKGROUND_COLOR"] = "#d4c6f5"
     os.environ["STREAMLIT_THEME_SIDEBAR_PRIMARY_COLOR"] = "blue"
     os.environ["STREAMLIT_THEME_SIDEBAR_SECONDARY_BACKGROUND_COLOR"] = "#222222"
     os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"] = "white"
@@ -56,6 +58,8 @@ def configure_sidebar_custom_theme():
     del os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_SIZE"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_LINK_COLOR"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_CODE_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_CODE_BACKGROUND_COLOR"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_PRIMARY_COLOR"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_SECONDARY_BACKGROUND_COLOR"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"]

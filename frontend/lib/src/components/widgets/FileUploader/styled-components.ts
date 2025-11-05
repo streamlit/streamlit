@@ -149,7 +149,7 @@ export const StyledFileIcon = styled.div<{ disabled?: boolean }>(
 )
 
 export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.red,
+  color: theme.colors.redTextColor,
   fontSize: theme.fontSizes.sm,
   height: theme.fontSizes.sm,
   lineHeight: theme.fontSizes.sm,

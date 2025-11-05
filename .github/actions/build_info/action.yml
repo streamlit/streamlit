@@ -22,9 +22,9 @@ runs:
       id: build_info
       shell: bash
       run: |
-        PYTHON_MIN_VERSION="3.9"
+        PYTHON_MIN_VERSION="3.10"
         PYTHON_MAX_VERSION="3.13"
-        PYTHON_VERSIONS='["min", "3.10", "3.11", "3.12", "max"]'
+        PYTHON_VERSIONS='["min", "3.11", "3.12", "max"]'
 
         echo "Setting step outputs and environment variables..."
 

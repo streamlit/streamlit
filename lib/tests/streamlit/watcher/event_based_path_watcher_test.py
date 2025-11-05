@@ -479,3 +479,40 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # The test succeeds if no exceptions were thrown.
         assert t1.is_alive() is False
         assert t2.is_alive() is False
+
+    @mock.patch("os.path.isdir")
+    def test_handles_value_error_from_commonpath(self, mock_is_dir):
+        """Ensure mixed-drive-like paths (commonpath ValueError) don't crash and are ignored.
+
+        We simulate Windows mixed-drive behavior by forcing os.path.commonpath to raise
+        ValueError. The event should be ignored and no callback invoked.
+        """
+        watched_dir = "/watched"
+        mock_is_dir.side_effect = lambda p: p == watched_dir
+
+        cb = mock.Mock()
+
+        # Ensure initial md5/mtime allow watcher creation
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(watched_dir, cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        # Simulate an event on a different "drive" by making commonpath raise
+        with mock.patch(
+            "streamlit.watcher.event_based_path_watcher.os.path.commonpath",
+            side_effect=ValueError,
+        ):
+            ev = events.FileSystemEvent("/other_drive/some_file.py")
+            ev.event_type = events.EVENT_TYPE_MODIFIED
+            folder_handler.on_modified(ev)
+
+        # The event is ignored; callback not called and no exception raised
+        cb.assert_not_called()
+
+        ro.close()

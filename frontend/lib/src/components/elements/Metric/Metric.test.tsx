@@ -136,9 +136,11 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     render(<Metric {...props} />)
+    // This is the gray metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(163, 168, 184);"
+      "color: rgba(49, 51, 63, 0.6);"
     )
+    // This is the gray metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(49, 51, 63, 0.1);"
     )
@@ -150,9 +152,11 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
+    // This is the green metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(33, 195, 84);"
+      "color: rgb(21, 130, 55);"
     )
+    // This is the green metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(33, 195, 84, 0.1);"
     )
@@ -161,9 +165,11 @@ describe("Metric element", () => {
   it("renders correct red based on props", () => {
     const props = getProps()
     render(<Metric {...props} />)
+    // This is the red metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(255, 75, 75);"
+      "color: rgb(189, 64, 67);"
     )
+    // This is the red metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(255, 43, 43, 0.1);"
     )

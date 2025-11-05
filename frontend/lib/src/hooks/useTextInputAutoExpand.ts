@@ -76,6 +76,7 @@ const initializeHeightGuidance = (
   heightGuidance: RefObject<HeightGuidance>
 ): void => {
   if (textareaRef.current && heightGuidance.current) {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const { offsetHeight } = textareaRef.current
     heightGuidance.current.minHeight = offsetHeight
     heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES

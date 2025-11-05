@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     feedback = ButtonGroupMixin().feedback
 
-    assert_type(feedback(), Union[None, Literal[0, 1]])
-    assert_type(feedback("thumbs"), Union[None, Literal[0, 1]])
-    assert_type(feedback("faces"), Union[None, Literal[0, 1, 2, 3, 4]])
-    assert_type(feedback("stars"), Union[None, Literal[0, 1, 2, 3, 4]])
+    assert_type(feedback(), None | Literal[0, 1])
+    assert_type(feedback("thumbs"), None | Literal[0, 1])
+    assert_type(feedback("faces"), None | Literal[0, 1, 2, 3, 4])
+    assert_type(feedback("stars"), None | Literal[0, 1, 2, 3, 4])

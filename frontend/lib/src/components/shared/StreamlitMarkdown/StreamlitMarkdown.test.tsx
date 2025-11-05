@@ -17,13 +17,13 @@
 import React, { ReactElement } from "react"
 
 import { cleanup, screen } from "@testing-library/react"
+import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { getMarkdownBgColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
@@ -430,15 +430,17 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("colours text properly", () => {
+    const grayTextColor = transparentize(colors.gray85, 0.4)
+
     const colorMapping = new Map([
-      ["red", colors.red80],
-      ["orange", colors.orange100],
-      ["yellow", colors.yellow80],
-      ["blue", colors.blue80],
+      ["red", colors.red90],
+      ["orange", colors.orange95],
+      ["yellow", colors.yellow115],
+      ["blue", colors.blue90],
       ["green", colors.green90],
-      ["violet", colors.purple80],
-      ["gray", colors.gray80],
-      ["grey", colors.gray80],
+      ["violet", colors.purple90],
+      ["gray", grayTextColor],
+      ["grey", grayTextColor],
       ["rainbow", "rgba(0, 0, 0, 0)"],
     ])
 
@@ -603,16 +605,6 @@ describe("CustomMediaTag", () => {
     alt: "Test image",
   }
 
-  // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
-  const createMockLibContextValue = (
-    resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): any => {
-    return {
-      libConfig: { resourceCrossOriginMode },
-    }
-  }
-
   it.each([
     { resourceCrossOriginMode: "anonymous" },
     { resourceCrossOriginMode: "use-credentials" },
@@ -620,14 +612,11 @@ describe("CustomMediaTag", () => {
   ] as const)(
     "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
-      const mockContextValue = createMockLibContextValue(
-        resourceCrossOriginMode
-      )
-      render(
-        <LibContext.Provider value={mockContextValue}>
-          <CustomMediaTag node={mockNode} {...mockProps} />
-        </LibContext.Provider>
-      )
+      renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
+        libConfigContext: {
+          resourceCrossOriginMode,
+        },
+      })
 
       const imgElement = screen.getByRole("img")
 
@@ -735,13 +724,13 @@ describe("CustomMediaTag", () => {
         const node = { tagName } as any
         const props = { src, ...extraProps }
 
-        const mockContextValue = createMockLibContextValue(
-          resourceCrossOriginMode
-        )
-        const { container } = render(
-          <LibContext.Provider value={mockContextValue}>
-            <CustomMediaTag node={node} {...props} />
-          </LibContext.Provider>
+        const { container } = renderWithContexts(
+          <CustomMediaTag node={node} {...props} />,
+          {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          }
         )
 
         const element =

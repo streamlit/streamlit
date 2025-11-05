@@ -81,7 +81,8 @@ class WebsocketSessionManagerTests(unittest.TestCase):
     def test_connect_session_check(self):
         with pytest.raises(
             RuntimeError,
-            match="Only one of existing_session_id and session_id_override should be truthy. This should never happen.",
+            match=r"Only one of existing_session_id and session_id_override should be truthy. "
+            r"This should never happen.",
         ):
             self.connect_session(
                 existing_session_id="existing_session_id",

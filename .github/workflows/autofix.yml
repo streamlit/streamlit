@@ -1,0 +1,101 @@
+# Autofix workflow makes it easy to apply automated fixes to PRs
+name: Autofix
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+# Only run if the PR has the autofix label
+jobs:
+  autofix:
+    if: contains(github.event.pull_request.labels.*.name, 'autofix')
+    runs-on: ubuntu-latest
+    # Add permissions for GITHUB_TOKEN
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    # Avoid duplicate workflows on same branch
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-autofix
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+          submodules: "recursive"
+          fetch-depth: 2
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+
+      - name: Run make frontend-fast
+        run: make frontend-fast
+
+      - name: Run make autofix
+        run: make autofix
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git add -A
+          git status --porcelain
+          echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
+
+      - name: Commit changes to new branch
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+          fix_branch="autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}"
+          git checkout -b "$fix_branch"
+          git add -A
+          git commit -m "Apply automatic fixes"
+          git push --set-upstream origin "$fix_branch"
+
+      - name: Create PR with autofix changes
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: |
+            ## Describe your changes
+
+            Automated fixes for #${{ github.event.pull_request.number }} created via the autofix CI workflow. The autofix workflow is triggered by adding the `autofix` label to a PR. This runs formatting, linting, pre-commit, and other automatically fixable tasks (see `make autofix`).
+
+            This PR targets a feature branch and can be merged without review approval.
+        run: |
+          gh pr create \
+            --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
+            --base "${{ github.head_ref }}" \
+            --title "[autofix] Automated fixes for #${{ github.event.pull_request.number }}" \
+            --body "$PR_BODY"
+
+      - name: Remove 'autofix' label from source PR
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
+
+      - name: Show notices for fork PRs
+        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          notice_title="Autofix skipped for fork PR"
+          notice_body="This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so autofix cannot push changes automatically. Please run 'make autofix' locally and push the results, or a maintainer can apply fixes."
+          echo "::notice title=${notice_title}::${notice_body}"

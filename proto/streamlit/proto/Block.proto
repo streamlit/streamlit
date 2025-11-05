@@ -147,6 +147,7 @@ message Block {
     string help = 3;
     bool disabled = 4;
     string icon = 5;
+    string type = 6;
   }
 
 

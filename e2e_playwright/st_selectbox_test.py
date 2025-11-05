@@ -21,8 +21,10 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_selectbox,
 )
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 19
+NUM_SELECTBOXES = 20
 
 
 def get_selectbox_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
@@ -256,6 +258,46 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "selectbox8")).to_be_visible()
+
+
+def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the selectbox can be updated dynamically while keeping the state."""
+    dynamic_select = get_element_by_key(app, "dynamic_selectbox_with_key")
+    expect(dynamic_select).to_be_visible()
+
+    # Initial state
+    expect(dynamic_select).to_contain_text("Initial dynamic selectbox")
+    expect_prefixed_markdown(app, "Initial selectbox value:", "apple")
+    assert_snapshot(dynamic_select, name="st_selectbox-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_select, "initial help")
+
+    # Type something and submit
+    select_input = dynamic_select.locator("input").first
+    select_input.type("banana")
+    select_input.press("Enter")
+    expect_prefixed_markdown(app, "Initial selectbox value:", "banana")
+
+    # Toggle to update props
+    click_toggle(app, "Update selectbox props")
+
+    # new date input is visible:
+    expect(dynamic_select).to_contain_text("Updated dynamic selectbox")
+
+    # Ensure new select is visible and previous value remains
+    expect_prefixed_markdown(app, "Updated selectbox value:", "banana")
+
+    dynamic_select.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_select, name="st_selectbox-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_select, "updated help")
+
+    # Select a different option again:
+    select_input.type("orange")
+    select_input.press("Enter")
+    expect_prefixed_markdown(app, "Updated selectbox value:", "orange")
 
 
 def test_dismiss_change_by_clicking_away(app: Page):

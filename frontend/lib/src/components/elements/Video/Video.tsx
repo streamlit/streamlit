@@ -265,19 +265,18 @@ function Video({
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles &&
-        subtitles.map((subtitle: ISubtitleTrack, idx: number) => (
-          <track
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={idx}
-            kind="captions"
-            src={endpoints.buildMediaURL(`${subtitle.url}`)}
-            label={`${subtitle.label}`}
-            default={idx === 0}
-            data-testid="stVideoSubtitle"
-          />
-        ))}
+      {subtitles?.map((subtitle: ISubtitleTrack, idx: number) => (
+        <track
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/no-array-index-key
+          key={idx}
+          kind="captions"
+          src={endpoints.buildMediaURL(`${subtitle.url}`)}
+          label={`${subtitle.label}`}
+          default={idx === 0}
+          data-testid="stVideoSubtitle"
+        />
+      ))}
     </video>
   )
 }

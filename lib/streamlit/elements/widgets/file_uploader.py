@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, Union, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
 from streamlit.elements.lib.file_uploader_utils import (
@@ -60,18 +58,15 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedFiles: TypeAlias = Union[
-    UploadedFile,
-    DeletedFile,
-    list[Union[UploadedFile, DeletedFile]],
-    None,
-]
+SomeUploadedFiles: TypeAlias = (
+    UploadedFile | DeletedFile | list[UploadedFile | DeletedFile] | None
+)
 
 # Type alias for accept_multiple_files parameter.
 # If True, multiple files can be uploaded.
 # If False, only a single file can be uploaded.
 # If set to the literal "directory", users can upload an entire directory (folder) of files.
-AcceptMultipleFiles: TypeAlias = Union[bool, Literal["directory"]]
+AcceptMultipleFiles: TypeAlias = bool | Literal["directory"]
 
 
 def _get_upload_files(

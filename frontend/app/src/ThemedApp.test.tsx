@@ -18,6 +18,8 @@ import React from "react"
 
 import { render, screen } from "@testing-library/react"
 
+import { baseTheme, ThemeContext } from "@streamlit/lib"
+
 import ThemedApp from "./ThemedApp"
 
 vi.mock("@streamlit/connection")
@@ -33,6 +35,12 @@ class ResizeObserver {
 window.ResizeObserver = ResizeObserver
 
 describe("ThemedApp", () => {
+  const themeContextValue = {
+    activeTheme: baseTheme,
+    setTheme: vi.fn(),
+    availableThemes: [],
+  }
+
   beforeEach(() => {
     // sourced from:
     // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
@@ -52,13 +60,21 @@ describe("ThemedApp", () => {
   })
 
   it("renders without crashing", () => {
-    render(<ThemedApp streamlitExecutionStartedAt={Date.now()} />)
+    render(
+      <ThemeContext.Provider value={themeContextValue}>
+        <ThemedApp streamlitExecutionStartedAt={Date.now()} />
+      </ThemeContext.Provider>
+    )
 
     expect(screen.getByTestId("stApp")).toBeInTheDocument()
   })
 
   it("contains the overlay portal required by the interactive table", () => {
-    render(<ThemedApp streamlitExecutionStartedAt={Date.now()} />)
+    render(
+      <ThemeContext.Provider value={themeContextValue}>
+        <ThemedApp streamlitExecutionStartedAt={Date.now()} />
+      </ThemeContext.Provider>
+    )
     const portalElement = screen.getByTestId("portal")
     expect(portalElement).toBeInTheDocument()
   })

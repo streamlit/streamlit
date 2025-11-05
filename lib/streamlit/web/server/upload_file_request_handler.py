@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import tornado.httputil
 import tornado.web
@@ -25,6 +25,8 @@ from streamlit.web.server import routes, server_util
 from streamlit.web.server.server_util import is_xsrf_enabled
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 

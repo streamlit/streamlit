@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { waitFor } from "@testing-library/dom"
+
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -391,7 +393,7 @@ describe("PlotlyChart utils", () => {
   })
 
   describe("sendEmptySelection", () => {
-    it("sets empty selection state", () => {
+    it("sets empty selection state", async () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
         sendRerunBackMsg,
@@ -407,24 +409,26 @@ describe("PlotlyChart utils", () => {
         '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}'
       )
 
-      // Verify rerun message is sent with correct widget states
-      expect(sendRerunBackMsg).toHaveBeenCalledWith(
-        {
-          widgets: [
-            {
-              id: "plotly_chart",
-              stringValue:
-                '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-            },
-          ],
-        },
-        undefined,
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        // Verify rerun message is sent with correct widget states
+        expect(sendRerunBackMsg).toHaveBeenCalledWith(
+          {
+            widgets: [
+              {
+                id: "plotly_chart",
+                stringValue:
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+              },
+            ],
+          },
+          undefined,
+          undefined,
+          undefined
+        )
+      })
     })
 
-    it("sets empty selection state and sends rerun with fragmentId", () => {
+    it("sets empty selection state and sends rerun with fragmentId", async () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
         sendRerunBackMsg,
@@ -442,20 +446,22 @@ describe("PlotlyChart utils", () => {
       )
 
       // Verify rerun message is sent with correct widget states and fragmentId
-      expect(sendRerunBackMsg).toHaveBeenCalledWith(
-        {
-          widgets: [
-            {
-              id: "plotly_chart",
-              stringValue:
-                '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-            },
-          ],
-        },
-        fragmentId,
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        expect(sendRerunBackMsg).toHaveBeenCalledWith(
+          {
+            widgets: [
+              {
+                id: "plotly_chart",
+                stringValue:
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+              },
+            ],
+          },
+          fragmentId,
+          undefined,
+          undefined
+        )
+      })
     })
   })
 })

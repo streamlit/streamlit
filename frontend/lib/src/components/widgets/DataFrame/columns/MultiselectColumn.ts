@@ -16,8 +16,14 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import { transparentize } from "color2k"
 
-import { blend, EmotionTheme, getMarkdownBgColors } from "~lib/theme"
+import {
+  blend,
+  EmotionTheme,
+  getMarkdownBgColors,
+  hasLightBackgroundColor,
+} from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -73,6 +79,10 @@ export const prepareOptions = (
   }
 
   const colorMapping = getColorMapping(theme)
+  // Categorical chart colors are used for the "auto" color option:
+  const categoricalColors = theme.colors.chartCategoricalColors
+  const isLightTheme = hasLightBackgroundColor(theme)
+  let autoColorIndex = 0
 
   return options
     .filter(opt => opt !== null && opt !== "")
@@ -85,19 +95,32 @@ export const prepareOptions = (
         }
       }
 
+      // Resolve the configured color:
+      let resolvedColor: string | undefined
+
+      if (option.color === "auto") {
+        // If the color is "auto", we use a color from the configured categorical chart colors
+        resolvedColor = transparentize(
+          categoricalColors[autoColorIndex % categoricalColors.length],
+          // Add some transparency to make the colors better as background colors:
+          isLightTheme ? 0.7 : 0.6
+        )
+
+        autoColorIndex += 1
+      } else if (option.color) {
+        // Try to map the color to a theme color, otherwise use the color value directly.
+        resolvedColor = colorMapping.get(option.color) ?? option.color
+      }
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
-      const optionColor = option.color
-        ? blend(
-            colorMapping.get(option.color) ?? option.color,
-            theme.colors.bgColor
-          )
+      const blendedColor = resolvedColor
+        ? blend(resolvedColor, theme.colors.bgColor)
         : undefined
 
       return {
         value: toSafeString(option.value).trim(),
         label: option.label ?? undefined,
-        color: optionColor,
+        color: blendedColor,
       }
     })
 }

@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
@@ -54,7 +52,7 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.runtime.state import WidgetCallback
 
-SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
+SpecType: TypeAlias = int | Sequence[int | float]
 
 
 class LayoutsMixin:
@@ -64,7 +62,7 @@ class LayoutsMixin:
         *,
         border: bool | None = None,
         key: Key | None = None,
-        width: WidthWithoutContent = "stretch",
+        width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
         horizontal_alignment: HorizontalAlignment = "left",
@@ -94,11 +92,13 @@ class LayoutsMixin:
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
 
-        width : "stretch" or int
+        width : "stretch", "content", or int
             The width of the container. This can be one of the following:
 
             - ``"stretch"`` (default): The width of the container matches the
               width of the parent container.
+            - ``"content"``: The width of the container matches the width of
+              its content.
             - An integer specifying the width in pixels: The container has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
@@ -300,7 +300,7 @@ class LayoutsMixin:
             block_proto.flex_container.justify = get_justify(vertical_alignment)
             block_proto.flex_container.align = get_align(horizontal_alignment)
 
-        validate_width(width)
+        validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
         if isinstance(height, int) or border:
@@ -385,13 +385,15 @@ class LayoutsMixin:
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown around each column.
 
-        width : int or "stretch"
-            The desired width of the columns expressed in pixels. If this is
-            ``"stretch"`` (default), Streamlit sets the width of the columns to
-            match the width of the parent container. Otherwise, this must be an
-            integer. If the specified width is greater than the width of the
-            parent container, Streamlit sets the width of the columns to match
-            the width of the parent container.
+        width : "stretch" or int
+            The width of the column group. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the column group matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The column group has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the column group matches the
+              width of the parent container.
 
         Returns
         -------
@@ -569,7 +571,7 @@ class LayoutsMixin:
 
         To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
-        examples below.
+        the examples below.
 
         .. note::
             All content within every tab is computed and sent to the frontend,
@@ -612,7 +614,8 @@ class LayoutsMixin:
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
             tab is selected. If this is a string, it must be one of the tab
-            labels.
+            labels. If two tabs have the same label as ``default``, the first
+            one is selected.
 
         Returns
         -------
@@ -621,7 +624,9 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the ``with`` notation to insert any element into a tab:
+        *Example 1: Use context management*
+
+        You can use ``with`` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -641,7 +646,9 @@ class LayoutsMixin:
             https://doc-tabs1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly on the returned objects:
+        *Example 2: Call methods directly*
+
+        You can call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng
@@ -659,6 +666,31 @@ class LayoutsMixin:
         .. output ::
             https://doc-tabs2.streamlit.app/
             height: 700px
+
+        *Example 3: Set the default tab and style the tab labels*
+
+        Use the ``default`` parameter to set the default tab. You can also use
+        Markdown in the tab labels.
+
+        >>> import streamlit as st
+        >>>
+        >>> tab1, tab2, tab3 = st.tabs(
+        ...     [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
+        ... )
+        >>>
+        >>> with tab1:
+        >>>     st.header("A cat")
+        >>>     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+        >>> with tab2:
+        >>>     st.header("A dog")
+        >>>     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+        >>> with tab3:
+        >>>     st.header("An owl")
+        >>>     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+
+        .. output ::
+            https://doc-tabs3.streamlit.app/
+            height: 620px
 
         """
         if not tabs:
@@ -832,6 +864,7 @@ class LayoutsMixin:
         self,
         label: str,
         *,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
@@ -882,6 +915,17 @@ class LayoutsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        type : "primary", "secondary", or "tertiary"
+            An optional string that specifies the button type. This can be one
+            of the following:
+
+            - ``"primary"``: The button's background is the app's primary color
+              for additional emphasis.
+            - ``"secondary"`` (default): The button's background coordinates
+              with the app's background color for normal emphasis.
+            - ``"tertiary"``: The button is plain text without a border or
+              background for subtlety.
+
         icon : str
             An optional emoji or icon to display next to the button label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
@@ -916,6 +960,12 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's content.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : int, "stretch", or "content"
             The width of the button. This can be one of the following:
 
@@ -932,12 +982,6 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
-
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
 
         Examples
         --------
@@ -979,9 +1023,17 @@ class LayoutsMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
+        # Checks whether the entered button type is one of the allowed options
+        if type not in ["primary", "secondary", "tertiary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
+                f'\nThe argument passed was "{type}".'
+            )
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
+        popover_proto.type = type
         if help:
             popover_proto.help = str(help)
         if icon is not None:

@@ -18,7 +18,7 @@ import contextlib
 import datetime
 import unittest
 from collections import Counter
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
@@ -33,6 +33,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 MAC = "mac"
 UUID = "uuid"
@@ -215,6 +218,21 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             str(command_metadata.args[2]).strip()
             == 'k: "disabled"\nt: "bool"\nm: "val:True"'
         )
+
+    def test_get_command_telemetry_custom_component_v2(self):
+        """Test getting command telemetry for Custom Components v2 via _get_command_telemetry."""
+        # Create a mock bidi_component function that appears to be from streamlit
+        mock_bidi_component = MagicMock()
+        mock_bidi_component.__module__ = "streamlit.components.v2.bidi_component"
+
+        # Test with a Custom Components v2 call
+        command_metadata = metrics_util._get_command_telemetry(
+            mock_bidi_component, "_bidi_component", "my_custom_component", key="test"
+        )
+
+        assert command_metadata.name == "component_v2:my_custom_component"
+        assert len(command_metadata.args) == 1
+        assert str(command_metadata.args[0]).strip() == 'k: "key"\nt: "str"\nm: "len:4"'
 
     def test_create_page_profile_message(self):
         """Test creating the page profile message via create_page_profile_message."""

@@ -64,3 +64,34 @@ st.toggle(
 st.toggle("toggle with content width", width="content")
 st.toggle("toggle with stretch width", width="stretch")
 st.toggle("toggle with 150px width", width=150)
+
+st.markdown("Dynamic toggle props:")
+
+if st.toggle("Update toggle props"):
+    state = st.toggle(
+        "Updated dynamic toggle",
+        value=False,
+        width="stretch",
+        help="updated help",
+        key="dynamic_toggle_with_key",
+        on_change=lambda a, param: print(
+            f"Updated toggle - callback triggered: {a} {param}"
+        ),
+        args=("Updated toggle arg",),
+        kwargs={"param": "updated kwarg param"},
+    )
+    st.write("Updated toggle state:", state)
+else:
+    state = st.toggle(
+        "Initial dynamic toggle",
+        value=True,
+        width="content",
+        help="initial help",
+        key="dynamic_toggle_with_key",
+        on_change=lambda a, param: print(
+            f"Initial toggle - callback triggered: {a} {param}"
+        ),
+        args=("Initial toggle arg",),
+        kwargs={"param": "initial kwarg param"},
+    )
+    st.write("Initial toggle state:", state)

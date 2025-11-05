@@ -23,14 +23,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
-    Union,
+    TypeAlias,
     cast,
 )
 
-from typing_extensions import TypeAlias
-
-import streamlit as st
 from streamlit import config, util
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -39,11 +37,14 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
     ValueFieldName,
+    WidgetArgs,
+    WidgetCallback,
     WidgetMetadata,
     is_array_value_field_name,
     is_element_id,
     is_keyed_element_id,
 )
+from streamlit.runtime.state.presentation import apply_presenter
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
@@ -71,7 +72,7 @@ class Value:
     value: Any
 
 
-WState: TypeAlias = Union[Value, Serialized]
+WState: TypeAlias = Value | Serialized
 
 
 @dataclass
@@ -228,7 +229,7 @@ class WStates(MutableMapping[str, Any]):
         if is_array_value_field_name(field):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
-        elif field == "json_value":
+        elif field in {"json_value", "json_trigger_value"}:
             setattr(widget, field, json.dumps(serialized))
         elif field == "file_uploader_state_value":
             widget.file_uploader_state_value.CopyFrom(serialized)
@@ -401,7 +402,7 @@ class SessionState:
 
     @property
     def filtered_state(self) -> dict[str, Any]:
-        """The combined session and widget state, excluding keyless widgets."""
+        """The combined session and widget state, excluding keyless widgets and internal widgets."""
 
         wid_key_map = self._key_id_mapper.id_key_mapping
 
@@ -414,9 +415,10 @@ class SessionState:
         for k in self._keys():
             if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_element_id(k):
+            elif is_keyed_element_id(k) and not _is_internal_key(k):
                 try:
                     key = wid_key_map[k]
+                    # Value returned by __getitem__ is already presented.
                     state[key] = self[k]
                 except KeyError:
                     # Widget id no longer maps to a key, it is a not yet
@@ -466,7 +468,12 @@ class SessionState:
             # the "key" is a raw widget id, so get its associated user key for lookup
             key = wid_key_map[widget_id]
         try:
-            return self._getitem(widget_id, key)
+            base_value = self._getitem(widget_id, key)
+            return (
+                apply_presenter(self, widget_id, base_value)
+                if widget_id is not None
+                else base_value
+            )
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
@@ -576,19 +583,210 @@ class SessionState:
         self._call_callbacks()
 
     def _call_callbacks(self) -> None:
-        """Call any callback associated with each widget whose value
-        changed between the previous and current script runs.
-        """
+        """Call callbacks for widgets whose value changed or whose trigger fired."""
         from streamlit.runtime.scriptrunner import RerunException
 
-        changed_widget_ids = [
-            wid for wid in self._new_widget_state if self._widget_changed(wid)
+        # Path 1: single callback.
+        changed_widget_ids_for_single_callback = [
+            wid
+            for wid in self._new_widget_state
+            if self._widget_changed(wid)
+            and (metadata := self._new_widget_state.widget_metadata.get(wid))
+            is not None
+            and metadata.callback is not None
         ]
-        for wid in changed_widget_ids:
+
+        for wid in changed_widget_ids_for_single_callback:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:  # noqa: PERF203
-                st.warning("Calling st.rerun() within a callback is a no-op.")
+                get_dg_singleton_instance().main_dg.warning(
+                    "Calling st.rerun() within a callback is a no-op."
+                )
+
+        # Path 2: multiple callbacks.
+        widget_ids_to_process = list(self._new_widget_state.states.keys())
+
+        for wid in widget_ids_to_process:
+            metadata = self._new_widget_state.widget_metadata.get(wid)
+            if not metadata or metadata.callbacks is None:
+                continue
+
+            args = metadata.callback_args or ()
+            kwargs = metadata.callback_kwargs or {}
+
+            # 1) Trigger dispatch: bool + JSON trigger aggregator
+            self._dispatch_trigger_callbacks(wid, metadata, args, kwargs)
+
+            # 2) JSON value change dispatch
+            if metadata.value_type == "json_value":
+                self._dispatch_json_change_callbacks(wid, metadata, args, kwargs)
+
+    def _execute_widget_callback(
+        self,
+        callback_fn: WidgetCallback,
+        cb_metadata: WidgetMetadata[Any],
+        cb_args: WidgetArgs,
+        cb_kwargs: dict[str, Any],
+    ) -> None:
+        """Execute a widget callback with fragment-aware context.
+
+        If the widget belongs to a fragment, temporarily marks the current
+        script context as being inside a fragment callback to adapt rerun
+        semantics. Attempts to call ``st.rerun()`` inside a widget callback are
+        converted to a user-visible warning and treated as a no-op.
+
+        Parameters
+        ----------
+        callback_fn : WidgetCallback
+            The user-provided callback to execute.
+        cb_metadata : WidgetMetadata[Any]
+            Metadata of the widget associated with the callback.
+        cb_args : WidgetArgs
+            Positional arguments passed to the callback.
+        cb_kwargs : dict[str, Any]
+            Keyword arguments passed to the callback.
+        """
+        from streamlit.runtime.scriptrunner import RerunException
+
+        ctx = get_script_run_ctx()
+        if ctx and cb_metadata.fragment_id is not None:
+            ctx.in_fragment_callback = True
+            try:
+                callback_fn(*cb_args, **cb_kwargs)
+            except RerunException:
+                get_dg_singleton_instance().main_dg.warning(
+                    "Calling st.rerun() within a callback is a no-op."
+                )
+            finally:
+                ctx.in_fragment_callback = False
+        else:
+            try:
+                callback_fn(*cb_args, **cb_kwargs)
+            except RerunException:
+                get_dg_singleton_instance().main_dg.warning(
+                    "Calling st.rerun() within a callback is a no-op."
+                )
+
+    def _dispatch_trigger_callbacks(
+        self,
+        wid: str,
+        metadata: WidgetMetadata[Any],
+        args: WidgetArgs,
+        kwargs: dict[str, Any],
+    ) -> None:
+        """Dispatch trigger-style callbacks for a widget.
+
+        Handles the JSON trigger aggregator. The JSON payload may be a single
+        event dict or a list of event dicts; each event must contain an
+        ``"event"`` field that maps to the corresponding callback name in
+        ``metadata.callbacks``.
+
+        Examples
+        --------
+        A component with a "submit" callback:
+
+        >>> metadata.callbacks = {"submit": on_submit}
+
+        The frontend can send a single event payload:
+
+        >>> {"event": "submit", "value": "payload"}
+
+        Or a list of event payloads to be processed in order:
+
+        >>> [{"event": "edit", ...}, {"event": "submit", ...}]
+
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+        """
+        widget_proto_state = self._new_widget_state.get_serialized(wid)
+        if not widget_proto_state:
+            return
+
+        # JSON trigger aggregator: value is deserialized by metadata.deserializer
+        if widget_proto_state.json_trigger_value:
+            try:
+                deserialized = self._new_widget_state[wid]
+            except KeyError:
+                deserialized = None
+
+            payloads: list[object]
+            if isinstance(deserialized, list):
+                payloads = deserialized
+            else:
+                payloads = [deserialized]
+
+            for payload in payloads:
+                if isinstance(payload, dict):
+                    event_name = payload.get("event")
+                    if isinstance(event_name, str) and metadata.callbacks:
+                        cb = metadata.callbacks.get(event_name)
+                        if cb is not None:
+                            self._execute_widget_callback(cb, metadata, args, kwargs)
+
+    def _dispatch_json_change_callbacks(
+        self,
+        wid: str,
+        metadata: WidgetMetadata[Any],
+        args: WidgetArgs,
+        kwargs: dict[str, Any],
+    ) -> None:
+        """Dispatch change callbacks for JSON-valued widgets.
+
+        Computes a shallow diff between the new and old JSON maps and invokes
+        callbacks for keys that changed or were added/removed.
+
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+        """
+        if not metadata.callbacks:
+            return
+
+        try:
+            new_val = self._new_widget_state.get(wid)
+        except KeyError:
+            new_val = None
+        old_val = self._old_state.get(wid)
+
+        def unwrap(obj: object) -> dict[str, object]:
+            if not isinstance(obj, dict):
+                return {}
+
+            obj = cast("dict[str, Any]", obj)
+            if set(obj.keys()) == {"value"}:
+                value = obj.get("value")
+                if isinstance(value, dict):
+                    return dict(value)  # shallow copy
+
+            return dict(obj)
+
+        new_map = unwrap(new_val)
+        old_map = unwrap(old_val)
+
+        if new_map or old_map:
+            all_keys = new_map.keys() | old_map.keys()
+            changed_keys = {k for k in all_keys if old_map.get(k) != new_map.get(k)}
+
+            for key in changed_keys:
+                cb = metadata.callbacks.get(key)
+                if cb is not None:
+                    self._execute_widget_callback(cb, metadata, args, kwargs)
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
@@ -623,6 +821,7 @@ class SessionState:
                 elif metadata.value_type in {
                     "string_trigger_value",
                     "chat_input_value",
+                    "json_trigger_value",
                 }:
                     self._new_widget_state[state_id] = Value(None)
 
@@ -634,6 +833,7 @@ class SessionState:
                 elif metadata.value_type in {
                     "string_trigger_value",
                     "chat_input_value",
+                    "json_trigger_value",
                 }:
                     self._old_state[state_id] = None
 
@@ -662,6 +862,10 @@ class SessionState:
                 )
             )
         }
+
+    def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
+        """Return the metadata for a widget id from the current widget state."""
+        return self._new_widget_state.widget_metadata.get(widget_id)
 
     def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata."""

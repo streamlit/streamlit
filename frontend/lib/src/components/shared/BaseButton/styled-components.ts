@@ -206,9 +206,9 @@ export const StyledGhostButton = styled(
     backgroundColor: theme.colors.transparent,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.gray30,
     borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.gray60,
   },
 }))
 
@@ -261,9 +261,9 @@ const StyledButtonGroupBaseButton = styled(
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText20,
       borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.bgColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
       cursor: "not-allowed",
     },
 
@@ -300,6 +300,12 @@ export const StyledPillsButtonActive = styled(
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
@@ -342,6 +348,12 @@ export const StyledSegmentedControlButtonActive = styled(
     "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
   }
 })
 
@@ -374,9 +386,9 @@ export const StyledHeaderButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -495,9 +507,9 @@ export const StyledElementToolbarButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })

@@ -14,6 +14,8 @@
 
 """Unit tests for st.map()."""
 
+from __future__ import annotations
+
 import itertools
 import json
 import re
@@ -331,18 +333,6 @@ class StMapTest(DeltaGeneratorTestCase):
         ):
             st.map(df)
 
-    def test_map_with_height(self):
-        """Test st.map with height."""
-        st.map(mock_df, height=500)
-        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        assert c.height == 500
-
-    def test_map_with_width(self):
-        """Test st.map with width."""
-        st.map(mock_df, width=240)
-        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        assert c.width == 240
-
     def test_mapbox_token_is_set_in_proto(self):
         """Test that mapbox token is set in proto if configured."""
 
@@ -350,3 +340,151 @@ class StMapTest(DeltaGeneratorTestCase):
             st.map(mock_df)
             c = self.get_delta_from_queue().new_element.deck_gl_json_chart
             assert c.mapbox_token == "test_mapbox_token"
+
+
+class StMapWidthHeightTest(DeltaGeneratorTestCase):
+    """Test st.map width and height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, expected_width_spec, expected_width_value
+            ("stretch", "use_stretch", True),
+            (500, "pixel_width", 500),
+        ]
+    )
+    def test_width_parameter(
+        self,
+        width: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+    ):
+        """Test st.map with various width combinations."""
+        st.map(mock_df, width=width)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            ("stretch", "use_stretch", True),
+            (400, "pixel_height", 400),
+        ]
+    )
+    def test_height_parameter(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test st.map with various height combinations."""
+        st.map(mock_df, height=height)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    def test_default_width_stretch(self):
+        """Test that default width is 'stretch'."""
+        st.map(mock_df)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.width_config.WhichOneof("width_spec") == "use_stretch"
+        assert el.width_config.use_stretch
+
+    def test_default_height_500(self):
+        """Test that default height is 500."""
+        st.map(mock_df)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 500
+
+    @parameterized.expand(
+        [
+            # use_container_width, width, expected_width_spec, expected_width_value
+            (True, None, "use_stretch", True),  # use_container_width=True -> stretch
+            (
+                False,
+                None,
+                "use_stretch",
+                True,
+            ),  # use_container_width=False, no width provided -> uses default "stretch"
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides width -> stretch
+            (
+                True,
+                "stretch",
+                "use_stretch",
+                True,
+            ),  # use_container_width=True overrides width -> stretch
+            (
+                False,
+                "stretch",
+                "use_stretch",
+                True,
+            ),  # use_container_width=False, width="stretch" -> stretch
+            (
+                False,
+                400,
+                "pixel_width",
+                400,
+            ),  # use_container_width=False, integer width -> preserve integer
+        ]
+    )
+    @mock.patch("streamlit.elements.map.show_deprecation_warning")
+    def test_use_container_width_deprecation(
+        self,
+        use_container_width: bool,
+        width: str | int | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_show_warning,
+    ):
+        """Test deprecation warning and translation logic."""
+        kwargs = {"use_container_width": use_container_width}
+        if width is not None:
+            kwargs["width"] = width
+
+        st.map(mock_df, **kwargs)
+
+        # Check that deprecation warning was called
+        mock_show_warning.assert_called_once()
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        # Check width_config reflects the expected width (NOT deprecated proto fields) - NO conditionals!
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            ("width", "invalid_width"),
+            ("width", "content"),  # content not supported for maps
+            ("width", 0),  # width must be positive
+            ("width", -100),  # negative width
+            ("height", "invalid_height"),
+            ("height", "content"),  # content not supported for maps
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_validation_errors(self, param_name: str, invalid_value: str | int):
+        """Test that invalid width/height values raise validation errors."""
+        kwargs = {param_name: invalid_value}
+        with pytest.raises(StreamlitAPIException):
+            st.map(mock_df, **kwargs)
