@@ -23,7 +23,7 @@ import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { EmotionTheme } from "~lib/theme"
-import { AcceptFileValue } from "~lib/util/utils"
+import { AcceptFileValue, AcceptImageValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
@@ -40,6 +40,7 @@ export interface Props {
   getRootProps: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
+  acceptImage: AcceptImageValue
   acceptFile: AcceptFileValue
   disabled: boolean
   theme: EmotionTheme
@@ -48,11 +49,31 @@ export interface Props {
 const ChatFileUploadButton = ({
   getRootProps,
   getInputProps,
+  acceptImage,
   acceptFile,
   disabled,
   theme,
 }: Props): React.ReactElement => {
-  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
+  // Use the primary accept type for configuration
+  const primaryAcceptType =
+    acceptImage !== AcceptImageValue.None ? acceptImage : acceptFile
+  const inputProps = configureFileInputProps(
+    getInputProps(),
+    primaryAcceptType
+  )
+
+  // Determine the description based on what's enabled
+  let description = ""
+  if (
+    acceptImage !== AcceptImageValue.None &&
+    acceptFile !== AcceptFileValue.None
+  ) {
+    description = "files and images"
+  } else if (acceptImage !== AcceptImageValue.None) {
+    description = getUploadDescription(acceptImage)
+  } else {
+    description = getUploadDescription(acceptFile)
+  }
 
   return (
     <StyledFileUploadButtonContainer disabled={disabled}>
@@ -63,7 +84,7 @@ const ChatFileUploadButton = ({
       >
         <input {...inputProps} />
         <TooltipIcon
-          content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+          content={`Upload or drag and drop ${description}`}
           placement={Placement.TOP}
           onMouseEnterDelay={500}
         >

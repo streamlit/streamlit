@@ -17,7 +17,7 @@
 import { describe, expect, it } from "vitest"
 
 import { createTestFile } from "~lib/test_util"
-import { AcceptFileValue } from "~lib/util/utils"
+import { AcceptImageValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
@@ -122,22 +122,22 @@ describe("fileUploadUtils", () => {
   })
 
   describe("getUploadDescription", () => {
-    it("returns correct description for single file", () => {
-      expect(getUploadDescription(AcceptFileValue.Single)).toBe("a file")
+    it("returns correct description for single image", () => {
+      expect(getUploadDescription(AcceptImageValue.Single)).toBe("an image")
     })
 
-    it("returns correct description for multiple files", () => {
-      expect(getUploadDescription(AcceptFileValue.Multiple)).toBe("files")
+    it("returns correct description for multiple images", () => {
+      expect(getUploadDescription(AcceptImageValue.Multiple)).toBe("images")
     })
 
     it("returns correct description for directory", () => {
-      expect(getUploadDescription(AcceptFileValue.Directory)).toBe(
+      expect(getUploadDescription(AcceptImageValue.Directory)).toBe(
         "a directory"
       )
     })
 
     it("returns correct description for none", () => {
-      expect(getUploadDescription(AcceptFileValue.None)).toBe("a file")
+      expect(getUploadDescription(AcceptImageValue.None)).toBe("an image")
     })
   })
 
@@ -146,7 +146,7 @@ describe("fileUploadUtils", () => {
       const inputProps = { accept: ".txt" }
       const result = configureFileInputProps(
         inputProps,
-        AcceptFileValue.Directory
+        AcceptImageValue.Directory
       )
       expect(result.webkitdirectory).toBe("")
       expect(result.multiple).toBe(true)
@@ -157,17 +157,17 @@ describe("fileUploadUtils", () => {
       const inputProps = { accept: ".pdf", multiple: false }
       const result = configureFileInputProps(
         inputProps,
-        AcceptFileValue.Single
+        AcceptImageValue.Single
       )
       expect(result).toEqual(inputProps)
       expect(result.webkitdirectory).toBeUndefined()
     })
 
-    it("preserves original props for multiple file uploads", () => {
+    it("preserves original props for multiple image uploads", () => {
       const inputProps = { accept: ".jpg,.png", multiple: true }
       const result = configureFileInputProps(
         inputProps,
-        AcceptFileValue.Multiple
+        AcceptImageValue.Multiple
       )
       expect(result).toEqual(inputProps)
       expect(result.webkitdirectory).toBeUndefined()

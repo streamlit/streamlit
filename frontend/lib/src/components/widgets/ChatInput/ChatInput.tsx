@@ -55,7 +55,9 @@ import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
   AcceptFileValue,
+  AcceptImageValue,
   chatInputAcceptFileProtoValueToEnum,
+  chatInputAcceptImageProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -149,7 +151,25 @@ function ChatInput({
     return value !== "" || files.length > 0
   }, [files, value])
 
+  const acceptImage = chatInputAcceptImageProtoValueToEnum(element.acceptImage)
   const acceptFile = chatInputAcceptFileProtoValueToEnum(element.acceptFile)
+
+  // Determine if either images or files are accepted
+  const acceptsImages = acceptImage !== AcceptImageValue.None
+  const acceptsFiles = acceptFile !== AcceptFileValue.None
+  const acceptsAnyFiles = acceptsImages || acceptsFiles
+
+  // For upload behavior, use the most permissive setting from either system
+  const acceptMultipleFiles =
+    acceptImage === AcceptImageValue.Multiple ||
+    acceptImage === AcceptImageValue.Directory ||
+    acceptFile === AcceptFileValue.Multiple ||
+    acceptFile === AcceptFileValue.Directory
+
+  const acceptDirectoryFiles =
+    acceptImage === AcceptImageValue.Directory ||
+    acceptFile === AcceptFileValue.Directory
+
   const maxFileSize = sizeConverter(
     element.maxUploadSizeMb,
     FileSize.Megabyte,
@@ -201,10 +221,33 @@ function ChatInput({
     [deleteUploadedFile]
   )
 
-  const createChatInputWidgetFilesValue =
+  const createChatInputWidgetImageValue =
     useCallback((): FileUploaderStateProto => {
+      if (!acceptsImages) {
+        return new FileUploaderStateProto({ uploadedFileInfo: [] })
+      }
+
       const uploadedFileInfo: UploadedFileInfoProto[] = files
         .filter(f => f.status.type === "uploaded")
+        .filter(f => {
+          // Include files in image state only if:
+          // 1. acceptImage is enabled, AND
+          // 2. If acceptFile is also enabled, only include files matching image_type
+          // 3. If acceptFile is not enabled, include all files
+          if (!acceptsFiles) {
+            return true // Include all files if only images are accepted
+          }
+
+          // Both image and file are accepted, so categorize by file extension
+          const fileExtension = f.name.toLowerCase().replace(/.*\./, ".")
+          const imageTypes = element.imageType || []
+
+          // Check if this file matches any image type
+          return imageTypes.some(type => {
+            const normalizedType = type.startsWith(".") ? type : `.${type}`
+            return fileExtension === normalizedType.toLowerCase()
+          })
+        })
         .map(f => {
           const { name, size, status } = f
           const { fileId, fileUrls } = status as UploadedStatus
@@ -217,17 +260,56 @@ function ChatInput({
         })
 
       return new FileUploaderStateProto({ uploadedFileInfo })
-    }, [files])
+    }, [files, acceptsImages, acceptsFiles, element.imageType])
+
+  const createChatInputWidgetFileValue =
+    useCallback((): FileUploaderStateProto => {
+      if (!acceptsFiles) {
+        return new FileUploaderStateProto({ uploadedFileInfo: [] })
+      }
+
+      const uploadedFileInfo: UploadedFileInfoProto[] = files
+        .filter(f => f.status.type === "uploaded")
+        .filter(f => {
+          // Include files in file state only if:
+          // 1. acceptFile is enabled, AND
+          // 2. If acceptImage is also enabled, only include files matching file_type
+          // 3. If acceptImage is not enabled, include all files
+          if (!acceptsImages) {
+            return true // Include all files if only files are accepted
+          }
+
+          // Both image and file are accepted, so categorize by file extension
+          const fileExtension = f.name.toLowerCase().replace(/.*\./, ".")
+          const fileTypes = element.fileType || []
+
+          // Check if this file matches any file type
+          return fileTypes.some(type => {
+            const normalizedType = type.startsWith(".") ? type : `.${type}`
+            return fileExtension === normalizedType.toLowerCase()
+          })
+        })
+        .map(f => {
+          const { name, size, status } = f
+          const { fileId, fileUrls } = status as UploadedStatus
+          return new UploadedFileInfoProto({
+            fileId,
+            fileUrls,
+            name,
+            size,
+          })
+        })
+
+      return new FileUploaderStateProto({ uploadedFileInfo })
+    }, [files, acceptsImages, acceptsFiles, element.fileType])
 
   const getNextLocalFileId = (): number => {
     return counterRef.current++
   }
 
   const dropHandler = createDropHandler({
-    acceptMultipleFiles:
-      acceptFile === AcceptFileValue.Multiple ||
-      acceptFile === AcceptFileValue.Directory,
-    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
+    acceptMultipleFiles,
+    acceptDirectoryFiles,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
@@ -299,9 +381,34 @@ function ChatInput({
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple:
-      acceptFile === AcceptFileValue.Multiple ||
-      acceptFile === AcceptFileValue.Directory,
-    accept: getAccept(element.fileType),
+      acceptImage === AcceptImageValue.Multiple ||
+      acceptImage === AcceptImageValue.Directory,
+    accept: (() => {
+      // If files are enabled but no file types specified, accept all files
+      if (
+        acceptsFiles &&
+        (!element.fileType || element.fileType.length === 0)
+      ) {
+        return undefined
+      }
+
+      const combinedTypes: string[] = []
+
+      // Add image types if images are enabled
+      if (acceptsImages) {
+        const imageTypes = element.imageType?.length
+          ? element.imageType
+          : [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"]
+        combinedTypes.push(...imageTypes)
+      }
+
+      // Add file types if files are enabled (we know file types are specified if we reach here)
+      if (acceptsFiles && element.fileType?.length) {
+        combinedTypes.push(...element.fileType)
+      }
+
+      return combinedTypes.length ? getAccept(combinedTypes) : undefined
+    })(),
     maxSize: maxFileSize,
   })
 
@@ -322,11 +429,13 @@ function ChatInput({
         return
       }
 
-      const filesValue = createChatInputWidgetFilesValue()
+      const imageValue = createChatInputWidgetImageValue()
+      const fileValue = createChatInputWidgetFileValue()
 
       const composedValue: IChatInputValue = {
         data: value,
-        fileUploaderState: filesValue,
+        fileUploaderState: fileValue,
+        imageUploaderState: imageValue,
         audioFileInfo: audioInfo,
       }
 
@@ -336,7 +445,26 @@ function ChatInput({
         { fromUi: true },
         fragmentId
       )
-      setFiles([])
+
+      // Clear files based on persistence rules:
+      // - Images are temporary: always clear after submission
+      // - Files are persistent: keep after submission (like st.file_uploader)
+      if (acceptsImages) {
+        setFiles(prevFiles =>
+          acceptsFiles
+            ? // Both enabled: only clear image files, keep non-image files
+              prevFiles.filter(
+                f =>
+                  !f.name
+                    .toLowerCase()
+                    .match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)
+              )
+            : // Only images enabled: clear all files (images are temporary)
+              []
+        )
+      }
+      // If only files enabled or neither enabled, don't clear files
+
       setValue("")
       autoExpand.clearScrollHeight()
     },
@@ -344,7 +472,10 @@ function ChatInput({
       dirty,
       disabled,
       value,
-      createChatInputWidgetFilesValue,
+      createChatInputWidgetImageValue,
+      createChatInputWidgetFileValue,
+      acceptsImages,
+      acceptsFiles,
       widgetMgr,
       element,
       fragmentId,
@@ -541,13 +672,13 @@ function ChatInput({
     }
   }, [fileDragged, innerWidth, innerHeight])
 
-  const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
+  const showDropzone = acceptsAnyFiles && fileDragged
 
   return (
     <>
-      {acceptFile === AcceptFileValue.None ? null : (
+      {acceptsAnyFiles ? (
         <ChatUploadedFiles items={[...files]} onDelete={deleteFile} />
-      )}
+      ) : null}
       <StyledChatInputContainer
         className="stChatInput"
         data-testid="stChatInput"
@@ -557,6 +688,7 @@ function ChatInput({
           <ChatFileUploadDropzone
             getRootProps={getRootProps}
             getInputProps={getInputProps}
+            acceptImage={acceptImage}
             acceptFile={acceptFile}
             inputHeight={autoExpand.height}
           />
@@ -573,11 +705,11 @@ function ChatInput({
               <StyledChatAudioWave ref={waveformContainerRef} />
             </StyledWaveformContainer>
 
-            {acceptFile === AcceptFileValue.None ||
-            controller.state === "recording" ? null : (
+            {!acceptsAnyFiles || controller.state === "recording" ? null : (
               <ChatFileUploadButton
                 getRootProps={getRootProps}
                 getInputProps={getInputProps}
+                acceptImage={acceptImage}
                 acceptFile={acceptFile}
                 disabled={disabled}
                 theme={theme}

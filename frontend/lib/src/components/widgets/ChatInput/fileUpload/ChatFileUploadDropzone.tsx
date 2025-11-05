@@ -16,7 +16,7 @@
 
 import React, { memo } from "react"
 
-import { AcceptFileValue } from "~lib/util/utils"
+import { AcceptFileValue, AcceptImageValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
@@ -32,6 +32,7 @@ export interface Props {
   getRootProps: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
+  acceptImage: AcceptImageValue
   acceptFile: AcceptFileValue
   inputHeight: string
 }
@@ -39,10 +40,30 @@ export interface Props {
 const ChatFileUploadDropzone = ({
   getRootProps,
   getInputProps,
+  acceptImage,
   acceptFile,
   inputHeight,
 }: Props): React.ReactElement => {
-  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
+  // Use the primary accept type for configuration
+  const primaryAcceptType =
+    acceptImage !== AcceptImageValue.None ? acceptImage : acceptFile
+  const inputProps = configureFileInputProps(
+    getInputProps(),
+    primaryAcceptType
+  )
+
+  // Determine the description based on what's enabled
+  let description = ""
+  if (
+    acceptImage !== AcceptImageValue.None &&
+    acceptFile !== AcceptFileValue.None
+  ) {
+    description = "files and images"
+  } else if (acceptImage !== AcceptImageValue.None) {
+    description = getUploadDescription(acceptImage)
+  } else {
+    description = getUploadDescription(acceptFile)
+  }
 
   return (
     <>
@@ -50,7 +71,7 @@ const ChatFileUploadDropzone = ({
         <input {...inputProps} />
       </StyledChatFileUploadDropzone>
       <StyledChatFileUploadDropzoneLabel height={inputHeight}>
-        {`Drag and drop ${getUploadDescription(acceptFile)} here`}
+        {`Drag and drop ${description} here`}
       </StyledChatFileUploadDropzoneLabel>
     </>
   )

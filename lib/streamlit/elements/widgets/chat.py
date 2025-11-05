@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -44,6 +44,7 @@ from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
     get_chat_input_accept_file_proto_value,
+    get_chat_input_accept_image_proto_value,
     save_for_app_testing,
     to_key,
 )
@@ -97,8 +98,10 @@ class ChatInputValue(MutableMapping[str, Any]):
     ----------
     text : str
         The text input provided by the user.
+    images : list[UploadedFile]
+        A list of image files uploaded by the user via accept_image (one-time use).
     files : list[UploadedFile]
-        A list of files uploaded by the user.
+        A list of files uploaded by the user via accept_file (persistent).
     audio : UploadedFile or None, optional
         An audio recording uploaded by the user, if any.
 
@@ -109,7 +112,8 @@ class ChatInputValue(MutableMapping[str, Any]):
     """
 
     text: str
-    files: list[UploadedFile]
+    images: list[UploadedFile] = field(default_factory=list)
+    files: list[UploadedFile] = field(default_factory=list)
     audio: UploadedFile | None = None
 
     def __len__(self) -> int:
@@ -309,21 +313,39 @@ def _pop_audio_file(
 
 @dataclass
 class ChatInputSerde:
+    accept_images: bool = False
     accept_files: bool = False
     accept_audio: bool = False
-    allowed_types: Sequence[str] | None = None
+    allowed_image_types: Sequence[str] | None = None
+    allowed_file_types: Sequence[str] | None = None
 
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
-        if not self.accept_files and not self.accept_audio:
+        if not self.accept_images and not self.accept_files and not self.accept_audio:
             return ui_value.data
-        uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
+
+        # Extract image files from image_uploader_state
+        uploaded_images = (
+            _pop_upload_files(ui_value.image_uploader_state)
+            if ui_value.HasField("image_uploader_state")
+            else []
+        )
+        for file in uploaded_images:
+            if self.allowed_image_types and not isinstance(file, DeletedFile):
+                enforce_filename_restriction(file.name, self.allowed_image_types)
+
+        # Extract regular files from file_uploader_state
+        uploaded_files = (
+            _pop_upload_files(ui_value.file_uploader_state)
+            if ui_value.HasField("file_uploader_state")
+            else []
+        )
         for file in uploaded_files:
-            if self.allowed_types and not isinstance(file, DeletedFile):
-                enforce_filename_restriction(file.name, self.allowed_types)
+            if self.allowed_file_types and not isinstance(file, DeletedFile):
+                enforce_filename_restriction(file.name, self.allowed_file_types)
 
         # Extract audio file separately from the audio_file_info field
         audio_file = _pop_audio_file(
@@ -332,6 +354,7 @@ class ChatInputSerde:
 
         return ChatInputValue(
             text=ui_value.data,
+            images=uploaded_images,
             files=uploaded_files,
             audio=audio_file,
         )
@@ -492,6 +515,8 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_image: Literal[False] | None = False,
+        image_type: str | Sequence[str] | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
@@ -509,6 +534,8 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_image: Literal[False] | None = False,
+        image_type: str | Sequence[str] | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
@@ -526,6 +553,46 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_image: Literal[True, "multiple", "directory"],
+        image_type: str | Sequence[str] | None = None,
+        accept_file: Literal[False] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
+        disabled: bool = False,
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+    ) -> ChatInputValue | None: ...
+
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        accept_image: Literal[False] | None = False,
+        image_type: str | Sequence[str] | None = None,
+        accept_file: Literal[True, "multiple", "directory"],
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
+        disabled: bool = False,
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+    ) -> ChatInputValue | None: ...
+
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        accept_image: Literal[True, "multiple", "directory"],
+        image_type: str | Sequence[str] | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -543,6 +610,8 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_image: bool | Literal["multiple", "directory"] | None = False,
+        image_type: str | Sequence[str] | None = None,
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -570,12 +639,51 @@ class ChatMixin:
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
 
-        accept_file : bool, "multiple", or "directory"
-            Whether the chat input should accept files. This can be one of the
+        accept_image : bool, "multiple", or "directory"
+            Whether the chat input should accept images. This can be one of the
             following values:
 
-            - ``False`` (default): No files are accepted and the user can only
+            - ``False`` (default): No images are accepted and the user can only
               submit a message.
+            - ``True``: The user can add a single image to their submission.
+            - ``"multiple"``: The user can add multiple images to their
+              submission.
+            - ``"directory"``: The user can add multiple images to their
+              submission by selecting a directory. If ``image_type`` is set,
+              only images matching those type(s) will be uploaded.
+
+            By default, uploaded images are limited to 200 MB each. You can
+            configure this using the ``server.maxUploadSize`` config option.
+            For more information on how to set config options, see
+            |config.toml|_.
+
+            .. |config.toml| replace:: ``config.toml``
+            .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
+
+        image_type : str, Sequence[str], or None
+            The allowed image extension(s) for uploaded images. This can be one
+            of the following types:
+
+            - ``None`` (default): All image extensions are allowed.
+            - A string: A single image extension is allowed. For example, to
+              only accept PNG images, use ``"png"``.
+            - A sequence of strings: Multiple image extensions are allowed. For
+              example, to only accept JPG/JPEG and PNG images, use
+              ``["jpg", "jpeg", "png"]``.
+
+            .. note::
+                This is a best-effort check, but doesn't provide a
+                security guarantee against users uploading images of other types
+                or type extensions. The correct handling of uploaded images is
+                part of the app developer's responsibility.
+
+        accept_file : bool, "multiple", or "directory"
+            Whether the chat input should accept files for persistent use.
+            Unlike images (accept_image), files uploaded via this parameter
+            remain attached after message submission, similar to st.file_uploader
+            behavior. This can be one of the following values:
+
+            - ``False`` (default): No files are accepted.
             - ``True``: The user can add a single file to their submission.
             - ``"multiple"``: The user can add multiple files to their
               submission.
@@ -585,11 +693,6 @@ class ChatMixin:
 
             By default, uploaded files are limited to 200 MB each. You can
             configure this using the ``server.maxUploadSize`` config option.
-            For more information on how to set config options, see
-            |config.toml|_.
-
-            .. |config.toml| replace:: ``config.toml``
-            .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
 
         file_type : str, Sequence[str], or None
             The allowed file extension(s) for uploaded files. This can be one
@@ -599,8 +702,7 @@ class ChatMixin:
             - A string: A single file extension is allowed. For example, to
               only accept CSV files, use ``"csv"``.
             - A sequence of strings: Multiple file extensions are allowed. For
-              example, to only accept JPG/JPEG and PNG files, use
-              ``["jpg", "jpeg", "png"]``.
+              example, to only accept text and CSV files, use ``["txt", "csv"]``.
 
             .. note::
                 This is a best-effort check, but doesn't provide a
@@ -646,28 +748,34 @@ class ChatMixin:
         None, str, or dict-like
             The user's submission. This is one of the following types:
 
-            - ``None``: If the user didn't submit a message, file, or audio
+            - ``None``: If the user didn't submit a message, image, file, or audio
               in the last rerun, the widget returns ``None``.
-            - A string: When the widget is not configured to accept files or
-              audio and the user submitted a message in the last rerun, the
+            - A string: When the widget is not configured to accept images, files,
+              or audio and the user submitted a message in the last rerun, the
               widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              and/or audio and the user submitted a message and/or file(s)
-              and/or audio in the last rerun, the widget returns a dict-like
-              object with three attributes: ``text``, ``files``, and ``audio``.
+            - A dict-like object: When the widget is configured to accept images,
+              files, and/or audio and the user submitted a message and/or image(s)
+              and/or file(s) and/or audio in the last rerun, the widget returns
+              a dict-like object with four attributes: ``text``, ``images``,
+              ``files``, and ``audio``.
 
-            When the widget is configured to accept files or audio and the user
-            submits something in the last rerun, you can access the user's
-            submission with key or attribute notation from the dict-like object.
-            This is shown in Example 3 below.
+            When the widget is configured to accept images, files, or audio and
+            the user submits something in the last rerun, you can access the
+            user's submission with key or attribute notation from the dict-like
+            object. This is shown in Example 3 below.
 
             The ``text`` attribute holds a string, which is the user's message.
-            This is an empty string if the user only submitted one or more
-            files or audio.
+            This is an empty string if the user only submitted images, files,
+            or audio.
 
-            The ``files`` attribute holds a list of UploadedFile objects.
-            The list is empty if the user only submitted a message or audio.
-            Unlike ``st.file_uploader``, this attribute always returns a list,
+            The ``images`` attribute holds a list of ``UploadedFile`` objects
+            containing image files uploaded via ``accept_image``. These images
+            are cleared after each submission (one-time use).
+
+            The ``files`` attribute holds a list of ``UploadedFile`` objects
+            containing files uploaded via ``accept_file``. These files persist
+            across submissions until manually removed by the user. Unlike
+            ``st.file_uploader``, this attribute always returns a list,
             even when the widget is configured to accept only one file at a time.
 
             The ``audio`` attribute holds an UploadedFile object representing
@@ -714,26 +822,32 @@ class ChatMixin:
             https://doc-chat-input-inline.streamlit.app/
             height: 350px
 
-        **Example 3: Let users upload files**
+        **Example 3: Let users upload images and files**
 
-        When you configure your chat input widget to allow file attachments, it
-        will return a dict-like object when the user sends a submission. You
+        When you configure your chat input widget to allow image and file attachments,
+        it will return a dict-like object when the user sends a submission. You
         can access the user's message through the ``text`` attribute of this
-        dictionary. You can access a list of the user's submitted file(s)
-        through the ``files`` attribute. Similar to ``st.session_state``, you
-        can use key or attribute notation.
+        dictionary. You can access a list of the user's submitted image(s)
+        through the ``images`` attribute and files through the ``files`` attribute.
+        Similar to ``st.session_state``, you can use key or attribute notation.
 
         >>> import streamlit as st
         >>>
         >>> prompt = st.chat_input(
-        >>>     "Say something and/or attach an image",
-        >>>     accept_file=True,
-        >>>     file_type=["jpg", "jpeg", "png"],
+        >>>     "Say something and/or attach images/files",
+        >>>     accept_image=True,
+        >>>     image_type=["jpg", "jpeg", "png"],
+        >>>     accept_file="multiple",
+        >>>     file_type=["txt", "csv", "pdf"],
         >>> )
         >>> if prompt and prompt.text:
         >>>     st.markdown(prompt.text)
+        >>> if prompt and prompt["images"]:
+        >>>     st.image(prompt["images"][0])
         >>> if prompt and prompt["files"]:
-        >>>     st.image(prompt["files"][0])
+        >>>     st.write(f"Uploaded {len(prompt.files)} file(s)")
+        >>>     for file in prompt.files:
+        >>>         st.write(f"- {file.name}")
 
         .. output ::
             https://doc-chat-input-file-uploader.streamlit.app/
@@ -757,8 +871,9 @@ class ChatMixin:
         **Example 5: Enable audio recording**
 
         You can enable audio recording by setting ``accept_audio=True``.
-        The ``accept_audio`` parameter works independently of ``accept_file``,
-        allowing you to enable audio recording with or without file uploads.
+        The ``accept_audio`` parameter works independently of ``accept_image``
+        and ``accept_file``, allowing you to enable audio recording with or
+        without image/file uploads.
 
         >>> import streamlit as st
         >>>
@@ -783,7 +898,12 @@ class ChatMixin:
             writes_allowed=True,
         )
 
-        if accept_file not in {True, False, "multiple", "directory"}:
+        if accept_image not in {None, True, False, "multiple", "directory"}:
+            raise StreamlitAPIException(
+                "The `accept_image` parameter must be a boolean or 'multiple' or 'directory'."
+            )
+
+        if accept_file not in {None, True, False, "multiple", "directory"}:
             raise StreamlitAPIException(
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
@@ -796,21 +916,46 @@ class ChatMixin:
             # Treat the provided key as the main identity. Only include
             # properties that can invalidate the current widget state
             # when changed. For chat_input, those are:
+            # - accept_image: Changes whether images can be attached (and how)
+            # - image_type: Restricts the accepted image types
             # - accept_file: Changes whether files can be attached (and how)
             # - file_type: Restricts the accepted file types
             # - max_chars: Changes the maximum allowed characters for the input
-            key_as_main_identity={"accept_file", "file_type", "max_chars"},
+            key_as_main_identity={
+                "accept_image",
+                "image_type",
+                "accept_file",
+                "file_type",
+                "max_chars",
+            },
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
+            accept_image=accept_image,
+            image_type=image_type,
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
             width=width,
         )
 
+        if image_type:
+            image_type = normalize_upload_file_type(image_type)
+
         if file_type:
             file_type = normalize_upload_file_type(file_type)
+
+        # Validate that image_type and file_type don't have overlapping extensions
+        if image_type and file_type:
+            image_extensions = set(image_type)
+            file_extensions = set(file_type)
+            overlapping_extensions = image_extensions.intersection(file_extensions)
+            if overlapping_extensions:
+                extensions_str = ", ".join(sorted(overlapping_extensions))
+                raise StreamlitAPIException(
+                    f"File extensions cannot be specified in both `image_type` and `file_type` parameters. "
+                    f"Overlapping extensions: {extensions_str}"
+                )
 
         # It doesn't make sense to create a chat input inside a form.
         # We throw an error to warn the user about this.
@@ -844,6 +989,12 @@ class ChatMixin:
         # Setting a default value is currently not supported for chat input.
         chat_input_proto.default = ""
 
+        chat_input_proto.accept_image = get_chat_input_accept_image_proto_value(
+            accept_image
+        )
+
+        chat_input_proto.image_type[:] = image_type if image_type is not None else []
+
         chat_input_proto.accept_file = get_chat_input_accept_file_proto_value(
             accept_file
         )
@@ -853,9 +1004,11 @@ class ChatMixin:
         chat_input_proto.accept_audio = accept_audio
 
         serde = ChatInputSerde(
+            accept_images=accept_image in {True, "multiple", "directory"},
             accept_files=accept_file in {True, "multiple", "directory"},
             accept_audio=accept_audio,
-            allowed_types=file_type,
+            allowed_image_types=image_type,
+            allowed_file_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]
             chat_input_proto.id,

@@ -48,7 +48,7 @@ const getProps = (
     placeholder: "Enter Text Here",
     disabled: false,
     default: "",
-    acceptFile: ChatInputProto.AcceptFile.NONE,
+    acceptImage: ChatInputProto.AcceptImage.NONE,
     ...elementProps,
   }),
   width: 300,
@@ -304,7 +304,7 @@ describe("ChatInput widget", () => {
   it("disables the textarea and button", () => {
     const props = getProps({
       disabled: true,
-      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      acceptImage: ChatInputProto.AcceptImage.SINGLE,
     })
     render(<ChatInput {...props} />)
 
@@ -374,7 +374,7 @@ describe("ChatInput widget", () => {
     it("disables submit button when files are uploading", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        acceptImage: ChatInputProto.AcceptImage.SINGLE,
         maxUploadSizeMb: 1,
       })
 
@@ -439,8 +439,8 @@ describe("ChatInput widget", () => {
 
   it("displays directory upload button when directory upload is enabled", () => {
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-      fileType: ["txt", "py", "md"],
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
+      imageType: ["txt", "py", "md"],
     })
 
     render(<ChatInput {...props} />)
@@ -465,8 +465,8 @@ describe("ChatInput widget", () => {
 
     const props = getProps(
       {
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-        fileType: ["txt", "py", "md"],
+        acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
+        imageType: ["txt", "py", "md"],
       },
       {
         widgetMgr: mockWidgetMgr,
@@ -483,7 +483,9 @@ describe("ChatInput widget", () => {
     expect(fileInput).toHaveAttribute("multiple")
 
     // Verify the component is configured to accept directory uploads
-    expect(props.element.acceptFile).toBe(ChatInputProto.AcceptFile.DIRECTORY)
+    expect(props.element.acceptImage).toBe(
+      ChatInputProto.AcceptImage.DIRECTORY
+    )
 
     // Verify we can still type messages
     const textarea = screen.getByTestId("stChatInputTextArea")
@@ -511,8 +513,8 @@ describe("ChatInput widget", () => {
 
   it("filters directory files by allowed types", () => {
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-      fileType: ["txt"], // Only allow .txt files
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
+      imageType: ["txt"], // Only allow .txt files
     })
 
     render(<ChatInput {...props} />)
@@ -524,13 +526,13 @@ describe("ChatInput widget", () => {
     expect(fileInput).toHaveAttribute("multiple")
 
     // Verify the component is configured with file type restrictions
-    expect(props.element.fileType).toEqual(["txt"])
+    expect(props.element.imageType).toEqual(["txt"])
   })
 
   it("handles empty directory upload", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
     })
 
     render(<ChatInput {...props} />)
@@ -551,7 +553,7 @@ describe("ChatInput widget", () => {
 
   it("displays directory upload instructions correctly", () => {
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
       placeholder: "Upload a directory",
     })
 
@@ -578,7 +580,7 @@ describe("ChatInput widget", () => {
   it("removes directory files when deleted individually", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
       maxUploadSizeMb: 50,
     })
 
@@ -649,7 +651,7 @@ describe("ChatInput widget", () => {
   it("handles directory upload with multiple files and preserves paths", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
       maxUploadSizeMb: 50,
     })
 
@@ -705,7 +707,7 @@ describe("ChatInput widget", () => {
   it("shows directory structure preservation in file names", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
       maxUploadSizeMb: 50,
     })
 
@@ -735,7 +737,7 @@ describe("ChatInput widget", () => {
   it("enables submit button when directory files are uploaded", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      acceptImage: ChatInputProto.AcceptImage.DIRECTORY,
       maxUploadSizeMb: 50,
     })
 

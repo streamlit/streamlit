@@ -139,9 +139,9 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.value == ""
         assert not c.set_value
         assert c.max_chars == 100
-        assert c.accept_file == ChatInput.AcceptFile.NONE
+        assert c.accept_image == ChatInput.AcceptImage.NONE
         assert not c.disabled
-        assert c.file_type == []
+        assert c.image_type == []
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
@@ -210,30 +210,31 @@ class ChatTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (False, ChatInput.AcceptFile.NONE),
-            (True, ChatInput.AcceptFile.SINGLE),
-            ("multiple", ChatInput.AcceptFile.MULTIPLE),
+            (None, ChatInput.AcceptImage.NONE),
+            (False, ChatInput.AcceptImage.NONE),
+            (True, ChatInput.AcceptImage.SINGLE),
+            ("multiple", ChatInput.AcceptImage.MULTIPLE),
         ]
     )
-    def test_chat_input_accept_file(self, accept_file, expected):
-        st.chat_input(accept_file=accept_file)
+    def test_chat_input_accept_image(self, accept_image, expected):
+        st.chat_input(accept_image=accept_image)
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == expected
+        assert c.accept_image == expected
 
-    def test_chat_input_invalid_accept_file(self):
+    def test_chat_input_invalid_accept_image(self):
         with pytest.raises(StreamlitAPIException) as ex:
-            st.chat_input(accept_file="invalid")
+            st.chat_input(accept_image="invalid")
 
         assert (
             str(ex.value)
-            == "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            == "The `accept_image` parameter must be a boolean or 'multiple' or 'directory'."
         )
 
-    def test_file_type(self):
+    def test_image_type(self):
         """Test that it can be called using string(s) for type parameter."""
-        st.chat_input(file_type="png")
+        st.chat_input(image_type="png")
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.file_type == [".png"]
+        assert c.image_type == [".png"]
 
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
     def test_multiple_files(self, deserialize_patch):
@@ -253,7 +254,7 @@ class ChatTest(DeltaGeneratorTestCase):
             text="placeholder", files=uploaded_files
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_image="multiple")
 
         assert return_val.files == uploaded_files
         for actual, expected in zip(return_val.files, uploaded_files, strict=False):
@@ -287,8 +288,8 @@ class ChatTest(DeltaGeneratorTestCase):
         # These file_uploaders have different labels so that we don't cause
         # a DuplicateKey error - but because we're patching the get_files
         # function, both file_uploaders will refer to the same files.
-        file0 = st.chat_input(key="key0", accept_file=True).files[0]
-        file1 = st.chat_input(key="key1", accept_file=True).files[0]
+        file0 = st.chat_input(key="key0", accept_image=True).files[0]
+        file1 = st.chat_input(key="key1", accept_image=True).files[0]
 
         assert id(file0) != id(file1)
 
@@ -308,10 +309,10 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
         deserialize_patch.return_value = ChatInputValue(text="placeholder", files=files)
 
-        value = st.chat_input("Placeholder", accept_file=True)
+        value = st.chat_input("Placeholder", accept_image=True)
         assert is_custom_dict(value)
 
-        value = st.chat_input("Placeholder", accept_file="multiple")
+        value = st.chat_input("Placeholder", accept_image="multiple")
         assert is_custom_dict(value)
 
     def test_chat_message_width_config_default(self):
@@ -427,12 +428,12 @@ class ChatTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                "accept_file",
+                "accept_image",
                 True,
                 "multiple",
             ),
             (
-                "file_type",
+                "image_type",
                 ["txt"],
                 ["csv"],
             ),
@@ -455,8 +456,8 @@ class ChatTest(DeltaGeneratorTestCase):
                 "placeholder": "Label 1",
                 "key": "chat_input_key",
                 # Keep other whitelisted params stable depending on the tested kwarg
-                "accept_file": True,
-                "file_type": ["txt"],
+                "accept_image": True,
+                "image_type": ["txt"],
                 "max_chars": 100,
             }
             base_kwargs[kwarg_name] = value1
@@ -487,8 +488,8 @@ class ChatTest(DeltaGeneratorTestCase):
                 args=("arg1", "arg2"),
                 kwargs={"kwarg1": "kwarg1"},
                 # Whitelisted kwargs (keep stable):
-                accept_file=True,
-                file_type=["txt"],
+                accept_image=True,
+                image_type=["txt"],
                 max_chars=100,
             )
             c1 = self.get_delta_from_queue().new_element.chat_input
@@ -504,8 +505,8 @@ class ChatTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 # Keep whitelisted the same to ensure ID stability
-                accept_file=True,
-                file_type=["txt"],
+                accept_image=True,
+                image_type=["txt"],
                 max_chars=100,
             )
             c2 = self.get_delta_from_queue().new_element.chat_input
@@ -537,73 +538,73 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.placeholder == "the label"
         assert c.max_chars == 10
 
-    def test_accept_file_single(self):
-        """Test st.chat_input with accept_file=True."""
-        st.chat_input("the label", accept_file=True, file_type=["txt", "csv"])
+    def test_accept_image_single(self):
+        """Test st.chat_input with accept_image=True."""
+        st.chat_input("the label", accept_image=True, image_type=["txt", "csv"])
 
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.placeholder == "the label"
-        assert c.accept_file == ChatInput.AcceptFile.SINGLE
-        assert c.file_type == [".txt", ".csv"]
+        assert c.accept_image == ChatInput.AcceptImage.SINGLE
+        assert c.image_type == [".txt", ".csv"]
 
-    def test_accept_file_multiple(self):
-        """Test st.chat_input with accept_file='multiple'."""
-        st.chat_input("the label", accept_file="multiple", file_type=["txt"])
+    def test_accept_image_multiple(self):
+        """Test st.chat_input with accept_image='multiple'."""
+        st.chat_input("the label", accept_image="multiple", image_type=["txt"])
 
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.placeholder == "the label"
-        assert c.accept_file == ChatInput.AcceptFile.MULTIPLE
-        assert c.file_type == [".txt"]
+        assert c.accept_image == ChatInput.AcceptImage.MULTIPLE
+        assert c.image_type == [".txt"]
 
-    def test_accept_file_directory(self):
-        """Test st.chat_input with accept_file='directory'."""
+    def test_accept_image_directory(self):
+        """Test st.chat_input with accept_image='directory'."""
         st.chat_input(
-            "the label", accept_file="directory", file_type=["py", "md", "txt"]
+            "the label", accept_image="directory", image_type=["py", "md", "txt"]
         )
 
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.placeholder == "the label"
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
-        assert c.file_type == [".py", ".md", ".txt"]
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
+        assert c.image_type == [".py", ".md", ".txt"]
 
-    def test_directory_upload_with_no_file_type(self):
+    def test_directory_upload_no_image_type_restriction(self):
         """Test directory upload without file type restrictions."""
-        st.chat_input("Upload any directory", accept_file="directory")
+        st.chat_input("Upload any directory", accept_image="directory")
 
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
-        assert c.file_type == []  # No restrictions
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
+        assert c.image_type == []  # No restrictions
 
     def test_directory_upload_with_width(self):
         """Test directory upload with width parameter."""
-        st.chat_input("Directory chat", accept_file="directory", width=400)
+        st.chat_input("Directory chat", accept_image="directory", width=400)
 
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
 
     def test_directory_upload_disabled(self):
         """Test disabled directory upload."""
-        st.chat_input("Disabled directory", accept_file="directory", disabled=True)
+        st.chat_input("Disabled directory", accept_image="directory", disabled=True)
 
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
         assert c.disabled
 
     def test_directory_upload_with_max_chars(self):
         """Test directory upload with character limit."""
-        st.chat_input("Limited text", accept_file="directory", max_chars=100)
+        st.chat_input("Limited text", accept_image="directory", max_chars=100)
 
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
         assert c.max_chars == 100
 
-    def test_accept_file_invalid_value(self):
-        """Test that invalid accept_file values raise an error."""
+    def test_accept_image_invalid_value(self):
+        """Test that invalid accept_image values raise an error."""
         with pytest.raises(StreamlitAPIException) as cm:
-            st.chat_input("the label", accept_file="invalid")
+            st.chat_input("the label", accept_image="invalid")
 
         assert (
-            "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            "The `accept_image` parameter must be a boolean or 'multiple' or 'directory'."
             in str(cm.value)
         )
 
@@ -614,24 +615,24 @@ class ChatTest(DeltaGeneratorTestCase):
             pass
 
         st.chat_input(
-            "Directory with callback", accept_file="directory", on_submit=callback
+            "Directory with callback", accept_image="directory", on_submit=callback
         )
 
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.accept_file == ChatInput.AcceptFile.DIRECTORY
+        assert c.accept_image == ChatInput.AcceptImage.DIRECTORY
 
-    def test_file_type_normalization_for_directory(self):
+    def test_image_type_normalization_for_directory(self):
         """Test that file types are properly normalized for directory upload."""
         # Test with various file type formats
-        st.chat_input("Directory", accept_file="directory", file_type=".txt")
+        st.chat_input("Directory", accept_image="directory", image_type=".txt")
         c1 = self.get_delta_from_queue().new_element.chat_input
-        assert c1.file_type == [".txt"]
+        assert c1.image_type == [".txt"]
 
         st.chat_input(
-            "Directory", accept_file="directory", file_type=["py", ".md", "txt"]
+            "Directory", accept_image="directory", image_type=["py", ".md", "txt"]
         )
         c2 = self.get_delta_from_queue().new_element.chat_input
-        assert c2.file_type == [".py", ".md", ".txt"]
+        assert c2.image_type == [".py", ".md", ".txt"]
 
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
     def test_audio_file(self, deserialize_patch):
@@ -646,7 +647,7 @@ class ChatTest(DeltaGeneratorTestCase):
             text="", files=[], audio=audio_file
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_image="multiple")
 
         assert return_val.audio == audio_file
         assert return_val.audio.name == "recording.wav"
@@ -660,7 +661,7 @@ class ChatTest(DeltaGeneratorTestCase):
             text="hello", files=[], audio=None
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_image="multiple")
 
         assert return_val.audio is None
         assert return_val.text == "hello"
@@ -677,18 +678,19 @@ class ChatTest(DeltaGeneratorTestCase):
             text="test", files=[], audio=audio_file
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_image="multiple")
 
         # Test dict-like access
         assert return_val["audio"] == audio_file
         assert return_val["text"] == "test"
         assert "audio" in return_val
-        assert len(return_val) == 3  # text, files, audio
+        assert len(return_val) == 4  # text, images, files, audio
 
         # Test to_dict
         as_dict = return_val.to_dict()
         assert as_dict["audio"] == audio_file
         assert as_dict["text"] == "test"
+        assert as_dict["images"] == []
         assert as_dict["files"] == []
 
     def test_chat_input_accept_audio_false(self):
@@ -702,3 +704,112 @@ class ChatTest(DeltaGeneratorTestCase):
         st.chat_input(accept_audio=True)
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.accept_audio is True
+
+    # Tests for new dual file upload system (accept_file parameter)
+    def test_chat_input_accept_file_single(self):
+        """Test that accept_file=True correctly sets the proto field."""
+        st.chat_input(accept_file=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_SINGLE
+
+    def test_chat_input_accept_file_multiple(self):
+        """Test that accept_file='multiple' correctly sets the proto field."""
+        st.chat_input(accept_file="multiple")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_MULTIPLE
+
+    def test_chat_input_accept_file_directory(self):
+        """Test that accept_file='directory' correctly sets the proto field."""
+        st.chat_input(accept_file="directory")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_DIRECTORY
+
+    def test_chat_input_accept_file_none(self):
+        """Test that accept_file=False sets FILE_NONE (default)."""
+        st.chat_input(accept_file=False)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_NONE
+
+    def test_chat_input_accept_file_invalid_value(self):
+        """Test that invalid accept_file values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as excinfo:
+            st.chat_input(accept_file="invalid")
+        assert "The `accept_file` parameter must be" in str(excinfo.value)
+
+    def test_chat_input_accept_both_image_and_file(self):
+        """Test that both accept_image and accept_file can be set simultaneously."""
+        st.chat_input(accept_image=True, accept_file="multiple")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_image == ChatInput.AcceptImage.SINGLE
+        assert c.accept_file == ChatInput.AcceptFile.FILE_MULTIPLE
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_with_dual_uploads(self, deserialize_patch):
+        """Test ChatInputValue with both images and files."""
+        # Create mock uploaded files
+        image_rec = UploadedFileRec("img0", "image.png", "image/png", b"image data")
+        image_file = UploadedFile(
+            image_rec, FileURLsProto(file_id="img0", delete_url="d0", upload_url="u0")
+        )
+
+        file_rec = UploadedFileRec(
+            "file0", "document.pdf", "application/pdf", b"pdf data"
+        )
+        regular_file = UploadedFile(
+            file_rec, FileURLsProto(file_id="file0", delete_url="d1", upload_url="u1")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="test with uploads",
+            images=[image_file],
+            files=[regular_file],
+            audio=None,
+        )
+
+        return_val = st.chat_input(accept_image=True, accept_file=True)
+
+        # Test dict-like access
+        assert return_val["text"] == "test with uploads"
+        assert return_val["images"] == [image_file]
+        assert return_val["files"] == [regular_file]
+        assert "images" in return_val
+        assert "files" in return_val
+        assert len(return_val) == 4  # text, images, files, audio
+
+        # Test to_dict
+        as_dict = return_val.to_dict()
+        assert as_dict["text"] == "test with uploads"
+        assert as_dict["images"] == [image_file]
+        assert as_dict["files"] == [regular_file]
+        assert as_dict["audio"] is None
+
+    def test_chat_input_file_type_parameter(self):
+        """Test that file_type parameter works with accept_file."""
+        st.chat_input(accept_file=True, file_type=[".pdf", ".docx"])
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_SINGLE
+        assert list(c.file_type) == [".pdf", ".docx"]
+
+    def test_chat_input_whitelisted_stable_key_kwargs_accept_file(self):
+        """Test that accept_file is included in whitelisted stable key kwargs."""
+        st.chat_input(accept_file=True, key="test_key")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_file == ChatInput.AcceptFile.FILE_SINGLE
+
+    def test_chat_input_whitelisted_stable_key_kwargs_file_type(self):
+        """Test that file_type is included in whitelisted stable key kwargs."""
+        st.chat_input(accept_file=True, file_type=[".txt"], key="test_key")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert list(c.file_type) == [".txt"]
+
+    def test_chat_input_overlapping_file_extensions_error(self):
+        """Test that overlapping extensions in image_type and file_type raise an error."""
+        with pytest.raises(StreamlitAPIException) as excinfo:
+            st.chat_input(
+                accept_image=True,
+                image_type=[".png", ".jpg"],
+                accept_file=True,
+                file_type=[".jpg", ".pdf"],
+            )
+        assert "overlapping extensions" in str(excinfo.value).lower()
+        assert ".jpg" in str(excinfo.value)

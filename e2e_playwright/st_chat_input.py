@@ -25,7 +25,7 @@ col1, _ = st.columns(2)
 
 v2 = col1.chat_input(
     "Chat input 2 (in column, disabled)",
-    accept_file=True,
+    accept_image=True,
     disabled=True,
     key="chat_input_2",
 )
@@ -54,12 +54,15 @@ if runtime.exists():
 
 
 v4 = st.container().chat_input(
-    "Chat input 4 (single file)", accept_file=True, file_type="txt", key="chat_input_4"
+    "Chat input 4 (single file)",
+    accept_image=True,
+    image_type="txt",
+    key="chat_input_4",
 )
 st.write("Chat input 4 (single file) - value:", v4)
 
 v5 = st.container().chat_input(
-    "Chat input 5 (multiple files)", accept_file="multiple", key="chat_input_5"
+    "Chat input 5 (multiple files)", accept_image="multiple", key="chat_input_5"
 )
 st.write("Chat input 5 (multiple files) - value:", v5)
 
@@ -83,13 +86,13 @@ st.write("Chat input 8 (bottom, max_chars) - value:", v8)
 
 # Directory upload tests
 v9 = st.container().chat_input(
-    "Chat input 9 (directory upload)", accept_file="directory", key="chat_input_9"
+    "Chat input 9 (directory upload)", accept_image="directory", key="chat_input_9"
 )
 st.write("Chat input 9 (directory upload) - value:", v9)
 
 v10 = st.container().chat_input(
     "Chat input 10 (directory upload disabled)",
-    accept_file="directory",
+    accept_image="directory",
     disabled=True,
     key="chat_input_10",
 )
@@ -110,8 +113,8 @@ if st.toggle("Update chat input props"):
         kwargs={"param": "updated kwarg param"},
         # Whitelisted params:
         max_chars=200,
-        accept_file=False,
-        file_type=["txt"],
+        accept_image=False,
+        image_type=["txt"],
     )
     st.write("Updated chat input value:", dyn_val)
 else:
@@ -126,14 +129,14 @@ else:
         kwargs={"param": "initial kwarg param"},
         # Whitelisted params:
         max_chars=200,
-        accept_file=False,
-        file_type=["txt"],
+        accept_image=False,
+        image_type=["txt"],
     )
     st.write("Initial chat input value:", dyn_val)
 
 v11 = st.container().chat_input(
     "Chat input 11 (audio recording)",
-    accept_file="multiple",
+    accept_image="multiple",
     accept_audio=True,
     key="chat_input_11",
 )
@@ -196,7 +199,7 @@ with col_b:
     v15 = st.chat_input(
         "Chat input 15 (w/ files)",
         accept_audio=True,
-        accept_file="multiple",
+        accept_image="multiple",
         key="chat_input_15",
     )
 

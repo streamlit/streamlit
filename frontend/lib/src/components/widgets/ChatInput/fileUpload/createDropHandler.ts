@@ -53,7 +53,7 @@ const filterDirectoryFiles = (
   const rejected: FileRejection[] = []
 
   files.forEach(file => {
-    const validation = validateFileType(file, element.fileType)
+    const validation = validateFileType(file, element.imageType)
     if (validation.isValid) {
       accepted.push(file)
     } else {

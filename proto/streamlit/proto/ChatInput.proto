@@ -34,16 +34,28 @@ message ChatInput {
   }
   Position position = 8;
 
-  enum AcceptFile {
+  enum AcceptImage {
     NONE = 0;
     SINGLE = 1;
     MULTIPLE = 2;
     DIRECTORY = 3;
   }
-  AcceptFile accept_file = 9;
+  AcceptImage accept_image = 9;
 
-  // Supported file types: For example: ["png","jpg","img"]
-  repeated string file_type = 10;
+  // Supported image types: For example: ["png","jpg","img"]
+  repeated string image_type = 10;
+
+  // New file upload support (persistent files, like file_uploader)
+  enum AcceptFile {
+    FILE_NONE = 0;
+    FILE_SINGLE = 1;
+    FILE_MULTIPLE = 2;
+    FILE_DIRECTORY = 3;
+  }
+  AcceptFile accept_file = 13;
+
+  // Supported file types for persistent files: For example: ["txt","csv","pdf"]
+  repeated string file_type = 14;
 
   // Max file size allowed by server config
   int32 max_upload_size_mb = 11;

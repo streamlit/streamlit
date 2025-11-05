@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { assertNever } from "~lib/util/assertNever"
-import { AcceptFileValue } from "~lib/util/utils"
+import { AcceptFileValue, AcceptImageValue } from "~lib/util/utils"
 
 /**
  * Configures input props for file upload based on the accept file type.
@@ -23,10 +22,13 @@ import { AcceptFileValue } from "~lib/util/utils"
  */
 export const configureFileInputProps = (
   inputProps: Record<string, unknown>,
-  acceptFile: AcceptFileValue
+  acceptType: AcceptImageValue | AcceptFileValue
 ): Record<string, unknown> => {
   // Apply webkitdirectory attribute for directory uploads
-  if (acceptFile === AcceptFileValue.Directory) {
+  if (
+    acceptType === AcceptImageValue.Directory ||
+    acceptType === AcceptFileValue.Directory
+  ) {
     return {
       ...inputProps,
       webkitdirectory: "",
@@ -92,8 +94,29 @@ export const validateFileType = (
 /**
  * Gets a human-readable description for the upload type.
  */
-export const getUploadDescription = (acceptFile: AcceptFileValue): string => {
-  switch (acceptFile) {
+export const getUploadDescription = (
+  acceptType: AcceptImageValue | AcceptFileValue
+): string => {
+  // Handle AcceptImageValue cases
+  if (
+    Object.values(AcceptImageValue).includes(acceptType as AcceptImageValue)
+  ) {
+    switch (acceptType as AcceptImageValue) {
+      case AcceptImageValue.None:
+        return "an image"
+      case AcceptImageValue.Single:
+        return "an image"
+      case AcceptImageValue.Multiple:
+        return "images"
+      case AcceptImageValue.Directory:
+        return "a directory"
+      default:
+        return "an image"
+    }
+  }
+
+  // Handle AcceptFileValue cases
+  switch (acceptType as AcceptFileValue) {
     case AcceptFileValue.None:
       return "a file"
     case AcceptFileValue.Single:
@@ -103,7 +126,6 @@ export const getUploadDescription = (acceptFile: AcceptFileValue): string => {
     case AcceptFileValue.Directory:
       return "a directory"
     default:
-      assertNever(acceptFile)
       return "a file"
   }
 }

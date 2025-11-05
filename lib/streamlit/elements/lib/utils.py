@@ -81,19 +81,36 @@ def get_label_visibility_proto_value(
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
 
 
+def get_chat_input_accept_image_proto_value(
+    accept_image_value: Literal["multiple", "directory"] | bool | None,
+) -> ChatInput.AcceptImage.ValueType:
+    """Returns one of ChatInput.AcceptImage enum value based on string value."""
+
+    if accept_image_value is False or accept_image_value is None:
+        return ChatInput.AcceptImage.NONE
+    if accept_image_value is True:
+        return ChatInput.AcceptImage.SINGLE
+    if accept_image_value == "multiple":
+        return ChatInput.AcceptImage.MULTIPLE
+    if accept_image_value == "directory":
+        return ChatInput.AcceptImage.DIRECTORY
+
+    raise ValueError(f"Unknown accept image value: {accept_image_value}")
+
+
 def get_chat_input_accept_file_proto_value(
     accept_file_value: Literal["multiple", "directory"] | bool,
 ) -> ChatInput.AcceptFile.ValueType:
     """Returns one of ChatInput.AcceptFile enum value based on string value."""
 
     if accept_file_value is False:
-        return ChatInput.AcceptFile.NONE
+        return ChatInput.AcceptFile.FILE_NONE
     if accept_file_value is True:
-        return ChatInput.AcceptFile.SINGLE
+        return ChatInput.AcceptFile.FILE_SINGLE
     if accept_file_value == "multiple":
-        return ChatInput.AcceptFile.MULTIPLE
+        return ChatInput.AcceptFile.FILE_MULTIPLE
     if accept_file_value == "directory":
-        return ChatInput.AcceptFile.DIRECTORY
+        return ChatInput.AcceptFile.FILE_DIRECTORY
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
 

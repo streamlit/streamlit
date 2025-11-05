@@ -455,6 +455,31 @@ export function labelVisibilityProtoValueToEnum(
   }
 }
 
+export enum AcceptImageValue {
+  None,
+  Single,
+  Multiple,
+  Directory,
+}
+
+export function chatInputAcceptImageProtoValueToEnum(
+  value: ChatInputProto.AcceptImage
+): AcceptImageValue {
+  switch (value) {
+    case ChatInputProto.AcceptImage.NONE:
+      return AcceptImageValue.None
+    case ChatInputProto.AcceptImage.SINGLE:
+      return AcceptImageValue.Single
+    case ChatInputProto.AcceptImage.MULTIPLE:
+      return AcceptImageValue.Multiple
+    case ChatInputProto.AcceptImage.DIRECTORY:
+      return AcceptImageValue.Directory
+    default:
+      assertNever(value)
+      return AcceptImageValue.None
+  }
+}
+
 export enum AcceptFileValue {
   None,
   Single,
@@ -466,13 +491,13 @@ export function chatInputAcceptFileProtoValueToEnum(
   value: ChatInputProto.AcceptFile
 ): AcceptFileValue {
   switch (value) {
-    case ChatInputProto.AcceptFile.NONE:
+    case ChatInputProto.AcceptFile.FILE_NONE:
       return AcceptFileValue.None
-    case ChatInputProto.AcceptFile.SINGLE:
+    case ChatInputProto.AcceptFile.FILE_SINGLE:
       return AcceptFileValue.Single
-    case ChatInputProto.AcceptFile.MULTIPLE:
+    case ChatInputProto.AcceptFile.FILE_MULTIPLE:
       return AcceptFileValue.Multiple
-    case ChatInputProto.AcceptFile.DIRECTORY:
+    case ChatInputProto.AcceptFile.FILE_DIRECTORY:
       return AcceptFileValue.Directory
     default:
       assertNever(value)

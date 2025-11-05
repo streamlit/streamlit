@@ -767,9 +767,9 @@ tab_a.write("tab 2 content")
 
 "st.chat_input"
 if st.toggle("Show chat input at the bottom of the screen", False):
-    st.chat_input(accept_file="multiple", disabled=disabled)
+    st.chat_input(accept_image="multiple", disabled=disabled)
 else:
-    st.container().chat_input(accept_file="multiple", disabled=disabled)
+    st.container().chat_input(accept_image="multiple", disabled=disabled)
 
 "st.chat_message"
 st.chat_message("assistant").write("Hello there!")
