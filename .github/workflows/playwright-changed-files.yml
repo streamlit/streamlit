@@ -54,6 +54,11 @@ jobs:
         shell: bash
 
     steps:
+      - name: Validate ref for workflow_call
+        if: github.event_name == 'workflow_call' && inputs.ref == ''
+        run: |
+          echo "::error::ref input is required when calling this workflow via workflow_call"
+          exit 1
       - name: Checkout Streamlit code (ref input)
         if: inputs.ref != ''
         uses: actions/checkout@v5
@@ -63,7 +68,7 @@ jobs:
           submodules: "recursive"
           fetch-depth: 0
       - name: Checkout Streamlit code (PR head)
-        if: inputs.ref == ''
+        if: inputs.ref == '' && github.event_name == 'pull_request'
         uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
