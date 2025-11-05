@@ -111,6 +111,7 @@ import {
   BackMsg,
   Config,
   CustomThemeConfig,
+  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -255,10 +256,7 @@ export class App extends PureComponent<Props, State> {
   // Map of pending deferred file requests: fileId -> Promise resolver
   private readonly pendingDeferredFileRequests = new Map<
     string,
-    PromiseWithResolvers<{
-      url: string
-      errorMsg?: string
-    }>
+    PromiseWithResolvers<DeferredFileResponse>
   >()
 
   private readonly appNavigation: AppNavigation
@@ -877,11 +875,8 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
-        deferredFileResponse: (deferredFileResponse: {
-          fileId: string
-          url: string
-          errorMsg: string
-        }) => this.handleDeferredFileResponse(deferredFileResponse),
+        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
+          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -2068,9 +2063,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  requestDeferredFile = (
-    fileId: string
-  ): Promise<{ url: string; errorMsg?: string }> => {
+  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
     const isConnected = this.isServerConnected()
     const isSessionInfoSet = this.sessionInfo.isSet
 
@@ -2080,10 +2073,7 @@ export class App extends PureComponent<Props, State> {
       )
     }
 
-    const resolver = Promise.withResolvers<{
-      url: string
-      errorMsg?: string
-    }>()
+    const resolver = Promise.withResolvers<DeferredFileResponse>()
 
     this.pendingDeferredFileRequests.set(fileId, resolver)
 
@@ -2109,19 +2099,12 @@ export class App extends PureComponent<Props, State> {
     return resolver.promise
   }
 
-  handleDeferredFileResponse = (response: {
-    fileId: string
-    url: string
-    errorMsg: string
-  }): void => {
+  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
     const resolver = this.pendingDeferredFileRequests.get(response.fileId)
 
     if (resolver) {
       this.pendingDeferredFileRequests.delete(response.fileId)
-      resolver.resolve({
-        url: response.url,
-        errorMsg: response.errorMsg || undefined,
-      })
+      resolver.resolve(response)
     }
   }
 
