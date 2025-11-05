@@ -1335,6 +1335,9 @@ def test_chat_input_permission_denied_error(
     # Hover over the tooltip hover target to show tooltip
     hover_target.hover()
 
+    # Small wait for tooltip animation (especially needed for Firefox)
+    app_with_microphone_permission_denied.wait_for_timeout(200)
+
     # Verify tooltip appears with error message
     # Using to_have_text which includes visibility check with auto-wait
     tooltip = app_with_microphone_permission_denied.get_by_test_id(
@@ -1387,6 +1390,9 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     # Hover over the tooltip hover target to show tooltip
     hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
     hover_target.hover()
+
+    # Small wait for tooltip animation (especially needed for Firefox)
+    app.wait_for_timeout(200)
 
     # Verify tooltip appears with error message
     # Using to_have_text which includes visibility check with auto-wait
