@@ -193,60 +193,6 @@ class BidiComponentMixin:
 
         return identity
 
-    def _compute_bidi_component_id(
-        self,
-        *,
-        key: str | None,
-        component_name: str,
-        isolate_styles: bool,
-        width: Width,
-        height: Height,
-        proto: BidiComponentProto,
-    ) -> str:
-        """Compute and register the CCv2 element ID.
-
-        Wraps ``compute_and_register_element_id`` with identity inputs built by
-        ``_build_bidi_identity_kwargs``. When a user key is provided,
-        ``key_as_main_identity=True`` causes payload-derived inputs to be
-        ignored; otherwise, serialized payload fingerprints are included so
-        unkeyed components change identity when their data changes.
-
-        Parameters
-        ----------
-        key : str or None
-            Optional user-provided key. When set, it dominates identity.
-        component_name : str
-            The registered component name.
-        isolate_styles : bool
-            Whether the component styles are rendered in a Shadow DOM.
-        width : Width
-            Desired width configuration passed to the component.
-        height : Height
-            Desired height configuration passed to the component.
-        proto : BidiComponentProto
-            The populated component protobuf used to derive payload identity.
-
-        Returns
-        -------
-        str
-            The registered, stable element ID.
-        """
-        identity_kwargs = self._build_bidi_identity_kwargs(
-            component_name=component_name,
-            isolate_styles=isolate_styles,
-            width=width,
-            height=height,
-            proto=proto,
-        )
-
-        return compute_and_register_element_id(
-            "bidi_component",
-            user_key=key,
-            key_as_main_identity=True,
-            dg=self.dg,
-            **identity_kwargs,
-        )
-
     @gather_metrics("_bidi_component")
     def _bidi_component(
         self,
@@ -415,14 +361,23 @@ class BidiComponentMixin:
                     raise BidiComponentUnserializableDataError()
         bidi_component_proto.form_id = current_form_id(self.dg)
 
-        # Compute a unique ID for this component instance now that the proto is populated.
-        computed_id = self._compute_bidi_component_id(
-            key=key,
+        # Build identity kwargs for the component instance now that the proto is
+        # populated.
+        identity_kwargs = self._build_bidi_identity_kwargs(
             component_name=component_name,
             isolate_styles=isolate_styles,
             width=width,
             height=height,
             proto=bidi_component_proto,
+        )
+        # Compute a unique ID for this component instance now that the proto is
+        # populated.
+        computed_id = compute_and_register_element_id(
+            "bidi_component",
+            user_key=key,
+            key_as_main_identity=True,
+            dg=self.dg,
+            **identity_kwargs,
         )
         bidi_component_proto.id = computed_id
 
