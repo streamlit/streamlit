@@ -68,3 +68,11 @@ with st.container(
         height="stretch",
         key="stretch_height_dataframe_inside_container",
     )
+
+content_height_dataframe = pd.DataFrame(np.random.randn(15, 3))
+st.dataframe(
+    content_height_dataframe, height="content", key="content_height_dataframe_20"
+)
+
+content_height_dataframe = pd.DataFrame(np.random.randn(300, 3))
+st.dataframe(content_height_dataframe, height="content", key="content_height_dataframe")

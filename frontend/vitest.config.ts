@@ -26,7 +26,11 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text-summary", "json-summary", "html"],
       include: ["*/src/**/*"],
-      exclude: ["lib/src/vendor/**", ...coverageConfigDefaults.exclude],
+      exclude: [
+        "lib/src/vendor/**",
+        "**/*.interface.ts",
+        ...coverageConfigDefaults.exclude,
+      ],
     },
   },
 })

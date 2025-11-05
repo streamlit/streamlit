@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -25,6 +25,10 @@ import {
   IChatInputValue,
 } from "@streamlit/protobuf"
 
+import type {
+  RecordingState,
+  WaveformController,
+} from "~lib/components/audio/core/types"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import {
   createDirectoryFiles,
@@ -69,7 +73,7 @@ const getProps = (
         })
       )
     }),
-    deleteFile: vi.fn(),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
   },
   ...widgetProps,
 })
@@ -753,6 +757,100 @@ describe("ChatInput widget", () => {
     // Wait for upload to complete
     await waitFor(() => {
       expect(submitButton).not.toBeDisabled()
+    })
+  })
+
+  it("shows spinner and disables buttons during audio upload", async () => {
+    // Mock uploadFile to return a controllable promise
+    let resolveUpload: (() => void) | undefined
+    const uploadPromise = new Promise<void>(resolve => {
+      resolveUpload = resolve
+    })
+
+    const props = getProps({
+      acceptAudio: true,
+    })
+
+    // Override uploadFile to use our controllable promise
+    props.uploadClient.uploadFile = vi.fn().mockReturnValue(uploadPromise)
+
+    // Mock the waveform controller with proper typing
+    const mockController: WaveformController = {
+      state: "idle" as RecordingState,
+      isPlaybackPlaying: false,
+      mountRef: { current: null },
+      playback: {
+        isPlaying: vi.fn().mockReturnValue(false),
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn().mockReturnValue(undefined),
+        load: vi.fn().mockResolvedValue(undefined),
+        getDurationMs: vi.fn().mockReturnValue(5000),
+        getCurrentTimeMs: vi.fn().mockReturnValue(0),
+      },
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue({
+        blob: new Blob(["audio data"], { type: "audio/wav" }),
+        meta: {
+          durationMs: 5000,
+          sampleRate: 44100,
+          mimeType: "audio/wav",
+          size: 1024,
+        },
+      }),
+      approve: vi.fn().mockResolvedValue(undefined),
+      cancel: vi.fn().mockReturnValue(undefined),
+      destroy: vi.fn().mockReturnValue(undefined),
+      setEventHandlers: vi.fn().mockReturnValue(undefined),
+    }
+
+    // Mock useWaveformController
+    const useWaveformController = await import("~lib/components/audio")
+    vi.spyOn(useWaveformController, "useWaveformController").mockReturnValue(
+      mockController
+    )
+
+    render(<ChatInput {...props} />)
+
+    // Get the approve button (it won't be visible initially since we're not recording)
+    // We need to trigger the recording flow and get the approve callback
+    // Instead, let's directly test by triggering the onApprove event from the mock
+
+    // Find the calls to useWaveformController and get the onApprove callback
+    const mockCalls = (
+      useWaveformController.useWaveformController as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const lastCallArgs = mockCalls[mockCalls.length - 1]
+    const { events } = lastCallArgs[0]
+    const onApprove = events?.onApprove
+
+    // Create a mock audio blob
+    const audioBlob = new Blob(["audio data"], { type: "audio/wav" })
+
+    // Trigger the approve event (this starts the upload)
+    let approvePromise: Promise<void> | undefined
+    await act(async () => {
+      approvePromise = onApprove?.(audioBlob)
+      // Wait a tick to let state updates propagate
+      await Promise.resolve()
+    })
+
+    // Check that buttons are disabled during upload
+    await waitFor(() => {
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      expect(submitButton).toBeDisabled()
+    })
+
+    // Resolve the upload
+    await act(async () => {
+      resolveUpload?.()
+      if (approvePromise) {
+        await approvePromise
+      }
+    })
+
+    // After upload completes, verify upload was called
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalled()
     })
   })
 })

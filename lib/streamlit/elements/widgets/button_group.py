@@ -333,9 +333,12 @@ class ButtonGroupMixin:
             based on its content. No two widgets may have the same key.
 
         default : int or None
-            An optional integer to be the default feedback value.
-            Must be a number between 0 and 1 for ``options="thumbs"``, and
-            between 0 and 4 for ``options="faces"`` and ``options="stars"``.
+            Default feedback value. This must be consistent with the feedback
+            type in ``options``:
+
+            - 0 or 1 if ``options="thumbs"``.
+            - Between 0 and 4, inclusive, if ``options="faces"`` or
+              ``options="stars"``.
 
         disabled : bool
             An optional boolean that disables the feedback widget if set

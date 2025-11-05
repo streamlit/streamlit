@@ -19,6 +19,10 @@
     "LICENSE"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "vite build",
     "buildWatch": "env DEV_WATCH=1 vite build --watch",

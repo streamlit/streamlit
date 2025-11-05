@@ -9,8 +9,24 @@ permissions:
   contents: read
 
 jobs:
+  # Internal PRs (same-repo branches): run the full Semgrep reusable workflow
+  # with app token.
   run-semgrep-reusable-workflow:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@main
     secrets:
       token: ${{ secrets.SEMGREP_APP_TOKEN }}
+  # Forked PRs: skip the Semgrep reusable workflow and just print a message so
+  # it prints a status and does not block merges. This mirrors patterns in other
+  # workflows where secret-using steps are skipped for forks.
+  # Any code integrated into `develop` will be scanned by Semgrep in other PRs,
+  # notably the release branch -> `develop` PR that is created for every new
+  # release.
+  run-semgrep-fork-safe:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip Semgrep for forked PRs
+        run: |
+          echo "Semgrep App scan requires repo secrets and is skipped for forked PRs."
+          echo "This job exists to keep the workflow green for forks, matching other workflows' behavior."

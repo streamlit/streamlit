@@ -200,31 +200,256 @@ def component(
     css: str | None = None,
     js: str | None = None,
 ) -> BidiComponentCallable:
-    """Register a st.components.v2 component and return a callable to mount it.
+    '''Register an ``st.components.v2`` component and return a callable to mount it.
+
+    A component must have HTML, JavaScript, or both. If you want a component
+    with only CSS, use ``st.html`` instead.
+
+    If your component is defined in an installed package, you can declare an
+    asset directory (``asset_dir``) through ``pyproject.toml`` files in the
+    package. This allows you to serve component assets and reference them by
+    path or glob in the ``html``, ``css``, and ``js`` parameters. Otherwise,
+    you must provide raw HTML, CSS, and/or JavaScript strings directly to these
+    parameters.
+
+    .. important::
+        When using paths or globs to define one or more component assets, the
+        paths must be relative to the component's ``asset_dir`` as declared in
+        the component manifest. This is only possible for installed components.
+
+        For security reasons, absolute paths and path traversals are rejected.
+        Because of runtime constraints, paths and globs must be provided as
+        strings and not ``Path`` objects.
 
     Parameters
     ----------
     name : str
-        A short, descriptive identifier for the component.
-    html : str | None
-        Inline HTML markup for the component root.
-    css : str | None
-        Inline CSS (string) or an asset-dir-relative path/glob to a ``.css``
-        file under the component's manifest-declared ``asset_dir``. Globs must
-        resolve to exactly one file within ``asset_dir``; absolute paths and
-        traversal are rejected.
-    js : str | None
-        Inline JavaScript (string) or an asset-dir-relative path/glob to a
-        ``.js`` file under the component's manifest-declared ``asset_dir``.
-        Globs must resolve to exactly one file within ``asset_dir``; absolute
-        paths and traversal are rejected.
+        A short, descriptive identifier for the component. This is used
+        internally by Streamlit to manage instances of the component.
+
+        Component names must be unique across an app. The names of imported
+        components are prefixed by their module name to avoid collisions.
+
+        If you register multiple components with the same name, a warning is
+        logged and the last-registered component is used. Because this can lead
+        to unexpected behavior, ensure that component names are unique. If you
+        intend to have multiple instances of a component in one app, avoid
+        wrapping a component definition together with its mounting command so
+        you don't re-register your component with each instance.
+
+    html : str or None
+        Inline HTML markup for the component root. This can be one of the
+        following strings:
+
+        - Raw HTML. This doesn't require any ``<html>``, ``<head>``, or
+          ``<body>`` tags; just provide the inner HTML.
+        - A path or glob to an HTML file, relative to the component's
+          asset directory.
+
+        If any HTML depends on data passed at mount time, use a placeholder
+        element and populate it via JavaScript. Alternatively, you can append
+        a new element to the parent. For more information, see Example 2.
+
+        ``html`` and ``js`` can't both be ``None``. At least one of them must
+        be provided.
+
+    css : str or None
+        Inline CSS. This can be one of the following strings:
+
+        - Raw CSS (without a ``<style>`` block).
+        - A path or glob to a CSS file, relative to the component's
+          asset directory.
+
+    js : str or None
+        Inline JavaScript. This can be one of the following strings:
+
+        - Raw JavaScript (without a ``<script>`` block).
+        - A path or glob to a JS file, relative to the component's
+          asset directory.
+
+        ``html`` and ``js`` can't both be ``None``. At least one of them must
+        be provided.
 
     Returns
     -------
-    Callable[..., BidiComponentResult]
-        A function that, when called inside a Streamlit script, mounts the
-        component and returns its state as a ``BidiComponentResult``.
-    """
+    BidiComponentCallable
+        The component's mounting command.
+
+        This callable accepts the component parameters like ``key`` and
+        ``data`` and returns a ``BidiComponentResult`` object with the
+        component's state. The mounting command can be included in a
+        user-friendly wrapper function to provide a simpler API. A mounting
+        command can be called multiple times in an app to create multiple
+        instances of the component.
+
+    Examples
+    --------
+    **Example 1: Create a JavaScript-only component that captures link clicks**
+
+    You can create a simple component that allows inline links to communicate
+    with Python. Normally, clicking links in a Streamlit app would start a new
+    session. This component captures link clicks and sends them to Python as
+    trigger values.
+
+    .. code-block:: python
+
+        import streamlit as st
+
+        JS = """
+        export default function(component) {
+            const { setTriggerValue } = component;
+            const links = document.querySelectorAll('a[href="#"]');
+
+            links.forEach((link) => {
+                link.onclick = (e) => {
+                    setTriggerValue('clicked', link.innerHTML);
+                };
+            });
+        }
+        """
+
+        my_component = st.components.v2.component(
+            "inline_links",
+            js=JS,
+        )
+
+        result = my_component(on_clicked_change=lambda: None)
+
+        st.markdown(
+            "Components aren't [sandboxed](#), so you can write JS that [interacts](#) with the main [document](#)."
+        )
+
+        if result.clicked:
+            st.write(f"You clicked {result.clicked}!")
+
+    .. output ::
+        https://doc-components-markdown-links.streamlit.app/
+        height: 250px
+
+    **Example 2: Display a paragraph with custom inline links**
+
+    If you want to dynamically pass custom data from inline links, you can pass
+    HTML to the ``data`` parameter of the component's mount command. When a
+    link is clicked, the component sets a trigger value from the link's
+    ``data-link`` HTML attribute.
+
+    .. warning::
+
+        If you directly modify the inner HTML of the parent element, you will
+        overwrite the HTML and CSS passed to the component. Instead, create a
+        new child element and set its inner HTML. You can create the
+        placeholder dynamically in JavaScript or include it in the ``html``
+        parameter.
+
+    .. code-block:: python
+
+        import streamlit as st
+
+        CSS = """
+        a {
+            color: var(--st-link-color);
+        }
+        """
+
+        JS = """
+        export default function(component) {
+            const { data, setTriggerValue, parentElement } = component;
+            const newElement = document.createElement('div');
+            parentElement.appendChild(newElement);
+            newElement.innerHTML = data;
+
+            const links = newElement.querySelectorAll('a');
+
+            links.forEach((link) => {
+                link.onclick = (e) => {
+                    setTriggerValue('clicked', link.getAttribute('data-link'));
+                };
+            });
+        }
+        """
+
+        my_component = st.components.v2.component(
+            "inline_links",
+            css=CSS,
+            js=JS,
+        )
+
+        paragraph_html = """
+        <p>This is an example paragraph with inline links. To see the response in
+        Python, click on the <a href="#" data-link="link_1">first link</a> or
+        <a href="#" data-link="link_2">second link</a>.</p>
+        """
+
+        result = my_component(data=paragraph_html, on_clicked_change=lambda: None)
+        if result.clicked == "link_1":
+            st.write("You clicked the first link!")
+        elif result.clicked == "link_2":
+            st.write("You clicked the second link!")
+
+    .. output ::
+        https://doc-components-custom-anchors.streamlit.app/
+        height: 250px
+
+    **Example 3: Display an interactive SVG image**
+
+    You can create a component that displays an SVG image with clickable
+    shapes. When a shape is clicked, the component sends the shape type to
+    Python as a trigger value.
+
+    .. code-block:: python
+
+        import streamlit as st
+
+        HTML = """
+        <p>Click on the triangle, square, or circle to interact with the shapes:</p>
+
+        <svg width="400" height="300">
+            <polygon points="100,50 50,150 150,150" data-shape="triangle"></polygon>
+            <rect x="200" y="75" width="100" height="100" data-shape="square"></rect>
+            <circle cx="125" cy="225" r="40" data-shape="circle"></circle>
+        </svg>
+        """
+
+        JS = """
+        export default function(component) {
+            const { setTriggerValue, parentElement } = component;
+            const shapes = parentElement.querySelectorAll('[data-shape]');
+
+            shapes.forEach((shape) => {
+                shape.onclick = (e) => {
+                    setTriggerValue('clicked', shape.getAttribute('data-shape'));
+                };
+            });
+        }
+        """
+
+        CSS = """
+        polygon, rect, circle {
+            stroke: var(--st-primary-color);
+            stroke-width: 2;
+            fill: transparent;
+            cursor: pointer;
+        }
+        polygon:hover, rect:hover, circle:hover {
+            fill: var(--st-secondary-background-color);
+        }
+        """
+
+        my_component = st.components.v2.component(
+            "clickable_svg",
+            html=HTML,
+            css=CSS,
+            js=JS,
+        )
+
+        result = my_component(on_clicked_change=lambda: None)
+        result
+
+    .. output ::
+        https://doc-components-interactive-svg.streamlit.app/
+        height: 550px
+
+    '''
     return _create_component_callable(name, html=html, css=css, js=js)
 
 

@@ -2539,6 +2539,19 @@ def ProgressColumn(
         Setting ``step`` for float columns will ensure a consistent number of
         digits after the decimal are displayed.
 
+    color : "auto", "auto-inverse", str, or None
+        The color to use for the chart. This can be one of the following:
+
+        - ``None`` (default): The primary color is used.
+        - ``"auto"``: If the value is more than half, the bar is green; if the
+          value is less than half, the bar is red.
+        - ``"auto-inverse"``: If the value is more than half, the bar is red;
+          if the value is less than half, the bar is green.
+        - A single color value that is applied to all charts in the column.
+          In addition to the basic color palette (red, orange, yellow, green,
+          blue, violet, gray/grey, and primary), this supports hex codes like
+          ``"#483d8b"``.
+
     Examples
     --------
     >>> import pandas as pd
