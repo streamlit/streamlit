@@ -441,6 +441,7 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(audio_input, name="st_audio_input-error_state")
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_permission_denied_state(
     app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
 ):
