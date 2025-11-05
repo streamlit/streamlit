@@ -170,7 +170,7 @@ describe("useWaveformController", () => {
     expect(mockEvents.onCancel).toHaveBeenCalled()
   })
 
-  it("should throw error when approving without recording", async () => {
+  it("should call onError when approving without recording", async () => {
     const { result } = renderHook(
       () =>
         useWaveformController({
@@ -180,8 +180,12 @@ describe("useWaveformController", () => {
       { wrapper }
     )
 
-    await expect(result.current.approve()).rejects.toThrow(
-      "No recorded audio to approve"
+    await result.current.approve()
+
+    expect(mockEvents.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "No recorded audio to approve",
+      })
     )
   })
 
