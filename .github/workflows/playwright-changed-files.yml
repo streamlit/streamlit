@@ -161,6 +161,9 @@ jobs:
           else
             echo "run_tests=true" >> $GITHUB_OUTPUT
           fi
+      - name: Use output
+        run: |
+          echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
