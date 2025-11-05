@@ -560,6 +560,11 @@ def browser_type_launch_args(
                 "media.navigator.permission.disabled": True,
                 "permissions.default.microphone": 1,
                 "permissions.default.camera": 1,
+                # Reduces screenshot flakiness caused by subpixel rendering and
+                # font rendering:
+                "layout.css.devPixelsPerPx": "1.0",
+                "browser.display.use_system_colors": False,
+                "gfx.font_rendering.cleartype_params.rendering_mode": 5,
             },
         }
     return browser_type_launch_args
