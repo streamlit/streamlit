@@ -1311,9 +1311,8 @@ def test_audio_disabled_states(app: Page):
     expect(submit_button).to_have_attribute("disabled", "")
 
 
-@pytest.mark.skip_browser(
-    "webkit", "firefox"
-)  # Webkit CI audio issue, Firefox tooltip issue
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio issue
+@pytest.mark.skip_browser("firefox")  # Firefox tooltip issue
 def test_chat_input_permission_denied_error(
     app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -1354,9 +1353,8 @@ def test_chat_input_permission_denied_error(
     expect(tooltip).not_to_be_visible()
 
 
-@pytest.mark.skip_browser(
-    "webkit", "firefox"
-)  # Webkit CI audio issue, Firefox tooltip issue
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio issue
+@pytest.mark.skip_browser("firefox")  # Firefox tooltip issue
 def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that recording errors are displayed in chat input."""
     from playwright.sync_api import Route
