@@ -69,7 +69,7 @@ jobs:
           ref: ${{ github.head_ref }}
           persist-credentials: false
           submodules: "recursive"
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Get changed files
         id: changed-files
         env:
