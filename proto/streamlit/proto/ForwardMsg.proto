@@ -90,6 +90,9 @@ message ForwardMsg {
     // Platform - message to host
     ParentMessage parent_message = 20;
 
+    // Response with URL for deferred download button file
+    DeferredFileResponse deferred_file_response = 25;
+
     // A reference to a ForwardMsg that has already been delivered
     // and cached in the frontend. The client should substitute the message
     // with the given hash for this one.
@@ -102,7 +105,14 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 25
+  // Next: 26
+}
+
+// Response containing URL for deferred download button file
+message DeferredFileResponse {
+  string file_id = 1;
+  string url = 2;           // Download URL (presigned or /media/...)
+  string error_msg = 3;     // If callable execution failed
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

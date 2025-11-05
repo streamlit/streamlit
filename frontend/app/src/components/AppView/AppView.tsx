@@ -75,6 +75,8 @@ export interface AppViewProps {
 
   sendMessageToHost: (message: IGuestToHostMessage) => void
 
+  sendBackMsg: (msg: any) => void
+
   widgetMgr: WidgetStateManager
 
   uploadClient: FileUploadClient
@@ -204,6 +206,7 @@ function AppView(props: AppViewProps): ReactElement {
       uploadClient={uploadClient}
       disableFullscreenMode={disableFullscreenMode}
       componentRegistry={componentRegistry}
+      sendBackMsg={sendBackMsg}
       height="auto"
       isRoot={true}
     />

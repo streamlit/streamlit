@@ -866,6 +866,8 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        deferredFileResponse: (response: any) =>
+          this.handleDeferredFileResponse(response),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -1862,6 +1864,16 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Handles a deferred file response from the server.
+   * Dispatches a custom event that DownloadButton components can listen to.
+   */
+  handleDeferredFileResponse = (response: any): void => {
+    // Dispatch custom event for DownloadButton to handle
+    const event = new CustomEvent("deferredFileResponse", { detail: response })
+    window.dispatchEvent(event)
+  }
+
+  /**
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errMarkdown: string): void => {
@@ -2219,6 +2231,7 @@ export class App extends PureComponent<Props, State> {
             <AppView
               endpoints={this.endpoints}
               sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
+              sendBackMsg={this.sendBackMsg}
               elements={elements}
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}

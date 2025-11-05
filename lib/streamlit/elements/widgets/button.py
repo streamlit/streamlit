@@ -338,12 +338,24 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, or file
-            The contents of the file to be downloaded.
+        data : str, bytes, file, or callable
+            The contents of the file to be downloaded. This can be:
 
-            To prevent unncecessary recomputation, use caching when converting
-            your data for download. For more information, see the Example 1
-            below.
+            - A string or bytes object containing the file data
+            - A file-like object (TextIO, BinaryIO, RawIOBase)
+            - A callable (function) that returns any of the above types
+
+            **Deferred execution with callables:**
+            When you pass a callable (function), it will NOT be executed during
+            script run. Instead, execution is deferred until the user clicks the
+            download button. This is useful for:
+
+            - Generating large files that take time to create
+            - Avoiding unnecessary computation when users don't download
+            - Creating dynamic content based on the download time
+
+            To prevent unnecessary recomputation, use caching when converting
+            your data for download. For more information, see the examples below.
 
         file_name: str
             An optional string to use as the name of the file to be downloaded,
@@ -566,6 +578,57 @@ class ButtonMixin:
         .. output::
            https://doc-download-button-file.streamlit.app/
            height: 200px
+
+        **Example 4: Deferred download with callable (lazy execution)**
+
+        Pass a callable (function) to defer execution until the user clicks
+        download. This is useful for expensive computations that should only
+        run when needed.
+
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import time
+        >>>
+        >>> def generate_large_csv():
+        ...     # This expensive operation only runs when user clicks download
+        ...     time.sleep(2)  # Simulate expensive computation
+        ...     df = pd.DataFrame({"col1": range(10000), "col2": range(10000)})
+        ...     return df.to_csv(index=False)
+        >>>
+        >>> # Pass the function itself (no parentheses!)
+        >>> st.download_button(
+        ...     "Download Large CSV",
+        ...     data=generate_large_csv,  # Callable, not the result
+        ...     file_name="large_data.csv",
+        ...     mime="text/csv",
+        ... )
+
+        **Example 5: Dynamic filename with timestamp**
+
+        Callables can generate fresh content on each download, useful for
+        timestamped exports or reports.
+
+        >>> import streamlit as st
+        >>> from datetime import datetime
+        >>>
+        >>> def generate_timestamped_report():
+        ...     timestamp = datetime.now().isoformat()
+        ...     return f"Report generated at: {timestamp}\\n\\nData here..."
+        >>>
+        >>> st.download_button(
+        ...     "Download Report",
+        ...     data=generate_timestamped_report,
+        ...     file_name=f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        ...     mime="text/plain",
+        ... )
+
+        **Performance Guidelines:**
+
+        - Use callables for expensive operations (> 1 second)
+        - For quick operations (< 100ms), regular data is fine
+        - Callables are session-scoped and cleared on rerun
+        - Don't use callables with `@st.cache_data` - pick one approach
+        - Regular (non-callable) downloads are stored immediately
 
         """
         ctx = get_script_run_ctx()
@@ -1252,15 +1315,19 @@ def marshall_file(
 
             return result_as_bytes
 
-        # Add lazy file to media file manager (callable not invoked yet)
-        file_url = runtime.get_instance().media_file_mgr.add_lazy(
+        # Register deferred callable (NOT executed yet, NOT stored in storage)
+        file_id = runtime.get_instance().media_file_mgr.register_deferred(
             element_id=element_id,
             callable_fn=callable_wrapper,
             mimetype=final_mimetype,
             coordinates=coordinates,
             file_name=file_name,
         )
-        proto_download_button.url = file_url
+
+        # Set deferred fields instead of URL
+        proto_download_button.deferred_file_id = file_id
+        proto_download_button.is_deferred = True
+        proto_download_button.url = ""  # Empty URL for deferred downloads
         return
 
     # Original logic for non-callable data

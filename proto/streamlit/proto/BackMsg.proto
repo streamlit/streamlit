@@ -73,6 +73,9 @@ message BackMsg {
 
     // Sends an app heartbeat message through the websocket
     bool app_heartbeat = 17;
+
+    // Requests that the server execute a deferred callable and return a download URL
+    DeferredFileRequest deferred_file_request = 18;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs
@@ -82,5 +85,11 @@ message BackMsg {
 
   reserved 1, 2, 3, 4, 8, 9, 10;
 
-  // Next: 18
+  // Next: 19
+}
+
+// Request to execute a deferred callable for download button
+message DeferredFileRequest {
+  string file_id = 1;
+  string session_id = 2;
 }

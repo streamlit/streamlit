@@ -20,9 +20,14 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useState,
+  useCallback,
 } from "react"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import {
+  DownloadButton as DownloadButtonProto,
+  BackMsg,
+} from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
@@ -41,14 +46,28 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  sendBackMsg?: (msg: BackMsg) => void
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, endpoints, fragmentId } = props
-  const { help, label, icon, ignoreRerun, type, url } = element
+  const { disabled, element, widgetMgr, endpoints, fragmentId, sendBackMsg } =
+    props
+  const {
+    help,
+    label,
+    icon,
+    ignoreRerun,
+    type,
+    url,
+    isDeferred,
+    deferredFileId,
+  } = element
 
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   let kind = BaseButtonKind.SECONDARY
   if (type === "primary") {
@@ -63,37 +82,128 @@ function DownloadButton(props: Props): ReactElement {
   )
 
   useEffect(() => {
-    // Since we use a hidden link to download, we can't use the onerror event
-    // to catch src url load errors. Catch with direct check instead.
-    void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
-  }, [downloadUrl, endpoints])
-
-  const handleDownloadClick: () => void = () => {
-    if (!ignoreRerun) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+    // Only check URL for non-deferred downloads
+    if (!isDeferred) {
+      // Since we use a hidden link to download, we can't use the onerror event
+      // to catch src url load errors. Catch with direct check instead.
+      void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
     }
-    // Downloads are only done on links, so create a hidden one and click it
-    // for the user.
-    const link = createDownloadLinkElement({
-      filename: "",
-      url: downloadUrl,
-      enforceDownloadInNewTab,
-    })
-    link.click()
-  }
+  }, [downloadUrl, endpoints, isDeferred])
+
+  // Listen for deferred file response
+  useEffect(() => {
+    if (!isDeferred || !deferredFileId) {
+      return
+    }
+
+    const handleDeferredResponse = (event: Event): void => {
+      const customEvent = event as CustomEvent
+      const response = customEvent.detail
+
+      if (response.fileId === deferredFileId) {
+        setIsLoading(false)
+
+        if (response.errorMsg) {
+          setError(response.errorMsg)
+        } else {
+          // Download with returned URL
+          const link = createDownloadLinkElement({
+            filename: "",
+            url: endpoints.buildDownloadUrl(response.url),
+            enforceDownloadInNewTab,
+          })
+          link.click()
+        }
+      }
+    }
+
+    window.addEventListener("deferredFileResponse", handleDeferredResponse)
+    return () => {
+      window.removeEventListener(
+        "deferredFileResponse",
+        handleDeferredResponse
+      )
+    }
+  }, [isDeferred, deferredFileId, endpoints, enforceDownloadInNewTab])
+
+  const handleDownloadClick = useCallback((): void => {
+    if (isDeferred && deferredFileId && sendBackMsg) {
+      // Deferred download flow
+      setIsLoading(true)
+      setError(null)
+
+      // Trigger widget state update if needed
+      if (!ignoreRerun) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+        widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+      }
+
+      // Send BackMsg to request file generation
+      const backMsg = new BackMsg({
+        deferredFileRequest: {
+          fileId: deferredFileId,
+          sessionId: "", // Will be filled by the connection manager
+        },
+      })
+      sendBackMsg(backMsg)
+
+      // Set timeout for request
+      setTimeout(() => {
+        setIsLoading(false)
+        setError("Download request timed out. Please try again.")
+      }, 60000) // 60 second timeout
+    } else {
+      // Regular immediate download flow
+      if (!ignoreRerun) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+        widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+      }
+      // Downloads are only done on links, so create a hidden one and click it
+      // for the user.
+      const link = createDownloadLinkElement({
+        filename: "",
+        url: downloadUrl,
+        enforceDownloadInNewTab,
+      })
+      link.click()
+    }
+  }, [
+    isDeferred,
+    deferredFileId,
+    sendBackMsg,
+    ignoreRerun,
+    widgetMgr,
+    element,
+    fragmentId,
+    downloadUrl,
+    enforceDownloadInNewTab,
+  ])
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
+      {error && (
+        <div
+          style={{
+            color: "red",
+            fontSize: "0.875rem",
+            marginBottom: "0.5rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
       <BaseButtonTooltip help={help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={disabled}
+          disabled={disabled || isLoading}
           onClick={handleDownloadClick}
           containerWidth={true}
         >
-          <DynamicButtonLabel icon={icon} label={label} />
+          <DynamicButtonLabel
+            icon={icon}
+            label={isLoading ? "Generating..." : label}
+          />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

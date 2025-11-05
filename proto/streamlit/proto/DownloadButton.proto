@@ -31,4 +31,8 @@ message DownloadButton {
   string type = 9;
   string icon = 10;
   bool ignore_rerun = 11;
+
+  // For deferred downloads (when data is a callable)
+  string deferred_file_id = 12;  // Set when data is callable
+  bool is_deferred = 13;         // Flag for frontend logic
 }

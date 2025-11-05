@@ -149,6 +149,12 @@ export interface BaseBlockProps {
    * iframe messages to ComponentInstances.
    */
   componentRegistry: ComponentRegistry
+
+  /**
+   * Function to send BackMsg messages to the server. Used by widgets that need
+   * to communicate with the backend outside of the normal widget state flow.
+   */
+  sendBackMsg?: (msg: any) => void
 }
 
 /**

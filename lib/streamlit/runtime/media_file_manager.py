@@ -19,7 +19,7 @@ from __future__ import annotations
 import collections
 import hashlib
 import threading
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
@@ -94,6 +94,10 @@ class MediaFileManager:
             collections.defaultdict(dict)
         )
 
+        # Dict of [file_id -> deferred callable metadata] for deferred downloads
+        # Stores callables that will be executed when user clicks download
+        self._deferred_callables: dict[str, dict[str, Any]] = {}
+
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which
         # means taking it multiple times from the same thread will deadlock.)
@@ -159,6 +163,15 @@ class MediaFileManager:
         _LOGGER.debug("Disconnecting files for session with ID %s", session_id)
 
         with self._lock:
+            # Clean up deferred callables for this session
+            deferred_to_remove = [
+                fid
+                for fid, meta in self._deferred_callables.items()
+                if meta.get("session_id") == session_id
+            ]
+            for fid in deferred_to_remove:
+                del self._deferred_callables[fid]
+
             if session_id in self._files_by_session_and_coord:
                 del self._files_by_session_and_coord[session_id]
 
@@ -319,3 +332,112 @@ class MediaFileManager:
             filehash.update(filename.encode())
 
         return filehash.hexdigest()
+
+    def register_deferred(
+        self,
+        element_id: str,
+        callable_fn: Callable[[], bytes],
+        mimetype: str,
+        coordinates: str,
+        file_name: str | None = None,
+    ) -> str:
+        """Register a callable for deferred execution (BackMsg protocol).
+
+        The callable is NOT invoked here and NOT stored in MediaFileStorage.
+        It will be executed when the user clicks download and the frontend
+        sends a DeferredFileRequest BackMsg.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        element_id : str
+            The unique widget element ID (used to generate stable file ID).
+        callable_fn : Callable[[], bytes]
+            Function that generates file content when invoked.
+        mimetype : str
+            The MIME type of the file.
+        coordinates : str
+            Unique string identifying the element's location.
+        file_name : str or None
+            Optional filename for download.
+
+        Returns
+        -------
+        str
+            The file ID that can be used to request execution later.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            # Generate stable file ID (not content-based, element-based)
+            file_id = self._generate_lazy_file_id(element_id, mimetype, file_name)
+
+            # Store callable metadata (NOT in storage yet)
+            self._deferred_callables[file_id] = {
+                "callable": callable_fn,
+                "mimetype": mimetype,
+                "filename": file_name,
+                "coordinates": coordinates,
+                "session_id": session_id,
+            }
+
+            # Track in session/coordinate mapping
+            self._files_by_session_and_coord[session_id][coordinates] = file_id
+
+            return file_id
+
+    def execute_deferred(self, file_id: str) -> str:
+        """Execute deferred callable and return download URL.
+
+        This is called when the frontend sends a DeferredFileRequest BackMsg
+        after the user clicks the download button.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        file_id : str
+            The file ID returned from register_deferred().
+
+        Returns
+        -------
+        str
+            The URL that the frontend can use to download the file.
+
+        Raises
+        ------
+        MediaFileStorageError
+            If file_id not found or callable execution fails.
+        """
+        from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+        # Get callable metadata (with lock)
+        with self._lock:
+            if file_id not in self._deferred_callables:
+                raise MediaFileStorageError(f"Deferred file {file_id} not found")
+            deferred = self._deferred_callables[file_id].copy()
+
+        # Execute outside lock to avoid blocking
+        try:
+            data = deferred["callable"]()  # Execute user's function
+        except Exception as e:
+            raise MediaFileStorageError(f"Callable execution failed: {e}") from e
+
+        # Store result using normal storage flow
+        with self._lock:
+            file_id_actual = self._storage.load_and_get_id(
+                data,
+                deferred["mimetype"],
+                MediaFileKind.DOWNLOADABLE,
+                deferred["filename"],
+            )
+
+            # Update metadata
+            metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
+            self._file_metadata[file_id_actual] = metadata
+
+            # Clean up callable reference
+            del self._deferred_callables[file_id]
+
+            return self._storage.get_url(file_id_actual)

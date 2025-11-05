@@ -304,6 +304,8 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                self._handle_deferred_file_request(msg.deferred_file_request)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -921,6 +923,40 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
+
+    def _handle_deferred_file_request(self, request: Any) -> None:
+        """Execute deferred callable and send URL back to frontend.
+
+        This is called when the user clicks a download button with deferred
+        (callable) data. The callable is executed and the resulting file is
+        stored, then the download URL is sent back to the frontend.
+
+        Parameters
+        ----------
+        request : DeferredFileRequest
+            The request containing the file_id to execute.
+        """
+        try:
+            # Execute callable and get URL
+            url = runtime.get_instance().media_file_mgr.execute_deferred(
+                request.file_id
+            )
+
+            # Create success response
+            response = ForwardMsg()
+            response.deferred_file_response.file_id = request.file_id
+            response.deferred_file_response.url = url
+
+            self._enqueue_forward_msg(response)
+
+        except Exception as e:
+            # Create error response
+            _LOGGER.exception("Error executing deferred file request")
+            response = ForwardMsg()
+            response.deferred_file_response.file_id = request.file_id
+            response.deferred_file_response.error_msg = str(e)
+
+            self._enqueue_forward_msg(response)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]
