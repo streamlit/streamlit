@@ -93,6 +93,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         args: dict[str, list[bytes]] = {}
         files: dict[str, list[Any]] = {}
 
+        if not self.path_kwargs:
+            self.send_error(404, reason="No path kwargs provided.")
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 
@@ -135,6 +139,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def delete(self, **kwargs: Any) -> None:
         """Delete file request handler."""
+
+        if not self.path_kwargs:
+            self.send_error(404, reason="No path kwargs provided.")
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 

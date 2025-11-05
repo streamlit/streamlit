@@ -372,7 +372,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
-            func,
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             persist=persist,
