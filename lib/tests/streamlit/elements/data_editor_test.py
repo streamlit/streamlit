@@ -219,12 +219,25 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [["x"], ["y"], ["z"]],
             }
         )
 
         added_rows: list[dict[str, Any]] = [
-            {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
-            {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
+            {
+                "col1": 10,
+                "col2": "foo",
+                "col3": False,
+                "col4": "2020-03-20T14:28:23",
+                "col5": ["x", "y"],
+            },
+            {
+                "col1": 11,
+                "col2": "bar",
+                "col3": True,
+                "col4": "2023-03-20T14:28:23",
+                "col5": ["z"],
+            },
         ]
 
         _apply_row_additions(
@@ -232,6 +245,9 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         assert len(df) == 5
+        assert df.loc[3, "col5"] == ["x", "y"]
+        assert df.loc[4, "col5"] == ["z"]
+        assert pd.api.types.is_bool_dtype(df["col3"])
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
