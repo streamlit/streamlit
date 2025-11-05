@@ -734,6 +734,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
+  latexDelimiters,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -772,10 +773,27 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     [overrideComponents]
   )
 
-  const processedSource = useMemo(
-    () => source.replaceAll(":material/", ":material_"),
-    [source]
-  )
+  const processedSource = useMemo(() => {
+    let processed = source.replaceAll(":material/", ":material_")
+    
+    // transform custom latex delimiters if provided
+    if (latexDelimiters) {
+      const { inlineOpen, inlineClose, blockOpen, blockClose } = latexDelimiters
+      if (inlineOpen && inlineClose) {
+        // escape special regex chars
+        const escapedOpen = inlineOpen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const escapedClose = inlineClose.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'g'), '$$$1$$')
+      }
+      if (blockOpen && blockClose) {
+        const escapedOpen = blockOpen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const escapedClose = blockClose.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'gs'), '$$$$\n$1\n$$$$')
+      }
+    }
+    
+    return processed
+  }, [source, latexDelimiters])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
