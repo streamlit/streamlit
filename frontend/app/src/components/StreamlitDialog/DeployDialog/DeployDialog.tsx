@@ -21,7 +21,6 @@ import { StyledAction, StyledBody } from "baseui/card"
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {
   DetachedHead,
@@ -73,6 +72,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 }
 
 export interface DeployDialogProps {
+  gitInfo: IGitInfo | null
   // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
@@ -88,10 +88,13 @@ export interface DeployDialogProps {
 export function DeployDialog(
   props: Readonly<DeployDialogProps>
 ): ReactElement {
-  // Get latest git info from AppContext:
-  const { gitInfo } = useAppContext()
-  const { onClose, metricsMgr, showDeployError, isDeployErrorModalOpen } =
-    props
+  const {
+    gitInfo,
+    onClose,
+    metricsMgr,
+    showDeployError,
+    isDeployErrorModalOpen,
+  } = props
   const onClickDeployApp = useCallback((): void => {
     metricsMgr.enqueue("menuClick", {
       label: "deployButtonInDialog",

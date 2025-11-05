@@ -18,7 +18,7 @@ import React, { FC, memo, useContext, useMemo } from "react"
 
 import range from "lodash/range"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 
 import { StyledParticles } from "./styled-components"
 export interface ParticleProps {
@@ -41,7 +41,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   numParticleTypes,
   ParticleComponent,
 }: Props) => {
-  const { libConfig } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibConfigContext)
 
   // Prepare a random selection of particle types:
   const particleTypes = useMemo(
@@ -61,7 +61,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
           // eslint-disable-next-line @eslint-react/no-array-index-key
           key={scriptRunId + i}
           particleType={particleType}
-          resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+          resourceCrossOriginMode={resourceCrossOriginMode}
         />
       ))}
     </StyledParticles>

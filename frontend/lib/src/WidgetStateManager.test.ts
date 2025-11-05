@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+import { waitFor } from "@testing-library/dom"
 import { enableMapSet, enablePatches } from "immer"
+import { getLogger } from "loglevel"
 import { Mock } from "vitest"
 
 import {
@@ -102,23 +104,29 @@ describe("Widget State Manager", () => {
   }
 
   /** Assert calls of our callback functions. */
-  const assertCallbacks = ({ insideForm }: { insideForm: boolean }): void => {
+  const assertCallbacks = async ({
+    insideForm,
+  }: {
+    insideForm: boolean
+  }): Promise<void> => {
     if (insideForm) {
       expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
-      expect(sendBackMsg).toHaveBeenCalledTimes(1)
-      expect(sendBackMsg).toHaveBeenCalledWith(
-        expect.anything(),
-        undefined, // fragmentId
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledTimes(1)
+        expect(sendBackMsg).toHaveBeenCalledWith(
+          expect.anything(),
+          undefined, // fragmentId
+          undefined,
+          undefined
+        )
+      })
     }
   }
 
   it.each([false, true])(
-    "sets string value correctly (insideForm=%p)",
-    insideForm => {
+    "sets string value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setStringValue(
         widget,
@@ -127,37 +135,37 @@ describe("Widget State Manager", () => {
         undefined
       )
       expect(widgetMgr.getStringValue(widget)).toBe("mockStringValue")
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets boolean value correctly (insideForm=%p)",
-    insideForm => {
+    "sets boolean value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
       expect(widgetMgr.getBoolValue(widget)).toBe(true)
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets int value correctly (insideForm=%p)",
-    insideForm => {
+    "sets int value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setIntValue(widget, 100, { fromUi: true }, undefined)
       expect(widgetMgr.getIntValue(widget)).toBe(100)
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets float value correctly (insideForm=%p)",
-    insideForm => {
+    "sets double value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true }, undefined)
       expect(widgetMgr.getDoubleValue(widget)).toBe(3.14)
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
@@ -171,12 +179,12 @@ describe("Widget State Manager", () => {
 
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
-    assertCallbacks({ insideForm: false })
+    await assertCallbacks({ insideForm: false })
   })
 
   it.each([false, true])(
-    "sets string array value correctly (insideForm=%p)",
-    insideForm => {
+    "sets string array value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setStringArrayValue(
         widget,
@@ -191,13 +199,13 @@ describe("Widget State Manager", () => {
         "bar",
         "baz",
       ])
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets int array value correctly (insideForm=%p)",
-    insideForm => {
+    "sets int array value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setIntArrayValue(
         widget,
@@ -206,13 +214,13 @@ describe("Widget State Manager", () => {
         undefined
       )
       expect(widgetMgr.getIntArrayValue(widget)).toEqual([4, 5, 6])
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets float array value correctly (insideForm=%p)",
-    insideForm => {
+    "sets double array value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setDoubleArrayValue(
         widget,
@@ -223,13 +231,13 @@ describe("Widget State Manager", () => {
         undefined
       )
       expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([1.1, 2.2, 3.3])
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets ArrowTable value correctly (insideForm=%p)",
-    insideForm => {
+    "sets ArrowTable value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setArrowValue(
         widget,
@@ -238,13 +246,13 @@ describe("Widget State Manager", () => {
         undefined
       )
       expect(widgetMgr.getArrowValue(widget)).toEqual(MOCK_ARROW_TABLE)
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets JSON value correctly (insideForm=%p)",
-    insideForm => {
+    "sets JSON value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setJsonValue(
         widget,
@@ -255,23 +263,23 @@ describe("Widget State Manager", () => {
         undefined
       )
       expect(widgetMgr.getJsonValue(widget)).toBe(JSON.stringify(MOCK_JSON))
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets bytes value correctly (insideForm=%p)",
-    insideForm => {
+    "sets bytes value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true }, undefined)
       expect(widgetMgr.getBytesValue(widget)).toEqual(MOCK_BYTES)
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
   it.each([false, true])(
-    "sets FileUploaderState value correctly (insideForm=%p)",
-    insideForm => {
+    "sets FileUploaderState value correctly (insideForm=%s)",
+    async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setFileUploaderStateValue(
         widget,
@@ -284,7 +292,7 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.getFileUploaderStateValue(widget)).toEqual(
         MOCK_FILE_UPLOADER_STATE
       )
-      assertCallbacks({ insideForm })
+      await assertCallbacks({ insideForm })
     }
   )
 
@@ -376,7 +384,7 @@ describe("Widget State Manager", () => {
         setterMethod: "setFileUploaderStateValue",
         value: MOCK_FILE_UPLOADER_STATE,
       },
-    ])("%p", async ({ setterMethod, value }) => {
+    ])("%s", async ({ setterMethod, value }) => {
       // @ts-expect-error
       await widgetMgr[setterMethod](
         MOCK_WIDGET,
@@ -386,12 +394,14 @@ describe("Widget State Manager", () => {
         },
         "myFragmentId"
       )
-      expect(sendBackMsg).toHaveBeenCalledWith(
-        expect.anything(),
-        "myFragmentId",
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledWith(
+          expect.anything(),
+          "myFragmentId",
+          undefined,
+          undefined
+        )
+      })
     })
 
     // This test isn't parameterized like the ones above because setTriggerValue
@@ -431,7 +441,7 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(45))
     })
 
-    it("sets float value as JSON correctly", () => {
+    it("sets double value as JSON correctly", () => {
       widgetMgr.setJsonValue(MOCK_WIDGET, 3.14, { fromUi: true }, undefined)
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(3.14))
     })
@@ -462,7 +472,7 @@ describe("Widget State Manager", () => {
       )
     })
 
-    it("sets float array value as JSON correctly", () => {
+    it("sets double array value as JSON correctly", () => {
       widgetMgr.setJsonValue(
         MOCK_WIDGET,
         [1.1, 2.2, 3.3],
@@ -1135,5 +1145,296 @@ describe("WidgetStateDict", () => {
         },
       ],
     })
+  })
+})
+
+// New tests for isolated batched JSON APIs
+describe("Trigger JSON payloads (aggregated)", () => {
+  let sendBackMsg: Mock
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    sendBackMsg = vi.fn()
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: sendBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+  })
+
+  it("setTriggerValue(payload): uses jsonTriggerValue field", async () => {
+    const widget = { id: "batchedTriggerWidget", formId: "" }
+
+    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragT", {
+      t: 1,
+    })
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedTriggerWidget",
+            jsonTriggerValue: JSON.stringify([{ t: 1 }]),
+          },
+        ],
+      },
+      "fragT",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setJsonValue and setTriggerValue(payload): coalesce to one back message", async () => {
+    const widget = { id: "jsonAndTriggerCoalesce", formId: "" }
+    const jsonValue = { foo: "bar" }
+    const triggerPayload = { baz: 42 }
+
+    widgetMgr.setJsonValue(widget, jsonValue, { fromUi: true }, "fragJT")
+
+    const triggerPromise = widgetMgr.setTriggerValue(
+      widget,
+      { fromUi: true },
+      "fragJT",
+      triggerPayload
+    )
+
+    await triggerPromise
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "jsonAndTriggerCoalesce",
+            jsonValue: JSON.stringify(jsonValue),
+            jsonTriggerValue: JSON.stringify([triggerPayload]),
+          },
+        ],
+      },
+      "fragJT",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setTriggerValue(payload): aggregates multiple payloads into a JSON array in one macrotask", async () => {
+    const widget = { id: "batchedTriggerAgg", formId: "" }
+
+    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragAgg", {
+      a: 1,
+    })
+    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragAgg", {
+      b: 2,
+    })
+
+    await Promise.all([p1, p2])
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedTriggerAgg",
+            jsonTriggerValue: JSON.stringify([{ a: 1 }, { b: 2 }]),
+          },
+        ],
+      },
+      "fragAgg",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setTriggerValue(payload): aggregates three payloads and sends once", async () => {
+    const widget = { id: "batchedTriple", formId: "" }
+
+    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
+      x: 1,
+    })
+    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
+      y: 2,
+    })
+    const p3 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
+      z: 3,
+    })
+
+    await Promise.all([p1, p2, p3])
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedTriple",
+            jsonTriggerValue: JSON.stringify([{ x: 1 }, { y: 2 }, { z: 3 }]),
+          },
+        ],
+      },
+      "frag3",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setTriggerValue(payload): batches even when fragments differ, using the first fragment id", async () => {
+    // Note that this flow shouldn't actually happen in practice. We shouldn't
+    // be updating multiple fragments in the same macrotask. This test is
+    // written now to test the behavior of the code, but it can change in the
+    // future if we decide to change the behavior.
+    const widget = { id: "batchedFragment", formId: "" }
+
+    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "f1", {
+      a: 1,
+    })
+    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "f2", {
+      b: 2,
+    })
+
+    await Promise.all([p1, p2])
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedFragment",
+            jsonTriggerValue: JSON.stringify([{ a: 1 }, { b: 2 }]),
+          },
+        ],
+      },
+      "f1",
+      undefined,
+      undefined
+    )
+  })
+
+  it("logs a warning and uses the first fragmentId when batch contains mixed fragmentIds", async () => {
+    const logger = getLogger("WidgetStateManager")
+    const warnSpy = vi.spyOn(logger, "warn")
+
+    const widget = { id: "warnMixedFragments", formId: "" }
+
+    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragA", {
+      a: true,
+    })
+    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragB", {
+      b: true,
+    })
+
+    await Promise.all([p1, p2])
+
+    // Uses the first fragment id
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      expect.anything(),
+      "fragA",
+      undefined,
+      undefined
+    )
+
+    // Logs exactly one warning for the batch
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [msg, usedFragment] = warnSpy.mock.calls[0]
+    expect(String(msg)).toContain("Multiple different fragmentIds")
+    expect(usedFragment).toBe("fragA")
+
+    warnSpy.mockRestore()
+  })
+
+  it("setTriggerValue(payload): retains existing fragment id if subsequent calls omit it", async () => {
+    const widget = { id: "batchedFragmentFallback", formId: "" }
+
+    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fKeep", {
+      first: true,
+    })
+    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined, {
+      second: true,
+    })
+
+    await Promise.all([p1, p2])
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedFragmentFallback",
+            jsonTriggerValue: JSON.stringify([
+              { first: true },
+              { second: true },
+            ]),
+          },
+        ],
+      },
+      "fKeep",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setTriggerValue(payload): merges with existing scalar jsonTriggerValue", async () => {
+    const widget = { id: "batchedScalarPrev", formId: "" }
+
+    // Pre-seed an existing scalar jsonTriggerValue
+    ;(
+      widgetMgr as unknown as {
+        widgetStates: {
+          createState: (id: string) => { jsonTriggerValue?: string }
+        }
+      }
+    ).widgetStates.createState(widget.id).jsonTriggerValue = JSON.stringify({
+      prev: 1,
+    })
+
+    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragS", {
+      next: 2,
+    })
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedScalarPrev",
+            jsonTriggerValue: JSON.stringify([{ prev: 1 }, { next: 2 }]),
+          },
+        ],
+      },
+      "fragS",
+      undefined,
+      undefined
+    )
+  })
+
+  it("setTriggerValue(payload): parse failure falls back to [prevString, payload]", async () => {
+    const widget = { id: "batchedParseFail", formId: "" }
+
+    // Pre-seed an invalid JSON string as previous value
+    ;(
+      widgetMgr as unknown as {
+        widgetStates: {
+          createState: (id: string) => { jsonTriggerValue?: string }
+        }
+      }
+    ).widgetStates.createState(widget.id).jsonTriggerValue = "NOT JSON"
+
+    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragPF", {
+      ok: true,
+    })
+
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: "batchedParseFail",
+            jsonTriggerValue: JSON.stringify(["NOT JSON", { ok: true }]),
+          },
+        ],
+      },
+      "fragPF",
+      undefined,
+      undefined
+    )
   })
 })

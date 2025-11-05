@@ -331,6 +331,10 @@ def _get_command_telemetry(
     ):
         name = f"component:{self_arg.name}"
 
+    if name == "_bidi_component" and len(args) > 0 and isinstance(args[0], str):
+        component_name = args[0]
+        name = f"component_v2:{component_name}"
+
     return Command(name=name, args=arguments)
 
 

@@ -386,6 +386,7 @@ img-src 'self' https: data: blob:;
 media-src 'self' https: data: blob:;
 connect-src ws://localhost:{app_port}/_stcore/stream
     {app_url}/_stcore/component/
+    {app_url}/_stcore/bidi-components/
     {app_url}/component/
     {app_url}/_stcore/upload_file/
     {app_url}/_stcore/host-config

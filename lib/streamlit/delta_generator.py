@@ -39,6 +39,7 @@ from streamlit import (
     runtime,
     util,
 )
+from streamlit.components.v2.bidi_component import BidiComponentMixin
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_last_dg_added_to_context_stack,
@@ -74,6 +75,7 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
+from streamlit.elements.space import SpaceMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -205,6 +207,7 @@ class DeltaGenerator(
     SelectSliderMixin,
     SliderMixin,
     SnowMixin,
+    SpaceMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -214,6 +217,7 @@ class DeltaGenerator(
     ArrowMixin,
     VegaChartsMixin,
     DataEditorMixin,
+    BidiComponentMixin,
 ):
     """Creator of Delta protobuf messages.
 

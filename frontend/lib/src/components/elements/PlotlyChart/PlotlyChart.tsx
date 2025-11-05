@@ -31,10 +31,12 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { StyledPlotlyChartContainer } from "./styled-components"
 import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
 // Minimum width for Plotly charts
@@ -89,6 +91,10 @@ export function PlotlyChart({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+
+  const { height: chartContainerHeight, elementRef: containerRef } =
+    useCalculatedDimensions([], 0)
+
   const width = elWidth || 0
 
   // Load the initial figure spec from the element message
@@ -304,14 +310,14 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
-  // Get the initial height, using a default if not specified
-  let calculatedHeight = initialFigureSpec.layout.height
+  let calculatedHeight =
+    chartContainerHeight > 0
+      ? chartContainerHeight
+      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width
-    calculatedHeight = fullScreenHeight
-  } else if (calculatedHeight === undefined) {
-    calculatedHeight = DEFAULT_PLOTLY_HEIGHT
+    calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
@@ -456,7 +462,11 @@ export function PlotlyChart({
   }, [plotlyFigure.layout?.dragmode])
 
   return (
-    <div className="stPlotlyChart" data-testid="stPlotlyChart">
+    <StyledPlotlyChartContainer
+      ref={containerRef}
+      className="stPlotlyChart"
+      data-testid="stPlotlyChart"
+    >
       <Plot
         data={plotlyFigure.data}
         layout={plotlyFigure.layout}
@@ -498,7 +508,7 @@ export function PlotlyChart({
           setPlotlyFigure(figure)
         }}
       />
-    </div>
+    </StyledPlotlyChartContainer>
   )
 }
 

@@ -47,6 +47,7 @@ interface Props {
 const MEDIA_ENDPOINT = "/media"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
+const BIDI_COMPONENT_ENDPOINT_BASE = "/_stcore/bidi-components"
 
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
@@ -142,6 +143,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     return buildHttpUri(
       this.requireServerUri(),
       `${COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
+    )
+  }
+
+  public buildBidiComponentURL(componentName: string, path: string): string {
+    return buildHttpUri(
+      this.requireServerUri(),
+      `${BIDI_COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
     )
   }
 

@@ -47,7 +47,9 @@ export const getTextAreaHeight = (
         ? 2
         : 30
     const innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
-    height = `${innerHeight}px`
+    // Ensure innerHeight is never negative to avoid invalid CSS height values
+    const clampedHeight = Math.max(0, innerHeight)
+    height = `${clampedHeight}px`
   }
   return height
 }
