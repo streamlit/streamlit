@@ -1335,14 +1335,12 @@ def test_chat_input_permission_denied_error(
     # Hover over the tooltip hover target to show tooltip
     hover_target.hover()
 
-    # Small wait for tooltip animation (especially needed for Firefox)
-    app_with_microphone_permission_denied.wait_for_timeout(200)
-
-    # Verify tooltip appears with error message
-    # Using to_have_text which includes visibility check with auto-wait
+    # Wait for tooltip to appear - BaseWeb tooltips may have delays
     tooltip = app_with_microphone_permission_denied.get_by_test_id(
         "stTooltipErrorContent"
     )
+    # Wait for tooltip to be attached to DOM (may take longer in Firefox)
+    expect(tooltip).to_be_attached(timeout=10000)
     expect(tooltip).to_have_text("Microphone access denied", use_inner_text=True)
 
     # Take snapshot of error state with tooltip
@@ -1391,12 +1389,10 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
     hover_target.hover()
 
-    # Small wait for tooltip animation (especially needed for Firefox)
-    app.wait_for_timeout(200)
-
-    # Verify tooltip appears with error message
-    # Using to_have_text which includes visibility check with auto-wait
+    # Wait for tooltip to appear - BaseWeb tooltips may have delays
     tooltip = app.get_by_test_id("stTooltipErrorContent")
+    # Wait for tooltip to be attached to DOM (may take longer in Firefox)
+    expect(tooltip).to_be_attached(timeout=10000)
     expect(tooltip).to_have_text("Recording failed", use_inner_text=True)
 
     # Take snapshot
