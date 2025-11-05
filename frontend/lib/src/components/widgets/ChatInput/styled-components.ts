@@ -53,10 +53,11 @@ export const StyledChatInput = styled.div<StyledChatInputProps>(
 interface StyledSendIconButtonProps {
   disabled: boolean
   extended: boolean
+  hasError?: boolean
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, extended }) => {
+  ({ theme, disabled, extended, hasError }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     const [cleanIconColor, dirtyIconColor] = lightTheme
       ? [theme.colors.gray60, theme.colors.gray80]
@@ -73,7 +74,11 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       lineHeight: theme.lineHeights.none,
       margin: theme.spacing.none,
       padding: theme.spacing.sm,
-      color: disabled ? cleanIconColor : dirtyIconColor,
+      color: hasError
+        ? theme.colors.redTextColor
+        : disabled
+          ? cleanIconColor
+          : dirtyIconColor,
       pointerEvents: "auto",
       "&:focus": {
         outline: "none",
@@ -87,7 +92,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
           : theme.colors.gray90,
       },
       "&:hover": {
-        color: theme.colors.primary,
+        color: hasError ? theme.colors.red70 : theme.colors.primary,
       },
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.transparent,
@@ -157,15 +162,4 @@ export const StyledChatAudioWave = styled.div(({ theme }) => ({
     position: "absolute",
     inset: 0,
   },
-}))
-
-export const StyledRecordingError = styled.small(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-  lineHeight: theme.fontSizes.sm,
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing.twoXS,
-  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-  marginTop: theme.spacing.twoXS,
 }))

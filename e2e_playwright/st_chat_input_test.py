@@ -1325,19 +1325,31 @@ def test_chat_input_permission_denied_error(
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
     mic_button.click()
 
-    # Wait for error message to appear
+    # Wait for error state to apply
     app_with_microphone_permission_denied.wait_for_timeout(500)
-    error_message = chat_input.get_by_test_id("stChatInputRecordingError")
-    expect(error_message).to_be_visible()
-    expect(error_message).to_contain_text("Microphone access denied")
 
-    # Take snapshot of error state
+    # Verify mic button shows error state (red color)
+    expect(mic_button).to_be_visible()
+
+    # Hover over mic button to show tooltip
+    mic_button.hover()
+    app_with_microphone_permission_denied.wait_for_timeout(300)
+
+    # Verify tooltip appears with error message
+    tooltip = app_with_microphone_permission_denied.get_by_test_id(
+        "stTooltipErrorContent"
+    )
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text("Microphone access denied")
+
+    # Take snapshot of error state with tooltip
     assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
 
     # Verify error clears when user types
     textarea = chat_input.locator("textarea").first
     textarea.fill("Some text")
-    expect(error_message).not_to_be_visible()
+    # After typing, tooltip should not appear on hover anymore
+    expect(tooltip).not_to_be_visible()
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
@@ -1368,10 +1380,18 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     approve_button.click()
     app.wait_for_timeout(1000)
 
-    # Verify error appears
-    error_message = chat_input.get_by_test_id("stChatInputRecordingError")
-    expect(error_message).to_be_visible()
-    expect(error_message).to_contain_text("Recording failed")
+    # Verify mic button shows error state
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+
+    # Hover over mic button to show tooltip
+    mic_button.hover()
+    app.wait_for_timeout(300)
+
+    # Verify tooltip appears with error message
+    tooltip = app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text("Recording failed")
 
     # Take snapshot
     assert_snapshot(chat_input, name="st_chat_input-recording_error")
@@ -1379,4 +1399,5 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     # Verify error clears when user starts typing
     textarea = chat_input.locator("textarea").first
     textarea.fill("Error cleared")
-    expect(error_message).not_to_be_visible()
+    # After typing, tooltip should not appear on hover anymore
+    expect(tooltip).not_to_be_visible()
