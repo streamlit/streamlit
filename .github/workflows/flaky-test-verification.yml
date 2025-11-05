@@ -19,9 +19,6 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  FLAKY_VERIFY_LABEL: flaky-verify
-
 jobs:
   verify:
     if: |
