@@ -826,7 +826,7 @@ def assert_snapshot(
 
             error_msg = (
                 f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
-                f" {mismatch / total_pixels * 100:.2f}%). "
+                f" {mismatch / total_pixels * 100:.2f}%)"
             )
 
             # Create new failures folder for this test:
@@ -860,7 +860,7 @@ def assert_snapshot(
                 f"Wrong size: expected={img_b.size}, actual={img_a.size} "
                 f"({pixel_diff} pixels difference; "
                 f"{pixel_diff / expected_pixels * 100:.2f}%). "
-                f"Error: {ex}. "
+                f"Error: {ex}"
             )
 
         if is_last_rerun:
