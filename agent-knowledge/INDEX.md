@@ -8,7 +8,13 @@ Central registry of resources available to AI agents working on Streamlit.
 
 ## Available Resources
 
-No resources have been added yet. Check back as content is introduced.
+### [Guides](references/guides/)
+
+System overviews and comprehensive documentation (e.g., layout system, caching, state management)
+
+### [Features](references/features/)
+
+Feature development artifacts (specs + implementation plans) organized by area
 
 ## Contributing
 
@@ -25,12 +31,10 @@ No resources have been added yet. Check back as content is introduced.
    ```
    - `status: experimental` - Workflow being developed, team feedback welcome
    - `status: stable` - Established, reviewed workflow
-2. Update this INDEX.md to make it discoverable
-3. Add a clear description of what the resource provides
+2. Place in the appropriate directory (guides or features organized by area)
+3. Discovery is automatic via directory structure
 
 ## See Also
 
 - [README.md](README.md) - Purpose and usage guide for this directory
 - [../AGENTS.md](../AGENTS.md) - Top-level agent repo overview
-
----
