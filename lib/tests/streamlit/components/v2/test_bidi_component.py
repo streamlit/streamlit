@@ -1178,7 +1178,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         mixin = BidiComponentMixin()
 
         class DummyProto:
-            def WhichOneof(self, name: str) -> str:
+            def WhichOneof(self, _name: str) -> str:
                 return "new_unhandled_field"
 
         with pytest.raises(

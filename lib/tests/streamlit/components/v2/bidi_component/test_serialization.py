@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from typing import NoReturn
 
 import pandas as pd
 
@@ -252,7 +253,7 @@ def test_extract_dataframes_from_dict_fallback_on_arrow_failure(monkeypatch):
     # Force detection as dataframe-like but make conversion raise.
     monkeypatch.setattr(ser, "is_dataframe_like", lambda v: v is obj)
 
-    def _boom(_: object) -> bytes:  # type: ignore[return-value]
+    def _boom(_: object) -> NoReturn:
         raise Exception("boom")
 
     monkeypatch.setattr(ser, "convert_anything_to_arrow_bytes", _boom)

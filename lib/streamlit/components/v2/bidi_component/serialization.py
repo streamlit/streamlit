@@ -68,7 +68,7 @@ def _extract_dataframes_from_dict(
                 arrow_bytes = convert_anything_to_arrow_bytes(value)
                 # Use deterministic, content-addressed ref IDs so placeholders
                 # are stable for identical content on each run.
-                ref_id = calc_md5(str(arrow_bytes))
+                ref_id = calc_md5(arrow_bytes)
                 arrow_blobs[ref_id] = arrow_bytes
                 processed_data[key] = {ARROW_REF_KEY: ref_id}
             except Exception:
