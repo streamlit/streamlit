@@ -24,6 +24,8 @@ import React, {
   useState,
 } from "react"
 
+import styled from "@emotion/styled"
+
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -36,6 +38,13 @@ import BaseButton, {
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+const StyledErrorMessage = styled.small(({ theme }) => ({
+  color: theme.colors.danger,
+  fontSize: theme.fontSizes.sm,
+  marginTop: theme.spacing.twoXS,
+  display: "block",
+}))
 
 export interface DeferredFileResponse {
   url: string
@@ -187,16 +196,9 @@ function DownloadButton(props: Props): ReactElement {
         </BaseButton>
       </BaseButtonTooltip>
       {error && (
-        <div
-          style={{
-            color: "red",
-            fontSize: "12px",
-            marginTop: "4px",
-          }}
-          data-testid="stDownloadButtonError"
-        >
+        <StyledErrorMessage data-testid="stDownloadButtonError">
           {error}
-        </div>
+        </StyledErrorMessage>
       )}
     </div>
   )
