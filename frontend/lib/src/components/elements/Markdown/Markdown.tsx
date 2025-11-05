@@ -39,7 +39,7 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, elementType, help, isCaption } = element
+  const { allowHtml, body, elementType, help, isCaption, latexDelimiters } = element
 
   const isLatex = elementType === MarkdownProto.Type.LATEX
 
@@ -53,6 +53,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       isCaption={isCaption}
       source={body}
       allowHTML={allowHtml}
+      latexDelimiters={latexDelimiters}
     />
   )
 
