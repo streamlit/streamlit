@@ -2872,7 +2872,10 @@ describe("parseFont", () => {
     ["Helvetica", 'Helvetica, "Source Sans", sans-serif'],
     ["Times New Roman", 'Times New Roman, "Source Sans", sans-serif'],
     ["Comic Sans MS", 'Comic Sans MS, "Source Sans", sans-serif'],
-    ["", ', "Source Sans", sans-serif'],
+    // Empty string should return just the fallback font
+    ["", '"Source Sans", sans-serif'],
+    // Whitespace-only string should also return just the fallback font
+    ["   ", '"Source Sans", sans-serif'],
     // Test fonts that already have fallbacks (should still append Streamlit default as final fallback)
     [
       '"Roboto", Arial, sans-serif',
