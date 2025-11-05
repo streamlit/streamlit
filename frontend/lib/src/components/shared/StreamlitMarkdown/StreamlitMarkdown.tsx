@@ -92,6 +92,7 @@ export interface Props {
   allowHTML: boolean
   style?: CSSProperties
   isCaption?: boolean
+  latexDelimiters?: any
 
   /**
    * Indicates widget labels & restricts allowed elements
