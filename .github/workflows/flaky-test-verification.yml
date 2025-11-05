@@ -24,6 +24,9 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
+    # ubuntu-latest (4 cores) is sufficient for this lightweight coordination job.
+    # The actual E2E test execution happens in the called workflow (playwright-changed-files.yml)
+    # which uses ubuntu-latest-8-cores.
     runs-on: ubuntu-latest
     outputs:
       runs: ${{ steps.compute.outputs.runs }}
