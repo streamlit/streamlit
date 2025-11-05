@@ -219,11 +219,7 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
-                "col5": [
-                    ["x", "y"],
-                    ["z"],
-                    ["y"],
-                ],
+                "col5": [["x"], ["y"], ["z"]],
             }
         )
 
@@ -251,6 +247,7 @@ class DataEditorUtilTest(unittest.TestCase):
         assert len(df) == 5
         assert df.loc[3, "col5"] == ["x", "y"]
         assert df.loc[4, "col5"] == ["z"]
+        assert pd.api.types.is_bool_dtype(df["col3"])
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
