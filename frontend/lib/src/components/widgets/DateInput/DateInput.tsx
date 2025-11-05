@@ -403,32 +403,32 @@ function DateInput({
                   },
                 },
                 Root: {
-                  style: {
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                    paddingRight: spacing.twoXS,
+                  style: ({ $isFocused }: { $isFocused: boolean }) => {
+                    let borderColor =
+                      theme.colors.widgetBorderColor ??
+                      theme.colors.secondaryBg
+                    if ($isFocused) {
+                      borderColor = colors.primary
+                    }
+                    return {
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      borderLeftWidth: sizes.borderWidth,
+                      borderRightWidth: sizes.borderWidth,
+                      borderTopWidth: sizes.borderWidth,
+                      borderBottomWidth: sizes.borderWidth,
+                      paddingRight: spacing.twoXS,
 
-                    borderTopColor:
-                      theme.colors.widgetBorderColor ??
-                      theme.colors.secondaryBg,
-                    borderRightColor:
-                      theme.colors.widgetBorderColor ??
-                      theme.colors.secondaryBg,
-                    borderBottomColor:
-                      theme.colors.widgetBorderColor ??
-                      theme.colors.secondaryBg,
-                    borderLeftColor:
-                      theme.colors.widgetBorderColor ??
-                      theme.colors.secondaryBg,
+                      borderTopColor: borderColor,
+                      borderRightColor: borderColor,
+                      borderBottomColor: borderColor,
+                      borderLeftColor: borderColor,
 
-                    // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                    // with our dark theme - we handle error state coloring manually here
-                    ...(error && {
-                      backgroundColor: colors.redBackgroundColor,
-                    }),
+                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
+                      // with our dark theme - we handle error state coloring manually here
+                      ...(error && {
+                        backgroundColor: colors.redBackgroundColor,
+                      }),
+                    }
                   },
                 },
                 ClearIcon: {

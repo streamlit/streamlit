@@ -266,23 +266,26 @@ const TextArea: FC<Props> = ({
             props: {
               "data-testid": "stTextAreaRootElement",
             },
-            style: {
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              let borderColor =
+                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
+              if ($isFocused) {
+                borderColor = theme.colors.primary
+              }
+              return {
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
 
-              borderTopColor:
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-              borderRightColor:
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-              borderBottomColor:
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-              borderLeftColor:
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
 
-              flexGrow: 1,
+                flexGrow: 1,
+              }
             },
           },
         }}

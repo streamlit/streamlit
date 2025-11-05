@@ -285,23 +285,26 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             ControlContainer: {
-              style: {
-                maxHeight: maxHeight,
-                minHeight: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
+              style: ({ $isFocused }: { $isFocused: boolean }) => {
+                let borderColor =
+                  theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
+                if ($isFocused) {
+                  borderColor = theme.colors.primary
+                }
+                return {
+                  maxHeight: maxHeight,
+                  minHeight: theme.sizes.minElementHeight,
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
 
-                borderTopColor:
-                  theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-                borderRightColor:
-                  theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-                borderBottomColor:
-                  theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-                borderLeftColor:
-                  theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+                  borderTopColor: borderColor,
+                  borderRightColor: borderColor,
+                  borderBottomColor: borderColor,
+                  borderLeftColor: borderColor,
+                }
               },
             },
             Placeholder: {
