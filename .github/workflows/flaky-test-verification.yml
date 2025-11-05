@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   FLAKY_VERIFY_LABEL: flaky-verify
@@ -30,7 +31,7 @@ jobs:
     outputs:
       runs: ${{ steps.compute.outputs.runs }}
       pr-number: ${{ steps.compute.outputs.pr_number }}
-      base-ref: ${{ steps.compute.outputs.base_ref }}
+      base_ref: ${{ steps.compute.outputs.base_ref }}
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
       - name: Compute inputs and matrix
@@ -47,10 +48,18 @@ jobs:
           echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
 
           # Resolve PR number from input or event
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr_number }}" ]]; then
-            pr_number="${{ inputs.pr_number }}"
-          else
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ inputs.pr_number }}" ]]; then
+              pr_number="${{ inputs.pr_number }}"
+            else
+              echo "::error::No PR number provided. When using workflow_dispatch, the pr_number input is required."
+              exit 1
+            fi
+          elif [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             pr_number="${{ github.event.pull_request.number }}"
+          else
+            echo "::error::Unsupported event type: ${{ github.event_name }}"
+            exit 1
           fi
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
 
@@ -78,6 +87,6 @@ jobs:
     uses: ./.github/workflows/playwright-changed-files.yml
     with:
       ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
-      base_ref: ${{ needs.verify.outputs.base-ref }}
+      base_ref: ${{ needs.verify.outputs.base_ref }}
       iteration: ${{ matrix.iteration }}
     secrets: inherit
