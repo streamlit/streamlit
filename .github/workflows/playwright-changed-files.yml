@@ -6,6 +6,8 @@ on:
     paths-ignore:
       # Don't run CI if changes are only in the specs folder:
       - "specs/**"
+      # Don't run CI if changes are only in the agent-knowledge folder:
+      - "agent-knowledge/**"
   workflow_call:
     inputs:
       ref:
