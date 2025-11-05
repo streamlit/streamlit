@@ -324,6 +324,7 @@ export interface RenderedMarkdownProps {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
+  latexDelimiters?: any
 
   overrideComponents?: Components
 
