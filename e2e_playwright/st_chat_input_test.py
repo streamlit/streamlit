@@ -1332,15 +1332,19 @@ def test_chat_input_permission_denied_error(
     # Verify mic button shows error state (red color)
     expect(mic_button).to_be_visible()
 
-    # Hover over the tooltip hover target to show tooltip
-    hover_target.hover()
+    # Move mouse to center of page first to ensure clean hover state
+    app_with_microphone_permission_denied.mouse.move(0, 0)
+    app_with_microphone_permission_denied.wait_for_timeout(100)
 
-    # Wait for tooltip to appear - BaseWeb tooltips may have delays
+    # Hover over the tooltip hover target to show tooltip
+    hover_target.hover(force=True)
+    app_with_microphone_permission_denied.wait_for_timeout(500)
+
+    # Verify tooltip appears with error message
     tooltip = app_with_microphone_permission_denied.get_by_test_id(
         "stTooltipErrorContent"
     )
-    # Wait for tooltip to be attached to DOM (may take longer in Firefox)
-    expect(tooltip).to_be_attached(timeout=10000)
+    expect(tooltip).to_be_visible()
     expect(tooltip).to_have_text("Microphone access denied", use_inner_text=True)
 
     # Take snapshot of error state with tooltip
@@ -1385,14 +1389,18 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
     expect(mic_button).to_be_visible()
 
+    # Move mouse to center of page first to ensure clean hover state
+    app.mouse.move(0, 0)
+    app.wait_for_timeout(100)
+
     # Hover over the tooltip hover target to show tooltip
     hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
-    hover_target.hover()
+    hover_target.hover(force=True)
+    app.wait_for_timeout(500)
 
-    # Wait for tooltip to appear - BaseWeb tooltips may have delays
+    # Verify tooltip appears with error message
     tooltip = app.get_by_test_id("stTooltipErrorContent")
-    # Wait for tooltip to be attached to DOM (may take longer in Firefox)
-    expect(tooltip).to_be_attached(timeout=10000)
+    expect(tooltip).to_be_visible()
     expect(tooltip).to_have_text("Recording failed", use_inner_text=True)
 
     # Take snapshot
