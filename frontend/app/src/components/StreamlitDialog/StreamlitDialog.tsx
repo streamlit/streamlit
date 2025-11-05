@@ -76,7 +76,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 }
 
 interface AboutProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.ABOUT
 
   /** Callback to close the dialog */
@@ -86,13 +85,18 @@ interface AboutProps {
 }
 
 /** About Dialog */
-function AboutDialog(props: AboutProps): ReactElement {
+function AboutDialog({
+  type: _dialogType,
+  onClose,
+  aboutSectionMd,
+}: AboutProps): ReactElement {
+  void _dialogType
   return (
-    <Modal isOpen onClose={props.onClose}>
+    <Modal isOpen onClose={onClose}>
       <ModalHeader>About</ModalHeader>
       <ModalBody>
-        {props.aboutSectionMd && (
-          <StreamlitMarkdown source={props.aboutSectionMd} allowHTML={false} />
+        {aboutSectionMd && (
+          <StreamlitMarkdown source={aboutSectionMd} allowHTML={false} />
         )}
       </ModalBody>
     </Modal>
@@ -100,7 +104,6 @@ function AboutDialog(props: AboutProps): ReactElement {
 }
 
 interface ClearCacheProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.CLEAR_CACHE
   /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void
@@ -109,7 +112,6 @@ interface ClearCacheProps {
   onClose: PlainEventHandler
 
   /** callback to run the default action */
-  // eslint-disable-next-line @eslint-react/no-unused-props
   defaultAction: () => void
 }
 
@@ -119,7 +121,14 @@ interface ClearCacheProps {
  * confirmCallback - callback to send the clear_cache request to the Proxy
  * onClose         - callback to close the dialog
  */
-function ClearCacheDialog(props: ClearCacheProps): ReactElement {
+function ClearCacheDialog({
+  type: _dialogType,
+  confirmCallback,
+  onClose,
+  defaultAction: _defaultAction,
+}: ClearCacheProps): ReactElement {
+  void _dialogType
+  void _defaultAction
   // Markdown New line is 2 spaces + \n
   const newLineMarkdown = "  \n"
   const clearCacheInfo = [
@@ -130,19 +139,19 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
 
   return (
     <div data-testid="stClearCacheDialog">
-      <Modal isOpen onClose={props.onClose}>
+      <Modal isOpen onClose={onClose}>
         <ModalHeader>Clear caches</ModalHeader>
         <ModalBody>
           <StreamlitMarkdown source={clearCacheInfo} allowHTML={false} />
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={BaseButtonKind.GHOST} onClick={props.onClose}>
+          <ModalButton kind={BaseButtonKind.GHOST} onClick={onClose}>
             Cancel
           </ModalButton>
           <ModalButton
             autoFocus
             kind={BaseButtonKind.SECONDARY}
-            onClick={props.confirmCallback}
+            onClick={confirmCallback}
           >
             Clear caches
           </ModalButton>
@@ -153,25 +162,27 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
 }
 
 export interface ScriptCompileErrorProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.SCRIPT_COMPILE_ERROR
   exception: IException | null | undefined
   onClose: PlainEventHandler
 }
 
-function ScriptCompileErrorDialog(
-  props: ScriptCompileErrorProps
-): ReactElement {
+function ScriptCompileErrorDialog({
+  type: _dialogType,
+  exception,
+  onClose,
+}: ScriptCompileErrorProps): ReactElement {
+  void _dialogType
   return (
-    <Modal isOpen onClose={props.onClose} size="auto" autoFocus={false}>
+    <Modal isOpen onClose={onClose} size="auto" autoFocus={false}>
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <StreamlitSyntaxHighlighter showLineNumbers={false} wrapLines={false}>
-          {props.exception?.message ? props.exception.message : "No message"}
+          {exception?.message ? exception.message : "No message"}
         </StreamlitSyntaxHighlighter>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
+        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -186,7 +197,6 @@ interface CommonWarningProps {
 }
 
 export interface WarningProps extends CommonWarningProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.WARNING
 }
 
@@ -197,19 +207,22 @@ export interface ConnectionErrorProps extends CommonWarningProps {
 /**
  * Prints out a warning
  */
-function WarningDialog(
-  props: WarningProps | ConnectionErrorProps
-): ReactElement {
+function WarningDialog({
+  title,
+  msg,
+  onClose,
+  type: _dialogType,
+}: WarningProps | ConnectionErrorProps): ReactElement {
+  void _dialogType
   return (
-    <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>{props.title}</ModalHeader>
-      <ModalBody>{props.msg}</ModalBody>
+    <Modal isOpen onClose={onClose}>
+      <ModalHeader>{title}</ModalHeader>
+      <ModalBody>{msg}</ModalBody>
     </Modal>
   )
 }
 
 interface DeployErrorProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_ERROR
   title: string
   msg: ReactNode
@@ -227,7 +240,9 @@ function DeployErrorDialog({
   onClose,
   onContinue,
   onTryAgain,
+  type: _dialogType,
 }: DeployErrorProps): ReactElement {
+  void _dialogType
   const handlePrimaryButton = (): void => {
     onClose()
 

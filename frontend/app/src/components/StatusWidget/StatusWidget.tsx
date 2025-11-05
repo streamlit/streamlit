@@ -37,7 +37,6 @@ import {
   Tooltip,
   useEmotionTheme,
 } from "@streamlit/lib"
-import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
 import { getConnectionStateUI } from "./getConnectionStateUI"
 import IconRunning from "./IconRunning"
@@ -182,6 +181,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
       }
     }
     if (scriptRunState === ScriptRunState.NOT_RUNNING) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset running animation when script stops
       setShowRunningMan(false)
     }
   }, [scriptRunState, showRunningManAfterInitialDelay, isConnected])
@@ -249,48 +249,61 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     )
   }
 
-  const renderWidget = (): ReactNode => {
+  type ViewKind = "scriptRunning" | "rerunPrompt" | "connectionStatus" | "none"
+
+  const getViewKind = (): ViewKind => {
     if (isConnected) {
       if (
         scriptRunState === ScriptRunState.RUNNING ||
         scriptRunState === ScriptRunState.RERUN_REQUESTED
       ) {
-        // Show scriptIsRunning when the script is actually running,
-        // but also when the user has just requested a re-run.
-        // In the latter case, the server should get around to actually
-        // re-running the script in a second or two, but we can appear
-        // more responsive by claiming it's started immediately.
-        return renderScriptIsRunning()
+        return "scriptRunning"
       }
+
       if (showScriptChangedActions) {
-        return renderRerunScriptPrompt()
+        return "rerunPrompt"
       }
     }
 
-    return renderConnectionStatus()
+    const ui = getConnectionStateUI(connectionState)
+    return ui === undefined ? "none" : "connectionStatus"
+  }
+
+  const renderViewForKind = (kind: ViewKind): ReactNode => {
+    switch (kind) {
+      case "scriptRunning":
+        return renderScriptIsRunning()
+      case "rerunPrompt":
+        return renderRerunScriptPrompt()
+      case "connectionStatus":
+        return renderConnectionStatus()
+      case "none":
+      default:
+        return null
+    }
   }
 
   // The StatusWidget fades in on appear and fades out on disappear.
-  // We keep track of our most recent result from `renderWidget`,
-  // via `this.curView`, so that we can fade out our previous state
-  // if `renderWidget` returns null after returning a non-null value.
-  const curView = useRef<ReactNode>()
-  const prevView = curView.current
-  curView.current = renderWidget()
+  // Keep track of the most recent non-empty view so we can fade it out
+  // after it disappears.
+  const nextViewKind = getViewKind()
+  const [previousNonEmptyViewKind, setPreviousNonEmptyViewKind] =
+    useState<ViewKind>("none")
 
-  if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
+  useEffect(() => {
+    if (nextViewKind !== "none") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- remember last non-empty view for fade-out animation
+      setPreviousNonEmptyViewKind(nextViewKind)
+    }
+  }, [nextViewKind])
+
+  if (nextViewKind === "none" && previousNonEmptyViewKind === "none") {
     return <></>
   }
 
-  let animateIn: boolean
-  let renderView: ReactNode
-  if (notNullOrUndefined(curView.current)) {
-    animateIn = true
-    renderView = curView.current
-  } else {
-    animateIn = false
-    renderView = prevView
-  }
+  const animateIn = nextViewKind !== "none"
+  const viewKindToRender = animateIn ? nextViewKind : previousNonEmptyViewKind
+  const renderView = renderViewForKind(viewKindToRender)
 
   // NB: the `timeout` value here must match the transition
   // times specified in the StatusWidget-*-active CSS classes

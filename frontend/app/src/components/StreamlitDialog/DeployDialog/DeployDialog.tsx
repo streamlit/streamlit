@@ -73,7 +73,6 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 
 export interface DeployDialogProps {
   gitInfo: IGitInfo | null
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
   showDeployError: (
@@ -94,7 +93,9 @@ export function DeployDialog(
     metricsMgr,
     showDeployError,
     isDeployErrorModalOpen,
+    type: _dialogType,
   } = props
+  void _dialogType
   const onClickDeployApp = useCallback((): void => {
     metricsMgr.enqueue("menuClick", {
       label: "deployButtonInDialog",

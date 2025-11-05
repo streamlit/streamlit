@@ -52,7 +52,7 @@ export default tseslint.config([
   // Base recommended configs
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.recommended,
+  reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
   eslintPluginPrettierRecommended,
@@ -104,9 +104,6 @@ export default tseslint.config([
       "react/prop-types": "off",
       // We don't escape entities
       "react/no-unescaped-entities": "off",
-      // Opting into the latest react-compiler rules
-      // @see https://react.dev/blog/2025/04/21/react-compiler-rc
-      "react-hooks/react-compiler": "error",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom/no-flush-sync": "error",
       // This was giving false positives
@@ -325,7 +322,7 @@ export default tseslint.config([
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop

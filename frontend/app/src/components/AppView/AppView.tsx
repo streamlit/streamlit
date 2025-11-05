@@ -168,6 +168,7 @@ function AppView(props: AppViewProps): ReactElement {
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep sidebar visible while new page content loads
       setShowSidebarOverride(true)
     }
   }, [showSidebar, hideSidebarNav, showSidebarOverride])
