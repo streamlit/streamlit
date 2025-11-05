@@ -405,8 +405,7 @@ function DateInput({
                 Root: {
                   style: ({ $isFocused }: { $isFocused: boolean }) => {
                     let borderColor =
-                      theme.colors.widgetBorderColor ??
-                      theme.colors.secondaryBg
+                      colors.widgetBorderColor ?? colors.secondaryBg
                     if ($isFocused) {
                       borderColor = colors.primary
                     }
