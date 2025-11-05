@@ -198,7 +198,7 @@ def _parse_value(
     import pandas as pd
 
     try:
-        if column_data_kind == ColumnDataKind.LIST:
+        if column_data_kind in (ColumnDataKind.LIST, ColumnDataKind.EMPTY):
             return list(value) if is_list_like(value) else [value]  # ty: ignore
 
         if column_data_kind == ColumnDataKind.STRING:
@@ -209,7 +209,7 @@ def _parse_value(
         # This isn't expected to happen.
         if isinstance(value, list):
             raise TypeError(  # noqa: TRY301
-                "List values are only supported by list and string columns."
+                "List values are only supported by list, string and empty columns."
             )
 
         if column_data_kind == ColumnDataKind.INTEGER:
