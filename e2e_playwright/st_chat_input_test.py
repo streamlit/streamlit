@@ -1326,8 +1326,9 @@ def test_chat_input_permission_denied_error(
     mic_button.click()
 
     # Wait for error state to apply by waiting for the tooltip hover target to appear
+    # Firefox may take longer to trigger permission denied and update React state
     hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
-    expect(hover_target).to_be_visible()
+    expect(hover_target).to_be_visible(timeout=10000)
 
     # Hover over the tooltip hover target to show tooltip
     hover_target.hover()
