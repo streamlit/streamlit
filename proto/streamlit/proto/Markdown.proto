@@ -38,4 +38,14 @@ message Markdown {
   Type element_type = 4;
 
   string help = 5;
+
+  // LaTeX delimiter configuration
+  message LaTeXDelimiters {
+    string inline_open = 1;   // e.g., "$" or "\\("
+    string inline_close = 2;  // e.g., "$" or "\\)"
+    string block_open = 3;    // e.g., "$$" or "\\["
+    string block_close = 4;   // e.g., "$$" or "\\]"
+  }
+  
+  LaTeXDelimiters latex_delimiters = 6;
 }

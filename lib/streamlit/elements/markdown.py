@@ -44,6 +44,7 @@ class MarkdownMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        latex_delimiters: tuple[tuple[str, str], tuple[str, str]] | None = None,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -129,6 +130,24 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+
+        latex_delimiters : tuple of tuples or None
+            Custom LaTeX delimiters for inline and block math. If ``None``
+            (default), uses the standard delimiters: ``$`` for inline math
+            and ``$$`` for block math (on separate lines).
+            
+            To support OpenAI/ChatGPT LaTeX format, use::
+            
+                latex_delimiters=((r"\(", r"\)"), (r"\[", r"\]"))
+            
+            The format is: ``((inline_open, inline_close), (block_open, block_close))``
+            
+            Example with custom delimiters::
+            
+                st.markdown(
+                    "Inline: \\(x^2\\) and block: \\[y = mx + b\\]",
+                    latex_delimiters=((r"\(", r"\)"), (r"\[", r"\]"))
+                )
         Examples
         --------
         >>> import streamlit as st
@@ -159,6 +178,13 @@ class MarkdownMixin:
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         if help:
             markdown_proto.help = help
+        
+        if latex_delimiters is not None:
+            inline_delims, block_delims = latex_delimiters
+            markdown_proto.latex_delimiters.inline_open = inline_delims[0]
+            markdown_proto.latex_delimiters.inline_close = inline_delims[1]
+            markdown_proto.latex_delimiters.block_open = block_delims[0]
+            markdown_proto.latex_delimiters.block_close = block_delims[1]
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
@@ -173,6 +199,7 @@ class MarkdownMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        latex_delimiters: tuple[tuple[str, str], tuple[str, str]] | None = None,
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -239,6 +266,13 @@ class MarkdownMixin:
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
             caption_proto.help = help
+        
+        if latex_delimiters is not None:
+            inline_delims, block_delims = latex_delimiters
+            caption_proto.latex_delimiters.inline_open = inline_delims[0]
+            caption_proto.latex_delimiters.inline_close = inline_delims[1]
+            caption_proto.latex_delimiters.block_open = block_delims[0]
+            caption_proto.latex_delimiters.block_close = block_delims[1]
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
