@@ -61,11 +61,21 @@ jobs:
             echo "::error::Unsupported event type: ${{ github.event_name }}"
             exit 1
           fi
+
+          # Validate pr_number is a positive integer
+          if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+            echo "::error::PR number must be a positive integer, got: $pr_number"
+            exit 1
+          fi
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
 
           # Get base ref/SHA for the PR
           # Use base SHA for comparison since Graphite uses special base refs like "graphite-base/12922"
           base_sha=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.sha')
+          if [[ -z "$base_sha" ]]; then
+            echo "::error::Failed to retrieve base SHA for PR #$pr_number"
+            exit 1
+          fi
           echo "base_ref=$base_sha" >> "$GITHUB_OUTPUT"
 
           # Build JSON array for matrix

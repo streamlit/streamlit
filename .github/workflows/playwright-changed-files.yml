@@ -41,7 +41,7 @@ on:
 # Concurrency control: cancel duplicate runs on same branch
 # When called via workflow_call with iteration input, include it to allow parallel matrix runs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.iteration }}-playwright-changed-files
+  group: ${{ github.workflow }}-${{ github.ref }}${{ inputs.iteration && format('-{0}', inputs.iteration) || '' }}-playwright-changed-files
   cancel-in-progress: true
 
 jobs:
@@ -81,8 +81,8 @@ jobs:
           BASE_REF: ${{ inputs.base_ref || 'develop' }}
         run: |
           # Fetch base branch/SHA for comparison
-          # If BASE_REF looks like a branch name (no slashes or is develop/main), fetch it
-          if [[ "$BASE_REF" == "develop" ]] || [[ "$BASE_REF" == "main" ]] || [[ "$BASE_REF" != */* ]]; then
+          # If BASE_REF is not a SHA (not 40 hex chars), fetch it as a branch name
+          if [[ ! "$BASE_REF" =~ ^[0-9a-f]{40}$ ]]; then
             git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
           fi
           # If it's a SHA, git already has it (we used fetch-depth: 0)
