@@ -20,7 +20,7 @@ import collections
 import io
 import threading
 import uuid
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, BinaryIO, Final, TextIO
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -247,7 +247,7 @@ class MediaFileManager:
 
     def add_deferred(
         self,
-        data_callable: Callable[[], bytes | str],
+        data_callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase],
         mimetype: str,
         coordinates: str,
         file_name: str | None = None,
@@ -261,7 +261,7 @@ class MediaFileManager:
 
         Parameters
         ----------
-        data_callable : Callable[[], bytes | str]
+        data_callable : Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
             A callable that returns the file data when invoked.
         mimetype : str
             The mime type for the file. E.g. "text/csv".
