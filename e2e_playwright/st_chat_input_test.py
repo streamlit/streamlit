@@ -1325,14 +1325,14 @@ def test_chat_input_permission_denied_error(
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
     mic_button.click()
 
-    # Wait for error state to apply
-    app_with_microphone_permission_denied.wait_for_timeout(500)
+    # Wait for error state to apply by waiting for the tooltip hover target to appear
+    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(hover_target).to_be_visible()
 
     # Verify mic button shows error state (red color)
     expect(mic_button).to_be_visible()
 
     # Hover over the tooltip hover target to show tooltip
-    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
     hover_target.hover()
 
     # Verify tooltip appears with error message
