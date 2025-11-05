@@ -153,6 +153,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.LIST,
                 ["foo"],
             ),
+            (
+                ["foo"],
+                ColumnDataKind.EMPTY,
+                ["foo"],
+            ),
         ]
     )
     def test_parse_value(
