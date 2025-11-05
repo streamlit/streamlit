@@ -832,6 +832,7 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  latexDelimiters,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -852,6 +853,7 @@ const StreamlitMarkdown: FC<Props> = ({
         allowHTML={allowHTML}
         isLabel={isLabel}
         disableLinks={disableLinks}
+        latexDelimiters={latexDelimiters}
       />
     </StyledStreamlitMarkdown>
   )
