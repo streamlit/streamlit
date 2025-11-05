@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Union
+from typing import TYPE_CHECKING, TypeAlias
 
 import streamlit.watcher
 from streamlit import cli_util, config, env_util
 from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 # local_sources_watcher.py caches the return value of
@@ -45,11 +48,11 @@ class NoOpPathWatcher:
 # EventBasedPathWatcher will be a stub and have no functional
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
-PathWatcherType = Union[
-    type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"],
-    type[PollingPathWatcher],
-    type[NoOpPathWatcher],
-]
+PathWatcherType: TypeAlias = (
+    type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"]
+    | type[PollingPathWatcher]
+    | type[NoOpPathWatcher]
+)
 
 
 def _is_watchdog_available() -> bool:

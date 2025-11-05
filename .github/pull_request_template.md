@@ -1,6 +1,6 @@
 ## Describe your changes
 
-<!-- If it's a visual change, please include a screenshot or video! -->
+## Screenshot or video (only for visual changes)
 
 ## GitHub Issue Link (if applicable)
 

@@ -24,13 +24,16 @@ import secrets
 import threading
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Config System Global State #
 
@@ -1188,15 +1191,19 @@ _create_theme_options(
     "base",
     categories=["theme"],
     description="""
-        The preset Streamlit theme that your custom theme inherits from, or a path/URL to a theme file.
+        The theme that your custom theme inherits from.
 
         This can be one of the following:
-        - "light" or "dark" (preset themes)
-        - A local file path to a .toml theme file (e.g., "themes/custom.toml")
-        - A URL to a .toml theme file (e.g., "https://example.com/theme.toml")
+        - "light": Streamlit's default light theme.
+        - "dark": Streamlit's default dark theme.
+        - A local file path to a TOML theme file: A local custom theme, like
+          "themes/custom.toml".
+        - A URL to a TOML theme file: An externally hosted custom theme, like
+          "https://example.com/theme.toml".
 
-        When using a theme file, it should contain a [theme] section with theme options.
-        Any options also set in config.toml will override the theme file values.
+        A TOML theme file must contain a [theme] table with theme options.
+        Any theme options defined in the app's config.toml file will override
+        those defined in the TOML theme file.
     """,
 )
 
@@ -1719,6 +1726,8 @@ _create_theme_options(
     ],
     description="""
         Color used for all links.
+
+        This defaults to the resolved value of `blueTextColor`.
     """,
 )
 
@@ -1751,10 +1760,7 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        By default, this is "#158237" for light theme and "#5ce488" for dark theme.
-
-        If this config is not provided, it will use the greenTextColor config value, or the
-        value derived from the greenColor config.
+        This defaults to the resolved value of `greenTextColor`.
     """,
 )
 

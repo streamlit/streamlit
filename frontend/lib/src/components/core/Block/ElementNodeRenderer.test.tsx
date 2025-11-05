@@ -25,6 +25,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { ScriptRunState } from "~lib/ScriptRunState"
@@ -82,6 +83,7 @@ function getProps(
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
+    componentRegistry: new ComponentRegistry(endpoints),
     ...props,
   }
 }
@@ -94,8 +96,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -113,7 +117,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>
@@ -134,8 +138,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -152,7 +158,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>

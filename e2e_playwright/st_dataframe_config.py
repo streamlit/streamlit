@@ -417,11 +417,9 @@ st.dataframe(
             help="This is a progress column",
         ),
         "col_1": st.column_config.ProgressColumn(
-            format="$%f", min_value=0, max_value=1000
+            format="$%f", min_value=0, max_value=1000, color="blue"
         ),
-        "col_2": st.column_config.ProgressColumn(
-            step=0.0001,
-        ),
+        "col_2": st.column_config.ProgressColumn(step=0.0001, color="auto"),
     },
     width="content",
     hide_index=True,

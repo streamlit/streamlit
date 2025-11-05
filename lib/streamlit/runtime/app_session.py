@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -51,6 +51,8 @@ from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache

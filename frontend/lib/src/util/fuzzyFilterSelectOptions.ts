@@ -42,6 +42,6 @@ export function fuzzyFilterSelectOptions<T extends LabeledOption>(
     filteredOptions,
     // Use the negative score to sort the list in a stable manner
     // This ensures highest score is first
-    (opt: T) => -score(pattern, opt.label, true)
+    (opt: T) => -score(pattern, opt.label)
   )
 }

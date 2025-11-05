@@ -22,14 +22,13 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -52,6 +51,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
     validate_height,
@@ -89,18 +89,11 @@ _LOGGER: Final = _logger.get_logger(__name__)
 # formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
     "EditableData",
-    bound=Union[
-        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        tuple[Any],
-        list[Any],
-        set[Any],
-        dict[str, Any],
-        # TODO(lukasmasuch): Add support for np.ndarray
-        # but it is not possible with np.ndarray.
-        # NDArray[Any] works, but is only available in numpy>1.20.
-        # TODO(lukasmasuch): Add support for pa.Table typing
-        # pa.Table does not work since it is a C-based class resulting in Any
-    ],
+    bound=dataframe_util.DataFrameGenericAlias[Any]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any],
 )
 
 
@@ -603,7 +596,7 @@ class DataEditorMixin:
         data: EditableData,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -624,7 +617,7 @@ class DataEditorMixin:
         data: Any,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -645,7 +638,7 @@ class DataEditorMixin:
         data: DataTypes,
         *,
         width: Width = "stretch",
-        height: int | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -697,16 +690,26 @@ class DataEditorMixin:
               the parent container, the width of the editor matches the width
               of the parent container.
 
-        height : int or "auto"
+        height : int, "auto", "content", or "stretch"
             The height of the data editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"stretch"``: The height of the editor expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The editor will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
 
-            Vertical scrolling within the data editor is enabled when the
-            height does not accommodate all rows.
+            Vertical scrolling within the editor is enabled when the height
+            does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -907,8 +910,8 @@ class DataEditorMixin:
         validate_width(width, allow_content=True)
         validate_height(
             height,
-            allow_content=False,
-            allow_stretch=False,
+            allow_content=True,
+            allow_stretch=True,
             additional_allowed=["auto"],
         )
 

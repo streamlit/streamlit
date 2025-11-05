@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
@@ -27,6 +27,8 @@ from streamlit.runtime.session_manager import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager

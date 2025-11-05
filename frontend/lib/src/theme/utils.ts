@@ -25,6 +25,7 @@ import {
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
 import merge from "lodash/merge"
+import mergeWith from "lodash/mergeWith"
 import once from "lodash/once"
 import { getLogger } from "loglevel"
 
@@ -56,6 +57,9 @@ import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
+export const CUSTOM_THEME_LIGHT_NAME = "Custom Theme Light"
+export const CUSTOM_THEME_DARK_NAME = "Custom Theme Dark"
+export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
@@ -97,9 +101,15 @@ export const getMergedDarkTheme = once(() =>
   mergeTheme(darkTheme, window.__streamlit?.DARK_THEME)
 )
 
-export const getSystemTheme = (): ThemeConfig => {
+export const getSystemThemePreference = (): "light" | "dark" => {
   return window.matchMedia &&
     window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light"
+}
+
+export const getSystemTheme = (): ThemeConfig => {
+  return getSystemThemePreference() === "dark"
     ? getMergedDarkTheme()
     : getMergedLightTheme()
 }
@@ -1210,5 +1220,241 @@ export const convertRemToPx = (scssValue: string): number => {
     remValue *
     // We fallback to 16px if the fontSize is not defined (should only happen in tests)
     (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+  )
+}
+
+/**
+ * Customizer function for lodash mergeWith that skips protobuf default values
+ * (empty strings, null, empty arrays) to prevent them from overwriting valid values.
+ * @returns objValue (keep existing value) if srcValue is a protobuf default, undefined otherwise
+ */
+const skipProtobufDefaults = (
+  objValue: unknown,
+  srcValue: unknown
+): unknown => {
+  // Exclude empty strings, empty arrays, and null values
+  if (
+    srcValue === "" ||
+    srcValue === null ||
+    (Array.isArray(srcValue) && srcValue.length === 0)
+  ) {
+    return objValue
+  }
+  // Let mergeWith handle all other cases normally
+  return undefined
+}
+
+/**
+ * Helper function to merge theme section configs (light/dark and light.sidebar/dark.sidebar)
+ * into a consolidated theme input with proper inheritance.
+ * Custom Light theme = uses streamlit base theme + [theme] configs + [theme.light] config overrides
+ * Custom Dark theme = uses streamlit base theme + [theme] configs + [theme.dark] config overrides
+ * Sidebar inherits from main theme with additional [theme.sidebar] overrides
+ * Light sidebar = custom light theme + [theme.sidebar] + [theme.light.sidebar] overrides
+ * Dark sidebar = custom dark theme + [theme.sidebar] + [theme.dark.sidebar] overrides
+ * @param themeInput: the theme input (configs) to merge
+ * @param variant: the theme variant to create ('light' or 'dark')
+ */
+export const handleSectionInheritance = (
+  themeInput: CustomThemeConfig,
+  variant: "light" | "dark"
+): CustomThemeConfig => {
+  const isLightTheme = variant === "light"
+  const base = isLightTheme
+    ? CustomThemeConfig.BaseTheme.LIGHT
+    : CustomThemeConfig.BaseTheme.DARK
+
+  // Destructure to separate concerns: common theme properties, sidebar properties,
+  // and light or dark variant sections
+  const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
+  const variantSection = isLightTheme ? light : dark
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
+
+  // Merge common theme properties with variant overrides (excluding sidebars for now)
+  // Note: base is set explicitly based on variant and is merged last to ensure it overrides
+  // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
+  const result = mergeWith(
+    {} as CustomThemeConfig,
+    commonTheme, // Common theme properties from themeInput
+    variantTheme, // Variant-specific theme overrides (without sidebar)
+    { base }, // Set base last to override any base from commonTheme/variantTheme
+    skipProtobufDefaults
+  )
+
+  // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
+  if (baseSidebar || variantSidebar) {
+    // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
+    result.sidebar = mergeWith(
+      {},
+      baseSidebar,
+      variantSidebar,
+      skipProtobufDefaults
+    )
+  }
+
+  return result
+}
+
+/**
+ * Check if a theme section has any non-null/undefined values set.
+ * Checks one level deep for nested objects (e.g., sidebar within light/dark sections).
+ * Treats empty arrays as "no config" since they represent default values.
+ * @param section: The theme section to check (e.g., themeInput.light or themeInput.dark)
+ * @returns true if the section has any actual values set
+ */
+export const hasThemeSectionConfigs = (
+  section: ICustomThemeConfig | null | undefined
+): boolean => {
+  if (!section) {
+    return false
+  }
+
+  // Helper to check if a value is non-empty (recursively checks one level deep)
+  const isNonEmpty = (value: unknown): boolean => {
+    if (value === null || value === undefined) {
+      return false
+    }
+    // Empty arrays are treated as "no config" (they're default values)
+    if (Array.isArray(value)) {
+      return value.length > 0
+    }
+    // Check nested objects one level deep (e.g., sidebar subsection)
+    if (typeof value === "object") {
+      return Object.values(value).some(isNonEmpty)
+    }
+    return true
+  }
+
+  return Object.values(section).some(isNonEmpty)
+}
+
+/**
+ * Create custom themes from the theme input for main app
+ * Function applies merge of sections/subsections and returns custom light/dark theme(s)
+ * When no light/dark section configs are set, returns "Custom Theme" (1 theme)
+ * When light and/or dark section configs are set, returns "Custom Theme Light", "Custom Theme Dark"
+ * & auto based on system preference ("Use System Setting") (3 themes)
+ * @param themeInput: the theme input (configs) with nested sections/subsections
+ * @returns 1 or 3 custom themes
+ */
+export const createCustomThemes = (
+  themeInput: CustomThemeConfig
+): ThemeConfig[] => {
+  const hasLightConfigs = hasThemeSectionConfigs(themeInput.light)
+  const hasDarkConfigs = hasThemeSectionConfigs(themeInput.dark)
+
+  const customThemes: ThemeConfig[] = []
+
+  // When light or dark theme section configs are set, need to create a custom theme for each
+  if (hasLightConfigs || hasDarkConfigs) {
+    const lightThemeInput = handleSectionInheritance(themeInput, "light")
+    const lightTheme = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput),
+      displayName: "Light",
+    }
+
+    const darkThemeInput = handleSectionInheritance(themeInput, "dark")
+    const darkTheme = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput),
+      displayName: "Dark",
+    }
+
+    // Also add an auto custom theme based on the system preference
+    const autoCustomTheme =
+      getSystemThemePreference() === "dark" ? darkTheme : lightTheme
+    const autoTheme = {
+      ...autoCustomTheme,
+      displayName: AUTO_THEME_NAME,
+      name: CUSTOM_THEME_AUTO_NAME,
+    }
+    // Return light, dark, and auto custom themes
+    customThemes.push(lightTheme, darkTheme, autoTheme)
+  } else {
+    // No light/dark section configs set - single "Custom Theme" returned
+    const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+    // Return the single custom theme
+    customThemes.push(customTheme)
+  }
+
+  return customThemes
+}
+
+/**
+ * Set the default heading font sizes for the sidebar.
+ * @param configHeadingFontSizes: the heading font sizes provided via theme config
+ * @returns the heading font sizes for the sidebar
+ */
+const setSidebarHeadingFontSizes = (
+  configHeadingFontSizes: string[] | null | undefined
+): string[] => {
+  // Default sidebar heading font sizes
+  const defaultHeadingFontSizes = [
+    "1.5rem",
+    "1.25rem",
+    "1.125rem",
+    "1rem",
+    "0.875rem",
+    "0.75rem",
+  ]
+
+  // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
+}
+
+/**
+ * Create the sidebar's theme, including any sidebar custom theme configurations
+ * Note: handleSectionInheritance has already handled section inheritance for sidebar
+ * in generating the main theme.
+ * @returns active theme to be used for the sidebar
+ */
+export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
+  const sidebarThemeInput = activeTheme.themeInput?.sidebar
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+
+  // Either use the configured background color or secondary background from main theme:
+  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+
+  // Either use the configured secondary background color or background from main theme:
+  const secondaryBackgroundColor =
+    sidebarThemeInput?.secondaryBackgroundColor || bgColor
+
+  // Handle configured vs. default header font sizes for sidebar
+  const headingFontSizes = setSidebarHeadingFontSizes(
+    sidebarThemeInput?.headingFontSizes
+  )
+
+  let baseTheme =
+    getLuminance(sidebarBackground) > 0.5
+      ? CustomThemeConfig.BaseTheme.LIGHT
+      : CustomThemeConfig.BaseTheme.DARK
+
+  // If the active theme is a light/dark custom theme, use the expected base
+  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+    baseTheme = CustomThemeConfig.BaseTheme.LIGHT
+  } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
+    baseTheme = CustomThemeConfig.BaseTheme.DARK
+  }
+
+  // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
+  const mergedSidebarThemeInput = mergeWith(
+    {},
+    activeTheme.themeInput, // Use the theme props from the main theme as basis
+    sidebarThemeInput, // Merge sidebar configs
+    {
+      // Explicit overrides that should always be applied
+      base: baseTheme,
+      backgroundColor: sidebarBackground,
+      secondaryBackgroundColor: secondaryBackgroundColor,
+      headingFontSizes: headingFontSizes,
+    },
+    skipProtobufDefaults
+  )
+
+  // Create the theme with overrides
+  return createTheme(
+    "Sidebar",
+    mergedSidebarThemeInput,
+    undefined, // Creating a new theme from scratch
+    true // inSidebar
   )
 }

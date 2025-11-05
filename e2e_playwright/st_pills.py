@@ -18,13 +18,6 @@ import streamlit as st
 
 st.header("Pills - standard")
 
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_pills = ["🧰 General widgets", "📊 Charts", "🧊 3D"]
-else:
-    st.session_state.default_pills = []
-
-default = st.session_state.default_pills
-
 pills_options = [
     "🧰 General widgets",
     "📊 Charts",
@@ -51,7 +44,6 @@ s1 = st.pills(
     pills_options,
     key="pills",
     selection_mode="multi",
-    default=default,
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {s1}")
@@ -176,3 +168,62 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_pills = ["🧰 General widgets", "🎥 Video"]
+else:
+    st.session_state.default_pills = []
+
+default = st.session_state.default_pills
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.pills(
+    "Pills with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_pills,
+)
+st.write("Pills with default options:", str(val))
+
+if st.toggle("Update pills props"):
+    dyn_val = st.pills(
+        "Updated dynamic pills",
+        key="dynamic_pills_with_key",
+        help="updated help",
+        width=300,
+        default="banana",
+        on_change=lambda a, param: print(
+            f"Updated pills - callback triggered: {a} {param}"
+        ),
+        args=("Updated pills arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated pills value:", dyn_val)
+else:
+    dyn_val = st.pills(
+        "Initial dynamic pills",
+        key="dynamic_pills_with_key",
+        help="initial help",
+        width="content",
+        default="apple",
+        on_change=lambda a, param: print(
+            f"Initial pills - callback triggered: {a} {param}"
+        ),
+        args=("Initial pills arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial pills value:", dyn_val)

@@ -23,12 +23,10 @@ from typing import (
     Any,
     Final,
     Literal,
-    Union,
+    TypeAlias,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -65,21 +63,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 # Type for things that point to a specific time (even if a default time, though not None).
-TimeValue: TypeAlias = Union[time, datetime, str, Literal["now"]]
+TimeValue: TypeAlias = time | datetime | str | Literal["now"]
 
 # Type for things that point to a specific date (even if a default date, including None).
-NullableScalarDateValue: TypeAlias = Union[date, datetime, str, Literal["today"], None]
+NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | None
 
 # The accepted input value for st.date_input. Can be a date scalar or a date range.
-DateValue: TypeAlias = Union[NullableScalarDateValue, Sequence[NullableScalarDateValue]]
+DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValue]
 
 # The return value of st.date_input.
-DateWidgetRangeReturn: TypeAlias = Union[
-    tuple[()],
-    tuple[date],
-    tuple[date, date],
-]
-DateWidgetReturn: TypeAlias = Union[date, DateWidgetRangeReturn, None]
+DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
+DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 
 DEFAULT_STEP_MINUTES: Final = 15

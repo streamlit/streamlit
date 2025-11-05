@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
 
-from typing_extensions import NotRequired, TypeAlias
+from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import StreamlitValueError
@@ -29,7 +29,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -45,7 +45,7 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
-ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
+ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -83,11 +83,7 @@ ThemeColor: TypeAlias = Literal[
 ]
 
 # Color options for chart columns:
-ChartColor: TypeAlias = Union[
-    Literal["auto", "auto-inverse"],
-    ThemeColor,
-    str,
-]
+ChartColor: TypeAlias = Literal["auto", "auto-inverse"] | ThemeColor | str
 
 
 def _validate_chart_color(maybe_color: str) -> None:
@@ -135,7 +131,7 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
-SelectboxOptionValue: TypeAlias = Union[str, int, float, bool]
+SelectboxOptionValue: TypeAlias = str | int | float | bool
 
 
 class SelectboxOption(TypedDict):
@@ -229,6 +225,7 @@ class ProgressColumnConfig(TypedDict):
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -2459,6 +2456,7 @@ def ProgressColumn(
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2541,6 +2539,19 @@ def ProgressColumn(
         Setting ``step`` for float columns will ensure a consistent number of
         digits after the decimal are displayed.
 
+    color : "auto", "auto-inverse", str, or None
+        The color to use for the chart. This can be one of the following:
+
+        - ``None`` (default): The primary color is used.
+        - ``"auto"``: If the value is more than half, the bar is green; if the
+          value is less than half, the bar is red.
+        - ``"auto-inverse"``: If the value is more than half, the bar is red;
+          if the value is less than half, the bar is green.
+        - A single color value that is applied to all charts in the column.
+          In addition to the basic color palette (red, orange, yellow, green,
+          blue, violet, gray/grey, and primary), this supports hex codes like
+          ``"#483d8b"``.
+
     Examples
     --------
     >>> import pandas as pd
@@ -2571,6 +2582,9 @@ def ProgressColumn(
         height: 300px
     """  # noqa: E501
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -2582,6 +2596,7 @@ def ProgressColumn(
             min_value=min_value,
             max_value=max_value,
             step=step,
+            color=color,
         ),
     )
 

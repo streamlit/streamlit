@@ -38,6 +38,9 @@ from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
 from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
+from streamlit.web.server.bidi_component_request_handler import (
+    BidiComponentRequestHandler,
+)
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
@@ -133,6 +136,7 @@ UNIX_SOCKET_PREFIX: Final = "unix://"
 # as the endpoints in frontend/connection/src/DefaultStreamlitEndpoints
 MEDIA_ENDPOINT: Final = "/media"
 COMPONENT_ENDPOINT: Final = "/component"
+BIDI_COMPONENT_ENDPOINT: Final = "/_stcore/bidi-components"
 STATIC_SERVING_ENDPOINT: Final = "/app/static"
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
@@ -394,6 +398,11 @@ class Server:
                 make_url_path_regex(base, f"{COMPONENT_ENDPOINT}/(.*)"),
                 ComponentRequestHandler,
                 {"registry": self._runtime.component_registry},
+            ),
+            (
+                make_url_path_regex(base, f"{BIDI_COMPONENT_ENDPOINT}/(.*)"),
+                BidiComponentRequestHandler,
+                {"component_manager": self._runtime.bidi_component_registry},
             ),
         ]
 

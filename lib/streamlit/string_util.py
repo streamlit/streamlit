@@ -19,9 +19,7 @@ import fractions
 import numbers
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union
 
 from streamlit.errors import StreamlitAPIException
 

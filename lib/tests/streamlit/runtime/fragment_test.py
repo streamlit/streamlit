@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Callable
+from collections.abc import Callable
 from unittest.mock import MagicMock, patch
 
 import pytest

@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_text_area,
 )
 
-NUM_TEXT_AREAS = 24
+NUM_TEXT_AREAS = 25
 
 
 def test_text_area_widget_rendering(
@@ -93,6 +93,11 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     # Expect this to default to the minimum height of 68px
     assert_snapshot(
         get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
+    )
+    # gh-12867: Test very small height that produces negative calculation
+    # Should clamp to 0px and use minHeight (68px)
+    assert_snapshot(
+        get_text_area(app, "text area 13.5 (height=10)"), name="st_text_area-height_10"
     )
     assert_snapshot(
         get_text_area(app, "text area 17 (width=200px)"),

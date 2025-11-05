@@ -16,10 +16,10 @@
 
 import { useContext } from "react"
 
-import { LibContext, useWindowDimensionsContext } from "@streamlit/lib"
+import { ThemeContext, useWindowDimensionsContext } from "@streamlit/lib"
 
 export const useViewportSize = (): { isMobile: boolean } => {
-  const { activeTheme } = useContext(LibContext)
+  const { activeTheme } = useContext(ThemeContext)
   const { innerWidth } = useWindowDimensionsContext()
 
   const breakpoint = parseInt(activeTheme.emotion.breakpoints.md, 10)

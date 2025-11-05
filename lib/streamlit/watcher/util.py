@@ -23,13 +23,13 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5

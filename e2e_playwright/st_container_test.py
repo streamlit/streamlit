@@ -124,6 +124,10 @@ def test_dimensions_are_correctly_applied(
     stretch_width_container.scroll_into_view_if_needed()
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
 
+    content_width_container = get_element_by_key(app, "container_with_content_width")
+    content_width_container.scroll_into_view_if_needed()
+    assert_snapshot(content_width_container, name="st_container-content_width")
+
     stretch_height_container = get_element_by_key(
         app, "container_with_stretch_height_container_inside"
     )

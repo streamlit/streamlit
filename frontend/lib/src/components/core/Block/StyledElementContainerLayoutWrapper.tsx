@@ -80,23 +80,17 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow"
+    "width" | "height" | "overflow" | "minWidth" | "flex"
   > & {
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
-  let minStretchBehavior: MinFlexElementWidth = "fit-content"
-  if (
-    isInHorizontalLayout &&
-    LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  let minStretchBehavior: MinFlexElementWidth
+  if (LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (
-    isInHorizontalLayout &&
-    MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "8rem"
   }
 
@@ -139,12 +133,10 @@ export const StyledElementContainerLayoutWrapper: FC<
         flex: "",
       }
     } else if (node.element.type === "arrowVegaLiteChart") {
-      if (node.element.widthConfig?.useContent) {
-        // This is necessary due to the read-only grid feature because the dataframe
-        // does not render correctly if it has a parent with fit-content styling which
-        // is the default for width.
-        // TODO (lawilby): Investigate if we can alter dataframes so that we
-        // don't need this.
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // VegaLite charts with embedded dataframes need a defined parent width
+        // (not fit-content) for proper measurement and rendering due to the resize feature.
+        // Resize is disabled in nested containers, so this is only necessary in the root container.
         styles.width = "100%"
       }
       if (isInHorizontalLayout && !node.element.widthConfig) {
@@ -153,15 +145,26 @@ export const StyledElementContainerLayoutWrapper: FC<
       }
       return styles
     } else if (node.element.type === "arrowDataFrame") {
-      if (node.element.widthConfig?.useContent) {
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // Resizable dataframes measure parent container width for the resize feature.
+        // Parent needs defined width (not fit-content) for measurement to work.
+        // Only needed in root where resize is enabled; disabled in nested containers.
         styles.width = "100%"
       }
       return styles
     } else if (node.element.type === "imgs") {
-      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component,
-      // and here set the width to auto.
+      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component.
       // This also covers st.pyplot() which is a special case of st.image.
-      styles.width = "auto"
+      //
+      // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
+      // Use "100%" when using stretch or when no width config is set to ensure container has dimensions for width calculation (#12678).
+      //
+      // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
+      // This is consistent with how useLayoutStyles handles missing config for other elements.
+      const isUsingStretch =
+        !node.element.widthConfig || node.element.widthConfig.useStretch
+
+      styles.width = isUsingStretch ? "100%" : "auto"
     }
 
     return styles
@@ -169,6 +172,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.type,
     node.element.heightConfig?.useStretch,
     isInHorizontalLayout,
+    isInRoot,
     node.element.widthConfig,
   ])
 
