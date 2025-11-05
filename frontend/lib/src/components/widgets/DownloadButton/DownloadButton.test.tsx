@@ -200,7 +200,7 @@ describe("DownloadButton widget", () => {
       const mockRequestDeferredFile = vi.fn().mockResolvedValue({
         url: "/media/generated_file",
         errorMsg: undefined,
-      })
+      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
 
       const props = getProps(
         {
@@ -230,16 +230,19 @@ describe("DownloadButton widget", () => {
 
     it("shows loading state during deferred download", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn(
+      const mockRequestDeferredFile = vi.fn().mockImplementation(
         () =>
           new Promise(resolve =>
             setTimeout(
               () =>
-                resolve({ url: "/media/generated_file", errorMsg: undefined }),
+                resolve({
+                  url: "/media/generated_file",
+                  errorMsg: undefined,
+                }),
               100
             )
           )
-      )
+      ) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
 
       const props = getProps(
         {
@@ -274,7 +277,7 @@ describe("DownloadButton widget", () => {
       const mockRequestDeferredFile = vi.fn().mockResolvedValue({
         url: "",
         errorMsg: "Callable execution failed: Test error",
-      })
+      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
 
       const props = getProps(
         {
@@ -304,7 +307,9 @@ describe("DownloadButton widget", () => {
       const user = userEvent.setup()
       const mockRequestDeferredFile = vi
         .fn()
-        .mockRejectedValue(new Error("Network error"))
+        .mockRejectedValue(new Error("Network error")) as (
+        fileId: string
+      ) => Promise<{ url: string; errorMsg?: string }>
 
       const props = getProps(
         {
@@ -334,7 +339,7 @@ describe("DownloadButton widget", () => {
       const mockRequestDeferredFile = vi.fn().mockResolvedValue({
         url: "",
         errorMsg: "Test error",
-      })
+      }) as (fileId: string) => Promise<{ url: string; errorMsg?: string }>
 
       const props = getProps(
         {
