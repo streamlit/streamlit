@@ -25,7 +25,10 @@ import pytest
 import streamlit as st
 from streamlit import _main as st_main
 from streamlit.components.v2.bidi_component.constants import EVENT_DELIM
-from streamlit.components.v2.bidi_component.main import _make_trigger_id
+from streamlit.components.v2.bidi_component.main import (
+    BidiComponentMixin,
+    _make_trigger_id,
+)
 from streamlit.components.v2.bidi_component.state import BidiComponentResult
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
@@ -33,6 +36,7 @@ from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
     StreamlitAPIException,
 )
+from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -1024,6 +1028,211 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         # Verify complex values are properly set
         assert result["list_state"] == complex_list
         assert result["dict_state"] == complex_dict
+
+
+class BidiComponentIdentityTest(DeltaGeneratorTestCase):
+    """Validate CCv2 identity rules for keyed and unkeyed instances."""
+
+    def setUp(self):
+        super().setUp()
+        self.manager = BidiComponentManager()
+        runtime = Runtime.instance()
+        if runtime is None:
+            raise RuntimeError("Runtime.instance() returned None in test setup.")
+        runtime.bidi_component_registry = self.manager
+        self.manager.register(
+            BidiComponentDefinition(name="ident", js="console.log('hi');")
+        )
+
+    def _clear_widget_registrations_for_current_run(self) -> None:
+        """Allow re-registering the same id within the same run for testing keyed stability."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.widget_user_keys_this_run.clear()
+        ctx.widget_ids_this_run.clear()
+
+    def _render_and_get_id(self) -> str:
+        delta = self.get_delta_from_queue()
+        return delta.new_element.bidi_component.id
+
+    def test_unkeyed_id_changes_when_json_data_changes(self):
+        """Without a user key, changing JSON data must change the backend id."""
+        st._bidi_component("ident", data={"x": 1})
+        id1 = self._render_and_get_id()
+
+        st._bidi_component("ident", data={"x": 2})
+        id2 = self._render_and_get_id()
+
+        assert id1 != id2
+
+    def test_unkeyed_id_changes_when_bytes_change(self):
+        """Without a user key, changing bytes must change the backend id."""
+        st._bidi_component("ident", data=b"abc")
+        id1 = self._render_and_get_id()
+
+        st._bidi_component("ident", data=b"abcd")
+        id2 = self._render_and_get_id()
+
+        assert id1 != id2
+
+    def test_unkeyed_id_changes_when_arrow_data_changes(self):
+        """Without a user key, changing dataframe content must change the backend id."""
+
+        st._bidi_component("ident", data=pd.DataFrame({"a": [1, 2]}))
+        id1 = self._render_and_get_id()
+
+        st._bidi_component("ident", data=pd.DataFrame({"a": [1, 3]}))
+        id2 = self._render_and_get_id()
+
+        assert id1 != id2
+
+    def test_unkeyed_id_changes_when_mixed_blobs_change(self):
+        """Without a user key, MixedData blob fingerprint differences must change id."""
+
+        st._bidi_component("ident", data={"df": pd.DataFrame({"x": [1]})})
+        id1 = self._render_and_get_id()
+
+        st._bidi_component("ident", data={"df": pd.DataFrame({"x": [2]})})
+        id2 = self._render_and_get_id()
+
+        assert id1 != id2
+
+    def test_keyed_id_stable_when_data_changes_json(self):
+        """With a user key, changing JSON data must NOT change the backend id (same run)."""
+        st._bidi_component("ident", key="K", data={"v": 1})
+        id1 = self._render_and_get_id()
+
+        # Allow re-registering the same id in the same run for test purposes
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component("ident", key="K", data={"v": 2})
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_keyed_id_stable_when_mixed_data_changes(self):
+        """With a user key, changing MixedData (JSON + blobs) must NOT change the backend id (same run)."""
+
+        st._bidi_component(
+            "ident", key="MIX", data={"df": pd.DataFrame({"a": [1]}), "m": {"x": 1}}
+        )
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component(
+            "ident", key="MIX", data={"df": pd.DataFrame({"a": [2]}), "m": {"x": 2}}
+        )
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_unkeyed_id_stable_when_arrow_data_unchanged(self):
+        """Without a user key, unchanged dataframe content must keep the same backend id (no needless churn)."""
+
+        df1 = pd.DataFrame({"a": [1, 2, 3]})
+        st._bidi_component("ident", data=df1)
+        id1 = self._render_and_get_id()
+
+        # Allow re-registering the same id in this run for stability assertion
+        self._clear_widget_registrations_for_current_run()
+
+        # New DataFrame object with identical content
+        df2 = pd.DataFrame({"a": [1, 2, 3]})
+        st._bidi_component("ident", data=df2)
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_unkeyed_id_stable_when_mixed_data_unchanged(self):
+        """Without a user key, unchanged MixedData must keep the same backend id (no needless churn)."""
+
+        mixed1 = {"df": pd.DataFrame({"x": [1, 2]}), "meta": {"k": "v"}}
+        st._bidi_component("ident", data=mixed1)
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        # New objects but same serialized content and key order
+        mixed2 = {"df": pd.DataFrame({"x": [1, 2]}), "meta": {"k": "v"}}
+        st._bidi_component("ident", data=mixed2)
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_keyed_id_stable_when_data_changes_arrow(self):
+        """With a user key, changing Arrow/mixed data must NOT change the backend id (same run)."""
+
+        st._bidi_component("ident", key="ARW", data=pd.DataFrame({"a": [1]}))
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component("ident", key="ARW", data=pd.DataFrame({"a": [2]}))
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_identity_kwargs_raises_on_unhandled_oneof(self):
+        """_build_bidi_identity_kwargs should raise if an unknown oneof is encountered."""
+        mixin = BidiComponentMixin()
+
+        class DummyProto:
+            def WhichOneof(self, name: str) -> str:
+                return "new_unhandled_field"
+
+        with pytest.raises(
+            RuntimeError, match=r"Unhandled BidiComponent\.data oneof field"
+        ):
+            mixin._build_bidi_identity_kwargs(
+                component_name="cmp",
+                isolate_styles=True,
+                width="stretch",
+                height="content",
+                proto=DummyProto(),  # type: ignore[arg-type]
+            )
+
+    def test_identity_kwargs_mixed_blob_keys_are_sorted(self):
+        """When computing identity, mixed arrow blob ref IDs must be sorted for stability."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        proto.mixed.json = "{}"
+        # Insert keys in descending order to verify sorting in identity.
+        proto.mixed.arrow_blobs["b"].data = b"b"
+        proto.mixed.arrow_blobs["a"].data = b"a"
+
+        identity = mixin._build_bidi_identity_kwargs(
+            component_name="cmp",
+            isolate_styles=True,
+            width="stretch",
+            height="content",
+            proto=proto,
+        )
+
+        assert identity["mixed_json"] == "{}"
+        assert identity["mixed_arrow_blobs"] == "a,b"
+
+    def test_extract_dataframes_from_dict_fallback_on_arrow_failure(self):
+        """If Arrow serialization fails for a dataframe-like value, the original value should be preserved."""
+        from streamlit.components.v2.bidi_component import serialization as ser
+
+        class Sentinel:
+            pass
+
+        obj = Sentinel()
+
+        with (
+            patch(
+                "streamlit.components.v2.bidi_component.serialization.is_dataframe_like",
+                side_effect=lambda v: v is obj,
+            ),
+            patch(
+                "streamlit.components.v2.bidi_component.serialization.convert_anything_to_arrow_bytes",
+                side_effect=Exception("boom"),
+            ),
+        ):
+            result = ser._extract_dataframes_from_dict({"df": obj})
+            assert result["df"] is obj
 
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):

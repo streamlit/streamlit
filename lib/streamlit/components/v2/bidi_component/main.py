@@ -55,6 +55,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
+from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
@@ -116,6 +117,135 @@ def _make_trigger_id(base: str, event: str) -> str:
 
 class BidiComponentMixin:
     """Mixin class for the bidi_component DeltaGenerator method."""
+
+    def _build_bidi_identity_kwargs(
+        self,
+        *,
+        component_name: str,
+        isolate_styles: bool,
+        width: Width,
+        height: Height,
+        proto: BidiComponentProto,
+    ) -> dict[str, Any]:
+        """Build deterministic identity kwargs for ID computation.
+
+        Construct a stable mapping of identity-relevant properties for
+        ``compute_and_register_element_id``. This includes structural
+        properties (name, style isolation, layout) and an explicit, typed
+        handling of the ``BidiComponent`` ``oneof data`` field to ensure
+        unkeyed components change identity when their serialized payload
+        changes.
+
+        Parameters
+        ----------
+        component_name : str
+            The registered component name.
+        isolate_styles : bool
+            Whether the component styles are rendered in a Shadow DOM.
+        width : Width
+            Desired width configuration passed to the component.
+        height : Height
+            Desired height configuration passed to the component.
+        proto : BidiComponentProto
+            The populated component protobuf. Its ``data`` oneof determines
+            which serialized payload (JSON, Arrow, bytes, or Mixed) contributes
+            to identity.
+
+        Returns
+        -------
+        dict[str, Any]
+            A mapping of deterministic values to be forwarded into
+            ``compute_and_register_element_id``.
+
+        Raises
+        ------
+        RuntimeError
+            If an unhandled ``oneof data`` variant is encountered (guards
+            against adding new fields without updating identity computation).
+        """
+        identity: dict[str, Any] = {
+            "component_name": component_name,
+            "isolate_styles": isolate_styles,
+            "width": width,
+            "height": height,
+        }
+
+        data_field = proto.WhichOneof("data")
+        if data_field is None:
+            return identity
+
+        if data_field == "json":
+            identity["json"] = proto.json
+        elif data_field == "arrow_data":
+            identity["arrow_data"] = proto.arrow_data.data
+        elif data_field == "bytes":
+            identity["bytes"] = proto.bytes
+        elif data_field == "mixed":
+            mixed: MixedDataProto = proto.mixed
+            # Add the JSON content of the MixedData to the identity.
+            identity["mixed_json"] = mixed.json
+            # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
+            identity["mixed_arrow_blobs"] = ",".join(sorted(mixed.arrow_blobs.keys()))
+        else:
+            raise RuntimeError(
+                f"Unhandled BidiComponent.data oneof field: {data_field}"
+            )
+
+        return identity
+
+    def _compute_bidi_component_id(
+        self,
+        *,
+        key: str | None,
+        component_name: str,
+        isolate_styles: bool,
+        width: Width,
+        height: Height,
+        proto: BidiComponentProto,
+    ) -> str:
+        """Compute and register the CCv2 element ID.
+
+        Wraps ``compute_and_register_element_id`` with identity inputs built by
+        ``_build_bidi_identity_kwargs``. When a user key is provided,
+        ``key_as_main_identity=True`` causes payload-derived inputs to be
+        ignored; otherwise, serialized payload fingerprints are included so
+        unkeyed components change identity when their data changes.
+
+        Parameters
+        ----------
+        key : str or None
+            Optional user-provided key. When set, it dominates identity.
+        component_name : str
+            The registered component name.
+        isolate_styles : bool
+            Whether the component styles are rendered in a Shadow DOM.
+        width : Width
+            Desired width configuration passed to the component.
+        height : Height
+            Desired height configuration passed to the component.
+        proto : BidiComponentProto
+            The populated component protobuf used to derive payload identity.
+
+        Returns
+        -------
+        str
+            The registered, stable element ID.
+        """
+        identity_kwargs = self._build_bidi_identity_kwargs(
+            component_name=component_name,
+            isolate_styles=isolate_styles,
+            width=width,
+            height=height,
+            proto=proto,
+        )
+
+        return compute_and_register_element_id(
+            "bidi_component",
+            user_key=key,
+            key_as_main_identity=True,
+            dg=self.dg,
+            **identity_kwargs,
+        )
 
     @gather_metrics("_bidi_component")
     def _bidi_component(
@@ -206,18 +336,6 @@ class BidiComponentMixin:
         if not has_js and not has_html:
             raise BidiComponentMissingContentError(component_name)
 
-        # Compute a unique ID for this component instance
-        computed_id = compute_and_register_element_id(
-            "bidi_component",
-            user_key=key,
-            component_name=component_name,
-            isolate_styles=isolate_styles,
-            width=width,
-            height=height,
-            dg=self.dg,
-            key_as_main_identity=True,
-        )
-
         # ------------------------------------------------------------------
         # 1. Parse user-supplied callbacks
         # ------------------------------------------------------------------
@@ -253,7 +371,6 @@ class BidiComponentMixin:
 
         # Set up the component proto
         bidi_component_proto = BidiComponentProto()
-        bidi_component_proto.id = computed_id
         bidi_component_proto.component_name = component_name
         bidi_component_proto.isolate_styles = isolate_styles
         bidi_component_proto.js_content = component_def.js_content or ""
@@ -297,6 +414,17 @@ class BidiComponentMixin:
                 except Exception:
                     raise BidiComponentUnserializableDataError()
         bidi_component_proto.form_id = current_form_id(self.dg)
+
+        # Compute a unique ID for this component instance now that the proto is populated.
+        computed_id = self._compute_bidi_component_id(
+            key=key,
+            component_name=component_name,
+            isolate_styles=isolate_styles,
+            width=width,
+            height=height,
+            proto=bidi_component_proto,
+        )
+        bidi_component_proto.id = computed_id
 
         # Instantiate the Serde for this component instance
         serde = BidiComponentSerde(default=default)
