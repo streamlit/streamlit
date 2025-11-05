@@ -1331,16 +1331,16 @@ def test_chat_input_permission_denied_error(
     # Verify mic button shows error state (red color)
     expect(mic_button).to_be_visible()
 
-    # Hover over mic button to show tooltip
-    mic_button.hover()
-    app_with_microphone_permission_denied.wait_for_timeout(300)
+    # Hover over the tooltip hover target to show tooltip
+    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
+    hover_target.hover()
 
     # Verify tooltip appears with error message
+    # Using to_have_text which includes visibility check with auto-wait
     tooltip = app_with_microphone_permission_denied.get_by_test_id(
         "stTooltipErrorContent"
     )
-    expect(tooltip).to_be_visible()
-    expect(tooltip).to_contain_text("Microphone access denied")
+    expect(tooltip).to_have_text("Microphone access denied", use_inner_text=True)
 
     # Take snapshot of error state with tooltip
     assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
@@ -1384,14 +1384,14 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
     expect(mic_button).to_be_visible()
 
-    # Hover over mic button to show tooltip
-    mic_button.hover()
-    app.wait_for_timeout(300)
+    # Hover over the tooltip hover target to show tooltip
+    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
+    hover_target.hover()
 
     # Verify tooltip appears with error message
+    # Using to_have_text which includes visibility check with auto-wait
     tooltip = app.get_by_test_id("stTooltipErrorContent")
-    expect(tooltip).to_be_visible()
-    expect(tooltip).to_contain_text("Recording failed")
+    expect(tooltip).to_have_text("Recording failed", use_inner_text=True)
 
     # Take snapshot
     assert_snapshot(chat_input, name="st_chat_input-recording_error")
