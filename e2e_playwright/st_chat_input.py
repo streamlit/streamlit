@@ -131,7 +131,7 @@ else:
     )
     st.write("Initial chat input value:", dyn_val)
 
-v11 = st.container(key="chat_input_11_container").chat_input(
+v11 = st.container().chat_input(
     "Chat input 11 (audio recording)",
     accept_file="multiple",
     accept_audio=True,

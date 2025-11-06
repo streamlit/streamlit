@@ -1350,11 +1350,7 @@ def test_chat_input_permission_denied_error(
     )
 
     # Take snapshot of error state with tooltip
-    # Snapshot the container to include both chat input and the tooltip
-    container = get_element_by_key(
-        app_with_microphone_permission_denied, "chat_input_11_container"
-    )
-    assert_snapshot(container, name="st_chat_input-mic_permission_denied")
+    assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
 
     # Verify error clears when user types
     textarea = chat_input.locator("textarea").first
@@ -1407,9 +1403,7 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     )
 
     # Take snapshot
-    # Snapshot the container to include both chat input and the tooltip
-    container = get_element_by_key(app, "chat_input_11_container")
-    assert_snapshot(container, name="st_chat_input-recording_error")
+    assert_snapshot(chat_input, name="st_chat_input-recording_error")
 
     # Verify error clears when user starts typing
     textarea = chat_input.locator("textarea").first
