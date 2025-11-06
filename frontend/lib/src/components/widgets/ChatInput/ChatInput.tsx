@@ -40,7 +40,7 @@ import {
 
 import { useWaveformController } from "~lib/components/audio"
 import { LOG } from "~lib/components/ChatInput/logger"
-import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
   UploadedStatus,
@@ -680,7 +680,7 @@ function ChatInput({
                     data-testid="stChatInputApproveButton"
                   >
                     {audioUploading ? (
-                      <StyledSpinnerIcon size="lg" margin="0" padding="0" />
+                      <DynamicIcon size="lg" iconValue="spinner" />
                     ) : (
                       <Icon content={Check} size="lg" color="inherit" />
                     )}
