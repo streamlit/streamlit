@@ -18,6 +18,8 @@ import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
+import { EmotionThemeColors } from "~lib/theme/types"
+
 export const Box = styled.div<{
   width?: CSSProperties["width"]
   height?: CSSProperties["height"]
@@ -25,3 +27,16 @@ export const Box = styled.div<{
   width,
   height,
 }))
+
+// Helper function to handle the border color for baseweb input widgets
+// @see Selectbox, Multiselect, DateInput, TimeInput, TextInput, TextArea, NumberInput
+export const getBorderColor = (
+  colors: EmotionThemeColors,
+  $isFocused: boolean
+): string => {
+  let borderColor = colors.widgetBorderColor ?? colors.secondaryBg
+  if ($isFocused) {
+    borderColor = colors.primary
+  }
+  return borderColor
+}

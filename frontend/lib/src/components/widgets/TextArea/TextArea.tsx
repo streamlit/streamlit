@@ -21,6 +21,7 @@ import uniqueId from "lodash/uniqueId"
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -267,11 +268,7 @@ const TextArea: FC<Props> = ({
               "data-testid": "stTextAreaRootElement",
             },
             style: ({ $isFocused }: { $isFocused: boolean }) => {
-              let borderColor =
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
-              if ($isFocused) {
-                borderColor = theme.colors.primary
-              }
+              const borderColor = getBorderColor(theme.colors, $isFocused)
               return {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: theme.sizes.borderWidth,

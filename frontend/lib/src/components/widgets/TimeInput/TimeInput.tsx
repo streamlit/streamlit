@@ -23,6 +23,7 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -83,11 +84,7 @@ function TimeInput({
         overrides: {
           ControlContainer: {
             style: ({ $isFocused }: { $isFocused: boolean }) => {
-              let borderColor =
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
-              if ($isFocused) {
-                borderColor = theme.colors.primary
-              }
+              const borderColor = getBorderColor(theme.colors, $isFocused)
               return {
                 height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.

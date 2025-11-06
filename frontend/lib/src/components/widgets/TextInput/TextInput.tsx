@@ -21,6 +21,7 @@ import uniqueId from "lodash/uniqueId"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
@@ -216,11 +217,7 @@ function TextInput({
               "data-testid": "stTextInputRootElement",
             },
             style: ({ $isFocused }: { $isFocused: boolean }) => {
-              let borderColor =
-                theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
-              if ($isFocused) {
-                borderColor = theme.colors.primary
-              }
+              const borderColor = getBorderColor(theme.colors, $isFocused)
               return {
                 height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
