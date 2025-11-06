@@ -253,10 +253,10 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
-  // Map of pending deferred file requests: fileId -> Promise resolver
-  private readonly pendingDeferredFileRequests = new Map<
+  // Listener registry for deferred file responses: fileId -> set of listeners
+  private readonly deferredFileListeners = new Map<
     string,
-    PromiseWithResolvers<DeferredFileResponse>
+    Set<(response: DeferredFileResponse) => void>
   >()
 
   private readonly appNavigation: AppNavigation
@@ -2075,7 +2075,16 @@ export class App extends PureComponent<Props, State> {
 
     const resolver = Promise.withResolvers<DeferredFileResponse>()
 
-    this.pendingDeferredFileRequests.set(fileId, resolver)
+    // Register a one-time listener for this fileId
+    const listeners =
+      this.deferredFileListeners.get(fileId) ??
+      new Set<(response: DeferredFileResponse) => void>()
+    const once = (response: DeferredFileResponse): void => {
+      listeners.delete(once)
+      resolver.resolve(response)
+    }
+    listeners.add(once)
+    this.deferredFileListeners.set(fileId, listeners)
 
     const backMsg = new BackMsg({
       deferredFileRequest: {
@@ -2087,25 +2096,22 @@ export class App extends PureComponent<Props, State> {
     backMsg.type = "deferredFileRequest"
     this.sendBackMsg(backMsg)
 
-    // Timeout after 60 seconds
-    setTimeout(() => {
-      const pendingResolver = this.pendingDeferredFileRequests.get(fileId)
-      if (pendingResolver) {
-        this.pendingDeferredFileRequests.delete(fileId)
-        pendingResolver.reject(new Error("Deferred file request timeout"))
-      }
-    }, 60000)
-
     return resolver.promise
   }
 
   handleDeferredFileResponse = (response: DeferredFileResponse): void => {
-    const resolver = this.pendingDeferredFileRequests.get(response.fileId)
+    const listeners = this.deferredFileListeners.get(response.fileId)
+    if (!listeners || listeners.size === 0) return
 
-    if (resolver) {
-      this.pendingDeferredFileRequests.delete(response.fileId)
-      resolver.resolve(response)
+    // Notify and clear all listeners for this fileId
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener(response)
+      } catch {
+        // Swallow listener errors to avoid breaking notification fanout
+      }
     }
+    this.deferredFileListeners.delete(response.fileId)
   }
 
   handleKeyDown = (keyName: string): void => {
