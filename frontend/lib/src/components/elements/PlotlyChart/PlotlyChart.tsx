@@ -67,7 +67,6 @@ export interface PlotlyChartProps {
   disabled: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
-
   width: number
 }
 
