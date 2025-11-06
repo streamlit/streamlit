@@ -593,6 +593,8 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
 def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_4").get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -605,6 +607,8 @@ def test_single_file_upload_button_tooltip(app: Page):
 
 def test_multi_file_upload_button_tooltip(app: Page):
     """Test that the multi file upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_5").get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -616,6 +620,8 @@ def test_multi_file_upload_button_tooltip(app: Page):
 
 def test_directory_upload_button_tooltip(app: Page):
     """Test that the directory upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_9").get_by_test_id(
         "stChatInputFileUploadButton"
     )
