@@ -106,6 +106,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialExpanded)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setExpanded(initialExpanded)
 
       // We manage the open attribute via the detailsRef and not with React state

@@ -261,8 +261,6 @@ function DataFrame({
   // e.g. if the user has applied changes to the column order in the code.
   useEffect(() => {
     setColumnOrder(element.columnOrder)
-
-    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.columnOrder.join(",")])
 
@@ -304,9 +302,7 @@ function DataFrame({
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
 
@@ -459,9 +455,7 @@ function DataFrame({
     // to play around and get to the bottom of it.
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen])
 
   // This callback is used to refresh the rendering of specified cells
@@ -563,9 +557,7 @@ function DataFrame({
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
 
