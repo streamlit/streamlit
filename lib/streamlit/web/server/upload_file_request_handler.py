@@ -94,7 +94,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         files: dict[str, list[Any]] = {}
 
         if not self.path_kwargs:
-            self.send_error(404, reason="No path kwargs provided.")
+            # This is not expected to happen with normal Streamlit usage.
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
             return
 
         session_id = self.path_kwargs["session_id"]
