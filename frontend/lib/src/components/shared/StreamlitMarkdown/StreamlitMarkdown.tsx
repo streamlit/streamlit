@@ -77,6 +77,13 @@ export enum Tags {
   H1 = "h1",
   H2 = "h2",
   H3 = "h3",
+
+export interface LaTeXDelimiters {
+  inlineOpen?: string
+  inlineClose?: string
+  blockOpen?: string
+  blockClose?: string
+}
 }
 
 export interface Props {
@@ -92,7 +99,7 @@ export interface Props {
   allowHTML: boolean
   style?: CSSProperties
   isCaption?: boolean
-  latexDelimiters?: any
+  latexDelimiters?: LaTeXDelimiters
 
   /**
    * Indicates widget labels & restricts allowed elements
@@ -324,7 +331,7 @@ export interface RenderedMarkdownProps {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
-  latexDelimiters?: any
+  latexDelimiters?: LaTeXDelimiters
 
   overrideComponents?: Components
 
@@ -773,6 +780,11 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     [overrideComponents]
   )
 
+
+  // helper to escape special regex characters
+  const escapeRegex = (str: string): string => {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  }
   const processedSource = useMemo(() => {
     let processed = source.replaceAll(":material/", ":material_")
     
@@ -780,14 +792,14 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     if (latexDelimiters) {
       const { inlineOpen, inlineClose, blockOpen, blockClose } = latexDelimiters
       if (inlineOpen && inlineClose) {
-        // escape special regex chars
-        const escapedOpen = inlineOpen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const escapedClose = inlineClose.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'g'), '$$$1$$')
+        const escapedOpen = escapeRegex(inlineOpen)
+        const escapedClose = escapeRegex(inlineClose)
+        // use single $ for inline math, s flag for multiline content
+        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'gs'), '\$1\$')
       }
       if (blockOpen && blockClose) {
-        const escapedOpen = blockOpen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const escapedClose = blockClose.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const escapedOpen = escapeRegex(blockOpen)
+        const escapedClose = escapeRegex(blockClose)
         processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'gs'), '$$$$\n$1\n$$$$')
       }
     }

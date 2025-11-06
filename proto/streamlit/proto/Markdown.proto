@@ -47,5 +47,6 @@ message Markdown {
     string block_close = 4;   // e.g., "$$" or "\\]"
   }
   
+  // Optional custom LaTeX delimiters. When unset, uses default $ and $$ delimiters.
   LaTeXDelimiters latex_delimiters = 6;
 }

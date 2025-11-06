@@ -36,6 +36,56 @@ MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
 class MarkdownMixin:
+
+def _validate_and_set_latex_delimiters(
+    proto: MarkdownProto,
+    latex_delimiters: tuple[tuple[str, str], tuple[str, str]] | None
+) -> None:
+    """Validate and set custom LaTeX delimiters on the protobuf message.
+    
+    Parameters
+    ----------
+    proto : MarkdownProto
+        The protobuf message to set delimiters on.
+    latex_delimiters : tuple of tuples or None
+        Custom LaTeX delimiters as ((inline_open, inline_close), (block_open, block_close)).
+        
+    Raises
+    ------
+    ValueError
+        If the delimiter format is invalid.
+    """
+    if latex_delimiters is None:
+        return
+        
+    # Validate structure
+    if not isinstance(latex_delimiters, tuple) or len(latex_delimiters) != 2:
+        raise ValueError(
+            "latex_delimiters must be a tuple of 2 tuples: "
+            "((inline_open, inline_close), (block_open, block_close))"
+        )
+    
+    inline_delims, block_delims = latex_delimiters
+    
+    if not isinstance(inline_delims, tuple) or len(inline_delims) != 2:
+        raise ValueError(
+            "inline delimiters must be a tuple of 2 strings: (open, close)"
+        )
+    if not isinstance(block_delims, tuple) or len(block_delims) != 2:
+        raise ValueError(
+            "block delimiters must be a tuple of 2 strings: (open, close)"
+        )
+    
+    # Validate all elements are strings
+    if not all(isinstance(d, str) for d in inline_delims + block_delims):
+        raise ValueError("all delimiter values must be strings")
+    
+    # Set the delimiters
+    proto.latex_delimiters.inline_open = inline_delims[0]
+    proto.latex_delimiters.inline_close = inline_delims[1]
+    proto.latex_delimiters.block_open = block_delims[0]
+    proto.latex_delimiters.block_close = block_delims[1]
+
     @gather_metrics("markdown")
     def markdown(
         self,
@@ -179,12 +229,7 @@ class MarkdownMixin:
         if help:
             markdown_proto.help = help
         
-        if latex_delimiters is not None:
-            inline_delims, block_delims = latex_delimiters
-            markdown_proto.latex_delimiters.inline_open = inline_delims[0]
-            markdown_proto.latex_delimiters.inline_close = inline_delims[1]
-            markdown_proto.latex_delimiters.block_open = block_delims[0]
-            markdown_proto.latex_delimiters.block_close = block_delims[1]
+        _validate_and_set_latex_delimiters(markdown_proto, latex_delimiters)
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
@@ -267,12 +312,7 @@ class MarkdownMixin:
         if help:
             caption_proto.help = help
         
-        if latex_delimiters is not None:
-            inline_delims, block_delims = latex_delimiters
-            caption_proto.latex_delimiters.inline_open = inline_delims[0]
-            caption_proto.latex_delimiters.inline_close = inline_delims[1]
-            caption_proto.latex_delimiters.block_open = block_delims[0]
-            caption_proto.latex_delimiters.block_close = block_delims[1]
+        _validate_and_set_latex_delimiters(caption_proto, latex_delimiters)
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
