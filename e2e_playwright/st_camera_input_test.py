@@ -164,6 +164,12 @@ def test_dynamic_camera_input_props(app: Page):
     dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
     expect(dynamic_camera_input).to_be_visible()
 
+    # Make sure its rendered correctly before checking the state:
+    check_dimensions = check_dimensions_func(
+        dynamic_camera_input.get_by_test_id("stCameraInput")
+    )
+    wait_until(app, check_dimensions)
+
     # Check initial state
     expect(dynamic_camera_input).to_contain_text("Initial dynamic camera input")
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
