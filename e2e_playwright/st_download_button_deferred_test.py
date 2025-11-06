@@ -18,7 +18,7 @@ from playwright.sync_api import Page, expect
 def test_deferred_download_csv_success(app: Page):
     """Test successful deferred CSV download."""
     # Get the CSV download button (second button in the app)
-    csv_button = app.get_by_test_id("stDownloadButton").nth(1).locator("button")
+    csv_button = app.get_by_role("button", name="Download CSV (Deferred)")
     expect(csv_button).to_contain_text("Download CSV (Deferred)")
 
     # Click and expect download
@@ -38,7 +38,7 @@ def test_deferred_download_csv_success(app: Page):
 def test_deferred_download_lambda_text(app: Page):
     """Test deferred download with lambda function."""
     # Get the lambda download button (third button)
-    lambda_button = app.get_by_test_id("stDownloadButton").nth(2).locator("button")
+    lambda_button = app.get_by_role("button", name="Download Lambda Text")
     expect(lambda_button).to_contain_text("Download Lambda Text")
 
     # Click and expect download
@@ -57,7 +57,7 @@ def test_deferred_download_lambda_text(app: Page):
 def test_deferred_download_binary(app: Page):
     """Test deferred download returning binary data."""
     # Get the binary download button (fourth button)
-    binary_button = app.get_by_test_id("stDownloadButton").nth(3).locator("button")
+    binary_button = app.get_by_role("button", name="Download Binary (Deferred)")
     expect(binary_button).to_contain_text("Download Binary (Deferred)")
 
     # Click and expect download
@@ -75,7 +75,7 @@ def test_deferred_download_binary(app: Page):
 def test_deferred_download_error_handling(app: Page):
     """Test that deferred download with failing callable shows error."""
     # Get the error button (fifth button)
-    error_button = app.get_by_test_id("stDownloadButton").nth(4).locator("button")
+    error_button = app.get_by_role("button", name="Download Error (Should Fail)")
     expect(error_button).to_contain_text("Download Error (Should Fail)")
 
     # Click the button
@@ -90,7 +90,7 @@ def test_deferred_download_error_handling(app: Page):
 def test_deferred_download_large_file(app: Page):
     """Test deferred download with large data."""
     # Get the large file download button (sixth button)
-    large_button = app.get_by_test_id("stDownloadButton").nth(5).locator("button")
+    large_button = app.get_by_role("button", name="Download Large File (Deferred)")
     expect(large_button).to_contain_text("Download Large File (Deferred)")
 
     # Click and expect download
@@ -111,7 +111,7 @@ def test_deferred_download_large_file(app: Page):
 def test_deferred_download_with_ignore_rerun(app: Page):
     """Test deferred download with on_click='ignore'."""
     # Get the no-rerun download button (seventh button)
-    no_rerun_button = app.get_by_test_id("stDownloadButton").nth(6).locator("button")
+    no_rerun_button = app.get_by_role("button", name="Download (No Rerun)")
     expect(no_rerun_button).to_contain_text("Download (No Rerun)")
 
     # Click and expect download
@@ -130,7 +130,7 @@ def test_deferred_download_with_ignore_rerun(app: Page):
 def test_regular_download_still_works(app: Page):
     """Test that regular (non-deferred) download still works."""
     # Get the first button (regular download)
-    regular_button = app.get_by_test_id("stDownloadButton").nth(0).locator("button")
+    regular_button = app.get_by_role("button", name="Download Regular String")
     expect(regular_button).to_contain_text("Download Regular String")
 
     # Click and expect download

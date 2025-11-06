@@ -119,6 +119,7 @@ function DownloadButton(props: Props): ReactElement {
 
       if (response.errorMsg) {
         setError(response.errorMsg)
+        setIsLoading(false)
         return
       }
 

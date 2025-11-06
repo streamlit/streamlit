@@ -775,3 +775,39 @@ class MediaFileManagerDeferredTest(TestCase):
         # Now both should be removed
         assert file_id_2 not in self.media_file_manager._deferred_callables
         assert len(self.media_file_manager._deferred_callables) == 0
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_execute_deferred_handles_text_io_wrapper_return(self):
+        """Test that execute_deferred handles TextIOWrapper (text stream) return values."""
+
+        def generate_text_wrapper():
+            # Create a TextIOWrapper over BytesIO containing UTF-8 text
+            byte_stream = io.BytesIO(b"wrapped text")
+            return io.TextIOWrapper(byte_stream, encoding="utf-8")
+
+        file_id = self.media_file_manager.add_deferred(
+            generate_text_wrapper, "text/plain", random_coordinates()
+        )
+
+        url = self.media_file_manager.execute_deferred(file_id)
+        assert url.startswith("/mock/endpoint/")
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_execute_deferred_handles_stringio_return(self):
+        """Test that execute_deferred handles StringIO (text stream) return values."""
+
+        def generate_stringio():
+            return io.StringIO("stringio text")
+
+        file_id = self.media_file_manager.add_deferred(
+            generate_stringio, "text/plain", random_coordinates()
+        )
+
+        url = self.media_file_manager.execute_deferred(file_id)
+        assert url.startswith("/mock/endpoint/")

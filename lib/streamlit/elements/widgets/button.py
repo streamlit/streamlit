@@ -348,7 +348,7 @@ class ButtonMixin:
             ``st.write("Deferred data prepared")``) are ignored and will not
             render.
 
-            To prevent unncecessary recomputation, use caching when converting
+            To prevent unnecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
             below.
 

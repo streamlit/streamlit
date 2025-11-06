@@ -371,6 +371,10 @@ class MediaFileManager:
         elif isinstance(data, io.BufferedReader):
             data.seek(0)
             data_as_bytes = data.read()
+        elif isinstance(data, io.TextIOBase):
+            data.seek(0)
+            string_data = data.read()
+            data_as_bytes = string_data.encode()
         elif isinstance(data, io.RawIOBase):
             data.seek(0)
             read_data = data.read()
