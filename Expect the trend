@@ -1,0 +1,160 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from datetime import datetime
+import io  # For potential file handling
+
+# Note: This is a standalone Python script to help you analyze trading charts.
+# To use it:
+# 1. Prepare your OHLC data in a CSV file with columns: 'timestamp', 'open', 'high', 'low', 'close'
+#    (timestamp in YYYY-MM-DD HH:MM:SS format). This works for any timeframe; we'll resample internally.
+# 2. Run this script and provide the CSV file path when prompted.
+# 3. It will analyze multiple timeframes (5min, 15min, 1H, 1D) and suggest trades based on a simple strategy:
+#    - Moving Average Crossover (50-period SMA > 200-period SMA for buy signal).
+#    - RSI (14-period) to avoid overbought/oversold entries.
+#    - ATR (14-period) for dynamic Stop Loss (1.5x ATR below entry for buy) and Target (2x ATR above entry).
+# 4. For chart images: Manually extract OHLC data (use tools like TradingView export) as CSV is more accurate.
+# 5. This is for educational purposes—backtest thoroughly and never trade real money without validation.
+
+def load_data(file_path):
+    """Load OHLC CSV data."""
+    df = pd.read_csv(file_path, parse_dates=['timestamp'])
+    df.set_index('timestamp', inplace=True)
+    df.sort_index(inplace=True)
+    return df
+
+def calculate_indicators(df, period_sma_short=50, period_sma_long=200, period_rsi=14, period_atr=14):
+    """Calculate technical indicators."""
+    # Simple Moving Averages
+    df['sma_short'] = df['close'].rolling(window=period_sma_short).mean()
+    df['sma_long'] = df['close'].rolling(window=period_sma_long).mean()
+    
+    # RSI
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period_rsi).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period_rsi).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
+    
+    # ATR (Average True Range)
+    high_low = df['high'] - df['low']
+    high_close = np.abs(df['high'] - df['close'].shift())
+    low_close = np.abs(df['low'] - df['close'].shift())
+    tr = np.maximum(high_low, np.maximum(high_close, low_close))
+    df['atr'] = tr.rolling(window=period_atr).mean()
+    
+    return df
+
+def resample_data(df, timeframe):
+    """Resample data to specified timeframe."""
+    rule = {'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'}
+    resampled = df.resample(timeframe).agg(rule).dropna()
+    return resampled
+
+def detect_signal(df):
+    """Detect buy/sell signals."""
+    signals = []
+    for i in range(1, len(df)):
+        if (df['sma_short'].iloc[i] > df['sma_long'].iloc[i] and 
+            df['sma_short'].iloc[i-1] <= df['sma_long'].iloc[i-1] and
+            df['rsi'].iloc[i] < 70 and df['rsi'].iloc[i] > 30):  # Golden cross, not extreme RSI
+            signals.append(('BUY', df.index[i], df['close'].iloc[i]))
+        elif (df['sma_short'].iloc[i] < df['sma_long'].iloc[i] and 
+              df['sma_short'].iloc[i-1] >= df['sma_long'].iloc[i-1] and
+              df['rsi'].iloc[i] > 30 and df['rsi'].iloc[i] < 70):  # Death cross
+            signals.append(('SELL', df.index[i], df['close'].iloc[i]))
+    return signals
+
+def calculate_sl_target(entry_price, atr, signal_type='BUY'):
+    """Calculate Stop Loss and Target based on ATR."""
+    atr_multiplier_sl = 1.5
+    atr_multiplier_target = 2.0
+    
+    if signal_type == 'BUY':
+        sl = entry_price - (atr * atr_multiplier_sl)
+        target = entry_price + (atr * atr_multiplier_target)
+    else:  # SELL
+        sl = entry_price + (atr * atr_multiplier_sl)
+        target = entry_price - (atr * atr_multiplier_target)
+    
+    return sl, target
+
+def analyze_timeframes(df_original, timeframes=['5T', '15T', '1H', '1D']):
+    """Analyze across multiple timeframes."""
+    results = {}
+    for tf in timeframes:
+        df_tf = resample_data(df_original, tf)
+        if len(df_tf) < 200:  # Need enough data for indicators
+            continue
+        df_tf = calculate_indicators(df_tf)
+        signals = detect_signal(df_tf)
+        
+        recent_signals = [s for s in signals if (pd.Timestamp.now() - s[1]) < pd.Timedelta(days=30)]  # Last 30 days
+        
+        tf_results = []
+        for sig_type, timestamp, entry_price in recent_signals[-3:]:  # Last 3 signals per TF
+            atr = df_tf['atr'].loc[timestamp]
+            sl, target = calculate_sl_target(entry_price, atr, sig_type)
+            tf_results.append({
+                'Signal': sig_type,
+                'Timestamp': timestamp,
+                'Entry': entry_price,
+                'Stop Loss': sl,
+                'Target': target,
+                'Risk/Reward': abs((target - entry_price) / (entry_price - sl)) if sig_type == 'BUY' else abs((entry_price - target) / (sl - entry_price))
+            })
+        
+        results[tf] = tf_results
+    
+    return results
+
+def plot_chart(df, timeframe='Original', signals=None):
+    """Plot the chart with signals."""
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(df.index, df['close'], label='Close Price', color='black')
+    ax.plot(df.index, df['sma_short'], label='SMA 50', color='blue')
+    ax.plot(df.index, df['sma_long'], label='SMA 200', color='red')
+    
+    if signals:
+        for sig_type, ts, price in signals:
+            color = 'green' if sig_type == 'BUY' else 'red'
+            ax.scatter(ts, price, color=color, s=100, marker='^' if sig_type == 'BUY' else 'v', label=sig_type)
+    
+    ax.set_title(f'{timeframe} Chart with Signals')
+    ax.legend()
+    ax.grid(True)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+# Main execution
+if __name__ == "__main__":
+    file_path = input("Enter the path to your OHLC CSV file: ")
+    try:
+        df = load_data(file_path)
+        print(f"Loaded {len(df)} data points from {df.index[0]} to {df.index[-1]}")
+        
+        # Analyze
+        results = analyze_timeframes(df)
+        
+        # Display results
+        print("\n=== Trading Signals Analysis ===")
+        for tf, sigs in results.items():
+            print(f"\n{ tf } Timeframe:")
+            if not sigs:
+                print("No recent signals.")
+            else:
+                for sig in sigs:
+                    print(f"Signal: {sig['Signal']} at {sig['Timestamp']} | Entry: {sig['Entry']:.2f} | SL: {sig['Stop Loss']:.2f} | Target: {sig['Target']:.2f} | R/R: {sig['Risk/Reward']:.2f}")
+        
+        # Optional: Plot latest timeframe (1H for example)
+        plot_tf = '1H'
+        if results.get(plot_tf):
+            df_plot = resample_data(df, plot_tf)
+            df_plot = calculate_indicators(df_plot)
+            signals_plot = detect_signal(df_plot)
+            plot_chart(df_plot, f"{plot_tf} Analysis", signals_plot[-5:])  # Last 5 signals
+        
+        print("\nTips to improve: Backtest this strategy on historical data. Adjust periods for your asset. Combine with volume/fundamentals.")
+    except Exception as e:
+        print(f"Error: {e}. Ensure CSV has correct columns and format.")
