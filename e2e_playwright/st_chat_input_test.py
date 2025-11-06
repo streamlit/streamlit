@@ -562,6 +562,7 @@ def test_file_upload_error_message_disallowed_files(
 @pytest.mark.skip_browser("chromium")
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
+    app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "large.txt"
     file1 = FilePayload(
