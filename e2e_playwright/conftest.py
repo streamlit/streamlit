@@ -33,7 +33,7 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 from urllib import parse
 
 import pytest
@@ -58,7 +58,7 @@ from e2e_playwright.shared.performance import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from types import ModuleType, TracebackType
 
 
@@ -386,6 +386,7 @@ img-src 'self' https: data: blob:;
 media-src 'self' https: data: blob:;
 connect-src ws://localhost:{app_port}/_stcore/stream
     {app_url}/_stcore/component/
+    {app_url}/_stcore/bidi-components/
     {app_url}/component/
     {app_url}/_stcore/upload_file/
     {app_url}/_stcore/host-config

@@ -23,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.50.0"  # PEP-440
+VERSION = "1.51.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -43,13 +43,12 @@ INSTALL_REQUIRES = [
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
-    "pillow>=7.1.0, <12",
+    "pillow>=7.1.0, <13",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
     "protobuf>=3.20, <7",
-    # pyarrow is not semantically versioned, gets new major versions frequently, and
-    # doesn't tend to break the API on major version upgrades, so we don't put an
-    # upper bound on it.
-    "pyarrow>=7.0",
+    # pyarrow v22 is causing 2 test failures in dataframe_util_test.py and arrow_dataframe_test.py.
+    # temporarily restrict to <22 to avoid breaking changes.
+    "pyarrow>=7.0, <22",
     "requests>=2.27, <3",
     "tenacity>=8.1.0, <10",
     # Starting from Python 3.11, Python has built in support for reading TOML files.
@@ -160,7 +159,6 @@ setup(
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
@@ -172,10 +170,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Application Frameworks",
         "Topic :: Software Development :: Widget Sets",
     ],
-    # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
-    # with typing.Protocol. See https://github.com/streamlit/streamlit/issues/5140 and
-    # https://bugs.python.org/issue45121
-    python_requires=">=3.9, !=3.9.7",
+    python_requires=">=3.10",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=find_packages(exclude=["tests", "tests.*"]),

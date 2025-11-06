@@ -20,9 +20,7 @@ import re
 from collections.abc import Sequence
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
 from streamlit import runtime, url_util
 from streamlit.errors import StreamlitAPIException
@@ -48,7 +46,7 @@ AtomicImage: TypeAlias = Union[
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
-ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
+ImageOrImageList: TypeAlias = AtomicImage | Sequence[AtomicImage]
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container
@@ -434,7 +432,7 @@ def marshall_images(
 
     # Each image in an image list needs to be kept track of at its own coordinates.
     for coord_suffix, (single_image, single_caption) in enumerate(
-        zip(images, captions)
+        zip(images, captions, strict=False)
     ):
         proto_img = proto_imgs.imgs.add()
         if single_caption is not None:

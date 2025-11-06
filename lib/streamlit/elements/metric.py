@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
@@ -42,8 +40,8 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union[AnyNumber, str, None]
-Delta: TypeAlias = Union[AnyNumber, str, None]
+Value: TypeAlias = AnyNumber | str | None
+Delta: TypeAlias = AnyNumber | str | None
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 

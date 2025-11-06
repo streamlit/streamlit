@@ -28,13 +28,13 @@ import React, {
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   CUSTOM_THEME_NAME,
-  LibContext,
   Modal,
   ModalBody,
   ModalHeader,
   SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
+  ThemeContext,
   UISelectbox,
 } from "@streamlit/lib"
 
@@ -71,9 +71,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   metricsMgr,
   sessionInfo,
 }) {
-  const libContext = useContext(LibContext)
-  const { activeTheme, availableThemes } = libContext
-  const isCustomTheme = activeTheme.name === CUSTOM_THEME_NAME
+  const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
 
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
@@ -105,10 +103,14 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
   const handleThemeChange = useCallback(
     (themeName: string | null): void => {
+      // The themeName from selector will always be Light, Dark, or Use System Setting
+      // These are the names for default themes, and the display names for custom themes
       let newTheme = undefined
       if (themeName) {
-        newTheme = availableThemes.find(
-          (theme: ThemeConfig) => theme.name === themeName
+        newTheme = availableThemes.find((theme: ThemeConfig) =>
+          theme.name.startsWith("Custom Theme")
+            ? theme.displayName === themeName
+            : theme.name === themeName
         )
       }
       if (newTheme === undefined) {
@@ -119,21 +121,17 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
         label: "changeTheme",
       })
 
-      libContext.setTheme(newTheme)
+      setTheme(newTheme)
     },
-    [libContext, metricsMgr, availableThemes]
+    [setTheme, metricsMgr, availableThemes]
   )
 
   const getAvailableThemeChoices = useCallback(() => {
-    // If a custom theme is set, this should be the only available theme
-    // so that the user cannot revert to streamlit default themes
-    if (isCustomTheme) {
-      return [activeTheme.name]
-    }
-
-    // If no custom theme is set, can choose among default streamlit themes (auto/light/dark)
-    return availableThemes.map(theme => theme.name)
-  }, [isCustomTheme, activeTheme.name, availableThemes])
+    return availableThemes.map(theme => {
+      // Custom themes have a display name, default themes just use their name
+      return theme.displayName ?? theme.name
+    })
+  }, [availableThemes])
 
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
@@ -184,9 +182,9 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
               <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
                 options={getAvailableThemeChoices()}
-                disabled={isCustomTheme}
+                disabled={activeTheme.name === CUSTOM_THEME_NAME}
                 onChange={handleThemeChange}
-                value={activeTheme.name}
+                value={activeTheme.displayName ?? activeTheme.name}
                 placeholder=""
                 acceptNewOptions={false}
               />

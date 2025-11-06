@@ -62,7 +62,7 @@ jobs:
           rm -rf ./test-results
           pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Upload failed test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}

@@ -17,6 +17,7 @@
 // We add some polyfills in order to support older browsers for the exports below
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
+export type { LibConfig } from "@streamlit/connection"
 export { AppRoot, BlockNode, ElementNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
@@ -29,10 +30,20 @@ export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
-export { LibContext } from "./components/core/LibContext"
-export type { LibConfig, LibContextProps } from "./components/core/LibContext"
+export { LibConfigContext } from "./components/core/LibConfigContext"
+export type { LibConfigContextProps } from "./components/core/LibConfigContext"
+export { NavigationContext } from "./components/core/NavigationContext"
+export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
+export { ScriptRunContext } from "./components/core/ScriptRunContext"
+export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
+export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
+export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
+export { ThemeContext } from "./components/core/ThemeContext"
+export type { ThemeContextProps } from "./components/core/ThemeContext"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
+export { ViewStateContext } from "./components/core/ViewStateContext"
+export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
 export { default as StreamlitSyntaxHighlighter } from "./components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 export { handleFavicon } from "./components/elements/Favicon"
@@ -100,14 +111,20 @@ export {
   baseTheme,
   convertRemToPx,
   createAutoTheme,
+  createCustomThemes,
   createPresetThemes,
+  createSidebarTheme,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -26,6 +27,7 @@ from streamlit.runtime.state.common import (
     WidgetKwargs,
     WidgetMetadata,
     WidgetSerializer,
+    WidgetValuePresenter,
     user_key_from_element_id,
 )
 
@@ -39,10 +41,12 @@ def register_widget(
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
+    callbacks: dict[str, WidgetCallback] | None = None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
     value_type: ValueFieldName,
+    presenter: WidgetValuePresenter | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -58,13 +62,15 @@ def register_widget(
         Called to convert a widget's value to its protobuf representation.
     ctx : ScriptRunContext or None
         Used to ensure uniqueness of widget IDs, and to look up widget values.
+    callbacks : dict[str, WidgetCallback] or None
+        A dictionary of callbacks for multi-callback support.
     on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
     args : WidgetArgs or None
-        args to pass to on_change_handler when invoked
+        Positional arguments to pass to the `on_change_handler` or `callbacks`.
     kwargs : WidgetKwargs or None
-        kwargs to pass to on_change_handler when invoked
-    value_type: ValueType
+        Keyword arguments to pass to the `on_change_handler` or `callbacks`.
+    value_type: ValueFieldName
         The value_type the widget is going to use.
         We use this information to start with a best-effort guess for the value_type
         of each widget. Once we actually receive a proto for a widget from the
@@ -72,6 +78,9 @@ def register_widget(
         not able to always rely on the proto as the type may be needed earlier.
         Thankfully, in these cases (when value_type == "trigger_value"), the static
         table here being slightly inaccurate should never pose a problem.
+    presenter : WidgetValuePresenter or None
+        An optional hook that allows a widget to customize how its value should be
+        presented.
 
 
     Returns
@@ -98,6 +107,11 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
+    if on_change_handler is not None and callbacks is not None:
+        raise StreamlitAPIException(
+            "Cannot provide both `on_change` and `callbacks` to a widget."
+        )
+
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         element_id,
@@ -105,9 +119,11 @@ def register_widget(
         serializer,
         value_type=value_type,
         callback=on_change_handler,
+        callbacks=callbacks,
         callback_args=args,
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
+        presenter=presenter,
     )
     return register_widget_from_metadata(metadata, ctx)
 

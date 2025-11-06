@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import math
-from typing import Callable, cast
+from collections.abc import Callable
+from typing import cast
 
 from playwright.sync_api import Locator, Page, expect
 

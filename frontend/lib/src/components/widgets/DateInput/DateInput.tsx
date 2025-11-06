@@ -32,7 +32,7 @@ import moment from "moment"
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -116,7 +116,7 @@ function DateInput({
   const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
     useEmotionTheme()
 
-  const { locale } = useContext(LibContext)
+  const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
   const minDate = useMemo(

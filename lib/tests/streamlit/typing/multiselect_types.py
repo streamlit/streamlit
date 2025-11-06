@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -46,24 +46,20 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])
 
     # Tests with accept_new_options=True
-    assert_type(
-        multiselect("foo", [1, 2, 3], accept_new_options=True), list[Union[int, str]]
-    )
+    assert_type(multiselect("foo", [1, 2, 3], accept_new_options=True), list[int | str])
     assert_type(
         multiselect("foo", [1, 2, 3], default=None, accept_new_options=True),
-        list[Union[int, str]],
+        list[int | str],
     )
     assert_type(
         multiselect("foo", [1.0, 2.0, 3.0], accept_new_options=True),
-        list[Union[float, str]],
+        list[float | str],
     )
     assert_type(multiselect("foo", ["foo", "bar"], accept_new_options=True), list[str])
-    assert_type(
-        multiselect("foo", Alfred, accept_new_options=True), list[Union[Alfred, str]]
-    )
+    assert_type(multiselect("foo", Alfred, accept_new_options=True), list[Alfred | str])
     assert_type(
         multiselect("foo", [Alfred.HITCHCOCK, Alfred.GREENE], accept_new_options=True),
-        list[Union[Alfred, str]],
+        list[Alfred | str],
     )
 
     # Tests with default values
@@ -77,11 +73,11 @@ if TYPE_CHECKING:
     # Tests with default values and accept_new_options
     assert_type(
         multiselect("foo", [1, 2, 3], default=[1], accept_new_options=True),
-        list[Union[int, str]],
+        list[int | str],
     )
     assert_type(
         multiselect("foo", [1, 2, 3], default=1, accept_new_options=True),
-        list[Union[int, str]],
+        list[int | str],
     )
     assert_type(
         multiselect("foo", ["foo", "bar"], default=["foo"], accept_new_options=True),
@@ -93,9 +89,9 @@ if TYPE_CHECKING:
     )
     assert_type(
         multiselect("foo", Alfred, default=[Alfred.HITCHCOCK], accept_new_options=True),
-        list[Union[Alfred, str]],
+        list[Alfred | str],
     )
     assert_type(
         multiselect("foo", Alfred, default=Alfred.HITCHCOCK, accept_new_options=True),
-        list[Union[Alfred, str]],
+        list[Alfred | str],
     )

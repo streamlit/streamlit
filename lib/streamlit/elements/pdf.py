@@ -16,9 +16,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
@@ -29,7 +27,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import HeightWithoutContent
 
-PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
+PdfData: TypeAlias = str | Path | bytes | io.BytesIO
 
 
 def _get_pdf_component() -> Any | None:
