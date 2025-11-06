@@ -14,28 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { forwardRef } from "react"
 
-import { Html as HtmlProto } from "@streamlit/protobuf"
+import { StyledHtml } from "./styled-components"
 
-import HtmlWithJs from "./HtmlWithJs"
-import SanitizedHtml from "./SanitizedHtml"
+type StyledHtmlProps = React.ComponentProps<typeof StyledHtml>
 
-export interface HtmlProps {
-  element: HtmlProto
-}
+const HtmlContainer = forwardRef<HTMLDivElement, StyledHtmlProps>(
+  function HtmlContainer(props, ref) {
+    return (
+      <StyledHtml
+        className="stHtml"
+        data-testid="stHtml"
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
 
-/**
- * HTML code to insert into the page.
- */
-function Html({ element }: Readonly<HtmlProps>): ReactElement {
-  const { body, unsafeAllowJavascript } = element
-
-  return unsafeAllowJavascript ? (
-    <HtmlWithJs body={body} />
-  ) : (
-    <SanitizedHtml body={body} />
-  )
-}
-
-export default memo(Html)
+export default HtmlContainer
