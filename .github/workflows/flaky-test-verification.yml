@@ -1,7 +1,7 @@
 name: Flaky Test Verification
 
 on:
-  pull_request_target:
+  pull_request:
     types: [labeled]
   workflow_dispatch:
     inputs:
@@ -23,7 +23,7 @@ jobs:
   verify:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
     # ubuntu-latest (4 cores) is sufficient for this lightweight coordination job.
     # The actual E2E test execution happens in the called workflow (playwright-changed-files.yml)
     # which uses ubuntu-latest-8-cores.
@@ -55,7 +55,7 @@ jobs:
               echo "::error::No PR number provided. When using workflow_dispatch, the pr_number input is required."
               exit 1
             fi
-          elif [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             pr_number="${{ github.event.pull_request.number }}"
           else
             echo "::error::Unsupported event type: ${{ github.event_name }}"
