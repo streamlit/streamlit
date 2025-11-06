@@ -145,7 +145,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         """Delete file request handler."""
 
         if not self.path_kwargs:
-            self.send_error(404, reason="No path kwargs provided.")
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
             return
 
         session_id = self.path_kwargs["session_id"]
