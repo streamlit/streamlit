@@ -322,7 +322,7 @@ export default defineConfig([
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      // ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
