@@ -338,8 +338,15 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, or file
+        data : str, bytes, file, or callable
             The contents of the file to be downloaded.
+
+            You can also pass a ``callable`` (no-arg function) that returns
+            ``str``, ``bytes``, or a file-like object. The callable is executed
+            when the user clicks the download button (deferred generation).
+            Streamlit commands inside the callable (for example,
+            ``st.write("Deferred data prepared")``) are ignored and will not
+            render.
 
             To prevent unncecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
@@ -566,6 +573,27 @@ class ButtonMixin:
         .. output::
            https://doc-download-button-file.streamlit.app/
            height: 200px
+
+        **Example 4: Generate the data on click with a callable**
+
+        Pass a function to ``data`` to generate the bytes lazily when the user
+        clicks the button. Streamlit commands inside this function are ignored.
+
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> def make_report():
+        >>>     # Runs on click; Streamlit commands here won't render
+        >>>     time.sleep(1)
+        >>>     # st.write("Deferred data prepared")  # Ignored
+        >>>     return "col1,col2\n1,2\n3,4".encode("utf-8")
+        >>>
+        >>> st.download_button(
+        ...     label="Download report",
+        ...     data=make_report,  # pass the function, don't call it
+        ...     file_name="report.csv",
+        ...     mime="text/csv",
+        ... )
 
         """
         ctx = get_script_run_ctx()
