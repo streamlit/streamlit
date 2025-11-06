@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import pickle
-from collections.abc import Iterator, KeysView, MutableMapping
+from collections.abc import Iterator, KeysView, Mapping, MutableMapping
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -726,7 +726,7 @@ class SessionState:
 
             for payload in payloads:
                 if isinstance(payload, dict):
-                    event_name = payload.get("event")
+                    event_name = cast("Mapping[str, object]", payload).get("event")
                     if isinstance(event_name, str) and metadata.callbacks:
                         cb = metadata.callbacks.get(event_name)
                         if cb is not None:

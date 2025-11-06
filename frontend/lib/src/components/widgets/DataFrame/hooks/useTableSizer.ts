@@ -15,9 +15,7 @@
  */
 
 // TODO: fix incorrect hook usage and delete this lint suppression
-// TODO: Update to match React best practices
-// eslint-disable-next-line react-hooks/react-compiler
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
 
 import React, { useLayoutEffect, useState } from "react"
 

@@ -123,7 +123,7 @@ export const useHandleHtmlAndCssContent = ({
     }
 
     try {
-      if (contentRef.current && contentRef.current.parentNode === parent) {
+      if (contentRef.current?.parentNode === parent) {
         parent.removeChild(contentRef.current)
       }
 

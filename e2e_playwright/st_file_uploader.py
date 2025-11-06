@@ -263,3 +263,38 @@ st.file_uploader(
     help="Select a file to be uploaded.",
     type=_MANY_FILE_TYPES,
 )
+
+if st.toggle("Update file uploader props"):
+    dynamic_file = st.file_uploader(
+        "Updated dynamic file uploader",
+        help="updated help",
+        width=300,
+        key="dynamic_file_uploader_key",
+        on_change=lambda a, param: print(
+            f"Updated file uploader - callback triggered: {a} {param}"
+        ),
+        args=("Updated uploader arg",),
+        kwargs={"param": "updated kwarg param"},
+        # type and accept_multiple_files are whitelisted parameters
+        # keeping them the same to test stable identity:
+        type=["txt", "pdf"],
+        accept_multiple_files=False,
+    )
+    st.write("Updated uploader value:", dynamic_file.name if dynamic_file else "None")
+else:
+    dynamic_file = st.file_uploader(
+        "Initial dynamic file uploader",
+        help="initial help",
+        width="stretch",
+        key="dynamic_file_uploader_key",
+        on_change=lambda a, param: print(
+            f"Initial file uploader - callback triggered: {a} {param}"
+        ),
+        args=("Initial uploader arg",),
+        kwargs={"param": "initial kwarg param"},
+        # type and accept_multiple_files are whitelisted parameters
+        # keeping them the same to test stable identity:
+        type=["txt", "pdf"],
+        accept_multiple_files=False,
+    )
+    st.write("Initial uploader value:", dynamic_file.name if dynamic_file else "None")
