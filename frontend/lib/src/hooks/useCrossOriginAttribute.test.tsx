@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import React, { useMemo } from "react"
+import React from "react"
 
 import { renderHook } from "@testing-library/react"
 
 import {
-  LibContext,
+  LibConfigContext,
+  LibConfigContextProps,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import type { LibContextProps } from "@streamlit/lib"
 
 import { useCrossOriginAttribute } from "./useCrossOriginAttribute"
 
@@ -33,19 +33,22 @@ const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
 ): React.FC<{ children: React.ReactNode }> => {
   return ({ children }: { children: React.ReactNode }): JSX.Element => {
-    const libContextValue = useMemo(
-      () =>
-        ({
-          libConfig: { resourceCrossOriginMode },
-        }) as unknown as LibContextProps,
-      []
-    )
+    // useMemo is not needed here as there is no performance benefit
+    // new wrapper is created for each test
+    // eslint-disable-next-line @eslint-react/no-unstable-context-value
+    const libConfigContextValue: LibConfigContextProps = {
+      resourceCrossOriginMode,
+      mapboxToken: undefined,
+      enforceDownloadInNewTab: undefined,
+      locale: "en-US",
+    }
+
     return (
-      <LibContext.Provider value={libContextValue}>
+      <LibConfigContext.Provider value={libConfigContextValue}>
         <ThemeProvider theme={mockTheme.emotion}>
           <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
         </ThemeProvider>
-      </LibContext.Provider>
+      </LibConfigContext.Provider>
     )
   }
 }

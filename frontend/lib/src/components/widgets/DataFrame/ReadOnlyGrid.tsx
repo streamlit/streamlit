@@ -25,6 +25,7 @@ import DataFrame from "./DataFrame"
 interface ReadOnlyGridProps {
   data: Quiver
   height?: number
+  width?: streamlit.IWidthConfig
   customToolbarActions?: React.ReactNode[]
 }
 
@@ -44,6 +45,7 @@ interface ReadOnlyGridProps {
 export const ReadOnlyGrid = ({
   data,
   height,
+  width,
   customToolbarActions,
 }: ReadOnlyGridProps): React.ReactElement => {
   return (
@@ -74,7 +76,7 @@ export const ReadOnlyGrid = ({
       fragmentId={undefined}
       disableFullscreenMode={true}
       customToolbarActions={customToolbarActions}
-      widthConfig={new streamlit.WidthConfig({ useStretch: true })}
+      widthConfig={width ?? new streamlit.WidthConfig({ useStretch: true })}
       heightConfig={
         height
           ? new streamlit.HeightConfig({ pixelHeight: height })

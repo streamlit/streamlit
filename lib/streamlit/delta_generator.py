@@ -17,20 +17,18 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     NoReturn,
+    TypeAlias,
     TypeVar,
     cast,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,
@@ -41,6 +39,7 @@ from streamlit import (
     runtime,
     util,
 )
+from streamlit.components.v2.bidi_component import BidiComponentMixin
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_last_dg_added_to_context_stack,
@@ -76,6 +75,7 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
+from streamlit.elements.space import SpaceMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -207,6 +207,7 @@ class DeltaGenerator(
     SelectSliderMixin,
     SliderMixin,
     SnowMixin,
+    SpaceMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -216,6 +217,7 @@ class DeltaGenerator(
     ArrowMixin,
     VegaChartsMixin,
     DataEditorMixin,
+    BidiComponentMixin,
 ):
     """Creator of Delta protobuf messages.
 

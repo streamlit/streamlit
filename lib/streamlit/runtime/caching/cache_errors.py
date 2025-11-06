@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 

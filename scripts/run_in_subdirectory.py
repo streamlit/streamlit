@@ -27,15 +27,9 @@ if __name__ not in ("__main__", "__mp_main__"):
 
 
 def is_relative_to(path: Path, *other: str) -> bool:
-    """Return True if the path is relative to another path or False.
+    """Return True if the path is relative to another path or False."""
 
-    This function is backported from Python 3.9 - Path.relativeto.
-    """
-    try:
-        path.relative_to(*other)  # ty: ignore[missing-argument]
-        return True
-    except ValueError:
-        return False
+    return path.is_relative_to(*other)
 
 
 def display_usage() -> None:

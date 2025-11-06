@@ -188,146 +188,325 @@ describe("useThemeManager", () => {
     expect(fontFaces2).toEqual(mockCustomThemeConfig.fontFaces)
   })
 
-  it("handles a font source", () => {
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
+  describe("setImportedTheme", () => {
+    it("creates a custom theme with the correct name", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
 
-    act(() => {
-      themeManager.setImportedTheme(mockCustomThemeConfig)
+      act(() => {
+        themeManager.setImportedTheme(mockCustomThemeConfig)
+      })
+
+      const [themeManager2] = result.current
+      expect(themeManager2.activeTheme.name).toBe(CUSTOM_THEME_NAME)
     })
 
-    // Test that useThemeManager returns the correct fontSources state
-    const [, , fontSources] = result.current
-    expect(fontSources).toEqual({
-      headingFont: "https://use.typekit.net/eor5wum.css",
+    it("applies theme colors correctly", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      act(() => {
+        themeManager.setImportedTheme(mockCustomThemeConfig)
+      })
+
+      const [themeManager2] = result.current
+      const { activeTheme } = themeManager2
+
+      expect(activeTheme.emotion.colors.primary).toBe(
+        mockCustomThemeConfig.primaryColor
+      )
+      expect(activeTheme.emotion.colors.bgColor).toBe(
+        mockCustomThemeConfig.backgroundColor
+      )
+      expect(activeTheme.emotion.colors.secondaryBg).toBe(
+        mockCustomThemeConfig.secondaryBackgroundColor
+      )
+      expect(activeTheme.emotion.colors.bodyText).toBe(
+        mockCustomThemeConfig.textColor
+      )
+    })
+
+    it("calls setFonts to handle font configuration", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      act(() => {
+        themeManager.setImportedTheme(mockCustomThemeConfig)
+      })
+
+      const [, fontFaces, fontSources] = result.current
+
+      // Verify fonts were set via setFonts
+      expect(fontFaces).toEqual(mockCustomThemeConfig.fontFaces)
+      expect(fontSources).toEqual({
+        headingFont: "https://use.typekit.net/eor5wum.css",
+      })
+    })
+
+    it("handles theme without font configuration", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      const themeWithoutFonts = {
+        primaryColor: "#FF0000",
+        backgroundColor: "#000000",
+        secondaryBackgroundColor: "#222222",
+        textColor: "#FFFFFF",
+      }
+
+      act(() => {
+        themeManager.setImportedTheme(themeWithoutFonts)
+      })
+
+      const [themeManager2, fontFaces, fontSources] = result.current
+
+      expect(themeManager2.activeTheme.name).toBe(CUSTOM_THEME_NAME)
+      expect(themeManager2.activeTheme.emotion.colors.primary).toBe("#FF0000")
+      // Font states should remain empty or at default values
+      expect(fontFaces).toEqual([])
+      expect(fontSources).toBeNull()
+    })
+
+    it("saves the imported theme to localStorage", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      act(() => {
+        themeManager.setImportedTheme(mockCustomThemeConfig)
+      })
+
+      const savedTheme = JSON.parse(
+        window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+      )
+
+      expect(savedTheme.name).toBe(CUSTOM_THEME_NAME)
+      expect(savedTheme.themeInput).toBeDefined()
+    })
+
+    it("replaces the current theme completely", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      const firstTheme = {
+        primaryColor: "#FF0000",
+        backgroundColor: "#FFFFFF",
+      }
+
+      const secondTheme = {
+        primaryColor: "#00FF00",
+        backgroundColor: "#000000",
+      }
+
+      act(() => {
+        themeManager.setImportedTheme(firstTheme)
+      })
+
+      const [themeManager2] = result.current
+      expect(themeManager2.activeTheme.emotion.colors.primary).toBe("#FF0000")
+
+      act(() => {
+        themeManager2.setImportedTheme(secondTheme)
+      })
+
+      const [themeManager3] = result.current
+      expect(themeManager3.activeTheme.emotion.colors.primary).toBe("#00FF00")
+      expect(themeManager3.activeTheme.emotion.colors.bgColor).toBe("#000000")
     })
   })
 
-  it("handles multiple font sources and replaces existing ones", () => {
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
+  describe("setFonts", () => {
+    it("handles a font source", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
 
-    // First, set a theme with multiple font sources
-    const multiSourceThemeConfig = {
-      ...mockCustomThemeConfig,
-      fontSources: [
-        {
-          configName: "font",
-          sourceUrl:
-            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
-        },
-        {
-          configName: "codeFont",
-          sourceUrl:
-            "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
-        },
-        {
-          configName: "headingFont",
-          sourceUrl: "https://use.typekit.net/eor5wum.css",
-        },
-      ],
-    }
+      act(() => {
+        themeManager.setFonts(mockCustomThemeConfig)
+      })
 
-    act(() => {
-      themeManager.setImportedTheme(multiSourceThemeConfig)
+      // Test that useThemeManager returns the correct fontSources state
+      const [, , fontSources] = result.current
+      expect(fontSources).toEqual({
+        headingFont: "https://use.typekit.net/eor5wum.css",
+      })
     })
 
-    // Test that useThemeManager returns the correct fontSources state
-    const [, , fontSources] = result.current
-    expect(fontSources).toEqual({
-      font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
-      codeFont:
-        "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
-      headingFont: "https://use.typekit.net/eor5wum.css",
+    it("handles provided font faces", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      act(() => {
+        themeManager.setFonts(mockCustomThemeConfig)
+      })
+
+      // Test that useThemeManager returns the correct fontFaces state
+      const [, fontFaces] = result.current
+      expect(fontFaces).toEqual(mockCustomThemeConfig.fontFaces)
     })
-  })
 
-  it("handles font sources from both theme and sidebar", () => {
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
+    it("handles multiple font sources and replaces existing ones", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
 
-    const themeWithSidebarFontSources = {
-      ...mockCustomThemeConfig,
-      fontSources: [
-        {
-          configName: "font",
-          sourceUrl:
-            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
-        },
-      ],
-      sidebar: {
+      // First, set a theme with multiple font sources
+      const multiSourceThemeConfig = {
+        ...mockCustomThemeConfig,
         fontSources: [
           {
-            configName: "font-sidebar",
+            configName: "font",
             sourceUrl:
-              "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+              "https://fonts.googleapis.com/css2?family=Inter&display=swap",
           },
           {
-            configName: "codeFont-sidebar",
+            configName: "codeFont",
             sourceUrl:
-              "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+              "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+          },
+          {
+            configName: "headingFont",
+            sourceUrl: "https://use.typekit.net/eor5wum.css",
           },
         ],
-      },
-    }
+      }
 
-    act(() => {
-      themeManager.setImportedTheme(themeWithSidebarFontSources)
+      act(() => {
+        themeManager.setFonts(multiSourceThemeConfig)
+      })
+
+      // Test that useThemeManager returns the correct fontSources state
+      const [, , fontSources] = result.current
+      expect(fontSources).toEqual({
+        font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        codeFont:
+          "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+        headingFont: "https://use.typekit.net/eor5wum.css",
+      })
     })
 
-    // Test that useThemeManager returns font sources from both theme and sidebar
-    const [, , fontSources] = result.current
-    expect(fontSources).toEqual({
-      font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
-      "font-sidebar":
-        "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
-      "codeFont-sidebar":
-        "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+    it("handles multiple font faces and replaces existing ones", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      // First, set a theme with multiple font faces
+      const multiFaceThemeConfig = {
+        ...mockCustomThemeConfig,
+        fontFaces: [
+          {
+            family: "Corgi",
+            url: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+            weight: 400,
+          },
+          {
+            family: "Roboto Mono",
+            url: "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+            weight: 400,
+          },
+          {
+            family: "Playwrite CC ZA",
+            url: "https://use.typekit.net/eor5wum.css",
+            weight: 400,
+          },
+        ],
+      }
+
+      act(() => {
+        themeManager.setFonts(multiFaceThemeConfig)
+      })
+
+      // Test that useThemeManager returns the correct fontFaces state
+      const [, fontFaces] = result.current
+      expect(fontFaces).toEqual(multiFaceThemeConfig.fontFaces)
     })
-  })
 
-  it("handles theme replacement correctly", () => {
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
+    it("handles font sources from both theme and sidebar", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
 
-    // First theme with multiple sources
-    const firstTheme = {
-      ...mockCustomThemeConfig,
-      fontSources: [
-        { configName: "font", sourceUrl: "https://example.com/font1.css" },
-        { configName: "codeFont", sourceUrl: "https://example.com/code1.css" },
-      ],
-    }
-
-    act(() => {
-      themeManager.setImportedTheme(firstTheme)
-    })
-
-    const [, , fontSources] = result.current
-    expect(fontSources).toEqual({
-      font: "https://example.com/font1.css",
-      codeFont: "https://example.com/code1.css",
-    })
-
-    // Replace with different theme
-    const secondTheme = {
-      ...mockCustomThemeConfig,
-      fontSources: [
-        {
-          configName: "headingFont",
-          sourceUrl: "https://example.com/heading2.css",
+      const themeWithSidebarFontSources = {
+        ...mockCustomThemeConfig,
+        fontSources: [
+          {
+            configName: "font",
+            sourceUrl:
+              "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+          },
+        ],
+        sidebar: {
+          fontSources: [
+            {
+              configName: "font-sidebar",
+              sourceUrl:
+                "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+            },
+            {
+              configName: "codeFont-sidebar",
+              sourceUrl:
+                "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+            },
+          ],
         },
-      ],
-    }
+      }
 
-    act(() => {
-      themeManager.setImportedTheme(secondTheme)
+      act(() => {
+        themeManager.setFonts(themeWithSidebarFontSources)
+      })
+
+      // Test that useThemeManager returns font sources from both theme and sidebar
+      const [, , fontSources] = result.current
+      expect(fontSources).toEqual({
+        font: "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        "font-sidebar":
+          "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+        "codeFont-sidebar":
+          "https://fonts.googleapis.com/css2?family=Monaco&display=swap",
+      })
     })
 
-    // Should completely replace the previous font sources
-    const [, , updatedFontSources] = result.current
-    expect(updatedFontSources).toEqual({
-      headingFont: "https://example.com/heading2.css",
+    it("handles font replacement correctly", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      // First theme with multiple sources
+      const firstTheme = {
+        ...mockCustomThemeConfig,
+        fontSources: [
+          { configName: "font", sourceUrl: "https://example.com/font1.css" },
+          {
+            configName: "codeFont",
+            sourceUrl: "https://example.com/code1.css",
+          },
+        ],
+      }
+
+      act(() => {
+        themeManager.setFonts(firstTheme)
+      })
+
+      const [, , fontSources] = result.current
+      expect(fontSources).toEqual({
+        font: "https://example.com/font1.css",
+        codeFont: "https://example.com/code1.css",
+      })
+
+      // Replace with different theme
+      const secondTheme = {
+        ...mockCustomThemeConfig,
+        fontSources: [
+          {
+            configName: "headingFont",
+            sourceUrl: "https://example.com/heading2.css",
+          },
+        ],
+      }
+
+      act(() => {
+        themeManager.setFonts(secondTheme)
+      })
+
+      // Should completely replace the previous font sources
+      const [, , updatedFontSources] = result.current
+      expect(updatedFontSources).toEqual({
+        headingFont: "https://example.com/heading2.css",
+      })
     })
   })
 })

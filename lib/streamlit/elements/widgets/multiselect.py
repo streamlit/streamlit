@@ -19,7 +19,6 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -64,7 +63,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
@@ -370,7 +369,9 @@ class MultiSelectMixin:
         Returns
         -------
         list
-            A list with the selected options
+            A list of the selected options.
+
+            The list contains copies of the selected options, not the originals.
 
         Examples
         --------

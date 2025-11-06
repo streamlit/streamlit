@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click

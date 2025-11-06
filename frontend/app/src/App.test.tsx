@@ -37,6 +37,9 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -230,6 +233,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     availableThemes: [],
     setTheme: vi.fn(),
     addThemes: vi.fn(),
+    setFonts: vi.fn(),
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
@@ -770,9 +774,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -793,9 +798,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -832,6 +838,7 @@ describe("App", () => {
           availableThemes: [],
           setTheme: vi.fn(),
           addThemes: vi.fn(),
+          setFonts: vi.fn(),
           setImportedTheme: vi.fn(),
         },
       })
@@ -1916,7 +1923,75 @@ describe("App", () => {
   })
 
   describe("App.processThemeInput", () => {
-    it("calls setImportedTheme when fontFaces are provided", () => {
+    it("passing a custom theme adds the custom theme and removes preset themes", () => {
+      // Simplest custom theme (no light/dark versions)
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Custom theme should be added
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+      // Active theme should be set to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
+    })
+
+    it("passing a custom theme with light/dark versions adds both and removes preset themes", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "red",
+        },
+        dark: {
+          primaryColor: "green",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Check that 3 themes were added (light, dark, auto)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ name: CUSTOM_THEME_LIGHT_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
+        ],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+
+      // Active theme should be set to the auto theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "red",
+          }),
+        })
+      )
+    })
+
+    it("calls setFonts when fontFaces are provided", () => {
       const fontFaces = [{ url: "test-url" }]
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
@@ -1931,11 +2006,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should have called setImportedTheme
-      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
     })
 
-    it("doesn't call setImportedTheme when fontFaces is empty", () => {
+    it("doesn't call setFonts when fontFaces is empty", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         fontFaces: [],
@@ -1949,11 +2024,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should not have called setImportedTheme
-      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
     })
 
-    it("calls setImportedTheme when a fontSource is provided", () => {
+    it("calls setFonts when a fontSource is provided", () => {
       const fontSources = [
         {
           configName: "font",
@@ -1974,11 +2049,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should have called setImportedTheme
-      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
     })
 
-    it("doesn't call setImportedTheme when fontSources is empty", () => {
+    it("doesn't call setFonts when fontSources is empty", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         fontSources: [],
@@ -1992,8 +2067,106 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should not have called setImportedTheme
-      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
+    })
+
+    it("sets active theme to Custom Theme when theme input has no light/dark configs", () => {
+      // App receives a custom theme input with new session, no light/dark configs
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
+      )
+    })
+
+    it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Light", () => {
+      // Mock the system preference return value (light)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: light)", // Returns true for light
+        })),
+      })
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom light theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "lightblue",
+          }),
+        })
+      )
+    })
+
+    it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Dark", () => {
+      // Mock the system preference return value (dark)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: dark)", // Returns true for dark
+        })),
+      })
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom dark theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "darkblue",
+          }),
+        })
+      )
     })
   })
 

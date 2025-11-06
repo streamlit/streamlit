@@ -47,4 +47,7 @@ message ChatInput {
 
   // Max file size allowed by server config
   int32 max_upload_size_mb = 11;
+
+  // Whether to show audio recording button
+  bool accept_audio = 12;
 }

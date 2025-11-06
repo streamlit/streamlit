@@ -20,12 +20,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     Union,
     overload,
 )
 
 from google.protobuf.message import Message
-from typing_extensions import TypeAlias
 
 from streamlit import config
 from streamlit.elements.lib.form_utils import current_form_id
@@ -49,12 +49,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Key: TypeAlias = Union[str, int]
+Key: TypeAlias = str | int
 
 LabelVisibility: TypeAlias = Literal["visible", "hidden", "collapsed"]
 
-PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-SAFE_VALUES = Union[
+PROTO_SCALAR_VALUE: TypeAlias = float | int | bool | str | bytes
+SAFE_VALUES: TypeAlias = Union[
     date,
     time,
     datetime,

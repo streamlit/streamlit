@@ -21,9 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -43,7 +41,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
+UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
 
 
 class ImageMixin:

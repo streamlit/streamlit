@@ -369,9 +369,7 @@ def connection_factory(  # type: ignore
     """
 
     if name.startswith(_USE_ENV_PREFIX):
-        # It'd be nice to use str.removeprefix() here, but we won't be able to do that
-        # until the minimum Python version we support is 3.9.
-        envvar_name = name[len(_USE_ENV_PREFIX) :]
+        envvar_name = name.removeprefix(_USE_ENV_PREFIX)
         name = os.environ[envvar_name]
 
     # type is a nice kwarg name for the st.connection user but is annoying to work with

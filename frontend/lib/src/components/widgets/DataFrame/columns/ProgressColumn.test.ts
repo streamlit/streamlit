@@ -19,6 +19,7 @@ import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, Int64 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import ProgressColumn, { ProgressColumnParams } from "./ProgressColumn"
 import { BaseColumnProps, ErrorCell, isErrorCell } from "./utils"
@@ -49,10 +50,13 @@ const PROGRESS_COLUMN_TEMPLATE = {
 function getProgressColumn(
   params?: ProgressColumnParams
 ): ReturnType<typeof ProgressColumn> {
-  return ProgressColumn({
-    ...PROGRESS_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return ProgressColumn(
+    {
+      ...PROGRESS_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 describe("ProgressColumn", () => {
@@ -227,20 +231,23 @@ describe("ProgressColumn", () => {
   })
 
   it("correctly formats int values to percentage", () => {
-    const mockColumn = ProgressColumn({
-      ...PROGRESS_COLUMN_TEMPLATE,
-      arrowType: {
-        type: DataFrameCellType.DATA,
-        arrowField: new Field("progress_column", new Int64(), true),
-        pandasType: {
-          field_name: "progress_column",
-          name: "progress_column",
-          pandas_type: "int64",
-          numpy_type: "int64",
-          metadata: null,
+    const mockColumn = ProgressColumn(
+      {
+        ...PROGRESS_COLUMN_TEMPLATE,
+        arrowType: {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("progress_column", new Int64(), true),
+          pandasType: {
+            field_name: "progress_column",
+            name: "progress_column",
+            pandas_type: "int64",
+            numpy_type: "int64",
+            metadata: null,
+          },
         },
-      },
-    } as BaseColumnProps)
+      } as BaseColumnProps,
+      mockTheme.emotion
+    )
     const mockCell = mockColumn.getCell(52)
     expect((mockCell as RangeCellType).data?.min).toEqual(0)
     expect((mockCell as RangeCellType).data?.max).toEqual(100)
@@ -248,5 +255,38 @@ describe("ProgressColumn", () => {
     // Correctly formats int values to percentage:
     expect((mockCell as RangeCellType).data?.value).toEqual(52)
     expect((mockCell as RangeCellType).data?.label).toEqual(" 52%")
+  })
+
+  it("supports named color mapping and custom colors", () => {
+    const blueColumn = getProgressColumn({ color: "blue" })
+    const blueCell = blueColumn.getCell(0.5) as RangeCellType
+    expect(blueCell.data?.color).toEqual(mockTheme.emotion.colors.blueColor)
+
+    const greyColumn = getProgressColumn({ color: "grey" })
+    const greyCell = greyColumn.getCell(0.5) as RangeCellType
+    expect(greyCell.data?.color).toEqual(mockTheme.emotion.colors.grayColor)
+
+    const customColor = "#123456"
+    const customColumn = getProgressColumn({ color: customColor })
+    const customCell = customColumn.getCell(0.5) as RangeCellType
+    expect(customCell.data?.color).toEqual(customColor)
+  })
+
+  it("applies auto color based on value", () => {
+    const autoColumn = getProgressColumn({ color: "auto" })
+    const highCell = autoColumn.getCell(0.75) as RangeCellType
+    expect(highCell.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
+
+    const lowCell = autoColumn.getCell(0.25) as RangeCellType
+    expect(lowCell.data?.color).toEqual(mockTheme.emotion.colors.redColor)
+  })
+
+  it("applies auto-inverse color based on value", () => {
+    const autoInvColumn = getProgressColumn({ color: "auto-inverse" })
+    const highCell = autoInvColumn.getCell(0.75) as RangeCellType
+    expect(highCell.data?.color).toEqual(mockTheme.emotion.colors.redColor)
+
+    const lowCell = autoInvColumn.getCell(0.25) as RangeCellType
+    expect(lowCell.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
   })
 })

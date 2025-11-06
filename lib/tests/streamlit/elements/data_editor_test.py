@@ -53,7 +53,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -150,6 +153,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.LIST,
                 ["foo"],
             ),
+            (
+                ["foo"],
+                ColumnDataKind.EMPTY,
+                ["foo"],
+            ),
         ]
     )
     def test_parse_value(
@@ -216,12 +224,25 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [["x"], ["y"], ["z"]],
             }
         )
 
         added_rows: list[dict[str, Any]] = [
-            {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
-            {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
+            {
+                "col1": 10,
+                "col2": "foo",
+                "col3": False,
+                "col4": "2020-03-20T14:28:23",
+                "col5": ["x", "y"],
+            },
+            {
+                "col1": 11,
+                "col2": "bar",
+                "col3": True,
+                "col4": "2023-03-20T14:28:23",
+                "col5": ["z"],
+            },
         ]
 
         _apply_row_additions(
@@ -229,6 +250,9 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         assert len(df) == 5
+        assert df.loc[3, "col5"] == ["x", "y"]
+        assert df.loc[4, "col5"] == ["z"]
+        assert pd.api.types.is_bool_dtype(df["col3"])
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
@@ -1050,3 +1074,25 @@ class DataEditorTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 500
+
+    def test_height_stretch(self):
+        """Test that height='stretch' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert el.height_config.use_stretch is True
+
+    def test_height_content(self):
+        """Test that height='content' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert el.height_config.use_content is True
