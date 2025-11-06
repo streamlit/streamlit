@@ -96,7 +96,7 @@ jobs:
         iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
     uses: ./.github/workflows/playwright-changed-files.yml
     with:
-      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/merge
+      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/head
       base_ref: ${{ needs.verify.outputs.base_ref }}
       iteration: ${{ matrix.iteration }}
     secrets: inherit
