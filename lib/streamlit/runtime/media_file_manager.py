@@ -142,6 +142,31 @@ class MediaFileManager:
                     else:
                         file.mark_for_delete()
 
+            # Clean up orphaned deferred callables
+            self._remove_orphaned_deferred_callables()
+
+    def _remove_orphaned_deferred_callables(self) -> None:
+        """Remove deferred callables that are not referenced by any active session.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        _LOGGER.debug("Removing orphaned deferred callables...")
+
+        # Get all file_ids currently referenced by any session
+        active_file_ids = set[str]()
+        for session_file_ids_by_coord in self._files_by_session_and_coord.values():
+            active_file_ids.update(session_file_ids_by_coord.values())
+
+        # Remove deferred callables that are no longer referenced
+        deferred_ids_to_remove = [
+            file_id
+            for file_id in self._deferred_callables
+            if file_id not in active_file_ids
+        ]
+        for file_id in deferred_ids_to_remove:
+            _LOGGER.debug("Removing deferred callable: %s", file_id)
+            del self._deferred_callables[file_id]
+
     def _delete_file(self, file_id: str) -> None:
         """Delete the given file from storage, and remove its metadata from
         self._files_by_id.
@@ -170,6 +195,10 @@ class MediaFileManager:
         with self._lock:
             if session_id in self._files_by_session_and_coord:
                 del self._files_by_session_and_coord[session_id]
+
+            # Don't immediately delete deferred callables here to avoid race conditions.
+            # They will be cleaned up by remove_orphaned_deferred_callables() which
+            # only removes callables that are not referenced by ANY session.
 
         _LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
@@ -364,8 +393,8 @@ class MediaFileManager:
             metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
             self._file_metadata[actual_file_id] = metadata
 
-            # Clean up the deferred callable reference
-            del self._deferred_callables[file_id]
+            # Keep the deferred callable so users can download multiple times
+            # It will be cleaned up when clear_session_refs() is called on rerun
 
             # Return the URL to access the file
             return self._storage.get_url(actual_file_id)

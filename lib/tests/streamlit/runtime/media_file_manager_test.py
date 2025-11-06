@@ -602,8 +602,8 @@ class MediaFileManagerDeferredTest(TestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         MagicMock(return_value="mock_session"),
     )
-    def test_execute_deferred_cleans_up(self):
-        """Test that execute_deferred removes callable reference after execution."""
+    def test_execute_deferred_keeps_callable(self):
+        """Test that execute_deferred keeps callable for multiple downloads."""
 
         def generate_data():
             return b"data"
@@ -617,8 +617,8 @@ class MediaFileManagerDeferredTest(TestCase):
 
         self.media_file_manager.execute_deferred(file_id)
 
-        # Callable should be removed after execution
-        assert file_id not in self.media_file_manager._deferred_callables
+        # Callable should still exist after execution for multiple downloads
+        assert file_id in self.media_file_manager._deferred_callables
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
@@ -670,10 +670,13 @@ class MediaFileManagerDeferredTest(TestCase):
         MagicMock(return_value="mock_session"),
     )
     def test_execute_deferred_multiple_times_same_callable(self):
-        """Test that attempting to execute the same deferred callable twice fails."""
+        """Test that the same deferred callable can be executed multiple times."""
+        call_count = 0
 
         def generate_data():
-            return b"data"
+            nonlocal call_count
+            call_count += 1
+            return f"data_{call_count}".encode()
 
         file_id = self.media_file_manager.add_deferred(
             generate_data, "text/plain", random_coordinates()
@@ -682,7 +685,93 @@ class MediaFileManagerDeferredTest(TestCase):
         # First execution should work
         url1 = self.media_file_manager.execute_deferred(file_id)
         assert url1.startswith("/mock/endpoint/")
+        assert call_count == 1
 
-        # Second execution should fail because callable was cleaned up
-        with pytest.raises(MediaFileStorageError, match=r"Deferred file .* not found"):
-            self.media_file_manager.execute_deferred(file_id)
+        # Second execution should also work (callable is kept)
+        url2 = self.media_file_manager.execute_deferred(file_id)
+        assert url2.startswith("/mock/endpoint/")
+        assert call_count == 2
+
+        # URLs can be different if the callable returns different data
+        # but both should be valid
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_clear_session_refs_and_remove_orphaned_cleans_deferred(self):
+        """Test that deferred callables are cleaned up after clear_session_refs + remove_orphaned_files."""
+
+        def generate_data():
+            return b"data"
+
+        # Add a deferred callable
+        file_id = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", random_coordinates()
+        )
+
+        # Callable should exist
+        assert file_id in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 1
+
+        # Clear session refs (doesn't immediately delete callables)
+        self.media_file_manager.clear_session_refs("mock_session")
+
+        # Callable should still exist (not immediately deleted to avoid race conditions)
+        assert file_id in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 1
+
+        # Remove orphaned files (this cleans up orphaned deferred callables)
+        self.media_file_manager.remove_orphaned_files()
+
+        # Now the deferred callable should be removed
+        assert file_id not in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 0
+
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
+    def test_remove_orphaned_only_cleans_unreferenced_deferred(
+        self, mock_get_session_id
+    ):
+        """Test that only truly orphaned deferred callables are removed."""
+
+        def generate_data():
+            return b"data"
+
+        # Add deferred callable for session 1
+        mock_get_session_id.return_value = "session_1"
+        file_id_1 = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", random_coordinates()
+        )
+
+        # Add deferred callable for session 2
+        mock_get_session_id.return_value = "session_2"
+        file_id_2 = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", random_coordinates()
+        )
+
+        # Both callables should exist
+        assert file_id_1 in self.media_file_manager._deferred_callables
+        assert file_id_2 in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 2
+
+        # Clear session 1 refs (doesn't immediately delete)
+        self.media_file_manager.clear_session_refs("session_1")
+
+        # Both callables still exist
+        assert file_id_1 in self.media_file_manager._deferred_callables
+        assert file_id_2 in self.media_file_manager._deferred_callables
+
+        # Remove orphaned files - only session 1's callable should be cleaned
+        self.media_file_manager.remove_orphaned_files()
+
+        assert file_id_1 not in self.media_file_manager._deferred_callables
+        assert file_id_2 in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 1
+
+        # Clear session 2 refs and remove orphans
+        self.media_file_manager.clear_session_refs("session_2")
+        self.media_file_manager.remove_orphaned_files()
+
+        # Now both should be removed
+        assert file_id_2 not in self.media_file_manager._deferred_callables
+        assert len(self.media_file_manager._deferred_callables) == 0
