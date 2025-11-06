@@ -25,9 +25,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import NoReturn, cast
-
-from typing_extensions import TypeAlias
+from typing import NoReturn, TypeAlias, cast
 
 PackageInfo: TypeAlias = tuple[str, str]
 

@@ -34,7 +34,7 @@ _LOGGER: Final = get_logger(__name__)
 
 # Mimetype -> filename extension map for the `get_extension_for_mimetype`
 # function. We use Python's `mimetypes.guess_extension` for most mimetypes,
-# but (as of Python 3.9) `mimetypes.guess_extension("audio/wav")` returns None,
+# but (as of Python 3.12) `mimetypes.guess_extension("audio/wav")` returns None,
 # so we handle it ourselves.
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",

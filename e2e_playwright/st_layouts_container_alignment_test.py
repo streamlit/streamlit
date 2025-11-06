@@ -32,6 +32,7 @@ CONTAINER_KEYS = [
     "container-vertical-horizontal-align-left",
     "container-vertical-horizontal-align-center",
     "container-vertical-horizontal-align-right",
+    "container-horizontal-centered-elements",
 ]
 
 

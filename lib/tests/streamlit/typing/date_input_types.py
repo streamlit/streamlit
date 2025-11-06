@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -37,12 +37,12 @@ if TYPE_CHECKING:
     assert_type(date_input("foo", value="2024-01-01"), date)
 
     # Should return date or None if value is None:
-    assert_type(date_input("foo", value=None), Union[date, None])
+    assert_type(date_input("foo", value=None), date | None)
     assert_type(
         date_input(
             "foo", value=None, min_value=date(2024, 1, 1), max_value=date(2024, 1, 31)
         ),
-        Union[date, None],
+        date | None,
     )
 
     # Date range input with different sequence types

@@ -391,7 +391,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
-      if (!info || !info.object || !tooltip) {
+      if (!info?.object || !tooltip) {
         return null
       }
 

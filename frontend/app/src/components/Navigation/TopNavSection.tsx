@@ -47,6 +47,7 @@ interface TopNavSectionProps {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
   hideChevron?: boolean
+  widgetsDisabled: boolean
 }
 
 const TopNavSection = ({
@@ -57,6 +58,7 @@ const TopNavSection = ({
   pageLinkBaseUrl,
   currentPageScriptHash,
   hideChevron = false,
+  widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useTheme()
@@ -76,7 +78,7 @@ const TopNavSection = ({
       triggerType={TRIGGER_TYPE.click}
       placement={PLACEMENT.bottomLeft}
       content={() => (
-        <StyledPopoverContent data-testid="stTopNavSection">
+        <StyledPopoverContent data-testid="stTopNavPopover">
           {sections.map((section, _sectionIndex) => {
             const sectionName = section[0].sectionHeader
 
@@ -103,12 +105,14 @@ const TopNavSection = ({
                       {...item}
                       icon={item.icon || null}
                       isTopNav={true}
+                      isInDropdown={true}
                       isActive={currentPageScriptHash === item.pageScriptHash}
                       onClick={handleClick}
                       pageUrl={endpoints.buildAppPageURL(
                         pageLinkBaseUrl,
                         item
                       )}
+                      widgetsDisabled={widgetsDisabled}
                     >
                       {pageName}
                     </SidebarNavLink>
@@ -173,6 +177,7 @@ const TopNavSection = ({
           tabIndex={0}
           onClick={() => setOpen(!open)}
           isOpen={open}
+          data-testid="stTopNavSection"
         >
           <StyledNavSectionText>{title}</StyledNavSectionText>
           {!hideChevron && (

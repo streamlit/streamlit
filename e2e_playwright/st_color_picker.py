@@ -82,6 +82,37 @@ st.color_picker(
     width=100,
 )
 
+if st.toggle("Update color picker props"):
+    dyn_val = st.color_picker(
+        "Updated dynamic color picker",
+        value="#00ff00",
+        width="stretch",
+        help="updated help",
+        key="dynamic_color_picker_with_key",
+        on_change=lambda a, param: print(
+            f"Updated color picker - callback triggered: {a} {param}"
+        ),
+        args=("Updated color arg",),
+        kwargs={"param": "updated kwarg param"},
+        label_visibility="visible",
+    )
+    st.write("Updated color picker value:", dyn_val)
+else:
+    dyn_val = st.color_picker(
+        "Initial dynamic color picker",
+        value="#ff0000",
+        width="content",
+        help="initial help",
+        key="dynamic_color_picker_with_key",
+        on_change=lambda a, param: print(
+            f"Initial color picker - callback triggered: {a} {param}"
+        ),
+        args=("Initial color arg",),
+        kwargs={"param": "initial kwarg param"},
+        label_visibility="visible",
+    )
+    st.write("Initial color picker value:", dyn_val)
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

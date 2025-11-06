@@ -20,6 +20,7 @@ import types
 from collections import ChainMap, UserDict, UserList
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -30,7 +31,6 @@ from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     cast,
 )
@@ -56,9 +56,6 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-_TEXT_CURSOR: Final = " ▏"
-
-
 class StreamingOutput(list[Any]):
     pass
 
@@ -71,8 +68,10 @@ class WriteMixin:
         | Generator[Any, Any, Any]
         | Iterable[Any]
         | AsyncGenerator[Any, Any],
+        *,
+        cursor: str | None = None,
     ) -> list[Any] | str:
-        """Stream a generator, iterable, or stream-like sequence to the app.
+        r"""Stream a generator, iterable, or stream-like sequence to the app.
 
         ``st.write_stream`` iterates through the given sequences and writes all
         chunks to the app. String chunks will be written using a typewriter effect.
@@ -91,6 +90,27 @@ class WriteMixin:
                 To use additional LLM libraries, you can create a wrapper to
                 manually define a generator function and include custom output
                 parsing.
+
+        cursor : str or None
+            A string to append to text as it's being written. If this is
+            ``None`` (default), no cursor is shown. Otherwise, the string is
+            rendered as Markdown and appears as a cursor at the end of the
+            streamed text. For example, you can use an emoji, emoji shortcode,
+            or Material icon.
+
+            The first line of the cursor string can contain GitHub-flavored
+            Markdown of the following types: Bold, Italics, Strikethroughs,
+            Inline Code, Links, and Images. Images display like icons, with a
+            max height equal to the font height. If you pass a multiline
+            string, additional lines display after the text with the full
+            Markdown rendering capabilities of ``st.markdown``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
 
         Returns
         -------
@@ -151,6 +171,7 @@ class WriteMixin:
                 "this data type."
             )
 
+        cursor_str = cursor or ""
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
@@ -229,7 +250,7 @@ class WriteMixin:
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
                 stream_container.markdown(
-                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                    streamed_response + ("" if first_text else cursor_str),
                 )
             elif callable(chunk):
                 flush_stream_response()

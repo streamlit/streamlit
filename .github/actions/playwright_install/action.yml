@@ -85,6 +85,17 @@ runs:
         #   - Then run this action to install browsers
         # This ensures a single source of truth and proper caching.
         if [[ "${{ inputs.with-deps }}" == "true" ]]; then
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            # Adjust apt mirror priorities to avoid slow Azure mirror (see
+            # https://github.com/actions/runner-images/issues/7048). Inspired by
+            # https://github.com/CrowdStrike/glide-core/pull/1113 and
+            # https://github.com/servo/servo/pull/39190 and
+            sudo sed -i '/archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:2/priority:0/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/azure.archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:0/priority:1/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/security.ubuntu.com\/ubuntu\/\tpriority/ s/priority:3/priority:2/' /etc/apt/apt-mirrors.txt
+            sudo cat /etc/apt/apt-mirrors.txt
+            sudo apt-get update
+          fi
           DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
         else
           python -m playwright install

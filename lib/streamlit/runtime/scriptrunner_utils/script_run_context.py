@@ -22,13 +22,10 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
-    Callable,
     Final,
-    Union,
+    TypeAlias,
 )
 from urllib import parse
-
-from typing_extensions import TypeAlias
 
 from streamlit.errors import (
     NoSessionContext,
@@ -41,7 +38,7 @@ from streamlit.runtime.forward_msg_cache import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from pathlib import Path
 
     from streamlit.cursor import RunningCursor
@@ -55,7 +52,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = dict[str, Union[str, bool, None]]
+UserInfo: TypeAlias = dict[str, str | bool | None]
 
 
 # If true, it indicates that we are in a cached function that disallows the usage of

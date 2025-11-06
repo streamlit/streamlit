@@ -62,6 +62,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
+  let kind = BaseButtonKind.SECONDARY
+  if (element.type === "primary") {
+    kind = BaseButtonKind.PRIMARY
+  } else if (element.type === "tertiary") {
+    kind = BaseButtonKind.TERTIARY
+  }
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <UIPopover
@@ -138,7 +145,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           <BaseButtonTooltip help={element.help} containerWidth={true}>
             <BaseButton
               data-testid="stPopoverButton"
-              kind={BaseButtonKind.SECONDARY}
+              kind={kind}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
               containerWidth={true}

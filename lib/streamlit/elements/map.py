@@ -21,12 +21,23 @@ import json
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit import config, dataframe_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
     is_color_like,
     to_int_color_tuple,
+)
+from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_height,
+    validate_width,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
@@ -85,9 +96,9 @@ class MapMixin:
         color: None | str | Color = None,
         size: None | str | float = None,
         zoom: int | None = None,
-        use_container_width: bool = True,
-        width: int | None = None,
-        height: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: HeightWithoutContent = 500,
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -163,28 +174,42 @@ class MapMixin:
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels.
 
-        use_container_width : bool
+        width : "stretch" or int
+            The width of the chart element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        height : "stretch" or int
+            The height of the chart element. This can be one of the following:
+
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled. This is ``500`` by default.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+
+        use_container_width : bool or None
             Whether to override the map's native width with the width of
-            the parent container. If ``use_container_width`` is ``True``
-            (default), Streamlit sets the width of the map to match the width
-            of the parent container. If ``use_container_width`` is ``False``,
-            Streamlit sets the width of the chart to fit its contents according
-            to the plotting library, up to the width of the parent container.
+            the parent container. This can be one of the following:
 
-        width : int or None
-            Desired width of the chart expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the width of the chart to fit
-            its contents according to the plotting library, up to the width of
-            the parent container. If ``width`` is greater than the width of the
-            parent container, Streamlit sets the chart width to match the width
-            of the parent container.
+            - ``None`` (default): Streamlit will use the map's default behavior.
+            - ``True``: Streamlit sets the width of the map to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the map to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
 
-            To use ``width``, you must set ``use_container_width=False``.
-
-        height : int or None
-            Desired height of the chart expressed in pixels. If ``height`` is
-            ``None`` (default), Streamlit sets the height of the chart to fit
-            its contents according to the plotting library.
+            .. deprecated::
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         Examples
         --------
@@ -231,12 +256,35 @@ class MapMixin:
            height: 600px
 
         """
+        # Handle use_container_width deprecation (for elements that already had width parameter)
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, specify an integer width.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            # For use_container_width=False, preserve any integer width that was set.
+
+        validate_width(width, allow_content=False)
+        validate_height(height, allow_content=False)
+
         map_proto = DeckGlJsonChartProto()
         deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
-        marshall(
-            map_proto, deck_gl_json, use_container_width, width=width, height=height
+
+        marshall(map_proto, deck_gl_json)
+
+        layout_config = LayoutConfig(width=width, height=height)
+        return self.dg._enqueue(
+            "deck_gl_json_chart", map_proto, layout_config=layout_config
         )
-        return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -399,9 +447,7 @@ def _convert_color_arg_or_column(
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(
-            data[color_col_name].iloc[0]
-        ):
+        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):
             # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
             data.loc[:, color_col_name] = data.loc[:, color_col_name].map(
                 to_int_color_tuple
@@ -466,18 +512,13 @@ def _get_zoom_level(distance: float) -> int:
 def marshall(
     pydeck_proto: DeckGlJsonChartProto,
     pydeck_json: str,
-    use_container_width: bool,
-    height: int | None = None,
-    width: int | None = None,
 ) -> None:
+    """Marshall a map proto with the given pydeck JSON specification.
+
+    Layout configuration (width, height, etc.) is handled by the LayoutConfig
+    system and not through proto fields.
+    """
     pydeck_proto.json = pydeck_json
-    pydeck_proto.use_container_width = use_container_width
-
-    if width:
-        pydeck_proto.width = width
-    if height:
-        pydeck_proto.height = height
-
     pydeck_proto.id = ""
 
     mapbox_token = config.get_option("mapbox.token")

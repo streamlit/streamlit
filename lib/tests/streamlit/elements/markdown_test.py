@@ -299,3 +299,19 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    def test_st_badge_with_help(self):
+        """Test st.badge with help parameter."""
+        st.badge("Badge with help", help="Tooltip text")
+        el = self.get_delta_from_queue().new_element
+
+        assert el.markdown.body == ":blue-badge[Badge with help]"
+        assert el.markdown.help == "Tooltip text"
+
+    def test_st_badge_help_not_set_when_none(self):
+        """Test that st.badge does not set help when help is None."""
+        st.badge("Badge without help")
+        el = self.get_delta_from_queue().new_element
+
+        assert el.markdown.body == ":blue-badge[Badge without help]"
+        assert not getattr(el.markdown, "help", None)

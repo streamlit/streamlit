@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 from pathlib import Path
 from typing import Any
@@ -26,8 +28,8 @@ import streamlit as st
 # allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
-img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
-img800: npt.NDArray[np.int_] = np.repeat(0, 640000).reshape(800, 800)
+img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
+img800: npt.NDArray[np.int64] = np.repeat(0, 640000).reshape(800, 800)
 
 
 st.header("Images from numpy arrays")
@@ -38,7 +40,7 @@ st.image(img, caption="Black Square as PNG.", output_format="PNG", width=100)
 
 st.image(img, caption="Black Square with no output format specified.", width=100)
 
-transparent_img: "npt.NDArray[Any]" = np.zeros((100, 100, 4), dtype=np.uint8)
+transparent_img: npt.NDArray[Any] = np.zeros((100, 100, 4), dtype=np.uint8)
 st.image(transparent_img, caption="Transparent Black Square.", width=100)
 
 st.header("GIF images")

@@ -305,7 +305,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
 
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
         with col1:
             st.number_input("foo", 0, 10)
 

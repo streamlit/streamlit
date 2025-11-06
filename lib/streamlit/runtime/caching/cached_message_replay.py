@@ -17,7 +17,7 @@ from __future__ import annotations
 import contextlib
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, TypeAlias, TypeVar
 
 from typing_extensions import ParamSpec
 
@@ -29,7 +29,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from google.protobuf.message import Message
 
@@ -69,7 +69,7 @@ class BlockMsgData:
     returned_dgs_id: str
 
 
-MsgData = Union[ElementMsgData, BlockMsgData]
+MsgData: TypeAlias = ElementMsgData | BlockMsgData
 
 
 R = TypeVar("R")

@@ -21,15 +21,14 @@ import threading
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
+    TypeAlias,
     TypeVar,
-    Union,
     overload,
 )
 
-from typing_extensions import ParamSpec, TypeAlias
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime
@@ -66,6 +65,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -75,7 +75,7 @@ _LOGGER: Final = get_logger(__name__)
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
-CachePersistType: TypeAlias = Union[Literal["disk"], None]
+CachePersistType: TypeAlias = Literal["disk"] | None
 
 
 P = ParamSpec("P")

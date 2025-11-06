@@ -27,6 +27,7 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons
 def configure_custom_theme_background_colors():
     """Configure custom theme background colors."""
     # Also set some main colors for better contrast with background colors
+    # these will trigger derived text colors as well
     os.environ["STREAMLIT_THEME_RED_COLOR"] = "#750000"
     os.environ["STREAMLIT_THEME_GREEN_COLOR"] = "#008000"
     os.environ["STREAMLIT_THEME_GRAY_COLOR"] = "#525252"

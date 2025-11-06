@@ -19,17 +19,18 @@ from __future__ import annotations
 
 import math
 import threading
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
+    TypeAlias,
     TypeVar,
     overload,
 )
 
 from cachetools import TTLCache
-from typing_extensions import ParamSpec, TypeAlias
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit.logger import get_logger

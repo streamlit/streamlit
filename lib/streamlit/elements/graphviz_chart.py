@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, Union, cast
 
 from streamlit import type_util
 from streamlit.deprecation_util import (
@@ -26,8 +24,10 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
+    validate_height,
     validate_width,
 )
 from streamlit.errors import StreamlitAPIException
@@ -53,6 +53,7 @@ class GraphvizMixin:
         use_container_width: bool | None = None,
         *,  # keyword-only arguments:
         width: Width = "content",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.
 
@@ -78,6 +79,12 @@ class GraphvizMixin:
             container. If ``use_container_width`` is ``True``, Streamlit sets
             the width of the figure to match the width of the parent container.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
         width : "content", "stretch", or int
             The width of the chart element. This can be one of the following:
 
@@ -91,11 +98,18 @@ class GraphvizMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a
-            future release. For ``use_container_width=True``, use
-            ``width="stretch"``. For ``use_container_width=False``, use
-            ``width="content"``.
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         Example
         -------
@@ -170,7 +184,8 @@ class GraphvizMixin:
 
         # Validate and set layout configuration
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        validate_height(height, allow_content=True)
+        layout_config = LayoutConfig(width=width, height=height)
 
         return self.dg._enqueue(
             "graphviz_chart", graphviz_chart_proto, layout_config=layout_config

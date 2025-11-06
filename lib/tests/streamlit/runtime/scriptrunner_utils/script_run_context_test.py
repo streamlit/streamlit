@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import threading
 import unittest
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 from parameterized import parameterized
@@ -36,6 +36,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.message_mocks import create_dataframe_msg
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _create_script_run_context(

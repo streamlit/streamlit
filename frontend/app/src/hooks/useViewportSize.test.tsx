@@ -19,16 +19,16 @@ import React from "react"
 import { act, renderHook } from "@testing-library/react"
 
 import {
-  LibContext,
   mockTheme,
+  ThemeContext,
   ThemeProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import type { LibContextProps } from "@streamlit/lib"
+import type { ThemeContextProps } from "@streamlit/lib"
 
 import { useViewportSize } from "./useViewportSize"
 
-const mockContextValue = {
+const mockThemeContextValue = {
   activeTheme: {
     emotion: {
       breakpoints: {
@@ -36,15 +36,17 @@ const mockContextValue = {
       },
     },
   },
-} as unknown as LibContextProps
+  setTheme: vi.fn(),
+  availableThemes: [],
+} as unknown as ThemeContextProps
 
 // Wrapper component to provide context
 const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
-  <LibContext.Provider value={mockContextValue}>
+  <ThemeContext.Provider value={mockThemeContextValue}>
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
     </ThemeProvider>
-  </LibContext.Provider>
+  </ThemeContext.Provider>
 )
 
 describe("useViewportSize", () => {

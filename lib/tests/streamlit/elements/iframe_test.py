@@ -146,3 +146,33 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
         assert element.height_config.pixel_height == 300
 
         assert element.iframe.srcdoc == "<h1>Test</h1>"
+
+    def test_iframe_with_zero_width_and_height(self):
+        """Test that components.iframe accepts both width=0 and height=0."""
+        st.components.v1.iframe("https://example.com", width=0, height=0)
+
+        element = self.get_delta_from_queue().new_element
+
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert element.width_config.pixel_width == 0
+        assert element.height_config.pixel_height == 0
+
+        assert element.iframe.src == "https://example.com"
+
+    def test_html_with_zero_width_and_height(self):
+        """Test that components.html accepts both width=0 and height=0."""
+        st.components.v1.html("<h1>Test</h1>", width=0, height=0)
+
+        element = self.get_delta_from_queue().new_element
+
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert element.width_config.pixel_width == 0
+        assert element.height_config.pixel_height == 0
+
+        assert element.iframe.srcdoc == "<h1>Test</h1>"

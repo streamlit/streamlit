@@ -19,20 +19,24 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_radio,
     get_radio_option,
     select_radio_option,
 )
 
+NUM_RADIO_ELEMENTS = 18
+
 
 def test_radio_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Render radios and snapshot by label/key (no index-based selection)."""
-    expect(themed_app.get_by_test_id("stRadio")).to_have_count(17)
+    expect(themed_app.get_by_test_id("stRadio")).to_have_count(NUM_RADIO_ELEMENTS)
 
     assert_snapshot(get_radio(themed_app, "radio 1 (default)"), name="st_radio-default")
     assert_snapshot(
@@ -211,3 +215,40 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "radio12")).to_be_visible()
+
+
+def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the radio can be updated dynamically while keeping the state."""
+    dynamic_radio = get_element_by_key(app, "dynamic_radio_with_key")
+    expect(dynamic_radio).to_be_visible()
+
+    # Initial state
+    expect(dynamic_radio).to_contain_text("Initial dynamic radio")
+    expect_prefixed_markdown(app, "Initial radio value:", "apple")
+    assert_snapshot(dynamic_radio, name="st_radio-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_radio, "initial help")
+
+    # Change selection before updating props to verify state persistence
+    select_radio_option(app, option="Banana", label="Initial dynamic radio")
+    expect_prefixed_markdown(app, "Initial radio value:", "banana")
+
+    # Click the toggle to update the radio props
+    click_toggle(app, "Update radio props")
+
+    # new radio is visible:
+    expect(dynamic_radio).to_contain_text("Updated dynamic radio")
+
+    # Ensure the previously selected value remains visible
+    expect_prefixed_markdown(app, "Updated radio value:", "banana")
+
+    dynamic_radio.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_radio, name="st_radio-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_radio, "updated help")
+
+    # Select a different option again:
+    select_radio_option(app, option="Orange", label="Updated dynamic radio")
+    expect_prefixed_markdown(app, "Updated radio value:", "orange")

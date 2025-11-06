@@ -32,6 +32,12 @@ CONTAINER_KEYS = [
     "layout-horizontal-text-area",
     # Don't expand this one, doesn't work well with the snapshot.
     "layout-horizontal-expander-dataframe-content-width-large",
+    "layout-vertical-stretch-height",
+    "layout-vertical-content-width-container-with-various-elements",
+    "layout-vertical-content-width-container-with-stretch-width-dataframes",
+    "layout-vertical-content-width-container-with-content-width-dataframes",
+    "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
+    "narrow-fixed-width-container-with-dataframe",
 ]
 
 CONTAINER_KEYS_WITH_EXPANDERS = [
@@ -58,7 +64,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
 
     # Wait for map elements to load
     map_elements = app.get_by_test_id("stDeckGlJsonChart")
-    expect(map_elements).to_have_count(1, timeout=15000)
+    expect(map_elements).to_have_count(2, timeout=15000)
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
     app.wait_for_timeout(10000)
@@ -73,6 +79,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
     )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
     expect(app.get_by_test_id("stExpander")).to_have_count(3)
@@ -86,7 +93,7 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         expander = container_expanders.first
         expect(expander).to_be_visible()
         expander.click()
-        app.wait_for_timeout(2000)
+        app.wait_for_timeout(5000)
 
         assert_snapshot(
             container,

@@ -15,16 +15,18 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_text_area,
 )
 
-NUM_TEXT_AREAS = 23
+NUM_TEXT_AREAS = 25
 
 
 def test_text_area_widget_rendering(
@@ -91,6 +93,11 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     # Expect this to default to the minimum height of 68px
     assert_snapshot(
         get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
+    )
+    # gh-12867: Test very small height that produces negative calculation
+    # Should clamp to 0px and use minHeight (68px)
+    assert_snapshot(
+        get_text_area(app, "text area 13.5 (height=10)"), name="st_text_area-height_10"
     )
     assert_snapshot(
         get_text_area(app, "text area 17 (width=200px)"),
@@ -250,24 +257,29 @@ def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     text_area = get_element_by_key(app, "text_area_9")
     text_area_field = text_area.locator("textarea").first
+    expect(text_area_field).to_be_visible()
 
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text area changed: True")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text area changed:", "True")
 
     # Change different widget to trigger delta path change
     first_text_area = get_text_area(app, "text area 1 (default)")
     first_text_area_field = first_text_area.locator("textarea").first
+    expect(first_text_area_field).to_be_visible()
+
     first_text_area_field.fill("hello world")
     first_text_area_field.press("Control+Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 1: hello world")
+    expect_prefixed_markdown(app, "value 1:", "hello world")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text area changed: False")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text area changed:", "False")
 
 
 def test_text_area_in_form_with_submit_by_enter(app: Page):
@@ -287,6 +299,51 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "text_area_9")).to_be_visible()
+
+
+def test_dynamic_text_area_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the text area can be updated dynamically while keeping the state."""
+    dynamic_text_area = get_element_by_key(app, "dynamic_text_area_with_key")
+    expect(dynamic_text_area).to_be_visible()
+
+    expect(dynamic_text_area).to_contain_text("Initial dynamic text area")
+
+    expect_prefixed_markdown(app, "Initial text area value:", "initial")
+
+    assert_snapshot(dynamic_text_area, name="st_text_area-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_text_area, "initial help")
+
+    # Type something and submit
+    ta_field = dynamic_text_area.locator("textarea").first
+    ta_field.fill("foo")
+    ta_field.press("Control+Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial text area value:", "foo")
+
+    # Click the toggle to update the text area props
+    click_toggle(app, "Update text area props")
+
+    # new text area is visible:
+    expect(dynamic_text_area).to_contain_text("Updated dynamic text area")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated text area value:", "foo")
+
+    dynamic_text_area.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_text_area, name="st_text_area-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_text_area, "updated help")
+
+    # Type something different and submit
+    ta_field.fill("bar")
+    ta_field.press("Control+Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated text area value:", "bar")
 
 
 def test_text_area_content_height_expansion(

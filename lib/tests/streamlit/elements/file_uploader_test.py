@@ -138,7 +138,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             if accept_multiple:
                 assert return_val == uploaded_files
 
-                for actual, expected in zip(return_val, uploaded_files):
+                for actual, expected in zip(return_val, uploaded_files, strict=False):
                     assert actual.name == expected.name
                     assert actual.type == expected.type
                     assert actual.size == expected.size
@@ -290,7 +290,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         assert return_val == uploaded_files
         assert len(return_val) == 3
 
-        for actual, expected in zip(return_val, uploaded_files):
+        for actual, expected in zip(return_val, uploaded_files, strict=False):
             assert actual.name == expected.name
             assert actual.type == expected.type
             assert actual.size == expected.size

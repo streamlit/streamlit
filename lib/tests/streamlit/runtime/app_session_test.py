@@ -19,7 +19,7 @@ import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
@@ -59,6 +59,9 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.fixture
@@ -696,10 +699,27 @@ class AppSessionTest(unittest.TestCase):
 def _mock_get_options_for_section(
     overrides: dict[str, Any] | None = None,
 ) -> Callable[..., Any]:
+    """Mock config.get_options_for_section for testing.
+
+    Expected override structure:
+        {
+            "sidebar": {...},        # Options for theme.sidebar
+            "light": {               # Options for theme.light
+                "sidebar": {...},    # Options for theme.light.sidebar
+                ...other options...
+            },
+            "dark": {                # Options for theme.dark
+                "sidebar": {...},    # Options for theme.dark.sidebar
+                ...other options...
+            },
+            ...other theme options...
+        }
+    """
     if not overrides:
         overrides = {}
 
-    sidebar_theme_opts = {
+    # Default options for sections (excluding main theme which has unique options like base)
+    section_default_opts = {
         "backgroundColor": "white",
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
@@ -734,13 +754,18 @@ def _mock_get_options_for_section(
         "greenBackgroundColor": "#5ce488",
         "violetBackgroundColor": "#b27eff",
         "grayBackgroundColor": "#bfc5d3",
+        "redTextColor": "#ffabab",
+        "orangeTextColor": "#ffe08e",
+        "yellowTextColor": "#ffff7d",
+        "blueTextColor": "#83c9ff",
+        "greenTextColor": "#7defa1",
+        "violetTextColor": "#c89dff",
+        "grayTextColor": "#d5dae5",
+        "codeTextColor": "#7defa1",
     }
 
-    if overrides.get("sidebar") is not None:
-        for k, v in overrides.get("sidebar").items():
-            sidebar_theme_opts[k] = v
-
-    theme_opts = {
+    # Main theme options (includes unique options like base, baseFontSize, etc.)
+    theme_default_opts = {
         "backgroundColor": "white",
         "base": "dark",
         "baseFontSize": 14,
@@ -786,6 +811,7 @@ def _mock_get_options_for_section(
         "showWidgetBorder": True,
         "showSidebarBorder": True,
         "textColor": "black",
+        "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
         "chartCategoricalColors": [
@@ -824,17 +850,59 @@ def _mock_get_options_for_section(
         "greenBackgroundColor": "#21c354",
         "violetBackgroundColor": "#803df5",
         "grayBackgroundColor": "#808495",
+        "redTextColor": "#ffabab",
+        "orangeTextColor": "#ffe08e",
+        "yellowTextColor": "#ffff7d",
+        "blueTextColor": "#83c9ff",
+        "greenTextColor": "#7defa1",
+        "violetTextColor": "#c89dff",
+        "grayTextColor": "#d5dae5",
     }
 
-    for k, v in overrides.items():
-        if k != "sidebar":
-            theme_opts[k] = v
+    def _apply_overrides(base: dict, overrides_dict: dict, exclude_keys: set) -> dict:
+        """Apply overrides to base dict, excluding specified keys."""
+        result = base.copy()
+        for k, v in overrides_dict.items():
+            if k not in exclude_keys:
+                result[k] = v
+        return result
 
-    def get_options_for_section(section):
+    def get_options_for_section(section: str) -> dict:
         if section == "theme":
-            return theme_opts
+            # Apply root-level overrides, excluding nested sections
+            return _apply_overrides(
+                theme_default_opts, overrides, {"sidebar", "light", "dark"}
+            )
+
         if section == "theme.sidebar":
-            return sidebar_theme_opts
+            # Apply sidebar overrides if present
+            return _apply_overrides(
+                section_default_opts, overrides.get("sidebar", {}), set()
+            )
+
+        if section == "theme.light":
+            # Apply light overrides, excluding nested sidebar
+            return _apply_overrides(
+                section_default_opts, overrides.get("light", {}), {"sidebar"}
+            )
+
+        if section == "theme.dark":
+            # Apply dark overrides, excluding nested sidebar
+            return _apply_overrides(
+                section_default_opts, overrides.get("dark", {}), {"sidebar"}
+            )
+
+        if section == "theme.light.sidebar":
+            # Apply light.sidebar overrides if present
+            light_sidebar = overrides.get("light", {}).get("sidebar", {})
+            return _apply_overrides(section_default_opts, light_sidebar, set())
+
+        if section == "theme.dark.sidebar":
+            # Apply dark.sidebar overrides if present
+            dark_sidebar = overrides.get("dark", {}).get("sidebar", {})
+            return _apply_overrides(section_default_opts, dark_sidebar, set())
+
+        # Fallback to real config for any other sections
         return config.get_options_for_section(section)
 
     return get_options_for_section
@@ -1045,8 +1113,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             ),
             pytest.raises(
                 RuntimeError,
-                match="This function must only be called on the eventloop thread "
-                "the AppSession was created on. This should never happen.",
+                match=r"This function must only be called on the eventloop thread "
+                r"the AppSession was created on. This should never happen.",
             ),
         ):
             session._handle_scriptrunner_event_on_event_loop(
@@ -1187,7 +1255,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
+            match=r"page_script_hash must be set for the SCRIPT_STARTED event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1207,7 +1275,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
+            match=r"exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1227,7 +1295,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="client_state must be set for the SHUTDOWN event. This should never happen.",
+            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1247,7 +1315,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         with pytest.raises(
             RuntimeError,
-            match="null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
+            match=r"null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen.",
         ):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
@@ -1286,6 +1354,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1304,6 +1373,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenBackgroundColor": None,
                     "violetBackgroundColor": None,
                     "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                 }
             )
         )
@@ -1343,6 +1419,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "sidebar": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1361,6 +1438,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenBackgroundColor": None,
                     "violetBackgroundColor": None,
                     "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                 }
             )
         )
@@ -1400,6 +1484,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showWidgetBorder": None,
                     "showSidebarBorder": None,
                     "textColor": None,
+                    "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
@@ -1418,6 +1503,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "greenBackgroundColor": None,
                     "violetBackgroundColor": None,
                     "grayBackgroundColor": None,
+                    "redTextColor": None,
+                    "orangeTextColor": None,
+                    "yellowTextColor": None,
+                    "blueTextColor": None,
+                    "greenTextColor": None,
+                    "violetTextColor": None,
+                    "grayTextColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1437,6 +1529,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "secondaryBackgroundColor": None,
                         "showWidgetBorder": None,
                         "textColor": None,
+                        "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
                         "redColor": None,
@@ -1446,6 +1539,20 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "greenColor": None,
                         "violetColor": None,
                         "grayColor": None,
+                        "redBackgroundColor": None,
+                        "orangeBackgroundColor": None,
+                        "yellowBackgroundColor": None,
+                        "blueBackgroundColor": None,
+                        "greenBackgroundColor": None,
+                        "violetBackgroundColor": None,
+                        "grayBackgroundColor": None,
+                        "redTextColor": None,
+                        "orangeTextColor": None,
+                        "yellowTextColor": None,
+                        "blueTextColor": None,
+                        "greenTextColor": None,
+                        "violetTextColor": None,
+                        "grayTextColor": None,
                     },
                 }
             )
@@ -1591,6 +1698,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.green_background_color == "#21c354"
         assert new_session_msg.custom_theme.violet_background_color == "#803df5"
         assert new_session_msg.custom_theme.gray_background_color == "#808495"
+        assert new_session_msg.custom_theme.red_text_color == "#ffabab"
+        assert new_session_msg.custom_theme.orange_text_color == "#ffe08e"
+        assert new_session_msg.custom_theme.yellow_text_color == "#ffff7d"
+        assert new_session_msg.custom_theme.blue_text_color == "#83c9ff"
+        assert new_session_msg.custom_theme.green_text_color == "#7defa1"
+        assert new_session_msg.custom_theme.violet_text_color == "#c89dff"
+        assert new_session_msg.custom_theme.gray_text_color == "#d5dae5"
+        assert new_session_msg.custom_theme.code_text_color == "#09ab3b"
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1707,6 +1822,13 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.green_background_color == "#5ce488"
         assert new_session_msg.custom_theme.sidebar.violet_background_color == "#b27eff"
         assert new_session_msg.custom_theme.sidebar.gray_background_color == "#bfc5d3"
+        assert new_session_msg.custom_theme.sidebar.red_text_color == "#ffabab"
+        assert new_session_msg.custom_theme.sidebar.orange_text_color == "#ffe08e"
+        assert new_session_msg.custom_theme.sidebar.yellow_text_color == "#ffff7d"
+        assert new_session_msg.custom_theme.sidebar.blue_text_color == "#83c9ff"
+        assert new_session_msg.custom_theme.sidebar.green_text_color == "#7defa1"
+        assert new_session_msg.custom_theme.sidebar.violet_text_color == "#c89dff"
+        assert new_session_msg.custom_theme.sidebar.gray_text_color == "#d5dae5"
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0
@@ -1714,6 +1836,255 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_light_theme_options(self, patched_config):
+        """Test that theme.light section options are populated correctly."""
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "primaryColor": "#ff0000",
+                        "backgroundColor": "#ffffff",
+                        "textColor": "#000000",
+                        "font": "serif",
+                    }
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.light, "theme.light"
+        )
+
+        assert new_session_msg.custom_theme.light.primary_color == "#ff0000"
+        assert new_session_msg.custom_theme.light.background_color == "#ffffff"
+        assert new_session_msg.custom_theme.light.text_color == "#000000"
+        assert new_session_msg.custom_theme.light.body_font == "serif"
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_dark_theme_options(self, patched_config):
+        """Test that theme.dark section options are populated correctly."""
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "dark": {
+                        "primaryColor": "#00ff00",
+                        "backgroundColor": "#000000",
+                        "textColor": "#ffffff",
+                        "font": "monospace",
+                    }
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme.dark, "theme.dark")
+
+        assert new_session_msg.custom_theme.dark.primary_color == "#00ff00"
+        assert new_session_msg.custom_theme.dark.background_color == "#000000"
+        assert new_session_msg.custom_theme.dark.text_color == "#ffffff"
+        assert new_session_msg.custom_theme.dark.body_font == "monospace"
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_light_sidebar_theme_options(self, patched_config):
+        """Test that theme.light.sidebar section options are populated correctly."""
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "sidebar": {
+                            "primaryColor": "#0000ff",
+                            "backgroundColor": "#f8f9fa",
+                            "textColor": "#212529",
+                            "font": "sans-serif",
+                            "baseRadius": "0.25rem",
+                        }
+                    }
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.light.sidebar, "theme.light.sidebar"
+        )
+
+        assert new_session_msg.custom_theme.light.sidebar.primary_color == "#0000ff"
+        assert new_session_msg.custom_theme.light.sidebar.background_color == "#f8f9fa"
+        assert new_session_msg.custom_theme.light.sidebar.text_color == "#212529"
+        assert new_session_msg.custom_theme.light.sidebar.body_font == "sans-serif"
+        assert new_session_msg.custom_theme.light.sidebar.base_radius == "0.25rem"
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_dark_sidebar_theme_options(self, patched_config):
+        """Test that theme.dark.sidebar section options are populated correctly."""
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "dark": {
+                        "sidebar": {
+                            "primaryColor": "#ffff00",
+                            "backgroundColor": "#212529",
+                            "textColor": "#f8f9fa",
+                            "font": "monospace",
+                            "baseRadius": "0.5rem",
+                        }
+                    }
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.dark.sidebar, "theme.dark.sidebar"
+        )
+
+        assert new_session_msg.custom_theme.dark.sidebar.primary_color == "#ffff00"
+        assert new_session_msg.custom_theme.dark.sidebar.background_color == "#212529"
+        assert new_session_msg.custom_theme.dark.sidebar.text_color == "#f8f9fa"
+        assert new_session_msg.custom_theme.dark.sidebar.body_font == "monospace"
+        assert new_session_msg.custom_theme.dark.sidebar.base_radius == "0.5rem"
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_new_theme_sections_handle_none_values(self, patched_config):
+        """Test that new theme sections handle None values correctly."""
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "primaryColor": None,
+                        "backgroundColor": None,
+                        "textColor": None,
+                        "font": None,
+                        "sidebar": {
+                            "primaryColor": None,
+                            "backgroundColor": None,
+                            "textColor": None,
+                            "font": None,
+                        },
+                    },
+                    "dark": {
+                        "primaryColor": None,
+                        "backgroundColor": None,
+                        "textColor": None,
+                        "font": None,
+                        "sidebar": {
+                            "primaryColor": None,
+                            "backgroundColor": None,
+                            "textColor": None,
+                            "font": None,
+                        },
+                    },
+                }
+            )
+        )
+
+        # Test each new section handles None values
+        test_cases = [
+            ("theme.light", lambda msg: msg.custom_theme.light),
+            ("theme.dark", lambda msg: msg.custom_theme.dark),
+            ("theme.light.sidebar", lambda msg: msg.custom_theme.light.sidebar),
+            ("theme.dark.sidebar", lambda msg: msg.custom_theme.dark.sidebar),
+        ]
+
+        for section, theme_obj_getter in test_cases:
+            with self.subTest(section=section):
+                msg = ForwardMsg()
+                new_session_msg = msg.new_session
+                theme_obj = theme_obj_getter(new_session_msg)
+                app_session._populate_theme_msg(theme_obj, section)
+
+                # When values are None, string fields are set to empty string (proto3 behavior)
+                assert theme_obj.primary_color == ""
+                assert theme_obj.background_color == ""
+                assert theme_obj.text_color == ""
+                assert theme_obj.body_font == ""
+
+    @patch("streamlit.runtime.app_session.config")
+    def test_new_theme_sections_support_all_color_options(self, patched_config):
+        """Test that new theme sections support all color palette options."""
+        color_overrides = {
+            "redColor": "#ff0000",
+            "orangeColor": "#ffa500",
+            "yellowColor": "#ffff00",
+            "blueColor": "#0000ff",
+            "greenColor": "#00ff00",
+            "violetColor": "#8a2be2",
+            "grayColor": "#808080",
+            "redBackgroundColor": "#ffe6e6",
+            "orangeBackgroundColor": "#fff2e6",
+            "yellowBackgroundColor": "#fffee6",
+            "blueBackgroundColor": "#e6e6ff",
+            "greenBackgroundColor": "#e6ffe6",
+            "violetBackgroundColor": "#f2e6ff",
+            "grayBackgroundColor": "#f5f5f5",
+            "redTextColor": "#ff0000",
+            "orangeTextColor": "#ffa500",
+            "yellowTextColor": "#ffff00",
+            "blueTextColor": "#0000ff",
+            "greenTextColor": "#00ff00",
+            "violetTextColor": "#8a2be2",
+            "grayTextColor": "#808080",
+        }
+
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "sidebar": color_overrides,
+                        **color_overrides,
+                    },
+                    "dark": {
+                        "sidebar": color_overrides,
+                        **color_overrides,
+                    },
+                },
+            )
+        )
+
+        # Test that all new sections support the full color palette
+        test_cases = [
+            ("theme.light", lambda msg: msg.custom_theme.light),
+            ("theme.dark", lambda msg: msg.custom_theme.dark),
+            ("theme.light.sidebar", lambda msg: msg.custom_theme.light.sidebar),
+            ("theme.dark.sidebar", lambda msg: msg.custom_theme.dark.sidebar),
+        ]
+
+        for section, theme_obj_getter in test_cases:
+            with self.subTest(section=section):
+                msg = ForwardMsg()
+                new_session_msg = msg.new_session
+                theme_obj = theme_obj_getter(new_session_msg)
+                app_session._populate_theme_msg(theme_obj, section)
+
+                # Verify all color options are populated
+                assert theme_obj.red_color == "#ff0000"
+                assert theme_obj.orange_color == "#ffa500"
+                assert theme_obj.yellow_color == "#ffff00"
+                assert theme_obj.blue_color == "#0000ff"
+                assert theme_obj.green_color == "#00ff00"
+                assert theme_obj.violet_color == "#8a2be2"
+                assert theme_obj.gray_color == "#808080"
+                assert theme_obj.red_background_color == "#ffe6e6"
+                assert theme_obj.orange_background_color == "#fff2e6"
+                assert theme_obj.yellow_background_color == "#fffee6"
+                assert theme_obj.blue_background_color == "#e6e6ff"
+                assert theme_obj.green_background_color == "#e6ffe6"
+                assert theme_obj.violet_background_color == "#f2e6ff"
+                assert theme_obj.gray_background_color == "#f5f5f5"
+                assert theme_obj.red_text_color == "#ff0000"
+                assert theme_obj.orange_text_color == "#ffa500"
+                assert theme_obj.yellow_text_color == "#ffff00"
+                assert theme_obj.blue_text_color == "#0000ff"
+                assert theme_obj.green_text_color == "#00ff00"
+                assert theme_obj.violet_text_color == "#8a2be2"
+                assert theme_obj.gray_text_color == "#808080"
 
     @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")

@@ -23,14 +23,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    TypeAlias,
     TypedDict,
     TypeVar,
-    Union,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -69,48 +67,43 @@ if TYPE_CHECKING:
 SliderNumericT = TypeVar("SliderNumericT", int, float)
 SliderDatelikeT = TypeVar("SliderDatelikeT", date, time, datetime)
 
-SliderNumericSpanT: TypeAlias = Union[
-    list[SliderNumericT],
-    tuple[()],
-    tuple[SliderNumericT],
-    tuple[SliderNumericT, SliderNumericT],
-]
-SliderDatelikeSpanT: TypeAlias = Union[
-    list[SliderDatelikeT],
-    tuple[()],
-    tuple[SliderDatelikeT],
-    tuple[SliderDatelikeT, SliderDatelikeT],
-]
+SliderNumericSpanT: TypeAlias = (
+    list[SliderNumericT]
+    | tuple[()]
+    | tuple[SliderNumericT]
+    | tuple[SliderNumericT, SliderNumericT]
+)
+SliderDatelikeSpanT: TypeAlias = (
+    list[SliderDatelikeT]
+    | tuple[()]
+    | tuple[SliderDatelikeT]
+    | tuple[SliderDatelikeT, SliderDatelikeT]
+)
 
 StepNumericT: TypeAlias = SliderNumericT
 StepDatelikeT: TypeAlias = timedelta
 
-SliderStep: TypeAlias = Union[int, float, timedelta]
-SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
+SliderStep: TypeAlias = int | float | timedelta
+SliderScalar: TypeAlias = int | float | date | time | datetime
 SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
-SliderValueGeneric: TypeAlias = Union[
-    SliderValueT,
-    Sequence[SliderValueT],
-]
-SliderValue: TypeAlias = Union[
-    SliderValueGeneric[int],
-    SliderValueGeneric[float],
-    SliderValueGeneric[date],
-    SliderValueGeneric[time],
-    SliderValueGeneric[datetime],
-]
-SliderReturnGeneric: TypeAlias = Union[
-    SliderValueT,
-    tuple[SliderValueT],
-    tuple[SliderValueT, SliderValueT],
-]
-SliderReturn: TypeAlias = Union[
-    SliderReturnGeneric[int],
-    SliderReturnGeneric[float],
-    SliderReturnGeneric[date],
-    SliderReturnGeneric[time],
-    SliderReturnGeneric[datetime],
-]
+SliderValueGeneric: TypeAlias = SliderValueT | Sequence[SliderValueT]
+SliderValue: TypeAlias = (
+    SliderValueGeneric[int]
+    | SliderValueGeneric[float]  # ty: ignore
+    | SliderValueGeneric[date]
+    | SliderValueGeneric[time]
+    | SliderValueGeneric[datetime]
+)
+SliderReturnGeneric: TypeAlias = (
+    SliderValueT | tuple[SliderValueT] | tuple[SliderValueT, SliderValueT]
+)
+SliderReturn: TypeAlias = (
+    SliderReturnGeneric[int]
+    | SliderReturnGeneric[float]  # ty: ignore
+    | SliderReturnGeneric[date]
+    | SliderReturnGeneric[time]
+    | SliderReturnGeneric[datetime]
+)
 
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
@@ -680,7 +673,10 @@ class SliderMixin:
         element_id = compute_and_register_element_id(
             "slider",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity; only include
+            # changes to the value-shaping arguments in the identity
+            # computation as those can invalidate the current value.
+            key_as_main_identity={"min_value", "max_value", "step"},
             dg=self.dg,
             label=label,
             min_value=min_value,
@@ -802,7 +798,7 @@ class SliderMixin:
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):
+            ) and max_value - min_value < timedelta(days=1):  # ty: ignore[unsupported-operator]
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001

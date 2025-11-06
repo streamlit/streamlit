@@ -37,7 +37,7 @@ export const StyledRow = styled.div(({ theme }) => ({
 export const StyledFirstColumn = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
   textAlign: "right",
-  color: theme.colors.gray,
+  color: theme.colors.grayTextColor,
   fontWeight: theme.fontWeights.bold,
   width: "6em",
 }))
