@@ -36,6 +36,8 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
+NUM_FILE_UPLOADERS = 17
+
 
 def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     """
@@ -106,7 +108,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(16)
+    expect(file_uploaders).to_have_count(NUM_FILE_UPLOADERS)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -828,7 +830,7 @@ def test_file_uploader_widths(
     """Test that file_uploader renders correctly with different width settings."""
     file_uploaders = app.get_by_test_id("stFileUploader")
 
-    expect(file_uploaders).to_have_count(16)
+    expect(file_uploaders).to_have_count(NUM_FILE_UPLOADERS)
 
     stretch_uploader = file_uploaders.nth(11)
     pixel_width_uploader = file_uploaders.nth(12)
