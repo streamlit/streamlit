@@ -37,6 +37,7 @@ import { sprintf } from "sprintf-js"
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -79,8 +80,8 @@ function SliderTickBar({
       isHovered={isHovered}
       isDisabled={isDisabled}
     >
-      <span>{minLabel}</span>
-      <span>{maxLabel}</span>
+      <StreamlitMarkdown source={minLabel} allowHTML={false} />
+      <StreamlitMarkdown source={maxLabel} allowHTML={false} />
     </StyledSliderTickBar>
   )
 }
@@ -204,7 +205,7 @@ function Slider({
               disabled={props.$disabled === true}
               ref={thumbValueRefs[thumbIndex]}
             >
-              {formattedValue}
+              <StreamlitMarkdown source={formattedValue} allowHTML={false} />
             </StyledThumbValue>
           </StyledThumb>
         )
@@ -213,18 +214,10 @@ function Slider({
     // Only run this on first render, to avoid losing the focus state.
     // Then, when the value written about the thumb needs to change, that
     // happens with the function below instead.
-    []
+    [formattedValueArr]
   )
 
   useEffect(() => {
-    // Update the numbers on the thumb via DOM manipulation to avoid a redraw,
-    // which drops the widget's focus state.
-    thumbValueRefs.map((ref, i) => {
-      if (ref.current) {
-        ref.current.innerText = formattedValueArr[i]
-      }
-    })
-
     thumbRefs.map((ref, i) => {
       if (ref.current) {
         ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
@@ -234,20 +227,28 @@ function Slider({
     // If, after rendering, the thumb value's is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
-    const sliderDiv = sliderRef.current ?? null
-    const thumb1Div = thumbRefs[0].current
+    const sliderDiv = sliderRef.current
+    const thumb1Div = thumbRefs[0]?.current
     const thumb2Div = thumbRefs[1]?.current
-    const thumb1ValueDiv = thumbValueRefs[0].current
+    const thumb1ValueDiv = thumbValueRefs[0]?.current
     const thumb2ValueDiv = thumbValueRefs[1]?.current
 
-    fixLabelPositions(
-      sliderDiv,
-      thumb1Div,
-      thumb2Div,
-      thumb1ValueDiv,
+    if (
+      sliderDiv &&
+      thumb1Div &&
+      thumb1ValueDiv &&
+      thumb2Div &&
       thumb2ValueDiv
-    )
-  })
+    ) {
+      fixLabelPositions(
+        sliderDiv,
+        thumb1Div,
+        thumb2Div,
+        thumb1ValueDiv,
+        thumb2ValueDiv
+      )
+    }
+  }, [formattedValueArr, thumbRefs, thumbValueRefs]) // Ensure this effect runs when dependencies change
 
   // Style that will be applied to BaseWeb's <InnerTrack>.
   const innerTrackStyle = useCallback(
