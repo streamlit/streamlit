@@ -795,7 +795,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         const escapedOpen = escapeRegex(inlineOpen)
         const escapedClose = escapeRegex(inlineClose)
         // use single $ for inline math, s flag for multiline content
-        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'gs'), '\$1\$')
+        processed = processed.replace(new RegExp(`${escapedOpen}(.*?)${escapedClose}`, 'gs'), '$$$1$$')
       }
       if (blockOpen && blockClose) {
         const escapedOpen = escapeRegex(blockOpen)

@@ -79,6 +79,8 @@ def _validate_and_set_latex_delimiters(
     # Validate all elements are strings
     if not all(isinstance(d, str) for d in inline_delims + block_delims):
         raise ValueError("all delimiter values must be strings")
+    if any(len(d) == 0 for d in inline_delims + block_delims):
+        raise ValueError("delimiter strings cannot be empty")
     
     # Set the delimiters
     proto.latex_delimiters.inline_open = inline_delims[0]
