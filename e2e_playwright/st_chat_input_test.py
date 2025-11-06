@@ -1343,7 +1343,9 @@ def test_chat_input_permission_denied_error(
     )
 
     # Take snapshot of error state with tooltip
-    assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
+    # Snapshot the block container to include both chat input and the tooltip portal
+    block = chat_input.locator("xpath=ancestor::div[@data-testid='stBlock']").first
+    assert_snapshot(block, name="st_chat_input-mic_permission_denied")
 
     # Verify error clears when user types
     textarea = chat_input.locator("textarea").first
@@ -1396,7 +1398,9 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     )
 
     # Take snapshot
-    assert_snapshot(chat_input, name="st_chat_input-recording_error")
+    # Snapshot the block container to include both chat input and the tooltip portal
+    block = chat_input.locator("xpath=ancestor::div[@data-testid='stBlock']").first
+    assert_snapshot(block, name="st_chat_input-recording_error")
 
     # Verify error clears when user starts typing
     textarea = chat_input.locator("textarea").first

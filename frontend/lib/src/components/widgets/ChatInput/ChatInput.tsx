@@ -25,7 +25,13 @@ import React, {
   useState,
 } from "react"
 
-import { Check, Close, Mic, Send } from "@emotion-icons/material-rounded"
+import {
+  Check,
+  Close,
+  ErrorOutline,
+  Mic,
+  Send,
+} from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -730,7 +736,11 @@ function ChatInput({
                             hasError
                             data-testid="stChatInputMicButton"
                           >
-                            <Icon content={Mic} size="xl" color="inherit" />
+                            <Icon
+                              content={ErrorOutline}
+                              size="xl"
+                              color="inherit"
+                            />
                           </StyledSendIconButton>
                         </Tooltip>
                       ) : (
