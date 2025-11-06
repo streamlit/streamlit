@@ -37,7 +37,7 @@ export const StyledSpinnerIcon = styled(Spinner, {
   padding = "",
   theme,
 }) => {
-  // Emojis are rendered 20% smaller to visually match the size of Material icons:
+  // Spinners are rendered 20% smaller to visually match the size of Material icons:
   const adjustedSpinnerSize = `calc(${theme.iconSizes[size]} * 0.80)`
 
   return {
@@ -119,8 +119,8 @@ interface StyledEmojiIconProps {
 
 export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
   ({ size, margin, padding, theme, color }) => {
-    // Emojis are rendered 15% smaller to visually match the size of Material icons:
-    const adjustedIconSize = `calc(${theme.iconSizes[size]} * 0.85)`
+    // Emojis are rendered 10% smaller to visually match the size of Material icons:
+    const adjustedIconSize = `calc(${theme.iconSizes[size]} * 0.90)`
     return {
       display: "inline-flex",
       alignItems: "center",
