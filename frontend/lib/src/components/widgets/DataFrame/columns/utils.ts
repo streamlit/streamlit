@@ -81,6 +81,8 @@ export interface BaseColumnProps {
   readonly contentAlignment?: "left" | "center" | "right"
   /** The default value of the column used when adding a new row. */
   readonly defaultValue?: string | number | boolean
+  /** Placeholder text shown for missing values in this column. */
+  readonly missingPlaceholder?: string
   /** Theme overrides for this column. */
   readonly themeOverride?: Partial<GlideTheme>
   /** A custom icon to be displayed in the column header. */

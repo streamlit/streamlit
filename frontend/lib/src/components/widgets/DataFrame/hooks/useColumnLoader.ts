@@ -74,6 +74,7 @@ export interface ColumnConfigProps {
   default?: number | string | boolean
   alignment?: "left" | "center" | "right"
   pinned?: boolean
+  missing_placeholder?: string
   // uses snake_case to match the property names in the backend:
   type_config?: Record<string, unknown>
 }
@@ -203,6 +204,7 @@ export function applyColumnConfig(
     contentAlignment: columnConfig.alignment,
     defaultValue: columnConfig.default,
     help: columnConfig.help,
+    missingPlaceholder: columnConfig.missing_placeholder,
   } as BaseColumnProps) as BaseColumnProps
 }
 
