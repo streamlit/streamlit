@@ -38,7 +38,7 @@ def get_pill_button(locator: Locator, text: str) -> Locator:
 
 
 def test_pills_regression_no_wrap_at_app_start(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test regression for gh-12067: Pills at the start of the app should not wrap.
 
@@ -48,7 +48,7 @@ def test_pills_regression_no_wrap_at_app_start(
     """
     # This pills is at the very start of the app (before the header)
     # With the bug, the last option ("3") would wrap to a new line
-    regression_pills = get_element_by_key(themed_app, "regression_3")
+    regression_pills = get_element_by_key(app, "regression_3")
 
     assert_snapshot(
         regression_pills,
