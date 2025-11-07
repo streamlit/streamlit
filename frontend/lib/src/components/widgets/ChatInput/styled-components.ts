@@ -36,6 +36,8 @@ export const StyledChatInput = styled.div<StyledChatInputProps>(
     position: "relative",
     flexGrow: 1,
     display: "flex",
+    flexDirection: "row",
+    flexWrap: "nowrap",
     alignItems: "center",
     paddingLeft: theme.spacing.lg,
     maxHeight: extended ? "none" : theme.sizes.minElementHeight,
@@ -97,21 +99,62 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
   }
 )
 
-export const StyledSendIconButtonContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "flex-end",
-  height: "100%",
-  position: "absolute",
-  right: 0,
-  // Negative margin to offset the parent border width when we align button to end
-  marginBottom: `-${theme.sizes.borderWidth}`,
-  pointerEvents: "none",
-}))
+interface StyledSendIconButtonContainerProps {
+  isRecording?: boolean
+}
 
-export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
-  position: "absolute",
-  bottom: "0px",
-  // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
-  // and some additional margin between the icon and the text (spacing.sm).
-  right: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+export const StyledSendIconButtonContainer =
+  styled.div<StyledSendIconButtonContainerProps>(({ theme, isRecording }) => ({
+    display: "flex",
+    alignItems: isRecording ? "center" : "flex-end",
+    height: "100%",
+    position: isRecording ? "static" : "absolute",
+    right: isRecording ? undefined : 0,
+    bottom: isRecording ? undefined : 0,
+    marginBottom: isRecording ? 0 : `-${theme.sizes.borderWidth}`,
+    pointerEvents: "none",
+    gap: 0,
+    paddingRight: isRecording ? theme.spacing.sm : 0,
+  }))
+
+interface StyledInputInstructionsContainerProps {
+  acceptAudio?: boolean
+}
+
+export const StyledInputInstructionsContainer =
+  styled.div<StyledInputInstructionsContainerProps>(
+    ({ theme, acceptAudio }) => ({
+      position: "absolute",
+      bottom: "0px",
+      // Calculate the right padding to account for button(s) on the right
+      // Each button is: iconSizes.xl + 2 * spacing.sm
+      // When acceptAudio is true, there are 2 buttons (mic + send) with extra margin
+      right: acceptAudio
+        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}) + 2 * ${theme.spacing.sm})`
+        : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+    })
+  )
+
+interface StyledWaveformContainerProps {
+  isRecording: boolean
+}
+
+export const StyledWaveformContainer =
+  styled.div<StyledWaveformContainerProps>(({ isRecording }) => ({
+    display: isRecording ? "flex" : "none",
+    flex: isRecording ? 1 : undefined,
+    alignItems: "center",
+    minWidth: 0, // Allow flex item to shrink below content size if needed
+  }))
+
+export const StyledChatAudioWave = styled.div(({ theme }) => ({
+  position: "relative",
+  width: "100%",
+  minHeight: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+  "& > div": {
+    position: "absolute",
+    inset: 0,
+  },
 }))

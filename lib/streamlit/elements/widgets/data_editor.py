@@ -51,7 +51,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    HeightWithoutContent,
+    Height,
     LayoutConfig,
     Width,
     validate_height,
@@ -198,7 +198,7 @@ def _parse_value(
     import pandas as pd
 
     try:
-        if column_data_kind == ColumnDataKind.LIST:
+        if column_data_kind in (ColumnDataKind.LIST, ColumnDataKind.EMPTY):
             return list(value) if is_list_like(value) else [value]  # ty: ignore
 
         if column_data_kind == ColumnDataKind.STRING:
@@ -209,7 +209,7 @@ def _parse_value(
         # This isn't expected to happen.
         if isinstance(value, list):
             raise TypeError(  # noqa: TRY301
-                "List values are only supported by list and string columns."
+                "List values are only supported by list, string and empty columns."
             )
 
         if column_data_kind == ColumnDataKind.INTEGER:
@@ -320,6 +320,20 @@ def _parse_added_row(
     return index_value, new_row
 
 
+def _assign_row_values(
+    df: pd.DataFrame,
+    row_label: Any,
+    row_values: list[Any],
+) -> None:
+    """Assign values to a dataframe row via a mapping.
+
+    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
+    multi-dimensional arrays when a column legitimately stores list values.
+    """
+
+    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+
+
 def _apply_row_additions(
     df: pd.DataFrame,
     added_rows: list[dict[str, Any]],
@@ -376,13 +390,13 @@ def _apply_row_additions(
             # already exists. In the future, it would be better to
             # require users to provide unique non-None values for the index with
             # some kind of visual indications.
-            df.loc[index_value, :] = new_row
+            _assign_row_values(df, index_value, new_row)
             continue
 
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            df.loc[index_stop, :] = new_row
+            _assign_row_values(df, index_stop, new_row)
             # Increment to the next range index value
             index_stop += index_step
             continue
@@ -596,7 +610,7 @@ class DataEditorMixin:
         data: EditableData,
         *,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -617,7 +631,7 @@ class DataEditorMixin:
         data: Any,
         *,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -638,7 +652,7 @@ class DataEditorMixin:
         data: DataTypes,
         *,
         width: Width = "stretch",
-        height: HeightWithoutContent | Literal["auto"] = "auto",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -690,21 +704,26 @@ class DataEditorMixin:
               the parent container, the width of the editor matches the width
               of the parent container.
 
-        height : int, "auto", or "stretch"
+        height : int, "auto", "content", or "stretch"
             The height of the data editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"stretch"``: The height of the editor expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The editor will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
-            - ``"stretch"``: The height of the editor expands to fill the
-              available vertical space in its parent container. The editor's
-              height will not exceed the parent container's height. When
-              multiple elements with stretch height are in the same container,
-              they share the available vertical space.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
 
-            Vertical scrolling within the data editor is enabled when the
-            height does not accommodate all rows.
+            Vertical scrolling within the editor is enabled when the height
+            does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -905,7 +924,7 @@ class DataEditorMixin:
         validate_width(width, allow_content=True)
         validate_height(
             height,
-            allow_content=False,
+            allow_content=True,
             allow_stretch=True,
             additional_allowed=["auto"],
         )

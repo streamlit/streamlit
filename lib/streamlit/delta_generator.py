@@ -39,6 +39,7 @@ from streamlit import (
     runtime,
     util,
 )
+from streamlit.components.v2.bidi_component import BidiComponentMixin
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_last_dg_added_to_context_stack,
@@ -216,6 +217,7 @@ class DeltaGenerator(
     ArrowMixin,
     VegaChartsMixin,
     DataEditorMixin,
+    BidiComponentMixin,
 ):
     """Creator of Delta protobuf messages.
 

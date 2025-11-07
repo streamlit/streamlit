@@ -722,17 +722,21 @@ class VegaChartsMixin:
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
 
-        use_container_width : bool
-            Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``True`` (default),
-            Streamlit sets the width of the chart to match the width of the
-            parent container. If ``use_container_width`` is ``False``,
-            Streamlit sets the chart's width according to ``width``.
+        use_container_width : bool or None
+            Whether to override the chart's native width with the width of
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the chart's default behavior.
+            - ``True``: Streamlit sets the width of the chart to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the chart to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         Examples
         --------
@@ -940,19 +944,29 @@ class VegaChartsMixin:
               baseline, which creates a steamgraph.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
         height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
@@ -966,10 +980,9 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         Examples
         --------
@@ -1240,19 +1253,29 @@ class VegaChartsMixin:
               total height around an axis.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
         height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
@@ -1266,10 +1289,9 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         Examples
         --------
@@ -1532,19 +1554,29 @@ class VegaChartsMixin:
               datapoint to be represented by a circle of a different size.
 
         width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"`` (default): Expand to the width of the parent container.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
 
         height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
@@ -1558,10 +1590,9 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         Examples
         --------
@@ -1727,27 +1758,38 @@ class VegaChartsMixin:
             https://altair-viz.github.io/gallery/ for examples of graph
             descriptions.
 
-        width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
+        width : "stretch", "content", int, or None
+            The width of the chart element. This can be one of the following:
 
-            - ``"stretch"``: Expand to the width of the parent container.
-              This is the default for most charts.
-            - ``"content"``: Size the chart to fit its contents, up to the width
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
               of the parent container.
-            - An integer: Set the chart width to this many pixels.
+            - ``None`` (default): Streamlit uses ``"stretch"`` for most charts,
+              and uses ``"content"`` for the following multi-view charts:
 
-            If not specified, Streamlit automatically chooses ``"stretch"``
-            for regular charts and ``"content"`` for facet charts (charts with
-            ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
-            in the encoding), horizontal concatenation charts (``"hconcat"``),
-            and repeat charts (``"repeat"``).
+                - Facet charts: the spec contains ``"facet"`` or encodings for
+                  ``"row"``, ``"column"``, or ``"facet"``.
+                - Horizontal concatenation charts: the spec contains
+                  ``"hconcat"``.
+                - Repeat charts: the spec contains ``"repeat"``.
 
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
@@ -1764,10 +1806,9 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1936,6 +1977,39 @@ class VegaChartsMixin:
             to both ``data`` and ``spec``. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
+        width : "stretch", "content", int, or None
+            The width of the chart element. This can be one of the following:
+
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+            - ``None`` (default): Streamlit uses ``"stretch"`` for most charts,
+              and uses ``"content"`` for the following multi-view charts:
+
+                - Facet charts: the spec contains ``"facet"`` or encodings for
+                  ``"row"``, ``"column"``, or ``"facet"``.
+                - Horizontal concatenation charts: the spec contains
+                  ``"hconcat"``.
+                - Repeat charts: the spec contains ``"repeat"``.
+
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
         use_container_width : bool or None
             Whether to override the chart's native width with the width of
             the parent container. This can be one of the following:
@@ -1951,10 +2025,9 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-                The ``use_container_width`` parameter is deprecated and will
-                be removed in a future version. Use the ``width`` parameter
-                with ``width="stretch"`` instead of ``use_container_width=True``,
-                and ``width="content"`` instead of ``use_container_width=False``.
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -2012,29 +2085,6 @@ class VegaChartsMixin:
             included in the selection state.
 
             Selection parameters are identified by their ``name`` property.
-
-        width : "stretch", "content", or int
-            How to size the chart's width. Can be one of:
-
-            - ``"stretch"``: Expand to the width of the parent container.
-              This is the default for most charts.
-            - ``"content"``: Size the chart to fit its contents, up to the width
-              of the parent container. This is the default for facet charts,
-              horizontal concatenation charts, and repeat charts.
-            - An integer: Set the chart width to this many pixels.
-
-            If not specified, Streamlit automatically chooses ``"stretch"`` for
-            regular charts and ``"content"`` for facet charts (charts with
-            ``"facet"`` in the spec or ``"row"``, ``"column"``, or ``"facet"``
-            in the encoding), horizontal concatenation charts (``"hconcat"``),
-            and repeat charts (``"repeat"``).
-
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
-
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
 
         **kwargs : any
             The Vega-Lite spec for the chart as keywords. This is an alternative

@@ -76,7 +76,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 }
 
 interface AboutProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.ABOUT
 
   /** Callback to close the dialog */
@@ -100,7 +99,6 @@ function AboutDialog(props: AboutProps): ReactElement {
 }
 
 interface ClearCacheProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.CLEAR_CACHE
   /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void
@@ -109,7 +107,6 @@ interface ClearCacheProps {
   onClose: PlainEventHandler
 
   /** callback to run the default action */
-  // eslint-disable-next-line @eslint-react/no-unused-props
   defaultAction: () => void
 }
 
@@ -153,7 +150,6 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
 }
 
 export interface ScriptCompileErrorProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.SCRIPT_COMPILE_ERROR
   exception: IException | null | undefined
   onClose: PlainEventHandler
@@ -186,7 +182,6 @@ interface CommonWarningProps {
 }
 
 export interface WarningProps extends CommonWarningProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.WARNING
 }
 
@@ -209,7 +204,6 @@ function WarningDialog(
 }
 
 interface DeployErrorProps {
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_ERROR
   title: string
   msg: ReactNode

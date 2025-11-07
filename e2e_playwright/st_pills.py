@@ -191,6 +191,8 @@ val = st.pills(
 )
 st.write("Pills with default options:", str(val))
 
+st.markdown("Pills - dynamic props:")
+
 if st.toggle("Update pills props"):
     dyn_val = st.pills(
         "Updated dynamic pills",

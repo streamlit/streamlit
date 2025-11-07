@@ -275,17 +275,22 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curView = useRef<ReactNode>()
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const prevView = curView.current
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   curView.current = renderWidget()
 
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (notNullOrUndefined(curView.current)) {
     animateIn = true
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     renderView = curView.current
   } else {
     animateIn = false

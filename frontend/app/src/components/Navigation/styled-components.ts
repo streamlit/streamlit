@@ -50,9 +50,10 @@ export const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div({
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
-})
+  fontFamily: theme.genericFonts.bodyFont,
+}))
 
 export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   return {

@@ -27,6 +27,9 @@ const mockEndpoints = {
   setStaticConfigUrl: vi.fn(),
   sendClientErrorToHost: vi.fn(),
   checkSourceUrlResponse: vi.fn(),
+  buildBidiComponentURL: vi.fn(
+    (componentName: string, path: string) => `${componentName}/${path}`
+  ),
   buildComponentURL: vi.fn(
     (componentName: string, path: string) => `${componentName}/${path}`
   ),
@@ -243,7 +246,9 @@ describe("LogoComponent", () => {
             })}
           />,
           {
-            libConfig: { resourceCrossOriginMode: "anonymous" },
+            libConfigContext: {
+              resourceCrossOriginMode: "anonymous",
+            },
           }
         )
 
@@ -277,7 +282,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -320,7 +325,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -352,7 +357,7 @@ describe("LogoComponent", () => {
             })}
           />,
           {
-            libConfig: { resourceCrossOriginMode: undefined },
+            libConfigContext: { resourceCrossOriginMode: undefined },
           }
         )
 
@@ -378,7 +383,9 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "use-credentials" },
+          libConfigContext: {
+            resourceCrossOriginMode: "use-credentials",
+          },
         }
       )
 

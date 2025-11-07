@@ -89,7 +89,6 @@ export interface Props {
   disabled: boolean
   element: SliderProto
   widgetMgr: WidgetStateManager
-  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
   fragmentId?: string
 }
@@ -162,9 +161,7 @@ function Slider({
     []
   )
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const renderThumb = useCallback(
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
@@ -266,9 +263,7 @@ function Slider({
   // Then we can adjust the padding around the thumbs separately
   // from the dimensions of the track.
   //
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const renderInnerTrack = useCallback(
     forwardRef<HTMLDivElement, StylePropsWithChildren>(
       function renderInnerTrack(props, ref): ReactElement {

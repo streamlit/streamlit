@@ -25,6 +25,31 @@ from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 class StHtmlAPITest(DeltaGeneratorTestCase):
     """Test st.html API."""
 
+    def test_unsafe_allow_javascript_default_false(self):
+        """By default JS execution is disabled (flag False)."""
+        st.html("<div>Hi</div>")
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is False
+
+    def test_unsafe_allow_javascript_true(self):
+        """When enabled, the flag is serialized as True."""
+        st.html("<div>Hi</div>", unsafe_allow_javascript=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is True
+
+    def test_unsafe_allow_javascript_style_only_ignores_flag(self):
+        """Style-only HTML ignores the JS flag since no scripts can execute."""
+        css = "<style>body{background:red}</style>"
+        st.html(css, unsafe_allow_javascript=True)
+        # First message routes the style-only tag to the event container; then
+        # the element
+        _ = self.get_message_from_queue()
+        style_el = self.get_delta_from_queue().new_element
+        assert style_el.html.body == css
+        assert style_el.html.unsafe_allow_javascript is False
+
     def test_st_html(self):
         """Test st.html."""
         st.html("<i> This is a i tag </i>")

@@ -71,7 +71,7 @@ class WriteMixin:
         *,
         cursor: str | None = None,
     ) -> list[Any] | str:
-        """Stream a generator, iterable, or stream-like sequence to the app.
+        r"""Stream a generator, iterable, or stream-like sequence to the app.
 
         ``st.write_stream`` iterates through the given sequences and writes all
         chunks to the app. String chunks will be written using a typewriter effect.
@@ -92,21 +92,24 @@ class WriteMixin:
                 parsing.
 
         cursor : str or None
-            A string to append to text as it's being written. By default, no cursor
-            is shown, but you can configure it to use any string that is supported
-            by ``st.markdown``. This includes:
+            A string to append to text as it's being written. If this is
+            ``None`` (default), no cursor is shown. Otherwise, the string is
+            rendered as Markdown and appears as a cursor at the end of the
+            streamed text. For example, you can use an emoji, emoji shortcode,
+            or Material icon.
 
-            - Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            The first line of the cursor string can contain GitHub-flavored
+            Markdown of the following types: Bold, Italics, Strikethroughs,
+            Inline Code, Links, and Images. Images display like icons, with a
+            max height equal to the font height. If you pass a multiline
+            string, additional lines display after the text with the full
+            Markdown rendering capabilities of ``st.markdown``.
 
-            - Google Material Symbols (rounded style), using the syntax
-              ``:material/icon_name:``, where "icon_name" is the name of the
-              icon in snake case. For a complete list of icons, see Google's
-              `Material Symbols <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
-              font library.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            - ...and much more! See ``st.markdown`` for more.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
 
         Returns

@@ -16,8 +16,10 @@
 
 export { encodeToWav } from "./core/encodeToWav"
 export type {
+  AudioMeta,
   WaveformController,
   WaveformControllerEvents,
   RecordingState,
+  StopResult,
 } from "./core/types"
 export { useWaveformController } from "./core/useWaveformController"

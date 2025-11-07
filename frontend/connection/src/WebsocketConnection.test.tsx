@@ -543,7 +543,55 @@ If you are trying to access a Streamlit app running on another server, this coul
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
       `Connection failed with status ${TEST_ERROR.response.status}, ` +
-        `and response "${TEST_ERROR.response.data}".`,
+        "and response:\n```\n" +
+        TEST_ERROR.response.data +
+        "\n```",
+      expect.anything()
+    )
+  })
+
+  it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx with an object response", async () => {
+    const TEST_ERROR = {
+      response: {
+        status: 500,
+        data: {
+          message: "TEST_DATA",
+        },
+      },
+    }
+
+    axios.get = vi
+      .fn()
+      // First Connection attempt
+      .mockRejectedValueOnce(TEST_ERROR)
+      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // Second Connection attempt
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Run any remaining timers to complete the ping process
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      `Connection failed with status ${TEST_ERROR.response.status}, ` +
+        "and response:\n```\n" +
+        JSON.stringify(TEST_ERROR.response.data, null, 2) +
+        "\n```",
       expect.anything()
     )
   })
