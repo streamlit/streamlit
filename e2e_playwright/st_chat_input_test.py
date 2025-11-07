@@ -473,6 +473,10 @@ def test_uploads_and_deletes_single_file(
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     uploaded_files.scroll_into_view_if_needed()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
     # Upload a second file. This one will replace the first.
@@ -513,6 +517,9 @@ def test_uploads_and_deletes_multiple_files(
     # Wait for file names to be visible before taking snapshot
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(app)
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
