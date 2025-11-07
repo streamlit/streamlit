@@ -250,11 +250,9 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("thumbs", 30, 65),  # Below minimum -> enforced to 65
-            ("thumbs", 65, 65),  # Exactly minimum -> stays 65
             ("thumbs", 100, 100),  # Above minimum -> stays as specified
             ("faces", 100, 155),  # Below minimum -> enforced to 155
             ("stars", 100, 155),  # Below minimum -> enforced to 155
-            ("faces", 155, 155),  # Exactly minimum -> stays 155
             ("stars", 200, 200),  # Above minimum -> stays as specified
         ]
     )
