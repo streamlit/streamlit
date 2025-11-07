@@ -176,7 +176,6 @@ describe("DownloadButton widget", () => {
   describe("Deferred downloads", () => {
     it("renders deferred download button", () => {
       const props = getProps({
-        isDeferred: true,
         deferredFileId: "test_file_id",
         url: "",
       })
@@ -188,7 +187,6 @@ describe("DownloadButton widget", () => {
 
     it("does not check URL for deferred downloads", () => {
       const props = getProps({
-        isDeferred: true,
         deferredFileId: "test_file_id",
         url: "",
       })
@@ -209,7 +207,6 @@ describe("DownloadButton widget", () => {
 
       const props = getProps(
         {
-          isDeferred: true,
           deferredFileId: "test_file_id",
           url: "",
         },
@@ -253,7 +250,6 @@ describe("DownloadButton widget", () => {
 
       const props = getProps(
         {
-          isDeferred: true,
           deferredFileId: "test_file_id",
           url: "",
           label: "Download File",
@@ -267,8 +263,9 @@ describe("DownloadButton widget", () => {
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
 
-      // Should show loading text
-      expect(screen.getByText("Loading...")).toBeInTheDocument()
+      // Should show spinner and keep original label
+      await screen.findByTestId("stSpinnerIcon")
+      expect(screen.getByText("Download File")).toBeInTheDocument()
 
       // Button should be disabled during loading
       expect(downloadButton).toBeDisabled()
@@ -290,7 +287,6 @@ describe("DownloadButton widget", () => {
 
       const props = getProps(
         {
-          isDeferred: true,
           deferredFileId: "test_file_id",
           url: "",
         },
@@ -322,7 +318,6 @@ describe("DownloadButton widget", () => {
 
       const props = getProps(
         {
-          isDeferred: true,
           deferredFileId: "test_file_id",
           url: "",
         },
@@ -354,7 +349,6 @@ describe("DownloadButton widget", () => {
 
       const props = getProps(
         {
-          isDeferred: true,
           deferredFileId: "test_file_id",
           url: "",
         },
@@ -388,7 +382,6 @@ describe("DownloadButton widget", () => {
     it("shows error when requestDeferredFile is not provided", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        isDeferred: true,
         deferredFileId: "test_file_id",
         url: "",
       })

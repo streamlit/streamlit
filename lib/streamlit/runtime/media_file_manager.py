@@ -20,7 +20,7 @@ import collections
 import io
 import threading
 import uuid
-from typing import TYPE_CHECKING, Any, BinaryIO, Final, TextIO
+from typing import TYPE_CHECKING, BinaryIO, Final, TextIO, TypedDict
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -33,6 +33,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
+
+
+class DeferredCallableEntry(TypedDict):
+    """Typed metadata for deferred download callables."""
+
+    callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
+    mimetype: str
+    filename: str | None
+    coordinates: str
 
 
 def _get_session_id() -> str:
@@ -101,7 +110,7 @@ class MediaFileManager:
 
         # Dict of [file_id -> deferred callable metadata]
         # Used for deferred download button execution
-        self._deferred_callables: dict[str, dict[str, Any]] = {}
+        self._deferred_callables: dict[str, DeferredCallableEntry] = {}
 
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which

@@ -24,8 +24,6 @@ import React, {
   useState,
 } from "react"
 
-import styled from "@emotion/styled"
-
 import {
   DeferredFileResponse,
   DownloadButton as DownloadButtonProto,
@@ -39,15 +37,9 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-
-const StyledErrorMessage = styled.small(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-  marginTop: theme.spacing.twoXS,
-  display: "block",
-}))
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -67,16 +59,7 @@ function DownloadButton(props: Props): ReactElement {
     fragmentId,
     requestDeferredFile,
   } = props
-  const {
-    help,
-    label,
-    icon,
-    ignoreRerun,
-    type,
-    url,
-    isDeferred,
-    deferredFileId,
-  } = element
+  const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,12 +81,13 @@ function DownloadButton(props: Props): ReactElement {
 
   useEffect(() => {
     // Only check URL for non-deferred downloads
+    const isDeferred = Boolean(deferredFileId && deferredFileId.length > 0)
     if (!isDeferred) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
       void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
     }
-  }, [downloadUrl, endpoints, isDeferred])
+  }, [downloadUrl, endpoints, deferredFileId])
 
   const handleDeferredDownload = useCallback(async (): Promise<void> => {
     if (!requestDeferredFile || !deferredFileId) {
@@ -145,6 +129,7 @@ function DownloadButton(props: Props): ReactElement {
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
 
+    const isDeferred = Boolean(deferredFileId && deferredFileId.length > 0)
     if (isDeferred) {
       // Handle deferred download
       void handleDeferredDownload()
@@ -163,7 +148,7 @@ function DownloadButton(props: Props): ReactElement {
     widgetMgr,
     element,
     fragmentId,
-    isDeferred,
+    deferredFileId,
     handleDeferredDownload,
     downloadUrl,
     enforceDownloadInNewTab,
@@ -189,8 +174,8 @@ function DownloadButton(props: Props): ReactElement {
           containerWidth={true}
         >
           <DynamicButtonLabel
-            icon={icon}
-            label={isLoading ? "Loading..." : label}
+            icon={isLoading ? "spinner" : icon}
+            label={label}
           />
         </BaseButton>
       </BaseButtonTooltip>

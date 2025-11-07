@@ -1236,8 +1236,6 @@ def marshall_file(
         if not runtime.exists():
             # When running in "raw mode", we can't access the MediaFileManager.
             proto_download_button.url = ""
-            proto_download_button.deferred_file_id = ""
-            proto_download_button.is_deferred = False
             return
 
         # Register the callable for deferred execution
@@ -1249,7 +1247,6 @@ def marshall_file(
             file_name=file_name,
         )
         proto_download_button.deferred_file_id = file_id
-        proto_download_button.is_deferred = True
         proto_download_button.url = ""  # No URL yet, will be generated on click
         return
 
