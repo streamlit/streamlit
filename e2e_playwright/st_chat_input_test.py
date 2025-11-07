@@ -476,6 +476,8 @@ def test_uploads_and_deletes_single_file(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
+    # Ensure tooltip is actually gone before taking snapshot
+    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_attached()
 
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
@@ -520,6 +522,8 @@ def test_uploads_and_deletes_multiple_files(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(app)
+    # Ensure tooltip is actually gone before taking snapshot
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_attached()
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
