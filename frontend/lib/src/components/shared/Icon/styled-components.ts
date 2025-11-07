@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// eslint-disable-next-line import/order
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
