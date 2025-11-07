@@ -65,7 +65,7 @@ class BokehMixin:
             "st.bokeh_chart has been deprecated and removed. "
             "Please use our custom component, "
             "[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh), "
-            "instead."
+            "instead. Calling st.bokeh_chart will do nothing."
         )
         return self.dg
 
