@@ -2247,8 +2247,6 @@ class DeferredFileRequestTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.runtime.get_instance")
     def test_handle_deferred_file_request_success(self, mock_get_runtime):
         """Test successful deferred file request handling."""
-        import asyncio
-
         # Mock the runtime and media file manager
         mock_media_mgr = MagicMock()
         mock_media_mgr.execute_deferred.return_value = "/media/test_file_url"
@@ -2279,8 +2277,6 @@ class DeferredFileRequestTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.runtime.get_instance")
     def test_handle_deferred_file_request_error(self, mock_get_runtime):
         """Test deferred file request handling when callable fails."""
-        import asyncio
-
         # Mock the runtime and media file manager
         mock_media_mgr = MagicMock()
         from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -2312,8 +2308,6 @@ class DeferredFileRequestTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.runtime.get_instance")
     def test_handle_deferred_file_request_file_not_found(self, mock_get_runtime):
         """Test deferred file request handling when file_id doesn't exist."""
-        import asyncio
-
         # Mock the runtime and media file manager
         mock_media_mgr = MagicMock()
         from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -2344,7 +2338,6 @@ class DeferredFileRequestTest(unittest.TestCase):
 
     def test_handle_backmsg_routes_deferred_file_request(self):
         """Test that handle_backmsg routes deferred_file_request correctly."""
-        import asyncio
 
         # Create a mock async handler that returns a coroutine
         async def mock_async_handler(request):

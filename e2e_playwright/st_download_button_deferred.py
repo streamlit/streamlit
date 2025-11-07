@@ -79,6 +79,7 @@ st.download_button(
     data=failing_callable,
     file_name="error.txt",
     mime="text/plain",
+    on_click="ignore",
 )
 
 st.subheader("6. Large Deferred Download")
