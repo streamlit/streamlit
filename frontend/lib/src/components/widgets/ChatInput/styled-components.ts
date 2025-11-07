@@ -62,6 +62,13 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     const [cleanIconColor, dirtyIconColor] = lightTheme
       ? [theme.colors.gray60, theme.colors.gray80]
       : [theme.colors.gray80, theme.colors.gray40]
+
+    const getSendIconColor = (): string => {
+      if (hasError) return theme.colors.redTextColor
+      if (disabled) return cleanIconColor
+      return dirtyIconColor
+    }
+
     return {
       border: "none",
       backgroundColor: theme.colors.transparent,
@@ -74,11 +81,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       lineHeight: theme.lineHeights.none,
       margin: theme.spacing.none,
       padding: theme.spacing.sm,
-      color: hasError
-        ? theme.colors.redTextColor
-        : disabled
-          ? cleanIconColor
-          : dirtyIconColor,
+      color: getSendIconColor(),
       pointerEvents: "auto",
       "&:focus": {
         outline: "none",
