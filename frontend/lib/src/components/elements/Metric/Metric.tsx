@@ -26,10 +26,8 @@ import { TopLevelSpec } from "vega-lite"
 import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import {
-  applyStreamlitTheme,
-  StyledVegaLiteChartTooltips,
-} from "~lib/components/elements/ArrowVegaLiteChart"
+import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"

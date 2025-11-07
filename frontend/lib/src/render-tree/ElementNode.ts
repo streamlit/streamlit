@@ -29,7 +29,7 @@ import {
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "~lib/components/elements/ArrowVegaLiteChart"
+} from "~lib/components/elements/ArrowVegaLiteChart/arrowUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"

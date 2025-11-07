@@ -22,7 +22,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 
 import DataFrame from "./DataFrame"
 
-interface ReadOnlyGridProps {
+export interface ReadOnlyGridProps {
   data: Quiver
   height?: number
   width?: streamlit.IWidthConfig

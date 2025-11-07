@@ -31,7 +31,7 @@ import Toolbar, {
   StyledToolbarElementContainer,
   ToolbarAction,
 } from "~lib/components/shared/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
+import type { ReadOnlyGridProps } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -80,6 +80,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
 }) => {
   const [showData, setShowData] = useState(false)
   const [enableShowData, setEnableShowData] = useState(false)
+  const [ReadOnlyGridComponent, setReadOnlyGridComponent] =
+    useState<React.ComponentType<ReadOnlyGridProps> | null>(null)
 
   const {
     expanded: isFullScreen,
@@ -191,9 +193,31 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
+  useEffect(() => {
+    if (!enableShowData || ReadOnlyGridComponent) {
+      return
+    }
+
+    let isMounted = true
+
+    void import("~lib/components/widgets/DataFrame").then(module => {
+      if (isMounted) {
+        setReadOnlyGridComponent(() => module.ReadOnlyGrid)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [enableShowData, ReadOnlyGridComponent])
+
   if (showData) {
+    if (ReadOnlyGridComponent === null) {
+      return null
+    }
+
     return (
-      <ReadOnlyGrid
+      <ReadOnlyGridComponent
         data={data ?? datasets[0]?.data}
         height={fullScreenHeight ?? chartContainerHeight ?? undefined}
         width={widthConfig ?? undefined}
