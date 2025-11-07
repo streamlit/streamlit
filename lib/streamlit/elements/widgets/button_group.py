@@ -423,14 +423,31 @@ class ButtonGroupMixin:
                 f" The passed default value is {default}"
             )
 
-        # Enforce minimum width to prevent icons from wrapping.
-        # Minimum widths based on number of icon buttons and their intrinsic sizes,
-        # calculated to support base font sizes up to 18px:
-        # - thumbs (2 icons): 65px minimum
-        # - faces/stars (5 icons): 155px minimum
-        if isinstance(width, int):
-            min_width_px = 65 if options == "thumbs" else 155
-            width = max(width, min_width_px)
+        # Convert small pixel widths to "content" to prevent icon wrapping.
+        # Calculate threshold based on theme.baseFontSize to be responsive to
+        # custom themes. The calculation is based on icon buttons sized in rem:
+        # - Button size: ~1.5rem (icon 1.25rem + padding 0.125rem x 2)
+        # - Gap: 0.125rem between buttons
+        # - thumbs: 2 buttons + 1 gap = 3.125rem
+        # - faces/stars: 5 buttons + 4 gaps = 8rem
+        from streamlit import config
+
+        base_font_size = config.get_option("theme.baseFontSize") or 16
+        button_size_rem = 1.5
+        gap_size_rem = 0.125
+
+        if options == "thumbs":
+            # 2 buttons + 1 gap
+            min_width_rem = 2 * button_size_rem + gap_size_rem
+        else:
+            # 5 buttons + 4 gaps (faces or stars)
+            min_width_rem = 5 * button_size_rem + 4 * gap_size_rem
+
+        # Convert rem to pixels based on base font size, add 10% buffer
+        min_width_threshold = int(min_width_rem * base_font_size * 1.1)
+
+        if isinstance(width, int) and width < min_width_threshold:
+            width = "content"
 
         _default: list[int] | None = (
             [options_indices[default]] if default is not None else None

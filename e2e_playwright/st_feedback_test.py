@@ -225,13 +225,13 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
 
 def test_feedback_minimum_width_enforcement(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.feedback enforces minimum width to prevent icon wrapping (gh-12068)."""
-    thumbs_min = get_element_by_key(themed_app, "thumbs_min_width")
+    thumbs_min = get_element_by_key(app, "thumbs_min_width")
     assert_snapshot(thumbs_min, name="st_feedback-thumbs_min_width_enforced")
 
-    stars_min = get_element_by_key(themed_app, "stars_min_width")
+    stars_min = get_element_by_key(app, "stars_min_width")
     assert_snapshot(stars_min, name="st_feedback-stars_min_width_enforced")
 
 

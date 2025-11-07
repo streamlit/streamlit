@@ -247,29 +247,48 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs", key="feedback_command_key")
         assert val == session_state_index
 
-    @parameterized.expand(
-        [
-            ("thumbs", 30, 65),  # Below minimum -> enforced to 65
-            ("thumbs", 100, 100),  # Above minimum -> stays as specified
-            ("faces", 100, 155),  # Below minimum -> enforced to 155
-            ("stars", 100, 155),  # Below minimum -> enforced to 155
-            ("stars", 200, 200),  # Above minimum -> stays as specified
-        ]
-    )
-    def test_feedback_enforces_minimum_width(
-        self, options: str, specified_width: int, expected_width: int
-    ):
-        """Test that st.feedback enforces minimum width to prevent icon wrapping."""
-        st.feedback(
-            options, width=specified_width, key=f"feedback_{options}_{specified_width}"
-        )
+    def test_feedback_converts_small_width_to_content(self):
+        """Test that st.feedback converts small pixel widths to content width.
 
+        The threshold is calculated dynamically based on theme.baseFontSize,
+        so this tests with default 16px base font size.
+        """
+        # With default 16px base font: thumbs threshold ~55px (3.125rem x 16 x 1.1)
+        st.feedback("thumbs", width=30, key="thumbs_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+        # With default 16px base font: faces threshold ~141px (8rem x 16 x 1.1)
+        st.feedback("faces", width=100, key="faces_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_feedback_preserves_adequate_pixel_widths(self):
+        """Test that st.feedback preserves pixel widths above the threshold."""
+        # Large widths well above any threshold should be preserved
+        st.feedback("thumbs", width=100, key="thumbs_adequate")
         el = self.get_delta_from_queue().new_element
         assert (
             el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert el.width_config.pixel_width == expected_width
+        assert el.width_config.pixel_width == 100
+
+        st.feedback("stars", width=200, key="stars_adequate")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 200
 
 
 def get_command_matrix(
