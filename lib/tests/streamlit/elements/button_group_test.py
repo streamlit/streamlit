@@ -247,6 +247,32 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs", key="feedback_command_key")
         assert val == session_state_index
 
+    @parameterized.expand(
+        [
+            ("thumbs", 30, 65),  # Below minimum -> enforced to 65
+            ("thumbs", 65, 65),  # Exactly minimum -> stays 65
+            ("thumbs", 100, 100),  # Above minimum -> stays as specified
+            ("faces", 100, 155),  # Below minimum -> enforced to 155
+            ("stars", 100, 155),  # Below minimum -> enforced to 155
+            ("faces", 155, 155),  # Exactly minimum -> stays 155
+            ("stars", 200, 200),  # Above minimum -> stays as specified
+        ]
+    )
+    def test_feedback_enforces_minimum_width(
+        self, options: str, specified_width: int, expected_width: int
+    ):
+        """Test that st.feedback enforces minimum width to prevent icon wrapping."""
+        st.feedback(
+            options, width=specified_width, key=f"feedback_{options}_{specified_width}"
+        )
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == expected_width
+
 
 def get_command_matrix(
     test_args: list[Any], with_st_feedback: bool = False

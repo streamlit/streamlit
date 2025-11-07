@@ -423,6 +423,15 @@ class ButtonGroupMixin:
                 f" The passed default value is {default}"
             )
 
+        # Enforce minimum width to prevent icons from wrapping.
+        # Minimum widths based on number of icon buttons and their intrinsic sizes,
+        # calculated to support base font sizes up to 18px:
+        # - thumbs (2 icons): 65px minimum
+        # - faces/stars (5 icons): 155px minimum
+        if isinstance(width, int):
+            min_width_px = 65 if options == "thumbs" else 155
+            width = max(width, min_width_px)
+
         _default: list[int] | None = (
             [options_indices[default]] if default is not None else None
         )
