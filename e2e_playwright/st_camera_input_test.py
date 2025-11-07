@@ -19,9 +19,14 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
+    expect_help_tooltip,
+    expect_prefixed_markdown,
     get_camera_input,
     get_element_by_key,
 )
+
+NUM_CAMERA_INPUT_WIDGETS = 5
 
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
@@ -38,7 +43,7 @@ def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
 def test_displays_correct_number_of_elements(app: Page):
     """Test that it renders correct number of camera_input elements."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
 
 @pytest.mark.only_browser("chromium")
@@ -74,7 +79,7 @@ def test_shows_disabled_widget_correctly(
 ):
     """Test that it renders disabled camera_input widget correctly."""
     camera_input_widgets = themed_app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
     disabled_camera_input = get_camera_input(themed_app, "Label2")
 
     # The width is debounced in this component, so we need to wait until the
@@ -90,7 +95,7 @@ def test_shows_disabled_widget_correctly(
 def test_take_photo_button_styling(app: Page):
     """Test that the Take Photo button is rendered properly when active/disabled."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
     # Active button styling
     active_camera_input = get_camera_input(app, "Label1")
@@ -137,7 +142,7 @@ def test_camera_input_widths(
     assert_snapshot: ImageCompareFunction,
 ):
     camera_input_widgets = app.get_by_test_id("stCameraInput")
-    expect(camera_input_widgets).to_have_count(4)
+    expect(camera_input_widgets).to_have_count(NUM_CAMERA_INPUT_WIDGETS)
 
     stretch_camera = get_camera_input(app, "Width Stretch")
     pixel_width_camera = get_camera_input(app, "Width 300px")
@@ -151,3 +156,38 @@ def test_camera_input_widths(
     check_dimensions = check_dimensions_func(pixel_width_camera)
     wait_until(app, check_dimensions)
     assert_snapshot(pixel_width_camera, name="st_camera_input-width_300px")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI camera permission issue
+def test_dynamic_camera_input_props(app: Page):
+    """Test that the camera input can be updated dynamically while keeping the state."""
+    dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
+    expect(dynamic_camera_input).to_be_visible()
+
+    # Make sure its rendered correctly before checking the state:
+    check_dimensions = check_dimensions_func(
+        dynamic_camera_input.get_by_test_id("stCameraInput")
+    )
+    wait_until(app, check_dimensions)
+
+    # Check initial state
+    expect(dynamic_camera_input).to_contain_text("Initial dynamic camera input")
+    expect_prefixed_markdown(app, "Initial camera input value:", "False")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_camera_input, "initial help")
+
+    # Click the toggle to update the camera input props
+    click_toggle(app, "Update camera input props")
+
+    # Check updated state
+    expect(dynamic_camera_input).to_contain_text("Updated dynamic camera input")
+
+    # The value should still be False (no photo taken)
+    expect_prefixed_markdown(app, "Updated camera input value:", "False")
+
+    # Check width manually since we cannot get stable screenshots:
+    expect(dynamic_camera_input).to_have_css("width", "300px")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_camera_input, "updated help")

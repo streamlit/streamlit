@@ -140,8 +140,7 @@ const NumberInput: React.FC<Props> = ({
     }
     // We only want to reformat the value if any of the formatting
     // related parameters change.
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [elementDataType, elementFormat, step])
 
   const commitValue = useCallback(
@@ -257,9 +256,7 @@ const NumberInput: React.FC<Props> = ({
     // I don't want to run this effect on every render, only on mount.
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy

@@ -33,9 +33,6 @@ const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
 ): React.FC<{ children: React.ReactNode }> => {
   return ({ children }: { children: React.ReactNode }): JSX.Element => {
-    // useMemo is not needed here as there is no performance benefit
-    // new wrapper is created for each test
-    // eslint-disable-next-line @eslint-react/no-unstable-context-value
     const libConfigContextValue: LibConfigContextProps = {
       resourceCrossOriginMode,
       mapboxToken: undefined,

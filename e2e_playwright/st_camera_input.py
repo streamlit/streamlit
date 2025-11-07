@@ -24,3 +24,30 @@ y = st.camera_input("Label2", help="help2", disabled=True)
 # Add camera inputs with different widths
 st.camera_input("Width Stretch", width="stretch", key="camera_stretch", disabled=True)
 st.camera_input("Width 300px", width=300, key="camera_300px", disabled=True)
+
+if st.toggle("Update camera input props"):
+    cam_val = st.camera_input(
+        "Updated dynamic camera input",
+        width=300,
+        help="updated help",
+        key="dynamic_camera_input_with_key",
+        on_change=lambda a, param: print(
+            f"Updated camera input - callback triggered: {a} {param}"
+        ),
+        args=("Updated camera arg",),
+        kwargs={"param": "updated kwarg param"},
+    )
+    st.write("Updated camera input value:", cam_val is not None)
+else:
+    cam_val = st.camera_input(
+        "Initial dynamic camera input",
+        width="stretch",
+        help="initial help",
+        key="dynamic_camera_input_with_key",
+        on_change=lambda a, param: print(
+            f"Initial camera input - callback triggered: {a} {param}"
+        ),
+        args=("Initial camera arg",),
+        kwargs={"param": "initial kwarg param"},
+    )
+    st.write("Initial camera input value:", cam_val is not None)

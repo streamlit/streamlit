@@ -483,7 +483,10 @@ class FileUploaderMixin:
         element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity; only include
+            # changes to the type and accept_multiple_files parameters in
+            # the identity computation as those can invalidate the current value.
+            key_as_main_identity={"type", "accept_multiple_files"},
             dg=self.dg,
             label=label,
             type=type,

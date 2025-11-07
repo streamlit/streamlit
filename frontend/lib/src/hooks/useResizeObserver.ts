@@ -93,8 +93,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
         cancelAnimationFrame(frameId)
       }
     }
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [properties, getValues, ...dependencies])
 
   return { values, elementRef }

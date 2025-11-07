@@ -233,7 +233,7 @@ describe("Cached theme helpers", () => {
       backgroundColor: "orange",
       secondaryBackgroundColor: "yellow",
       textColor: "green",
-      bodyFont: '"Source Sans", sans-serif',
+      bodyFont: "Roboto",
     }
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
 
@@ -281,9 +281,13 @@ describe("Cached theme helpers", () => {
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
 
+      // Note: bodyFont will have Streamlit's default fallback appended by parseFont
       expect(cachedTheme).toEqual({
         name: customTheme.name,
-        themeInput,
+        themeInput: {
+          ...themeInput,
+          bodyFont: 'Roboto, "Source Sans", sans-serif',
+        },
       })
     })
   })
@@ -2707,7 +2711,9 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
 
-    expect(theme.genericFonts.bodyFont).toBe("Body Font Test")
+    expect(theme.genericFonts.bodyFont).toBe(
+      'Body Font Test, "Source Sans", sans-serif'
+    )
   })
 
   it("uses codeFont when configured", () => {
@@ -2717,7 +2723,9 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
 
-    expect(theme.genericFonts.codeFont).toBe("Code Font Test")
+    expect(theme.genericFonts.codeFont).toBe(
+      'Code Font Test, "Source Code Pro", monospace'
+    )
   })
 
   it("uses headingFont when configured", () => {
@@ -2727,7 +2735,9 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
 
-    expect(theme.genericFonts.headingFont).toBe("Heading Font Test")
+    expect(theme.genericFonts.headingFont).toBe(
+      'Heading Font Test, "Source Sans", sans-serif'
+    )
   })
 
   it("uses bodyFont for headingFont when headingFont is not configured", () => {
@@ -2857,15 +2867,38 @@ describe("parseFont", () => {
     ["sans serif", '"Source Sans", sans-serif'], // With space
     ["serif", '"Source Serif", serif'],
     ["monospace", '"Source Code Pro", monospace'],
-
-    // Test fonts that aren't in the map (should return as-is)
-    ["Arial", "Arial"],
-    ["Helvetica", "Helvetica"],
-    ["Times New Roman", "Times New Roman"],
-    ["Comic Sans MS", "Comic Sans MS"],
-    ["", ""],
+    // Test fonts that aren't in the map (should always append Streamlit default as fallback)
+    ["Arial", 'Arial, "Source Sans", sans-serif'],
+    ["Helvetica", 'Helvetica, "Source Sans", sans-serif'],
+    ["Times New Roman", 'Times New Roman, "Source Sans", sans-serif'],
+    ["Comic Sans MS", 'Comic Sans MS, "Source Sans", sans-serif'],
+    // Empty string should return just the fallback font
+    ["", '"Source Sans", sans-serif'],
+    // Whitespace-only string should also return just the fallback font
+    ["   ", '"Source Sans", sans-serif'],
+    // Test fonts that already have fallbacks (should still append Streamlit default as final fallback)
+    [
+      '"Roboto", Arial, sans-serif',
+      '"Roboto", Arial, sans-serif, "Source Sans", sans-serif',
+    ],
+    [
+      "Arial, Helvetica, sans-serif",
+      'Arial, Helvetica, sans-serif, "Source Sans", sans-serif',
+    ],
   ])("correctly maps '%s' to '%s'", (input, expected) => {
     expect(parseFont(input)).toBe(expected)
+  })
+
+  it("allows custom fallback font", () => {
+    expect(parseFont("Arial", '"Source Code Pro", monospace')).toBe(
+      'Arial, "Source Code Pro", monospace'
+    )
+  })
+
+  it("appends fallback even to fonts that already have commas", () => {
+    expect(parseFont('"My Font", Arial')).toBe(
+      '"My Font", Arial, "Source Sans", sans-serif'
+    )
   })
 })
 

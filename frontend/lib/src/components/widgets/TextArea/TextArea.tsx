@@ -91,6 +91,7 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const id = useRef(uniqueId("text_area_")).current
 
   const { width, elementRef } = useCalculatedDimensions()

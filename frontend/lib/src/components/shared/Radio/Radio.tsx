@@ -95,9 +95,7 @@ function Radio({
     setValue(defaultValue ?? null)
 
     // Exclude value from the dependency list on purpose to avoid a loop.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [defaultValue])
 
   const onChangeCallback = useCallback(
