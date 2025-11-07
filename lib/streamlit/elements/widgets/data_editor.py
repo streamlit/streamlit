@@ -198,7 +198,7 @@ def _parse_value(
     import pandas as pd
 
     try:
-        if column_data_kind == ColumnDataKind.LIST:
+        if column_data_kind in (ColumnDataKind.LIST, ColumnDataKind.EMPTY):
             return list(value) if is_list_like(value) else [value]  # ty: ignore
 
         if column_data_kind == ColumnDataKind.STRING:
@@ -209,7 +209,7 @@ def _parse_value(
         # This isn't expected to happen.
         if isinstance(value, list):
             raise TypeError(  # noqa: TRY301
-                "List values are only supported by list and string columns."
+                "List values are only supported by list, string and empty columns."
             )
 
         if column_data_kind == ColumnDataKind.INTEGER:
@@ -320,6 +320,20 @@ def _parse_added_row(
     return index_value, new_row
 
 
+def _assign_row_values(
+    df: pd.DataFrame,
+    row_label: Any,
+    row_values: list[Any],
+) -> None:
+    """Assign values to a dataframe row via a mapping.
+
+    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
+    multi-dimensional arrays when a column legitimately stores list values.
+    """
+
+    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+
+
 def _apply_row_additions(
     df: pd.DataFrame,
     added_rows: list[dict[str, Any]],
@@ -376,13 +390,13 @@ def _apply_row_additions(
             # already exists. In the future, it would be better to
             # require users to provide unique non-None values for the index with
             # some kind of visual indications.
-            df.loc[index_value, :] = new_row
+            _assign_row_values(df, index_value, new_row)
             continue
 
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            df.loc[index_stop, :] = new_row
+            _assign_row_values(df, index_stop, new_row)
             # Increment to the next range index value
             index_stop += index_step
             continue

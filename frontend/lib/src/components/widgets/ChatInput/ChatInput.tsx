@@ -25,7 +25,13 @@ import React, {
   useState,
 } from "react"
 
-import { Check, Close, Mic, Send } from "@emotion-icons/material-rounded"
+import {
+  Check,
+  Close,
+  ErrorOutline,
+  Mic,
+  Send,
+} from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -42,6 +48,7 @@ import { useWaveformController } from "~lib/components/audio"
 import { LOG } from "~lib/components/ChatInput/logger"
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -119,6 +126,7 @@ function ChatInput({
   const [files, setFiles] = useState<UploadFileInfo[]>([])
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [recordingError, setRecordingError] = useState<string | null>(null)
 
   // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
@@ -177,7 +185,7 @@ function ChatInput({
           .catch(error => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
-            LOG.error("Failed to delete file from server", error)
+            LOG.error("Failed to delete file from server:", error)
           })
       }
     },
@@ -399,7 +407,9 @@ function ChatInput({
         // 4. Submit immediately with audio info
         submitChatInput(audioInfo)
       } catch (error) {
+        const errorMessage = "Recording failed"
         LOG.error("Audio upload failed:", error)
+        setRecordingError(errorMessage)
         // Refocus on input after error
         if (chatInputRef.current) {
           chatInputRef.current.focus()
@@ -415,6 +425,19 @@ function ChatInput({
   const controllerEvents = useMemo(
     () => ({
       onApprove: handleAudioApprove,
+      onPermissionDenied: () => {
+        const errorMessage = "Microphone access denied"
+        setRecordingError(errorMessage)
+        LOG.error("Permission denied:", errorMessage)
+      },
+      onError: (error: Error) => {
+        const errorMessage = "Recording failed"
+        setRecordingError(errorMessage)
+        LOG.error("Recording error:", error)
+      },
+      onRecordStart: () => {
+        setRecordingError(null)
+      },
     }),
     [handleAudioApprove]
   )
@@ -450,6 +473,11 @@ function ChatInput({
 
     setValue(targetValue)
     autoExpand.updateScrollHeight()
+
+    // Clear recording error when user starts typing
+    if (recordingError) {
+      setRecordingError(null)
+    }
   }
 
   const handleMicClick = useCallback(
@@ -461,7 +489,6 @@ function ChatInput({
         return
       }
 
-      // Error handling is done via controller events (onError, onPermissionDenied)
       await controller.start()
     },
     [acceptAudio, disabled, controller]
@@ -475,12 +502,21 @@ function ChatInput({
   }, [controller])
 
   const handleRecordingApprove = useCallback(async () => {
-    // Stop recording and get the blob
     const { blob } = await controller.stop()
-    // Approve the recording (encodes to WAV and triggers onApprove event which handles upload)
-    // Error handling is done via controller events (onError) and in the onApprove handler for upload errors
     await controller.approve(blob)
   }, [controller])
+
+  // Void wrappers for async handlers to satisfy eslint
+  const handleMicClickVoid = useCallback(
+    (e: React.MouseEvent) => {
+      void handleMicClick(e)
+    },
+    [handleMicClick]
+  )
+
+  const handleRecordingApproveVoid = useCallback(() => {
+    void handleRecordingApprove()
+  }, [handleRecordingApprove])
 
   // Handle setValue command from backend
   // This runs when element.setValue is true, indicating the backend wants to set a new value
@@ -670,11 +706,7 @@ function ChatInput({
                   </StyledSendIconButton>
                   {/* Approve button (✓ icon or spinner during upload) */}
                   <StyledSendIconButton
-                    onClick={() => {
-                      handleRecordingApprove().catch(_error => {
-                        // Error handling is done via controller events
-                      })
-                    }}
+                    onClick={handleRecordingApproveVoid}
                     disabled={disabled || audioUploading}
                     extended={autoExpand.isExtended}
                     data-testid="stChatInputApproveButton"
@@ -690,18 +722,38 @@ function ChatInput({
                 <>
                   {/* Mic button */}
                   {acceptAudio && (
-                    <StyledSendIconButton
-                      onClick={(e: React.MouseEvent) => {
-                        handleMicClick(e).catch(_error => {
-                          // Error handling is done via controller events
-                        })
-                      }}
-                      disabled={disabled || audioUploading}
-                      extended={autoExpand.isExtended}
-                      data-testid="stChatInputMicButton"
-                    >
-                      <Icon content={Mic} size="xl" color="inherit" />
-                    </StyledSendIconButton>
+                    <>
+                      {recordingError ? (
+                        <Tooltip
+                          content={recordingError}
+                          placement={Placement.TOP}
+                          error
+                        >
+                          <StyledSendIconButton
+                            onClick={handleMicClickVoid}
+                            disabled={disabled || audioUploading}
+                            extended={autoExpand.isExtended}
+                            hasError
+                            data-testid="stChatInputMicButton"
+                          >
+                            <Icon
+                              content={ErrorOutline}
+                              size="xl"
+                              color="inherit"
+                            />
+                          </StyledSendIconButton>
+                        </Tooltip>
+                      ) : (
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={disabled || audioUploading}
+                          extended={autoExpand.isExtended}
+                          data-testid="stChatInputMicButton"
+                        >
+                          <Icon content={Mic} size="xl" color="inherit" />
+                        </StyledSendIconButton>
+                      )}
+                    </>
                   )}
                   {/* Send button */}
                   <StyledSendIconButton

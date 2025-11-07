@@ -47,6 +47,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   const particleTypes = useMemo(
     () =>
       range(numParticles).map(() =>
+        // eslint-disable-next-line react-hooks/purity -- TODO: Update to match React best practices
         Math.floor(Math.random() * numParticleTypes)
       ),
     [numParticles, numParticleTypes]

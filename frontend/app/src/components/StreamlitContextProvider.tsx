@@ -206,8 +206,6 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [scriptRunState, scriptRunId, fragmentIdsThisRun]
   )
 
-  // formsData is not a stable reference, so memoization does not help
-  // eslint-disable-next-line @eslint-react/no-unstable-context-value
   const formsContextProps: FormsContextProps = {
     formsData,
   }

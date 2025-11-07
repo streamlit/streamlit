@@ -3,10 +3,45 @@ name: Playwright E2E Tests - Changed Files
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (branch, SHA) or PR merge ref to checkout
+        required: false
+        type: string
+        default: ""
+      base_ref:
+        description: Base branch/SHA to compare against (e.g., develop, commit SHA, or parent in stack)
+        required: false
+        type: string
+        default: "develop"
+      iteration:
+        description: Iteration number for matrix runs (used for unique concurrency groups)
+        required: false
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref (branch, SHA) or PR merge ref to checkout
+        required: false
+        type: string
+        default: ""
+      base_ref:
+        description: Base branch/SHA to compare against (e.g., develop, commit SHA, or parent in stack)
+        required: false
+        type: string
+        default: "develop"
+      iteration:
+        description: Iteration number for matrix runs (used for unique concurrency groups)
+        required: false
+        type: string
+        default: ""
 
-# Avoid duplicate workflows on same branch
+# Concurrency control: cancel duplicate runs on same branch
+# When called via workflow_call with iteration input, include it to allow parallel matrix runs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-playwright-changed-files
+  group: ${{ github.workflow }}-${{ github.ref }}${{ inputs.iteration && format('-{0}', inputs.iteration) || '' }}-playwright-changed-files
   cancel-in-progress: true
 
 jobs:
@@ -19,18 +54,41 @@ jobs:
         shell: bash
 
     steps:
-      - name: Checkout Streamlit code
+      - name: Validate ref for workflow_call
+        if: github.event_name == 'workflow_call' && inputs.ref == ''
+        run: |
+          echo "::error::ref input is required when calling this workflow via workflow_call"
+          exit 1
+      - name: Checkout Streamlit code (ref input)
+        if: inputs.ref != ''
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-          fetch-depth: 2
+          fetch-depth: 0
+      - name: Checkout Streamlit code (PR head)
+        if: inputs.ref == '' && github.event_name == 'pull_request'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 0
       - name: Get changed files
         id: changed-files
+        env:
+          BASE_REF: ${{ inputs.base_ref || 'develop' }}
         run: |
-          # Get all changed files using git diff-tree
-          git_output=$(git diff-tree --no-commit-id --name-only -r HEAD^ HEAD)
+          # Fetch base branch/SHA for comparison
+          # If BASE_REF is not a SHA (not 40 hex chars), fetch it as a branch name
+          if [[ ! "$BASE_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
+          fi
+          # If it's a SHA, git already has it (we used fetch-depth: 0)
+
+          # Get all changed files comparing against base
+          git_output=$(git diff --name-only "${BASE_REF}...HEAD")
 
           # Filter files in e2e_playwright directory and find relevant test files
           # Includes both changed test files and test files for changed app scripts
@@ -134,21 +192,22 @@ jobs:
           else
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
-      - if: steps.check_changed_files.outputs.run_tests == 'true'
-        name: Run changed playwright tests
+      - name: Run changed playwright tests
+        if: steps.check_changed_files.outputs.run_tests == 'true'
         run: |
           cd e2e_playwright
           rm -rf ./test-results
+          echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
           pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()
         with:
-          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
+          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v5
         with:
-          name: coverage_report_e2e
+          name: coverage_report_e2e${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/htmlcov
           retention-days: 14
