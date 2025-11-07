@@ -40,7 +40,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 
 // Default token used for missing values (null, NaN, etc.)
-export const DEFAULT_MISSING_PLACEHOLDER = "None"
+const DEFAULT_MISSING_PLACEHOLDER = "None"
 
 /**
  * Draw a red indicator in the top right corner of the cell
