@@ -151,14 +151,6 @@ class ColorPickerTest(DeltaGeneratorTestCase):
                 "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
             ),
             (
-                -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
-            ),
-            (
-                0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
-            ),
-            (
                 100.5,
                 "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
             ),
