@@ -19,7 +19,8 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { IMenuItem, mockSessionInfo, render } from "@streamlit/lib"
+import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
 import MainMenu, { Props } from "./MainMenu"
