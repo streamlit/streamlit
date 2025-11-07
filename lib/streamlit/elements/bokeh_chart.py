@@ -36,8 +36,7 @@ class BokehMixin:
     ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.
 
-        Bokeh is a charting library for Python. The arguments to this function
-        closely follow the ones for Bokeh's ``show`` function. You can find
+        Bokeh is a charting library for Python. You can find
         more about Bokeh at https://bokeh.pydata.org.
 
         .. Important::
