@@ -343,6 +343,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           <StyledMetricDeltaText
             data-testid="stMetricDelta"
             metricColor={color}
+            showArrow={metricDirection !== null}
           >
             {metricDirection && (
               <Icon
