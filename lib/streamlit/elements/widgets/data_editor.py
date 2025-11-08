@@ -1067,7 +1067,7 @@ class DataEditorMixin:
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
             row_height=row_height,
-            missing_placeholder=placeholder,
+            placeholder=placeholder,
         )
 
         proto = ArrowProto()
