@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -107,5 +109,5 @@ def test_link_button_shortcut_triggers_popup(app: Page):
     with app.expect_popup() as popup_info:
         _press_shortcut(app, "l", include_alt=True)
     popup = popup_info.value
-    expect(popup.url).to_contain("https://streamlit.io")
+    expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
