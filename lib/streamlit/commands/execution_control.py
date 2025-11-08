@@ -161,11 +161,11 @@ def rerun(  # type: ignore[misc]
 
 
 @gather_metrics("switch_page")
-def switch_page(
+def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
     query_params: QueryParamsInput | None = None,
-) -> NoReturn:  # type: ignore[misc]
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
