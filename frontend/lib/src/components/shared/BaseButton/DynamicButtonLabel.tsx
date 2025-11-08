@@ -49,7 +49,7 @@ export const DynamicButtonLabel = ({
 
   return (
     <StyledButtonLabel>
-      <StyledButtonMainLabel>
+      <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
         {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
         {label && (
           <StreamlitMarkdown
@@ -60,12 +60,12 @@ export const DynamicButtonLabel = ({
             disableLinks
           />
         )}
+        {displayShortcut && (
+          <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>
+            {displayShortcut}
+          </StyledButtonShortcut>
+        )}
       </StyledButtonMainLabel>
-      {displayShortcut && (
-        <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>
-          {displayShortcut}
-        </StyledButtonShortcut>
-      )}
     </StyledButtonLabel>
   )
 }
