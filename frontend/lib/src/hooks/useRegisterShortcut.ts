@@ -201,6 +201,10 @@ function getModifierLabel(
     return isMac ? MODIFIER_DISPLAY.cmd : MODIFIER_DISPLAY.ctrl
   }
 
+  if (modifier === "alt" && isMac) {
+    return "Option"
+  }
+
   return MODIFIER_DISPLAY[modifier as (typeof MODIFIER_ORDER)[number]]
 }
 

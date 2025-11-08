@@ -25,7 +25,10 @@ import { vi } from "vitest"
 
 import { render } from "~lib/test_util"
 
-import { useRegisterShortcut } from "./useRegisterShortcut"
+import {
+  formatShortcutForDisplay,
+  useRegisterShortcut,
+} from "./useRegisterShortcut"
 
 vi.mock("hotkeys-js", () => {
   const handlers = new Map<
@@ -186,5 +189,17 @@ describe("useRegisterShortcut", () => {
 
     expect(commandHandler).toBeDefined()
     expect(ctrlHandler).toBeDefined()
+  })
+})
+
+describe("formatShortcutForDisplay", () => {
+  it("renders Option for alt modifiers on macOS", () => {
+    expect(formatShortcutForDisplay("Alt+S", { isMac: true })).toBe(
+      "Option + S"
+    )
+  })
+
+  it("renders Alt modifiers on non-mac platforms", () => {
+    expect(formatShortcutForDisplay("Alt+S", { isMac: false })).toBe("Alt + S")
   })
 })

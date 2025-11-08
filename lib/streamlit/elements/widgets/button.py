@@ -1125,6 +1125,9 @@ class ButtonMixin:
             normalized_shortcut = _normalize_shortcut(shortcut)
 
         if normalized_shortcut is not None:
+            # We only register the element ID if a shortcut is provide.
+            # The ID is required to correctly register and handle the shortcut
+            # on the client side.
             link_button_proto.id = compute_and_register_element_id(
                 "link_button",
                 user_key=None,
