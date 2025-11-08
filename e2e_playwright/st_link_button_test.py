@@ -18,10 +18,7 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import (
-    check_top_level_class,
-    get_expander,
-)
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 LINK_BUTTON_ELEMENTS = 16
 
@@ -98,7 +95,7 @@ def test_link_button_shortcut_triggers(app: Page):
     # Press hotkey to trigger the button:
 
     with app.expect_popup() as popup_info:
-        app.keyboard.press("Control+Alt+KeyL")
+        app.keyboard.press("ControlOrMeta+Alt+KeyL")
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
