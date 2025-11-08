@@ -181,12 +181,16 @@ function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
   }
 
   const sequences = new Set<string>()
-  sequences.add(toHotkeysSequenceFromTokens(parsedShortcut.tokens))
+  const { tokens } = parsedShortcut
+  sequences.add(toHotkeysSequenceFromTokens(tokens))
 
-  if (parsedShortcut.tokens.includes("cmd")) {
-    const aliasTokens = parsedShortcut.tokens.map(token =>
-      token === "cmd" ? "ctrl" : token
-    )
+  if (tokens.includes("cmd")) {
+    const aliasTokens = tokens.map(token => (token === "cmd" ? "ctrl" : token))
+    sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
+  }
+
+  if (tokens.includes("ctrl")) {
+    const aliasTokens = tokens.map(token => (token === "ctrl" ? "cmd" : token))
     sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
   }
 

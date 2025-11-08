@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -312,7 +314,10 @@ def test_download_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the download button."""
     shortcut_button = get_element_by_key(app, "shortcut_download_button")
     expect(shortcut_button).to_be_visible()
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + D")
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"Ctrl \+ (Alt|Option) \+ D")
+    )
+
     # Press hotkey to trigger the button:
     with app.expect_download() as download_info:
         app.keyboard.press("ControlOrMeta+Alt+D")
