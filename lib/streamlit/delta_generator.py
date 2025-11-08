@@ -17,20 +17,18 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     NoReturn,
+    TypeAlias,
     TypeVar,
     cast,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,
@@ -41,6 +39,7 @@ from streamlit import (
     runtime,
     util,
 )
+from streamlit.components.v2.bidi_component import BidiComponentMixin
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_last_dg_added_to_context_stack,
@@ -71,10 +70,12 @@ from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
+from streamlit.elements.pdf import PdfMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
+from streamlit.elements.space import SpaceMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -196,6 +197,7 @@ class DeltaGenerator(
     MetricMixin,
     MultiSelectMixin,
     NumberInputMixin,
+    PdfMixin,
     PlotlyMixin,
     ProgressMixin,
     PydeckMixin,
@@ -205,6 +207,7 @@ class DeltaGenerator(
     SelectSliderMixin,
     SliderMixin,
     SnowMixin,
+    SpaceMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -214,6 +217,7 @@ class DeltaGenerator(
     ArrowMixin,
     VegaChartsMixin,
     DataEditorMixin,
+    BidiComponentMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -483,12 +487,11 @@ class DeltaGenerator(
         msg_el_proto.CopyFrom(element_proto)
 
         if layout_config:
-            if layout_config.height:
+            if layout_config.height is not None:
                 msg.delta.new_element.height_config.CopyFrom(
                     get_height_config(layout_config.height)
                 )
-
-            if layout_config.width:
+            if layout_config.width is not None:
                 msg.delta.new_element.width_config.CopyFrom(
                     get_width_config(layout_config.width)
                 )
@@ -533,6 +536,7 @@ class DeltaGenerator(
             invoked_dg_id=self.id,
             used_dg_id=dg.id,
             returned_dg_id=output_dg.id,
+            layout_config=layout_config,
         )
 
         return output_dg

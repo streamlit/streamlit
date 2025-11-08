@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useRef } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import JSON5 from "json5"
-import Clipboard from "clipboard"
-import ReactJson from "react-json-view"
+import ReactJson, { OnCopyProps } from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
 import ErrorElement from "~lib/components/shared/ErrorElement"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { ensureError } from "~lib/util/ErrorHandling"
 
 import { StyledJsonWrapper } from "./styled-components"
@@ -39,7 +39,14 @@ export interface JsonProps {
 function Json({ element }: Readonly<JsonProps>): ReactElement {
   const theme = useEmotionTheme()
 
-  const elementRef = useRef<HTMLDivElement>(null)
+  const { copyToClipboard } = useCopyToClipboard()
+
+  const handleCopy = useCallback(
+    (copy: OnCopyProps): void => {
+      copyToClipboard(JSON.stringify(copy.src))
+    },
+    [copyToClipboard]
+  )
 
   let bodyObject
   try {
@@ -62,22 +69,8 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
   // theme's background is light or dark.
   const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const handleCopy = (copy: any): void => {
-    // we use ClipboardJS to do the copying, because it allows
-    // us to specify a container element. This is necessary because
-    // otherwise copying doesn't work in dialogs.
-    Clipboard.copy(JSON.stringify(copy.src), {
-      container: elementRef.current ?? undefined,
-    })
-  }
-
   return (
-    <StyledJsonWrapper
-      className="stJson"
-      data-testid="stJson"
-      ref={elementRef}
-    >
+    <StyledJsonWrapper className="stJson" data-testid="stJson">
       <ReactJson
         src={bodyObject}
         collapsed={element.maxExpandDepth ?? !element.expanded}

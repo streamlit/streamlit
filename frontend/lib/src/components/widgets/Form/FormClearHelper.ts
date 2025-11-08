@@ -85,7 +85,7 @@ interface FormElementProtoInterface {
 
 interface FormClearHelperArgs {
   element: FormElementProtoInterface
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   onFormCleared: () => void
 }
 
@@ -95,7 +95,7 @@ export function useFormClearHelper({
   onFormCleared,
 }: FormClearHelperArgs): void {
   useEffect(() => {
-    if (!isValidFormId(element.formId)) {
+    if (!widgetMgr || !isValidFormId(element.formId)) {
       return
     }
 

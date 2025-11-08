@@ -18,9 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Final, Literal, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
@@ -104,6 +102,16 @@ _EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = 
         ColumnDataKind.EMPTY,
     ],
     "link": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
+    "list": [
+        ColumnDataKind.LIST,
+        ColumnDataKind.STRING,
+        ColumnDataKind.EMPTY,
+    ],
+    "multiselect": [
+        ColumnDataKind.LIST,
+        ColumnDataKind.STRING,
+        ColumnDataKind.EMPTY,
+    ],
 }
 
 
@@ -395,10 +403,14 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = dict[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMapping: TypeAlias = dict[IndexIdentifierType | str | int, ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Mapping[
-    Union[IndexIdentifierType, str],
-    Union[ColumnConfig, None, str],
+    # TODO(lukasmasuch): This should also use int here to
+    # correctly type the support for positional index. However,
+    # allowing int here leads mypy to complain about simple dict[str, ...]
+    # as input -> which seems like a mypy bug.
+    IndexIdentifierType | str,
+    ColumnConfig | None | str,
 ]
 
 
@@ -440,7 +452,9 @@ def process_config_mapping(
 
 
 def update_column_config(
-    column_config_mapping: ColumnConfigMapping, column: str, column_config: ColumnConfig
+    column_config_mapping: ColumnConfigMapping,
+    column: str | int,
+    column_config: ColumnConfig,
 ) -> None:
     """Updates the column config value for a single column within the mapping.
 
@@ -449,8 +463,9 @@ def update_column_config(
     column_config_mapping : ColumnConfigMapping
         The column config mapping to update.
 
-    column : str
-        The column to update the config value for.
+    column : str | int
+        The column to update the config value for. This can be the column name or
+        the numerical position of the column.
 
     column_config : ColumnConfig
         The column config to update.

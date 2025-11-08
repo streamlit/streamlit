@@ -26,8 +26,8 @@ import {
   Rowing,
 } from "@emotion-icons/material-outlined"
 
-import { EmotionTheme } from "@streamlit/lib"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
+import { EmotionTheme } from "@streamlit/lib"
 
 import { StyledAppRunningIcon } from "./styled-components"
 

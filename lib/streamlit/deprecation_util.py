@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Final, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, Final, TypeVar, cast
 
 import streamlit
 from streamlit import config
@@ -27,14 +28,35 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-def _should_show_deprecation_warning_in_browser() -> bool:
-    """True if we should print deprecation warnings to the browser."""
-    return bool(config.get_option("client.showErrorDetails"))
+def _error_details_in_browser_enabled() -> bool:
+    """True if we should print deprecation warnings to the browser.
+
+    Deprecation warnings are only shown when showErrorDetails is set to "full"
+    or the legacy True value. All other values ("stacktrace", "type", "none",
+    False) hide deprecation warnings in the browser.
+    """
+    show_error_details = config.get_option("client.showErrorDetails")
+    return (
+        show_error_details == config.ShowErrorDetailsConfigOptions.FULL
+        or config.ShowErrorDetailsConfigOptions.is_true_variation(show_error_details)
+    )
 
 
-def show_deprecation_warning(message: str) -> None:
-    """Show a deprecation warning message."""
-    if _should_show_deprecation_warning_in_browser():
+def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
+    """Show a deprecation warning message.
+
+    Parameters
+    ----------
+    message : str
+        The deprecation warning message.
+    show_in_browser : bool, default=True
+        Whether to show the deprecation warning in the browser. When this is True,
+        we will show the deprecation warning in the browser only if the user has
+        set `client.showErrorDetails` to "full" or the legacy True value. All
+        other values ("stacktrace", "type", "none", False) will hide deprecation
+        warnings in the browser (but still log them to the console).
+    """
+    if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 
     # We always log deprecation warnings
@@ -97,7 +119,11 @@ def deprecate_func_name(
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
-                old_name, name_override or func.__name__, removal_date, extra_message
+                old_name,
+                name_override
+                or (str(func.__name__) if hasattr(func, "__name__") else "unknown"),
+                removal_date,
+                extra_message,
             )
         )
         return result

@@ -89,7 +89,9 @@ describe("PageLink", () => {
     const props = getProps()
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -102,7 +104,9 @@ describe("PageLink", () => {
     const props = getProps({}, { disabled: true })
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -115,7 +119,9 @@ describe("PageLink", () => {
     const props = getProps({ page: "http://example.com", external: true })
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -165,18 +171,12 @@ describe("PageLink", () => {
     expect(emojiIcon).not.toBeInTheDocument()
   })
 
-  it("renders with container width properly", () => {
-    const props = getProps({ useContainerWidth: true })
-    render(<PageLink {...props} />)
-
-    const pageLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageLink).toHaveStyle("width: 100%")
-  })
-
   it("renders a current page link properly", () => {
     const props = getProps({ pageScriptHash: "main_page_hash" })
     renderWithContexts(<PageLink {...props} />, {
-      currentPageScriptHash: "main_page_hash",
+      navigationContext: {
+        currentPageScriptHash: "main_page_hash",
+      },
     })
 
     const currentPageBgColor = lightTheme.emotion.colors.darkenedBgMix15
@@ -205,33 +205,14 @@ describe("PageLink", () => {
     // When the help param is used, page link renders twice (once for normal
     // tooltip and once for mobile tooltip) so we need to get the first one
     const pageLink = screen.getAllByTestId("stPageLink-NavLink")[0]
-    // Ensure both the page link and tooltip target have correct width
-    expect(pageLink).toHaveStyle("width: fit-content")
-    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
-    expect(tooltipTarget).toHaveStyle("width: auto")
-
-    // Ensure the tooltip content is visible and has the correct text
-    await user.hover(tooltipTarget)
-
-    const tooltipContent = await screen.findByTestId("stTooltipContent")
-    expect(tooltipContent).toHaveTextContent("mockHelpText")
-  })
-
-  it("renders with container width & help properly", async () => {
-    const user = userEvent.setup()
-    render(
-      <PageLink
-        {...getProps({ help: "mockHelpText", useContainerWidth: true })}
-      />
-    )
-
-    // See note above re: rendering twice
-    const pageLink = screen.getAllByTestId("stPageLink-NavLink")[0]
-    // Ensure both the page link and tooltip target have correct width
+    // Ensure both the page link and tooltip target have correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
     expect(pageLink).toHaveStyle("width: 100%")
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toHaveStyle("width: 100%")
 
+    // Ensure the tooltip content is visible and has the correct text
     await user.hover(tooltipTarget)
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")

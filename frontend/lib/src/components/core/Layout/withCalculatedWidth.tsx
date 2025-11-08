@@ -18,7 +18,7 @@ import React, { ComponentType, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { Box } from "~lib/components/shared/Base/styled-components"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 
 /**
  * HOC that wraps a component and passes its width as a prop. Should only be
@@ -28,7 +28,7 @@ export const withCalculatedWidth = <P extends { width?: number }>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>
 ): ComponentType<Omit<P, "width">> => {
   const EnhancedComponent = (props: Omit<P, "width">): ReactElement => {
-    const [width, elementRef] = useCalculatedWidth()
+    const { width, elementRef } = useCalculatedDimensions()
 
     return (
       <Box ref={elementRef}>

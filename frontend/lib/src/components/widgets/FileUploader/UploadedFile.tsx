@@ -42,14 +42,17 @@ import { UploadFileInfo } from "./UploadFileInfo"
 export interface Props {
   fileInfo: UploadFileInfo
   onDelete: (id: number) => void
+  disabled: boolean
 }
 
 export interface UploadedFileStatusProps {
   fileInfo: UploadFileInfo
+  disabled: boolean
 }
 
 export const UploadedFileStatus = ({
   fileInfo,
+  disabled,
 }: UploadedFileStatusProps): React.ReactElement | null => {
   if (fileInfo.status.type === "uploading") {
     return <ProgressBar value={fileInfo.status.progress} size={Size.SMALL} />
@@ -69,19 +72,27 @@ export const UploadedFileStatus = ({
   }
 
   if (fileInfo.status.type === "uploaded") {
-    return <Small>{getSizeDisplay(fileInfo.size, FileSize.Byte)}</Small>
+    return (
+      <Small disabled={disabled}>
+        {getSizeDisplay(fileInfo.size, FileSize.Byte)}
+      </Small>
+    )
   }
 
   return null
 }
 
-const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
+const UploadedFile = ({
+  fileInfo,
+  onDelete,
+  disabled,
+}: Props): React.ReactElement => {
   return (
     <StyledUploadedFile
       className="stFileUploaderFile"
       data-testid="stFileUploaderFile"
     >
-      <StyledFileIcon>
+      <StyledFileIcon disabled={disabled}>
         <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>
       <StyledUploadedFileData className="stFileUploaderFileData">
@@ -89,15 +100,18 @@ const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
           className="stFileUploaderFileName"
           data-testid="stFileUploaderFileName"
           title={fileInfo.name}
+          disabled={disabled}
         >
           {fileInfo.name}
         </StyledUploadedFileName>
-        <UploadedFileStatus fileInfo={fileInfo} />
+        <UploadedFileStatus fileInfo={fileInfo} disabled={disabled} />
       </StyledUploadedFileData>
       <div data-testid="stFileUploaderDeleteBtn">
         <BaseButton
           onClick={() => onDelete(fileInfo.id)}
           kind={BaseButtonKind.MINIMAL}
+          disabled={disabled}
+          aria-label={`Remove ${fileInfo.name}`}
         >
           <Icon content={Clear} size="lg" />
         </BaseButton>

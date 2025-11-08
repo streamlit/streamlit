@@ -17,27 +17,31 @@
 from __future__ import annotations
 
 import copy
+import json
 import logging
 import os
 import secrets
 import threading
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: dict[str, str] = OrderedDict(
-    _test="Special test section just used for unit tests."
+_section_descriptions: OrderedDict[str, str] = OrderedDict(  # ty: ignore
+    _test="Special test section just used for unit tests."  # ty: ignore
 )
 
 # Ensures that we don't try to get or set config options when config.toml files
@@ -97,6 +101,10 @@ class CustomThemeCategories(str, Enum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
+    LIGHT = "light"
+    DARK = "dark"
+    LIGHT_SIDEBAR = "light.sidebar"
+    DARK_SIDEBAR = "dark.sidebar"
 
 
 def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None:
@@ -322,6 +330,8 @@ def _create_theme_options(
     The same config option can be supported for multiple categories, e.g. "theme"
     and "theme.sidebar".
     """
+    # Handle creation of the main theme config sections (e.g. theme, theme.sidebar, theme.light, theme.dark)
+    # as well as the nested subsections (e.g. theme.light.sidebar, theme.dark.sidebar)
     for cat in categories:
         section = cat if cat == "theme" else f"theme.{cat.value}"
 
@@ -710,7 +720,7 @@ _create_option(
 
         Allowed values:
         - "auto"     : Streamlit will attempt to use the watchdog module, and
-                       falls back to polling if watchdog is not available.
+                       falls back to polling if watchdog isn't available.
         - "watchdog" : Force Streamlit to use the watchdog module.
         - "poll"     : Force Streamlit to always use polling.
         - "none"     : Streamlit will not watch files.
@@ -750,8 +760,8 @@ def _server_headless() -> bool:
 _create_option(
     "server.showEmailPrompt",
     description="""
-        Whether to show a terminal prompt for the user to enter their email
-        address when they run Streamlit for the first time. If you set
+        Whether to show a terminal prompt for the user's email address when
+        they run Streamlit (locally) for the first time. If you set
         `server.headless=True`, Streamlit will not show this prompt.
     """,
     default_val=True,
@@ -926,6 +936,24 @@ _create_option(
 )
 
 _create_option(
+    "server.websocketPingInterval",
+    description="""
+        The interval (in seconds) at which the server pings the client to keep
+        the websocket connection alive.
+
+        The default value should work for most deployments. However, if you're
+        experiencing frequent disconnections in certain proxy setups (e.g.,
+        "Connection error" messages), you may want to try adjusting this value.
+
+        Note: When you set this option, Streamlit automatically sets the ping
+        timeout to match this interval. For Tornado >=6.5, a value less than 30
+        may cause connection issues.
+    """,
+    default_val=None,
+    type_=int,
+)
+
+_create_option(
     "server.enableStaticServing",
     description="""
         Enable serving files from a `static` directory in the running app's
@@ -942,10 +970,37 @@ _create_option(
 
         The server may choose to clean up session state, uploaded files, etc
         for a given session with no active websocket connection at any point
-        after this time has passed.
+        after this time has passed. If you are using load balancing or
+        replication in your deployment, you must enable session stickiness
+        in your proxy to guarantee reconnection to the existing session. For
+        more information, see https://docs.streamlit.io/replication.
     """,
     default_val=120,
     type_=int,
+)
+
+_create_option(
+    "server.trustedUserHeaders",
+    description="""
+        HTTP headers to embed in st.user.
+
+        Configures HTTP headers whose values, on websocket connect, will be saved in
+        st.user. Each key is the header name to map, and each value is the key in
+        st.user to save the value under. If the configured header occurs multiple times
+        in the request, the first value will be used. Multiple headers may not point to
+        the same user key, and an error will be thrown on initialization if this is
+        done.
+
+        If configured using an environment variable or CLI option, it should be a
+        single JSON-formatted dict of string-to-string.
+
+        Note: This is an experimental API subject to change.
+    """,
+    default_val={},
+    # This is used by click. We accept a JSON string, so this is a str.
+    type_=str,
+    # Hide until API is finalized.
+    visibility="hidden",
 )
 
 # Config Section: Browser #
@@ -999,8 +1054,8 @@ def _browser_server_port() -> int:
 
 _SSL_PRODUCTION_WARNING = [
     "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For the production environment, "
-    "we recommend performing SSL termination by the load balancer or the reverse proxy."
+    "security audits or performance tests. For a production environment, we "
+    "recommend performing SSL termination through a load balancer or reverse proxy."
 ]
 
 _create_option(
@@ -1102,24 +1157,66 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 # Create a section for each custom theme element
 for cat in list(CustomThemeCategories):
-    _create_section(
-        f"theme.{cat.value}",
-        f"Settings to define a custom {cat.value} theme in your Streamlit app.",
-    )
+    if cat == CustomThemeCategories.SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            f"Settings to define a custom {cat.value} theme in your Streamlit app.",
+        )
+    elif cat == CustomThemeCategories.LIGHT:
+        _create_section(
+            f"theme.{cat.value}",
+            "Settings to define custom light theme properties that extend the defined [theme] properties.",
+        )
+    elif cat == CustomThemeCategories.DARK:
+        _create_section(
+            f"theme.{cat.value}",
+            "Settings to define custom dark theme properties that extend the defined [theme] properties.",
+        )
+
+    # Create nested sidebar sections
+    elif cat == CustomThemeCategories.LIGHT_SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            """Settings to define custom light theme properties for the sidebar that extend the defined
+            [theme.sidebar] properties.""",
+        )
+    elif cat == CustomThemeCategories.DARK_SIDEBAR:
+        _create_section(
+            f"theme.{cat.value}",
+            """Settings to define custom dark theme properties for the sidebar that extend the defined
+            [theme.sidebar] properties.""",
+        )
 
 _create_theme_options(
     "base",
     categories=["theme"],
     description="""
-        The preset Streamlit theme that your custom theme inherits from.
+        The theme that your custom theme inherits from.
 
-        This can be one of the following: "light" or "dark".
+        This can be one of the following:
+        - "light": Streamlit's default light theme.
+        - "dark": Streamlit's default dark theme.
+        - A local file path to a TOML theme file: A local custom theme, like
+          "themes/custom.toml".
+        - A URL to a TOML theme file: An externally hosted custom theme, like
+          "https://example.com/theme.toml".
+
+        A TOML theme file must contain a [theme] table with theme options.
+        Any theme options defined in the app's config.toml file will override
+        those defined in the TOML theme file.
     """,
 )
 
 _create_theme_options(
     "primaryColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Primary accent color.
     """,
@@ -1127,7 +1224,14 @@ _create_theme_options(
 
 _create_theme_options(
     "backgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color of the app.
     """,
@@ -1135,7 +1239,14 @@ _create_theme_options(
 
 _create_theme_options(
     "secondaryBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color used for most interactive widgets.
     """,
@@ -1143,23 +1254,493 @@ _create_theme_options(
 
 _create_theme_options(
     "textColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Color used for almost all text.
     """,
 )
 
 _create_theme_options(
+    "redColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Red color used in the basic color palette.
+
+        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        dark theme.
+
+        If `redColor` is provided, and `redBackgroundColor` isn't, then
+        `redBackgroundColor` will be derived from `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Orange color used in the basic color palette.
+
+        By default, this is #ffa421 for the light theme and #ff8700 for the
+        dark theme.
+
+        If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
+        `orangeBackgroundColor` will be derived from `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Yellow color used in the basic color palette.
+
+        By default, this is #faca2b for the light theme and #ffe312 for the
+        dark theme.
+
+        If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
+        `yellowBackgroundColor` will be derived from `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Blue color used in the basic color palette.
+
+        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        dark theme.
+
+        If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
+        `blueBackgroundColor` will be derived from `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Green color used in the basic color palette.
+
+        By default, this is #21c354 for the light theme and #09ab3b for the
+        dark theme.
+
+        If `greenColor` is provided, and `greenBackgroundColor` isn't, then
+        `greenBackgroundColor` will be derived from `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Violet color used in the basic color palette.
+
+        By default, this is #803df5 for both the light and dark themes.
+
+        If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
+        `violetBackgroundColor` will be derived from `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "grayColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Gray color used in the basic color palette.
+
+        By default, this is #a3a8b8 for the light theme and #555867 for the
+        dark theme.
+
+        If `grayColor` is provided, and `grayBackgroundColor` isn't, then
+        `grayBackgroundColor` will be derived from `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "redBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Red background color used in the basic color palette.
+
+        If `redColor` is provided, this defaults to `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ff2b2b with 10% opacity for light theme and
+        #ff6c6c with 20% opacity for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Orange background color used for the basic color palette.
+
+        If `orangeColor` is provided, this defaults to `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ffa421 with 10% opacity for the light theme and
+        #ff8700 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Yellow background color used for the basic color palette.
+
+        If `yellowColor` is provided, this defaults to `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ffff12 with 10% opacity for the light theme and
+        #ffff12 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Blue background color used for the basic color palette.
+
+        If `blueColor` is provided, this defaults to `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #1c83ff with 10% opacity for the light theme and
+        #3d9df3 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Green background color used for the basic color palette.
+
+        If `greenColor` is provided, this defaults to `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #21c354 with 10% opacity for the light theme and
+        #3dd56d with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Violet background color used for the basic color palette.
+
+        If `violetColor` is provided, this defaults to `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #9a5dff with 10% opacity for light theme and
+        #9a5dff with 20% opacity for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "grayBackgroundColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Gray background color used for the basic color palette.
+
+        If `grayColor` is provided, this defaults to `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #31333f with 10% opacity for the light theme and
+        #808495 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "redTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Red text color used for the basic color palette.
+
+        If `redColor` is provided, this defaults to `redColor`, darkened by 15%
+        for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Orange text color used for the basic color palette.
+
+        If `orangeColor` is provided, this defaults to `orangeColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Yellow text color used for the basic color palette.
+
+        If `yellowColor` is provided, this defaults to `yellowColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "blueTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Blue text color used for the basic color palette.
+
+        If `blueColor` is provided, this defaults to `blueColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "greenTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Green text color used for the basic color palette.
+
+        If `greenColor` is provided, this defaults to `greenColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "violetTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Violet text color used for the basic color palette.
+
+        If `violetColor` is provided, this defaults to `violetColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "grayTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Gray text color used for the basic color palette.
+
+        If `grayColor` is provided, this defaults to `grayColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #31333f with 60% opacity for the light theme and
+        #fafafa with 60% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
     "linkColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Color used for all links.
+
+        This defaults to the resolved value of `blueTextColor`.
     """,
 )
 
 _create_theme_options(
     "linkUnderline",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Whether or not links should be displayed with an underline.
     """,
@@ -1167,8 +1748,32 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "codeTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        Text color used for code blocks.
+
+        This defaults to the resolved value of `greenTextColor`.
+    """,
+)
+
+_create_theme_options(
     "codeBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Background color used for code blocks.
     """,
@@ -1176,7 +1781,14 @@ _create_theme_options(
 
 _create_theme_options(
     "font",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The font family for all text, except code blocks.
 
@@ -1185,73 +1797,14 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
         For example, you can use the following:
 
             font = "cool-font, fallback-cool-font, sans-serif"
-    """,
-)
-
-_create_theme_options(
-    "codeFont",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        The font family to use for code (monospace) in the sidebar.
-
-        This can be one of the following:
-        - "sans-serif"
-        - "serif"
-        - "monospace"
-        - The `family` value for a custom font table under [[theme.fontFaces]]
-        - A comma-separated list of these (as a single string) to specify
-          fallbacks
-    """,
-)
-
-_create_theme_options(
-    "codeFontSize",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        Sets the font size (in pixels or rem) for code blocks and code text.
-
-        This applies to code blocks (ex: `st.code`), as well as font in `st.json` and `st.help`.
-        It does not apply to inline code, which is set by default to 0.75em.
-
-        When unset, the code font size will be 0.875rem.
-    """,
-)
-
-_create_theme_options(
-    "codeFontWeight",
-    categories=["theme"],
-    description="""
-        The font weight for code blocks and code text.
-
-        This applies to inline code, code blocks (ex: `st.code`), and font in `st.json` and `st.help`.
-        Valid values are 100-900, in increments of 100.
-
-        When unset, the default code font weight will be 400.
-    """,
-    type_=int,
-)
-
-_create_theme_options(
-    "headingFont",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        The font family to use for headings.
-
-        This can be one of the following:
-        - "sans-serif"
-        - "serif"
-        - "monospace"
-        - The `family` value for a custom font table under [[theme.fontFaces]]
-        - A comma-separated list of these (as a single string) to specify
-          fallbacks
-
-        If no heading font is set, Streamlit uses `theme.font` for headings.
     """,
 )
 
@@ -1287,8 +1840,213 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "baseFontSize",
+    categories=["theme"],
+    description="""
+        The root font size (in pixels) for the app.
+
+        This determines the overall scale of text and UI elements. This is a
+        positive integer.
+
+        If this isn't set, the font size will be 16px.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "baseFontWeight",
+    categories=["theme"],
+    description="""
+        The root font weight for the app.
+
+        This determines the overall weight of text and UI elements. This is an
+        integer multiple of 100. Values can be between 100 and 600, inclusive.
+
+        If this isn't set, the font weight will be set to 400 (normal weight).
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "headingFont",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The font family to use for headings.
+
+        This can be one of the following:
+        - "sans-serif"
+        - "serif"
+        - "monospace"
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
+        - A comma-separated list of these (as a single string) to specify
+          fallbacks
+
+        If this isn't set, Streamlit uses `theme.font` for headings.
+    """,
+)
+
+_create_theme_options(
+    "headingFontSizes",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        One or more font sizes for h1-h6 headings.
+
+        If no sizes are set, Streamlit will use the default sizes for h1-h6
+        headings. Heading font sizes set in [theme] are not inherited by
+        [theme.sidebar]. The following sizes are used by default:
+        [
+            "2.75rem", # h1 (1.5rem for sidebar)
+            "2.25rem", # h2 (1.25rem for sidebar)
+            "1.75rem", # h3 (1.125rem for sidebar)
+            "1.5rem",  # h4 (1rem for sidebar)
+            "1.25rem", # h5 (0.875rem for sidebar)
+            "1rem",    # h6 (0.75rem for sidebar)
+        ]
+
+        If you specify an array with fewer than six sizes, the unspecified
+        heading sizes will be the default values. For example, you can use the
+        following array to set the font sizes for h1-h3 headings while keeping
+        h4-h6 headings at their default sizes:
+            headingFontSizes = ["3rem", "2.875rem", "2.75rem"]
+
+        Setting a single value (not in an array) will set the font size for all
+        h1-h6 headings to that value:
+            headingFontSizes = "2.75rem"
+
+        Font sizes can be specified in pixels or rem, but rem is recommended.
+    """,
+)
+
+_create_theme_options(
+    "headingFontWeights",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        One or more font weights for h1-h6 headings.
+
+        If no weights are set, Streamlit will use the default weights for h1-h6
+        headings. Heading font weights set in [theme] are not inherited by
+        [theme.sidebar]. The following weights are used by default:
+        [
+            700, # h1 (bold)
+            600, # h2 (semi-bold)
+            600, # h3 (semi-bold)
+            600, # h4 (semi-bold)
+            600, # h5 (semi-bold)
+            600, # h6 (semi-bold)
+        ]
+
+        If you specify an array with fewer than six weights, the unspecified
+        heading weights will be the default values. For example, you can use
+        the following array to set the font weights for h1-h2 headings while
+        keeping h3-h6 headings at their default weights:
+            headingFontWeights = [800, 700]
+
+        Setting a single value (not in an array) will set the font weight for
+        all h1-h6 headings to that value:
+            headingFontWeights = 500
+    """,
+)
+
+_create_theme_options(
+    "codeFont",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The font family to use for code (monospace) in the sidebar.
+
+        This can be one of the following:
+        - "sans-serif"
+        - "serif"
+        - "monospace"
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "'Space Mono':https://fonts.googleapis.com/css2?family=Space+Mono&display=swap")
+        - A comma-separated list of these (as a single string) to specify
+          fallbacks
+    """,
+)
+
+_create_theme_options(
+    "codeFontSize",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The font size (in pixels or rem) for code blocks and code text.
+
+        This applies to font in code blocks, `st.json`, and `st.help`. It
+        doesn't apply to inline code, which is set by default to 0.75em.
+
+        If this isn't set, the code font size will be 0.875rem.
+    """,
+)
+
+_create_theme_options(
+    "codeFontWeight",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The font weight for code blocks and code text.
+
+        This applies to font in inline code, code blocks, `st.json`, and
+        `st.help`. This is an integer multiple of 100. Values can be between
+        100 and 600, inclusive.
+
+        If this isn't set, the code font weight will be 400 (normal weight).
+    """,
+    type_=int,
+)
+
+_create_theme_options(
     "baseRadius",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The radius used as basis for the corners of most UI elements.
 
@@ -1307,7 +2065,14 @@ _create_theme_options(
 
 _create_theme_options(
     "buttonRadius",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The radius used as basis for the corners of buttons.
 
@@ -1322,13 +2087,20 @@ _create_theme_options(
         For example, you can use "10px", "0.5rem", or "2rem". To follow best
         practices, use rem instead of pixels when specifying a numeric size.
 
-        If no button radius is set, Streamlit uses `theme.baseRadius` instead.
+        If this isn't set, Streamlit uses `theme.baseRadius` instead.
     """,
 )
 
 _create_theme_options(
     "borderColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The color of the border around elements.
     """,
@@ -1336,29 +2108,52 @@ _create_theme_options(
 
 _create_theme_options(
     "dataframeBorderColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The color of the border around dataframes and tables.
 
-        If no dataframe border color is set, Streamlit uses `theme.borderColor`
-        instead.
+        If this isn't set, Streamlit uses `theme.borderColor` instead.
     """,
 )
 
 _create_theme_options(
     "dataframeHeaderBackgroundColor",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         The background color of the dataframe's header.
 
-        If no dataframe header background color is set, Streamlit uses a mix of
-        `theme.bgColor` and `theme.secondaryBg`.
+        This color applies to all non-interior cells of the dataframe. This
+        includes the header row, the row-selection column (if present), and
+        the bottom row of data editors with a dynamic number of rows. If this
+        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
+        `theme.secondaryBackgroundColor`.
     """,
 )
 
 _create_theme_options(
     "showWidgetBorder",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         Whether to show a border around input widgets.
     """,
@@ -1375,63 +2170,22 @@ _create_theme_options(
     type_=bool,
 )
 
-_create_theme_options(
-    "baseFontSize",
-    categories=["theme"],
-    description="""
-        Sets the root font size (in pixels) for the app.
-
-        This determines the overall scale of text and UI elements.
-
-        When unset, the font size will be 16px.
-    """,
-    type_=int,
-)
-
-_create_theme_options(
-    "baseFontWeight",
-    categories=["theme"],
-    description="""
-        Sets the root font weight for the app.
-
-        This determines the overall weight of text and UI elements.
-        Valid values are 100-600, in increments of 100.
-
-        When unset, the font weight will be set to normal 400.
-    """,
-    type_=int,
-)
-
-_create_theme_options(
-    "headingFontWeights",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
-
-        When unset, the font weights will be set to defaults:
-        - h1: bold 700
-        - h2-h6: semi-bold 600
-
-        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
-            headingFontWeights = [700, 600, 600, 600, 600, 600]
-
-        If you only want to set h1-h3:
-            headingFontWeights = [700, 600, 500]
-
-        If you want to set the font weight for all headings to 700, you can do the following:
-            headingFontWeights = 700
-    """,
-)
 
 _create_theme_options(
     "chartCategoricalColors",
     categories=["theme"],
     description="""
-        An array of colors to use for categorical charts.
+        An array of colors to use for categorical chart data.
 
-        If no chart categorical colors are set, Streamlit uses a default set of
-        colors.
-        For light themes the default colors are:
+        This is a list of one or more color strings which are applied in order
+        to categorical data. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid colors are skipped, and colors repeat cyclically if there are
+        more categories than colors. If no chart categorical colors are set,
+        Streamlit uses a default set of colors.
+
+        For light themes, the following colors are the default:
         [
             "#0068c9", # blue80
             "#83c9ff", # blue40
@@ -1444,7 +2198,7 @@ _create_theme_options(
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
         ]
-        For dark themes the default colors are:
+        For dark themes, the following colors are the default:
         [
             "#83c9ff", # blue40
             "#0068c9", # blue80
@@ -1456,6 +2210,47 @@ _create_theme_options(
             "#ff8700", # orange80
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
+        ]
+    """,
+)
+
+_create_theme_options(
+    "chartSequentialColors",
+    categories=["theme"],
+    description="""
+        An array of ten colors to use for sequential or continuous chart data.
+
+        The ten colors create a gradient color scale. These colors apply to
+        Plotly, Altair, and Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+         For light themes, the following colors are the default:
+        [
+            "#e4f5ff", #blue10
+            "#c7ebff", #blue20
+            "#a6dcff", #blue30
+            "#83c9ff", #blue40
+            "#60b4ff", #blue50
+            "#3d9df3", #blue60
+            "#1c83e1", #blue70
+            "#0068c9", #blue80
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+        For dark themes, the following colors are the default:
+        [
+            "#004280", #blue100
+            "#0054a3", #blue90
+            "#0068c9", #blue80
+            "#1c83e1", #blue70
+            "#3d9df3", #blue60
+            "#60b4ff", #blue50
+            "#83c9ff", #blue40
+            "#a6dcff", #blue30
+            "#c7ebff", #blue20
+            "#e4f5ff", #blue10
         ]
     """,
 )
@@ -1598,6 +2393,43 @@ def _update_config_with_sensitive_env_var(
         _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
 
 
+def _is_valid_theme_section(section_path: str) -> bool:
+    """Check if a theme section path follows valid nesting rules, returns True if valid, False otherwise.
+
+    Valid patterns: theme.sidebar, theme.light, theme.dark, theme.light.sidebar, theme.dark.sidebar
+    Invalid patterns: theme.sidebar.light, theme.sidebar.dark, theme.light.dark, theme.dark.light, etc.
+
+    Parameters
+    ----------
+    section_path : str
+        The dot-separated theme section path (e.g., "theme.light.sidebar").
+        Will always have at least 2 parts and start with "theme".
+    """
+    parts = section_path.split(".")
+
+    # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
+    if len(parts) == 2:
+        return parts[1] in [
+            CustomThemeCategories.SIDEBAR.value,
+            CustomThemeCategories.LIGHT.value,
+            CustomThemeCategories.DARK.value,
+        ]
+
+    # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
+    if len(parts) == 3:
+        # Only allow light/dark as the middle level, with sidebar as the final level
+        if parts[1] in [
+            CustomThemeCategories.LIGHT.value,
+            CustomThemeCategories.DARK.value,
+        ]:
+            return parts[2] == CustomThemeCategories.SIDEBAR.value
+        # sidebar cannot have nested sections (theme.sidebar.light/dark)
+        return False
+
+    # Any nesting with 4+ parts is invalid (e.g., theme.light.sidebar.dark)
+    return False
+
+
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
 
@@ -1660,8 +2492,17 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
-            # Process it as a nested config section if it's a custom theme sub-category
-            if name in [CustomThemeCategories.SIDEBAR.value]:
+            # Only check for nested sections when we're already in a theme section
+            if section_path.startswith("theme") and name in [
+                CustomThemeCategories.SIDEBAR.value,
+                CustomThemeCategories.LIGHT.value,
+                CustomThemeCategories.DARK.value,
+            ]:
+                # Validate the theme section before processing
+                if not _is_valid_theme_section(option_name):
+                    raise StreamlitInvalidThemeSectionError(
+                        option_name=option_name,
+                    )
                 process_section(option_name, value)
             else:
                 # It's a regular config option, set it
@@ -1791,7 +2632,7 @@ def get_config_options(
         # Short-circuit if config files were parsed while we were waiting on
         # the lock.
         if _config_options and not force_reparse:
-            return _config_options
+            return _config_options  # ty: ignore[invalid-return-type]
 
         old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)
@@ -1811,6 +2652,13 @@ def get_config_options(
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
+        # Handle theme inheritance if theme.base points to a file
+        # This happens AFTER all config sources (files, env vars, flags) are processed
+        # so theme.base can be set via any of those
+        config_util.process_theme_inheritance(
+            _config_options, _config_options_template, _set_option
+        )
 
         if old_options and config_util.server_option_changed(
             old_options, _config_options
@@ -1876,6 +2724,56 @@ def _set_development_mode() -> None:
     development.is_development_mode = get_option("global.developmentMode")
 
 
+def _parse_trusted_user_headers() -> None:
+    """Convert string-valued server.trustedUserHeaders to a dict.
+
+    If server.trustedUserHeaders is configured from an environment variable or from
+    the CLI, it will be a JSON string. Parse this and set the value to the resulting
+    dict, after validation.
+    """
+    options = get_config_options()
+    trusted_user_headers = options["server.trustedUserHeaders"]
+    if isinstance(trusted_user_headers.value, str):
+        try:
+            parsed_value = json.loads(trusted_user_headers.value)
+            # Validate that this is an object with string values.
+            if not isinstance(parsed_value, dict):
+                # Config validation is using RuntimeError deliberately; ignore warning
+                # about making this TypeError.
+                # ruff: noqa: TRY004
+                raise RuntimeError("server.trustedUserHeaders JSON must be an object")
+            for json_key, json_value in parsed_value.items():
+                if not isinstance(json_value, str):
+                    raise RuntimeError(
+                        "server.trustedUserHeaders JSON must only have string values. "
+                        f'got bad value for key "{json_key}": {json_value}'
+                    )
+            set_option(
+                "server.trustedUserHeaders",
+                parsed_value,
+                where_defined=trusted_user_headers.where_defined,
+            )
+        except json.JSONDecodeError as jde:
+            raise RuntimeError(
+                f"bad JSON value for server.trustedUserHeaders: {jde.msg}"
+            )
+
+    # Fetch the latest value, since we might've updated it from JSON.
+    final_config_value = options["server.trustedUserHeaders"].value
+    # Ensure no user keys are duplicated.
+    values = set()
+    bad_keys = []
+    for user_key in final_config_value.values():
+        if user_key in values:
+            bad_keys.append(user_key)
+        values.add(user_key)
+
+    if bad_keys:
+        raise RuntimeError(
+            f"server.trustedUserHeaders had multiple mappings for user key(s) {bad_keys}"
+        )
+
+
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -1935,3 +2833,6 @@ def on_config_parsed(
 # may edit config options based on the values of other config options.
 on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
+# Update server.trustedUserHeaders from any JSON string that was set. Take out the
+# lock, since this is mutating the config.
+on_config_parsed(_parse_trusted_user_headers, lock=True)

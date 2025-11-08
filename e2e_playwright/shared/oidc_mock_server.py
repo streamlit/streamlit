@@ -16,8 +16,9 @@ import base64
 import json
 import time
 import uuid
+from collections.abc import Callable
 from functools import partial
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
 

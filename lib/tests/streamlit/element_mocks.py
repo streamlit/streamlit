@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import altair as alt
 import matplotlib.pyplot as plt
@@ -165,6 +166,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("caption", lambda: st.caption("Caption")),
     ("badge", lambda: st.badge("Badge")),
     ("divider", lambda: st.divider()),
+    ("space", lambda: st.space()),
     ("text", lambda: st.text("Hello")),
     ("code", lambda: st.code("Hello")),
     ("html", lambda: st.html("Hello")),
@@ -195,6 +197,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         "logo",
         lambda: st.logo("https://streamlit.io/images/brand/streamlit-mark-color.png"),
     ),
+    ("pdf", lambda: st.pdf(b"%PDF-1.4")),  # Minimal PDF bytes
     # data elements
     ("json", lambda: st.json({})),
     ("metric", lambda: st.metric("Metric", 100)),
@@ -267,5 +270,4 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("form", lambda: st.form("Form")),
     ("empty", lambda: st.empty()),
     ("dialog", lambda: st.dialog("Dialog")),
-    ("experimental_dialog", lambda: st.experimental_dialog("Dialog")),
 ]

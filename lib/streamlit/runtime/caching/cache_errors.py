@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
@@ -64,7 +67,7 @@ class UnhashableParamError(StreamlitAPIException):
     ) -> str:
         arg_name_str = arg_name if arg_name is not None else "(unnamed)"
         arg_type = type_util.get_fqn_type(arg_value)
-        func_name = func.__name__
+        func_name = func.__name__ if hasattr(func, "__name__") else "unknown"
         arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
 
         return (

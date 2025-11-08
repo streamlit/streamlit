@@ -14,11 +14,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Literal, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
@@ -37,7 +35,7 @@ if TYPE_CHECKING:
     from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
-PageType: TypeAlias = Union[str, Path, Callable[[], None], StreamlitPage]
+PageType: TypeAlias = str | Path | Callable[[], None] | StreamlitPage
 
 
 def convert_to_streamlit_page(
@@ -121,7 +119,9 @@ def navigation(
         menu, ``pages`` must be a dictionary. Each key is the label of a
         section and each value is the list of page-like objects for
         that section. If you use ``position="top"``, each grouping will be a
-        collapsible item in the navigation menu.
+        collapsible item in the navigation menu. For top navigation, if you use
+        an empty string as a section header, the pages in that section will be
+        displayed at the beginning of the menu before the collapsible sections.
 
         When you use a string or path as a page-like object, they are
         internally passed to ``st.Page`` and converted to ``StreamlitPage``

@@ -244,7 +244,7 @@ def normalize_path_join(*args: str) -> str:
     str
         The normalized path of the joined path.
     """
-    return os.path.normpath(os.path.join(*args))
+    return os.path.normpath(os.path.join(*args))  # ty: ignore[no-matching-overload]
 
 
 def get_main_script_directory(main_script: str) -> str:

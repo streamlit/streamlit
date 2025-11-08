@@ -16,8 +16,8 @@
 
 import React, { ReactElement, ReactNode, useState } from "react"
 
-import Tooltip, { Placement } from "./Tooltip"
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
+import Tooltip, { Placement } from "./Tooltip"
 
 export interface OverflowTooltipProps {
   content: ReactNode
@@ -43,7 +43,8 @@ function OverflowTooltip({
 
   React.useEffect(() => {
     const newAllowTooltip = childRef?.current
-      ? childRef.current.offsetWidth < childRef.current.scrollWidth
+      ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+        childRef.current.offsetWidth < childRef.current.scrollWidth
       : false
     if (newAllowTooltip !== allowTooltip) {
       setAllowTooltip(newAllowTooltip)

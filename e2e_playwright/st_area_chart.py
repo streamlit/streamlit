@@ -64,7 +64,7 @@ st.area_chart(df)
 st.area_chart(df, x="a")
 st.area_chart(df, y="a")
 st.area_chart(df, y=["a", "b"])
-st.area_chart(df, x="a", y="b", height=500, width=300, use_container_width=False)
+st.area_chart(df, x="a", y="b", height=500, width=300)
 st.area_chart(df, x="b", y="a")
 st.area_chart(df, x="a", y=["b", "c"])
 st.area_chart(utc_df)
@@ -81,7 +81,7 @@ st.area_chart(source, x="date", y="count", color="series", stack="normalize")
 st.area_chart(source, x="date", y="count", color="series", stack="center")
 
 # Test that add_rows maintains original styling params:
-# color, width, height, use_container_width, horizontal, stack
+# color, width, height, horizontal, stack
 area_data = pd.DataFrame({"Area 1": [], "Area 2": []})
 
 empty_area = st.area_chart(
@@ -91,7 +91,6 @@ empty_area = st.area_chart(
     width=600,
     height=300,
     stack="center",
-    use_container_width=False,
 )
 
 if st.button("Add data to Area Chart"):

@@ -24,16 +24,16 @@ import React, {
 
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import { Placement } from "~lib/components/shared/Tooltip"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   disabled: boolean
@@ -95,9 +95,7 @@ function Radio({
     setValue(defaultValue ?? null)
 
     // Exclude value from the dependency list on purpose to avoid a loop.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [defaultValue])
 
   const onChangeCallback = useCallback(

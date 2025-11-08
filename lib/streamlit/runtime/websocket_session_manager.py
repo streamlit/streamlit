@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
@@ -27,6 +27,8 @@ from streamlit.runtime.session_manager import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -85,7 +87,7 @@ class WebsocketSessionManager(SessionManager):
             and self._session_storage.get(existing_session_id)
         )
 
-        if session_info:
+        if isinstance(session_info, SessionInfo):
             existing_session = session_info.session
             existing_session.register_file_watchers()
 
@@ -137,6 +139,10 @@ class WebsocketSessionManager(SessionManager):
             )
             del self._active_session_info_by_id[session_id]
 
+        if not self._active_session_info_by_id:
+            # Avoid stale cached scripts when all file watchers and sessions are disconnected
+            self._script_cache.clear()
+
     def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         return self._active_session_info_by_id.get(session_id)
 
@@ -151,6 +157,10 @@ class WebsocketSessionManager(SessionManager):
             active_session_info = self._active_session_info_by_id[session_id]
             del self._active_session_info_by_id[session_id]
             active_session_info.session.shutdown()
+
+            if not self._active_session_info_by_id:
+                # Avoid stale cached scripts when all file watchers and sessions are disconnected
+                self._script_cache.clear()
             return
 
         session_info = self._session_storage.get(session_id)

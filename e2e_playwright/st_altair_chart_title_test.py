@@ -20,7 +20,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_altair_chart_title_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_count(2)
+    expect(
+        app.get_by_test_id("stVegaLiteChart").locator("[role='graphics-document']")
+    ).to_have_count(2)
     charts = app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(2)
     snapshot_names = [

@@ -27,7 +27,6 @@ import {
   getGray70,
   getGray90,
   getIncreasingGreen,
-  getSequentialColorsArray,
 } from "~lib/theme"
 import { ensureError } from "~lib/util/ErrorHandling"
 
@@ -50,6 +49,7 @@ export function applyStreamlitThemeTemplateLayout(
       color: getGray70(theme),
       family: genericFonts.bodyFont,
       size: convertRemToPx(fontSizes.twoSm),
+      weight: theme.fontWeights.normal,
     },
     title: {
       color: colors.headingColor,
@@ -281,7 +281,7 @@ function replaceSequentialColors(
   const SEQUENTIAL_9 = "#000020"
 
   if (elementTheme === "streamlit") {
-    const sequentialColors = getSequentialColorsArray(theme)
+    const sequentialColors = theme.colors.chartSequentialColors
     spec = spec.replaceAll(SEQUENTIAL_0, sequentialColors[0])
     spec = spec.replaceAll(SEQUENTIAL_1, sequentialColors[1])
     spec = spec.replaceAll(SEQUENTIAL_2, sequentialColors[2])

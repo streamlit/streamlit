@@ -56,20 +56,6 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.link_button
         assert c.type == type
 
-    def test_use_container_width_can_be_set_to_true(self):
-        """Test use_container_width can be set to true."""
-        st.link_button("label", url="https://streamlit.io", use_container_width=True)
-
-        c = self.get_delta_from_queue().new_element.link_button
-        assert c.use_container_width
-
-    def test_use_container_width_is_false_by_default(self):
-        """Test use_container_width is false by default."""
-        st.link_button("the label", url="https://streamlit.io")
-
-        c = self.get_delta_from_queue().new_element.link_button
-        assert not c.use_container_width
-
     def test_emoji_icon(self):
         """Test that it can be called with an emoji icon."""
         st.link_button("the label", url="https://streamlit.io", icon="🎈")

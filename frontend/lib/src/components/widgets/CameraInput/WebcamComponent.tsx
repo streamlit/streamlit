@@ -26,21 +26,21 @@ import React, {
 import { Video } from "@emotion-icons/open-iconic"
 import Webcam from "react-webcam"
 
-import { isMobile } from "~lib/util/isMobile"
-import { debounce } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
+import { isMobile } from "~lib/util/isMobile"
+import { debounce } from "~lib/util/utils"
 
 import CameraInputButton from "./CameraInputButton"
-import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
   StyledDescription,
   StyledLink,
 } from "./styled-components"
+import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
 
 export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
@@ -101,9 +101,7 @@ const WebcamComponent = ({
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const memoizedSetDebouncedCallback = useCallback(
     debounce(1000, setDebouncedWidth),
     []

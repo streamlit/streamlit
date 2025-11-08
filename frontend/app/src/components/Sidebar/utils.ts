@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { PageConfig } from "@streamlit/protobuf"
+import { localStorageAvailable } from "@streamlit/utils"
 
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
@@ -31,5 +31,33 @@ export function shouldCollapse(
       // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
       return windowInnerWidth <= mediumBreakpointPx
     }
+  }
+}
+
+export const getSidebarCollapsedKey = (pageLinkBaseUrl: string): string =>
+  `stSidebarCollapsed-${pageLinkBaseUrl}`
+
+export const getSavedSidebarState = (
+  pageLinkBaseUrl: string
+): boolean | null => {
+  if (!localStorageAvailable()) {
+    return null
+  }
+
+  const saved = window.localStorage.getItem(
+    getSidebarCollapsedKey(pageLinkBaseUrl)
+  )
+  return saved === null ? null : saved === "true"
+}
+
+export const saveSidebarState = (
+  pageLinkBaseUrl: string,
+  isCollapsed: boolean
+): void => {
+  if (localStorageAvailable()) {
+    window.localStorage.setItem(
+      getSidebarCollapsedKey(pageLinkBaseUrl),
+      isCollapsed.toString()
+    )
   }
 }

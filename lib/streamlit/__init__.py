@@ -93,10 +93,7 @@ _event = _dg_singleton._event_dg
 _bottom = _dg_singleton._bottom_dg
 
 
-from streamlit.elements.dialog_decorator import (
-    dialog_decorator as _dialog_decorator,
-    experimental_dialog_decorator as _experimental_dialog_decorator,
-)
+from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -105,10 +102,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
-from streamlit.runtime.fragment import (
-    experimental_fragment as _experimental_fragment,
-    fragment as _fragment,
-)
+from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.context import ContextProxy as _ContextProxy
@@ -171,6 +165,7 @@ audio_input = _main.audio_input
 badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
+_bidi_component = _main._bidi_component
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
@@ -212,6 +207,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pdf = _main.pdf
 pills = _main.pills
 plotly_chart = _main.plotly_chart
 popover = _main.popover
@@ -224,6 +220,7 @@ select_slider = _main.select_slider
 segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
+space = _main.space
 subheader = _main.subheader
 success = _main.success
 table = _main.table
@@ -283,8 +280,6 @@ logout = _logout
 user = _UserInfoProxy()
 
 # Experimental APIs
-experimental_dialog = _experimental_dialog_decorator
-experimental_fragment = _experimental_fragment
 experimental_user = _DeprecatedUserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
@@ -311,4 +306,5 @@ experimental_set_query_params = _deprecate_func_name(
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1  # noqa: F401
+import streamlit.components.v1
+import streamlit.components.v2  # noqa: F401

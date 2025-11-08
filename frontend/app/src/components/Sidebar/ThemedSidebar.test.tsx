@@ -19,42 +19,44 @@ import React from "react"
 import { screen } from "@testing-library/react"
 
 import {
+  createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  render,
+  renderWithContexts,
   ThemeConfig,
 } from "@streamlit/lib"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
-import ThemedSidebar, { createSidebarTheme } from "./ThemedSidebar"
+import ThemedSidebar from "./ThemedSidebar"
 
 function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     endpoints: mockEndpoints(),
     hasElements: true,
-    appPages: [],
-    navSections: [],
-    onPageChange: vi.fn(),
-    currentPageScriptHash: "",
-    hideSidebarNav: false,
-    expandSidebarNav: false,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
-    appLogo: null,
+    widgetsDisabled: false,
     ...props,
   }
 }
 
+// Helper to render ThemedSidebar with default context values
+function renderThemedSidebar(
+  props: Partial<SidebarProps> = {}
+): ReturnType<typeof renderWithContexts> {
+  return renderWithContexts(<ThemedSidebar {...getProps(props)} />)
+}
+
 describe("ThemedSidebar Component", () => {
   it("should render without crashing", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,
@@ -156,5 +158,57 @@ describe("createSidebarTheme", () => {
     const sidebarTheme = createSidebarTheme(theme)
     expect(sidebarTheme.themeInput?.primaryColor).toBe("#FF0000")
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#00FF00")
+  })
+
+  it("removes empty array properties from sidebar overrides", () => {
+    const theme = createMockTheme({
+      themeInput: {
+        fontFaces: [{ family: "main-font" }],
+        headingFontSizes: ["3rem", "2rem"],
+        headingFontWeights: [700, 600],
+        chartCategoricalColors: ["red", "green", "blue"],
+        sidebar: {
+          fontFaces: [], // should be removed
+          headingFontSizes: [], // special handling, should become default
+          headingFontWeights: [], // should be removed
+          chartCategoricalColors: [], // should be removed
+          chartSequentialColors: ["blue", "green"], // should be kept
+          primaryColor: "red", // should be kept
+        },
+      },
+    })
+    const sidebarTheme = createSidebarTheme(theme)
+
+    // These properties had empty arrays in the sidebar config. They should be removed
+    // from the sidebar-specific overrides, so the final sidebar theme should fall back to
+    // the main theme's values for these.
+    expect(sidebarTheme.themeInput?.fontFaces).toEqual([
+      { family: "main-font" },
+    ])
+    expect(sidebarTheme.themeInput?.headingFontWeights).toEqual([700, 600])
+    expect(sidebarTheme.themeInput?.chartCategoricalColors).toEqual([
+      "red",
+      "green",
+      "blue",
+    ])
+
+    // These properties were defined in the sidebar config and should be present.
+    expect(sidebarTheme.themeInput?.chartSequentialColors).toEqual([
+      "blue",
+      "green",
+    ])
+    expect(sidebarTheme.themeInput?.primaryColor).toBe("red")
+
+    // headingFontSizes has special handling in createSidebarTheme.
+    // When the sidebar-specific headingFontSizes is empty, it gets replaced
+    // with a default set of values, not the main theme's values.
+    expect(sidebarTheme.themeInput?.headingFontSizes).toEqual([
+      "1.5rem",
+      "1.25rem",
+      "1.125rem",
+      "1rem",
+      "0.875rem",
+      "0.75rem",
+    ])
   })
 })

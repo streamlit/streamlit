@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from blinker import Signal
 
@@ -62,7 +62,7 @@ from streamlit.runtime.state import (
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -762,7 +762,7 @@ def _clean_problem_modules() -> None:
     if "keras" in sys.modules:
         try:
             keras = sys.modules["keras"]
-            keras.backend.clear_session()
+            cast("Any", keras).backend.clear_session()
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't clear the Keras session.
             pass
@@ -770,7 +770,7 @@ def _clean_problem_modules() -> None:
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
-            plt.close("all")
+            cast("Any", plt).close("all")
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't close matplotlib
             pass

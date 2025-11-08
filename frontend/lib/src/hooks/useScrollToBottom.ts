@@ -16,8 +16,8 @@
 
 import { RefObject, useCallback, useEffect, useRef } from "react"
 
-import useScrollSpy from "./useScrollSpy"
 import useScrollAnimation from "./useScrollAnimation"
+import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
 export interface ScrollToBottomOptions {
@@ -119,7 +119,9 @@ export function useScrollToBottom<T extends HTMLElement>(
       // Chrome will emit "synthetic" scroll event if the container is resized or an element is added
       // We need to ignore these "synthetic" events
       const {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         offsetHeight: nextOffsetHeight,
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         scrollHeight: nextScrollHeight,
       } = target
       const { current: offsetHeight } = offsetHeightRef
@@ -200,6 +202,7 @@ export function useScrollToBottom<T extends HTMLElement>(
           }
         } else if (
           target &&
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           target.scrollHeight <= target.offsetHeight &&
           !isStickyRef.current
         ) {
@@ -234,6 +237,7 @@ export function useScrollToBottom<T extends HTMLElement>(
     const target = scrollableRef.current
     if (target && active) {
       const handleFocus = (): void => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         scrollHeightRef.current = target.scrollHeight
       }
 
@@ -248,8 +252,10 @@ export function useScrollToBottom<T extends HTMLElement>(
     }
   }, [scrollableRef, active])
 
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   useScrollSpy(scrollableRef.current, handleScroll, active)
   useScrollAnimation(
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     scrollableRef.current,
     handleScrollToBottomFinished,
     isAnimating,

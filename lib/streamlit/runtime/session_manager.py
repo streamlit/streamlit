@@ -16,9 +16,11 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.script_data import ScriptData

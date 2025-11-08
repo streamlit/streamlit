@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import click_button, get_element_by_key
 
 
 def test_data_frame_with_different_sizes(app: Page):
@@ -32,24 +34,82 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "400px"},
         {"width": "704px", "height": "400px"},
+        {"width": "229px", "height": "400px"},
+        {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
+        {"width": "704px", "height": "177px"},
+        {"width": "288px", "height": "177px"},
+        {"width": "400px", "height": "300px"},
+        {
+            "width": "672px",
+            "height": "368px",
+        },
+        {"width": "704px", "height": "177px"},
+        {"width": "672px", "height": "144px"},
+        {"width": "704px", "height": "563px"},
+        {"width": "704px", "height": "10048px"},  # 300 rows content height (capped)
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(12)
+    expect(dataframe_elements).to_have_count(22)
 
     for i, element in enumerate(dataframe_elements.all()):
-        expect(element).to_have_css("width", expected[i]["width"])
-        expect(element).to_have_css("height", expected[i]["height"])
+        expected_width = expected[i]["width"]
+        expected_height = expected[i]["height"]
+
+        # Content width dataframes (indices 11 and 15) can vary between browsers/environments
+        # Index 11 (small_df, 3 cols): Chromium/Linux CI: 226px, Firefox/WebKit: 229px
+        # Index 15 (short_dataframe, 4 cols): Linux CI: 284px, macOS: 288px
+        if i == 11:
+            actual_width_str = element.evaluate("el => getComputedStyle(el).width")
+            actual_width_px = int(actual_width_str.replace("px", ""))
+
+            assert actual_width_px in [226, 229], (
+                f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 226px or 229px"
+            )
+        elif i == 15:
+            actual_width_str = element.evaluate("el => getComputedStyle(el).width")
+            actual_width_px = int(actual_width_str.replace("px", ""))
+
+            assert actual_width_px in [284, 288], (
+                f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 284px or 288px"
+            )
+        else:
+            expect(element).to_have_css("width", expected_width)
+
+        expect(element).to_have_css("height", expected_height)
 
 
 def test_data_frame_resizing(app: Page):
     """Test that st.dataframe should resize as expected."""
 
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(11)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(13)
     expect(dataframe_element).to_have_css("width", "200px")
     expect(dataframe_element).to_have_css("height", "100px")
 
     click_button(app, "Resize dataframe")
     expect(dataframe_element).to_have_css("width", "400px")
     expect(dataframe_element).to_have_css("height", "200px")
+
+
+@pytest.mark.skip_browser("firefox")
+def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.dataframe should render as expected with width and height."""
+    stretch_dataframe = app.get_by_test_id("stDataFrame").nth(14)
+    assert_snapshot(stretch_dataframe, name="st_dataframe-stretch-width")
+
+    content_dataframe_element = app.get_by_test_id("stDataFrame").nth(15)
+    assert_snapshot(content_dataframe_element, name="st_dataframe-content-width")
+
+    fixed_dimensions_dataframe_element = app.get_by_test_id("stDataFrame").nth(16)
+    assert_snapshot(
+        fixed_dimensions_dataframe_element, name="st_dataframe-fixed-dimensions"
+    )
+
+    stretch_height_container = get_element_by_key(app, "test_height_stretch")
+    assert_snapshot(stretch_height_container, name="st_dataframe-stretch-height")
+
+    content_height_dataframe_element = app.get_by_test_id("stDataFrame").nth(20)
+    assert_snapshot(
+        content_height_dataframe_element, name="st_dataframe-content-height"
+    )

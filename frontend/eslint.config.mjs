@@ -16,12 +16,13 @@
 
 import path from "path"
 import { fileURLToPath } from "url"
+import { createJiti } from "jiti"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
 import react from "eslint-plugin-react"
-import * as reactHooks from "eslint-plugin-react-hooks"
+import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
@@ -29,9 +30,8 @@ import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
-import streamlitCustom from "eslint-plugin-streamlit-custom"
 import globals from "globals"
-import { globalIgnores } from "eslint/config"
+import { defineConfig, globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
@@ -40,11 +40,19 @@ import jsxA11y from "eslint-plugin-jsx-a11y"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-export default tseslint.config([
+// This is to support our custom rules, which are written in TypeScript,
+// but need to be imported as JS to work in ESLint.
+const jiti = createJiti(import.meta.url)
+const streamlitCustom = await jiti.import(
+  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
+  { default: true }
+)
+
+export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.recommended,
+  reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
   eslintPluginPrettierRecommended,
@@ -96,17 +104,12 @@ export default tseslint.config([
       "react/prop-types": "off",
       // We don't escape entities
       "react/no-unescaped-entities": "off",
-      // Opting into the latest react-compiler rules
-      // @see https://react.dev/blog/2025/04/21/react-compiler-rc
-      "react-hooks/react-compiler": "error",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom/no-flush-sync": "error",
       // This was giving false positives
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
       "@eslint-react/naming-convention/use-state": "off",
-      // Helps us catch functions written as if they are hooks, but are not.
-      "@eslint-react/hooks-extra/no-useless-custom-hooks": "error",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
@@ -162,6 +165,8 @@ export default tseslint.config([
       ],
       // We want this on
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Prefer optional chaining over && chains
+      "@typescript-eslint/prefer-optional-chain": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -204,6 +209,11 @@ export default tseslint.config([
           property: "innerHeight",
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -245,7 +255,7 @@ export default tseslint.config([
         },
       ],
       "import/order": [
-        1,
+        "error",
         {
           pathGroups: [
             {
@@ -255,6 +265,11 @@ export default tseslint.config([
             },
             {
               pattern: "@streamlit/**",
+              group: "internal",
+              position: "before",
+            },
+            {
+              pattern: "~lib/**",
               group: "internal",
               position: "before",
             },
@@ -269,12 +284,17 @@ export default tseslint.config([
             "index",
           ],
           "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
         },
       ],
       "streamlit-custom/no-hardcoded-theme-values": "error",
       "streamlit-custom/use-strict-null-equality-checks": "error",
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
+      "streamlit-custom/no-force-reflow-access": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -289,6 +309,12 @@ export default tseslint.config([
                 "Please use the useEmotionTheme hook instead of useTheme for type-safety",
               importNames: ["useTheme"],
             },
+            {
+              name: "axios",
+              importNames: ["CancelToken"],
+              message:
+                "Please use the `AbortController` API instead of `CancelToken`",
+            },
           ],
         },
       ],
@@ -296,7 +322,7 @@ export default tseslint.config([
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
@@ -329,6 +355,8 @@ export default tseslint.config([
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
+      // Allow force reflow access in test files
+      "streamlit-custom/no-force-reflow-access": "off",
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",

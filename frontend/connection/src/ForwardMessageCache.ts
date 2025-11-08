@@ -158,7 +158,7 @@ export class ForwardMsgCache {
       return
     }
 
-    if (!msg.metadata || !msg.metadata.cacheable) {
+    if (!msg.metadata?.cacheable) {
       // Don't cache messages that the server hasn't marked as cacheable.
       return
     }

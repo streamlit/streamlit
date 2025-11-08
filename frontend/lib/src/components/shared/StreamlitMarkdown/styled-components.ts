@@ -17,9 +17,11 @@
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
-  isInSidebarOrDialog: boolean
+  isInDialog: boolean
   isLabel?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
@@ -43,19 +45,27 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 /**
  * Caption sizes taken from default styles, but using em instead of rem, so it
- * inherits the <small>'s shrunk size
- *
+ * inherits the <small>'s shrunk size. Also handles reduced heading font sizes
+ * in dialogs.
  */
 function convertFontSizes(
   fontSize: string,
-  smallFontSize: string,
-  useSmallerHeadings: boolean,
+  isInDialog: boolean,
   isCaption: boolean
 ): string {
-  if (useSmallerHeadings) {
-    // For headers in `st.caption`, we use `em` values, so the headers automatically
-    // become a bit smaller by adapting to the font size of the caption.
-    return isCaption ? convertRemToEm(smallFontSize) : smallFontSize
+  // For headers in `st.caption`, we use `em` values, so the headers automatically
+  // become a bit smaller by adapting to the font size of the caption.
+
+  if (isInDialog) {
+    // Dialogs also reduce the font size of the headings to 65% of the base font size
+    // Round the font size to the nearest eighth of a rem to try to keep to round px values
+    const roundedFontSize = roundFontSizeToNearestEighth(
+      parseFloat(fontSize) * 0.65
+    )
+
+    // Ensure the font size is at least 0.75rem
+    const dialogFontSize = `${Math.max(roundedFontSize, 0.75)}rem`
+    return isCaption ? convertRemToEm(dialogFontSize) : dialogFontSize
   }
 
   return isCaption ? convertRemToEm(fontSize) : fontSize
@@ -63,7 +73,7 @@ function convertFontSizes(
 
 function getMarkdownHeadingDefinitions(
   theme: Theme,
-  useSmallerHeadings: boolean,
+  isInDialog: boolean,
   isCaption: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
@@ -76,11 +86,11 @@ function getMarkdownHeadingDefinitions(
     },
     h1: {
       fontSize: convertFontSizes(
-        theme.fontSizes.fourXL,
-        theme.fontSizes.xl,
-        useSmallerHeadings,
+        theme.fontSizes.h1FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h1FontWeight,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
@@ -94,9 +104,8 @@ function getMarkdownHeadingDefinitions(
     },
     h2: {
       fontSize: convertFontSizes(
-        theme.fontSizes.threeXL,
-        theme.fontSizes.lg,
-        useSmallerHeadings,
+        theme.fontSizes.h2FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
@@ -104,19 +113,18 @@ function getMarkdownHeadingDefinitions(
     },
     h3: {
       fontSize: convertFontSizes(
-        theme.fontSizes.twoXL,
-        theme.fontSizes.mdLg,
-        useSmallerHeadings,
+        theme.fontSizes.h3FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h3FontWeight,
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
-        theme.fontSizes.xl,
-        theme.fontSizes.md,
-        useSmallerHeadings,
+        theme.fontSizes.h4FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
@@ -124,9 +132,8 @@ function getMarkdownHeadingDefinitions(
     },
     h5: {
       fontSize: convertFontSizes(
-        theme.fontSizes.lg,
-        theme.fontSizes.sm,
-        useSmallerHeadings,
+        theme.fontSizes.h5FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
@@ -134,11 +141,11 @@ function getMarkdownHeadingDefinitions(
     },
     h6: {
       fontSize: convertFontSizes(
-        theme.fontSizes.md,
-        theme.fontSizes.twoSm,
-        useSmallerHeadings,
+        theme.fontSizes.h6FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h6FontWeight,
       padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
@@ -150,7 +157,7 @@ export const StyledStreamlitMarkdown =
     ({
       theme,
       isCaption,
-      isInSidebarOrDialog,
+      isInDialog,
       isLabel,
       inheritFont,
       boldLabel,
@@ -172,12 +179,12 @@ export const StyledStreamlitMarkdown =
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
+        // Always respect the width of the parent container:
+        maxWidth: "100%",
+        // Break long words to prevent them from overflowing the container:
+        overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(
-          theme,
-          isInSidebarOrDialog,
-          isCaption
-        ),
+        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).
@@ -205,6 +212,8 @@ export const StyledStreamlitMarkdown =
           // In labels, widgets should never be taller than the text.
           maxHeight: isLabel ? "1em" : undefined,
           verticalAlign: "middle",
+          // Ensure that images are not distorted:
+          objectFit: "scale-down",
         },
 
         li: {
@@ -232,6 +241,11 @@ export const StyledStreamlitMarkdown =
 
         "b, strong": {
           fontWeight: theme.fontWeights.bold,
+        },
+
+        // Issue #11976: Handle bolded inline code
+        "b code, strong code": {
+          fontWeight: theme.fontWeights.codeBold,
         },
 
         // Handles the horizontal divider:
@@ -306,6 +320,10 @@ export const StyledStreamlitMarkdown =
         ".katex-display": {
           overflowX: "auto",
           overflowY: "hidden",
+        },
+
+        ".katex": {
+          fontWeight: theme.fontWeights.normal,
         },
       }
     }

@@ -1,0 +1,11 @@
+{
+  "root": true,
+  "extends": "@streamlit/typescript-config/base.tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

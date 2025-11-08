@@ -20,9 +20,8 @@ import {
   BaseButton,
   BaseButtonKind,
   DynamicIcon,
-  LibContext,
+  ThemeContext,
 } from "@streamlit/lib"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import {
   StyledHeader,
@@ -41,6 +40,7 @@ export interface HeaderProps {
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode
+  showToolbar: boolean
 }
 
 const Header = ({
@@ -50,9 +50,9 @@ const Header = ({
   navigation,
   rightContent,
   logoComponent,
+  showToolbar,
 }: HeaderProps): ReactElement => {
-  const { showToolbar } = useAppContext()
-  const { activeTheme } = useContext(LibContext)
+  const { activeTheme } = useContext(ThemeContext)
 
   const shouldShowLogo = logoComponent && !isSidebarOpen
   const shouldShowExpandButton = hasSidebar && !isSidebarOpen
@@ -95,7 +95,7 @@ const Header = ({
                   >
                     <DynamicIcon
                       size="xl"
-                      iconValue={":material/keyboard_double_arrow_right:"}
+                      iconValue=":material/keyboard_double_arrow_right:"
                       color={activeTheme.emotion.colors.fadedText60}
                     />
                   </BaseButton>

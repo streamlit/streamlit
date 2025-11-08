@@ -50,7 +50,7 @@ def get_external_ip() -> str | None:
     if response is None:
         response = _make_blocking_http_get(_AWS_CHECK_IP_HTTPS, timeout=5)
 
-    if _looks_like_an_ip_adress(response):
+    if _looks_like_an_ip_address(response):
         _external_ip = response
     else:
         _LOGGER.warning(
@@ -103,7 +103,7 @@ def _make_blocking_http_get(url: str, timeout: float = 5) -> str | None:
         return None
 
 
-def _looks_like_an_ip_adress(address: str | None) -> bool:
+def _looks_like_an_ip_address(address: str | None) -> bool:
     if address is None:
         return False
 

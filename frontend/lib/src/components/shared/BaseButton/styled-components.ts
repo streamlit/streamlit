@@ -105,18 +105,13 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       width: containerWidth ? "100%" : "auto",
       cursor: "pointer",
       userSelect: "none",
-      "&:hover": {
-        // override text color on hover for colored text - note since text color applied
-        // as inline style (highest specificity) we need to use !important
-        // use inherit to handle all button types
-        "span.stMarkdownColoredText": {
-          color: "inherit !important",
-        },
-      },
       "&:focus": {
         outline: "none",
       },
       "&:focus-visible": {
+        // When focus-visible (e.g. if the button was focused via keyboard navigation)
+        // we use the hover style of the respective button type (see below) and
+        // additionally show a colored focus ring
         boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       },
       ...getSizeStyle(size, theme),
@@ -130,12 +125,14 @@ export const StyledPrimaryButton = styled(
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-  "&:hover": {
-    backgroundColor: darken(theme.colors.primary, 0.05),
+  "&:hover, &:focus-visible": {
+    backgroundColor: darken(theme.colors.primary, 0.15),
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:active": {
-    backgroundColor: "transparent",
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+    // Keep the border darker when clicked so that the button looks "pressed"
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     borderColor: theme.colors.borderColor,
@@ -150,18 +147,11 @@ export const StyledSecondaryButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  "&:hover": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+  "&:hover, &:focus-visible": {
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
-    color: theme.colors.white,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
-  },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     borderColor: theme.colors.borderColor,
@@ -178,19 +168,20 @@ export const StyledTertiaryButton = styled(
     padding: theme.spacing.none,
     backgroundColor: theme.colors.transparent,
     border: "none",
-
+    "&:hover, &:focus-visible": {
+      color: theme.colors.primary,
+    },
+    "&:hover:not(:disabled), &:focus-visible:not(:disabled)": {
+      // Also make colored text have the primary color on hover. Since text color is
+      // applied as an inline style we need to use !important to override it.
+      // Note that we're not doing this when disabled. We should probably do that as
+      // well but we don't do it anywhere else.
+      "span.stMarkdownColoredText": {
+        color: "inherit !important",
+      },
+    },
     "&:active": {
-      color: theme.colors.primary,
-    },
-    "&:focus": {
-      outline: "none",
-    },
-    "&:focus-visible": {
-      color: theme.colors.primary,
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
-    },
-    "&:hover": {
-      color: theme.colors.primary,
+      color: darken(theme.colors.primary, 0.25),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.transparent,
@@ -205,7 +196,7 @@ export const StyledGhostButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     borderColor: theme.colors.transparent,
     color: theme.colors.primary,
   },
@@ -214,14 +205,10 @@ export const StyledGhostButton = styled(
     borderColor: theme.colors.transparent,
     backgroundColor: theme.colors.transparent,
   },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.transparent,
-    color: theme.colors.primary,
-  },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.gray30,
     borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.gray60,
   },
 }))
 
@@ -234,6 +221,10 @@ export const StyledMinimalButton = styled(
   padding: theme.spacing.none,
   "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
   },
 }))
 
@@ -253,7 +244,6 @@ const StyledButtonGroupBaseButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     background: theme.colors.bgColor,
-    color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
@@ -267,13 +257,13 @@ const StyledButtonGroupBaseButton = styled(
     overflow: "hidden",
     textOverflow: "ellipsis",
 
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
+    "&:hover, &:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText20,
-      borderColor: theme.colors.fadedText20,
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
       cursor: "not-allowed",
     },
 
@@ -306,10 +296,16 @@ export const StyledPillsButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
@@ -334,8 +330,9 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:hover": {
-      zIndex: theme.zIndices.priority, // Make sure overlapped borders are visible
+    "&:focus-visible": {
+      // Make sure the focus ring isn't below the previous/next button.
+      zIndex: theme.zIndices.priority,
     },
   }
 })
@@ -348,8 +345,14 @@ export const StyledSegmentedControlButtonActive = styled(
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
@@ -383,9 +386,9 @@ export const StyledHeaderButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -429,7 +432,7 @@ export const StyledBorderlessIconButton = styled(
       outline: "none",
     },
     "&:hover": {
-      color: theme.colors.text,
+      color: theme.colors.bodyText,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText10,
@@ -504,9 +507,9 @@ export const StyledElementToolbarButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -516,3 +519,9 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
     width: containerWidth ? "100%" : "auto",
   })
 )
+
+export const StyledButtonLabel = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+}))

@@ -12,21 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    wait_for_app_run,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    click_toggle,
+    expect_prefixed_markdown,
     get_element_by_key,
+    get_expander,
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 15
+DOWNLOAD_BUTTON_ELEMENTS = 17
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -48,41 +51,57 @@ def test_download_button_widget_rendering(
 ):
     """Test that download buttons are correctly rendered via screenshot matching."""
     download_buttons = themed_app.get_by_test_id("stDownloadButton")
-    expect(download_buttons).to_have_count(15)
-
-    assert_snapshot(download_buttons.nth(0), name="st_download_button-default")
-    assert_snapshot(download_buttons.nth(1), name="st_download_button-disabled")
+    expect(download_buttons).to_have_count(DOWNLOAD_BUTTON_ELEMENTS)
 
     assert_snapshot(
-        download_buttons.nth(4), name="st_download_button-use_container_width"
+        get_element_by_key(themed_app, "default_download_button"),
+        name="st_download_button-default",
     )
     assert_snapshot(
-        download_buttons.nth(5), name="st_download_button-use_container_width_help"
+        get_element_by_key(themed_app, "disabled_dl_button"),
+        name="st_download_button-disabled",
     )
-    assert_snapshot(download_buttons.nth(6), name="st_download_button-primary")
-    assert_snapshot(download_buttons.nth(7), name="st_download_button-emoji_icon")
-    assert_snapshot(download_buttons.nth(8), name="st_download_button-material_icon")
-    assert_snapshot(download_buttons.nth(9), name="st_download_button-tertiary")
+
     assert_snapshot(
-        download_buttons.nth(10), name="st_download_button-disabled_tertiary"
+        get_element_by_key(themed_app, "primary_download_button"),
+        name="st_download_button-primary",
     )
-    assert_snapshot(download_buttons.nth(11), name="st_download_button-help")
+    assert_snapshot(
+        get_element_by_key(themed_app, "emoji_download_button"),
+        name="st_download_button-emoji_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "material_icon_download_button"),
+        name="st_download_button-material_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "tertiary_download_button"),
+        name="st_download_button-tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "disabled_tertiary_download_button"),
+        name="st_download_button-disabled_tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "help_download_button"),
+        name="st_download_button-help",
+    )
 
 
 def test_show_tooltip_on_hover(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(5)
+    download_button = app.get_by_test_id("stDownloadButton").nth(9)
     download_button.hover()
-    expect(app.get_by_test_id("stTooltipContent")).to_have_text("Example help text")
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
 
 
 def test_value_correct_on_click(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
@@ -123,7 +142,7 @@ def test_click_calls_callback(app: Page):
 
 
 def test_reset_on_other_widget_change(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(14).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: True")
     expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
@@ -194,7 +213,6 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "download_button")).to_be_visible()
 
 
-@pytest.mark.flaky(reruns=4)
 def test_download_button_source_error(app: Page, app_port: int):
     """Test that the download button source error is correctly logged."""
     # Ensure download source request return a 404 status
@@ -220,3 +238,51 @@ def test_download_button_source_error(app: Page, app_port: int):
         ),
         timeout=10000,
     )
+
+
+def test_download_button_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test download button width examples via screenshot matching."""
+    download_expander = get_expander(app, "Download Button Width Examples")
+    download_elements = download_expander.get_by_test_id("stDownloadButton")
+
+    assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
+    assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
+    assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
+
+
+def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the download button can be updated dynamically."""
+    dynamic_button = get_element_by_key(app, "dynamic_download_button_with_key")
+    expect(dynamic_button).to_be_visible()
+
+    # Initial state
+    expect(dynamic_button).to_contain_text("Initial dynamic button")
+    assert_snapshot(dynamic_button, name="st_download_button-dynamic_initial")
+    dynamic_button.hover()
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
+    # Clean hovering before clicking the toggle:
+    app.get_by_text("Dynamic download button props:").hover(force=True)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
+
+    # Click the toggle to update the button props
+    click_toggle(app, "Update button props")
+
+    # Updated state
+    expect(dynamic_button).to_contain_text("Updated dynamic button")
+    dynamic_button.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_button, name="st_download_button-dynamic_updated")
+    dynamic_button.hover()
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("updated help")
+
+    # Click the download button and verify the download
+    with app.expect_download() as download_info:
+        dynamic_button.click()
+
+    download = download_info.value
+    assert download.suggested_filename == "updated.txt"
+    assert download.path().read_text() == "Updated data"
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")

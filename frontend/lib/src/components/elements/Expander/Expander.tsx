@@ -14,28 +14,13 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-
-import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
+import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import {
-  DynamicIcon,
-  StyledIcon,
-  StyledSpinnerIcon,
-} from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
-import { LibContext } from "~lib/components/core/LibContext"
-import { IconSize, isPresetTheme } from "~lib/theme"
 
 import {
   BORDER_SIZE,
@@ -44,6 +29,7 @@ import {
   StyledExpandableContainer,
   StyledSummary,
   StyledSummaryHeading,
+  StyledSummaryLabelWrapper,
 } from "./styled-components"
 
 export interface ExpanderIconProps {
@@ -62,36 +48,18 @@ export interface ExpanderIconProps {
  */
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
-  const { activeTheme } = useContext(LibContext)
-
-  const iconProps = {
-    size: "lg" as IconSize,
-    margin: "0",
-    padding: "0",
-  }
 
   const statusIconTestIds: Record<string, string> = {
     ":material/check:": "stExpanderIconCheck",
     ":material/error:": "stExpanderIconError",
-  }
-
-  if (icon === "spinner") {
-    const usingCustomTheme = !isPresetTheme(activeTheme)
-    return (
-      <StyledSpinnerIcon
-        usingCustomTheme={usingCustomTheme}
-        data-testid="stExpanderIconSpinner"
-        {...iconProps}
-      />
-    )
+    spinner: "stExpanderIconSpinner",
   }
 
   return icon ? (
     <DynamicIcon
-      color="inherit"
+      size="lg"
       iconValue={icon}
       testid={statusIconTestIds[icon] || "stExpanderIcon"}
-      {...iconProps}
     />
   ) : (
     <></>
@@ -110,6 +78,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
+  const [isHovered, setIsHovered] = useState(false)
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
   const animationRef = useRef<Animation | null>(null)
@@ -119,6 +88,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialExpanded)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setExpanded(initialExpanded)
 
       // We manage the open attribute via the detailsRef and not with React state
@@ -188,7 +158,9 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     }
 
     detailsEl.style.overflow = "hidden"
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const detailsHeight = detailsEl.getBoundingClientRect().height
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const summaryHeight = summaryRef.current.getBoundingClientRect().height
 
     if (!expanded) {
@@ -215,6 +187,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           }
 
           const contentHeight =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             contentRef.current.getBoundingClientRect().height
           toggleAnimation(
             detailsEl,
@@ -232,23 +205,54 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     }
   }
 
+  const handleMouseEnter = (): void => {
+    setIsHovered(true)
+  }
+
+  const handleMouseLeave = (): void => {
+    setIsHovered(false)
+  }
+
+  // Determine which icon to show
+  const showChevron = !element.icon || isHovered
+  const showUserIcon = element.icon && !isHovered
+
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
-      <StyledDetails isStale={isStale} ref={detailsRef}>
-        <StyledSummary onClick={toggle} ref={summaryRef} isStale={isStale}>
+      <StyledDetails
+        isStale={isStale}
+        ref={detailsRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <StyledSummary
+          onClick={toggle}
+          ref={summaryRef}
+          isStale={isStale}
+          expanded={expanded}
+        >
           <StyledSummaryHeading>
-            {element.icon && <ExpanderIcon icon={element.icon} />}
-            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+            {showChevron && (
+              <DynamicIcon
+                iconValue={
+                  expanded
+                    ? ":material/keyboard_arrow_down:"
+                    : ":material/keyboard_arrow_right:"
+                }
+                size="lg"
+              />
+            )}
+            {showUserIcon && <ExpanderIcon icon={element.icon} />}
+
+            <StyledSummaryLabelWrapper>
+              <StreamlitMarkdown
+                source={label}
+                allowHTML={false}
+                isLabel
+                largerLabel
+              />
+            </StyledSummaryLabelWrapper>
           </StyledSummaryHeading>
-          <StyledIcon
-            as={expanded ? ExpandLess : ExpandMore}
-            color={"inherit"}
-            aria-hidden="true"
-            data-testid="stExpanderToggleIcon"
-            size="lg"
-            margin=""
-            padding=""
-          />
         </StyledSummary>
         <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
           {children}

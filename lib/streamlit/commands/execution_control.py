@@ -103,7 +103,7 @@ def _new_fragment_id_queue(
 def rerun(  # type: ignore[misc]
     *,  # The scope argument can only be passed via keyword.
     scope: Literal["app", "fragment"] = "app",
-) -> NoReturn:
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
     When ``st.rerun()`` is called, Streamlit halts the current script run and

@@ -139,13 +139,20 @@ with st.form("form with a code block", height=400):
     st.code(code, height="stretch")
     st.form_submit_button("Submit")
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+
+narrow_code = """
+def hello():
+    print("Hello!")
+"""
 
 with col1:
-    st.code(code, height=300)
-    st.code(code, height="stretch")
+    st.code(narrow_code, height=300)
+    st.code(narrow_code, height="stretch")
 with col2:
-    st.code(code, height="stretch")
+    st.code(narrow_code, height="stretch")
+with col3:
+    st.code(narrow_code, height="content")
 
 with st.container(height=300, key="container_with_code"):
     st.code(code, height=100)

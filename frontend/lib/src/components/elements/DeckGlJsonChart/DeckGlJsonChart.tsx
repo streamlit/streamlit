@@ -23,32 +23,32 @@ import React, {
   useState,
 } from "react"
 
+import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
-import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
+import { Close } from "@emotion-icons/material-outlined"
+import { registerLoaders } from "@loaders.gl/core"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
-import { registerLoaders } from "@loaders.gl/core"
-import { LayersList, PickingInfo } from "@deck.gl/core"
-import { Close } from "@emotion-icons/material-outlined"
+import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-import { assertNever } from "~lib/util/assertNever"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import { LibContext } from "~lib/components/core/LibContext"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { assertNever } from "~lib/util/assertNever"
 
+import { MapBoxCss } from "./MapBoxCss"
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
-import { MapBoxCss } from "./MapBoxCss"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
@@ -57,9 +57,15 @@ const EMPTY_SELECTION = EMPTY_STATE.selection
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
-  const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
-    props
-  const { libConfig } = useContext(LibContext)
+  const {
+    disabled,
+    disableFullscreenMode,
+    element,
+    fragmentId,
+    heightConfig,
+    widgetMgr,
+  } = props
+  const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
@@ -67,18 +73,18 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
+  const isStretchHeight = !!heightConfig?.useStretch
+
   const {
     createTooltip,
     data: selection,
     deck,
     hasActiveSelection,
-    height,
     isSelectionModeActivated,
     onViewStateChange,
     selectionMode,
     setSelection,
     viewState,
-    width,
   } = useDeckGl({
     element,
     fragmentId,
@@ -87,7 +93,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     widgetMgr,
   })
 
-  const mapboxToken = element.mapboxToken || libConfig.mapboxToken
+  const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
@@ -213,7 +219,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
-      height={height}
+      isStretchHeight={isStretchHeight}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
@@ -238,8 +244,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         <DeckGL
           viewState={viewState}
           onViewStateChange={onViewStateChange}
-          height={height}
-          width={width}
           layers={isInitialized ? deck.layers : EMPTY_LAYERS}
           getTooltip={createTooltip}
           // @ts-expect-error There is a type mismatch due to our versions of the libraries
@@ -250,8 +254,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           }
         >
           <StaticMap
-            height={height}
-            width={width}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"

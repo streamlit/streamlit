@@ -18,7 +18,6 @@ import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
-import { getSidebarHorizontalSpacing } from "@streamlit/app/src/components/Sidebar/styled-components"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -51,9 +50,10 @@ export const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div({
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
-})
+  fontFamily: theme.genericFonts.bodyFont,
+}))
 
 export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   return {
@@ -97,8 +97,6 @@ export const StyledSidebarNavIcon = styled.span<StyledSidebarNavIconProps>(
 )
 
 export const StyledSidebarNavLinkListItem = styled.li(({ theme }) => ({
-  marginLeft: getSidebarHorizontalSpacing(theme),
-  marginRight: getSidebarHorizontalSpacing(theme),
   marginTop: theme.spacing.threeXS,
   marginBottom: theme.spacing.threeXS,
 }))
@@ -183,17 +181,47 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   }
 )
 
-export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
+  ({ isExpanded }) => ({
+    visibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+    transition: "transform 200ms ease",
+    flexShrink: 0,
+  })
+)
+
+export const StyledNavSectionHeaderText = styled.span(() => ({
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+}))
+
+export const StyledSidebarNavSectionHeader = styled.header<{
+  isExpanded: boolean
+}>(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
-    marginLeft: getSidebarHorizontalSpacing(theme),
-    marginRight: getSidebarHorizontalSpacing(theme),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.twoXS,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    cursor: "pointer",
+    userSelect: "none",
+    "&:hover": {
+      [`& > ${StyledChevronContainer}`]: {
+        visibility: "visible",
+      },
+    },
   }
 })
 
@@ -207,7 +235,7 @@ export const StyledViewButton = styled.button(({ theme }) => {
     border: "none",
     borderRadius: theme.radii.default,
     marginTop: theme.spacing.twoXS,
-    marginLeft: theme.spacing.lg,
+    marginLeft: theme.spacing.none,
     marginBottom: theme.spacing.none,
     marginRight: theme.spacing.none,
     padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
@@ -225,8 +253,6 @@ export const StyledViewButton = styled.button(({ theme }) => {
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
   borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  marginRight: getSidebarHorizontalSpacing(theme),
-  marginLeft: getSidebarHorizontalSpacing(theme),
 }))
 
 export const StyledNavSectionContainer = styled.div(({ theme }) => ({

@@ -12,23 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 """@st.cache_resource implementation."""
 
 from __future__ import annotations
 
 import math
 import threading
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
+    TypeAlias,
     TypeVar,
     overload,
 )
 
 from cachetools import TTLCache
-from typing_extensions import ParamSpec, TypeAlias
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit.logger import get_logger
@@ -45,7 +47,6 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
     MsgData,
-    show_widget_replay_deprecation,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
@@ -232,7 +233,6 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         show_time: bool = False,
         validate: ValidateFunc | None = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
@@ -245,17 +245,15 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         show_time: bool = False,
         validate: ValidateFunc | None = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
-        return self._decorator(
-            func,
+        return self._decorator(  # ty: ignore
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             show_spinner=show_spinner,
             show_time=show_time,
             validate=validate,
-            experimental_allow_widgets=experimental_allow_widgets,
             hash_funcs=hash_funcs,
         )
 
@@ -268,7 +266,6 @@ class CacheResourceAPI:
         show_spinner: bool | str,
         show_time: bool = False,
         validate: ValidateFunc | None,
-        experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
@@ -288,8 +285,29 @@ class CacheResourceAPI:
         arguments match a previous function call. Alternatively, you can
         declare custom hashing functions with ``hash_funcs``.
 
-        To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/develop/concepts/architecture/caching.
+        Cached values are available to all users of your app. If you need to
+        save results that should only be accessible within a session, use
+        `Session State
+        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
+        instead. Within each user session, an ``@st.cache_resource``-decorated
+        function returns the cached instance of the return value (if the value
+        is already cached). Therefore, objects cached by ``st.cache_resource``
+        act like singletons and can mutate. To cache data and return copies,
+        use ``st.cache_data`` instead. To learn more about caching, see
+        `Caching overview
+        <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
+
+        .. warning::
+            Async objects are not officially supported in Streamlit. Caching
+            async objects or objects that reference async objects may have
+            unintended consequences. For example, Streamlit may close event
+            loops in its normal operation and make the cached object raise an
+            ``Event loop closed`` error.
+
+            To upvote official ``asyncio`` support, see GitHub issue `#8488
+            <https://github.com/streamlit/streamlit/issues/8488>`_. To upvote
+            support for caching async functions, see GitHub issue `#8308
+            <https://github.com/streamlit/streamlit/issues/8308>`_.
 
         Parameters
         ----------
@@ -333,9 +351,6 @@ class CacheResourceAPI:
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.
 
-        experimental_allow_widgets : bool
-            Allow widgets to be used in the cached function. Defaults to False.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -343,12 +358,6 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
-
-        .. deprecated::
-            The cached widget replay functionality was removed in 1.38. Please
-            remove the ``experimental_allow_widgets`` parameter from your
-            caching decorators. This parameter will be removed in a future
-            version.
 
         Example
         -------
@@ -432,8 +441,6 @@ class CacheResourceAPI:
         ... def get_person_name(person: Person):
         ...     return person.name
         """
-        if experimental_allow_widgets:
-            show_widget_replay_deprecation("cache_resource")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)

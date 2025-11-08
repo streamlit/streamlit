@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { lighten, transparentize } from "color2k"
+import { transparentize } from "color2k"
 
 import { colors } from "~lib/theme/primitives/colors"
 
@@ -22,22 +22,34 @@ export default {
   ...colors,
   bgColor: colors.gray100,
   bodyText: colors.gray10,
-  warning: colors.yellow20,
-  warningBg: transparentize(colors.yellow70, 0.8),
-  success: colors.green10,
-  successBg: transparentize(colors.green60, 0.8),
-  info: colors.blue20,
-  infoBg: transparentize(colors.blue60, 0.8),
-  danger: colors.red20,
-  dangerBg: transparentize(colors.red60, 0.8),
-  // Brighten link color a bit so they're easier to read:
-  link: lighten(colors.blue80, 0.2),
 
   primary: colors.red70,
   secondaryBg: colors.gray90,
-  disabled: colors.gray70,
-  red: colors.red70,
-  blue: colors.blue50,
-  green: colors.green60,
-  yellow: colors.yellow40,
+
+  // Default main theme colors (dark theme)
+  redColor: colors.red80,
+  orangeColor: colors.orange80,
+  yellowColor: colors.yellow70,
+  blueColor: colors.blue80,
+  greenColor: colors.green80,
+  violetColor: colors.purple70,
+  grayColor: colors.gray80,
+
+  // Default background theme colors (dark theme)
+  redBackgroundColor: transparentize(colors.red60, 0.8),
+  orangeBackgroundColor: transparentize(colors.orange80, 0.8),
+  yellowBackgroundColor: transparentize(colors.yellow65, 0.8),
+  blueBackgroundColor: transparentize(colors.blue60, 0.8),
+  greenBackgroundColor: transparentize(colors.green60, 0.8),
+  violetBackgroundColor: transparentize(colors.purple60, 0.8),
+  grayBackgroundColor: transparentize(colors.gray70, 0.8),
+
+  // Default text theme colors (dark theme)
+  redTextColor: colors.red60,
+  orangeTextColor: colors.orange60,
+  yellowTextColor: colors.yellow20,
+  blueTextColor: colors.blue60,
+  greenTextColor: colors.green50,
+  violetTextColor: colors.purple50,
+  grayTextColor: transparentize(colors.gray10, 0.4),
 }

@@ -15,44 +15,68 @@
  */
 
 import styled from "@emotion/styled"
-import { Spinner } from "baseui/spinner"
 
 export const StyledAudioInputContainerDiv = styled.div()
 
-export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
-  height: theme.sizes.largestElementHeight,
-  width: "100%",
-  background: theme.colors.secondaryBg,
-  borderRadius: theme.radii.default,
-  marginBottom: theme.spacing.twoXS,
-  display: "flex",
-  alignItems: "center",
-  position: "relative",
-  paddingLeft: theme.spacing.xs,
-  paddingRight: theme.spacing.sm,
-  border: theme.colors.widgetBorderColor
-    ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-    : undefined,
-}))
+export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
+  ({ theme, disabled }) => ({
+    height: theme.sizes.largestElementHeight,
+    width: "100%",
+    background: theme.colors.secondaryBg,
+    borderRadius: theme.radii.default,
+    marginBottom: theme.spacing.twoXS,
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
+    paddingLeft: theme.spacing.xs,
+    paddingRight: theme.spacing.sm,
+    border: theme.colors.widgetBorderColor
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+      : undefined,
+    cursor: disabled ? "not-allowed" : "auto",
+    overflow: "hidden",
+  })
+)
 
 export const StyledWaveformInnerDiv = styled.div({
   flex: 1,
 })
 
 export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
-  ({ show }) => ({
+  ({ show, theme }) => ({
     display: show ? "block" : "none",
+    // CRITICAL: scrollingWaveform creates TWO WaveSurfer instances (recording + playback)
+    // as sibling divs. Stack them with relative positioning so they overlap.
+    position: "relative",
+    height: theme.sizes.largestElementHeight,
+    // Add vertical padding to prevent waveform from touching container edges.
+    paddingTop: theme.spacing.threeXS,
+    paddingBottom: theme.spacing.threeXS,
+    // Each WaveSurfer child div should be absolutely positioned to stack
+    "& > div": {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      // Use flexbox to center the shadow DOM content vertically
+      display: "flex",
+      alignItems: "center",
+    },
   })
 )
 
 export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
-}>(({ theme, isPlayingOrRecording }) => ({
+  disabled?: boolean
+}>(({ theme, isPlayingOrRecording, disabled }) => ({
   margin: theme.spacing.sm,
   fontFamily: theme.fonts.monospace,
-  color: isPlayingOrRecording
-    ? theme.colors.bodyText
-    : theme.colors.fadedText60,
+  color: disabled
+    ? theme.colors.fadedText40
+    : isPlayingOrRecording
+      ? theme.colors.bodyText
+      : theme.colors.fadedText60,
   backgroundColor: theme.colors.secondaryBg,
   fontSize: theme.fontSizes.sm,
 }))
@@ -74,6 +98,7 @@ export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
 
 // Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
+  flex: 1,
   height: theme.sizes.largestElementHeight,
   display: "flex",
   justifyContent: "center",
@@ -98,7 +123,7 @@ export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
     padding: theme.spacing.threeXS,
   },
   "& > button:hover, & > button:focus": {
-    color: theme.colors.red,
+    color: theme.colors.redColor,
   },
 }))
 
@@ -138,19 +163,3 @@ export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
 export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
 }))
-
-export const StyledSpinner = styled(Spinner)(({ theme }) => {
-  return {
-    fontSize: theme.fontSizes.sm,
-    width: theme.sizes.spinnerSize,
-    height: theme.sizes.spinnerSize,
-    borderWidth: theme.sizes.spinnerThickness,
-    justifyContents: "center",
-    padding: theme.spacing.none,
-    margin: theme.spacing.none,
-    borderColor: theme.colors.borderColor,
-    borderTopColor: theme.colors.secondary,
-    flexGrow: 0,
-    flexShrink: 0,
-  }
-})

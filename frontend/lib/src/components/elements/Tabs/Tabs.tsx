@@ -28,10 +28,10 @@ import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
 import { isElementStale } from "~lib/components/core/Block/utils"
-import { LibContext } from "~lib/components/core/LibContext"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { STALE_STYLES } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { STALE_STYLES } from "~lib/theme"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -42,19 +42,22 @@ export interface TabProps extends BlockPropsWithoutWidth {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   renderTabContent: (childProps: any) => ReactElement
   width: React.CSSProperties["width"]
+  flex: React.CSSProperties["flex"]
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale, width } = props
-  const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const { widgetsDisabled, node, isStale, width, flex } = props
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
+  const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
 
   let allTabLabels: string[] = []
-  const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
-  const [activeTabName, setActiveTabName] = useState<string>(
-    // @ts-expect-error
-    node.children[0].deltaBlock.tab.label || "0"
-  )
+  const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
+  const [activeTabName, setActiveTabName] = useState<string>(() => {
+    const tab = node.children[defaultTabIndex] as BlockNode
+
+    return tab?.deltaBlock?.tab?.label ?? "0"
+  })
 
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()
@@ -65,16 +68,15 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   useEffect(() => {
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey === -1) {
-      setActiveTabKey(0)
-      setActiveTabName(allTabLabels[0])
+      setActiveTabKey(defaultTabIndex)
+      setActiveTabName(allTabLabels[defaultTabIndex])
     }
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
   useEffect(() => {
     if (tabListRef.current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const { scrollWidth, clientWidth } = tabListRef.current
       setIsOverflowing(scrollWidth > clientWidth)
     }
@@ -85,13 +87,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(newTabKey)
       setActiveTabName(allTabLabels[newTabKey])
     } else {
-      setActiveTabKey(0)
-      setActiveTabName(allTabLabels[0])
+      setActiveTabKey(defaultTabIndex)
+      setActiveTabName(allTabLabels[defaultTabIndex])
     }
 
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [node.children.length])
 
   const TAB_HEIGHT = theme.sizes.tabHeight
@@ -103,6 +103,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
       width={width}
+      flex={flex}
     >
       <UITabs
         activateOnFocus

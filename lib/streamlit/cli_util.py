@@ -103,4 +103,4 @@ def open_browser(url: str) -> None:
 
     import platform
 
-    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')
+    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[unresolved-attribute]

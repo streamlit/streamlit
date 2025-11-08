@@ -170,44 +170,22 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             if tab_index is not None:
                 element.component_instance.tab_index = tab_index
 
-            # Normally, a widget's element_hash (which determines
-            # its identity across multiple runs of an app) is computed
-            # by hashing its arguments. This means that, if any of the arguments
-            # to the widget are changed, Streamlit considers it a new widget
-            # instance and it loses its previous state.
-            #
-            # However! If a *component* has a `key` argument, then the
-            # component's hash identity is determined by entirely by
-            # `component_name + url + key`. This means that, when `key`
-            # exists, the component will maintain its identity even when its
-            # other arguments change, and the component's iframe won't be
-            # remounted on the frontend.
+            element.component_instance.json_args = serialized_json_args
+            element.component_instance.special_args.extend(special_args)
 
-            def marshall_element_args() -> None:
-                element.component_instance.json_args = serialized_json_args
-                element.component_instance.special_args.extend(special_args)
-
-            ctx = get_script_run_ctx()
-
-            if key is None:
-                marshall_element_args()
-                computed_id = compute_and_register_element_id(
-                    "component_instance",
-                    user_key=key,
-                    form_id=current_form_id(dg),
-                    name=self.name,
-                    url=self.url,
-                    json_args=serialized_json_args,
-                    special_args=special_args,
-                )
-            else:
-                computed_id = compute_and_register_element_id(
-                    "component_instance",
-                    user_key=key,
-                    form_id=current_form_id(dg),
-                    name=self.name,
-                    url=self.url,
-                )
+            computed_id = compute_and_register_element_id(
+                "component_instance",
+                user_key=key,
+                # Ensure that the component identity is kept stable when key is provided,
+                # Only the name and url are whitelisted to result in a new identity
+                # if they are changed.
+                key_as_main_identity={"name", "url"},
+                dg=dg,
+                name=self.name,
+                url=self.url,
+                json_args=serialized_json_args,
+                special_args=special_args,
+            )
             element.component_instance.id = computed_id
 
             def deserialize_component(ui_value: Any) -> Any:
@@ -218,14 +196,11 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 element.component_instance.id,
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
-                ctx=ctx,
+                ctx=get_script_run_ctx(),
                 on_change_handler=on_change,
                 value_type="json_value",
             )
             widget_value = component_state.value
-
-            if key is not None:
-                marshall_element_args()
 
             if widget_value is None:
                 widget_value = default

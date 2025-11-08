@@ -19,12 +19,12 @@ import React, { memo, ReactElement, useCallback } from "react"
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
 import UIRadio from "~lib/components/shared/Radio"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

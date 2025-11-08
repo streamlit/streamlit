@@ -39,18 +39,21 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import TYPE_CHECKING, Callable, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from blinker import ANY, Signal
 from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from watchdog.observers.api import ObservedWatch
 
 _LOGGER: Final = get_logger(__name__)
@@ -315,7 +318,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         allow_nonexistent=allow_nonexistent,
                     )
                     self._watched_paths[path] = watched_path
-                except Exception as ex:
+                except StreamlitMaxRetriesError as ex:
                     _LOGGER.debug(
                         "Failed to calculate MD5 for path %s",
                         path,
@@ -371,11 +374,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # Watchdog 5.X is supported Python >=3.9, so watchdog 4.X is used for Python 3.8.
-        # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
-        # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
-        if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
-            changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
+        # Watchdog 5.X emits bytes paths on some platforms, so we normalize to str.
+        if isinstance(changed_path, bytes):
+            changed_path = changed_path.decode("utf-8")
 
         if changed_path.endswith("~"):
             # Files ending with ~ are typically backup files created by editors.
@@ -396,12 +397,23 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # directories themselves.
             if changed_path_info is None:
                 for path, info in self._watched_paths.items():
-                    if (
-                        os.path.isdir(path)
-                        and os.path.commonpath([path, abs_changed_path]) == path
-                    ):
-                        changed_path_info = info
-                        break
+                    if not os.path.isdir(path):
+                        continue
+                    try:
+                        if os.path.commonpath([path, abs_changed_path]) == path:
+                            changed_path_info = info
+                            break
+                    except ValueError as ex:
+                        # On Windows, os.path.commonpath raises ValueError when paths
+                        # are on different drives. In that case, the changed path
+                        # cannot be inside the watched directory.
+                        _LOGGER.debug(
+                            "Ignoring changed path %s.\nWatched_paths: %s",
+                            abs_changed_path,
+                            self._watched_paths,
+                            exc_info=ex,
+                        )
+                        continue
 
         # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
@@ -439,7 +451,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
             changed_path_info.md5 = new_md5
             changed_path_info.on_changed.send(abs_changed_path)
-        except Exception as ex:
+        except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
                 "Ignoring file change. Failed to calculate MD5 for path %s",
                 abs_changed_path,

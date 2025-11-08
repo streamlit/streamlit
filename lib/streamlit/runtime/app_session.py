@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -45,11 +45,14 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -735,10 +738,34 @@ class AppSession:
             msg.new_session, pages or self._pages_manager.get_pages()
         )
         _populate_config_msg(msg.new_session.config)
+
+        # Handles theme sections
+        # [theme] configs
         _populate_theme_msg(msg.new_session.custom_theme)
+        # [theme.light] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light,
+            f"theme.{config.CustomThemeCategories.LIGHT.value}",
+        )
+        # [theme.dark] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark,
+            f"theme.{config.CustomThemeCategories.DARK.value}",
+        )
+        # [theme.sidebar] configs
         _populate_theme_msg(
             msg.new_session.custom_theme.sidebar,
             f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
+        )
+        # [theme.light.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light.sidebar,
+            f"theme.{config.CustomThemeCategories.LIGHT_SIDEBAR.value}",
+        )
+        # [theme.dark.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark.sidebar,
+            f"theme.{config.CustomThemeCategories.DARK_SIDEBAR.value}",
         )
 
         # Immutable session data. We send this every time a new session is
@@ -810,6 +837,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
@@ -946,8 +979,12 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "base",
                 "font",
                 "fontFaces",
+                "codeFont",
+                "headingFont",
+                "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
+                "chartSequentialColors",
             }
             and option_val is not None
         ):
@@ -973,11 +1010,15 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         else:
             msg.base = base_map[base]
 
-    # Since the font field uses the deprecated enum, we need to put the font
-    # config into the body_font field instead:
-    body_font = theme_opts.get("font", None)
-    if body_font:
-        msg.body_font = body_font
+    # Handle font, codeFont, and headingFont config options and if they are
+    # specified with a source URL
+    msg = parse_fonts_with_source(
+        msg,
+        theme_opts.get("font", None),
+        theme_opts.get("codeFont", None),
+        theme_opts.get("headingFont", None),
+        section,
+    )
 
     font_faces = theme_opts.get("fontFaces", None)
     # If fontFaces was configured via config.toml, it's already a parsed list of
@@ -1005,6 +1046,45 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
+                    exc_info=e,
+                )
+
+    heading_font_sizes = theme_opts.get("headingFontSizes", None)
+    # headingFontSizes is either an single string value (set for all headings) or
+    # a list of strings (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+
+    if isinstance(heading_font_sizes, str):
+        heading_font_sizes = heading_font_sizes.strip().lower()
+        if heading_font_sizes.endswith(("px", "rem")):
+            # Handle the case where headingFontSizes is a single string value to be applied to all headings
+            heading_font_sizes = [heading_font_sizes] * 6
+        else:
+            # Handle the case where headingFontSizes is a json string (coming from CLI or env variable)
+            try:
+                heading_font_sizes = json.loads(heading_font_sizes)
+            except Exception as e:
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option with json.loads: %s.",
+                    heading_font_sizes,
+                    exc_info=e,
+                )
+                heading_font_sizes = None
+
+    if heading_font_sizes is not None:
+        # Check that the list has between 1 and 6 values
+        if not heading_font_sizes or len(heading_font_sizes) > 6:
+            raise ValueError(
+                f"Config theme.headingFontSizes should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_sizes)}"
+            )
+        for size in heading_font_sizes:
+            try:
+                msg.heading_font_sizes.append(size)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option: %s.",
+                    size,
                     exc_info=e,
                 )
 
@@ -1071,6 +1151,39 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
+                    exc_info=e,
+                )
+
+    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
+    # If chartSequentialColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_sequential_colors, str):
+        try:
+            chart_sequential_colors = json.loads(chart_sequential_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartSequentialColors config option: %s.",
+                chart_sequential_colors,
+                exc_info=e,
+            )
+            chart_sequential_colors = None
+
+    if chart_sequential_colors is not None:
+        # Check that the list has 10 color values
+        if len(chart_sequential_colors) != 10:
+            _LOGGER.error(
+                "Config theme.chartSequentialColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_sequential_colors),
+            )
+        for color in chart_sequential_colors:
+            try:
+                msg.chart_sequential_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartSequentialColors config option: %s.",
                     color,
                     exc_info=e,
                 )

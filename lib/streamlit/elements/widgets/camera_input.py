@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
@@ -52,7 +50,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
-SomeUploadedSnapshotFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
+SomeUploadedSnapshotFile: TypeAlias = UploadedFile | DeletedFile | None
 
 
 @dataclass
@@ -143,8 +141,8 @@ class CameraInputMixin:
             An optional callback invoked when this camera_input's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -234,7 +232,7 @@ class CameraInputMixin:
         element_id = compute_and_register_element_id(
             "camera_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,

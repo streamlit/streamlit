@@ -70,13 +70,13 @@ describe("FormSubmitButton", () => {
   it("renders without crashing", () => {
     // render with renderWithContexts necessary as FormsContext required
     // second arg is empty object as overrides for LibContextProps are not needed
-    renderWithContexts(<FormSubmitButton {...getProps()} />, {})
+    renderWithContexts(<FormSubmitButton {...getProps()} />)
     expect(screen.getByRole("button")).toBeInTheDocument()
   })
 
   it("has correct className", () => {
     const props = getProps()
-    renderWithContexts(<FormSubmitButton {...props} />, {})
+    renderWithContexts(<FormSubmitButton {...props} />)
 
     const formSubmitButton = screen.getByTestId("stFormSubmitButton")
 
@@ -85,7 +85,7 @@ describe("FormSubmitButton", () => {
 
   it("renders a label within the button", () => {
     const props = getProps()
-    renderWithContexts(<FormSubmitButton {...props} />, {})
+    renderWithContexts(<FormSubmitButton {...props} />)
 
     const formSubmitButton = screen.getByRole("button", {
       name: `${props.element.label}`,
@@ -97,14 +97,16 @@ describe("FormSubmitButton", () => {
   it("renders with help properly", async () => {
     const user = userEvent.setup()
     renderWithContexts(
-      <FormSubmitButton {...getProps({}, { help: "mockHelpText" })} />,
-      {}
+      <FormSubmitButton {...getProps({}, { help: "mockHelpText" })} />
     )
 
+    // Ensure both the button and the tooltip target have the correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
     const formSubmitButton = screen.getByRole("button")
-    expect(formSubmitButton).toHaveStyle("width: auto")
+    expect(formSubmitButton).toHaveStyle("width: 100%")
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
-    expect(tooltipTarget).toHaveStyle("width: auto")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
 
     await user.hover(tooltipTarget)
 
@@ -116,7 +118,7 @@ describe("FormSubmitButton", () => {
     const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "submitForm")
-    renderWithContexts(<FormSubmitButton {...props} />, {})
+    renderWithContexts(<FormSubmitButton {...props} />)
 
     const formSubmitButton = screen.getByRole("button")
 
@@ -132,7 +134,7 @@ describe("FormSubmitButton", () => {
     const user = userEvent.setup()
     const props = getProps({ fragmentId: "myFragmentId" })
     vi.spyOn(props.widgetMgr, "submitForm")
-    renderWithContexts(<FormSubmitButton {...props} />, {})
+    renderWithContexts(<FormSubmitButton {...props} />)
 
     const formSubmitButton = screen.getByRole("button")
 
@@ -151,13 +153,11 @@ describe("FormSubmitButton", () => {
       formsWithUploads: new Set(["mockFormId"]),
     }
 
-    renderWithContexts(
-      <FormSubmitButton {...getProps()} />,
-      {},
-      {
+    renderWithContexts(<FormSubmitButton {...getProps()} />, {
+      formsContext: {
         formsData: formsDataOverride,
-      }
-    )
+      },
+    })
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toBeDisabled()
@@ -177,8 +177,7 @@ describe("FormSubmitButton", () => {
     })
 
     const { unmount: unmountView1 } = renderWithContexts(
-      <FormSubmitButton {...props} />,
-      {}
+      <FormSubmitButton {...props} />
     )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
@@ -186,8 +185,7 @@ describe("FormSubmitButton", () => {
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
     const { unmount: unmountView2 } = renderWithContexts(
-      <FormSubmitButton {...props2} />,
-      {}
+      <FormSubmitButton {...props2} />
     )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)

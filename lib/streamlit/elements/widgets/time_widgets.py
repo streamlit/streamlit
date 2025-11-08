@@ -23,12 +23,10 @@ from typing import (
     Any,
     Final,
     Literal,
-    Union,
+    TypeAlias,
     cast,
     overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -65,21 +63,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 # Type for things that point to a specific time (even if a default time, though not None).
-TimeValue: TypeAlias = Union[time, datetime, str, Literal["now"]]
+TimeValue: TypeAlias = time | datetime | str | Literal["now"]
 
 # Type for things that point to a specific date (even if a default date, including None).
-NullableScalarDateValue: TypeAlias = Union[date, datetime, str, Literal["today"], None]
+NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | None
 
 # The accepted input value for st.date_input. Can be a date scalar or a date range.
-DateValue: TypeAlias = Union[NullableScalarDateValue, Sequence[NullableScalarDateValue]]
+DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValue]
 
 # The return value of st.date_input.
-DateWidgetRangeReturn: TypeAlias = Union[
-    tuple[()],
-    tuple[date],
-    tuple[date, date],
-]
-DateWidgetReturn: TypeAlias = Union[date, DateWidgetRangeReturn, None]
+DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
+DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 
 DEFAULT_STEP_MINUTES: Final = 15
@@ -420,8 +414,8 @@ class TimeWidgetsMixin:
         on_change : callable
             An optional callback invoked when this time_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -529,7 +523,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; only whitelist step since it
+            # affects the selection granularity and available options.
+            key_as_main_identity={"step"},
             dg=self.dg,
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
@@ -753,8 +749,8 @@ class TimeWidgetsMixin:
         on_change : callable
             An optional callback invoked when this date_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -912,7 +908,12 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; explicitly whitelist parameters
+            # that might invalidate the current widget state.
+            # format should be supported. However, there is a bug in baseweb where
+            # changing the format dynamically leads to a wrongly formatted date.
+            # So, we whitelist it for now until we migrate this away from baseweb.
+            key_as_main_identity={"min_value", "max_value", "format"},
             dg=self.dg,
             label=label,
             value=parsed,

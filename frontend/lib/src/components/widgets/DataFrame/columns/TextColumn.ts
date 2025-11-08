@@ -104,6 +104,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "text",
     sortMode: "default",
+    typeIcon: ":material/notes:",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {

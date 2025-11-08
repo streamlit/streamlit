@@ -14,33 +14,40 @@
  * limitations under the License.
  */
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Spinner } from "baseui/spinner"
 
 import { computeSpacingStyle, IconSize } from "~lib/theme"
 
-interface StyledSpinnerIconProps {
-  usingCustomTheme: boolean
-  size: IconSize
-  margin: string
-  padding: string
+export interface StyledSpinnerIconProps {
+  size?: IconSize
+  margin?: string
+  padding?: string
 }
 
 export const StyledSpinnerIcon = styled(Spinner, {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
-})<StyledSpinnerIconProps>(({ size, margin, padding, theme }) => {
+})<StyledSpinnerIconProps>(({
+  size = "lg",
+  margin = "",
+  padding = "",
+  theme,
+}) => {
+  // Spinners are rendered 20% smaller to visually match the size of Material icons:
+  const adjustedSpinnerSize = `calc(${theme.iconSizes[size]} * 0.80)`
+
   return {
-    width: theme.iconSizes[size],
-    height: theme.iconSizes[size],
-    fontSize: theme.iconSizes[size],
+    width: adjustedSpinnerSize,
+    height: adjustedSpinnerSize,
+    fontSize: adjustedSpinnerSize,
     justifyContents: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
-    borderColor: theme.colors.borderColor,
-    borderTopColor: theme.colors.secondary,
+    borderColor: theme.colors.fadedText10,
+    borderTopColor: theme.colors.bodyText,
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
@@ -111,13 +118,15 @@ interface StyledEmojiIconProps {
 
 export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
   ({ size, margin, padding, theme, color }) => {
+    // Emojis are rendered 10% smaller to visually match the size of Material icons:
+    const adjustedIconSize = `calc(${theme.iconSizes[size]} * 0.90)`
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContents: "center",
-      fontSize: theme.iconSizes[size],
-      width: theme.iconSizes[size],
-      height: theme.iconSizes[size],
+      fontSize: adjustedIconSize,
+      width: adjustedIconSize,
+      height: adjustedIconSize,
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       color: color,

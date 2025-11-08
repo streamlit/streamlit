@@ -24,8 +24,8 @@ import {
 import { FixedSizeList } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
-import { convertRemToPx } from "~lib/theme/utils"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
@@ -68,7 +68,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
 
-  if (!children[0] || !children[0].props.item) {
+  if (!children[0]?.props.item) {
     const childrenProps = children[0] ? children[0].props : {}
     return (
       <StyledList

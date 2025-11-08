@@ -14,7 +14,7 @@
 
 """file_uploader unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -138,7 +138,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             if accept_multiple:
                 assert return_val == uploaded_files
 
-                for actual, expected in zip(return_val, uploaded_files):
+                for actual, expected in zip(return_val, uploaded_files, strict=False):
                     assert actual.name == expected.name
                     assert actual.type == expected.type
                     assert actual.size == expected.size
@@ -249,6 +249,148 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_directory_upload(self, get_upload_files_patch):
+        """Test directory upload functionality"""
+        # Mock directory upload with multiple files
+        rec1 = UploadedFileRec(
+            "file1", "project/main.py", "text/plain", b"print('hello')"
+        )
+        rec2 = UploadedFileRec(
+            "file2", "project/utils.py", "text/plain", b"def helper(): pass"
+        )
+        rec3 = UploadedFileRec(
+            "file3", "project/tests/test_main.py", "text/plain", b"def test(): pass"
+        )
+
+        uploaded_files = [
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d2", upload_url="u2")
+            ),
+            UploadedFile(
+                rec3, FileURLsProto(file_id="file3", delete_url="d3", upload_url="u3")
+            ),
+        ]
+
+        get_upload_files_patch.return_value = uploaded_files
+
+        # Test directory upload
+        return_val = st.file_uploader(
+            "Upload directory", type=[".py"], accept_multiple_files="directory"
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+
+        # Directory uploads always return a list
+        assert return_val == uploaded_files
+        assert len(return_val) == 3
+
+        for actual, expected in zip(return_val, uploaded_files, strict=False):
+            assert actual.name == expected.name
+            assert actual.type == expected.type
+            assert actual.size == expected.size
+            assert actual.getvalue() == expected.getvalue()
+
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_directory_upload_with_file_filtering(self, get_upload_files_patch):
+        """Test that directory upload respects file type restrictions"""
+        # Mock mixed file types in directory - only .txt should be included
+        rec1 = UploadedFileRec(
+            "file1", "docs/readme.txt", "text/plain", b"readme content"
+        )
+        rec2 = UploadedFileRec(
+            "file2", "docs/notes.txt", "text/plain", b"notes content"
+        )
+        # These would be filtered out by file type restrictions
+
+        uploaded_files = [
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d2", upload_url="u2")
+            ),
+        ]
+
+        get_upload_files_patch.return_value = uploaded_files
+
+        return_val = st.file_uploader(
+            "Upload text files only", type=["txt"], accept_multiple_files="directory"
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+        assert c.type == [".txt"]
+
+        # Should only return .txt files
+        assert len(return_val) == 2
+        for file in return_val:
+            assert file.name.endswith(".txt")
+
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_directory_upload_empty(self, get_upload_files_patch):
+        """Test directory upload with no files"""
+        get_upload_files_patch.return_value = []
+
+        return_val = st.file_uploader(
+            "Upload empty directory", accept_multiple_files="directory"
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+
+        # Empty directory should return empty list
+        assert return_val == []
+
+    def test_directory_upload_proto_values(self):
+        """Test that directory upload sets correct proto values"""
+        st.file_uploader("Directory uploader", accept_multiple_files="directory")
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+
+    def test_directory_upload_with_width(self):
+        """Test directory upload with width parameter"""
+        st.file_uploader(
+            "Directory with width", accept_multiple_files="directory", width=300
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+
+    def test_directory_upload_disabled(self):
+        """Test disabled directory upload"""
+        st.file_uploader(
+            "Disabled directory", accept_multiple_files="directory", disabled=True
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+        assert c.disabled is True
+
+    def test_directory_upload_with_help(self):
+        """Test directory upload with help text"""
+        help_text = "Upload a directory containing your project files"
+
+        st.file_uploader(
+            "Project directory", accept_multiple_files="directory", help=help_text
+        )
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.multiple_files is True
+        assert c.accept_directory is True
+        assert c.help == help_text
+
 
 class FileUploaderWidthTest(DeltaGeneratorTestCase):
     def test_file_uploader_with_width_pixels(self):
@@ -293,3 +435,79 @@ class FileUploaderWidthTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.file_uploader("the label", width=invalid_width)
+
+
+class FileUploaderStableIdTest(DeltaGeneratorTestCase):
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.file_uploader(
+                label="Label 1",
+                key="file_uploader_key",
+                help="help 1",
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                disabled=False,
+                # Whitelisted kwargs
+                type=["txt", "csv"],
+                accept_multiple_files=False,
+            )
+            c1 = self.get_delta_from_queue().new_element.file_uploader
+            id1 = c1.id
+
+            st.file_uploader(
+                label="Label 2",
+                key="file_uploader_key",
+                help="help 2",
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                disabled=True,
+                # Whitelisted kwargs (same as before)
+                type=["txt", "csv"],
+                accept_multiple_files=False,
+            )
+            c2 = self.get_delta_from_queue().new_element.file_uploader
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("type", ["txt"], ["pdf", "doc"]),
+            ("type", None, ["csv"]),
+            ("accept_multiple_files", False, True),
+            ("accept_multiple_files", False, "directory"),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "file_uploader_key2",
+                "type": ["txt"],
+                "accept_multiple_files": False,
+            }
+            base_kwargs[kwarg_name] = value1
+            st.file_uploader(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.file_uploader
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.file_uploader(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.file_uploader
+            id2 = c2.id
+            assert id1 != id2

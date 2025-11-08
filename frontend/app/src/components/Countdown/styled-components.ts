@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
+import styled from "@emotion/styled"
 
 const screencastCounterAnimation = keyframes`
 0% {
@@ -38,10 +38,10 @@ export const StyledCountdown = styled.div(({ theme }) => ({
   width: theme.sizes.full,
   height: theme.sizes.full,
   fontSize: "40vh",
-  color: theme.colors.red,
+  color: theme.colors.redTextColor,
   fontWeight: theme.fontWeights.bold,
   opacity: "0.8",
-  textShadow: `1px 1px 10px ${theme.colors.darkGray}`,
+  textShadow: `1px 1px 10px ${theme.colors.grayTextColor}`,
   transition: "opacity 0.3s ease-in-out",
   animation: `${screencastCounterAnimation} 1s`,
 }))

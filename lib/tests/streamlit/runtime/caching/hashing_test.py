@@ -529,6 +529,34 @@ class HashTest(unittest.TestCase):
         assert get_hash(im4) == get_hash(im5)
         assert get_hash(im5) != get_hash(im6)
 
+    @pytest.mark.require_integration
+    def test_pydantic_model(self):
+        """Test that Pydantic models are properly hashed.
+
+        Verifies that:
+        - The same model instance hashes consistently
+        - Two identical model instances produce the same hash
+        - Models with different field values produce different hashes
+        - Different model classes with the same field values produce different hashes
+        """
+        import pydantic
+
+        class Foo(pydantic.BaseModel):
+            name: str
+
+        class Bar(pydantic.BaseModel):
+            name: str
+
+        m1 = Foo(name="fake_name1")
+        m1_again = Foo(name="fake_name1")
+        m2 = Foo(name="fake_name2")
+        m3 = Bar(name="fake_name1")
+
+        assert get_hash(m1) == get_hash(m1)
+        assert get_hash(m1) == get_hash(m1_again)
+        assert get_hash(m1) != get_hash(m2)
+        assert get_hash(m1) != get_hash(m3)
+
     @parameterized.expand(
         [
             (BytesIO, b"123", b"456", b"123"),

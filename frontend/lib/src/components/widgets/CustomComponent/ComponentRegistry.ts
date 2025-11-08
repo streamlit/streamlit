@@ -15,8 +15,8 @@
  */
 import { getLogger } from "loglevel"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import { ComponentMessageType } from "./enums"
 
@@ -96,6 +96,14 @@ export class ComponentRegistry {
   /** Return a URL for fetching a resource for the given component. */
   public getComponentURL = (componentName: string, path: string): string => {
     return this.endpoints.buildComponentURL(componentName, path)
+  }
+
+  /** Return a URL for fetching a resource for the given bidirectional component. */
+  public getBidiComponentURL = (
+    componentName: string,
+    path: string
+  ): string => {
+    return this.endpoints.buildBidiComponentURL(componentName, path)
   }
 
   private onMessageEvent = (event: MessageEvent): void => {

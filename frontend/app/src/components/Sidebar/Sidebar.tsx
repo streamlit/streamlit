@@ -17,6 +17,7 @@
 import React, {
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -29,20 +30,25 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
-import { SidebarNav } from "@streamlit/app/src/components/Navigation"
+import { LogoComponent } from "@streamlit/app/src/components/Logo"
+import {
+  shouldShowNavigation,
+  SidebarNav,
+} from "@streamlit/app/src/components/Navigation"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
   DynamicIcon,
   IsSidebarContext,
+  NavigationContext,
+  SidebarConfigContext,
   useEmotionTheme,
   useExecuteWhenChanged,
+  useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
-import { IAppPage, Logo } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
 
 import {
   RESIZE_HANDLE_WIDTH,
@@ -59,15 +65,9 @@ export interface SidebarProps {
   endpoints: StreamlitEndpoints
   children?: ReactElement
   hasElements: boolean
-  appLogo: Logo | null
-  appPages: IAppPage[]
-  navSections: string[]
-  onPageChange: (pageName: string) => void
-  currentPageScriptHash: string
-  hideSidebarNav: boolean
-  expandSidebarNav: boolean
   isCollapsed: boolean
-  onToggleCollapse: (collapsed: boolean) => void
+  onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
+  widgetsDisabled: boolean
 }
 
 const DEFAULT_WIDTH = "256"
@@ -78,22 +78,22 @@ function calculateMaxBreakpoint(value: string): number {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-  appLogo,
   endpoints,
-  appPages,
   children,
   hasElements,
-  onPageChange,
-  currentPageScriptHash,
-  hideSidebarNav,
-  expandSidebarNav,
-  navSections,
   isCollapsed,
   onToggleCollapse,
+  widgetsDisabled,
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
+
+  const { appPages, navSections } = useContext(NavigationContext)
+
+  const { hideSidebarNav, appLogo } = useContext(SidebarConfigContext)
+
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -139,6 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     ) => {
       // Use the actual ref width, not the delta, to avoid stale delta values
       if (ref) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const newWidth = ref.clientWidth || ref.offsetWidth
         initializeSidebarWidth(newWidth)
       }
@@ -150,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Collapse the sidebar if the window was narrowed and is now mobile-sized
     if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
       if (!isCollapsed) {
-        onToggleCollapse(true)
+        onToggleCollapse(true, false)
       }
     }
     setLastInnerWidth(innerWidth)
@@ -209,14 +210,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         appLogo={appLogo}
         endpoints={endpoints}
         collapsed={isCollapsed}
-        sidebarWidth={sidebarWidth}
         componentName="Sidebar Logo"
         dataTestId="stSidebarLogo"
       />
     )
   }
 
-  const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+  const hasPageNavAbove =
+    shouldShowNavigation(appPages, navSections) && !hideSidebarNav
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -254,10 +255,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       <StyledSidebarContent
         data-testid="stSidebarContent"
         ref={sidebarRef}
-        // Safari fix: hide scrollbars when not hovered. See globalStyles.ts
-        className={"hideScrollbar"}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        scrollbarGutterSize={scrollbarGutterSize}
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
@@ -271,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <DynamicIcon
                 size="xl"
-                iconValue={":material/keyboard_double_arrow_left:"}
+                iconValue=":material/keyboard_double_arrow_left:"
                 color={theme.colors.fadedText60}
               />
             </BaseButton>
@@ -280,13 +280,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         {hasPageNavAbove && (
           <SidebarNav
             endpoints={endpoints}
-            appPages={appPages}
             collapseSidebar={toggleCollapse}
-            currentPageScriptHash={currentPageScriptHash}
-            navSections={navSections}
             hasSidebarElements={hasElements}
-            expandSidebarNav={expandSidebarNav}
-            onPageChange={onPageChange}
+            widgetsDisabled={widgetsDisabled}
           />
         )}
         <StyledSidebarUserContent

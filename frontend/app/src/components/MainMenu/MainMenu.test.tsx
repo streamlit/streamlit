@@ -18,12 +18,12 @@ import React from "react"
 
 import { screen, within } from "@testing-library/react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { IMenuItem, mockSessionInfo, render } from "@streamlit/lib"
 import { Config } from "@streamlit/protobuf"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
-import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 import MainMenu, { Props } from "./MainMenu"
+import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: vi.fn(),

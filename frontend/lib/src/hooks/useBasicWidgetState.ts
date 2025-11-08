@@ -22,9 +22,9 @@ import {
   useState,
 } from "react"
 
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { isNullOrUndefined } from "~lib/util/utils"
+import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type ValueWithSource<T> = {
   value: T
@@ -107,6 +107,7 @@ export function useBasicWidgetClientState<
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     setNextValueWithSource(null) // Clear "event".
 
     setCurrentValue(nextValueWithSource.value)
@@ -199,8 +200,7 @@ export function useBasicWidgetState<
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

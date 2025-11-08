@@ -81,6 +81,7 @@ export default function AlertContainer({
       overrides={{
         Body: {
           style: {
+            fontWeight: theme.fontWeights.normal,
             marginTop: theme.spacing.none,
             marginBottom: theme.spacing.none,
             marginLeft: theme.spacing.none,

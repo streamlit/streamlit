@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
 
@@ -52,14 +52,15 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -228,8 +229,8 @@ class RadioMixin:
         on_change : callable
             An optional callback invoked when this radio's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -270,6 +271,8 @@ class RadioMixin:
         -------
         any
             The selected option or ``None`` if no option is selected.
+
+            This is a copy of the selected option, not the original.
 
         Example
         -------
@@ -368,7 +371,12 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Treat provided key as the main widget identity. Only include the
+            # following parameters in the identity computation since they can
+            # invalidate the current selection mapping.
+            # Changes to format_func also invalidate the current selection,
+            # but this is already handled via the `options` parameter below:
+            key_as_main_identity={"options"},
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],

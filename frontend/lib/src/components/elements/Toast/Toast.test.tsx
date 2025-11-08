@@ -16,15 +16,22 @@
 
 import React, { ReactElement } from "react"
 
-import { RenderResult, screen, waitFor, within } from "@testing-library/react"
-import { PLACEMENT, ToasterContainer } from "baseui/toast"
+import {
+  act,
+  RenderResult,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
+import { vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockTheme } from "~lib/mocks/mockTheme"
 import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import Toast, { shortenMessage, ToastProps } from "./Toast"
 
@@ -46,9 +53,13 @@ const createContainer = (): ReactElement => (
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
-  body: "This is a toast message",
-  icon: "🐶",
-  ...elementProps,
+  element: ToastProto.create({
+    body: "This is a toast message",
+    icon: "🐶",
+    // Default to no auto-hide in tests to avoid timers leaking past teardown
+    duration: 0,
+    ...elementProps,
+  }),
 })
 
 const renderComponent = (props: ToastProps): RenderResult =>
@@ -60,6 +71,26 @@ const renderComponent = (props: ToastProps): RenderResult =>
   )
 
 describe("Toast Component", () => {
+  beforeEach(() => {
+    // Use fake timers across tests to control and flush BaseWeb internal timeouts
+    vi.useFakeTimers()
+  })
+
+  afterEach(async () => {
+    // Clear all toasts and flush timers to avoid updates after test teardown
+    // eslint-disable-next-line @typescript-eslint/require-await
+    await act(async () => {
+      toaster.clear()
+    })
+
+    // Ensure any pending BaseWeb toast timers are executed and then cleared
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
   test("renders default toast", () => {
     const props = getProps()
     renderComponent(props)
@@ -98,7 +129,7 @@ describe("Toast Component", () => {
   })
 
   test("can expand to see the full toast message & collapse to truncate", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps({
       icon: "",
       body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
@@ -117,6 +148,9 @@ describe("Toast Component", () => {
 
     // Click view more button & expand the message
     await user.click(expandButton)
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
     expect(toast).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
     )
@@ -125,6 +159,9 @@ describe("Toast Component", () => {
     const collapseButton = screen.getByRole("button", { name: "view less" })
     expect(toast).toContainElement(collapseButton)
     await user.click(collapseButton)
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
     expect(toastText).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long"
     )
@@ -132,7 +169,7 @@ describe("Toast Component", () => {
   })
 
   test("can close toast", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps()
     renderComponent(props)
 
@@ -142,8 +179,32 @@ describe("Toast Component", () => {
     expect(closeButton).toBeInTheDocument()
     // Click close button
     await user.click(closeButton)
-    // Wait for toast to be removed from DOM
-    await waitFor(() => expect(toast).not.toBeInTheDocument())
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    // Toast may be removed synchronously when timers are flushed
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  test("auto hides based on duration seconds", async () => {
+    const props = getProps({ duration: 1 })
+    renderComponent(props)
+
+    const toast = screen.getByRole("alert")
+    expect(toast).toBeVisible()
+
+    // Advance time just before auto hide
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+    expect(screen.getByRole("alert")).toBeVisible()
+
+    // Cross the 1s threshold (Toast multiplies seconds by 1000)
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+
+    await waitForElementToBeRemoved(toast)
   })
 
   test("throws an error when called via st.sidebar.toast", () => {
@@ -203,7 +264,7 @@ describe("Toast Component", () => {
   })
 
   test("expands and collapses long messages with explicit line breaks correctly", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const messageWithBreaks =
       "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."
     const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
@@ -212,6 +273,9 @@ describe("Toast Component", () => {
 
     const expandButton = screen.getByRole("button", { name: "view more" })
     await user.click(expandButton) // Expand
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     const toastExpanded = screen
       .getByRole("alert")
@@ -220,6 +284,9 @@ describe("Toast Component", () => {
 
     const collapseButton = screen.getByRole("button", { name: "view less" })
     await user.click(collapseButton) // Collapse
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     const toastCollapsed = screen
       .getByRole("alert")

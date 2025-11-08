@@ -16,28 +16,43 @@
 
 import React, { ReactElement } from "react"
 
+import { DynamicIcon } from "@streamlit/lib"
+
 import {
+  StyledChevronContainer,
   StyledNavSectionContainer,
+  StyledNavSectionHeaderText,
   StyledSidebarNavSectionHeader,
 } from "./styled-components"
 
 export interface NavSectionProps {
   header?: string
   children: ReactElement[]
+  isExpanded: boolean
+  onToggle: () => void
 }
 
 const NavSection = ({
   header = "",
   children,
+  isExpanded,
+  onToggle,
 }: NavSectionProps): ReactElement => {
   return (
     <StyledNavSectionContainer>
       {header && (
-        <StyledSidebarNavSectionHeader data-testid="stNavSectionHeader">
-          {header}
+        <StyledSidebarNavSectionHeader
+          data-testid="stNavSectionHeader"
+          onClick={onToggle}
+          isExpanded={isExpanded}
+        >
+          <StyledNavSectionHeaderText>{header}</StyledNavSectionHeaderText>
+          <StyledChevronContainer isExpanded={isExpanded}>
+            <DynamicIcon iconValue=":material/expand_more:" size="lg" />
+          </StyledChevronContainer>
         </StyledSidebarNavSectionHeader>
       )}
-      {children}
+      {isExpanded && children}
     </StyledNavSectionContainer>
   )
 }

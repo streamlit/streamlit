@@ -22,6 +22,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     TypeVar,
     Union,
@@ -29,10 +30,12 @@ from typing import (
     overload,
 )
 
-from typing_extensions import TypeAlias
-
 from streamlit import dataframe_util
 from streamlit import logger as _logger
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -47,6 +50,13 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -60,7 +70,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import is_type
+from streamlit.type_util import is_list_like, is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -79,18 +89,11 @@ _LOGGER: Final = _logger.get_logger(__name__)
 # formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
     "EditableData",
-    bound=Union[
-        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        tuple[Any],
-        list[Any],
-        set[Any],
-        dict[str, Any],
-        # TODO(lukasmasuch): Add support for np.ndarray
-        # but it is not possible with np.ndarray.
-        # NDArray[Any] works, but is only available in numpy>1.20.
-        # TODO(lukasmasuch): Add support for pa.Table typing
-        # pa.Table does not work since it is a C-based class resulting in Any
-    ],
+    bound=dataframe_util.DataFrameGenericAlias[Any]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any],
 )
 
 
@@ -161,7 +164,8 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v for k, v in data_editor_state["edited_rows"].items()
+            int(k): v
+            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
         }
         return data_editor_state
 
@@ -170,14 +174,14 @@ class DataEditorSerde:
 
 
 def _parse_value(
-    value: str | int | float | bool | None,
+    value: str | int | float | bool | list[str] | None,
     column_data_kind: ColumnDataKind,
 ) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
-    value : str | int | float | bool | None
+    value : str | int | float | bool | list[str] | None
         The value to convert.
 
     column_data_kind : ColumnDataKind
@@ -194,8 +198,19 @@ def _parse_value(
     import pandas as pd
 
     try:
+        if column_data_kind in (ColumnDataKind.LIST, ColumnDataKind.EMPTY):
+            return list(value) if is_list_like(value) else [value]  # ty: ignore
+
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
+
+        # List values aren't supported for anything else than list column data kind.
+        # To make the type checker happy, we raise a TypeError here. However,
+        # This isn't expected to happen.
+        if isinstance(value, list):
+            raise TypeError(  # noqa: TRY301
+                "List values are only supported by list, string and empty columns."
+            )
 
         if column_data_kind == ColumnDataKind.INTEGER:
             return int(value)
@@ -220,7 +235,7 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)
+            datetime_value = pd.Timestamp(value)  # ty: ignore
 
             if datetime_value is pd.NaT:
                 return None
@@ -234,7 +249,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
@@ -247,7 +262,9 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]],
+    edited_rows: Mapping[
+        int, Mapping[str, str | int | float | bool | list[str] | None]
+    ],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -278,7 +295,7 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iloc[row_pos, col_pos] = _parse_value(
+                df.iat[row_pos, col_pos] = _parse_value(
                     value, dataframe_schema[col_name]
                 )
 
@@ -301,6 +318,20 @@ def _parse_added_row(
             new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
 
     return index_value, new_row
+
+
+def _assign_row_values(
+    df: pd.DataFrame,
+    row_label: Any,
+    row_values: list[Any],
+) -> None:
+    """Assign values to a dataframe row via a mapping.
+
+    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
+    multi-dimensional arrays when a column legitimately stores list values.
+    """
+
+    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
 
 
 def _apply_row_additions(
@@ -337,8 +368,8 @@ def _apply_row_additions(
     if isinstance(df.index, pd.RangeIndex):
         # Extract metadata from the range index:
         index_type = "range"
-        index_stop = cast("int", df.index.stop)
-        index_step = cast("int", df.index.step)
+        index_stop = df.index.stop
+        index_step = df.index.step
     elif isinstance(df.index, pd.Index) and pd.api.types.is_integer_dtype(
         df.index.dtype
     ):
@@ -359,13 +390,13 @@ def _apply_row_additions(
             # already exists. In the future, it would be better to
             # require users to provide unique non-None values for the index with
             # some kind of visual indications.
-            df.loc[index_value, :] = new_row
+            _assign_row_values(df, index_value, new_row)
             continue
 
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            df.loc[index_stop, :] = new_row
+            _assign_row_values(df, index_stop, new_row)
             # Increment to the next range index value
             index_stop += index_step
             continue
@@ -578,14 +609,14 @@ class DataEditorMixin:
         self,
         data: EditableData,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -599,14 +630,14 @@ class DataEditorMixin:
         self,
         data: Any,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -620,14 +651,14 @@ class DataEditorMixin:
         self,
         data: DataTypes,
         *,
-        width: int | None = None,
-        height: int | None = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool | Iterable[str] = False,
+        disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -647,9 +678,12 @@ class DataEditorMixin:
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
                 - Text and number formatting from ``column_config`` always takes
                   precedence over text and number formatting from ``pandas.Styler``.
+                - If your dataframe starts with an empty column, you should set
+                  the column datatype in the underlying dataframe to ensure your
+                  intended datatype, especially for integers versus floats.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
+                  ``complex``, ``tuple``, ``bytes``, ``bytearray``,
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
@@ -658,18 +692,38 @@ class DataEditorMixin:
                   default to uneditable, but this can be changed through column
                   configuration.
 
-        width : int or None
-            Desired width of the data editor expressed in pixels. If ``width``
-            is ``None`` (default), Streamlit sets the data editor width to fit
-            its contents up to the width of the parent container. If ``width``
-            is greater than the width of the parent container, Streamlit sets
-            the data editor width to match the width of the parent container.
+        width : "stretch", "content", or int
+            The width of the data editor. This can be one of the following:
 
-        height : int or None
-            Desired height of the data editor expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the data editor element is
-            enabled when the height does not accommodate all rows.
+            - ``"stretch"`` (default): The width of the editor matches the
+              width of the parent container.
+            - ``"content"``: The width of the editor matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The editor has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the editor matches the width
+              of the parent container.
+
+        height : int, "auto", "content", or "stretch"
+            The height of the data editor. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - ``"stretch"``: The height of the editor expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The editor will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
+            - An integer specifying the height in pixels: The editor has a
+              fixed height.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
+
+            Vertical scrolling within the editor is enabled when the height
+            does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -678,33 +732,52 @@ class DataEditorMixin:
             this is ``False``, Streamlit sets the data editor's width according
             to ``width``.
 
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
+
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
             (default), the visibility of index columns is automatically
             determined based on the data.
 
-        column_order : Iterable of str or None
-            Specifies the display order of columns. This also affects which columns are
-            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
-            first, followed by 'col1', and will hide all other non-index columns. If
-            None (default), the order is inherited from the original data structure.
+        column_order : Iterable[str] or None
+            The ordered list of columns to display. If this is ``None``
+            (default), Streamlit displays all columns in the order inherited
+            from the underlying data structure. If this is a list, the
+            indicated columns will display in the order they appear within the
+            list. Columns may be omitted or repeated within the list.
+
+            For example, ``column_order=("col2", "col1")`` will display
+            ``"col2"`` first, followed by ``"col1"``, and will hide all other
+            non-index columns.
+
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
 
         column_config : dict or None
-            Configures how columns are displayed, e.g. their title, visibility, type, or
-            format, as well as editing properties such as min/max value or step.
-            This needs to be a dictionary where each key is a column name and the value
-            is one of:
+            Configuration to customize how columns are displayed. If this is
+            ``None`` (default), columns are styled based on the underlying data
+            type of each column.
+
+            Column configuration can modify column names, visibility, type,
+            width, format, editing properties like min/max, and more. If this
+            is a dictionary, the keys are column names (strings) and/or
+            positional column indices (integers), and the values are one of the
+            following:
 
             - ``None`` to hide the column.
-
             - A string to set the display label of the column.
+            - One of the column types defined under ``st.column_config``. For
+              example, to show a column as dollar amounts, use
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``.
+              See more info on the available column types and config options
+              `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
-            - One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values", format="$ %d")`` to show
-              a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
-
-            To configure the index column(s), use ``_index`` as the column name.
+            To configure the index column(s), use ``"_index"`` as the column
+            name, or use a positional column index where ``0`` refers to the
+            first index column.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -712,11 +785,20 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or Iterable of str
-            Controls the editing of columns. If True, editing is disabled for all columns.
-            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
-            only the specified columns will be disabled for editing. If False (default),
-            all columns that support editing are editable.
+        disabled : bool or Iterable[str | int]
+            Controls the editing of columns. This can be one of the following:
+
+            - ``False`` (default): All columns that support editing are editable.
+            - ``True``: All columns are disabled for editing.
+            - An Iterable of column names and/or positional indices: The
+              specified columns are disabled for editing while the remaining
+              columns are editable where supported. For example,
+              ``disabled=["col1", "col2"]`` will disable editing for the
+              columns named "col1" and "col2".
+
+            To disable editing for the index column(s), use ``"_index"`` as the
+            column name, or use a positional column index where ``0`` refers to
+            the first index column.
 
         key : str
             An optional string to use as the unique key for this widget. If this
@@ -726,8 +808,8 @@ class DataEditorMixin:
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -746,15 +828,17 @@ class DataEditorMixin:
 
         Examples
         --------
-        >>> import streamlit as st
+        **Example 1: Basic usage**
+
         >>> import pandas as pd
+        >>> import streamlit as st
         >>>
         >>> df = pd.DataFrame(
         >>>     [
-        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
-        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
-        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
-        >>>    ]
+        >>>         {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>         {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>         {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>     ]
         >>> )
         >>> edited_df = st.data_editor(df)
         >>>
@@ -765,17 +849,20 @@ class DataEditorMixin:
            https://doc-data-editor.streamlit.app/
            height: 350px
 
-        You can also allow the user to add and delete rows by setting ``num_rows`` to "dynamic":
+        **Example 2: Allowing users to add and delete rows**
+
+        You can allow your users to add and delete rows by setting ``num_rows``
+        to "dynamic":
 
         >>> import streamlit as st
         >>> import pandas as pd
         >>>
         >>> df = pd.DataFrame(
         >>>     [
-        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
-        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
-        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
-        >>>    ]
+        >>>         {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>         {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>         {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>     ]
         >>> )
         >>> edited_df = st.data_editor(df, num_rows="dynamic")
         >>>
@@ -786,7 +873,9 @@ class DataEditorMixin:
            https://doc-data-editor1.streamlit.app/
            height: 450px
 
-        Or you can customize the data editor via ``column_config``, ``hide_index``,
+        **Example 3: Data editor configuration**
+
+        You can customize the data editor via ``column_config``, ``hide_index``,
         ``column_order``, or ``disabled``:
 
         >>> import pandas as pd
@@ -832,6 +921,14 @@ class DataEditorMixin:
 
         key = to_key(key)
 
+        validate_width(width, allow_content=True)
+        validate_height(
+            height,
+            allow_content=True,
+            allow_stretch=True,
+            additional_allowed=["auto"],
+        )
+
         check_widget_policies(
             self.dg,
             key,
@@ -839,6 +936,23 @@ class DataEditorMixin:
             default_value=None,
             writes_allowed=False,
         )
+
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
 
         if column_order is not None:
             column_order = list(column_order)
@@ -935,7 +1049,7 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=False,
             dg=self.dg,
             data=arrow_bytes,
             width=width,
@@ -949,18 +1063,6 @@ class DataEditorMixin:
 
         proto = ArrowProto()
         proto.id = element_id
-
-        if use_container_width is None:
-            # If use_container_width was not explicitly set by the user, we set
-            # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = width is None
-
-        proto.use_container_width = use_container_width
-
-        if width:
-            proto.width = width
-        if height:
-            proto.height = height
 
         if row_height:
             proto.row_height = row_height
@@ -998,6 +1100,13 @@ class DataEditorMixin:
 
         marshall_column_config(proto, column_config_mapping)
 
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
+
         serde = DataEditorSerde()
 
         widget_state = register_widget(
@@ -1012,7 +1121,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto)
+        self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

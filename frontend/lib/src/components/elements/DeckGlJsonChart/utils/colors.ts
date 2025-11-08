@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import * as layers from "@deck.gl/layers"
 import * as geoLayers from "@deck.gl/geo-layers"
+import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
 
 import { jsonConverter } from "./jsonConverter"
