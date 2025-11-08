@@ -119,7 +119,7 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon
-      // or don't show it (right now it's always shown).
+      // or if the arrow is not shown (controlled by the showArrow prop).
       paddingLeft: theme.spacing.twoXS,
     }),
   })

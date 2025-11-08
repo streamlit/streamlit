@@ -292,12 +292,13 @@ class MetricMixin:
             cast("DeltaArrow", clean_text(delta_arrow))
         )
 
-        if parsed_delta_arrow == "off":
-            metric_proto.direction = MetricProto.MetricDirection.NONE
-        elif parsed_delta_arrow == "up":
-            metric_proto.direction = MetricProto.MetricDirection.UP
-        elif parsed_delta_arrow == "down":
-            metric_proto.direction = MetricProto.MetricDirection.DOWN
+        if parsed_delta_arrow != "auto":
+            if parsed_delta_arrow == "off":
+                metric_proto.direction = MetricProto.MetricDirection.NONE
+            elif parsed_delta_arrow == "up":
+                metric_proto.direction = MetricProto.MetricDirection.UP
+            elif parsed_delta_arrow == "down":
+                metric_proto.direction = MetricProto.MetricDirection.DOWN
         metric_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
