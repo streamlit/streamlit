@@ -28,8 +28,17 @@ export const Box = styled.div<{
   height,
 }))
 
-// Helper function to handle the border color for baseweb input widgets
-// @see Selectbox, Multiselect, DateInput, TimeInput, TextInput, TextArea, NumberInput
+/**
+ * Helper function to handle the border color for baseweb input widgets
+ * @see Selectbox
+ * @see Multiselect
+ * @see DateInput
+ * @see TimeInput
+ * @see TextInput
+ * @see TextArea
+ * Note: NumberInput exhibits same styling but doesn't directly use this function -
+ * border color is handled in StyledInputContainer instead of the baseweb overrides.
+ */
 export const getBorderColor = (
   colors: EmotionThemeColors,
   $isFocused: boolean
