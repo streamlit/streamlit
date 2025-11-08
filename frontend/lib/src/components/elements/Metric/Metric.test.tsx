@@ -478,7 +478,7 @@ describe("Metric element", () => {
           encodings: ["x"],
           nearest: true,
           on: "mousemove",
-          clear: "mouseout",
+          clear: "mouseleave",
         }),
       })
     })

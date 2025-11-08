@@ -169,7 +169,7 @@ export function getMetricChartSpec(
               encodings: ["x"],
               nearest: true,
               on: "mousemove",
-              clear: "mouseout",
+              clear: "mouseleave",
             },
           },
         ],
@@ -183,17 +183,6 @@ export function getMetricChartSpec(
               param: `${baseName}_hover_selection`,
               empty: false,
             },
-          },
-          {
-            window: [
-              {
-                op: "row_number",
-                as: "hover_selection_rank",
-              },
-            ],
-          },
-          {
-            filter: "datum.hover_selection_rank === 1",
           },
         ],
         mark: {
