@@ -96,6 +96,16 @@ st.download_button(
     key="help_download_button",
 )
 
+shortcut_download_clicked = st.download_button(
+    "Shortcut download button",
+    data="Shortcut payload",
+    file_name="shortcut.txt",
+    shortcut="Ctrl+Alt+D",
+    key="shortcut_download_button",
+)
+if shortcut_download_clicked:
+    st.write("Shortcut download triggered!")
+
 random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 

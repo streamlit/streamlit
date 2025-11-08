@@ -17,6 +17,7 @@
 import React, {
   memo,
   ReactElement,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -31,6 +32,7 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -46,6 +48,7 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url } = element
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
@@ -62,26 +65,42 @@ function DownloadButton(props: Props): ReactElement {
     [endpoints, url]
   )
 
-  useEffect(() => {
-    // Since we use a hidden link to download, we can't use the onerror event
-    // to catch src url load errors. Catch with direct check instead.
-    void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
-  }, [downloadUrl, endpoints])
+  const handleDownloadClick = useCallback((): void => {
+    if (disabled) {
+      return
+    }
 
-  const handleDownloadClick: () => void = () => {
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
-    // Downloads are only done on links, so create a hidden one and click it
-    // for the user.
     const link = createDownloadLinkElement({
       filename: "",
       url: downloadUrl,
       enforceDownloadInNewTab,
     })
     link.click()
-  }
+  }, [
+    disabled,
+    ignoreRerun,
+    widgetMgr,
+    element,
+    fragmentId,
+    downloadUrl,
+    enforceDownloadInNewTab,
+  ])
+
+  useEffect(() => {
+    // Since we use a hidden link to download, we can't use the onerror event
+    // to catch src url load errors. Catch with direct check instead.
+    void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
+  }, [downloadUrl, endpoints])
+
+  useRegisterShortcut({
+    shortcut,
+    disabled,
+    onActivate: handleDownloadClick,
+  })
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
@@ -93,7 +112,7 @@ function DownloadButton(props: Props): ReactElement {
           onClick={handleDownloadClick}
           containerWidth={true}
         >
-          <DynamicButtonLabel icon={icon} label={label} />
+          <DynamicButtonLabel icon={icon} label={label} shortcut={shortcut} />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

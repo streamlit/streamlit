@@ -29,7 +29,17 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 27
+TOTAL_BUTTONS = 28
+
+CONTROL_KEY = "Control"
+
+
+def _press_shortcut(page: Page, key: str, *, include_alt: bool = False) -> None:
+    modifiers = [CONTROL_KEY]
+    if include_alt:
+        modifiers.append("Alt")
+    shortcut = "+".join([*modifiers, f"Key{key.upper()}"])
+    page.keyboard.press(shortcut)
 
 
 def test_button_widget_rendering(
@@ -256,3 +266,17 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_button_displays_shortcut(app: Page):
+    """Ensure shortcut labels are rendered for buttons."""
+    shortcut_button = get_element_by_key(app, "shortcut_button")
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+
+
+def test_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the button."""
+    app.locator("body").click()
+    _press_shortcut(app, "j")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Shortcut button pressed!")).to_be_visible()

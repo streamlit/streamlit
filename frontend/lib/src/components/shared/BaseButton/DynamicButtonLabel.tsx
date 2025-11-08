@@ -14,19 +14,26 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useMemo } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
 import { IconSize } from "~lib/theme"
+import { isFromMac } from "~lib/util/utils"
 
-import { StyledButtonLabel } from "./styled-components"
+import {
+  StyledButtonLabel,
+  StyledButtonMainLabel,
+  StyledButtonShortcut,
+} from "./styled-components"
 
 export interface DynamicButtonLabelProps {
   icon?: string
   label?: string
   iconSize?: IconSize
   useSmallerFont?: boolean
+  shortcut?: string | null
 }
 
 export const DynamicButtonLabel = ({
@@ -34,18 +41,30 @@ export const DynamicButtonLabel = ({
   label,
   iconSize,
   useSmallerFont = false,
+  shortcut,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
+  const displayShortcut = useMemo(() => {
+    return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
+  }, [shortcut])
+
   return (
     <StyledButtonLabel>
-      {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
-      {label && (
-        <StreamlitMarkdown
-          source={label}
-          allowHTML={false}
-          isLabel
-          largerLabel={!useSmallerFont}
-          disableLinks
-        />
+      <StyledButtonMainLabel>
+        {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
+        {label && (
+          <StreamlitMarkdown
+            source={label}
+            allowHTML={false}
+            isLabel
+            largerLabel={!useSmallerFont}
+            disableLinks
+          />
+        )}
+      </StyledButtonMainLabel>
+      {displayShortcut && (
+        <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>
+          {displayShortcut}
+        </StyledButtonShortcut>
       )}
     </StyledButtonLabel>
   )

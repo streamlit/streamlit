@@ -75,6 +75,111 @@ For more information, refer to the
 DownloadButtonDataType: TypeAlias = str | bytes | TextIO | BinaryIO | io.RawIOBase
 
 
+_MODIFIER_ALIASES: Final[dict[str, str]] = {
+    "ctrl": "ctrl",
+    "control": "ctrl",
+    "cmd": "cmd",
+    "command": "cmd",
+    "meta": "cmd",
+    "alt": "alt",
+    "option": "alt",
+    "shift": "shift",
+}
+
+_MODIFIER_ORDER: Final[tuple[str, ...]] = ("ctrl", "cmd", "alt", "shift")
+
+_KEY_ALIASES: Final[dict[str, str]] = {
+    "enter": "enter",
+    "return": "enter",
+    "space": "space",
+    "spacebar": "space",
+    "tab": "tab",
+    "escape": "escape",
+    "esc": "escape",
+    "backspace": "backspace",
+    "delete": "delete",
+    "del": "delete",
+    "home": "home",
+    "end": "end",
+    "pageup": "pageup",
+    "pagedown": "pagedown",
+    "left": "left",
+    "arrowleft": "left",
+    "right": "right",
+    "arrowright": "right",
+    "up": "up",
+    "arrowup": "up",
+    "down": "down",
+    "arrowdown": "down",
+}
+
+_RESERVED_KEYS: Final[set[str]] = {"c", "r"}
+
+
+def _normalize_shortcut(shortcut: str) -> str:
+    if not isinstance(shortcut, str):
+        raise StreamlitAPIException("shortcut must be a string value.")
+
+    tokens = [token.strip() for token in shortcut.split("+") if token.strip()]
+    if not tokens:
+        raise StreamlitAPIException(
+            "shortcut must contain at least one key or modifier."
+        )
+
+    modifiers: list[str] = []
+    key: str | None = None
+
+    for raw_token in tokens:
+        lower_token = raw_token.lower()
+        if lower_token in _MODIFIER_ALIASES:
+            normalized_modifier = _MODIFIER_ALIASES[lower_token]
+            if normalized_modifier not in modifiers:
+                modifiers.append(normalized_modifier)
+            continue
+
+        if key is not None:
+            raise StreamlitAPIException(
+                "shortcut may only specify a single non-modifier key."
+            )
+
+        normalized_key = _normalize_key_token(lower_token)
+        if normalized_key in _RESERVED_KEYS:
+            raise StreamlitAPIException(
+                "shortcut cannot use the keys 'C' or 'R', with or without modifiers."
+            )
+
+        key = normalized_key
+
+    if key is None and not modifiers:
+        raise StreamlitAPIException(
+            "shortcut must contain a key, a modifier, or a modifier key combination."
+        )
+
+    normalized_tokens: list[str] = [
+        modifier for modifier in _MODIFIER_ORDER if modifier in modifiers
+    ]
+    if key is not None:
+        normalized_tokens.append(key)
+
+    return "+".join(normalized_tokens)
+
+
+def _normalize_key_token(lower_token: str) -> str:
+    if lower_token in _KEY_ALIASES:
+        return _KEY_ALIASES[lower_token]
+
+    if len(lower_token) == 1 and lower_token.isalnum():
+        return lower_token
+
+    if lower_token.startswith("f") and lower_token[1:].isdigit():
+        return lower_token
+
+    raise StreamlitAPIException(
+        "shortcut must include a single character or one of the supported keys "
+        "(e.g. Enter, Space, Tab, Escape)."
+    )
+
+
 @dataclass
 class ButtonSerde:
     def serialize(self, v: bool) -> bool:
@@ -100,6 +205,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         r"""Display a button widget.
 
@@ -205,6 +311,12 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. Provide a
+            single key (for example, ``"K"``) or a modifier combination such as
+            ``"Ctrl+K"``. The keys ``"C"`` and ``"R"`` are reserved and may not
+            be used.
+
         Returns
         -------
         bool
@@ -276,6 +388,7 @@ class ButtonMixin:
             icon=icon,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("download_button")
@@ -296,6 +409,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         r"""Display a download button widget.
 
@@ -449,6 +563,12 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the download button.
+            Provide a single key (for example, ``"K"``) or a modifier
+            combination such as ``"Ctrl+K"``. The keys ``"C"`` and ``"R"`` are
+            reserved and may not be used.
+
         Returns
         -------
         bool
@@ -586,6 +706,7 @@ class ButtonMixin:
             disabled=disabled,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("link_button")
@@ -600,6 +721,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> DeltaGenerator:
         r"""Display a link button element.
 
@@ -697,6 +819,12 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the link button.
+            Provide a single key (for example, ``"K"``) or a modifier
+            combination such as ``"Ctrl+K"``. The keys ``"C"`` and ``"R"`` are
+            reserved and may not be used.
+
         Example
         -------
         >>> import streamlit as st
@@ -726,6 +854,7 @@ class ButtonMixin:
             type=type,
             icon=icon,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("page_link")
@@ -892,6 +1021,7 @@ class ButtonMixin:
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         key = to_key(key)
 
@@ -900,6 +1030,10 @@ class ButtonMixin:
             if on_click is None or on_click in {"ignore", "rerun"}
             else cast("WidgetCallback", on_click)
         )
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = _normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -921,6 +1055,7 @@ class ButtonMixin:
             help=help,
             type=type,
             width=width,
+            shortcut=normalized_shortcut,
         )
 
         if is_in_form(self.dg):
@@ -948,6 +1083,9 @@ class ButtonMixin:
             download_button_proto.ignore_rerun = True
         else:
             download_button_proto.ignore_rerun = False
+
+        if normalized_shortcut is not None:
+            download_button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 
@@ -979,8 +1117,27 @@ class ButtonMixin:
         icon: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = _normalize_shortcut(shortcut)
+
+        if normalized_shortcut is not None:
+            link_button_proto.id = compute_and_register_element_id(
+                "link_button",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                icon=icon,
+                url=url,
+                help=help,
+                type=type,
+                width=width,
+                shortcut=normalized_shortcut,
+            )
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
@@ -991,6 +1148,9 @@ class ButtonMixin:
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
+
+        if normalized_shortcut is not None:
+            link_button_proto.shortcut = normalized_shortcut
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
@@ -1103,8 +1263,13 @@ class ButtonMixin:
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         key = to_key(key)
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = _normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -1128,6 +1293,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             width=width,
+            shortcut=normalized_shortcut,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -1159,6 +1325,9 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
+
+        if normalized_shortcut is not None:
+            button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 

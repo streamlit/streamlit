@@ -148,6 +148,47 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
 
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_serialization(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts are serialized for supported buttons."""
+        command(shortcut="Ctrl+K")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+k"
+
+    def test_cmd_shortcut_alias(self) -> None:
+        """Test that Cmd shortcuts are normalized."""
+        st.button("the label", shortcut="Cmd+O")
+
+        proto = self.get_delta_from_queue().new_element.button
+        assert proto.shortcut == "cmd+o"
+
+    def test_modifier_only_shortcut(self) -> None:
+        """Test that modifier-only shortcuts are supported."""
+        st.button("the label", shortcut="Ctrl")
+
+        proto = self.get_delta_from_queue().new_element.button
+        assert proto.shortcut == "ctrl"
+
+    @pytest.mark.parametrize("shortcut", ["R", "r", "Shift+R", "Ctrl+C", "cmd+c"])
+    def test_reserved_shortcuts_raise(self, shortcut: str) -> None:
+        """Test that reserved shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("reserved", shortcut=shortcut)
+
+    def test_invalid_shortcut_raises(self) -> None:
+        """Test that invalid shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("invalid", shortcut="A+B")
+
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
         with patch(

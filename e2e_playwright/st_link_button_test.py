@@ -18,7 +18,17 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 15
+LINK_BUTTON_ELEMENTS = 16
+
+CONTROL_KEY = "Control"
+
+
+def _press_shortcut(page: Page, key: str, *, include_alt: bool = False) -> None:
+    modifiers = [CONTROL_KEY]
+    if include_alt:
+        modifiers.append("Alt")
+    shortcut = "+".join([*modifiers, f"Key{key.upper()}"])
+    page.keyboard.press(shortcut)
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -73,3 +83,29 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+def test_link_button_displays_shortcut(app: Page):
+    """Ensure shortcut labels are rendered for link buttons."""
+    shortcut_button = (
+        app.get_by_test_id("stLinkButton")
+        .filter(has_text="Link Button with shortcut")
+        .first
+    )
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + L")
+
+
+def test_link_button_shortcut_triggers_popup(app: Page):
+    """Ensure pressing the shortcut opens the link in a new tab."""
+    shortcut_button = (
+        app.get_by_test_id("stLinkButton")
+        .filter(has_text="Link Button with shortcut")
+        .first
+    )
+    expect(shortcut_button).to_be_visible()
+    app.locator("body").click()
+    with app.expect_popup() as popup_info:
+        _press_shortcut(app, "l", include_alt=True)
+    popup = popup_info.value
+    expect(popup.url).to_contain("https://streamlit.io")
+    popup.close()

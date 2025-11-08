@@ -523,5 +523,31 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
 export const StyledButtonLabel = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "space-between",
+  width: "100%",
   gap: theme.spacing.sm,
+}))
+
+export const StyledButtonMainLabel = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  minWidth: 0,
+  flex: 1,
+}))
+
+export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
+  borderRadius: theme.radii.button,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  backgroundColor: theme.colors.fadedText05,
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.base,
+  letterSpacing: "0.02em",
 }))
