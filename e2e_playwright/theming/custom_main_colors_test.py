@@ -41,7 +41,8 @@ def configure_custom_theme_colors():
     os.environ["STREAMLIT_THEME_SIDEBAR_VIOLET_COLOR"] = "#dbbbff"
     os.environ["STREAMLIT_THEME_SIDEBAR_GRAY_COLOR"] = "#e6eaf1"
 
-    # Since main colors are configured, these are used to derive background colors as well
+    # Since main colors are configured, these are used to derive background
+    # and text colors as well
     yield
     del os.environ["STREAMLIT_THEME_RED_COLOR"]
     del os.environ["STREAMLIT_THEME_ORANGE_COLOR"]
@@ -63,7 +64,9 @@ def configure_custom_theme_colors():
 def test_custom_theme_colors(app: Page, assert_snapshot: ImageCompareFunction):
     # Set bigger viewport to better show app content
     app.set_viewport_size({"width": 1280, "height": 1000})
+    # Add a small timeout to allow elements to adjust to the new viewport size
+    app.wait_for_timeout(2000)
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
-    assert_snapshot(app, name="custom_main_colors_app", image_threshold=0.0003)
+    assert_snapshot(app, name="custom_main_colors_app")

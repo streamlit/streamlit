@@ -35,21 +35,23 @@ import {
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
   BlockNode,
+  ComponentRegistry,
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
-  LibContext,
+  NavigationContext,
   Profiler,
+  SidebarConfigContext,
+  ThemeContext,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
+import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
@@ -77,25 +79,11 @@ export interface AppViewProps {
 
   uploadClient: FileUploadClient
 
-  appPages: IAppPage[]
-
-  navSections: string[]
-
-  onPageChange: (pageName: string) => void
-
-  hideSidebarNav: boolean
-
-  expandSidebarNav: boolean
-
   navigationPosition: Navigation.Position
 
   topRightContent?: React.ReactNode
 
-  pageLinkBaseUrl?: string
-
   wideMode: boolean
-
-  appLogo: Logo | null
 
   embedded: boolean
 
@@ -103,7 +91,17 @@ export interface AppViewProps {
 
   disableScrolling: boolean
 
-  currentPageScriptHash: string
+  addScriptFinishedHandler: (func: () => void) => void
+
+  removeScriptFinishedHandler: (func: () => void) => void
+
+  widgetsDisabled: boolean
+
+  showToolbar: boolean
+
+  disableFullscreenMode?: boolean
+
+  componentRegistry: ComponentRegistry
 }
 
 /**
@@ -114,22 +112,20 @@ function AppView(props: AppViewProps): ReactElement {
     elements,
     widgetMgr,
     uploadClient,
-    appLogo,
-    appPages,
-    navSections,
-    onPageChange,
-    expandSidebarNav,
-    hideSidebarNav,
     sendMessageToHost,
     endpoints,
     navigationPosition,
     topRightContent,
-    pageLinkBaseUrl = "",
     wideMode,
     embedded,
     showPadding,
     disableScrolling,
-    currentPageScriptHash,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
+    widgetsDisabled,
+    showToolbar,
+    disableFullscreenMode,
+    componentRegistry,
   } = props
 
   useEffect(() => {
@@ -143,13 +139,14 @@ function AppView(props: AppViewProps): ReactElement {
     return () => window.removeEventListener("hashchange", listener, false)
   }, [sendMessageToHost])
 
-  const { initialSidebarState, widgetsDisabled, showToolbar } = useAppContext()
+  const { activeTheme } = useContext(ThemeContext)
 
-  const {
-    addScriptFinishedHandler,
-    removeScriptFinishedHandler,
-    activeTheme,
-  } = useContext(LibContext)
+  const { appPages, navSections, pageLinkBaseUrl } =
+    useContext(NavigationContext)
+
+  const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
+    SidebarConfigContext
+  )
 
   const { innerWidth } = useWindowDimensionsContext()
 
@@ -171,6 +168,7 @@ function AppView(props: AppViewProps): ReactElement {
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setShowSidebarOverride(true)
     }
   }, [showSidebar, hideSidebarNav, showSidebarOverride])
@@ -205,7 +203,10 @@ function AppView(props: AppViewProps): ReactElement {
       widgetMgr={widgetMgr}
       widgetsDisabled={widgetsDisabled}
       uploadClient={uploadClient}
+      disableFullscreenMode={disableFullscreenMode}
+      componentRegistry={componentRegistry}
       height="auto"
+      isRoot={true}
     />
   )
 
@@ -297,16 +298,10 @@ function AppView(props: AppViewProps): ReactElement {
           <Profiler id="Sidebar">
             <ThemedSidebar
               endpoints={endpoints}
-              appLogo={appLogo}
-              appPages={appPages}
-              navSections={navSections}
               hasElements={hasSidebarElements}
-              onPageChange={onPageChange}
-              currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav}
-              expandSidebarNav={expandSidebarNav}
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
+              widgetsDisabled={widgetsDisabled}
             >
               <StyledSidebarBlockContainer>
                 {renderBlock(elements.sidebar)}
@@ -324,15 +319,13 @@ function AppView(props: AppViewProps): ReactElement {
               shouldShowNavigation(appPages, navSections) ? (
                 <TopNav
                   endpoints={endpoints}
-                  pageLinkBaseUrl={pageLinkBaseUrl}
-                  currentPageScriptHash={currentPageScriptHash}
-                  appPages={appPages}
-                  onPageChange={onPageChange}
+                  widgetsDisabled={widgetsDisabled}
                 />
               ) : null
             }
             rightContent={topRightContent}
             logoComponent={logoElement}
+            showToolbar={showToolbar}
           />
           <Component
             tabIndex={0}

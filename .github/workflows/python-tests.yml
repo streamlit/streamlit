@@ -89,7 +89,7 @@ jobs:
           submodules: "recursive"
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
@@ -105,7 +105,7 @@ jobs:
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_${{ matrix.python_version }}
           path: lib/${{ env.COVERAGE_FILE }}
@@ -129,7 +129,7 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Setup virtual env
@@ -149,7 +149,7 @@ jobs:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_integration
           path: lib/${{ env.COVERAGE_FILE }}
@@ -179,7 +179,7 @@ jobs:
           submodules: "recursive"
           fetch-depth: 2
       - name: Set up Python ${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}"
       - name: Setup virtual env
@@ -213,7 +213,7 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage_data_min_deps
           path: lib/${{ env.COVERAGE_FILE }}
@@ -241,12 +241,12 @@ jobs:
           submodules: "recursive"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -278,18 +278,18 @@ jobs:
         working-directory: lib
 
       - name: Upload combined coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_data
           path: lib/.coverage
           include-hidden-files: true
       - name: Upload combined coverage JSON
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_json
           path: lib/coverage.json
       - name: Upload combined coverage HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: combined_coverage_report
           path: lib/htmlcov
@@ -298,7 +298,7 @@ jobs:
       - name: Get latest develop run ID
         if: github.event_name == 'pull_request'
         id: get-latest-run
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -318,7 +318,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -330,7 +330,7 @@ jobs:
 
       - name: Check coverage changes and comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%

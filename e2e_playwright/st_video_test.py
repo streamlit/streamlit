@@ -54,6 +54,8 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
         is True,
         timeout=15000,
     )
+    # Wait another 2 seconds to prevent some flakiness
+    app.wait_for_timeout(2000)
 
 
 @pytest.mark.skip_browser("webkit")

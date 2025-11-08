@@ -27,6 +27,27 @@ from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
 
 
+def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
+    """Get a chat input container by its label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stChatInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a time input with the given label.
 
@@ -44,6 +65,27 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
         The element.
     """
     element = locator.get_by_test_id("stTimeInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a camera input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str | Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCameraInput").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -190,6 +232,35 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
+def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a slider with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    # Prefer matching the widget label exactly to avoid substring collisions
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stSlider").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
@@ -264,7 +335,16 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     label : str or Pattern[str]
         The label of the element to get.
     """
-    element = locator.get_by_test_id("stRadio").filter(has_text=label)
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # similar to multiselect/date input helpers.
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stRadio").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
 

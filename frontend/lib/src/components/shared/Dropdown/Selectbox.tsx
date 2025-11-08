@@ -177,7 +177,7 @@ const Selectbox: FC<Props> = ({
               overrides: {
                 Svg: {
                   style: {
-                    color: theme.colors.darkGray,
+                    color: theme.colors.grayTextColor,
                     // Setting this width and height makes the clear-icon align with dropdown arrows
                     padding: theme.spacing.threeXS,
                     height: theme.sizes.clearIconSize,
@@ -252,7 +252,9 @@ const Selectbox: FC<Props> = ({
             component: ChevronDown,
             props: {
               style: {
-                cursor: "pointer",
+                ...(selectDisabled && {
+                  cursor: "not-allowed",
+                }),
               },
               overrides: {
                 Svg: {

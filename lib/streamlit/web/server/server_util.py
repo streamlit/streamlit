@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Final, Literal, cast
 from urllib.parse import urljoin
 
 from streamlit import config, net_util, url_util
@@ -24,6 +24,8 @@ from streamlit.runtime.secrets import secrets_singleton
 from streamlit.type_util import is_version_less_than
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tornado.web import RequestHandler
 
 # The port used for internal development.

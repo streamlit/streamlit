@@ -44,16 +44,6 @@ const requiredThemeColors = {
 
   primary: colors.red70,
   secondary: colors.blue70,
-  disabled: colors.gray40,
-  lightestGray: colors.gray20,
-  lightGray: colors.gray30,
-  gray: colors.gray60,
-  darkGray: colors.gray70,
-
-  // TODO (mgbarnes): Reduce/remove these colors when removed from base/dark theme
-  red: colors.red80,
-  blue: colors.blue80,
-  green: colors.green90,
 
   // Default main theme colors (light theme)
   redColor: colors.red70,

@@ -45,7 +45,34 @@ if st.button("Resize dataframe"):
 else:
     st.dataframe(small_df, width=200, height=100)
 
-short_dataframe = pd.DataFrame(np.random.randn(3, 3))
+short_dataframe = pd.DataFrame(np.random.randn(4, 4))
 st.dataframe(short_dataframe, width="stretch", key="stretch_dataframe")
 st.dataframe(short_dataframe, width="content", key="content_dataframe")
 st.dataframe(short_dataframe, width=400, height=300, key="fixed_dimensions_dataframe")
+
+st.write("Dataframe with height='stretch' (in 400px container):")
+with st.container(border=True, key="test_height_stretch", height=400):
+    st.dataframe(short_dataframe, height="stretch", key="stretch_height_dataframe")
+
+st.write("Dataframe with height='stretch' outside of a container:")
+st.dataframe(
+    short_dataframe, height="stretch", key="stretch_height_dataframe_outside_container"
+)
+
+with st.container(
+    border=True, key="test_height_stretch_outside_container", height="stretch"
+):
+    st.write("Dataframe with height='stretch' inside a stretch height container:")
+    st.dataframe(
+        short_dataframe,
+        height="stretch",
+        key="stretch_height_dataframe_inside_container",
+    )
+
+content_height_dataframe = pd.DataFrame(np.random.randn(15, 3))
+st.dataframe(
+    content_height_dataframe, height="content", key="content_height_dataframe_20"
+)
+
+content_height_dataframe = pd.DataFrame(np.random.randn(300, 3))
+st.dataframe(content_height_dataframe, height="content", key="content_height_dataframe")

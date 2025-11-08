@@ -42,6 +42,7 @@ class HtmlMixin:
         body: str | Path | SupportsStr | SupportsReprHtml,
         *,  # keyword-only arguments:
         width: Width = "stretch",
+        unsafe_allow_javascript: bool = False,
     ) -> DeltaGenerator:
         """Insert HTML into your app.
 
@@ -52,8 +53,10 @@ class HtmlMixin:
         loading external code can increase the risk of vulnerabilities in your
         app.
 
-        ``st.html`` content is **not** iframed. Executing JavaScript is not
-        supported at this time.
+        ``st.html`` content is **not** iframed. By default, JavaScript is
+        ignored. To execute JavaScript contained in the HTML, set
+        ``unsafe_allow_javascript=True``. Use with caution and never pass
+        untrusted input.
 
         Parameters
         ----------
@@ -136,6 +139,8 @@ class HtmlMixin:
             html_proto.body = html_content
             return self._event_dg._enqueue("html", html_proto)
         # Otherwise, send the html to the main container as normal
+        # Only set the unsafe JS flag for non-style-only HTML content
+        html_proto.unsafe_allow_javascript = unsafe_allow_javascript
         html_proto.body = html_content
         return self.dg._enqueue("html", html_proto, layout_config=layout_config)
 

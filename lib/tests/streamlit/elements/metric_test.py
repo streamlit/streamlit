@@ -100,7 +100,7 @@ class MetricTest(DeltaGeneratorTestCase):
             "—",
         ]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.metric("label_test", arg_value)
 
             c = self.get_delta_from_queue().new_element.metric
@@ -112,7 +112,7 @@ class MetricTest(DeltaGeneratorTestCase):
         arg_values = [" -253", "+25", "26", 123, -123, 1.234, -1.5, None, ""]
         delta_values = ["-253", "+25", "26", "123", "-123", "1.234", "-1.5", "", ""]
 
-        for arg_value, delta_value in zip(arg_values, delta_values):
+        for arg_value, delta_value in zip(arg_values, delta_values, strict=False):
             st.metric("label_test", "4312", arg_value)
 
             c = self.get_delta_from_queue().new_element.metric
@@ -159,7 +159,11 @@ class MetricTest(DeltaGeneratorTestCase):
             color_value,
             direction_value,
         ) in zip(
-            arg_delta_values, arg_delta_color_values, color_values, direction_values
+            arg_delta_values,
+            arg_delta_color_values,
+            color_values,
+            direction_values,
+            strict=False,
         ):
             st.metric(
                 "label_test", "4312", arg_delta_value, delta_color=arg_delta_color_value
@@ -225,8 +229,7 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert str(exc.value) == (
             "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. "
-            "value only accepts: int, float, str, or None. "
-            "Please convert the value to an accepted type."
+            "Please convert the value to an accepted number type."
         )
 
     def test_invalid_delta(self):
@@ -235,8 +238,7 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert str(exc.value) == (
             "'[123]' is of type <class 'list'>, which is not an accepted type. "
-            "delta only accepts: int, float, str, or None. "
-            "Please convert the value to an accepted type."
+            "Please convert the value to an accepted number type."
         )
 
     def test_invalid_delta_color(self):

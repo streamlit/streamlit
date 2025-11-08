@@ -19,10 +19,13 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import * as isMobile from "@streamlit/lib"
-import { mockEndpoints, render } from "@streamlit/lib"
+import * as LibModule from "@streamlit/lib"
+import {
+  mockEndpoints,
+  NavigationContextProps,
+  renderWithContexts,
+  SidebarConfigContextProps,
+} from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 
 import SidebarNav, { Props } from "./SidebarNav"
@@ -138,43 +141,64 @@ const createAppPagesForSections = (sectionPageCounts: {
 }
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  appPages: generateAppPages(2),
   collapseSidebar: vi.fn(),
   hasSidebarElements: false,
   endpoints: mockEndpoints(),
-  onPageChange: vi.fn(),
-  navSections: [],
-  currentPageScriptHash: "",
-  expandSidebarNav: false,
+  widgetsDisabled: false,
   ...props,
 })
 
-function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
+function getSidebarConfigContextOutput(
+  context: Partial<SidebarConfigContextProps>
+): SidebarConfigContextProps {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
     appLogo: null,
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
     ...context,
   }
 }
 
+function getNavigationContextOutput(
+  context: Partial<NavigationContextProps>
+): NavigationContextProps {
+  return {
+    pageLinkBaseUrl: "",
+    currentPageScriptHash: "",
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: generateAppPages(2),
+    ...context,
+  }
+}
+
+// Helper to render SidebarNav with proper context
+function renderSidebarNav(
+  props: Partial<Props> = {},
+  overrides?: {
+    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): ReturnType<typeof renderWithContexts> {
+  const sidebarConfigContextValues = getSidebarConfigContextOutput(
+    overrides?.sidebarConfigContext || {}
+  )
+
+  const navigationContextValues = getNavigationContextOutput(
+    overrides?.navigationContext || {}
+  )
+
+  return renderWithContexts(<SidebarNav {...getProps(props)} />, {
+    sidebarConfigContext: sidebarConfigContextValues,
+    navigationContext: navigationContextValues,
+  })
+}
+
 describe("SidebarNav", () => {
   beforeEach(() => {
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-      getContextOutput({})
-    )
-
-    vi.spyOn(isMobile, "isMobile").mockReturnValue(false)
+    vi.spyOn(LibModule, "isMobile").mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -182,7 +206,7 @@ describe("SidebarNav", () => {
   })
 
   it("replaces underscores with spaces in pageName", () => {
-    render(<SidebarNav {...getProps()} />)
+    renderSidebarNav()
 
     expect(screen.getByText("streamlit app")).toBeInTheDocument()
     expect(screen.getByText("my other page")).toBeInTheDocument()
@@ -215,9 +239,7 @@ describe("SidebarNav", () => {
         .mockImplementation((_pageLinkBaseURL: string, page: IAppPage) => {
           return `http://mock/app/page/${page.urlPathname}`
         })
-      const props = getProps({ endpoints: mockEndpoints({ buildAppPageURL }) })
-
-      render(<SidebarNav {...props} />)
+      renderSidebarNav({ endpoints: mockEndpoints({ buildAppPageURL }) })
 
       const links = screen.getAllByRole("link")
       expect(links).toHaveLength(2)
@@ -234,25 +256,23 @@ describe("SidebarNav", () => {
   })
 
   it("does not add separator below if there are no sidebar elements", () => {
-    render(<SidebarNav {...getProps({ hasSidebarElements: false })} />)
+    renderSidebarNav({ hasSidebarElements: false })
     expect(
       screen.queryByTestId("stSidebarNavSeparator")
     ).not.toBeInTheDocument()
   })
 
   it("adds separator below if the sidebar also has elements", () => {
-    render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
+    renderSidebarNav({ hasSidebarElements: true })
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
   })
 
   it("renders View more button when there are 13 elements", () => {
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(13),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(13) },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -262,14 +282,12 @@ describe("SidebarNav", () => {
   })
 
   it("does not render View less button when explicitly asked to expand", () => {
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          expandSidebarNav: true,
-          appPages: generateAppPages(13),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        sidebarConfigContext: { expandSidebarNav: true },
+        navigationContext: { appPages: generateAppPages(13) },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -279,13 +297,11 @@ describe("SidebarNav", () => {
   })
 
   it("renders View more button when there are more than 13 elements", () => {
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(14),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(14) },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -295,13 +311,11 @@ describe("SidebarNav", () => {
   })
 
   it("does not render View more button when there are < 13 elements", () => {
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(12),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(12) },
+      }
     )
 
     expect(
@@ -312,13 +326,11 @@ describe("SidebarNav", () => {
 
   it("renders View less button when expanded", async () => {
     const user = userEvent.setup()
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(14),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(14) },
+      }
     )
 
     // Click on the separator to expand the nav component.
@@ -331,13 +343,11 @@ describe("SidebarNav", () => {
   it("renders View less button when user prefers expansion", () => {
     window.localStorage.setItem("sidebarNavState", "expanded")
 
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(14),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(14) },
+      }
     )
 
     const viewLessButton = screen.getByText("View less")
@@ -347,13 +357,11 @@ describe("SidebarNav", () => {
   })
 
   it("is unexpanded by default, displaying 10 links when > 12 pages", () => {
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(14),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(14) },
+      }
     )
 
     const navLinks = screen.getAllByTestId("stSidebarNavLink")
@@ -362,13 +370,11 @@ describe("SidebarNav", () => {
 
   it("toggles to expanded and back when the View more/less buttons are clicked", async () => {
     const user = userEvent.setup()
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          appPages: generateAppPages(14),
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { appPages: generateAppPages(14) },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -384,16 +390,15 @@ describe("SidebarNav", () => {
 
   it("displays partial sections", async () => {
     const user = userEvent.setup()
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: {
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
-        })}
-      />
+        },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -426,24 +431,21 @@ describe("SidebarNav", () => {
 
   it("restores section expansion state from localStorage", () => {
     const pageLinkBaseUrl = "test_app"
-    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-      getContextOutput({ pageLinkBaseUrl })
-    )
     window.localStorage.setItem(
       `stSidebarSectionsState-${pageLinkBaseUrl}`,
       JSON.stringify({ "section 1": false, "section 2": true })
     )
 
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          navSections: ["section 1", "section 2"],
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: {
+          pageLinkBaseUrl,
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2"],
           }),
-        })}
-      />
+        },
+      }
     )
 
     // Section 1 should be collapsed, so only pages from section 2 are visible
@@ -462,14 +464,11 @@ describe("SidebarNav", () => {
     const appPages = createAppPagesForSections(sectionPageCounts)
     const navSections = Object.keys(sectionPageCounts)
 
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          navSections,
-          appPages,
-        })}
-      />
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: { navSections, appPages },
+      }
     )
 
     // Initially, all sections are expanded, 20 pages total.
@@ -508,16 +507,15 @@ describe("SidebarNav", () => {
     const user = userEvent.setup()
     // First section has 5 pages, second section has 5 pages, third section has 4 pages
     // Since 5+5 = 10, only the first two sections should be visible
-    render(
-      <SidebarNav
-        {...getProps({
-          hasSidebarElements: true,
-          navSections: ["section 1", "section 2", "section 3"],
+    renderSidebarNav(
+      { hasSidebarElements: true },
+      {
+        navigationContext: {
           appPages: generateAppPages(14, {
             sectionHeaders: ["section 1", "section 2", "section 3"],
           }),
-        })}
-      />
+        },
+      }
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
@@ -538,39 +536,52 @@ describe("SidebarNav", () => {
   it("passes the pageScriptHash to onPageChange if a link is clicked", async () => {
     const onPageChange = vi.fn()
     const user = userEvent.setup()
-    const props = getProps({ onPageChange })
-    render(<SidebarNav {...props} />)
+    const collapseSidebar = vi.fn()
+    renderSidebarNav(
+      { collapseSidebar },
+      {
+        navigationContext: { onPageChange },
+      }
+    )
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     await user.click(links[1])
 
     // Check the onPageChange func from props is called with the correct pageScriptHash
     expect(onPageChange).toHaveBeenCalledWith("other_page_hash")
-    expect(props.collapseSidebar).not.toHaveBeenCalled()
+    expect(collapseSidebar).not.toHaveBeenCalled()
   })
 
   it("collapses sidebar on page change when on mobile", async () => {
     const onPageChange = vi.fn()
     const user = userEvent.setup()
-    vi.spyOn(isMobile, "isMobile").mockReturnValue(true)
+    vi.spyOn(LibModule, "isMobile").mockReturnValue(true)
 
-    const props = getProps({ onPageChange })
-    render(<SidebarNav {...props} />)
+    const collapseSidebar = vi.fn()
+    renderSidebarNav(
+      { collapseSidebar },
+      {
+        navigationContext: { onPageChange },
+      }
+    )
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     await user.click(links[1])
 
     // Check the onPageChange func from props is called with the correct pageScriptHash
     expect(onPageChange).toHaveBeenCalledWith("other_page_hash")
-    expect(props.collapseSidebar).toHaveBeenCalled()
+    expect(collapseSidebar).toHaveBeenCalled()
   })
 
   it("handles default and custom page icons", () => {
-    const props = getProps({
-      appPages: generateAppPages(2, { icons: true }),
-    })
-
-    render(<SidebarNav {...props} />)
+    renderSidebarNav(
+      {},
+      {
+        navigationContext: {
+          appPages: generateAppPages(2, { icons: true }),
+        },
+      }
+    )
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     expect(links).toHaveLength(2)
@@ -579,11 +590,15 @@ describe("SidebarNav", () => {
 
   it("indicates the current page as active", () => {
     const appPages = generateAppPages(2)
-    const props = getProps({
-      appPages,
-      currentPageScriptHash: appPages[1].pageScriptHash as string,
-    })
-    render(<SidebarNav {...props} />)
+    renderSidebarNav(
+      {},
+      {
+        navigationContext: {
+          appPages,
+          currentPageScriptHash: appPages[1].pageScriptHash as string,
+        },
+      }
+    )
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     expect(links).toHaveLength(2)

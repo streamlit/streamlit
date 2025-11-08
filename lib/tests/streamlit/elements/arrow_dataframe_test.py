@@ -381,6 +381,29 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert len(el.arrow_data_frame.selection_mode) == 0
 
+    def test_row_selection_auto_hides_range_index(self):
+        """Test that a RangeIndex is auto-hidden when row selection is enabled.
+
+        When selections are activated (on_select != "ignore") and the
+        selection_mode is a single row-selection mode ("single-row" or
+        "multi-row"), a dataframe with a default RangeIndex should have its
+        index column hidden automatically.
+        """
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        st.dataframe(df, on_select="rerun", selection_mode="multi-row")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
+
+    def test_row_selections_shows_custom_index(self):
+        """Test that a custom index is shown when row selection is enabled."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"], index=["a", "b"])
+        st.dataframe(df, on_select="rerun", selection_mode="multi-row")
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert "hidden" not in proto.columns
+
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
 
@@ -459,6 +482,19 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             == WidthConfigFields.PIXEL_WIDTH.value
         )
         assert el.width_config.pixel_width == 400
+
+    @pytest.mark.usefixtures("benchmark")
+    def test_pandas_styler_performance(self):
+        """Performance benchmark for using styled dataframes with st.dataframe."""
+
+        def large_styler_df() -> None:
+            # Create a large DF with random numbers:
+            df = pd.DataFrame(np.random.rand(10000, 10), columns=list("ABCDEFGHIJ"))
+            # Format all numbers with pandas styler:
+            styler = df.style.format("{:.2f}")
+            st.dataframe(styler)
+
+        self.benchmark(large_styler_df)
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):

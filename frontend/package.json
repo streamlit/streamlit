@@ -1,9 +1,10 @@
 {
   "name": "streamlit",
-  "version": "1.49.1",
+  "version": "1.51.0",
   "private": true,
   "workspaces": [
     "app",
+    "component-v2-lib",
     "connection",
     "eslint-plugin-streamlit-custom",
     "lib",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "concurrently": "^9.2.1",
+    "jiti": "^2.5.1",
     "vitest": "^3.2.4"
   }
 }

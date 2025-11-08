@@ -417,11 +417,9 @@ st.dataframe(
             help="This is a progress column",
         ),
         "col_1": st.column_config.ProgressColumn(
-            format="$%f", min_value=0, max_value=1000
+            format="$%f", min_value=0, max_value=1000, color="blue"
         ),
-        "col_2": st.column_config.ProgressColumn(
-            step=0.0001,
-        ),
+        "col_2": st.column_config.ProgressColumn(step=0.0001, color="auto"),
     },
     width="content",
     hide_index=True,
@@ -474,6 +472,7 @@ st.dataframe(
             help="This is a bar chart column",
             y_min=-5,
             y_max=5,
+            color="auto",
         ),
         "col_1": st.column_config.BarChartColumn(),
     },
@@ -498,6 +497,7 @@ st.dataframe(
             help="This is a line chart column",
             y_min=-5,
             y_max=5,
+            color="auto",
         ),
         "col_1": st.column_config.LineChartColumn(),
     },
@@ -521,8 +521,38 @@ st.dataframe(
             help="This is an area chart column",
             y_min=-5,
             y_max=5,
+            color="auto",
         ),
         "col_1": st.column_config.AreaChartColumn(),
+    },
+    width="content",
+    hide_index=True,
+)
+
+st.header("Chart column colors:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "red": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "blue": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "orange": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "violet": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "gray": [[1, 5, 2, 6], [2, 3, 5, 1]],
+            "auto": [[1, 5, 2, 6], [6, 2, 5, 1]],  # up and down trend
+            "auto-inverse": [[1, 5, 2, 6], [6, 2, 5, 1]],  # up and down trend
+        }
+    ),
+    column_config={
+        "red": st.column_config.BarChartColumn("Red", color="red"),
+        "blue": st.column_config.AreaChartColumn("Blue", color="blue"),
+        "orange": st.column_config.BarChartColumn("Orange", color="orange"),
+        "violet": st.column_config.LineChartColumn("Violet", color="violet"),
+        "gray": st.column_config.AreaChartColumn("Gray", color="gray"),
+        "auto": st.column_config.AreaChartColumn("Auto", color="auto"),
+        "auto-inverse": st.column_config.AreaChartColumn(
+            "Auto-inverse", color="auto-inverse"
+        ),
     },
     width="content",
     hide_index=True,
@@ -832,6 +862,12 @@ st.dataframe(
         {
             "col_0": [["a", "b"], ["b", "c", "d"], [], None],
             "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [
+                ["orange", "banana", "apple"],
+                ["pineapple", "mango", "orange", "strawberry"],
+                [],
+                None,
+            ],
         }
     ),
     column_config={
@@ -856,6 +892,11 @@ st.dataframe(
             options=["a", "b", "c", "d", "e"],
             color="primary",
             format_func=lambda x: f"Option {x}",
+        ),
+        "col_2": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["orange", "banana", "apple", "pineapple", "mango", "strawberry"],
+            color="auto",
         ),
     },
     width="content",

@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Final, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, Final, TypeVar, cast
 
 import streamlit
 from streamlit import config
@@ -28,8 +29,17 @@ TObj = TypeVar("TObj", bound=object)
 
 
 def _error_details_in_browser_enabled() -> bool:
-    """True if we should print deprecation warnings to the browser."""
-    return bool(config.get_option("client.showErrorDetails"))
+    """True if we should print deprecation warnings to the browser.
+
+    Deprecation warnings are only shown when showErrorDetails is set to "full"
+    or the legacy True value. All other values ("stacktrace", "type", "none",
+    False) hide deprecation warnings in the browser.
+    """
+    show_error_details = config.get_option("client.showErrorDetails")
+    return (
+        show_error_details == config.ShowErrorDetailsConfigOptions.FULL
+        or config.ShowErrorDetailsConfigOptions.is_true_variation(show_error_details)
+    )
 
 
 def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
@@ -41,9 +51,10 @@ def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None
         The deprecation warning message.
     show_in_browser : bool, default=True
         Whether to show the deprecation warning in the browser. When this is True,
-        we will show the deprecation warning in the browser unless the user has
-        disabled error details in the browser by setting the `client.showErrorDetails`
-        config option to "none".
+        we will show the deprecation warning in the browser only if the user has
+        set `client.showErrorDetails` to "full" or the legacy True value. All
+        other values ("stacktrace", "type", "none", False) will hide deprecation
+        warnings in the browser (but still log them to the console).
     """
     if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)

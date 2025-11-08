@@ -21,15 +21,25 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeAlias,
     TypedDict,
     cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
-
 from streamlit import config
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
@@ -263,9 +273,9 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
-        height: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: Literal[
             "single-object"
         ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
@@ -279,9 +289,9 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
-        height: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
@@ -292,9 +302,9 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         *,
-        use_container_width: bool = True,
-        width: int | None = None,
-        height: int | None = None,
+        width: WidthWithoutContent = "stretch",
+        use_container_width: bool | None = None,
+        height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
@@ -342,26 +352,43 @@ class PydeckMixin:
         ----------
         pydeck_obj : pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
-        use_container_width : bool
-            Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``True`` (default),
-            Streamlit sets the width of the figure to match the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets the
-            width of the chart to fit its contents according to the plotting library,
-            up to the width of the parent container.
-        width : int or None
-            Desired width of the chart expressed in pixels. If ``width`` is
-            ``None`` (default), Streamlit sets the width of the chart to fit
-            its contents according to the plotting library, up to the width of
-            the parent container. If ``width`` is greater than the width of the
-            parent container, Streamlit sets the chart width to match the width
-            of the parent container.
+        width : "stretch" or int
+            The width of the chart element. This can be one of the following:
 
-            To use ``width``, you must set ``use_container_width=False``.
-        height : int or None
-            Desired height of the chart expressed in pixels. If ``height`` is
-            ``None`` (default), Streamlit sets the height of the chart to fit
-            its contents according to the plotting library.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        use_container_width : bool or None
+            Whether to override the chart's native width with the width of
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the chart's default behavior.
+            - ``True``: Streamlit sets the width of the chart to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the chart to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
+
+            .. deprecated::
+               ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
+
+        height : "stretch" or int
+            The height of the chart element. This can be one of the following:
+
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled. This is ``500`` by default.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This controls
             whether or not the chart behaves like an input widget.
@@ -460,6 +487,25 @@ class PydeckMixin:
            you can set ``map_style=None`` in the ``pydeck.Deck`` object.
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, specify an integer width.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            # Otherwise keep the provided width.
+
+        validate_width(width, allow_content=False)
+        validate_height(height, allow_content=False)
+
         pydeck_proto = PydeckProto()
 
         ctx = get_script_run_ctx()
@@ -467,12 +513,6 @@ class PydeckMixin:
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
-        pydeck_proto.use_container_width = use_container_width
-
-        if width:
-            pydeck_proto.width = width
-        if height:
-            pydeck_proto.height = height
 
         tooltip = _get_pydeck_tooltip(pydeck_obj)
         if tooltip:
@@ -535,16 +575,34 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+            layout_config = LayoutConfig(width=width, height=height)
+            self.dg._enqueue(
+                "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+            )
 
             return widget_state.value
 
-        return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+        layout_config = LayoutConfig(width=width, height=height)
+        return self.dg._enqueue(
+            "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _get_pydeck_width(pydeck_obj: Deck | None) -> int | None:
+    """Extract the width from a pydeck Deck object, if specified."""
+    if pydeck_obj is None:
+        return None
+
+    width = getattr(pydeck_obj, "width", None)
+    if width is not None and isinstance(width, (int, float)):
+        return int(width)
+
+    return None
 
 
 def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:

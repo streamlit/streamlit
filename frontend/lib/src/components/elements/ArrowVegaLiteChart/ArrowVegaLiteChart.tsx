@@ -170,15 +170,21 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // because the forward message always produces new references, so
   // this function will run regularly to update the view.
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-    updateView(data, datasets)
-  }, [data, datasets, updateView])
+    void updateView(data, datasets)
+
+    // We only want to update the view if the data or datasets change.
+    // updateView isn't stable because its updated via the isCreatingView flag.
+    // With updateView as dependency, the chart seems to
+    // expand within the parent container (less left/right padding).
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  }, [data, datasets])
 
   useEffect(() => {
     // We only show data if its provided via data or if there
     // is one data set in the datasets array. In this case,
     // only the first dataset is shown:
-    if (data || (datasets && datasets[0]?.data)) {
+    if (data || datasets?.[0]?.data) {
       setEnableShowData(true)
     } else {
       setEnableShowData(false)
@@ -190,6 +196,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
         height={fullScreenHeight ?? chartContainerHeight ?? undefined}
+        width={widthConfig ?? undefined}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"

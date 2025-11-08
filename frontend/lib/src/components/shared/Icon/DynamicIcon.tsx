@@ -20,7 +20,11 @@ import { IconSize } from "~lib/theme"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
-import { StyledDynamicIcon, StyledImageIcon } from "./styled-components"
+import {
+  StyledDynamicIcon,
+  StyledImageIcon,
+  StyledSpinnerIcon,
+} from "./styled-components"
 
 interface IconPackEntry {
   pack: string
@@ -43,6 +47,9 @@ export function parseIconPackEntry(iconName: string): IconPackEntry {
  * Returns true if the icon value is a material icon.
  */
 export function isMaterialIcon(iconName: string): boolean {
+  if (!iconName) {
+    return false
+  }
   const parsedIcon = parseIconPackEntry(iconName)
   return parsedIcon.pack === "material" && parsedIcon.icon !== ""
 }
@@ -58,8 +65,6 @@ export function getFilledStarIconSrc(): string {
 export interface DynamicIconProps {
   iconValue: string
   size?: IconSize
-  margin?: string
-  padding?: string
   testid?: string
   color?: string
 }
@@ -68,6 +73,17 @@ const DynamicIconDispatcher = ({
   iconValue,
   ...props
 }: DynamicIconProps): React.ReactElement => {
+  if (iconValue === "spinner") {
+    return (
+      <StyledDynamicIcon {...props}>
+        <StyledSpinnerIcon
+          data-testid={props.testid || "stSpinnerIcon"}
+          {...props}
+        />
+      </StyledDynamicIcon>
+    )
+  }
+
   const { pack, icon } = parseIconPackEntry(iconValue)
   switch (pack) {
     case "material":

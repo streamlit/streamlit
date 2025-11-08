@@ -60,17 +60,6 @@ const WIDTH_STRETCH_OVERRIDE = [
   // Because of how width is handled for custom components, we need the
   // element wrapper to be full width.
   "componentInstance",
-  "arrowDataFrame",
-  // TODO (lawilby): This can probably be removed once width is
-  // implemented for plotly charts. But currently, it seems like when
-  // we have use_container_width=False and the minWidth change the image
-  // doesn't render large enough.
-  "plotlyChart",
-  // The st.image element is potentially a list of images, so we always want
-  // the enclosing container to be full width. The size of individual
-  // images is managed in the ImageList component.
-  // This also covers st.pyplot() which is a special case of st.image.
-  "imgs",
   // Without this style, the skeleton width relies on the flex container that
   // wraps the page contents having align-items: stretch. There was a regression
   // where this default was changed. It is more robust to ensure that the skeleton
@@ -85,28 +74,23 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   "arrowDataFrame",
   "deckGlJsonChart",
   "arrowVegaLiteChart",
+  "graphvizChart",
 ]
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow"
+    "width" | "height" | "overflow" | "minWidth" | "flex"
   > & {
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
-  let minStretchBehavior: MinFlexElementWidth = "fit-content"
-  if (
-    isInHorizontalLayout &&
-    LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  let minStretchBehavior: MinFlexElementWidth
+  if (LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (
-    isInHorizontalLayout &&
-    MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
-  ) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
     minStretchBehavior = "8rem"
   }
 
@@ -148,25 +132,11 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (node.element.type === "deckGlJsonChart") {
-      // TODO (lawilby): When width is implemented for deckGlJsonChart, we
-      // should try to remove these custom styles.
-      // Currently, maps with use_container_width=False and a size layer
-      // don't render correctly without the width override.
-      if (
-        !node.element.deckGlJsonChart?.useContainerWidth &&
-        !node.element.deckGlJsonChart?.width
-      ) {
-        styles.width = "100%"
-      }
-      return styles
     } else if (node.element.type === "arrowVegaLiteChart") {
-      if (node.element.widthConfig?.useContent) {
-        // This is necessary due to the read-only grid feature because the dataframe
-        // does not render correctly if it has a parent with fit-content styling which
-        // is the default for width.
-        // TODO (lawilby): Investigate if we can alter dataframes so that we
-        // don't need this.
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // VegaLite charts with embedded dataframes need a defined parent width
+        // (not fit-content) for proper measurement and rendering due to the resize feature.
+        // Resize is disabled in nested containers, so this is only necessary in the root container.
         styles.width = "100%"
       }
       if (isInHorizontalLayout && !node.element.widthConfig) {
@@ -174,25 +144,65 @@ export const StyledElementContainerLayoutWrapper: FC<
         styles.flex = "1 1 14rem"
       }
       return styles
+    } else if (node.element.type === "arrowDataFrame") {
+      if (node.element.widthConfig?.useContent && isInRoot) {
+        // Resizable dataframes measure parent container width for the resize feature.
+        // Parent needs defined width (not fit-content) for measurement to work.
+        // Only needed in root where resize is enabled; disabled in nested containers.
+        styles.width = "100%"
+      }
+      return styles
+    } else if (node.element.type === "imgs") {
+      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component.
+      // This also covers st.pyplot() which is a special case of st.image.
+      //
+      // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
+      // Use "100%" when using stretch or when no width config is set to ensure container has dimensions for width calculation (#12678).
+      //
+      // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
+      // This is consistent with how useLayoutStyles handles missing config for other elements.
+      const isUsingStretch =
+        !node.element.widthConfig || node.element.widthConfig.useStretch
+
+      styles.width = isUsingStretch ? "100%" : "auto"
     }
 
     return styles
   }, [
     node.element.type,
     node.element.heightConfig?.useStretch,
-    node.element.deckGlJsonChart?.useContainerWidth,
-    node.element.deckGlJsonChart?.width,
     isInHorizontalLayout,
+    isInRoot,
     node.element.widthConfig,
   ])
 
-  const styles = useLayoutStyles({
+  let styles = useLayoutStyles({
     element: node.element,
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
     styleOverrides,
     minStretchBehavior,
   })
+
+  // Special handling for space elements: apply only relevant dimension
+  // to prevent unintended cross-axis spacing
+  if (node.element.type === "space") {
+    if (isInHorizontalLayout) {
+      // In horizontal layout: keep width, clear height
+      // This prevents unwanted vertical spacing
+      styles = {
+        ...styles,
+        height: "auto",
+      }
+    } else {
+      // In vertical layout (default): keep height, clear width
+      // This prevents unwanted horizontal spacing
+      styles = {
+        ...styles,
+        width: "auto",
+      }
+    }
+  }
 
   return <StyledElementContainer {...rest} {...styles} />
 }

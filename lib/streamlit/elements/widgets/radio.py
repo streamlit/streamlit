@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
 
@@ -56,7 +56,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -272,6 +272,8 @@ class RadioMixin:
         any
             The selected option or ``None`` if no option is selected.
 
+            This is a copy of the selected option, not the original.
+
         Example
         -------
         >>> import streamlit as st
@@ -369,7 +371,12 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            key_as_main_identity=False,
+            # Treat provided key as the main widget identity. Only include the
+            # following parameters in the identity computation since they can
+            # invalidate the current selection mapping.
+            # Changes to format_func also invalidate the current selection,
+            # but this is already handled via the `options` parameter below:
+            key_as_main_identity={"options"},
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
