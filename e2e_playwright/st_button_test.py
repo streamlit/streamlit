@@ -84,6 +84,10 @@ def test_button_widget_rendering(
         get_element_by_key(themed_app, "material_icon_digit_in_label_button"),
         name="st_button-material_icon_1k_markdown",
     )
+    assert_snapshot(
+        get_button(themed_app, "Shortcut Button"),
+        name="st_button-shortcut_button",
+    )
 
     # The rest is tested in one screenshot in the following test
 
@@ -256,18 +260,15 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
-def test_button_displays_shortcut(app: Page):
-    """Ensure shortcut labels are rendered for buttons."""
-    shortcut_button = get_element_by_key(app, "shortcut_button")
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
-
-
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
-    expect(
-        get_button(app, "Shortcut Button"),
-    ).to_be_visible()
+    shortcut_button = get_element_by_key(app, "shortcut_button")
+    expect(shortcut_button).to_be_visible()
 
+    # Ensure shortcut labels are rendered for buttons.
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+
+    # Press hotkey to trigger the button:
     app.keyboard.press("Control+J")
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut button pressed!")

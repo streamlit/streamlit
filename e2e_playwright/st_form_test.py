@@ -378,9 +378,12 @@ def test_form_submit_button_displays_shortcut(app: Page):
 @pytest.mark.skip_browser("firefox")
 def test_form_submit_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the form submit button."""
-    app.locator("body").click()
-    shortcut = "Control+Alt+KeyS"
-    app.keyboard.press(shortcut)
+    shortcut_button = get_element_by_key(app, "shortcut_submit_button")
+    expect(shortcut_button).to_be_visible()
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + S")
+
+    # Press hotkey to trigger the button:
+    app.keyboard.press("Control+Alt+KeyS")
     wait_for_app_run(app)
     expect(app.get_by_text("Shortcut form submitted!")).to_be_visible()
 

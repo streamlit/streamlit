@@ -45,6 +45,7 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
         link_elements.nth(10), name="st_link_button-tertiary_container_width"
     )
     assert_snapshot(link_elements.nth(11), name="st_link_button-help")
+    assert_snapshot(link_elements.nth(12), name="st_link_button-shortcut")
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -80,16 +81,6 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
 
 
-def test_link_button_displays_shortcut(app: Page):
-    """Ensure shortcut labels are rendered for link buttons."""
-    shortcut_button = (
-        app.get_by_test_id("stLinkButton")
-        .filter(has_text="Link Button with shortcut")
-        .first
-    )
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + L")
-
-
 def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
     shortcut_button = (
@@ -98,6 +89,11 @@ def test_link_button_shortcut_triggers(app: Page):
         .first
     )
     expect(shortcut_button).to_be_visible()
+
+    # Ensure shortcut labels are rendered for link buttons:
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + L")
+
+    # Press hotkey to trigger the button:
 
     with app.expect_popup() as popup_info:
         app.keyboard.press("Control+Alt+L")

@@ -23,6 +23,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
@@ -85,6 +86,10 @@ def test_download_button_widget_rendering(
     assert_snapshot(
         get_element_by_key(themed_app, "help_download_button"),
         name="st_download_button-help",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "shortcut_download_button"),
+        name="st_download_button-shortcut",
     )
 
 
@@ -288,18 +293,15 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
-def test_download_button_displays_shortcut(app: Page):
-    """Ensure shortcut labels are rendered for download buttons."""
-    shortcut_button = get_element_by_key(app, "shortcut_download_button")
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + D")
-
-
 def test_download_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the download button."""
-    app.locator("body").click()
+    shortcut_button = get_element_by_key(app, "shortcut_download_button")
+    expect(shortcut_button).to_be_visible()
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + D")
+    # Press hotkey to trigger the button:
     with app.expect_download() as download_info:
         app.keyboard.press("ControlOrMeta+Alt+D")
     download = download_info.value
     assert download.suggested_filename == "shortcut.txt"
     wait_for_app_run(app)
-    expect(app.get_by_text("Shortcut download triggered!")).to_be_visible()
+    expect_markdown(app, "Shortcut download triggered!")
