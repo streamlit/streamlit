@@ -1006,6 +1006,13 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+            if num_rows == "dynamic" and hide_index is True:
+                _LOGGER.warning(
+                    "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
+                    "when `num_rows='dynamic'`. It is required for the user to fill in index values for "
+                    "adding new rows. To hide the index, make sure to set the DataFrame "
+                    "index to a range index."
+                )
 
         if hide_index is None and has_range_index and num_rows == "dynamic":
             # Temporary workaround:

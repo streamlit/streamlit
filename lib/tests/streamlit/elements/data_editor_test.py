@@ -730,6 +730,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
 
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_dynamic_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with dynamic rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="dynamic")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows='dynamic'" in warning_message
+
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
