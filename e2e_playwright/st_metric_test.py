@@ -64,7 +64,7 @@ def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
 
     assert_snapshot(
         get_element_by_key(app, "metric_arrow_config"),
-        name="st_metric-metric_arrow_config",
+        name="st_metric-delta_arrow_config",
     )
 
 
