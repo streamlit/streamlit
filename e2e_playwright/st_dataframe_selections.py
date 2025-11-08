@@ -120,7 +120,7 @@ selection = st.dataframe(
 )
 st.write("Dataframe single-row-single-column selection:", str(selection))
 
-st.header("Selections in form:")
+st.subheader("Selections in form:")
 
 with st.form(key="my_form", clear_on_submit=True):
     selection = st.dataframe(
@@ -141,7 +141,7 @@ if "df_selection_in_form" in st.session_state:
         str(st.session_state.df_selection_in_form),
     )
 
-st.header("Selection callback:")
+st.subheader("Selection callback:")
 
 
 def on_selection():
@@ -158,7 +158,7 @@ st.dataframe(
     width="content",
 )
 
-st.header("Selections in fragment:")
+st.subheader("Selections in fragment:")
 
 
 @st.fragment
@@ -233,6 +233,7 @@ selection = st.dataframe(
 st.write("Dataframe multi-row & single-cell selection:", str(selection))
 
 st.subheader("multi-row, multi-column & multi-cell select")
+
 selection = st.dataframe(
     df,
     hide_index=True,
