@@ -210,8 +210,16 @@ class ButtonTest(DeltaGeneratorTestCase):
         proto = getattr(self.get_delta_from_queue().new_element, name)
         assert proto.shortcut == "shift"
 
-    @pytest.mark.parametrize("shortcut", ["R", "r", "Shift+R", "Ctrl+C", "cmd+c"])
-    def test_reserved_shortcuts_raise(self, shortcut: str) -> None:
+    @parameterized.expand(
+        [
+            ("upper_r", "R"),
+            ("lower_r", "r"),
+            ("shift_r", "Shift+R"),
+            ("ctrl_c", "Ctrl+C"),
+            ("cmd_c", "cmd+c"),
+        ]
+    )
+    def test_reserved_shortcuts_raise(self, _name: str, shortcut: str) -> None:
         """Test that reserved shortcuts raise an exception."""
         with pytest.raises(StreamlitAPIException):
             st.button("reserved", shortcut=shortcut)
