@@ -109,7 +109,7 @@ if shortcut_download_clicked:
 random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 
-st.write(f"value: {clicked}")
+st.write(f"Random download value: {clicked}")
 
 download_button_ignore_rerun = st.download_button(
     "Download Button ignore rerun",
@@ -139,8 +139,8 @@ if runtime.exists():
         args=(1,),
         kwargs={"y": 2},
     )
-    st.write("value:", i1)
-    st.write("value from state:", st.session_state["download_button"])
+    st.write("Download button value:", i1)
+    st.write("Download button value from state:", st.session_state["download_button"])
 
     button_was_clicked = "click_count" in st.session_state
     st.write("Download Button was clicked:", button_was_clicked)

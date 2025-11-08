@@ -102,14 +102,16 @@ def test_show_tooltip_on_hover(app: Page):
 def test_value_correct_on_click(app: Page):
     download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
 
 
 def test_value_not_reset_on_reclick(app: Page):
     download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
 
 
 def test_value_correct_on_ignore_click(app: Page):
@@ -120,8 +122,12 @@ def test_value_correct_on_ignore_click(app: Page):
         download_button.click()
 
     # Check that rerun does not happen
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "Ignore rerun download button value: False"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Ignore rerun download button value:",
+        "False",
+        exact_match=True,
     )
     # Check that the actual download happened
     download = download_info.value
@@ -134,30 +140,39 @@ def test_value_correct_on_ignore_click(app: Page):
 
 def test_click_calls_callback(app: Page):
     download_button = get_element_by_key(app, "download_button").locator("button")
-    expect(app.get_by_test_id("stMarkdown").nth(4)).to_contain_text(
-        "Download Button was clicked: False"
+    expect_prefixed_markdown(
+        app,
+        "Download Button was clicked:",
+        "False",
+        exact_match=True,
     )
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").nth(4)).to_have_text(
-        "Download Button was clicked: True"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Download Button was clicked:",
+        "True",
+        exact_match=True,
     )
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text("times clicked: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(6)).to_have_text("arg value: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text("kwarg value: 2")
+    expect_prefixed_markdown(app, "times clicked:", "1", exact_match=True)
+    expect_prefixed_markdown(app, "arg value:", "1", exact_match=True)
+    expect_prefixed_markdown(app, "kwarg value:", "2", exact_match=True)
 
 
 def test_reset_on_other_widget_change(app: Page):
     download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: True")
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value from state: True"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Download button value:", "True", exact_match=True)
+    expect_prefixed_markdown(
+        app, "Download button value from state:", "True", exact_match=True
     )
 
     click_checkbox(app, "reset button return value")
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: False")
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value from state: False"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Download button value:", "False", exact_match=True)
+    expect_prefixed_markdown(
+        app, "Download button value from state:", "False", exact_match=True
     )
 
 
