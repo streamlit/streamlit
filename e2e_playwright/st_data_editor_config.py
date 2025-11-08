@@ -513,6 +513,6 @@ st.data_editor(
             "nan": [None, np.nan, 3],
         }
     ),
-    missing_placeholder="-",
+    placeholder="-",
     width="content",
 )

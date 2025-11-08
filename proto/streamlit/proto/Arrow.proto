@@ -50,7 +50,7 @@ message Arrow {
   // is only used for `st.table` at the moment.
   BorderMode border_mode = 14;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
-  optional string missing_placeholder = 15;
+  optional string placeholder = 15;
 
   // Available editing modes:
   enum EditingMode {

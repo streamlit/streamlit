@@ -123,7 +123,7 @@ type CustomRendererReturn = Pick<
  */
 function useCustomRenderer(
   columns: BaseColumn[],
-  defaultMissingPlaceholder?: string
+  missingPlaceholder?: string
 ): CustomRendererReturn {
   const drawCell: DrawCellCallback = useCallback(
     (args, draw) => {
@@ -135,9 +135,7 @@ function useCustomRenderer(
       } else if (isMissingValueCell(cell) && colPos < columns.length) {
         const column = columns[colPos]
         const placeholderToken =
-          column.missingPlaceholder ??
-          defaultMissingPlaceholder ??
-          DEFAULT_MISSING_PLACEHOLDER
+          missingPlaceholder ?? DEFAULT_MISSING_PLACEHOLDER
 
         // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
         // they are taking care of rendering their missing value state themselves (usually as empty cell).
@@ -161,7 +159,7 @@ function useCustomRenderer(
       }
       draw()
     },
-    [columns, defaultMissingPlaceholder]
+    [columns, missingPlaceholder]
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:

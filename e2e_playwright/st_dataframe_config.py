@@ -903,7 +903,7 @@ st.dataframe(
     hide_index=True,
 )
 
-st.header("Missing placeholder:")
+st.header("Placeholder:")
 st.dataframe(
     pd.DataFrame(
         {
@@ -912,6 +912,6 @@ st.dataframe(
             "nan": [None, np.nan, 3],
         }
     ),
-    missing_placeholder="-",
+    placeholder="-",
     width="content",
 )

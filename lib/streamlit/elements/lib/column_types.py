@@ -287,11 +287,6 @@ class ColumnConfig(TypedDict, total=False):
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    missing_placeholder : str or None
-        The text that should be shown for missing values (such as ``None`` or
-        ``NaN``). If this is ``None`` (default), missing values are displayed
-        as ``"None"``.
-
     hidden : bool or None
         Whether to hide the column. This defaults to ``False``.
 
@@ -307,7 +302,6 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     pinned: bool | None
     default: str | bool | int | float | list[str] | None
-    missing_placeholder: str | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
         NumberColumnConfig
@@ -339,7 +333,6 @@ def Column(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
 ) -> ColumnConfig:
     """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -399,11 +392,6 @@ def Column(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    missing_placeholder : str or None
-        The text that should be shown for missing values (such as ``None`` or
-        ``NaN``). If this is ``None`` (default), missing values are displayed
-        as ``"None"``.
-
     Examples
     --------
     >>> import pandas as pd
@@ -440,7 +428,6 @@ def Column(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
     )
 
 
@@ -453,7 +440,6 @@ def NumberColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: int | float | None = None,
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
@@ -602,7 +588,6 @@ def NumberColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=default,
         type_config=NumberColumnConfig(
             type="number",
@@ -623,7 +608,6 @@ def TextColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -732,7 +716,6 @@ def TextColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=default,
         type_config=TextColumnConfig(
             type="text", max_chars=max_chars, validate=validate
@@ -749,7 +732,6 @@ def LinkColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -897,7 +879,6 @@ def LinkColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=default,
         type_config=LinkColumnConfig(
             type="link",
@@ -917,7 +898,6 @@ def CheckboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: bool | None = None,
 ) -> ColumnConfig:
     """Configure a checkbox column in ``st.dataframe`` or ``st.data_editor``.
@@ -1015,7 +995,6 @@ def CheckboxColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=default,
         type_config=CheckboxColumnConfig(type="checkbox"),
     )
@@ -1030,7 +1009,6 @@ def SelectboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: SelectboxOptionValue | None = None,
     options: Iterable[SelectboxOptionValue] | None = None,
     format_func: Callable[[SelectboxOptionValue], str] | None = None,
@@ -1160,7 +1138,6 @@ def SelectboxColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=default,
         type_config=SelectboxColumnConfig(
             type="selectbox",
@@ -1176,7 +1153,6 @@ def BarChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1284,7 +1260,6 @@ def BarChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=BarChartColumnConfig(
             type="bar_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1298,7 +1273,6 @@ def LineChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1405,7 +1379,6 @@ def LineChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=LineChartColumnConfig(
             type="line_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1419,7 +1392,6 @@ def AreaChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1529,7 +1501,6 @@ def AreaChartColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=AreaChartColumnConfig(
             type="area_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1543,7 +1514,6 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
 ) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1628,7 +1598,6 @@ def ImageColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=ImageColumnConfig(type="image"),
     )
 
@@ -1640,7 +1609,6 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
@@ -1746,7 +1714,6 @@ def ListColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         disabled=disabled,
         required=required,
         default=None if default is None else list(default),
@@ -1763,7 +1730,6 @@ def MultiselectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
@@ -1987,7 +1953,6 @@ def MultiselectColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",
@@ -2006,7 +1971,6 @@ def DatetimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: datetime.datetime | None = None,
     format: str | Literal["localized", "distance", "calendar", "iso8601"] | None = None,
     min_value: datetime.datetime | None = None,
@@ -2154,7 +2118,6 @@ def DatetimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=None if default is None else default.isoformat(),
         type_config=DatetimeColumnConfig(
             type="datetime",
@@ -2176,7 +2139,6 @@ def TimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: datetime.time | None = None,
     format: str | Literal["localized", "iso8601"] | None = None,
     min_value: datetime.time | None = None,
@@ -2314,7 +2276,6 @@ def TimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=None if default is None else default.isoformat(),
         type_config=TimeColumnConfig(
             type="time",
@@ -2335,7 +2296,6 @@ def DateColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     default: datetime.date | None = None,
     format: str | Literal["localized", "distance", "iso8601"] | None = None,
     min_value: datetime.date | None = None,
@@ -2474,7 +2434,6 @@ def DateColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         default=None if default is None else default.isoformat(),
         type_config=DateColumnConfig(
             type="date",
@@ -2493,7 +2452,6 @@ def ProgressColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
@@ -2632,7 +2590,6 @@ def ProgressColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=ProgressColumnConfig(
             type="progress",
             format=format,
@@ -2651,7 +2608,6 @@ def JsonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    missing_placeholder: str | None = None,
 ) -> ColumnConfig:
     """Configure a JSON column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2730,6 +2686,5 @@ def JsonColumn(
         width=width,
         help=help,
         pinned=pinned,
-        missing_placeholder=missing_placeholder,
         type_config=JsonColumnConfig(type="json"),
     )

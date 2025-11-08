@@ -622,7 +622,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
-        missing_placeholder: str | None = None,
+        placeholder: str | None = None,
     ) -> EditableData:
         pass
 
@@ -644,7 +644,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
-        missing_placeholder: str | None = None,
+        placeholder: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -666,7 +666,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
-        missing_placeholder: str | None = None,
+        placeholder: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -822,7 +822,7 @@ class DataEditorMixin:
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
 
-        missing_placeholder : str or None
+        placeholder : str or None
             The text that should be shown for missing values (such as ``"None"``,
             ``"NaN"``, ``"-"``, or ``""`` ). If this is ``None`` (default),
             missing values are displayed as ``"None"``.
@@ -1067,7 +1067,7 @@ class DataEditorMixin:
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
             row_height=row_height,
-            missing_placeholder=missing_placeholder,
+            missing_placeholder=placeholder,
         )
 
         proto = ArrowProto()
@@ -1079,8 +1079,8 @@ class DataEditorMixin:
         if column_order:
             proto.column_order[:] = column_order
 
-        if missing_placeholder is not None:
-            proto.missing_placeholder = missing_placeholder
+        if placeholder is not None:
+            proto.placeholder = placeholder
 
         # Only set disabled to true if it is actually true
         # It can also be a list of columns, which should result in false here.
