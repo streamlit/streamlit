@@ -102,15 +102,16 @@ def test_show_tooltip_on_hover(app: Page):
 
 
 def test_value_correct_on_click(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
+    download_button = app.get_by_role("button", name="Download random text")
     download_button.click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
+    download_button = app.get_by_role("button", name="Download random text")
     download_button.click()
+    wait_for_app_run(app)
     download_button.click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
@@ -162,7 +163,7 @@ def test_click_calls_callback(app: Page):
 
 
 def test_reset_on_other_widget_change(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = get_element_by_key(app, "download_button").locator("button")
     download_button.click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Download button value:", "True", exact_match=True)
