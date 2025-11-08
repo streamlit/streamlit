@@ -139,16 +139,19 @@ if runtime.exists():
         args=(1,),
         kwargs={"y": 2},
     )
-    st.write("Download button value:", i1)
-    st.write("Download button value from state:", st.session_state["download_button"])
+    st.write("Download button with on_click value:", i1)
+    st.write(
+        "Download button with on_click value from state:",
+        st.session_state["download_button"],
+    )
 
     button_was_clicked = "click_count" in st.session_state
     st.write("Download Button was clicked:", button_was_clicked)
 
     if button_was_clicked:
         st.write("times clicked:", st.session_state.click_count)
-        st.write("arg value:", st.session_state.x)
-        st.write("kwarg value:", st.session_state.y)
+        st.write("callback arg value:", st.session_state.x)
+        st.write("callback kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
 

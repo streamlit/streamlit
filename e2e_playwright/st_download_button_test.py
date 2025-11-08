@@ -157,25 +157,25 @@ def test_click_calls_callback(app: Page):
         "True",
         exact_match=True,
     )
-    expect_prefixed_markdown(app, "times clicked:", "1", exact_match=True)
-    expect_prefixed_markdown(app, "arg value:", "1", exact_match=True)
-    expect_prefixed_markdown(app, "kwarg value:", "2", exact_match=True)
+    expect_prefixed_markdown(app, "times clicked:", "1")
+    expect_prefixed_markdown(app, "callback arg value:", "1")
+    expect_prefixed_markdown(app, "callback kwarg value:", "2")
 
 
 def test_reset_on_other_widget_change(app: Page):
     download_button = get_element_by_key(app, "download_button").locator("button")
     download_button.click()
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Download button value:", "True", exact_match=True)
+    expect_prefixed_markdown(app, "Download button with on_click value:", "True")
     expect_prefixed_markdown(
-        app, "Download button value from state:", "True", exact_match=True
+        app, "Download button with on_click value from state:", "True"
     )
 
     click_checkbox(app, "reset button return value")
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Download button value:", "False", exact_match=True)
+    expect_prefixed_markdown(app, "Download button with on_click value:", "False")
     expect_prefixed_markdown(
-        app, "Download button value from state:", "False", exact_match=True
+        app, "Download button with on_click value from state:", "False"
     )
 
 
