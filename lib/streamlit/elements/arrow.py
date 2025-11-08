@@ -518,7 +518,7 @@ class ArrowMixin:
 
         placeholder : str or None
             The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""`` ). If this is ``None`` (default),
+            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
             missing values are displayed as ``"None"``.
 
         Returns
