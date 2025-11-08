@@ -50,7 +50,7 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span({
+export const StyledSummaryHeading = styled.span(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
@@ -58,7 +58,8 @@ export const StyledSummaryHeading = styled.span({
   width: "100%",
   maxWidth: "100%",
   overflow: "hidden",
-})
+  gap: theme.spacing.sm,
+}))
 
 export const StyledSummaryLabelWrapper = styled.div({
   display: "flex",
