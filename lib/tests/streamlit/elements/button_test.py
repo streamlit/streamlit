@@ -178,6 +178,38 @@ class ButtonTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.button
         assert proto.shortcut == "ctrl"
 
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_ignores_case_and_whitespace(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts ignore casing and extraneous whitespace."""
+        command(shortcut="  CtRl  +  OptIon +   ShIfT   +   N   ")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+alt+shift+n"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_modifier_only_shortcut_with_whitespace(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that modifier-only shortcuts handle additional whitespace."""
+        command(shortcut="   shift   ")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "shift"
+
     @pytest.mark.parametrize("shortcut", ["R", "r", "Shift+R", "Ctrl+C", "cmd+c"])
     def test_reserved_shortcuts_raise(self, shortcut: str) -> None:
         """Test that reserved shortcuts raise an exception."""

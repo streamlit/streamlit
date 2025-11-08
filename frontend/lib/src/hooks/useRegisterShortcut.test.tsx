@@ -202,4 +202,10 @@ describe("formatShortcutForDisplay", () => {
   it("renders Alt modifiers on non-mac platforms", () => {
     expect(formatShortcutForDisplay("Alt+S", { isMac: false })).toBe("Alt + S")
   })
+
+  it("ignores casing and extra whitespace", () => {
+    expect(formatShortcutForDisplay("  cTrL  +   alt +   n  ")).toBe(
+      "Ctrl + Alt + N"
+    )
+  })
 })
