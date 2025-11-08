@@ -754,10 +754,13 @@ describe("App", () => {
       )
       renderApp(props)
 
+      // The new session has a single Custom Theme, so it should be set as the active theme
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
     })
 
     it("sets the custom theme as the default if no user preference is set", () => {
@@ -777,10 +780,6 @@ describe("App", () => {
     })
 
     it("sets the custom theme again if a custom theme is already active", () => {
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
-      )
       const props = getProps()
       props.theme.activeTheme = {
         ...lightTheme,

@@ -182,23 +182,15 @@ describe("Cached theme helpers", () => {
       expect(getCachedTheme()).toEqual(darkTheme)
     })
 
-    it("returns a custom cached theme if localStorage is available and one is set", () => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        primaryColor: "red",
-        backgroundColor: "orange",
-        secondaryBackgroundColor: "yellow",
-        textColor: "green",
-        bodyFont: '"Source Sans", sans-serif',
-      }
-
-      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-
+    it("returns null for non-preset theme names", () => {
+      // When a custom theme name is cached (e.g., "Custom Theme"),
+      // getCachedTheme returns null since it only handles preset themes
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput })
+        JSON.stringify({ name: CUSTOM_THEME_NAME })
       )
 
-      expect(getCachedTheme()).toEqual(customTheme)
+      expect(getCachedTheme()).toBe(null)
     })
   })
 
@@ -274,21 +266,18 @@ describe("Cached theme helpers", () => {
       ).toBe(null)
     })
 
-    it("sets a custom theme with its name and themeInput if localStorage is available", () => {
+    it("sets a custom theme with only its name if localStorage is available", () => {
       setCachedTheme(customTheme)
 
       const cachedTheme = JSON.parse(
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
 
-      // Note: bodyFont will have Streamlit's default fallback appended by parseFont
+      // Only the theme name (preference) is cached, not the themeInput
       expect(cachedTheme).toEqual({
         name: customTheme.name,
-        themeInput: {
-          ...themeInput,
-          bodyFont: 'Roboto, "Source Sans", sans-serif',
-        },
       })
+      expect(cachedTheme.themeInput).toBeUndefined()
     })
   })
 })
@@ -554,6 +543,31 @@ describe("getDefaultTheme", () => {
 
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("respects embed query parameter over cached preference", () => {
+    // First, cache a user preference for Dark theme
+    windowSpy = mockWindow()
+    setCachedTheme(darkTheme)
+
+    // Verify Dark theme is cached
+    const cachedThemeBeforeEmbed =
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? ""
+    expect(cachedThemeBeforeEmbed).toBeTruthy()
+    const cachedThemeParsed = JSON.parse(cachedThemeBeforeEmbed)
+    expect(cachedThemeParsed.name).toBe("Dark")
+
+    // Now simulate embed context with Light theme specified via query params
+    windowSpy.mockRestore()
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+
+    const defaultTheme = getDefaultTheme()
+
+    // Should use embed param (Light), not cached preference (Dark)
+    expect(defaultTheme.name).toBe("Light")
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
 })

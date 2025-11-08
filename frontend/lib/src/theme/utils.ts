@@ -1076,6 +1076,23 @@ export const createTheme = (
   }
 }
 
+export const removeCachedTheme = (): void => {
+  if (!localStorageAvailable()) {
+    return
+  }
+
+  window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+}
+
+/**
+ * Get the user's cached theme preference from localStorage.
+ * Only "Light" or "Dark" system preferences are saved.
+ *
+ * @returns The preset theme matching the cached preference, or null if:
+ *   - localStorage is not available
+ *   - No preference is cached (first-time user)
+ *   - Cached value is invalid (cleared automatically)
+ */
 export const getCachedTheme = (): ThemeConfig | null => {
   if (!localStorageAvailable()) {
     return null
@@ -1086,16 +1103,18 @@ export const getCachedTheme = (): ThemeConfig | null => {
     return null
   }
 
-  const { name: themeName, themeInput }: CachedTheme =
-    JSON.parse(cachedThemeStr)
+  const { name: themeName }: CachedTheme = JSON.parse(cachedThemeStr)
+
+  // Only "Light" or "Dark" are valid cached preferences
   switch (themeName) {
-    case lightTheme.name:
+    case lightTheme.name: // "Light"
       return getMergedLightTheme()
-    case darkTheme.name:
+    case darkTheme.name: // "Dark"
       return getMergedDarkTheme()
     default:
-      // At this point we're guaranteed that themeInput is defined.
-      return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
+      // Invalid cached value (e.g., from old version) - clear it and return null
+      removeCachedTheme()
+      return null
   }
 }
 
@@ -1128,25 +1147,17 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
+  // Only store the system preference - light/dark - if set.
   const cachedTheme: CachedTheme = {
-    name: themeConfig.name,
-    ...(!isPresetTheme(themeConfig) && {
-      themeInput: toThemeInput(themeConfig.emotion),
-    }),
+    // The system preference is the displayName for custom themes,
+    // otherwise use the theme's name property
+    name: themeConfig.displayName ?? themeConfig.name,
   }
 
   window.localStorage.setItem(
     LocalStore.ACTIVE_THEME,
     JSON.stringify(cachedTheme)
   )
-}
-
-export const removeCachedTheme = (): void => {
-  if (!localStorageAvailable()) {
-    return
-  }
-
-  window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
 }
 
 export const getHostSpecifiedTheme = (): ThemeConfig => {
@@ -1162,16 +1173,20 @@ export const getHostSpecifiedTheme = (): ThemeConfig => {
 }
 
 export const getDefaultTheme = (): ThemeConfig => {
-  // Priority for default theme
-  const cachedTheme = getCachedTheme()
+  // Embed query params take highest priority
+  const hostTheme = getHostSpecifiedTheme()
+  if (isLightThemeInQueryParams() || isDarkThemeInQueryParams()) {
+    return hostTheme
+  }
 
-  // We shouldn't ever have auto saved in our storage in case
-  // OS theme changes but we explicitly check in case!
+  // Then check cached preference
+  const cachedTheme = getCachedTheme()
   if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
     return cachedTheme
   }
 
-  return getHostSpecifiedTheme()
+  // Fall back to auto/system preference
+  return hostTheme
 }
 
 const whiteSpace = /\s+/

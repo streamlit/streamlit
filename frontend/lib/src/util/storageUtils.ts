@@ -16,7 +16,8 @@
 
 // Note: Cached themes before version 1 were simply stored with key equal to
 // CACHED_THEME_BASE_KEY (with no version number).
-const CACHED_THEME_VERSION = 1
+// Version 2 only saves the system preference (Light/Dark)
+const CACHED_THEME_VERSION = 2
 const CACHED_THEME_BASE_KEY = `stActiveTheme-${window.location.pathname}`
 
 export const LocalStore = {

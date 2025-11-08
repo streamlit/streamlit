@@ -18,12 +18,13 @@ import { useCallback, useEffect, useState } from "react"
 
 import {
   AUTO_THEME_NAME,
-  createAutoTheme,
   createPresetThemes,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_NAME,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getSystemThemePreference,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
@@ -77,9 +78,16 @@ export function useThemeManager(): [
     (newTheme: ThemeConfig): void => {
       setTheme(prevTheme => {
         if (newTheme !== prevTheme) {
-          // Only save to localStorage if it is not Auto since auto is the default.
-          // Important to not save since it can change depending on time of day.
-          if (newTheme.name === AUTO_THEME_NAME) {
+          // Only save to localStorage if explicit "Light" or "Dark" user preference.
+          // Don't save:
+          // - Auto themes: can change based on system preference/time of day
+          // - Single custom theme: it's the only option (like auto), no preference to preserve
+          // Checking both name and displayName to handle default & custom themes.
+          if (
+            newTheme.name === AUTO_THEME_NAME ||
+            newTheme.displayName === AUTO_THEME_NAME ||
+            newTheme.name === CUSTOM_THEME_NAME
+          ) {
             removeCachedTheme()
           } else {
             setCachedTheme(newTheme)
@@ -93,14 +101,63 @@ export function useThemeManager(): [
   )
 
   const updateAutoTheme = useCallback((): void => {
-    if (theme.name === AUTO_THEME_NAME) {
-      updateTheme(getHostSpecifiedTheme())
-    }
-    const constantThemes = availableThemes.filter(
-      currTheme => currTheme.name !== AUTO_THEME_NAME
+    // Find the auto theme (could be preset or custom)
+    const autoTheme = availableThemes.find(
+      t => t.name === AUTO_THEME_NAME || t.name === CUSTOM_THEME_AUTO_NAME
     )
-    setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }, [theme.name, availableThemes, updateTheme])
+
+    if (!autoTheme) {
+      // No auto theme exists (single custom theme case) - nothing to update
+      return
+    }
+
+    // Determine if we're dealing with custom or preset auto theme
+    const isCustomAuto = autoTheme.name === CUSTOM_THEME_AUTO_NAME
+
+    if (isCustomAuto) {
+      // Custom auto theme - update to match system preference
+      const systemPreference = getSystemThemePreference() // "light" or "dark"
+
+      // Find the matching custom variant to copy properties from
+      const matchingCustomTheme = availableThemes.find(
+        t => t.displayName?.toLowerCase() === systemPreference
+      )
+
+      if (matchingCustomTheme) {
+        // Create updated auto theme with the correct variant's properties
+        const updatedAutoTheme: ThemeConfig = {
+          ...matchingCustomTheme,
+          name: CUSTOM_THEME_AUTO_NAME,
+          displayName: AUTO_THEME_NAME,
+        }
+
+        // Update availableThemes list with the refreshed auto theme
+        const otherThemes = availableThemes.filter(
+          t => t.name !== CUSTOM_THEME_AUTO_NAME
+        )
+        setAvailableThemes([...otherThemes, updatedAutoTheme])
+
+        // Update active theme if user is on auto
+        if (theme.name === CUSTOM_THEME_AUTO_NAME) {
+          setTheme(updatedAutoTheme)
+        }
+      }
+    } else {
+      // We are using auto from default themes
+      // Create the updated auto theme (respecting embed params if present)
+      const updatedAutoTheme = getHostSpecifiedTheme()
+
+      // Update the auto theme if active theme is auto
+      if (theme.name === AUTO_THEME_NAME) {
+        setTheme(updatedAutoTheme)
+      }
+      // Refresh the preset auto theme in the list
+      const constantThemes = availableThemes.filter(
+        currTheme => currTheme.name !== AUTO_THEME_NAME
+      )
+      setAvailableThemes([updatedAutoTheme, ...constantThemes])
+    }
+  }, [theme.name, availableThemes])
 
   const setFonts = useCallback(
     (themeInfo: ICustomThemeConfig): void => {
@@ -153,7 +210,7 @@ export function useThemeManager(): [
       window.removeEventListener("afterprint", updateAutoTheme)
       mediaMatch.removeEventListener("change", updateAutoTheme)
     }
-  }, [theme, availableThemes, updateAutoTheme])
+  }, [updateAutoTheme])
 
   return [
     {

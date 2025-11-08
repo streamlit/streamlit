@@ -1356,49 +1356,61 @@ export class App extends PureComponent<Props, State> {
     }
     this.setState({ themeHash })
 
-    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
+      // Handle custom fonts first if provided - set the fonts in the
+      // theme manager to make them available.
+      if (
+        (themeInput.fontFaces && themeInput.fontFaces.length > 0) ||
+        (themeInput.fontSources && themeInput.fontSources.length > 0)
+      ) {
+        this.props.theme.setFonts(themeInput)
+      }
+
       // createCustomThemes can return either 1 theme ("Custom Theme")
       // or 3 themes ("Custom Theme Light", "Custom Theme Dark", and "Custom Theme Auto")
-      const customThemes = createCustomThemes(themeInput)
+      const customThemes: ThemeConfig[] = createCustomThemes(themeInput)
 
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      const userPreference = getCachedTheme()
-      if (userPreference === null || usingCustomTheme) {
-        // If the user hasn't set a preference, or if a custom theme is currently active,
-        // update the theme to be a custom theme.
-        if (customThemes.length > 1) {
-          // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
-          // on the system preference and set this as the active theme
-          const autoThemeIndex = customThemes.findIndex(
-            theme => theme.name === CUSTOM_THEME_AUTO_NAME
-          )
-          this.setAndSendTheme(customThemes[autoThemeIndex])
-        } else {
-          // Set to singular Custom Theme
-          this.setAndSendTheme(customThemes[0])
+      // Single custom theme - always use it (no preference to consider)
+      if (customThemes.length === 1) {
+        this.setAndSendTheme(customThemes[0])
+        return
+      }
+
+      // Light/Dark Custom themes - try to respect user's light/dark preference from localStorage
+      const cachedTheme = getCachedTheme()
+      const cachedSystemPreference = cachedTheme?.name // "Light" or "Dark" or null
+
+      if (cachedSystemPreference) {
+        const matchingTheme = customThemes.find(
+          theme => theme.displayName === cachedSystemPreference
+        )
+        if (matchingTheme) {
+          this.setAndSendTheme(matchingTheme)
+          return
         }
       }
+
+      // No preference or no match - use auto theme (system preference)
+      const autoTheme = customThemes.find(
+        theme => theme.name === CUSTOM_THEME_AUTO_NAME
+      )
+      if (autoTheme) {
+        this.setAndSendTheme(autoTheme)
+      }
     } else {
-      // Remove the custom theme menu option.
+      // Since there is no themeInput (no custom theme), remove custom themes and reset to defaults
       this.props.theme.addThemes([])
 
+      // Only change theme if user was using a custom theme
+      const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
       if (usingCustomTheme) {
         // Reset to the auto theme taking into account any host preferences
         // aka embed query params.
         this.setAndSendTheme(getHostSpecifiedTheme())
       }
-    }
-
-    if (
-      (themeInput?.fontFaces && themeInput.fontFaces.length > 0) ||
-      (themeInput?.fontSources && themeInput.fontSources.length > 0)
-    ) {
-      // If font faces or font sources are provided, we need to set the imported
-      // theme with the theme manager to make the fonts available.
-      this.props.theme.setFonts(themeInput)
     }
   }
 

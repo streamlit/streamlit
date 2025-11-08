@@ -151,18 +151,17 @@ describe("useThemeManager", () => {
     expect(availableThemes.length).toBe(createPresetThemes().length)
   })
 
-  it("includes a custom theme as an available theme if one is cached", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: CUSTOM_THEME_NAME,
-    })
+  it("applies cached preference to preset themes", () => {
+    // When only a preference is cached (e.g., "Dark"), it should load the preset theme
+    setCachedTheme(darkTheme)
 
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
     const { activeTheme, availableThemes } = themeManager
 
-    expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(availableThemes.length).toBe(createPresetThemes().length + 1)
+    expect(activeTheme.name).toBe("Dark")
+    // Should only have preset themes available (no custom themes)
+    expect(availableThemes.length).toBe(createPresetThemes().length)
   })
 
   it("handles custom theme sent from Host", () => {
@@ -267,7 +266,7 @@ describe("useThemeManager", () => {
       expect(fontSources).toBeNull()
     })
 
-    it("saves the imported theme to localStorage", () => {
+    it("does not save single custom theme to localStorage", () => {
       const { result } = renderHook(() => useThemeManager())
       const [themeManager] = result.current
 
@@ -275,12 +274,10 @@ describe("useThemeManager", () => {
         themeManager.setImportedTheme(mockCustomThemeConfig)
       })
 
-      const savedTheme = JSON.parse(
-        window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
-      )
-
-      expect(savedTheme.name).toBe(CUSTOM_THEME_NAME)
-      expect(savedTheme.themeInput).toBeDefined()
+      // Single custom theme (CUSTOM_THEME_NAME) should not be cached
+      // since it's the only option (like auto theme)
+      const cachedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+      expect(cachedTheme).toBe(null)
     })
 
     it("replaces the current theme completely", () => {
