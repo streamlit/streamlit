@@ -662,7 +662,7 @@ function DataFrame({
 
   const { drawCell, customRenderers } = useCustomRenderer(
     columns,
-    element.missingPlaceholder ?? undefined
+    element.placeholder ?? undefined
   )
   const { provideEditor } = useCustomEditors()
   // Callback that can be used to configure the column menu for the columns
