@@ -91,12 +91,14 @@ def test_link_button_shortcut_triggers(app: Page):
     expect(shortcut_button).to_be_visible()
 
     # Ensure shortcut labels are rendered for link buttons:
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + L")
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"Ctrl \+ (Alt|Option) \+ L")
+    )
 
     # Press hotkey to trigger the button:
 
     with app.expect_popup() as popup_info:
-        app.keyboard.press("ControlOrMeta+Alt+KeyL")
+        app.keyboard.press("Control+Alt+KeyL")
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
