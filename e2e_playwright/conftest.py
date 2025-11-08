@@ -83,8 +83,16 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
     This allows patch of configurations before the application is initialized
 
     Copied from: https://github.com/pytest-dev/pytest/issues/1216#issuecomment-456109892
+
+    WARNING: This function accesses the private attribute
+    `_arg2fixturedefs` of pytest's Metafunc. This is NOT a public API
+    and may break with future versions of pytest.
     """
-    for fixture_definitions in metafunc._arg2fixturedefs.values():
+    fixturedef_map = getattr(metafunc, "_arg2fixturedefs", None)
+    if fixturedef_map is None:
+        # Could log a warning here instead if desired
+        return
+    for fixture_definitions in fixturedef_map.values():
         fixturedef = fixture_definitions[0]
         for mark in getattr(fixturedef.func, "pytestmark", []):
             if mark.name == "early":
@@ -172,11 +180,11 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
 
 def hash_to_range(
     text: str,
-    min: int = 10000,
-    max: int = 65535,
+    min_value: int = 10000,
+    max_value: int = 65535,
 ) -> int:
     sha256_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return min + (int(sha256_hash, 16) % (max - min + 1))
+    return min_value + (int(sha256_hash, 16) % (max_value - min_value + 1))
 
 
 def is_port_available(port: int, host: str) -> bool:
@@ -209,7 +217,7 @@ def is_app_server_running(port: int, host: str = "localhost") -> bool:
         return False
 
 
-def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
+def wait_for_app_server_to_start(port: int, timeout_minutes: int = 5) -> bool:
     """Wait for the app server to start.
 
     Parameters
@@ -217,7 +225,7 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     port : int
         The port on which the app server is running.
 
-    timeout : int
+    timeout_minutes : int
         The number of minutes to wait for the app server to start.
 
     Returns
@@ -230,7 +238,7 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     start_time = time.time()
     while not is_app_server_running(port):
         time.sleep(3)
-        if time.time() - start_time > 60 * timeout:
+        if time.time() - start_time > 60 * timeout_minutes:
             return False
     return True
 
@@ -490,8 +498,8 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
         # playwright
         page.route(fake_iframe_server_route, fulfill_iframe_request)
 
-        def fullfill_streamlit_app_request(route: Route) -> None:
-            """Get the actual Streamlit app and return it's content."""
+        def fulfill_streamlit_app_request(route: Route) -> None:
+            """Get the actual Streamlit app and return its content."""
             response = route.fetch()
             route.fulfill(
                 body=response.body(),
@@ -499,7 +507,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             )
 
         # this will route the request to the actual Streamlit app
-        page.route(src, fullfill_streamlit_app_request)
+        page.route(src, fulfill_streamlit_app_request)
 
         def _expect_streamlit_app_loaded_in_iframe_with_added_header(
             response: Response,
