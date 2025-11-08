@@ -264,7 +264,10 @@ def test_button_displays_shortcut(app: Page):
 
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
-    app.locator("body").click()
-    app.keyboard.press("ControlOrMeta+J")
+    expect(
+        get_button(app, "Shortcut Button"),
+    ).to_be_visible()
+
+    app.keyboard.press("Control+J")
     wait_for_app_run(app)
-    expect(app.get_by_text("Shortcut button pressed!")).to_be_visible()
+    expect_markdown(app, "Shortcut button pressed!")

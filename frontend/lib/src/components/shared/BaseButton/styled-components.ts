@@ -546,8 +546,8 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   backgroundColor: theme.colors.fadedText05,
   color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.twoSm,
   fontFamily: "inherit",
-  lineHeight: theme.lineHeights.base,
+  lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.02em",
 }))

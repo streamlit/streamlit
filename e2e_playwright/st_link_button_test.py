@@ -98,9 +98,9 @@ def test_link_button_shortcut_triggers(app: Page):
         .first
     )
     expect(shortcut_button).to_be_visible()
-    app.locator("body").click()
+
     with app.expect_popup() as popup_info:
-        app.keyboard.press("ControlOrMeta+Alt+L")
+        app.keyboard.press("Control+Alt+L")
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
