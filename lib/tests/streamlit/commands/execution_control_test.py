@@ -125,6 +125,13 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
     ctx.page_script_hash = "some_hash"  # This is for the current page, not the target
     ctx.cached_message_hashes = MagicMock()
     ctx.context_info = {"test_key": "test_value"}  # Set a specific context_info
+    ctx.script_requests.request_rerun = MagicMock()
+
+    query_params_cm = MagicMock()
+    query_params_instance = MagicMock()
+    query_params_cm.__enter__.return_value = query_params_instance
+    query_params_cm.__exit__.return_value = None
+    ctx.session_state.query_params.return_value = query_params_cm
 
     patched_get_script_run_ctx.return_value = ctx
 
@@ -144,4 +151,88 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
     assert call_args.page_script_hash == "target_page_hash"
     assert call_args.context_info == {"test_key": "test_value"}
     # check that query_params.clear() was called
-    ctx.session_state.query_params.assert_called_once()
+    query_params_instance.clear.assert_called_once()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_switch_page_sets_query_params(patched_get_script_run_ctx):
+    """Test that st.switch_page sets provided query params."""
+    ctx = MagicMock()
+    ctx.main_script_path = "/app/main.py"
+    ctx.query_string = ""
+    ctx.cached_message_hashes = MagicMock()
+    ctx.context_info = {"foo": "bar"}
+    ctx.pages_manager.get_pages.return_value = {
+        "foo": {
+            "script_path": "/app/pages/foo.py",
+            "page_script_hash": "hash123",
+            "page_name": "Foo",
+            "url_pathname": "foo",
+        }
+    }
+
+    query_params_cm = MagicMock()
+    query_params_instance = MagicMock()
+    query_params_cm.__enter__.return_value = query_params_instance
+    query_params_cm.__exit__.return_value = None
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    def update_query_string(mapping: dict[str, str | list[str]]) -> None:
+        assert mapping == {"alpha": "1", "beta": ["x", "y"]}
+        ctx.query_string = "alpha=1&beta=x&beta=y"
+
+    query_params_instance.from_dict.side_effect = update_query_string
+    ctx.script_requests.request_rerun = MagicMock()
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    with patch(
+        "streamlit.commands.execution_control.get_main_script_directory",
+        return_value="/app",
+    ):
+        with patch("os.path.realpath", return_value="/app/pages/foo.py"):
+            switch_page(
+                "pages/foo.py?alpha=0", query_params={"alpha": "1", "beta": ["x", "y"]}
+            )
+
+    query_params_instance.from_dict.assert_called_once()
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert rerun_arg.query_string == "alpha=1&beta=x&beta=y"
+    assert rerun_arg.page_script_hash == "hash123"
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_switch_page_clears_query_params_when_none(patched_get_script_run_ctx):
+    """Test that st.switch_page clears query params when none provided."""
+    ctx = MagicMock()
+    ctx.main_script_path = "/app/main.py"
+    ctx.query_string = ""
+    ctx.cached_message_hashes = MagicMock()
+    ctx.context_info = {"foo": "bar"}
+    ctx.pages_manager.get_pages.return_value = {
+        "foo": {
+            "script_path": "/app/pages/foo.py",
+            "page_script_hash": "hash123",
+            "page_name": "Foo",
+            "url_pathname": "foo",
+        }
+    }
+
+    query_params_cm = MagicMock()
+    query_params_instance = MagicMock()
+    query_params_cm.__enter__.return_value = query_params_instance
+    query_params_cm.__exit__.return_value = None
+    ctx.session_state.query_params.return_value = query_params_cm
+    ctx.script_requests.request_rerun = MagicMock()
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    with patch(
+        "streamlit.commands.execution_control.get_main_script_directory",
+        return_value="/app",
+    ):
+        with patch("os.path.realpath", return_value="/app/pages/foo.py"):
+            switch_page("pages/foo.py")
+
+    query_params_instance.clear.assert_called_once()

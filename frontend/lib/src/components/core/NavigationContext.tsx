@@ -47,7 +47,7 @@ export interface NavigationContextProps {
    * @see SidebarNav
    * @see PageLink
    */
-  onPageChange: (pageScriptHash: string) => void
+  onPageChange: (pageScriptHash: string, queryString?: string) => void
 
   /**
    * The nav sections in a multi-page app. Used to group pages into
@@ -80,7 +80,7 @@ export interface NavigationContextProps {
 export const NavigationContext = createContext<NavigationContextProps>({
   pageLinkBaseUrl: "",
   currentPageScriptHash: "",
-  onPageChange: () => {},
+  onPageChange: (_pageScriptHash: string, _queryString?: string) => {},
   navSections: [],
   appPages: [],
 })

@@ -53,7 +53,7 @@ type LibConfigContextValues = {
 type NavigationContextValues = {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
-  onPageChange: (pageScriptHash: string) => void
+  onPageChange: (pageScriptHash: string, queryString?: string) => void
   navSections: string[]
   appPages: IAppPage[]
 }

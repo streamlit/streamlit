@@ -35,6 +35,7 @@ const getProps = (
     page: "streamlit_app",
     pageScriptHash: "main_page_hash",
     useContainerWidth: null,
+    queryString: "",
     ...elementProps,
   }),
   disabled: false,
@@ -96,7 +97,7 @@ describe("PageLink", () => {
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
-    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", undefined)
   })
 
   it("does not trigger onPageChange when disabled", async () => {
@@ -112,6 +113,29 @@ describe("PageLink", () => {
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
     expect(mockOnPageChange).not.toHaveBeenCalled()
+  })
+
+  it("passes query params when provided", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ queryString: "foo=bar" })
+
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
+    })
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    await user.click(pageNavLink)
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", "foo=bar")
+  })
+
+  it("includes query string in href for internal links", () => {
+    const props = getProps({ queryString: "foo=bar" })
+    render(<PageLink {...props} />)
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageNavLink).toHaveAttribute("href", "streamlit_app?foo=bar")
   })
 
   it("does not trigger onPageChange for external links", async () => {

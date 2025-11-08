@@ -18,6 +18,7 @@ import os
 from itertools import dropwhile
 from pathlib import Path
 from typing import Literal, NoReturn
+from urllib.parse import urlsplit
 
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
@@ -28,6 +29,11 @@ from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
+)
+from streamlit.runtime.state.query_params import (
+    QueryParamsInput,
+    merge_query_params,
+    pairs_to_query_dict,
 )
 
 
@@ -155,7 +161,11 @@ def rerun(  # type: ignore[misc]
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[misc]
+def switch_page(
+    page: str | Path | StreamlitPage,
+    *,
+    query_params: QueryParamsInput | None = None,
+) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
@@ -169,6 +179,13 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
     page: str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
         the page to switch to.
+
+    query_params: Mapping[str, object] or Iterable[tuple[str, object]]
+        Optional query parameters to append to the destination page's URL.
+        ``Iterable`` values (except for strings and bytes) are expanded into
+        multiple key/value pairs in the resulting URL. Query parameter keys
+        ``embed`` and ``embed_options`` are reserved for Streamlit and cannot
+        be set programmatically.
 
 
     Example
@@ -203,16 +220,23 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
         raise NoSessionContext()
 
     page_script_hash = ""
+    query_pairs: list[tuple[str, str]] = []
+
     if isinstance(page, StreamlitPage):
         page_script_hash = page._script_hash
+        _, query_pairs = merge_query_params(None, query_params)
     else:
         # Convert Path to string if necessary
         if isinstance(page, Path):
             page = str(page)
 
+        parsed_page = urlsplit(page)
+        normalized_page = parsed_page.path or page
+        _, query_pairs = merge_query_params(parsed_page.query, query_params)
+
         main_script_directory = get_main_script_directory(ctx.main_script_path)
         requested_page = os.path.realpath(
-            normalize_path_join(main_script_directory, page)
+            normalize_path_join(main_script_directory, normalized_page)
         )
         all_app_pages = ctx.pages_manager.get_pages().values()
 
@@ -229,7 +253,10 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
 
     # We want to reset query params (with exception of embed) when switching pages
     with ctx.session_state.query_params() as qp:
-        qp.clear()
+        if query_pairs:
+            qp.from_dict(pairs_to_query_dict(query_pairs))
+        else:
+            qp.clear()
 
     ctx.script_requests.request_rerun(
         RerunData(

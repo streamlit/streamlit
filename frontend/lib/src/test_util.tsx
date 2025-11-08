@@ -254,7 +254,7 @@ export const renderWithContexts = (
   let currentNavigationContextProps: NavigationContextProps = {
     pageLinkBaseUrl: "",
     currentPageScriptHash: "",
-    onPageChange: vi.fn(),
+    onPageChange: vi.fn() as NavigationContextProps["onPageChange"],
     navSections: [],
     appPages: [],
     ...options.navigationContext,

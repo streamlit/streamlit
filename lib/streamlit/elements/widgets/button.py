@@ -28,6 +28,7 @@ from typing import (
     TypeAlias,
     cast,
 )
+from urllib.parse import urlsplit, urlunsplit
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
@@ -58,6 +59,10 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+)
+from streamlit.runtime.state.query_params import (
+    QueryParamsInput,
+    merge_query_params,
 )
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
@@ -736,6 +741,7 @@ class ButtonMixin:
         label: str | None = None,
         icon: str | None = None,
         help: str | None = None,
+        query_params: QueryParamsInput | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -800,6 +806,13 @@ class ButtonMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        query_params : Mapping[str, object] or Iterable[tuple[str, object]]
+            Optional query parameters to append to the destination page's URL.
+            ``Iterable`` values (except for strings and bytes) are expanded into
+            multiple key/value pairs in the resulting URL. Query parameter keys
+            ``embed`` and ``embed_options`` are reserved for Streamlit and
+            cannot be set programmatically.
 
         disabled : bool
             An optional boolean that disables the page link if set to ``True``.
@@ -871,6 +884,7 @@ class ButtonMixin:
             label=label,
             icon=icon,
             help=help,
+            query_params=query_params,
             disabled=disabled,
             width=width,
         )
@@ -1005,6 +1019,7 @@ class ButtonMixin:
         label: str | None = None,
         icon: str | None = None,
         help: str | None = None,
+        query_params: QueryParamsInput | None = None,
         disabled: bool = False,
         width: Width = "content",
     ) -> DeltaGenerator:
@@ -1038,6 +1053,9 @@ class ButtonMixin:
                 page_link_proto.icon = page.icon
                 # Here the StreamlitPage's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+            query_string, _ = merge_query_params(None, query_params)
+            if query_string:
+                page_link_proto.query_string = query_string
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):
@@ -1045,14 +1063,31 @@ class ButtonMixin:
 
             # Handle external links:
             if is_url(page):
+                parsed_url = urlsplit(page)
+                query_string, _ = merge_query_params(parsed_url.query, query_params)
+                rebuilt_url = urlunsplit(
+                    (
+                        parsed_url.scheme,
+                        parsed_url.netloc,
+                        parsed_url.path,
+                        query_string or "",
+                        parsed_url.fragment,
+                    )
+                )
                 if label is None or label == "":
                     raise StreamlitMissingPageLabelError()
-                page_link_proto.page = page
+                page_link_proto.page = rebuilt_url
                 page_link_proto.external = True
+                if query_string:
+                    page_link_proto.query_string = query_string
                 layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
+
+            parsed_page = urlsplit(page)
+            query_string, _ = merge_query_params(parsed_page.query, query_params)
+            normalized_page = parsed_page.path or str(page)
 
             ctx_main_script = ""
             all_app_pages = {}
@@ -1061,7 +1096,7 @@ class ButtonMixin:
 
             main_script_directory = get_main_script_directory(ctx_main_script)
             requested_page = os.path.realpath(
-                normalize_path_join(main_script_directory, page)
+                normalize_path_join(main_script_directory, normalized_page)
             )
 
             # Handle retrieving the page_script_hash & page
@@ -1082,6 +1117,9 @@ class ButtonMixin:
                     main_script_directory=main_script_directory,
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
+
+            if query_string:
+                page_link_proto.query_string = query_string
 
         layout_config = LayoutConfig(width=width)
         return self.dg._enqueue(

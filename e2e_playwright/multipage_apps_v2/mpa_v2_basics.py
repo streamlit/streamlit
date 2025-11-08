@@ -132,6 +132,12 @@ if st.button("page 5"):
 if st.button("page 9"):
     st.switch_page(page9)
 
+if st.button("page 5 with query params"):
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
+if st.button("page 9 with query params"):
+    st.switch_page(page9, query_params={"ref": "home"})
+
 if st.checkbox("Show sidebar elements"):
     st.sidebar.write("Sidebar content")
 
@@ -140,6 +146,12 @@ pg.run()
 st.page_link("page_5.py", label="page 5 page link")
 
 st.page_link(page9, label="page 9 page link")
+
+st.page_link(
+    page9,
+    label="page 9 page link with query params",
+    query_params={"ref": "home"},
+)
 
 st.write("Context URL:", st.context.url)
 

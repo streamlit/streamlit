@@ -44,6 +44,11 @@ function PageLink(props: Readonly<Props>): ReactElement {
   const { disabled, element } = props
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
+  const pageQueryString = element.queryString ?? ""
+  const resolvedHref =
+    element.external || pageQueryString.length === 0
+      ? element.page
+      : `${element.page}?${pageQueryString}`
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     if (element.external) {
@@ -55,7 +60,10 @@ function PageLink(props: Readonly<Props>): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash)
+        onPageChange(
+          element.pageScriptHash,
+          pageQueryString.length > 0 ? pageQueryString : undefined
+        )
       }
     }
   }
@@ -72,7 +80,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            href={element.page}
+            href={resolvedHref}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}

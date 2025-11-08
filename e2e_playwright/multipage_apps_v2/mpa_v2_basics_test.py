@@ -180,6 +180,28 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_contain_text("x is 0")
 
 
+def test_switch_page_sets_query_params(app: Page, app_port: int):
+    """Test that st.switch_page applies query params when provided."""
+    goto_app(app, f"http://localhost:{app_port}")
+    click_button(app, "page 5 with query params")
+    wait_for_app_run(app)
+
+    expected_url = f"http://localhost:{app_port}/page_5?team=streamlit"
+    expect(app).to_have_url(expected_url)
+    expect_prefixed_markdown(app, "Context URL:", expected_url)
+
+
+def test_page_link_sets_query_params(app: Page, app_port: int):
+    """Test that st.page_link applies query params when provided."""
+    goto_app(app, f"http://localhost:{app_port}")
+    app.get_by_role("link", name="page 9 page link with query params").click()
+    wait_for_app_run(app)
+
+    expected_url = f"http://localhost:{app_port}/page_9?ref=home"
+    expect(app).to_have_url(expected_url)
+    expect_prefixed_markdown(app, "Context URL:", expected_url)
+
+
 def test_titles_are_set_correctly(app: Page):
     """Test that page titles work as expected."""
     expect_page_order(app)

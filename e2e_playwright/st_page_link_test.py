@@ -14,11 +14,15 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-PAGE_LINK_COUNT = 17
+PAGE_LINK_COUNT = 19
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
@@ -104,3 +108,19 @@ def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFun
     # Hover over the page link to show background color & radius application
     page_link.hover()
     assert_snapshot(container, name="st_page_link-custom-theme")
+
+
+def test_page_link_query_params_href(app: Page):
+    """Test that query params are appended to the page link URL."""
+    link = app.get_by_role("link", name="Query Param Example")
+    expect(link).to_have_attribute("href", "http://www.example.com?foo=bar")
+
+
+def test_page_link_navigates_to_internal_page(app: Page):
+    """Test that st.page_link can navigate to an internal Streamlit page."""
+    app_link = app.get_by_role("link", name="Internal Page Example")
+    app_link.click()
+    wait_for_app_run(app)
+
+    heading = app.get_by_test_id("stHeading").nth(0)
+    expect(heading).to_contain_text("Page with Icon")

@@ -169,7 +169,8 @@ interface Props {
     widgetStates: WidgetStates,
     fragmentId: string | undefined,
     pageScriptHash: string | undefined,
-    isAutoRerun: boolean | undefined
+    isAutoRerun: boolean | undefined,
+    queryString?: string
   ) => void
 
   /**

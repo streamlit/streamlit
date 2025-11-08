@@ -191,3 +191,80 @@ class PageLinkTest(DeltaGeneratorTestCase):
             st.page_link(page="https://example.com", label="Test", icon="   ")
 
         assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
+    def test_streamlit_page_with_query_params(self):
+        """Test that st.page_link encodes query params for StreamlitPage."""
+        with patch("pathlib.Path.is_file", MagicMock(return_value=True)):
+            page = st.Page("foo.py", title="Bar Test")
+            st.page_link(page=page, query_params={"alpha": "1", "beta": ["x", "y"]})
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.query_string == "alpha=1&beta=x&beta=y"
+
+    def test_internal_page_with_query_params(self):
+        """Test that st.page_link encodes query params for internal paths."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "foo": {
+                "script_path": "/app/pages/foo.py",
+                "page_name": "Foo",
+                "url_pathname": "foo",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/foo.py"):
+                    st.page_link(
+                        "pages/foo.py",
+                        query_params={"team": "streamlit", "env": ["dev", "prod"]},
+                    )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.page == "foo"
+        assert c.query_string == "team=streamlit&env=dev&env=prod"
+
+    def test_internal_page_query_overrides(self):
+        """Test that new query params override those provided in the page argument."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "foo": {
+                "script_path": "/app/pages/foo.py",
+                "page_name": "Foo",
+                "url_pathname": "foo",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/foo.py"):
+                    st.page_link(
+                        "pages/foo.py?team=core",
+                        query_params={"team": "streamlit", "launch": True},
+                    )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.query_string == "team=streamlit&launch=True"
+
+    def test_external_page_with_query_params(self):
+        """Test that external pages receive merged query params."""
+        st.page_link(
+            page="https://example.com/report?foo=bar",
+            label="External",
+            query_params={"baz": "qux"},
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.page == "https://example.com/report?foo=bar&baz=qux"

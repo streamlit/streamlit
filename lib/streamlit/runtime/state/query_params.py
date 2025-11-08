@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, MutableMapping
+from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, cast
 from urllib import parse
@@ -33,6 +33,12 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
     EMBED_QUERY_PARAM,
     EMBED_OPTIONS_QUERY_PARAM,
 ]
+
+QueryParamScalar = str | int | float | bool | None | bytes
+QueryParamValue = QueryParamScalar | Iterable[QueryParamScalar]
+QueryParamsMappingInput = Mapping[str, QueryParamValue]
+QueryParamsSequenceInput = Iterable[tuple[str, QueryParamValue]]
+QueryParamsInput = QueryParamsMappingInput | QueryParamsSequenceInput
 
 
 @dataclass
@@ -82,10 +88,7 @@ class QueryParams(MutableMapping[str, str]):
                 f"You cannot set a query params key `{key}` to a dictionary."
             )
 
-        if key in EMBED_QUERY_PARAMS_KEYS:
-            raise StreamlitAPIException(
-                "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
-            )
+        _validate_query_param_key(key)
         # Type checking users should handle the string serialization themselves
         # We will accept any type for the list and serialize to str just in case
         if isinstance(value, Iterable) and not isinstance(value, str):
@@ -202,3 +205,97 @@ class QueryParams(MutableMapping[str, str]):
 
 def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}".'
+
+
+def _validate_query_param_key(key: str) -> None:
+    if key.lower() in EMBED_QUERY_PARAMS_KEYS:
+        raise StreamlitAPIException(
+            "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+        )
+
+
+def _stringify_query_param_scalar(value: QueryParamScalar) -> str:
+    if value is None:
+        return ""
+
+    if isinstance(value, bytes):
+        return value.decode()
+
+    return str(value)
+
+
+def _iter_query_param_items(
+    query_params: QueryParamsInput,
+) -> Iterable[tuple[str, QueryParamValue]]:
+    if isinstance(query_params, Mapping):
+        return query_params.items()
+    return query_params
+
+
+def flatten_query_params(query_params: QueryParamsInput) -> list[tuple[str, str]]:
+    """Normalize query params input into a flat list of string tuples."""
+
+    flattened: list[tuple[str, str]] = []
+    for raw_key, raw_value in _iter_query_param_items(query_params):
+        if not isinstance(raw_key, str):
+            raise StreamlitAPIException(
+                "Query parameter keys must be strings when passed to query_params."
+            )
+
+        if isinstance(raw_value, dict):
+            raise StreamlitAPIException(
+                f"You cannot set a query params key `{raw_key}` to a dictionary."
+            )
+
+        _validate_query_param_key(raw_key)
+
+        if isinstance(raw_value, Iterable) and not isinstance(raw_value, (str, bytes)):
+            for item in raw_value:
+                flattened.append((raw_key, _stringify_query_param_scalar(item)))  # noqa: PERF401
+        else:
+            flattened.append((raw_key, _stringify_query_param_scalar(raw_value)))
+
+    return flattened
+
+
+def merge_query_params(
+    existing_query: str | None,
+    new_query_params: QueryParamsInput | None,
+) -> tuple[str | None, list[tuple[str, str]]]:
+    """Merge existing query string with new query params input."""
+
+    existing_pairs: list[tuple[str, str]] = []
+    if existing_query:
+        existing_pairs = parse.parse_qsl(existing_query, keep_blank_values=True)
+        for key, _ in existing_pairs:
+            _validate_query_param_key(key)
+
+    if new_query_params is None:
+        if not existing_pairs:
+            return None, []
+        result = parse.urlencode(existing_pairs, doseq=True)
+        return (result if result else None), existing_pairs
+
+    new_pairs = flatten_query_params(new_query_params)
+    override_keys = {key.lower() for key, _ in new_pairs}
+    filtered_existing = [
+        (key, value)
+        for key, value in existing_pairs
+        if key.lower() not in override_keys
+    ]
+    combined_pairs = filtered_existing + new_pairs
+
+    query_string = parse.urlencode(combined_pairs, doseq=True)
+    return (query_string if query_string else None), combined_pairs
+
+
+def pairs_to_query_dict(pairs: Iterable[tuple[str, str]]) -> dict[str, str | list[str]]:
+    """Convert flat pairs into a mapping suitable for QueryParams.update."""
+
+    multi: dict[str, list[str]] = {}
+    for key, value in pairs:
+        multi.setdefault(key, []).append(value)
+
+    return {
+        key: values[0] if len(values) == 1 else values for key, values in multi.items()
+    }

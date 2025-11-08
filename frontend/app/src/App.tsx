@@ -1137,7 +1137,7 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
-        const queryString = preserveEmbedQueryParams()
+        const queryString = this.getQueryString()
         const qs = queryString ? `?${queryString}` : ""
 
         const basePathPrefix = pathname === "/" ? "" : pathname
@@ -1640,7 +1640,7 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (pageScriptHash: string, queryString?: string): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1661,10 +1661,17 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
+    const combinedQueryString = this.combineQueryParams(queryString)
+    this.setState({
+      queryParams: combinedQueryString ? `?${combinedQueryString}` : "",
+    })
+
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString
     )
   }
 
@@ -1681,7 +1688,8 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    targetQueryString?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1694,7 +1702,10 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString =
+      targetQueryString !== undefined
+        ? this.combineQueryParams(targetQueryString)
+        : this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1710,8 +1721,8 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
+        // Clear non-embed query parameters within a page change while applying new ones
+        queryString = this.combineQueryParams(targetQueryString)
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
@@ -1764,6 +1775,16 @@ export class App extends PureComponent<Props, State> {
     // Reset hasReceivedNewSession to false to ensure that we are aware
     // if a finished message is from a previous script run.
     this.hasReceivedNewSession = false
+  }
+
+  private combineQueryParams(queryString?: string): string {
+    const embedQueryParams = preserveEmbedQueryParams()
+
+    if (embedQueryParams && queryString) {
+      return `${embedQueryParams}&${queryString}`
+    }
+
+    return queryString ?? embedQueryParams
   }
 
   /** Requests that the server stop running the script */
