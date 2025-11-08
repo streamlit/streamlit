@@ -31,16 +31,6 @@ from e2e_playwright.shared.app_utils import (
 
 DOWNLOAD_BUTTON_ELEMENTS = 18
 
-CONTROL_KEY = "Control"
-
-
-def _press_shortcut(page: Page, key: str, *, include_alt: bool = False) -> None:
-    modifiers = [CONTROL_KEY]
-    if include_alt:
-        modifiers.append("Alt")
-    shortcut = "+".join([*modifiers, f"Key{key.upper()}"])
-    page.keyboard.press(shortcut)
-
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
     """Check that the expected number of download button source error messages are logged."""
@@ -308,7 +298,7 @@ def test_download_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the download button."""
     app.locator("body").click()
     with app.expect_download() as download_info:
-        _press_shortcut(app, "d", include_alt=True)
+        app.keyboard.press("ControlOrMeta+Alt+D")
     download = download_info.value
     assert download.suggested_filename == "shortcut.txt"
     wait_for_app_run(app)

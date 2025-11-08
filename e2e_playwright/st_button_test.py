@@ -29,24 +29,12 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 28
-
-CONTROL_KEY = "Control"
-
-
-def _press_shortcut(page: Page, key: str, *, include_alt: bool = False) -> None:
-    modifiers = [CONTROL_KEY]
-    if include_alt:
-        modifiers.append("Alt")
-    shortcut = "+".join([*modifiers, f"Key{key.upper()}"])
-    page.keyboard.press(shortcut)
-
 
 def test_button_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the button widgets are correctly rendered via screenshot matching."""
-    expect(themed_app.get_by_test_id("stButton")).to_have_count(TOTAL_BUTTONS)
+    expect(themed_app.get_by_test_id("stButton")).to_have_count(28)
 
     assert_snapshot(
         get_button(themed_app, "button 1"),
@@ -277,6 +265,6 @@ def test_button_displays_shortcut(app: Page):
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
     app.locator("body").click()
-    _press_shortcut(app, "j")
+    app.keyboard.press("ControlOrMeta+J")
     wait_for_app_run(app)
     expect(app.get_by_text("Shortcut button pressed!")).to_be_visible()

@@ -18,19 +18,12 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_expander,
+)
 
 LINK_BUTTON_ELEMENTS = 16
-
-CONTROL_KEY = "Control"
-
-
-def _press_shortcut(page: Page, key: str, *, include_alt: bool = False) -> None:
-    modifiers = [CONTROL_KEY]
-    if include_alt:
-        modifiers.append("Alt")
-    shortcut = "+".join([*modifiers, f"Key{key.upper()}"])
-    page.keyboard.press(shortcut)
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -97,7 +90,7 @@ def test_link_button_displays_shortcut(app: Page):
     expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + L")
 
 
-def test_link_button_shortcut_triggers_popup(app: Page):
+def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
     shortcut_button = (
         app.get_by_test_id("stLinkButton")
@@ -107,7 +100,7 @@ def test_link_button_shortcut_triggers_popup(app: Page):
     expect(shortcut_button).to_be_visible()
     app.locator("body").click()
     with app.expect_popup() as popup_info:
-        _press_shortcut(app, "l", include_alt=True)
+        app.keyboard.press("ControlOrMeta+Alt+L")
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
