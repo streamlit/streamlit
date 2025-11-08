@@ -903,7 +903,7 @@ st.dataframe(
     hide_index=True,
 )
 
-st.header("Placeholder:")
+st.header("Missing placeholder:")
 st.dataframe(
     pd.DataFrame(
         {
