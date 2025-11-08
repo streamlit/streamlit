@@ -781,7 +781,7 @@ class ArrowMixin:
                 selection_mode=selection_mode,
                 is_selection_activated=is_selection_activated,
                 row_height=row_height,
-                missing_placeholder=placeholder,
+                placeholder=placeholder,
             )
 
             serde = DataframeSelectionSerde()
