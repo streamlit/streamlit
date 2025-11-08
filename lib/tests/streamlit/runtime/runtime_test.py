@@ -25,6 +25,10 @@ from unittest.mock import ANY, MagicMock, call, patch
 import pytest
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
+from streamlit.components.v2.component_manager import BidiComponentManager
+from streamlit.components.v2.component_registry import (
+    BidiComponentDefinition,
+)
 from streamlit.runtime import (
     Runtime,
     RuntimeConfig,
@@ -593,3 +597,55 @@ time.sleep(5)
         event_based_path_watcher._MultiPathWatcher._singleton = None
         assert expected_loads == ok
         assert expected_msg == msg
+
+
+class BidiComponentManagerTest(unittest.TestCase):
+    """Test that the BidiComponentManager is properly initialized in the runtime."""
+
+    def tearDown(self) -> None:
+        # Clear the singleton instance after each test
+        Runtime._instance = None
+
+    def test_bidi_component_registry_initialization(self):
+        """Test that the BidiComponentManager is properly initialized."""
+        # Create a mock config with minimum required parameters
+        config = RuntimeConfig(
+            script_path="test_path",
+            command_line=None,
+            media_file_storage=MagicMock(),
+            uploaded_file_manager=MagicMock(),
+        )
+
+        # Initialize the runtime
+        runtime = Runtime(config)
+
+        # Verify that the BidiComponentManager is initialized
+        assert runtime.bidi_component_registry is not None
+        assert isinstance(runtime.bidi_component_registry, BidiComponentManager)
+
+    def test_custom_bidi_component_registry(self):
+        """Test that a custom BidiComponentManager can be provided to the runtime."""
+        # Create a custom component manager
+        custom_component_manager = BidiComponentManager()
+        custom_component_manager.register(
+            BidiComponentDefinition(
+                name="test_component",
+                html="<div>Test</div>",
+            )
+        )
+
+        # Create a mock config with our custom registry
+        config = RuntimeConfig(
+            script_path="test_path",
+            command_line=None,
+            media_file_storage=MagicMock(),
+            uploaded_file_manager=MagicMock(),
+            bidi_component_registry=custom_component_manager,
+        )
+
+        # Initialize the runtime
+        runtime = Runtime(config)
+
+        # Verify that our custom component manager is used
+        assert runtime.bidi_component_registry is custom_component_manager
+        assert runtime.bidi_component_registry.get("test_component") is not None

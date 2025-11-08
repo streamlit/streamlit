@@ -19,17 +19,18 @@ from __future__ import annotations
 
 import math
 import threading
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
+    TypeAlias,
     TypeVar,
     overload,
 )
 
 from cachetools import TTLCache
-from typing_extensions import ParamSpec, TypeAlias
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit.logger import get_logger
@@ -246,8 +247,8 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
-        return self._decorator(
-            func,
+        return self._decorator(  # ty: ignore
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             show_spinner=show_spinner,

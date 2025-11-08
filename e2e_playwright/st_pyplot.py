@@ -109,3 +109,21 @@ st.pyplot(fig_width_test, width="stretch")
 
 st.write("width=200 (pixels):")
 st.pyplot(fig_width_test, width=200)
+
+
+st.write(
+    "Tests for v1.50.0 regression where plots rendered at minimum width in containers."
+)
+
+# Create test figure (6.4in x 4.8in at 100 DPI = 640px x 480px)
+fig_regression, ax_regression = plt.subplots(figsize=(6.4, 4.8))
+ax_regression.bar([1, 2, 3], [1, 2, 3])
+
+with st.container(border=True, width=600, key="stretch-pyplot-in-container"):
+    st.pyplot(fig_regression, width="stretch")
+
+with st.container(border=True, key="content-pyplot-in-container"):
+    st.pyplot(fig_regression, width="content")
+
+with st.container(border=True, key="pixel-pyplot-in-container"):
+    st.pyplot(fig_regression, width=500)

@@ -68,6 +68,19 @@ def test_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.usefixtures("configure_custom_fonts")
+def test_custom_theme_main_menu(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the main menu is rendered correctly with a custom theme (uses configured font)."""
+    # Make sure that all elements are rendered and no skeletons are shown:
+    expect_no_skeletons(app, timeout=25000)
+
+    # Open the main menu
+    app.get_by_test_id("stMainMenu").click()
+
+    element = app.get_by_test_id("stMainMenuPopover")
+    assert_snapshot(element, name="custom_fonts_main_menu")
+
+
+@pytest.mark.usefixtures("configure_custom_fonts")
 def test_custom_theme_settings_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the settings dialog is rendered correctly with a custom theme."""
     # Make sure that all elements are rendered and no skeletons are shown:

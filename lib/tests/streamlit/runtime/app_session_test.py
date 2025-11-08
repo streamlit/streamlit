@@ -19,7 +19,7 @@ import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
@@ -59,6 +59,9 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.fixture

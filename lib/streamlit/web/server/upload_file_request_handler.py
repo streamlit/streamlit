@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import tornado.httputil
 import tornado.web
@@ -25,6 +25,8 @@ from streamlit.web.server import routes, server_util
 from streamlit.web.server.server_util import is_xsrf_enabled
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 
@@ -91,6 +93,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         args: dict[str, list[bytes]] = {}
         files: dict[str, list[Any]] = {}
 
+        if not self.path_kwargs:
+            # This is not expected to happen with normal Streamlit usage.
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 
@@ -133,6 +143,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def delete(self, **kwargs: Any) -> None:
         """Delete file request handler."""
+
+        if not self.path_kwargs:
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 

@@ -21,9 +21,9 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Sized
+from collections.abc import Callable, Sized
 from functools import wraps
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, util
 from streamlit.logger import get_logger
@@ -330,6 +330,10 @@ def _get_command_telemetry(
         and self_arg.name
     ):
         name = f"component:{self_arg.name}"
+
+    if name == "_bidi_component" and len(args) > 0 and isinstance(args[0], str):
+        component_name = args[0]
+        name = f"component_v2:{component_name}"
 
     return Command(name=name, args=arguments)
 

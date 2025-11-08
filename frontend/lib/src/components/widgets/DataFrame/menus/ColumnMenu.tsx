@@ -118,9 +118,8 @@ function ColumnMenu({
           <StyledColumnHeaderRow>
             <StyledTypeIconContainer title={column.kind}>
               <DynamicIcon
-                iconValue={column.typeIcon || ":material/notes:"}
                 size="base"
-                color="inherit"
+                iconValue={column.typeIcon || ":material/notes:"}
               />
             </StyledTypeIconContainer>
             <StyledColumnNameWithIcon title={column.title}>
@@ -131,12 +130,10 @@ function ColumnMenu({
                 aria-label="Copy column name"
               >
                 <DynamicIcon
+                  size="sm"
                   iconValue={
                     isCopied ? ":material/check:" : ":material/content_copy:"
                   }
-                  size="sm"
-                  margin="0"
-                  color="inherit"
                 />
               </StyledIconButton>
             </StyledColumnNameWithIcon>
@@ -151,12 +148,7 @@ function ColumnMenu({
                 }}
                 role="menuitem"
               >
-                <DynamicIcon
-                  size="base"
-                  margin="0"
-                  color="inherit"
-                  iconValue=":material/arrow_upward:"
-                />
+                <DynamicIcon size="base" iconValue=":material/arrow_upward:" />
                 Sort ascending
               </StyledMenuListItem>
               <StyledMenuListItem
@@ -168,8 +160,6 @@ function ColumnMenu({
               >
                 <DynamicIcon
                   size="base"
-                  margin="0"
-                  color="inherit"
                   iconValue=":material/arrow_downward:"
                 />
                 Sort descending
@@ -195,8 +185,6 @@ function ColumnMenu({
                 <div>
                   <DynamicIcon
                     size="base"
-                    margin="0"
-                    color="inherit"
                     iconValue=":material/format_list_numbered:"
                   />
                   Format
@@ -204,8 +192,6 @@ function ColumnMenu({
 
                 <DynamicIcon
                   size="base"
-                  margin="0"
-                  color="inherit"
                   iconValue=":material/chevron_right:"
                 />
               </StyledMenuListItem>
@@ -218,12 +204,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size="base"
-                margin="0"
-                color="inherit"
-                iconValue=":material/arrows_outward:"
-              />
+              <DynamicIcon size="base" iconValue=":material/arrows_outward:" />
               Autosize
             </StyledMenuListItem>
           )}
@@ -234,12 +215,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size="base"
-                margin="0"
-                color="inherit"
-                iconValue=":material/keep_off:"
-              />
+              <DynamicIcon size="base" iconValue=":material/keep_off:" />
               Unpin column
             </StyledMenuListItem>
           )}
@@ -250,12 +226,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size="base"
-                margin="0"
-                color="inherit"
-                iconValue=":material/keep:"
-              />
+              <DynamicIcon size="base" iconValue=":material/keep:" />
               Pin column
             </StyledMenuListItem>
           )}
@@ -266,12 +237,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size="base"
-                margin="0"
-                color="inherit"
-                iconValue=":material/visibility_off:"
-              />
+              <DynamicIcon size="base" iconValue=":material/visibility_off:" />
               Hide column
             </StyledMenuListItem>
           )}

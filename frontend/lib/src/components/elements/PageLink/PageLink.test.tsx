@@ -89,7 +89,9 @@ describe("PageLink", () => {
     const props = getProps()
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -102,7 +104,9 @@ describe("PageLink", () => {
     const props = getProps({}, { disabled: true })
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -115,7 +119,9 @@ describe("PageLink", () => {
     const props = getProps({ page: "http://example.com", external: true })
 
     renderWithContexts(<PageLink {...props} />, {
-      onPageChange: mockOnPageChange,
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
@@ -168,7 +174,9 @@ describe("PageLink", () => {
   it("renders a current page link properly", () => {
     const props = getProps({ pageScriptHash: "main_page_hash" })
     renderWithContexts(<PageLink {...props} />, {
-      currentPageScriptHash: "main_page_hash",
+      navigationContext: {
+        currentPageScriptHash: "main_page_hash",
+      },
     })
 
     const currentPageBgColor = lightTheme.emotion.colors.darkenedBgMix15

@@ -243,9 +243,14 @@ If you are trying to access a Streamlit app running on another server, this coul
             )
             sendClientError(status, statusText, source)
           }
+
           return retry(
             `Connection failed with status ${status}, ` +
-              `and response "${data}".`
+              "and response:\n```\n" +
+              (data !== null && typeof data === "object"
+                ? JSON.stringify(data, null, 2)
+                : data) +
+              "\n```"
           )
         }
 

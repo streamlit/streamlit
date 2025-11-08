@@ -31,11 +31,12 @@ export const StyledSpinner = styled.div<StyledSpinnerProps>(
   })
 )
 
-export const StyledSpinnerContainer = styled.div({
+export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   width: "100%",
-})
+  gap: theme.spacing.sm,
+}))
 
 export const StyledSpinnerText = styled.div(({ theme }) => ({
   display: "flex",

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -32,20 +33,13 @@ import { groupPagesBySection, processNavigationStructure } from "./utils"
 import { SidebarNavLink } from "./index"
 
 export interface Props {
-  currentPageScriptHash: string
-  appPages: IAppPage[]
-  onPageChange: (pageScriptHash: string) => void
-  pageLinkBaseUrl: string
   endpoints: StreamlitEndpoints
+  widgetsDisabled: boolean
 }
 
-const TopNav: React.FC<Props> = ({
-  endpoints,
-  pageLinkBaseUrl,
-  currentPageScriptHash,
-  appPages,
-  onPageChange,
-}) => {
+const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
+  const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
+    useContext(NavigationContext)
   const { data, itemKey } = useMemo((): {
     data: (IAppPage | IAppPage[])[]
     itemKey: (item: IAppPage | IAppPage[]) => string
@@ -79,6 +73,7 @@ const TopNav: React.FC<Props> = ({
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}
             currentPageScriptHash={currentPageScriptHash}
+            widgetsDisabled={widgetsDisabled}
           />
         )
       }
@@ -96,13 +91,20 @@ const TopNav: React.FC<Props> = ({
                 onPageChange(item.pageScriptHash)
               }
             }}
+            widgetsDisabled={widgetsDisabled}
           >
             {String(item.pageName)}
           </SidebarNavLink>
         </StyledTopNavLinkContainer>
       )
     },
-    [onPageChange, endpoints, pageLinkBaseUrl, currentPageScriptHash]
+    [
+      onPageChange,
+      endpoints,
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      widgetsDisabled,
+    ]
   )
 
   const renderRest = useCallback(
@@ -128,10 +130,17 @@ const TopNav: React.FC<Props> = ({
           endpoints={endpoints}
           pageLinkBaseUrl={pageLinkBaseUrl}
           currentPageScriptHash={currentPageScriptHash}
+          widgetsDisabled={widgetsDisabled}
         />
       )
     },
-    [onPageChange, endpoints, pageLinkBaseUrl, currentPageScriptHash]
+    [
+      onPageChange,
+      endpoints,
+      pageLinkBaseUrl,
+      currentPageScriptHash,
+      widgetsDisabled,
+    ]
   )
 
   return (

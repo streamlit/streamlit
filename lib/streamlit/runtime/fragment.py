@@ -17,9 +17,10 @@ from __future__ import annotations
 import contextlib
 import inspect
 from abc import abstractmethod
+from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError

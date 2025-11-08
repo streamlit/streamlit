@@ -261,30 +261,3 @@ fig.update_layout(
     title_font_size=30,
 )
 st.plotly_chart(fig, theme="streamlit")
-
-# Width parameter tests
-st.write("## Width Parameter Tests")
-
-# Create a simple chart for width testing
-simple_fig = go.Figure()
-simple_fig.add_trace(
-    go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17], name="Simple Chart")
-)
-simple_fig.update_layout(height=200, width=500, title="Chart with width='content':")
-
-st.plotly_chart(simple_fig, width="content", theme="streamlit")
-
-simple_fig.update_layout(title="Chart with width='stretch':")
-st.plotly_chart(simple_fig, width="stretch", theme="streamlit")
-
-simple_fig.update_layout(title="Chart with width=400:")
-st.plotly_chart(simple_fig, width=400, theme="streamlit")
-
-large_fig = go.Figure()
-large_fig.add_trace(
-    go.Scatter(x=[1, 2, 3, 4, 5, 6], y=[10, 15, 13, 17, 20, 18], name="Large Chart")
-)
-large_fig.update_layout(
-    height=400, width=1000, title="Chart with figure width=1000 and width='content':"
-)
-st.plotly_chart(large_fig, width="content", theme="streamlit")

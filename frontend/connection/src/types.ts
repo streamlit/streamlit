@@ -105,6 +105,13 @@ export interface StreamlitEndpoints {
   buildComponentURL(componentName: string, path: string): string
 
   /**
+   * Return a URL to fetch data for the given bidirectional component.
+   * @param componentName The registered name of the component.
+   * @param path The path of the component resource to fetch, e.g. "script.js".
+   */
+  buildBidiComponentURL(componentName: string, path: string): string
+
+  /**
    * Construct a URL for a media file.
    * @param url a relative or absolute URL. If `url` is absolute, it will be
    * returned unchanged. Otherwise, the return value will be a URL for fetching
