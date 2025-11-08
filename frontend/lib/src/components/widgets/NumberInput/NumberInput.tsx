@@ -29,7 +29,7 @@ import uniqueId from "lodash/uniqueId"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -349,11 +349,6 @@ const NumberInput: React.FC<Props> = ({
     [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
 
-  // Material icons need to be larger to render similar size of emojis,
-  // and we change their text color
-  const isMaterialIcon = icon?.startsWith(":material")
-  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
-
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
   const iconAdjustment =
@@ -410,7 +405,7 @@ const NumberInput: React.FC<Props> = ({
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size={dynamicIconSize}
+                size="lg"
               />
             )
           }
@@ -492,7 +487,9 @@ const NumberInput: React.FC<Props> = ({
                 // Keeps emoji icons from being cut off on the right
                 minWidth: theme.iconSizes.lg,
                 // Material icons color changed as inactionable
-                color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+                color: isMaterialIcon(icon)
+                  ? theme.colors.fadedText60
+                  : "inherit",
               },
             },
           }}

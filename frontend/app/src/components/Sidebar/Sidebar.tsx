@@ -271,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <DynamicIcon
                 size="xl"
-                iconValue={":material/keyboard_double_arrow_left:"}
+                iconValue=":material/keyboard_double_arrow_left:"
                 color={theme.colors.fadedText60}
               />
             </BaseButton>

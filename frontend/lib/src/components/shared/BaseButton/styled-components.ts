@@ -519,3 +519,9 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
     width: containerWidth ? "100%" : "auto",
   })
 )
+
+export const StyledButtonLabel = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+}))
