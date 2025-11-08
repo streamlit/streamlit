@@ -483,6 +483,26 @@ describe("Metric element", () => {
       })
     })
 
+    it("throttles hover selection for large datasets", () => {
+      const largeChartData = Array.from({ length: 1500 }, (_, index) =>
+        Number(index)
+      )
+      const spec = getMetricChartSpec(
+        largeChartData,
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { layer: unknown[] }
+
+      const pointsLayer = spec.layer?.[1] as { params?: unknown[] }
+      expect(pointsLayer?.params?.[0]).toMatchObject({
+        select: expect.objectContaining({
+          on: "mousemove{16}",
+        }),
+      })
+    })
+
     it("includes highlighted points layer", () => {
       const spec = getMetricChartSpec(
         [1, 2, 3],
