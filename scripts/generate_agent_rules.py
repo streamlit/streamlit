@@ -147,7 +147,7 @@ def generate_make_commands_rule() -> None:
     output_path = os.path.join(output_dir, "make_commands.mdc")
 
     # Write the formatted content to the file
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(formatted_content)
     print(f"Generated rule file: {output_path}")
 
@@ -176,7 +176,7 @@ def generate_agent_rules() -> None:
             raise FileNotFoundError(f"Missing AGENTS.md file at '{agents_md_path}'.")
 
         # Read the full content of the AGENTS.md file
-        with open(agents_md_path) as f:
+        with open(agents_md_path, encoding="utf-8") as f:
             agents_md_content = f.read()
 
         # Write cursor rule file:
@@ -190,7 +190,7 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(cursor_mdc_path, "w") as f:
+        with open(cursor_mdc_path, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Generated Cursor rule file: {cursor_mdc_path}")
 
@@ -205,7 +205,7 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(github_copilot_path, "w") as f:
+        with open(github_copilot_path, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 

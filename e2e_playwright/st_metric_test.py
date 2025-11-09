@@ -121,7 +121,7 @@ def test_markdown_label_support(
     assert_snapshot(
         get_metric(
             themed_app,
-            re.compile("Test 11.+"),
+            re.compile(r"Test 11.+"),
         ),
         name="st_metric-markdown_label",
     )

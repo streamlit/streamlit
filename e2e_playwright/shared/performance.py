@@ -219,7 +219,7 @@ def measure_performance(
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
         with open(
-            os.path.join(performance_results_dir, f"{timestamp}_{test_name}.json"), "w"
+            os.path.join(performance_results_dir, f"{timestamp}_{test_name}.json"), "w", encoding="utf-8"
         ) as f:
             json.dump(
                 {

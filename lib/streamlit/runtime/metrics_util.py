@@ -169,11 +169,11 @@ def _get_machine_id_v3() -> str:
     """
 
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH) as f:
+        with open(_ETC_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH) as f:
+        with open(_DBUS_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     else:

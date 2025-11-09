@@ -139,7 +139,7 @@ class AsyncSubprocess:
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
-        self._stdout_file = TemporaryFile("w+")
+        self._stdout_file = TemporaryFile("w+", encoding="utf-8")
         print(f"Running: {shlex.join(self.args)}")
         self._proc = subprocess.Popen(
             self.args,

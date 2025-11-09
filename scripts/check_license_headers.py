@@ -97,7 +97,7 @@ def main() -> None:
             continue
 
         try:
-            file_content = filepath.read_text()
+            file_content = filepath.read_text(encoding="utf-8")
             if LICENSE_TEXT not in file_content:
                 print("Found file without license header", fileloc)
                 invalid_files_count += 1

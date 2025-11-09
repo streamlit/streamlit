@@ -194,7 +194,7 @@ def _clean(txt: str) -> str:
 
     Preserves leading and trailing spaces, and does not modify spaces in between lines.
     """
-    return re.sub(" +", " ", txt)
+    return re.sub(r" +", " ", txt)
 
 
 def _clean_paragraphs(txt: str) -> list[str]:

@@ -46,10 +46,10 @@ generated_code = f"""### EMOJIS START ###
 ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}
 ### EMOJIS END ###"""
 
-with open(EMOJIS_SCRIPT_PATH) as file:
+with open(EMOJIS_SCRIPT_PATH, encoding="utf-8") as file:
     script_content = file.read()
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)
 
-with open(EMOJIS_SCRIPT_PATH, "w") as file:
+with open(EMOJIS_SCRIPT_PATH, "w", encoding="utf-8") as file:
     file.write(updated_script_content)

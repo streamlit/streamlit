@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
 
 def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
     elements = locator.get_by_test_id(
-        re.compile("stBaseButton-borderlessIcon(Active)?")
+        re.compile(r"stBaseButton-borderlessIcon(Active)?")
     )
     if type:
         elements = elements.filter(has_text=type)

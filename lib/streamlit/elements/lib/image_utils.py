@@ -265,7 +265,7 @@ def image_to_url(
 
         if image.endswith(".svg") and os.path.isfile(image):
             # Unpack local SVG image file to an SVG string
-            with open(image) as textfile:
+            with open(image, encoding="utf-8") as textfile:
                 image = textfile.read()
 
         # Following regex allows svg image files to start either via a "<?xml...>" tag

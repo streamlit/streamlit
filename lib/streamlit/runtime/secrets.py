@@ -308,7 +308,7 @@ class Secrets(Mapping[str, Any]):
                 if os.path.isdir(file_path):
                     continue
 
-                with open(file_path) as f:
+                with open(file_path, encoding="utf-8") as f:
                     sub_secrets[filename] = f.read().strip()
                     found_secrets_file = True
 

@@ -93,12 +93,12 @@ generated_code = f"""### MATERIAL ICON NAMES START ###
 ALL_MATERIAL_ICONS = {{{", ".join([f'"{icon_name}"' for icon_name in sorted(icon_names)])}}}
 ### MATERIAL ICON NAMES END ###"""
 
-with open(NAMES_MODULE_PATH) as file:
+with open(NAMES_MODULE_PATH, encoding="utf-8") as file:
     script_content = file.read()
 
 updated_script_content = re.sub(NAMES_SET_REGEX, generated_code, script_content)
 
-with open(NAMES_MODULE_PATH, "w") as file:
+with open(NAMES_MODULE_PATH, "w", encoding="utf-8") as file:
     file.write(updated_script_content)
 
 # Fetch the content from the URL
@@ -144,9 +144,9 @@ st.success(
 )
 ### LATEST MATERIAL ICON TEST END ###"""
 
-with open(PLAYWRIGHT_TEST_MODULE_PATH) as file:
+with open(PLAYWRIGHT_TEST_MODULE_PATH, encoding="utf-8") as file:
     script_content = file.read()
 
 updated_script_content = re.sub(PLAYWRIGHT_TEST_REGEX, generated_code, script_content)
-with open(PLAYWRIGHT_TEST_MODULE_PATH, "w") as file:
+with open(PLAYWRIGHT_TEST_MODULE_PATH, "w", encoding="utf-8") as file:
     file.write(updated_script_content)

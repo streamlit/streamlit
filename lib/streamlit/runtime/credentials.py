@@ -148,7 +148,7 @@ class Credentials:
         import toml
 
         try:
-            with open(self._conf_file) as f:
+            with open(self._conf_file, encoding="utf-8") as f:
                 data = toml.load(f).get("general")
             if data is None:
                 raise RuntimeError  # noqa: TRY301
@@ -218,7 +218,7 @@ class Credentials:
 
         import toml
 
-        with open(self._conf_file, "w") as f:
+        with open(self._conf_file, "w", encoding="utf-8") as f:
             toml.dump({"general": data}, f)
 
         try:

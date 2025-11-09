@@ -95,7 +95,7 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
         name="st_multiselect-narrow_column",
     )
     assert_snapshot(
-        get_multiselect(themed_app, re.compile("^multiselect 13")),
+        get_multiselect(themed_app, re.compile(r"^multiselect 13")),
         name="st_multiselect-markdown_label",
     )
     assert_snapshot(

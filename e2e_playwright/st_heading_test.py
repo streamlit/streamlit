@@ -145,7 +145,7 @@ def test_clicking_on_anchor_changes_url(app: Page):
     link = first_header.locator("a")
     expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
     link.click()
-    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
+    expect(app).to_have_url(re.compile(r".*#info-this-header-is-awesome"))
 
 
 def test_headers_snapshot_match(

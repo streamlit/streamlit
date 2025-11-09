@@ -34,9 +34,37 @@ line-ending = "lf"
 
 [lint]
 preview = true
+explicit-preview-rules = true
 # We activate all rules and only ignore the rules that we don't want to enforce
 # or that are not relevant for our codebase.
-select = ["ALL"]
+select = [
+  "ALL",
+  # preview rules:
+  "ASYNC212",
+  "ASYNC240",
+  "ASYNC250",
+  "B901",
+  "B909",
+  "B912",
+  "LOG004",
+  "PLC2701",
+  "PLE4703",
+  "PLR0202",
+  "PLR0203",
+  "PLR6301",
+  # "PLW0108",
+  "PLW0244",
+  "PLW1514",
+  "PT029",
+  "RUF027",
+  "RUF029",
+  "RUF031",
+  "RUF036",
+  "RUF039",
+  "RUF045",
+  "RUF055",
+  "RUF061",
+]
 ignore = [
   # Rules planned to be supported in the future:
   "EM101",  # Checks for the use of string literals in exception constructors.
@@ -95,6 +123,7 @@ ignore = [
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
   "PLC0415", # Enforces imports to be at the top-level of the file.
+  # Preview rules:
   "PLR6301", # Checks for unnecessary self usage.
   "PLC2701", # Checks for imports of private names (underscore prefix).
   "PLR0917", # Checks for too many positional arguments.
@@ -130,6 +159,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",
   "ANN",
   "NPY002",
+  "RUF029",
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

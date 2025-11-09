@@ -243,7 +243,7 @@ def _make_manifest(pkg_name: str, comp_name: str, asset_dir: str) -> ComponentMa
 def _write(path: Path, content: str) -> None:
     """Write content to a file, creating parent directories if needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
 
 
 def test_re_resolves_js_glob_on_change(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -81,7 +81,7 @@ class RunWarningTest(unittest.TestCase):
             # assertLogs is being used as a context manager, but it also checks
             # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
-            assert not re.search(r"streamlit run", "".join(logs.output))
+            assert r"streamlit run" not in "".join(logs.output)
 
     def test_public_api(self):
         """Test that we don't accidentally remove (or add) symbols
