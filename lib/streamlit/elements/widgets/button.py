@@ -51,6 +51,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
+from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer_mime
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -1250,32 +1251,14 @@ def marshall_file(
         return
 
     # Existing logic for non-callable data
-    data_as_bytes: bytes
-    if isinstance(data, str):
-        data_as_bytes = data.encode()
-        mimetype = mimetype or "text/plain"
-    elif isinstance(data, io.TextIOWrapper):
-        string_data = data.read()
-        data_as_bytes = string_data.encode()
-        mimetype = mimetype or "text/plain"
-    # Assume bytes; try methods until we run out.
-    elif isinstance(data, bytes):
-        data_as_bytes = data
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.BytesIO):
-        data.seek(0)
-        data_as_bytes = data.getvalue()
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.BufferedReader):
-        data.seek(0)
-        data_as_bytes = data.read()
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.RawIOBase):
-        data.seek(0)
-        data_as_bytes = data.read() or b""
-        mimetype = mimetype or "application/octet-stream"
-    else:
-        raise StreamlitAPIException(f"Invalid binary data format: {type(data)}")
+    data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
+        data,
+        unsupported_error=StreamlitAPIException(
+            f"Invalid binary data format: {type(data)}"
+        ),
+    )
+    if mimetype is None:
+        mimetype = inferred_mime_type
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(

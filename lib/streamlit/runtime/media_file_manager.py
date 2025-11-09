@@ -17,12 +17,12 @@
 from __future__ import annotations
 
 import collections
-import io
 import threading
 import uuid
 from typing import TYPE_CHECKING, BinaryIO, Final, TextIO, TypedDict
 
 from streamlit.logger import get_logger
+from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer_mime
 from streamlit.runtime.media_file_storage import (
     MediaFileKind,
     MediaFileStorage,
@@ -30,6 +30,7 @@ from streamlit.runtime.media_file_storage import (
 )
 
 if TYPE_CHECKING:
+    import io
     from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
@@ -372,36 +373,12 @@ class MediaFileManager:
             raise MediaFileStorageError(f"Callable execution failed: {e}") from e
 
         # Convert data to bytes and infer mimetype if needed
-        data_as_bytes: bytes
-        inferred_mime_type: str
-
-        if isinstance(data, str):
-            data_as_bytes = data.encode()
-            inferred_mime_type = "text/plain"
-        elif isinstance(data, io.TextIOWrapper):
-            string_data = data.read()
-            data_as_bytes = string_data.encode()
-            inferred_mime_type = "text/plain"
-        # Assume bytes; try methods until we run out.
-        elif isinstance(data, bytes):
-            data_as_bytes = data
-            inferred_mime_type = "application/octet-stream"
-        elif isinstance(data, io.BytesIO):
-            data.seek(0)
-            data_as_bytes = data.getvalue()
-            inferred_mime_type = "application/octet-stream"
-        elif isinstance(data, io.BufferedReader):
-            data.seek(0)
-            data_as_bytes = data.read()
-            inferred_mime_type = "application/octet-stream"
-        elif isinstance(data, io.RawIOBase):
-            data.seek(0)
-            data_as_bytes = data.read() or b""
-            inferred_mime_type = "application/octet-stream"
-        else:
-            raise MediaFileStorageError(
+        data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
+            data,
+            unsupported_error=MediaFileStorageError(
                 f"Callable returned unsupported type: {type(data)}"
-            )
+            ),
+        )
 
         # Use provided mimetype if available, otherwise use inferred mimetype
         mime_type: str = deferred["mimetype"] or inferred_mime_type
