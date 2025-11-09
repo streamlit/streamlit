@@ -410,7 +410,7 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
     IndexIdentifierType | str,
-    ColumnConfig | None | str,
+    ColumnConfig | str | None,
 ]
 
 

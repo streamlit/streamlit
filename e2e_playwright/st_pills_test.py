@@ -126,7 +126,7 @@ def test_pills_are_disabled_and_take_screenshot(
     selected_pill.click(force=True)
     wait_for_app_run(app)
     expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect_markdown(app, "pills-disabled: None")
     assert_snapshot(pills, name="st_pills-disabled")
@@ -142,7 +142,7 @@ def test_pills_are_disabled_and_selected_and_take_screenshot(
     selected_pill.click(force=True)
     wait_for_app_run(app)
     expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect_markdown(app, "pills-disabled-selected: Water")
     assert_snapshot(pills, name="st_pills-disabled-selected")

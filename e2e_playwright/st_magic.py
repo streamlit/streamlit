@@ -85,6 +85,7 @@ func("FUNCTION")
 
 
 async def async_func(value: Any) -> None:
+    await asyncio.sleep(0)
     value
 
 
@@ -93,6 +94,7 @@ async_loop.run_until_complete(async_func("ASYNC FUNCTION"))
 
 async def async_for():
     async def async_iter():
+        await asyncio.sleep(0)
         yield
 
     async for _ in async_iter():
@@ -106,8 +108,10 @@ async def async_with():
     @contextlib.asynccontextmanager
     async def async_context_mgr():
         try:
+            await asyncio.sleep(0)
             yield
         finally:
+            await asyncio.sleep(0)
             pass
 
     async with async_context_mgr():

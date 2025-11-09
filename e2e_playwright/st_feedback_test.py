@@ -132,7 +132,7 @@ def test_feedback_buttons_are_disabled(app: Page):
     selected_button = star_buttons.nth(4)
     selected_button.click(force=True)
     expect(selected_button).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\\(\\d+, \\d+, \\d+\\)")
     )
     # the feedback value was set to 3 via session state
     text = get_markdown(app, "feedback-disabled: 3")
@@ -189,11 +189,11 @@ def test_feedback_remount_keep_value(app: Page):
     wait_for_app_run(app)
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
     expect(selected_button).to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\\(\\d+, \\d+, \\d+\\)")
     )
     click_button(app, "Create some elements to unmount component")
     expect(selected_button).to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
 

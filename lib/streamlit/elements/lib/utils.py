@@ -59,10 +59,10 @@ SAFE_VALUES: TypeAlias = Union[
     time,
     datetime,
     timedelta,
-    None,
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
+    None,
 ]
 
 
