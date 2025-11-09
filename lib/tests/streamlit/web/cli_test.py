@@ -34,7 +34,6 @@ from parameterized import parameterized
 from requests.adapters import HTTPAdapter, Retry
 from testfixtures import tempdir
 
-import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption

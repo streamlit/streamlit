@@ -16,10 +16,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import tornado.httpserver
 import tornado.testing
 import tornado.web
-import tornado.websocket
 
 from streamlit.auth_util import encode_provider_token
 from streamlit.web.server import oauth_authlib_routes

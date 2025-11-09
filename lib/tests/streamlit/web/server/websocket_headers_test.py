@@ -17,7 +17,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, Mock, patch
 
 import tornado.testing
-import tornado.websocket
 
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.web.server import websocket_headers

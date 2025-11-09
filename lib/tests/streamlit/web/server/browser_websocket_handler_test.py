@@ -17,9 +17,7 @@ from __future__ import annotations
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
 
 from streamlit.proto.BackMsg_pb2 import BackMsg

@@ -19,10 +19,6 @@ import json
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
-import tornado.concurrent
-import tornado.locks
-import tornado.netutil
-import tornado.web
 import tornado.websocket
 from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler

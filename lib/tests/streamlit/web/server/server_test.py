@@ -32,7 +32,6 @@ from unittest.mock import patch
 import pytest
 import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
 from parameterized import parameterized
 
