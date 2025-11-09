@@ -39,7 +39,7 @@ explicit-preview-rules = true
 # or that are not relevant for our codebase.
 select = [
   "ALL",
-  # preview rules:
+  # Preview rules:
   "ASYNC212",
   "ASYNC240",
   "ASYNC250",
@@ -52,7 +52,6 @@ select = [
   "PLR0202",
   "PLR0203",
   "PLR6301",
-  # "PLW0108",
   "PLW0244",
   "PLW1514",
   "PT029",
