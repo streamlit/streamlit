@@ -799,15 +799,66 @@ class MediaFileManagerDeferredTest(TestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         MagicMock(return_value="mock_session"),
     )
-    def test_execute_deferred_handles_stringio_return(self):
-        """Test that execute_deferred handles StringIO (text stream) return values."""
+    def test_execute_deferred_infers_text_plain_for_string_when_mimetype_none(self):
+        """If mimetype is None, infer text/plain for str returns."""
 
-        def generate_stringio():
-            return io.StringIO("stringio text")
+        def generate_text():
+            return "hello world"
 
         file_id = self.media_file_manager.add_deferred(
-            generate_stringio, "text/plain", random_coordinates()
+            generate_text, None, random_coordinates()
         )
 
         url = self.media_file_manager.execute_deferred(file_id)
         assert url.startswith("/mock/endpoint/")
+        assert url.endswith(".txt")
+
+        # Verify stored mimetype is text/plain
+        filename = url.split("/")[-1]
+        stored = self.storage.get_file(filename)
+        assert stored.mimetype == "text/plain"
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_execute_deferred_respects_provided_mimetype_over_inferred(self):
+        """Test that provided mimetype is used even when data type suggests different."""
+
+        def generate_text():
+            return "hello world"
+
+        # Even though data is string (would infer text/plain), use provided mimetype
+        file_id = self.media_file_manager.add_deferred(
+            generate_text, "text/csv", random_coordinates()
+        )
+
+        url = self.media_file_manager.execute_deferred(file_id)
+        assert url.startswith("/mock/endpoint/")
+
+        # Verify stored mimetype is text/csv (the provided one)
+        filename = url.split("/")[-1]
+        stored = self.storage.get_file(filename)
+        assert stored.mimetype == "text/csv"
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_execute_deferred_infers_octet_stream_for_bytes_when_mimetype_none(self):
+        """If mimetype is None, infer application/octet-stream for bytes returns."""
+
+        def generate_bytes():
+            return b"binary data"
+
+        file_id = self.media_file_manager.add_deferred(
+            generate_bytes, None, random_coordinates()
+        )
+
+        url = self.media_file_manager.execute_deferred(file_id)
+        assert url.startswith("/mock/endpoint/")
+
+        # Verify stored mimetype is application/octet-stream
+        filename = url.split("/")[-1]
+        stored = self.storage.get_file(filename)
+        assert stored.mimetype == "application/octet-stream"

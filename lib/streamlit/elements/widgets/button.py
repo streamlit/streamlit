@@ -1239,7 +1239,6 @@ def marshall_file(
             return
 
         # Register the callable for deferred execution
-        mimetype = mimetype or "application/octet-stream"
         file_id = runtime.get_instance().media_file_mgr.add_deferred(
             data,
             mimetype,

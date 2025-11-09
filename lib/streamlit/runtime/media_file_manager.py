@@ -39,7 +39,7 @@ class DeferredCallableEntry(TypedDict):
     """Typed metadata for deferred download callables."""
 
     callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
-    mimetype: str
+    mimetype: str | None
     filename: str | None
     coordinates: str
 
@@ -286,7 +286,7 @@ class MediaFileManager:
     def add_deferred(
         self,
         data_callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase],
-        mimetype: str,
+        mimetype: str | None,
         coordinates: str,
         file_name: str | None = None,
     ) -> str:
@@ -301,8 +301,10 @@ class MediaFileManager:
         ----------
         data_callable : Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
             A callable that returns the file data when invoked.
-        mimetype : str
+        mimetype : str or None
             The mime type for the file. E.g. "text/csv".
+            If None, the mimetype will be inferred from the data type when
+            execute_deferred() is called.
         coordinates : str
             Unique string identifying an element's location.
         file_name : str or None
@@ -317,6 +319,7 @@ class MediaFileManager:
 
         with self._lock:
             # Generate a unique placeholder ID for this deferred callable
+            # Expected: a new placeholder ID is created on every script rerun.
             file_id = uuid.uuid4().hex
 
             # Store the callable with its metadata
@@ -368,36 +371,46 @@ class MediaFileManager:
         except Exception as e:
             raise MediaFileStorageError(f"Callable execution failed: {e}") from e
 
-        # Convert data to bytes if needed
+        # Convert data to bytes and infer mimetype if needed
         data_as_bytes: bytes
+        inferred_mime_type: str
+
         if isinstance(data, str):
             data_as_bytes = data.encode()
+            inferred_mime_type = "text/plain"
+        elif isinstance(data, io.TextIOWrapper):
+            string_data = data.read()
+            data_as_bytes = string_data.encode()
+            inferred_mime_type = "text/plain"
+        # Assume bytes; try methods until we run out.
         elif isinstance(data, bytes):
             data_as_bytes = data
+            inferred_mime_type = "application/octet-stream"
         elif isinstance(data, io.BytesIO):
             data.seek(0)
             data_as_bytes = data.getvalue()
+            inferred_mime_type = "application/octet-stream"
         elif isinstance(data, io.BufferedReader):
             data.seek(0)
             data_as_bytes = data.read()
-        elif isinstance(data, io.TextIOBase):
-            data.seek(0)
-            string_data = data.read()
-            data_as_bytes = string_data.encode()
+            inferred_mime_type = "application/octet-stream"
         elif isinstance(data, io.RawIOBase):
             data.seek(0)
-            read_data = data.read()
-            data_as_bytes = read_data if read_data else b""
+            data_as_bytes = data.read() or b""
+            inferred_mime_type = "application/octet-stream"
         else:
             raise MediaFileStorageError(
                 f"Callable returned unsupported type: {type(data)}"
             )
 
+        # Use provided mimetype if available, otherwise use inferred mimetype
+        mime_type: str = deferred["mimetype"] or inferred_mime_type
+
         # Store the generated data and get the actual file_id
         with self._lock:
             actual_file_id = self._storage.load_and_get_id(
                 data_as_bytes,
-                deferred["mimetype"],
+                mime_type,
                 MediaFileKind.DOWNLOADABLE,
                 deferred["filename"],
             )
