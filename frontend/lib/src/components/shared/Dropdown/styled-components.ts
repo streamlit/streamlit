@@ -20,25 +20,55 @@ import { StyledDropdownListItem } from "baseui/select"
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted }) => {
+})(({ theme, $isHighlighted, $selected }) => {
+  const hoverBg = theme.colors.darkenedBgMix15
+  const selectedBg = (theme as any).colors?.darkenedBgMix25 ?? hoverBg
+  const hasBg = Boolean($selected || $isHighlighted)
+  const bgColor = $selected
+    ? selectedBg
+    : $isHighlighted
+      ? hoverBg
+      : "transparent"
+
   return {
+    position: "relative",
     display: "flex",
     alignItems: "center",
+    marginLeft: theme.spacing.xs,
+    marginRight: theme.spacing.xs,
+    borderRadius: theme.radii.xl, // ALL items get rounded corners
+    overflow: "visible",
+
+    // ensure any Base Web inner wrappers cannot paint square backgrounds
+    "& *": { backgroundColor: "transparent !important" },
+    "& [data-baseweb]": { backgroundColor: "transparent !important" },
+
+    // keep text above our highlight layer
+    "& > *": { position: "relative", zIndex: 1 },
+
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+
+    // our rounded highlight - same radius for ALL items
+    "::before": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      borderRadius: theme.radii.xl, // Consistent rounded corners on all items
+      background: bgColor,
+      opacity: hasBg ? 1 : 0,
+      transition: "opacity 120ms ease",
+      pointerEvents: "none",
+      zIndex: 0,
+    },
+
     fontWeight: theme.fontWeights.normal,
 
-    // Override the default itemSize set on the component's JSX
-    // on mobile, so we can make list items taller and scrollable
     [`@media (max-width: ${theme.breakpoints.md})`]: {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
-    },
-    "&:hover, &:active, &:focus-visible": {
-      background: theme.colors.darkenedBgMix15,
     },
   }
 })

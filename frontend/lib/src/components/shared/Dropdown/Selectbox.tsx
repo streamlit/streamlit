@@ -38,6 +38,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -171,7 +172,10 @@ const Selectbox: FC<Props> = ({
               fontWeight: theme.fontWeights.normal,
             }),
           },
-          Dropdown: { component: VirtualDropdown },
+          Dropdown: {
+            component: VirtualDropdown,
+            style: { boxShadow: "none", overflow: "hidden" },
+          },
           ClearIcon: {
             props: {
               overrides: {
@@ -229,19 +233,56 @@ const Selectbox: FC<Props> = ({
               lineHeight: theme.lineHeights.inputWidget,
             }),
           },
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
-                  style: () => ({
-                    marginTop: theme.spacing.px,
-                  }),
+                  style: () => {
+                    const lightBackground = hasLightBackgroundColor(theme)
+                    return {
+                      marginTop: theme.spacing.sm,
+                      marginRight: theme.spacing.lg,
+                      marginBottom: theme.spacing.lg,
+
+                      maxHeight: "70vh",
+                      //minWidth: "8rem",
+                      overflow: "auto",
+                      //maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+
+                      // Rounded corners - exactly like TopNav
+                      borderTopLeftRadius: theme.radii.xl,
+                      borderTopRightRadius: theme.radii.xl,
+                      borderBottomRightRadius: theme.radii.xl,
+                      borderBottomLeftRadius: theme.radii.xl,
+
+                      // Borders - exactly like TopNav
+                      borderLeftWidth: theme.sizes.borderWidth,
+                      borderRightWidth: theme.sizes.borderWidth,
+                      borderTopWidth: theme.sizes.borderWidth,
+                      borderBottomWidth: theme.sizes.borderWidth,
+
+                      borderLeftStyle: "solid",
+                      borderRightStyle: "solid",
+                      borderTopStyle: "solid",
+                      borderBottomStyle: "solid",
+
+                      borderLeftColor: theme.colors.borderColor,
+                      borderRightColor: theme.colors.borderColor,
+                      borderTopColor: theme.colors.borderColor,
+                      borderBottomColor: theme.colors.borderColor,
+
+                      // Shadow - exactly like TopNav
+                      boxShadow: lightBackground
+                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
+                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+                    }
+                  },
                 },
               },
             },
           },
+
           SingleValue: {
             style: () => ({
               // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.
