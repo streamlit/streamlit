@@ -202,7 +202,6 @@ const RawElementNodeRenderer = (
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
     componentRegistry: props.componentRegistry,
-    requestDeferredFile: props.requestDeferredFile,
   }
 
   switch (node.element.type) {

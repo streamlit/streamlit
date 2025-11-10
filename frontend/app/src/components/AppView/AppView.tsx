@@ -51,7 +51,7 @@ import {
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { DeferredFileResponse, Navigation } from "@streamlit/protobuf"
+import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
@@ -78,8 +78,6 @@ export interface AppViewProps {
   widgetMgr: WidgetStateManager
 
   uploadClient: FileUploadClient
-
-  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 
   navigationPosition: Navigation.Position
 
@@ -114,7 +112,6 @@ function AppView(props: AppViewProps): ReactElement {
     elements,
     widgetMgr,
     uploadClient,
-    requestDeferredFile,
     sendMessageToHost,
     endpoints,
     navigationPosition,
@@ -206,7 +203,6 @@ function AppView(props: AppViewProps): ReactElement {
       widgetMgr={widgetMgr}
       widgetsDisabled={widgetsDisabled}
       uploadClient={uploadClient}
-      requestDeferredFile={requestDeferredFile}
       disableFullscreenMode={disableFullscreenMode}
       componentRegistry={componentRegistry}
       height="auto"

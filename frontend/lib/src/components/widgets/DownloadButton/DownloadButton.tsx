@@ -24,11 +24,9 @@ import React, {
   useState,
 } from "react"
 
-import {
-  DeferredFileResponse,
-  DownloadButton as DownloadButtonProto,
-} from "@streamlit/protobuf"
+import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
+import { DownloadContext } from "~lib/components/core/DownloadContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
   BaseButtonKind,
@@ -47,18 +45,10 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const {
-    disabled,
-    element,
-    widgetMgr,
-    endpoints,
-    fragmentId,
-    requestDeferredFile,
-  } = props
+  const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
 
   const [isLoading, setIsLoading] = useState(false)
@@ -66,6 +56,7 @@ function DownloadButton(props: Props): ReactElement {
 
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { requestDeferredFile } = useContext(DownloadContext)
 
   let kind = BaseButtonKind.SECONDARY
   if (type === "primary") {

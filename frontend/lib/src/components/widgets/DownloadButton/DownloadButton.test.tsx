@@ -24,6 +24,7 @@ import {
   DownloadButton as DownloadButtonProto,
 } from "@streamlit/protobuf"
 
+import { DownloadContext } from "~lib/components/core/DownloadContext"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -205,16 +206,17 @@ describe("DownloadButton widget", () => {
         })
       ) as (fileId: string) => Promise<DeferredFileResponse>
 
-      const props = getProps(
-        {
-          deferredFileId: "test_file_id",
-          url: "",
-        },
-        {
-          requestDeferredFile: mockRequestDeferredFile,
-        }
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      render(
+        <DownloadContext.Provider
+          value={{ requestDeferredFile: mockRequestDeferredFile }}
+        >
+          <DownloadButton {...props} />
+        </DownloadContext.Provider>
       )
-      render(<DownloadButton {...props} />)
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -248,17 +250,18 @@ describe("DownloadButton widget", () => {
           )
       ) as (fileId: string) => Promise<DeferredFileResponse>
 
-      const props = getProps(
-        {
-          deferredFileId: "test_file_id",
-          url: "",
-          label: "Download File",
-        },
-        {
-          requestDeferredFile: mockRequestDeferredFile,
-        }
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+        label: "Download File",
+      })
+      render(
+        <DownloadContext.Provider
+          value={{ requestDeferredFile: mockRequestDeferredFile }}
+        >
+          <DownloadButton {...props} />
+        </DownloadContext.Provider>
       )
-      render(<DownloadButton {...props} />)
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -285,16 +288,17 @@ describe("DownloadButton widget", () => {
         })
       ) as (fileId: string) => Promise<DeferredFileResponse>
 
-      const props = getProps(
-        {
-          deferredFileId: "test_file_id",
-          url: "",
-        },
-        {
-          requestDeferredFile: mockRequestDeferredFile,
-        }
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      render(
+        <DownloadContext.Provider
+          value={{ requestDeferredFile: mockRequestDeferredFile }}
+        >
+          <DownloadButton {...props} />
+        </DownloadContext.Provider>
       )
-      render(<DownloadButton {...props} />)
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -316,16 +320,17 @@ describe("DownloadButton widget", () => {
         fileId: string
       ) => Promise<DeferredFileResponse>
 
-      const props = getProps(
-        {
-          deferredFileId: "test_file_id",
-          url: "",
-        },
-        {
-          requestDeferredFile: mockRequestDeferredFile,
-        }
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      render(
+        <DownloadContext.Provider
+          value={{ requestDeferredFile: mockRequestDeferredFile }}
+        >
+          <DownloadButton {...props} />
+        </DownloadContext.Provider>
       )
-      render(<DownloadButton {...props} />)
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -347,16 +352,18 @@ describe("DownloadButton widget", () => {
         })
       ) as (fileId: string) => Promise<DeferredFileResponse>
 
-      const props = getProps(
-        {
-          deferredFileId: "test_file_id",
-          url: "",
-        },
-        {
-          requestDeferredFile: mockRequestDeferredFile,
-        }
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+        label: "Download File",
+      })
+      render(
+        <DownloadContext.Provider
+          value={{ requestDeferredFile: mockRequestDeferredFile }}
+        >
+          <DownloadButton {...props} />
+        </DownloadContext.Provider>
       )
-      render(<DownloadButton {...props} />)
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)

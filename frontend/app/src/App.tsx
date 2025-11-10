@@ -2262,6 +2262,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2282,7 +2283,6 @@ export class App extends PureComponent<Props, State> {
               elements={elements}
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
-              requestDeferredFile={this.requestDeferredFile}
               navigationPosition={effectiveNavigationPosition}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}

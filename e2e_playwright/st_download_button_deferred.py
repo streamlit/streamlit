@@ -41,6 +41,7 @@ st.download_button(
     data=generate_csv_data,
     file_name="data.csv",
     mime="text/csv",
+    on_click="ignore",
 )
 
 st.subheader("3. Deferred Download with Lambda")
@@ -49,6 +50,7 @@ st.download_button(
     data=lambda: f"Generated at {time.time()}\nThis is dynamically generated text",
     file_name="lambda_output.txt",
     mime="text/plain",
+    on_click="ignore",
 )
 
 st.subheader("4. Deferred Download Returning Bytes")
@@ -64,6 +66,7 @@ st.download_button(
     data=generate_binary_data,
     file_name="binary.dat",
     mime="application/octet-stream",
+    on_click="ignore",
 )
 
 st.subheader("5. Deferred Download that Raises Error")
@@ -98,6 +101,7 @@ st.download_button(
     data=generate_large_data,
     file_name="large.txt",
     mime="text/plain",
+    on_click="ignore",
 )
 
 st.subheader("7. Deferred Download with on_click='ignore'")
