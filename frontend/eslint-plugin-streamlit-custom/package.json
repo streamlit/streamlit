@@ -21,12 +21,12 @@
     "@typescript-eslint/rule-tester": "^8.46.2",
     "@typescript-eslint/types": "^8.46.2",
     "@typescript-eslint/utils": "^8.46.2",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^4.0.7",
     "eslint": "^9.39.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typesync": "^0.14.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.7"
   },
   "peerDependencies": {
     "@typescript-eslint/utils": "^8.46.2",
