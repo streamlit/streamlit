@@ -248,7 +248,7 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None = None,
-        max_size: int | None = None,
+        max_upload_size: int | None = None,
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
@@ -442,7 +442,7 @@ class FileUploaderMixin:
         return self._file_uploader(
             label=label,
             type=type,
-            max_size=max_size,
+            max_upload_size=max_upload_size,
             accept_multiple_files=accept_multiple_files,
             key=key,
             help=help,
@@ -459,7 +459,7 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None = None,
-        max_size: int | None = None,
+        max_upload_size: int | None = None,
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
@@ -503,8 +503,8 @@ class FileUploaderMixin:
         file_uploader_proto.type[:] = (
             normalized_type if normalized_type is not None else []
         )
-        if max_size is not None:
-            file_uploader_proto.max_upload_size_mb = int(max_size)
+        if max_upload_size is not None:
+            file_uploader_proto.max_upload_size_mb = int(max_upload_size)
         else:
             file_uploader_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
