@@ -71,6 +71,7 @@ jobs:
         if: inputs.ref == '' && github.event_name == 'pull_request'
         uses: actions/checkout@v5
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
           persist-credentials: false
           submodules: "recursive"
