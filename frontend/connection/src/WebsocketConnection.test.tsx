@@ -27,6 +27,7 @@ import {
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
+import type { IHostConfigResponse, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
@@ -40,14 +41,17 @@ const MOCK_HOST_CONFIG_RESPONSE = {
 
 const MOCK_HEALTH_RESPONSE = { status: "ok" }
 
+type GenericMock = ReturnType<typeof vi.fn>
+type OnRetryMock = GenericMock & OnRetry
+type HostConfigHandler = (resp: IHostConfigResponse) => void
+
 // Sets up axios get mock to fail a specific number of times before succeeding
 function setupAxiosMockWithFailures(
   retryCount: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   errorObj: any
-): ReturnType<typeof vi.fn> {
-  const mockImplementation = vi.fn()
-  axios.get = mockImplementation
+): GenericMock {
+  const mockImplementation = assignAxiosGetMock()
 
   // Each "totalTries" increment involves cycling through all URIs
   // Each URI requires 2 axios calls (health + config)
@@ -79,21 +83,27 @@ function createMockArgs(overrides?: Partial<Args>): Args {
         pathname: "/",
       } as URL,
     ],
-    onMessage: vi.fn(),
-    onConnectionStateChange: vi.fn(),
-    onRetry: vi.fn(),
+    onMessage: vi.fn<Args["onMessage"]>(),
+    onConnectionStateChange: vi.fn<Args["onConnectionStateChange"]>(),
+    onRetry: vi.fn<OnRetry>(),
     claimHostAuthToken: () => Promise.resolve(undefined),
-    resetHostAuthToken: vi.fn(),
-    sendClientError: vi.fn(),
-    onHostConfigResp: vi.fn(),
+    resetHostAuthToken: vi.fn<Args["resetHostAuthToken"]>(),
+    sendClientError: vi.fn<Args["sendClientError"]>(),
+    onHostConfigResp: vi.fn<Args["onHostConfigResp"]>(),
     ...overrides,
   }
 }
 
+function assignAxiosGetMock(): GenericMock {
+  const mock = vi.fn()
+  axios.get = mock as unknown as typeof axios.get
+  return mock
+}
+
 /** Create a robust axios mock that handles any number of HTTP requests */
-function createAxiosMock(): ReturnType<typeof vi.fn> {
+function createAxiosMock(): GenericMock {
   let callCount = 0
-  return vi.fn().mockImplementation(() => {
+  return assignAxiosGetMock().mockImplementation(() => {
     callCount++
     // Alternate between health check (empty string) and host config responses
     return Promise.resolve(
@@ -120,9 +130,9 @@ describe("doInitPings", () => {
     ] as URL[],
     timeoutMs: 10,
     maxTimeoutMs: 100,
-    retryCallback: vi.fn(),
-    sendClientError: vi.fn(),
-    setAllowedOrigins: vi.fn(),
+    retryCallback: vi.fn<OnRetry>(),
+    sendClientError: vi.fn<Args["sendClientError"]>(),
+    setAllowedOrigins: vi.fn<HostConfigHandler>(),
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -130,21 +140,20 @@ describe("doInitPings", () => {
 
   // Helper function to create retry callbacks that advance timers
   const createTimerAdvancingRetryCallback = (
-    originalCallback?: typeof MOCK_PING_DATA.retryCallback
-  ): ReturnType<typeof vi.fn> => {
-    return vi.fn((_times, _errorNode, timeout) => {
+    originalCallback?: OnRetry
+  ): OnRetryMock =>
+    vi.fn<OnRetry>((_times, _errorNode, timeout): void => {
       if (originalCallback) {
         originalCallback(_times, _errorNode, timeout)
       }
       vi.advanceTimersByTime(timeout)
     })
-  }
 
   beforeEach(() => {
     vi.useFakeTimers()
     originalAxiosGet = axios.get
-    MOCK_PING_DATA.retryCallback = vi.fn()
-    MOCK_PING_DATA.setAllowedOrigins = vi.fn()
+    MOCK_PING_DATA.retryCallback = vi.fn<OnRetry>()
+    MOCK_PING_DATA.setAllowedOrigins = vi.fn<HostConfigHandler>()
   })
 
   afterEach(() => {
@@ -155,8 +164,7 @@ describe("doInitPings", () => {
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
@@ -177,8 +185,8 @@ describe("doInitPings", () => {
 
   it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
     window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
-    axios.get = vi
-      .fn()
+    const axiosGetMock = assignAxiosGetMock()
+    axiosGetMock
       .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
@@ -195,16 +203,14 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
-    // @ts-expect-error
-    expect(axios.get.mock.calls[1]).toEqual([
+    expect(axiosGetMock.mock.calls[1]).toEqual([
       "https://example.com:1234/_stcore/host-config",
       { timeout: 15000 },
     ])
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       .mockResolvedValueOnce("")
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
@@ -224,8 +230,7 @@ describe("doInitPings", () => {
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (1)", async () => {
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(new Error(""))
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -257,8 +262,7 @@ describe("doInitPings", () => {
   it("calls retry with the corresponding error message if there was an error", async () => {
     const TEST_ERROR_MESSAGE = "ERROR_MESSAGE"
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(new Error(TEST_ERROR_MESSAGE))
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -293,8 +297,7 @@ describe("doInitPings", () => {
   it("calls retry with 'Connection timed out.' when the error code is `ECONNABORTED`", async () => {
     const TEST_ERROR = { code: "ECONNABORTED" }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -333,8 +336,7 @@ describe("doInitPings", () => {
       },
     }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -371,8 +373,7 @@ describe("doInitPings", () => {
       request: {},
     }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -429,8 +430,7 @@ describe("doInitPings", () => {
       },
     }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -473,8 +473,7 @@ describe("doInitPings", () => {
 
 If you are trying to access a Streamlit app running on another server, this could be due to the app's [CORS](${CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}) settings.`
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -514,8 +513,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       },
     }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -560,8 +558,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       },
     }
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -599,8 +596,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   it("calls retry with correct total tries", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -643,8 +639,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   it("has increasing but capped retry backoff", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -709,8 +704,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   it("backs off independently for each target url", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -764,8 +758,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   it("resets timeout each ping call", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = vi
-      .fn()
+    assignAxiosGetMock()
       // First Connection attempt
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
@@ -852,10 +845,10 @@ If you are trying to access a Streamlit app running on another server, this coul
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
     it("with status = 0 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+      const sendClientErrorSpy = vi.fn<Args["sendClientError"]>()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+      setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
         response: {
           status: 0,
           statusText: "No response",
@@ -889,10 +882,10 @@ If you are trying to access a Streamlit app running on another server, this coul
     })
 
     it("with status = 403 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+      const sendClientErrorSpy = vi.fn<Args["sendClientError"]>()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+      setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
         response: {
           status: 403,
           statusText: "Forbidden",
@@ -925,10 +918,10 @@ If you are trying to access a Streamlit app running on another server, this coul
     })
 
     it("with status = 500 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+      const sendClientErrorSpy = vi.fn<Args["sendClientError"]>()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+      setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
         response: {
           status: 500,
           statusText: "Internal Server Error",
@@ -961,10 +954,10 @@ If you are trying to access a Streamlit app running on another server, this coul
     })
 
     it("with request error", async () => {
-      const sendClientErrorSpy = vi.fn()
+      const sendClientErrorSpy = vi.fn<Args["sendClientError"]>()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+      setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
         request: {
           path: "https://example.com/health",
         },
@@ -1005,7 +998,7 @@ describe("WebsocketConnection", () => {
     server = new WS("ws://localhost:1234/_stcore/stream")
 
     originalAxiosGet = axios.get
-    axios.get = createAxiosMock()
+    createAxiosMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
@@ -1110,7 +1103,7 @@ describe("WebsocketConnection auth token handling", () => {
     websocketSpy = vi.spyOn(window, "WebSocket")
 
     originalAxiosGet = axios.get
-    axios.get = createAxiosMock()
+    createAxiosMock()
   })
 
   afterEach(() => {
@@ -1120,7 +1113,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
-    const resetHostAuthToken = vi.fn()
+    const resetHostAuthToken = vi.fn<Args["resetHostAuthToken"]>()
     const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
@@ -1137,7 +1130,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("sets second Sec-WebSocket-Protocol option to value from claimHostAuthToken", async () => {
-    const resetHostAuthToken = vi.fn()
+    const resetHostAuthToken = vi.fn<Args["resetHostAuthToken"]>()
     const ws = new WebsocketConnection(
       createMockArgs({
         claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
@@ -1176,7 +1169,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("sets both host provided auth token and lastSessionId if both set", async () => {
-    const resetHostAuthToken = vi.fn()
+    const resetHostAuthToken = vi.fn<Args["resetHostAuthToken"]>()
     const ws = new WebsocketConnection(
       createMockArgs({
         getLastSessionId: () => "lastSessionId",

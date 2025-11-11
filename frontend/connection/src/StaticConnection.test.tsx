@@ -67,7 +67,7 @@ describe("StaticConnection", () => {
 
       // Mock fetch for our static asset location
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ static_url: "https://example.com" }),
@@ -92,7 +92,7 @@ describe("StaticConnection", () => {
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(null)
       // Mock fetch for our static asset location
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
           status: 404,
@@ -116,7 +116,7 @@ describe("StaticConnection", () => {
 
       // Mock fetch for our protos
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
@@ -138,7 +138,7 @@ describe("StaticConnection", () => {
 
       // Mock fetch for our protos
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
           status: 404,
@@ -164,7 +164,7 @@ describe("StaticConnection", () => {
     it("decodes and dispatches messages", async () => {
       // Handles getProtoResponse
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
@@ -192,7 +192,7 @@ describe("StaticConnection", () => {
     it("logs error if arrayBuffer is undefined", async () => {
       // Handles getProtoResponse
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           arrayBuffer: () => Promise.resolve(null),
@@ -233,7 +233,7 @@ describe("StaticConnection", () => {
 
       // Handles getProtoResponse
       // @ts-expect-error
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),

@@ -190,7 +190,7 @@ export class WebsocketConnection {
    * timeout fires. This field stores the timer ID from setTimeout, so we can
    * cancel it if needed.
    */
-  private wsConnectionTimeout?: NodeJS.Timeout | number
+  private wsConnectionTimeout?: ReturnType<typeof globalThis.setTimeout>
 
   constructor(props: Args) {
     this.args = props
