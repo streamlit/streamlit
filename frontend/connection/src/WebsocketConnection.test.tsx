@@ -106,9 +106,7 @@ function createAxiosMock(): GenericMock {
   return assignAxiosGetMock().mockImplementation(() => {
     callCount++
     // Alternate between health check (empty string) and host config responses
-    return Promise.resolve(
-      callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
-    )
+    return callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
   })
 }
 
