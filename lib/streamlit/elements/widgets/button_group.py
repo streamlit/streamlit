@@ -28,6 +28,7 @@ from typing import (
     overload,
 )
 
+from streamlit import config
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
@@ -430,8 +431,6 @@ class ButtonGroupMixin:
         # - Gap: 0.125rem between buttons
         # - thumbs: 2 buttons + 1 gap = 3.125rem
         # - faces/stars: 5 buttons + 4 gaps = 8rem
-        from streamlit import config
-
         base_font_size = config.get_option("theme.baseFontSize") or 16
         button_size_rem = 1.5
         gap_size_rem = 0.125

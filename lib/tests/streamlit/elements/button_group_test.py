@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import config
 from streamlit.elements.widgets.button_group import (
     _FACES_ICONS,
     _SELECTED_STAR_ICON,
@@ -289,6 +290,35 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
             == WidthConfigFields.PIXEL_WIDTH.value
         )
         assert el.width_config.pixel_width == 200
+
+    def test_feedback_threshold_adapts_to_base_font_size(self):
+        """Test that the conversion threshold adapts to theme.baseFontSize."""
+
+        # Test with 20px base font size (larger than default 16px)
+        # Threshold calculation: 3.125rem x 20 x 1.1 = 68.75px (thumbs)
+        # So width=65 should convert to "content" at 20px, but preserves at 16px
+        config.set_option("theme.baseFontSize", 20)
+
+        st.feedback("thumbs", width=65, key="thumbs_20px_font")
+        el = self.get_delta_from_queue().new_element
+        # At 20px base font, 65px is below threshold, converts to content
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+        # Reset to default
+        config.set_option("theme.baseFontSize", 16)
+
+        # At 16px base font, same 65px width is above threshold, preserved
+        st.feedback("thumbs", width=65, key="thumbs_16px_font")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 65
 
 
 def get_command_matrix(
