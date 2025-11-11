@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_COLOR_PICKERS = 12
+NUM_COLOR_PICKERS = 13
 
 
 def test_color_picker_widget_display(
@@ -237,6 +237,10 @@ def test_color_picker_width_examples(
     assert_snapshot(
         get_color_picker(themed_app, "Color picker with 100px width"),
         name="st_color_picker-width_100px",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "color_picker_min_width"),
+        name="st_color_picker-width_20px_min_enforced",
     )
 
 
