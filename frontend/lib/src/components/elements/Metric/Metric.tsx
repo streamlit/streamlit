@@ -172,7 +172,7 @@ export function getMetricChartSpec(
               nearest: true,
               on:
                 chartData.length > LARGE_DATASET_POINT_THRESHOLD
-                  ? "mousemove{16}" // Throttle hover events for large datasets to
+                  ? "mousemove{16}" // Throttle hover events for large datasets to 16ms
                   : "mousemove",
               clear: "mouseleave",
             },
