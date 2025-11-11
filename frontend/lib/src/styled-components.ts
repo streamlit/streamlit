@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { hasLightBackgroundColor } from "@streamlit/lib"
+
 export const StyledApp = styled.div(({ theme }) => ({
   position: "absolute",
   background: theme.colors.bgColor,
@@ -44,4 +46,13 @@ export const StyledDataFrameOverlay = styled.div(({ theme }) => ({
   left: 0,
   zIndex: theme.zIndices.tablePortal,
   lineHeight: "100%",
+  ...(!hasLightBackgroundColor(theme) && {
+    "& input[type='date'], & input[type='time'], & input[type='datetime-local']":
+      {
+        "&::-webkit-calendar-picker-indicator": {
+          filter: "brightness(0) invert(1)",
+          opacity: 1,
+        },
+      },
+  }),
 }))
