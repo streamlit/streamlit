@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import * as polyfill from "polyfill-pseudoclass-has"
-import "vitest-canvas-mock"
-import { vi } from "vitest"
 import "@testing-library/jest-dom/vitest"
+import { vi } from "vitest"
+import "vitest-canvas-mock"
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
@@ -44,14 +43,15 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn() }))
 
-global.ResizeObserver = vi
-  .fn()
-  .mockImplementation(function (this: unknown, _callback: ResizeObserverCallback) {
-    return {
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    }
-  }) as unknown as typeof ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(function (
+  this: unknown,
+  _callback: ResizeObserverCallback
+) {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+}) as unknown as typeof ResizeObserver
 
 process.env.TZ = "UTC"
