@@ -25,12 +25,24 @@ describe("useResizeObserver", () => {
   beforeEach(() => {
     vi.useFakeTimers()
     // Mock ResizeObserver with immediate callback execution
-    global.ResizeObserver = vi.fn().mockImplementation(callback => ({
-      observe: mockObserve.mockImplementation(() => {
-        callback([{ target: document.createElement("div") }])
-      }),
-      disconnect: mockDisconnect,
-    }))
+    global.ResizeObserver = vi.fn(function (
+      this: unknown,
+      callback: ResizeObserverCallback
+    ) {
+      return {
+        observe: mockObserve.mockImplementation(() => {
+          callback(
+            [
+              {
+                target: document.createElement("div"),
+              } as unknown as ResizeObserverEntry,
+            ],
+            this as ResizeObserver
+          )
+        }),
+        disconnect: mockDisconnect,
+      }
+    }) as unknown as typeof ResizeObserver
     // Mock requestAnimationFrame
     global.requestAnimationFrame = vi.fn().mockImplementation(cb => {
       cb()
