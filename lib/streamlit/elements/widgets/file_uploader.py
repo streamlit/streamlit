@@ -486,6 +486,7 @@ class FileUploaderMixin:
         element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
+            max_upload_size=max_upload_size,
             key_as_main_identity=False,
             dg=self.dg,
             label=label,
