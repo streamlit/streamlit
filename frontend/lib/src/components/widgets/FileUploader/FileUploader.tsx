@@ -65,6 +65,39 @@ type FilesUpdater =
   | UploadFileInfo[]
   | ((prev: UploadFileInfo[]) => UploadFileInfo[])
 
+const createInitialFiles = (
+  element: FileUploaderProto,
+  widgetMgr: WidgetStateManager
+): { files: UploadFileInfo[]; nextLocalId: number } => {
+  const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+  if (isNullOrUndefined(widgetValue)) {
+    return { files: [], nextLocalId: 1 }
+  }
+
+  const { uploadedFileInfo } = widgetValue
+  if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
+    return { files: [], nextLocalId: 1 }
+  }
+
+  let nextLocalId = 1
+  const files = uploadedFileInfo.map(f => {
+    const name = f.name as string
+    const size = f.size as number
+    const fileId = f.fileId as string
+    const fileUrls = f.fileUrls as FileURLsProto
+
+    const uploadFile = new UploadFileInfo(name, size, nextLocalId, {
+      type: "uploaded",
+      fileId,
+      fileUrls,
+    })
+    nextLocalId += 1
+    return uploadFile
+  })
+
+  return { files, nextLocalId }
+}
+
 /**
  * Convert a list of uploaded file info to the widget state.
  */
@@ -107,9 +140,20 @@ const FileUploader = ({
   uploadClient,
   fragmentId,
 }: Props): React.ReactElement => {
-  const localFileIdCounterRef = useRef(1)
-  const forceUpdatingStatusRef = useRef(false)
   const { width, elementRef } = useCalculatedDimensions()
+
+  const { files: initialFiles, nextLocalId: initialNextLocalId } = useMemo(
+    () => createInitialFiles(element, widgetMgr),
+    [element, widgetMgr]
+  )
+
+  const localFileIdCounterRef = useRef(initialNextLocalId)
+  const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
+  const filesRef = useRef<UploadFileInfo[]>(files)
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
+  const [isForceUpdating, setIsForceUpdating] = useState(false)
 
   /**
    * Generate a unique ID for a new file.
@@ -119,38 +163,6 @@ const FileUploader = ({
     localFileIdCounterRef.current += 1
     return id
   }, [])
-
-  /**
-   * Get the initial files from the widget manager.
-   */
-  const getInitialFiles = (): UploadFileInfo[] => {
-    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (isNullOrUndefined(widgetValue)) {
-      return []
-    }
-
-    const { uploadedFileInfo } = widgetValue
-    if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
-      return []
-    }
-
-    return uploadedFileInfo.map(f => {
-      const name = f.name as string
-      const size = f.size as number
-      const fileId = f.fileId as string
-      const fileUrls = f.fileUrls as FileURLsProto
-
-      return new UploadFileInfo(name, size, nextLocalFileId(), {
-        type: "uploaded",
-        fileId,
-        fileUrls,
-      })
-    })
-  }
-
-  const [files, setFiles] = useState<UploadFileInfo[]>(() => getInitialFiles())
-  const filesRef = useRef<UploadFileInfo[]>(files)
-  filesRef.current = files
 
   const maxUploadSizeInBytes = useMemo(() => {
     const maxMbs = element.maxUploadSizeMb
@@ -178,6 +190,21 @@ const FileUploader = ({
       })
     })
   }, [])
+
+  const setForceUpdatingStatus = useCallback(
+    (value: boolean): void => {
+      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+       * We need the status flag to update synchronously so that subsequent
+       * renders treat the widget as updating. Otherwise, the status could
+       * briefly report as ready and trigger widget state propagation while
+       * we're still replacing an existing file.
+       */
+      flushSync(() => {
+        setIsForceUpdating(value)
+      })
+    },
+    [setIsForceUpdating]
+  )
 
   /**
    * Add a file to the list of files.
@@ -229,8 +256,7 @@ const FileUploader = ({
   }, [])
 
   const status: FileUploaderStatus =
-    files.some(file => file.status.type === "uploading") ||
-    forceUpdatingStatusRef.current
+    files.some(file => file.status.type === "uploading") || isForceUpdating
       ? "updating"
       : "ready"
 
@@ -510,9 +536,9 @@ const FileUploader = ({
               f => f.status.type !== "error"
             )
             if (existingFile) {
-              forceUpdatingStatusRef.current = true
+              setForceUpdatingStatus(true)
               deleteFile(existingFile.id)
-              forceUpdatingStatusRef.current = false
+              setForceUpdatingStatus(false)
             }
           }
 
@@ -554,6 +580,7 @@ const FileUploader = ({
       nextLocalFileId,
       uploadClient,
       uploadFile,
+      setForceUpdatingStatus,
     ]
   )
 
