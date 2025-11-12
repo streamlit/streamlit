@@ -902,3 +902,16 @@ st.dataframe(
     width="content",
     hide_index=True,
 )
+
+st.header("Missing placeholder:")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "with_none": [1, None, 3],
+            "all_missing": [None, None, None],
+            "nan": [None, np.nan, 3],
+        }
+    ),
+    placeholder="-",
+    width="content",
+)

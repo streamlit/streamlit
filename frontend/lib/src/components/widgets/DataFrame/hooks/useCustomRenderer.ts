@@ -39,8 +39,8 @@ import {
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
 
-// Token used for missing values (null, NaN, etc.)
-const NULL_VALUE_TOKEN = "None"
+// Default token used for missing values (null, NaN, etc.)
+const DEFAULT_MISSING_PLACEHOLDER = "None"
 
 /**
  * Draw a red indicator in the top right corner of the cell
@@ -72,7 +72,10 @@ export function drawAttentionIndicator(
 /**
  * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
  */
-export const drawMissingPlaceholder = (args: BaseDrawArgs): void => {
+export const drawMissingPlaceholder = (
+  args: BaseDrawArgs,
+  placeholder: string
+): void => {
   const { cell, theme, ctx } = args
   drawTextCell(
     {
@@ -89,7 +92,7 @@ export const drawMissingPlaceholder = (args: BaseDrawArgs): void => {
       spriteManager: {},
       hyperWrapping: false,
     },
-    NULL_VALUE_TOKEN,
+    placeholder,
     cell.contentAlign
   )
   // Reset fill style to the original one
@@ -118,7 +121,10 @@ type CustomRendererReturn = Pick<
  * - `customRenderers`: A map of custom cell renderers used by custom cells
  *    that can be passed to the `DataEditor` component.
  */
-function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
+function useCustomRenderer(
+  columns: BaseColumn[],
+  missingPlaceholder?: string
+): CustomRendererReturn {
   const drawCell: DrawCellCallback = useCallback(
     (args, draw) => {
       const { cell, theme, ctx, rect } = args
@@ -128,6 +134,8 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
         drawAttentionIndicator(ctx, rect, theme)
       } else if (isMissingValueCell(cell) && colPos < columns.length) {
         const column = columns[colPos]
+        const placeholderToken =
+          missingPlaceholder ?? DEFAULT_MISSING_PLACEHOLDER
 
         // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
         // they are taking care of rendering their missing value state themselves (usually as empty cell).
@@ -139,7 +147,7 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
         ) {
           draw()
         } else {
-          drawMissingPlaceholder(args as BaseDrawArgs)
+          drawMissingPlaceholder(args as BaseDrawArgs, placeholderToken)
         }
 
         if (column.isRequired && column.isEditable) {
@@ -151,7 +159,7 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
       }
       draw()
     },
-    [columns]
+    [columns, missingPlaceholder]
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:

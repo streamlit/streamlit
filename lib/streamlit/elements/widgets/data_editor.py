@@ -622,6 +622,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> EditableData:
         pass
 
@@ -643,6 +644,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -664,6 +666,7 @@ class DataEditorMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -818,6 +821,11 @@ class DataEditorMixin:
             The height of each row in the data editor in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
+
+        placeholder : str or None
+            The text that should be shown for missing values (such as ``"None"``,
+            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
+            missing values are displayed as ``"None"``.
 
         Returns
         -------
@@ -1006,6 +1014,13 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+            if num_rows == "dynamic" and hide_index is True:
+                _LOGGER.warning(
+                    "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
+                    "when `num_rows='dynamic'`. It is required for the user to fill in index values for "
+                    "adding new rows. To hide the index, make sure to set the DataFrame "
+                    "index to a range index."
+                )
 
         if hide_index is None and has_range_index and num_rows == "dynamic":
             # Temporary workaround:
@@ -1059,6 +1074,7 @@ class DataEditorMixin:
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
             row_height=row_height,
+            placeholder=placeholder,
         )
 
         proto = ArrowProto()
@@ -1069,6 +1085,9 @@ class DataEditorMixin:
 
         if column_order:
             proto.column_order[:] = column_order
+
+        if placeholder is not None:
+            proto.placeholder = placeholder
 
         # Only set disabled to true if it is actually true
         # It can also be a list of columns, which should result in false here.
