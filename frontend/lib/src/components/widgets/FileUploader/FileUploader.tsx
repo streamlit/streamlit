@@ -537,8 +537,11 @@ const FileUploader = ({
             )
             if (existingFile) {
               setForceUpdatingStatus(true)
-              deleteFile(existingFile.id)
-              setForceUpdatingStatus(false)
+              try {
+                deleteFile(existingFile.id)
+              } finally {
+                setForceUpdatingStatus(false)
+              }
             }
           }
 
