@@ -894,6 +894,59 @@ describe("FileUploader widget tests", () => {
     )
   })
 
+  it("marks files as error when fetching upload URLs fails", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    props.uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockRejectedValue("fetch URLs failed")
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("failing.txt"))
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("stFileUploaderFileErrorMessage")
+      ).toHaveTextContent("fetch URLs failed")
+    )
+
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("updates progress immediately when upload progress fires synchronously", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    props.uploadClient.uploadFile = vi
+      .fn()
+      .mockImplementation(
+        (
+          _element,
+          _url,
+          _file,
+          onUploadProgress: ((event: ProgressEvent) => void) | undefined
+        ) => {
+          onUploadProgress?.({ loaded: 50, total: 100 } as ProgressEvent)
+          return new Promise(() => {
+            /* never resolve to keep status uploading */
+          })
+        }
+      )
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("inflight.txt"))
+
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        "50"
+      )
+    })
+  })
+
   it("resets its value when form is cleared", async () => {
     const user = userEvent.setup()
     const props = getProps({ multipleFiles: true, formId: "form-id" })
