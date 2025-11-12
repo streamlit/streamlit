@@ -112,14 +112,16 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{
-        paddingBottom: theme.spacing.twoXS,
-        paddingTop: theme.spacing.twoXS,
-        paddingLeft: theme.spacing.none,
-        paddingRight: theme.spacing.none,
+        paddingBottom: theme.spacing.sm,
+        paddingTop: theme.spacing.sm,
+        paddingLeft: theme.spacing.sm,
+        paddingRight: theme.spacing.sm,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
         overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto",
       }}
       data-testid="stSelectboxVirtualDropdown"
     >

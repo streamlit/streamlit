@@ -242,21 +242,21 @@ const Selectbox: FC<Props> = ({
                     const lightBackground = hasLightBackgroundColor(theme)
                     return {
                       marginTop: theme.spacing.sm,
-                      marginRight: theme.spacing.lg,
-                      marginBottom: theme.spacing.lg,
+                      marginRight: theme.spacing.sm,
+                      marginBottom: theme.spacing.sm,
 
                       maxHeight: "70vh",
-                      //minWidth: "8rem",
                       overflow: "auto",
-                      //maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+                      boxSizing: "border-box",
 
-                      // Rounded corners - exactly like TopNav
+
+
                       borderTopLeftRadius: theme.radii.xl,
                       borderTopRightRadius: theme.radii.xl,
                       borderBottomRightRadius: theme.radii.xl,
                       borderBottomLeftRadius: theme.radii.xl,
 
-                      // Borders - exactly like TopNav
+
                       borderLeftWidth: theme.sizes.borderWidth,
                       borderRightWidth: theme.sizes.borderWidth,
                       borderTopWidth: theme.sizes.borderWidth,
@@ -272,7 +272,7 @@ const Selectbox: FC<Props> = ({
                       borderTopColor: theme.colors.borderColor,
                       borderBottomColor: theme.colors.borderColor,
 
-                      // Shadow - exactly like TopNav
+
                       boxShadow: lightBackground
                         ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
                         : "0px 4px 16px rgba(0, 0, 0, 0.7)",

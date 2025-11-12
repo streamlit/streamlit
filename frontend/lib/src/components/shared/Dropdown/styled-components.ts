@@ -17,6 +17,7 @@
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
+import { zIndices } from "~lib/theme/primitives"
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
@@ -34,17 +35,17 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     position: "relative",
     display: "flex",
     alignItems: "center",
-    marginLeft: theme.spacing.xs,
-    marginRight: theme.spacing.xs,
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
     borderRadius: theme.radii.xl, // ALL items get rounded corners
-    overflow: "visible",
+    overflow: "hidden",
 
     // ensure any Base Web inner wrappers cannot paint square backgrounds
     "& *": { backgroundColor: "transparent !important" },
     "& [data-baseweb]": { backgroundColor: "transparent !important" },
 
     // keep text above our highlight layer
-    "& > *": { position: "relative", zIndex: 1 },
+    "& > *": { position: "relative", zIndex: theme.zIndices.priority },
 
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
@@ -61,7 +62,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       opacity: hasBg ? 1 : 0,
       transition: "opacity 120ms ease",
       pointerEvents: "none",
-      zIndex: 0,
+      zIndex: theme.zIndices.base,
     },
 
     fontWeight: theme.fontWeights.normal,
