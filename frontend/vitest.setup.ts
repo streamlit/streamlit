@@ -43,15 +43,21 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn() }))
 
-global.ResizeObserver = vi.fn().mockImplementation(function (
-  this: unknown,
+type ResizeObserverMockInstance = {
+  observe: ReturnType<typeof vi.fn>
+  unobserve: ReturnType<typeof vi.fn>
+  disconnect: ReturnType<typeof vi.fn>
+}
+
+const MockResizeObserver = vi.fn(function (
+  this: ResizeObserverMockInstance,
   _callback: ResizeObserverCallback
 ) {
-  return {
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }
+  this.observe = vi.fn()
+  this.unobserve = vi.fn()
+  this.disconnect = vi.fn()
 }) as unknown as typeof ResizeObserver
+
+global.ResizeObserver = MockResizeObserver
 
 process.env.TZ = "UTC"
