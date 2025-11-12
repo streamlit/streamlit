@@ -506,7 +506,9 @@ class FileUploaderMixin:
         if max_upload_size is not None:
             file_uploader_proto.max_upload_size_mb = int(max_upload_size)
         else:
-            file_uploader_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+            file_uploader_proto.max_upload_size_mb = config.get_option(
+                "server.maxUploadSize"
+            )
 
         # Handle directory uploads - they should enable multiple files and set the directory flag
         is_directory_upload = accept_multiple_files == "directory"
