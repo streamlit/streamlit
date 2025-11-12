@@ -163,7 +163,12 @@ const FileUploader = ({
   const setFilesImmediate = useCallback((updater: FilesUpdater): void => {
     /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
      * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
+     * before any subsequent file upload operations occur. Without this, React
+     * can defer the commit and our upload callbacks (progress, completion, or
+     * abort) may run while filesRef.current still points to the previous state.
+     * Those callbacks rely on filesRef.current to locate the in-flight upload,
+     * so deferring the update would cause them to no-op and break progress
+     * tracking.
      */
     flushSync(() => {
       setFiles(prev => {
