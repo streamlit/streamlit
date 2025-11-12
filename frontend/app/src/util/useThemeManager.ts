@@ -131,16 +131,16 @@ export function useThemeManager(): [
           displayName: AUTO_THEME_NAME,
         }
 
+        // Update active theme if user is on auto
+        if (theme.name === CUSTOM_THEME_AUTO_NAME) {
+          setTheme(updatedAutoTheme)
+        }
+
         // Update availableThemes list with the refreshed auto theme
         const otherThemes = availableThemes.filter(
           t => t.name !== CUSTOM_THEME_AUTO_NAME
         )
         setAvailableThemes([...otherThemes, updatedAutoTheme])
-
-        // Update active theme if user is on auto
-        if (theme.name === CUSTOM_THEME_AUTO_NAME) {
-          setTheme(updatedAutoTheme)
-        }
       }
     } else {
       // We are using auto from default themes

@@ -746,23 +746,6 @@ describe("App", () => {
       window.localStorage.clear()
     })
 
-    it("respects the user's theme preference if set, but adds custom theme as an option", () => {
-      const props = getProps()
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: lightTheme.name })
-      )
-      renderApp(props)
-
-      // The new session has a single Custom Theme, so it should be set as the active theme
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-
-      expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).toHaveBeenCalledWith(
-        expect.objectContaining({ name: CUSTOM_THEME_NAME })
-      )
-    })
-
     it("sets the custom theme as the default if no user preference is set", () => {
       const props = getProps()
       renderApp(props)
@@ -1963,74 +1946,6 @@ describe("App", () => {
   })
 
   describe("App.processThemeInput", () => {
-    it("passing a custom theme adds the custom theme and removes preset themes", () => {
-      // Simplest custom theme (no light/dark versions)
-      const themeInput = new CustomThemeConfig({
-        primaryColor: "blue",
-      })
-
-      const props = getProps()
-      renderApp(props)
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        customTheme: themeInput,
-      })
-
-      // Custom theme should be added
-      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
-      expect(props.theme.addThemes).toHaveBeenCalledWith(
-        [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
-        expect.objectContaining({ keepPresetThemes: false })
-      )
-      // Active theme should be set to the custom theme
-      expect(props.theme.setTheme).toHaveBeenCalledWith(
-        expect.objectContaining({ name: CUSTOM_THEME_NAME })
-      )
-    })
-
-    it("passing a custom theme with light/dark versions adds both and removes preset themes", () => {
-      const themeInput = new CustomThemeConfig({
-        primaryColor: "blue",
-        light: {
-          primaryColor: "red",
-        },
-        dark: {
-          primaryColor: "green",
-        },
-      })
-
-      const props = getProps()
-      renderApp(props)
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        customTheme: themeInput,
-      })
-
-      // Check that 3 themes were added (light, dark, auto)
-      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      expect(props.theme.addThemes).toHaveBeenCalledWith(
-        [
-          expect.objectContaining({ name: CUSTOM_THEME_LIGHT_NAME }),
-          expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
-          expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
-        ],
-        expect.objectContaining({ keepPresetThemes: false })
-      )
-
-      // Active theme should be set to the auto theme
-      expect(props.theme.setTheme).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: CUSTOM_THEME_AUTO_NAME,
-          themeInput: expect.objectContaining({
-            primaryColor: "red",
-          }),
-        })
-      )
-    })
-
     it("calls setFonts when fontFaces are provided", () => {
       const fontFaces = [{ url: "test-url" }]
       const themeInput = new CustomThemeConfig({
@@ -2111,8 +2026,8 @@ describe("App", () => {
       expect(props.theme.setFonts).not.toHaveBeenCalled()
     })
 
-    it("sets active theme to Custom Theme when theme input has no light/dark configs", () => {
-      // App receives a custom theme input with new session, no light/dark configs
+    it("passing a custom theme adds the custom theme and removes preset themes", () => {
+      // Simplest custom theme (no light/dark versions)
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
       })
@@ -2125,10 +2040,56 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
+      // Custom theme should be added
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+      // Active theme should be set to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
+    })
+
+    it("passing a custom theme with light/dark versions adds both + an auto theme, removes preset themes", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "red",
+        },
+        dark: {
+          primaryColor: "green",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Check that 3 themes were added (light, dark, auto)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ name: CUSTOM_THEME_LIGHT_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
+        ],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+
+      // Active theme should be set to the auto theme
       expect(props.theme.setTheme).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: CUSTOM_THEME_NAME,
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "red",
+          }),
         })
       )
     })

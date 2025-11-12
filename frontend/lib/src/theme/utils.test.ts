@@ -174,7 +174,15 @@ describe("Cached theme helpers", () => {
       expect(getCachedTheme()).toBe(null)
     })
 
-    it("returns preset cached theme if localStorage is available and one is set", () => {
+    it("returns preset cached theme if localStorage is available and one is set - light", () => {
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: lightTheme.name })
+      )
+      expect(getCachedTheme()).toEqual(lightTheme)
+    })
+
+    it("returns preset cached theme if localStorage is available and one is set - dark", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
         JSON.stringify({ name: darkTheme.name })
@@ -182,9 +190,9 @@ describe("Cached theme helpers", () => {
       expect(getCachedTheme()).toEqual(darkTheme)
     })
 
-    it("returns null for non-preset theme names", () => {
-      // When a custom theme name is cached (e.g., "Custom Theme"),
-      // getCachedTheme returns null since it only handles preset themes
+    it("returns null for invalid cached values", () => {
+      // If somehow an invalid preference is cached (e.g., "Custom Theme"),
+      // getCachedTheme returns null since it doesn't match expected values ("Light" or "Dark")
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
         JSON.stringify({ name: CUSTOM_THEME_NAME })
