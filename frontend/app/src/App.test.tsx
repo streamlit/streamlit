@@ -133,14 +133,20 @@ vi.mock("@streamlit/connection", async () => {
   }
 })
 vi.mock("~lib/SessionInfo", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/SessionInfo")
+  const actualModule =
+    await vi.importActual<typeof import("~lib/SessionInfo")>(
+      "~lib/SessionInfo"
+    )
 
-  const MockedClass = vi.fn().mockImplementation(() => {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const SessionInfoMockImpl = function SessionInfoMock(this: unknown) {
     return new actualModule.SessionInfo()
-  })
+  }
 
-  // @ts-expect-error
+  const MockedClass = vi.fn(
+    SessionInfoMockImpl
+  ) as unknown as typeof actualModule.SessionInfo
+
   MockedClass.propsFromNewSessionMessage = vi
     .fn()
     .mockImplementation(actualModule.SessionInfo.propsFromNewSessionMessage)
