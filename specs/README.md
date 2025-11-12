@@ -13,15 +13,15 @@ Not every change requires a STEP. However, having an approved STEP increases the
 
 ## How to propose a STEP?
 
-1. Create a PR that copies [steps/0000-template.md](./0000-template.md) and fill it out.
+1. Create a PR that copies the `specs/0000-template/` directory to a new folder named `specs/0000-<kebab-case-slug>/`, then fill in the [`product-spec.md`](./0000-template/product-spec.md) inside it.
    - PR title: `[STEP] <short, Title Case name>`, e.g., `[STEP] Datetime widget`
-   - Filename: `0000-<kebab-case-slug>.md`, e.g., `0000-datetime-widget.md`. We will assign the correct number before merging.
+   - Directory name: `0000-<kebab-case-slug>`, e.g., `0000-datetime-widget`. We will assign and rename to the correct number before merging.
    - Keep the PR in Draft until it’s ready for discussion.
 2. When ready, mark the PR “Ready for review” on GitHub. The PR thread is the canonical place for discussion.
 3. Approval requires at least two approvals from core maintainers.
-   - If approved: Maintainers will assign the final number, rename the file, update the Status to Approved, merge the STEP PR and link the STEP document in related issues.
+   - If approved: Maintainers will assign the final number, rename the directory, update the Status to Approved, merge the STEP PR and link the STEP document in related issues.
    - If rejected: The PR is closed with an explanation.
-   - Note: The PR might be kept open for a while. E.g. if the feature is blocked by other enhancements.
+   - Note: The PR might stay open for a while, e.g. if the feature depends on other enhancements.
 
 ## STEP Lifecycle
 
