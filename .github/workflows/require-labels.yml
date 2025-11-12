@@ -5,7 +5,7 @@ on:
     types: [opened, labeled, unlabeled, synchronize]
     paths-ignore:
       # Don't run CI if changes are only in the steps folder:
-      - "steps/**"
+      - "specs/**"
 
 jobs:
   check-required-labels:
