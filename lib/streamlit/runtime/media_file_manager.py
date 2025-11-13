@@ -399,5 +399,8 @@ class MediaFileManager:
             # Keep the deferred callable so users can download multiple times
             # It will be cleaned up when clear_session_refs() is called on rerun
 
+            # We leave actual_file_id unmapped so repeat clicks rerun the callable.
+            # Cleanup prunes the stored file once no session references it.
+
             # Return the URL to access the file
             return self._storage.get_url(actual_file_id)

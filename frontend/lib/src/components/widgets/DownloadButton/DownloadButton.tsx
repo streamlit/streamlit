@@ -71,8 +71,7 @@ function DownloadButton(props: Props): ReactElement {
   )
 
   useEffect(() => {
-    // Only check URL for non-deferred downloads
-    const isDeferred = Boolean(deferredFileId && deferredFileId.length > 0)
+    const isDeferred = Boolean(deferredFileId?.length)
     if (!isDeferred) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
@@ -98,10 +97,18 @@ function DownloadButton(props: Props): ReactElement {
         return
       }
 
+      const resolvedDownloadUrl = endpoints.buildDownloadUrl(response.url)
+
+      // Proactively check the resolved URL for load errors to surface metrics.
+      void endpoints.checkSourceUrlResponse(
+        resolvedDownloadUrl,
+        "Download Button"
+      )
+
       // Trigger download with the returned URL
       const link = createDownloadLinkElement({
         filename: "",
-        url: endpoints.buildDownloadUrl(response.url),
+        url: resolvedDownloadUrl,
         enforceDownloadInNewTab,
       })
       link.click()
@@ -120,7 +127,7 @@ function DownloadButton(props: Props): ReactElement {
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
 
-    const isDeferred = Boolean(deferredFileId && deferredFileId.length > 0)
+    const isDeferred = Boolean(deferredFileId?.length)
     if (isDeferred) {
       // Handle deferred download
       void handleDeferredDownload()

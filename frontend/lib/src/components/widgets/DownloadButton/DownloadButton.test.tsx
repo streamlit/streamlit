@@ -24,9 +24,8 @@ import {
   DownloadButton as DownloadButtonProto,
 } from "@streamlit/protobuf"
 
-import { DownloadContext } from "~lib/components/core/DownloadContext"
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -34,6 +33,14 @@ import DownloadButton, { Props } from "./DownloadButton"
 
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
+
+const anchorClickSpy = vi
+  .spyOn(HTMLAnchorElement.prototype, "click")
+  .mockImplementation(() => {})
+
+afterAll(() => {
+  anchorClickSpy.mockRestore()
+})
 
 const getProps = (
   elementProps: Partial<DownloadButtonProto> = {},
@@ -186,15 +193,40 @@ describe("DownloadButton widget", () => {
       expect(downloadButton).toBeInTheDocument()
     })
 
-    it("does not check URL for deferred downloads", () => {
+    it("checks URL once deferred download URL resolves", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "/media/generated_file",
+          errorMsg: "",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
       const props = getProps({
         deferredFileId: "test_file_id",
         url: "",
       })
-      render(<DownloadButton {...props} />)
+      props.endpoints.buildDownloadUrl = vi.fn(url => `resolved${url}`)
 
-      // checkSourceUrlResponse should not be called for deferred downloads
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      // Should not check before the download starts.
       expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should request deferred file
+      expect(mockRequestDeferredFile).toHaveBeenCalledWith("test_file_id")
+
+      await vi.waitFor(() => {
+        expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(
+          "resolved/media/generated_file",
+          "Download Button"
+        )
+      })
     })
 
     it("handles successful deferred download", async () => {
@@ -210,13 +242,9 @@ describe("DownloadButton widget", () => {
         deferredFileId: "test_file_id",
         url: "",
       })
-      render(
-        <DownloadContext.Provider
-          value={{ requestDeferredFile: mockRequestDeferredFile }}
-        >
-          <DownloadButton {...props} />
-        </DownloadContext.Provider>
-      )
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -255,13 +283,9 @@ describe("DownloadButton widget", () => {
         url: "",
         label: "Download File",
       })
-      render(
-        <DownloadContext.Provider
-          value={{ requestDeferredFile: mockRequestDeferredFile }}
-        >
-          <DownloadButton {...props} />
-        </DownloadContext.Provider>
-      )
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -292,13 +316,9 @@ describe("DownloadButton widget", () => {
         deferredFileId: "test_file_id",
         url: "",
       })
-      render(
-        <DownloadContext.Provider
-          value={{ requestDeferredFile: mockRequestDeferredFile }}
-        >
-          <DownloadButton {...props} />
-        </DownloadContext.Provider>
-      )
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -324,13 +344,9 @@ describe("DownloadButton widget", () => {
         deferredFileId: "test_file_id",
         url: "",
       })
-      render(
-        <DownloadContext.Provider
-          value={{ requestDeferredFile: mockRequestDeferredFile }}
-        >
-          <DownloadButton {...props} />
-        </DownloadContext.Provider>
-      )
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
@@ -357,13 +373,9 @@ describe("DownloadButton widget", () => {
         url: "",
         label: "Download File",
       })
-      render(
-        <DownloadContext.Provider
-          value={{ requestDeferredFile: mockRequestDeferredFile }}
-        >
-          <DownloadButton {...props} />
-        </DownloadContext.Provider>
-      )
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
