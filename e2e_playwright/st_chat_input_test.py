@@ -476,8 +476,8 @@ def test_uploads_and_deletes_single_file(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
-    # Ensure tooltip is actually gone before taking snapshot
-    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_attached()
+    # Wait for tooltip to hide (may remain in DOM but not visible)
+    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
@@ -522,8 +522,8 @@ def test_uploads_and_deletes_multiple_files(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(app)
-    # Ensure tooltip is actually gone before taking snapshot
-    expect(app.get_by_test_id("stTooltipContent")).not_to_be_attached()
+    # Wait for tooltip to hide (may remain in DOM but not visible)
+    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
@@ -564,7 +564,16 @@ def test_file_upload_error_message_disallowed_files(
         .first
     )
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+    # Wait for tooltip to hide (may remain in DOM but not visible)
+    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
+
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
+
+    # Ensure tooltip is gone before hovering on error tooltip
+    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
     expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
@@ -1017,6 +1026,7 @@ def test_audio_rapid_re_recordings(app: Page):
     for i in range(3):
         mic_button = chat_input.get_by_test_id("stChatInputMicButton")
         expect(mic_button).to_be_visible()
+        expect(mic_button).to_be_enabled()
         mic_button.click()
 
         # Wait for approve button to appear
@@ -1030,8 +1040,11 @@ def test_audio_rapid_re_recordings(app: Page):
         approve_button.click()
 
         if i < 2:  # Don't wait after last recording
-            # Wait for approve button to disappear (indicates ready for next recording)
-            expect(approve_button).not_to_be_visible()
+            # Wait for upload to complete and component to reset before next recording
+            wait_for_app_run(app)
+            # Ensure mic button is ready for next recording
+            expect(mic_button).to_be_visible()
+            expect(mic_button).to_be_enabled()
 
     # Wait for the final upload to complete
     wait_for_app_run(app)
