@@ -18,7 +18,9 @@ def main() -> None:
         submitted = st.form_submit_button("Submit")
 
     if submitted:
-        st.success(f"Thanks, {name}! Embedded Streamlit {'does' if agree else 'does not'} spark joy.")
+        st.success(
+            f"Thanks, {name}! Embedded Streamlit {'does' if agree else 'does not'} spark joy."
+        )
 
 
 if __name__ == "__main__":

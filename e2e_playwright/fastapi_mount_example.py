@@ -14,6 +14,7 @@ from streamlit.web.server.starlette_app import create_starlette_app
 
 if TYPE_CHECKING:
     from asyncio import Task
+
     from starlette.applications import Starlette
 
 _STREAMLIT_SCRIPT = Path(__file__).with_name("fastapi_streamlit_app.py")
@@ -39,7 +40,7 @@ _runtime_task: Task[None] | None = None
 
 @app.on_event("startup")
 async def start_streamlit_runtime() -> None:
-    global _runtime_task
+    global _runtime_task  # noqa: PLW0603
     _runtime_task = asyncio.create_task(server._runtime.start())
 
 

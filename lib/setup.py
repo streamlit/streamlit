@@ -89,6 +89,7 @@ EXTRA_REQUIRES = {
         "python-multipart>=0.0.10",
         "uvicorn>=0.30.0",
         "anyio>=4.0.0",
+        "websockets>=12.0.0",
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
