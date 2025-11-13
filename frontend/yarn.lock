@@ -3648,7 +3648,7 @@ __metadata:
     uuid: "npm:^13.0.0"
     vega: "npm:^6.2.0"
     vega-embed: "npm:^7.0.2"
-    vega-interpreter: "npm:^2.1.0"
+    vega-interpreter: "npm:^2.2.1"
     vega-lite: "npm:6.3.1"
     vite: "npm:^7.1.11"
     vite-plugin-dts: "npm:^4.5.4"
@@ -19916,12 +19916,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "vega-interpreter@npm:2.1.0"
+"vega-interpreter@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "vega-interpreter@npm:2.2.1"
   dependencies:
     vega-util: "npm:^2.1.0"
-  checksum: 10c0/9af405426e9278edd73ff84438d5fe4167412ef89d07460b62c418b1ea8c0a159438e49893404f0277076f49766431020ac32c64759c63359a46281854efe37a
+  checksum: 10c0/91da8c4df70fbf54caea5bf30b45726a14d04016bf4eac76460b7c665435e33f86a5ecca9d40478afefa2e630571b0eee13bb184793da5cbcb43f82186749b9d
   languageName: node
   linkType: hard
 
