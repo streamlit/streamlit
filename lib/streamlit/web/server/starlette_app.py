@@ -17,14 +17,10 @@
 from __future__ import annotations
 
 import asyncio
-import base64
-import hashlib
-import hmac
+import binascii
 import json
 import mimetypes
 import os
-import secrets
-import struct
 import time
 from contextlib import suppress
 from pathlib import Path
@@ -32,6 +28,7 @@ from shlex import quote
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from tornado.util import _websocket_mask
 from tornado.web import decode_signed_value
 
 from streamlit import config, file_util
@@ -122,46 +119,82 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
     return user_info
 
 
-def _generate_xsrf_token(cookie_secret: str) -> str:
-    version = b"2"
-    timestamp = struct.pack(">Q", int(time.time()))
-    random_bits = os.urandom(8)
-    signature_input = b"|".join([version, timestamp, random_bits])
-    signature = hmac.new(
-        cookie_secret.encode("utf-8"),
-        signature_input,
-        hashlib.sha256,
-    ).digest()
-    token = b"|".join(
-        [
-            version,
-            base64.b64encode(timestamp).strip(),
-            base64.b64encode(random_bits).strip(),
-            base64.b64encode(signature).strip(),
-        ]
-    )
-    return token.decode("utf-8")
-
-
 def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     if not is_xsrf_enabled():
         return
 
     cookie_name = "_streamlit_xsrf"
-    cookie_value = request.cookies.get(cookie_name)
-    if not cookie_value:
-        cookie_secret = get_cookie_secret()
-        if cookie_secret:
-            cookie_value = _generate_xsrf_token(cookie_secret)
-        else:  # pragma: no cover - defensive fallback
-            cookie_value = secrets.token_urlsafe(32)
+    raw_cookie = request.cookies.get(cookie_name)
+    token_bytes: bytes | None = None
+    timestamp: int | None = None
+    if raw_cookie:
+        token_bytes, timestamp = _decode_xsrf_cookie(raw_cookie)
 
-    response.set_cookie(
+    if token_bytes is None or timestamp is None:
+        token_bytes = os.urandom(16)
+        timestamp = int(time.time())
+
+    mask = os.urandom(4)
+    masked_token = _websocket_mask(mask, token_bytes)
+    cookie_value = "2|{}|{}|{}".format(
+        binascii.b2a_hex(mask).decode("ascii"),
+        binascii.b2a_hex(masked_token).decode("ascii"),
+        timestamp,
+    )
+
+    _set_unquoted_cookie(
+        response,
         cookie_name,
         cookie_value,
-        httponly=False,
         secure=bool(config.get_option("server.sslCertFile")),
     )
+
+
+def _decode_xsrf_cookie(
+    cookie_value: str,
+) -> tuple[bytes | None, int | None]:
+    value = cookie_value.strip("\"'")
+    try:
+        if value.startswith("2|"):
+            _, mask_hex, masked_hex, timestamp_str = value.split("|")
+            mask = binascii.a2b_hex(mask_hex.encode("ascii"))
+            masked = binascii.a2b_hex(masked_hex.encode("ascii"))
+            token = _websocket_mask(mask, masked)
+            return token, int(timestamp_str)
+
+        token = binascii.a2b_hex(value.encode("ascii"))
+        return token, int(time.time())
+    except (binascii.Error, ValueError):
+        return None, None
+
+
+def _set_unquoted_cookie(
+    response: Response,
+    cookie_name: str,
+    cookie_value: str,
+    *,
+    secure: bool,
+) -> None:
+    header_value = "; ".join(
+        [
+            f"{cookie_name}={cookie_value}",
+            "Path=/",
+            "SameSite=Lax",
+            *(["Secure"] if secure else []),
+        ]
+    )
+
+    key_prefix = f"{cookie_name}=".encode("latin-1")
+    filtered_headers: list[tuple[bytes, bytes]] = [
+        (name, value)
+        for name, value in response.raw_headers
+        if not (
+            name.lower() == b"set-cookie"
+            and value.lower().startswith(key_prefix.lower())
+        )
+    ]
+    filtered_headers.append((b"set-cookie", header_value.encode("latin-1")))
+    response.raw_headers = filtered_headers
 
 
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
