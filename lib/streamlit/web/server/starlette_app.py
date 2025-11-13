@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from starlette.applications import Starlette
     from starlette.datastructures import Headers
     from starlette.requests import Request
+    from starlette.responses import Response
     from starlette.websockets import WebSocket
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -67,11 +68,24 @@ if TYPE_CHECKING:
 _LOGGER = get_logger(__name__)
 
 
-def _with_base(path: str) -> str:
-    base = (config.get_option("server.baseUrlPath") or "").strip("/")
+def _with_base(path: str, base_url: str | None = None) -> str:
+    base = (
+        base_url if base_url is not None else config.get_option("server.baseUrlPath")
+    ) or ""
+    base = base.strip("/")
     if base:
         return f"/{base}/{path.lstrip('/')}"
     return f"/{path.lstrip('/')}"
+
+
+async def _set_cors_headers(request: Request, response: Response) -> None:
+    if allow_all_cross_origin_requests():
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return
+
+    origin = request.headers.get("Origin")
+    if origin and is_allowed_origin(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
 
 
 def _parse_subprotocols(headers: Headers) -> tuple[str | None, str | None]:
@@ -208,12 +222,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     except ModuleNotFoundError:  # pragma: no cover - auth optional
         pass
 
-    async def _set_cors_headers(request: Request, response: Response) -> None:
-        if allow_all_cross_origin_requests():
-            response.headers["Access-Control-Allow-Origin"] = "*"
-        elif (origin := request.headers.get("Origin")) and is_allowed_origin(origin):
-            response.headers["Access-Control-Allow-Origin"] = origin
-
     async def _health_endpoint(request: Request) -> PlainTextResponse:
         ok, message = await runtime.is_ready_for_browser_connection
         status = 200 if ok else 503
@@ -222,7 +230,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
-                f'<{_with_base("_stcore/health")}>; rel="alternate"'
+                f'<{_with_base("_stcore/health", base_url)}>; rel="alternate"'
             )
         return response
 
@@ -241,7 +249,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
-                f'<{_with_base("_stcore/metrics")}>; rel="alternate"'
+                f'<{_with_base("_stcore/metrics", base_url)}>; rel="alternate"'
             )
         return response
 
@@ -536,54 +544,68 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     routes.extend(
         [
-            Route(_with_base("_stcore/health"), _health_endpoint, methods=["GET"]),
-            Route(_with_base("healthz"), _health_endpoint, methods=["GET"]),
-            Route(_with_base("_stcore/metrics"), _metrics_endpoint, methods=["GET"]),
-            Route(_with_base("st-metrics"), _metrics_endpoint, methods=["GET"]),
             Route(
-                _with_base("_stcore/host-config"),
+                _with_base("_stcore/health", base_url),
+                _health_endpoint,
+                methods=["GET"],
+            ),
+            Route(_with_base("healthz", base_url), _health_endpoint, methods=["GET"]),
+            Route(
+                _with_base("_stcore/metrics", base_url),
+                _metrics_endpoint,
+                methods=["GET"],
+            ),
+            Route(
+                _with_base("st-metrics", base_url), _metrics_endpoint, methods=["GET"]
+            ),
+            Route(
+                _with_base("_stcore/host-config", base_url),
                 _host_config_endpoint,
                 methods=["GET"],
             ),
-            WebSocketRoute(_with_base("_stcore/stream"), _websocket_endpoint),
-            Route(_with_base("media/{file_id:path}"), _media_endpoint, methods=["GET"]),
+            WebSocketRoute(_with_base("_stcore/stream", base_url), _websocket_endpoint),
             Route(
-                _with_base("media/{file_id:path}"),
+                _with_base("media/{file_id:path}", base_url),
+                _media_endpoint,
+                methods=["GET"],
+            ),
+            Route(
+                _with_base("media/{file_id:path}", base_url),
                 _media_options,
                 methods=["OPTIONS"],
             ),
             Route(
-                _with_base("_stcore/upload_file/{session_id}/{file_id}"),
+                _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
                 _upload_put,
                 methods=["PUT"],
             ),
             Route(
-                _with_base("_stcore/upload_file/{session_id}/{file_id}"),
+                _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
                 _upload_delete,
                 methods=["DELETE"],
             ),
             Route(
-                _with_base("_stcore/upload_file/{session_id}/{file_id}"),
+                _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
                 _upload_options,
                 methods=["OPTIONS"],
             ),
             Route(
-                _with_base("component/{path:path}"),
+                _with_base("component/{path:path}", base_url),
                 _component_endpoint,
                 methods=["GET"],
             ),
             Route(
-                _with_base("component/{path:path}"),
+                _with_base("component/{path:path}", base_url),
                 _component_options,
                 methods=["OPTIONS"],
             ),
             Route(
-                _with_base("_stcore/bidi-components/{path:path}"),
+                _with_base("_stcore/bidi-components/{path:path}", base_url),
                 _bidi_component_endpoint,
                 methods=["GET"],
             ),
             Route(
-                _with_base("_stcore/bidi-components/{path:path}"),
+                _with_base("_stcore/bidi-components/{path:path}", base_url),
                 _bidi_component_options,
                 methods=["OPTIONS"],
             ),
@@ -593,11 +615,11 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     if not dev_mode:
         static_dir = file_util.get_static_dir()
         static_files = StaticFiles(directory=static_dir, html=True)
-        routes.append(Mount(_with_base(""), app=static_files, name="static"))
+        routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
     app = Starlette(routes=routes)
 
-    @app.route(_with_base("_stcore/metrics"), methods=["OPTIONS"])
+    @app.route(_with_base("_stcore/metrics", base_url), methods=["OPTIONS"])
     async def _metrics_options(request: Request) -> Response:
         response = Response(status_code=204)
         response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
