@@ -49,9 +49,6 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
     // as sibling divs. Stack them with relative positioning so they overlap.
     position: "relative",
     height: theme.sizes.largestElementHeight,
-    // Add vertical padding to prevent waveform from touching container edges.
-    paddingTop: theme.spacing.threeXS,
-    paddingBottom: theme.spacing.threeXS,
     // Each WaveSurfer child div should be absolutely positioned to stack
     "& > div": {
       position: "absolute",
