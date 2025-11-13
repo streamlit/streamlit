@@ -3,19 +3,19 @@ Author(s): @github-name
 Status: Draft
 ---
 
-# Enhancement Title
+# Feature name
 
 ## Summary
 
 <!--
-A clear and concise description of the feature or enhancement (~2-3 sentences).
+A clear and concise description of the feature or enhancement (2-3 sentences).
 -->
 
-## Motivation
+## Problem
 
 <!--
 Please outline the problem, motivation, or use case related to
-this feature proposal. Also reference all relevant issues here.
+this feature proposal. Link all relevant GitHub issues and describe user requests.
 -->
 
 ## Proposal
@@ -23,12 +23,11 @@ this feature proposal. Also reference all relevant issues here.
 <!--
 Please outline the proposed solution to the problem.
 
-If API changes, include:
-- command names, parameters, types
-- default values, error cases
-- examples or brief UX description
-
-If visual changes, add screenshots or mockups.
+Some possible sub-sections:
+- API (describing command name, parameters, types, default values)
+- Behavior (including error and edge cases)
+- Design (link to a Figma file and/or add mockups or screenshots)
+- Examples (including code snippets)
 -->
 
 ## Checklist
@@ -37,9 +36,10 @@ If visual changes, add screenshots or mockups.
 Check the boxes or add a comment with the reason it cannot be checked.
 -->
 
-- [ ] Backwards compatible
-- [ ] No new dependencies
-- [ ] Works across deployment platforms
-- [ ] Supports metrics
-- [ ] No known risks or drawbacks
-- [ ] No open questions
+- [ ] Works on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
+- [ ] No breaking API changes?
+- [ ] No new dependencies?
+- [ ] Metrics collected?
+- [ ] Any security or legal implications?
+- [ ] Anything to keep in mind for docs?
+- [ ] Any other risks?
