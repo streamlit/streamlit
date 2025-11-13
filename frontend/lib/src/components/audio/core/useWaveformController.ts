@@ -239,7 +239,13 @@ export function useWaveformController({
     } finally {
       isInitializingRef.current = false
     }
-  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
+  }, [
+    containerRef,
+    theme,
+    effectiveSampleRate,
+    configurePlayerEvents,
+    waveformPadding,
+  ])
 
   useEffect(() => {
     void initializeWaveSurfer()
