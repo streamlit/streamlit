@@ -515,14 +515,14 @@ def _parse_selection_mode(
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
-    """Altair < 6.0.0 uses a global counter for unnamed parameters and views.
+    """Altair uses a global counter for unnamed parameters and views.
     We need to reset these counters on a spec-level to make the
     spec stable across reruns and avoid changes to the element ID.
     """
-    if not type_util.is_altair_version_less_than("6.0.0"):
-        return vega_spec
 
-    pattern = re.compile(rf'"{prefix}\d+"')
+    # Altair 6.0.0 introduced a new way to handle parameters,
+    # by using hashes instead of pure counters:
+    pattern = re.compile(rf'"{prefix}[0-9a-z]+"')
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.
