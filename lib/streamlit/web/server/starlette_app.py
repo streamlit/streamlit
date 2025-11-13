@@ -41,6 +41,10 @@ from streamlit.runtime.session_manager import (
     SessionClientDisconnectedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server.component_file_utils import (
+    build_safe_abspath,
+    guess_content_type,
+)
 from streamlit.web.server.routes import (
     _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
     allow_all_cross_origin_requests,
@@ -193,6 +197,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     upload_mgr: MemoryUploadedFileManager = runtime.uploaded_file_mgr  # type: ignore
     media_storage: MemoryMediaFileStorage = media_manager._storage  # type: ignore
     component_registry = runtime.component_registry
+    bidi_component_manager = runtime.bidi_component_registry
     base_url = config.get_option("server.baseUrlPath")
     dev_mode = bool(config.get_option("global.developmentMode"))
 
@@ -467,6 +472,63 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
         return response
 
+    async def _bidi_component_endpoint(request: Request) -> Response:
+        async def _text_response(body: str, status_code: int) -> PlainTextResponse:
+            response = PlainTextResponse(body, status_code=status_code)
+            await _set_cors_headers(request, response)
+            return response
+
+        path = request.path_params["path"]
+        parts = path.split("/")
+        component_name = parts[0] if parts else ""
+        if not component_name:
+            return await _text_response("not found", 404)
+
+        if bidi_component_manager.get(component_name) is None:
+            return await _text_response("not found", 404)
+
+        component_root = bidi_component_manager.get_component_path(component_name)
+        if component_root is None:
+            return await _text_response("not found", 404)
+
+        filename = "/".join(parts[1:])
+        if not filename or filename.endswith("/"):
+            return await _text_response("not found", 404)
+
+        abspath = build_safe_abspath(component_root, filename)
+        if abspath is None:
+            return await _text_response("forbidden", 403)
+
+        if os.path.isdir(abspath):
+            return await _text_response("not found", 404)
+
+        try:
+            async with await anyio.open_file(abspath, "rb") as file:
+                data = await file.read()
+        except OSError:
+            sanitized_abspath = abspath.replace("\n", "").replace("\r", "")
+            _LOGGER.exception(
+                "Error reading bidi component asset: %s", sanitized_abspath
+            )
+            return await _text_response("read error", 404)
+
+        response = StreamingResponse(
+            iter([data]), media_type=guess_content_type(abspath)
+        )
+        await _set_cors_headers(request, response)
+
+        if filename.endswith(".html"):
+            response.headers["Cache-Control"] = "no-cache"
+        else:
+            response.headers["Cache-Control"] = "public"
+
+        return response
+
+    async def _bidi_component_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        await _set_cors_headers(request, response)
+        return response
+
     async def _component_options(request: Request) -> Response:
         response = Response(status_code=204)
         await _set_cors_headers(request, response)
@@ -513,6 +575,16 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
             Route(
                 _with_base("component/{path:path}"),
                 _component_options,
+                methods=["OPTIONS"],
+            ),
+            Route(
+                _with_base("_stcore/bidi-components/{path:path}"),
+                _bidi_component_endpoint,
+                methods=["GET"],
+            ),
+            Route(
+                _with_base("_stcore/bidi-components/{path:path}"),
+                _bidi_component_options,
                 methods=["OPTIONS"],
             ),
         ]
