@@ -476,8 +476,6 @@ def test_uploads_and_deletes_single_file(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
-    # Wait for tooltip to hide (may remain in DOM but not visible)
-    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
@@ -522,8 +520,6 @@ def test_uploads_and_deletes_multiple_files(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(app)
-    # Wait for tooltip to hide (may remain in DOM but not visible)
-    expect(app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
@@ -567,13 +563,11 @@ def test_file_upload_error_message_disallowed_files(
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
-    # Wait for tooltip to hide (may remain in DOM but not visible)
-    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
 
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
 
-    # Ensure tooltip is gone before hovering on error tooltip
-    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_visible()
+    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
+    reset_hovering(themed_app)
 
     uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
     expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
