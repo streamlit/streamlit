@@ -17,10 +17,17 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import json
 import mimetypes
 import os
+import secrets
+import struct
+import time
 from contextlib import suppress
+from pathlib import Path
 from shlex import quote
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -41,6 +48,10 @@ from streamlit.runtime.session_manager import (
     SessionClientDisconnectedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server.app_static_file_handler import (
+    MAX_APP_STATIC_FILE_SIZE,
+    SAFE_APP_STATIC_FILE_EXTENSIONS,
+)
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
     guess_content_type,
@@ -109,6 +120,48 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
         values = headers.getlist(header_name)
         user_info[user_key] = values[0] if values else None
     return user_info
+
+
+def _generate_xsrf_token(cookie_secret: str) -> str:
+    version = b"2"
+    timestamp = struct.pack(">Q", int(time.time()))
+    random_bits = os.urandom(8)
+    signature_input = b"|".join([version, timestamp, random_bits])
+    signature = hmac.new(
+        cookie_secret.encode("utf-8"),
+        signature_input,
+        hashlib.sha256,
+    ).digest()
+    token = b"|".join(
+        [
+            version,
+            base64.b64encode(timestamp).strip(),
+            base64.b64encode(random_bits).strip(),
+            base64.b64encode(signature).strip(),
+        ]
+    )
+    return token.decode("utf-8")
+
+
+def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
+    if not is_xsrf_enabled():
+        return
+
+    cookie_name = "_streamlit_xsrf"
+    cookie_value = request.cookies.get(cookie_name)
+    if not cookie_value:
+        cookie_secret = get_cookie_secret()
+        if cookie_secret:
+            cookie_value = _generate_xsrf_token(cookie_secret)
+        else:  # pragma: no cover - defensive fallback
+            cookie_value = secrets.token_urlsafe(32)
+
+    response.set_cookie(
+        cookie_name,
+        cookie_value,
+        httponly=False,
+        secure=bool(config.get_option("server.sslCertFile")),
+    )
 
 
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
@@ -193,6 +246,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         from starlette.datastructures import UploadFile
         from starlette.exceptions import HTTPException
         from starlette.responses import (
+            FileResponse,
             JSONResponse,
             PlainTextResponse,
             Response,
@@ -226,12 +280,34 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         ok, message = await runtime.is_ready_for_browser_connection
         status = 200 if ok else 503
         response = PlainTextResponse(message, status_code=status)
+        response.headers["Cache-Control"] = "no-cache"
         await _set_cors_headers(request, response)
+        _ensure_xsrf_cookie(request, response)
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
                 f'<{_with_base("_stcore/health", base_url)}>; rel="alternate"'
             )
+        return response
+
+    async def _script_health_endpoint(request: Request) -> PlainTextResponse:
+        ok, message = await runtime.does_script_run_without_error()
+        status = 200 if ok else 503
+        response = PlainTextResponse(message, status_code=status)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
+        _ensure_xsrf_cookie(request, response)
+        if "_stcore/" not in request.url.path:
+            response.headers["Deprecation"] = "true"
+            response.headers["Link"] = (
+                f'<{_with_base("_stcore/script-health-check", base_url)}>; rel="alternate"'
+            )
+        return response
+
+    async def _health_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
         return response
 
     async def _metrics_endpoint(request: Request) -> Response:
@@ -542,14 +618,86 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         await _set_cors_headers(request, response)
         return response
 
+    if config.get_option("server.enableStaticServing"):
+        script_path = getattr(runtime, "_main_script_path", None)
+        app_static_root = (
+            os.path.realpath(file_util.get_app_static_dir(script_path))
+            if script_path
+            else None
+        )
+
+        async def _app_static_endpoint(request: Request) -> Response:
+            if not app_static_root:
+                raise HTTPException(status_code=404, detail="File not found")
+
+            relative_path = request.path_params.get("path", "")
+            safe_path = build_safe_abspath(app_static_root, relative_path)
+            if safe_path is None:
+                raise HTTPException(status_code=404, detail="File not found")
+
+            if not os.path.exists(safe_path) or os.path.isdir(safe_path):
+                raise HTTPException(status_code=404, detail="File not found")
+
+            if os.path.getsize(safe_path) > MAX_APP_STATIC_FILE_SIZE:
+                raise HTTPException(
+                    status_code=404,
+                    detail="File is too large",
+                )
+
+            ext = Path(safe_path).suffix.lower()
+            media_type = None
+            if ext not in SAFE_APP_STATIC_FILE_EXTENSIONS:
+                media_type = "text/plain"
+
+            response = FileResponse(safe_path, media_type=media_type)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
+
+        async def _app_static_options(_request: Request) -> Response:
+            response = Response(status_code=204)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
+
+        routes.extend(
+            [
+                Route(
+                    _with_base("app/static/{path:path}", base_url),
+                    _app_static_endpoint,
+                    methods=["GET"],
+                ),
+                Route(
+                    _with_base("app/static/{path:path}", base_url),
+                    _app_static_options,
+                    methods=["OPTIONS"],
+                ),
+            ]
+        )
+
     routes.extend(
         [
             Route(
                 _with_base("_stcore/health", base_url),
                 _health_endpoint,
-                methods=["GET"],
+                methods=["GET", "HEAD"],
             ),
-            Route(_with_base("healthz", base_url), _health_endpoint, methods=["GET"]),
+            Route(
+                _with_base("_stcore/health", base_url),
+                _health_options,
+                methods=["OPTIONS"],
+            ),
+            Route(
+                _with_base("healthz", base_url),
+                _health_endpoint,
+                methods=["GET", "HEAD"],
+            ),
+            Route(
+                _with_base("healthz", base_url),
+                _health_options,
+                methods=["OPTIONS"],
+            ),
             Route(
                 _with_base("_stcore/metrics", base_url),
                 _metrics_endpoint,
@@ -611,6 +759,32 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
             ),
         ]
     )
+
+    if config.get_option("server.scriptHealthCheckEnabled"):
+        routes.extend(
+            [
+                Route(
+                    _with_base("_stcore/script-health-check", base_url),
+                    _script_health_endpoint,
+                    methods=["GET", "HEAD"],
+                ),
+                Route(
+                    _with_base("_stcore/script-health-check", base_url),
+                    _health_options,
+                    methods=["OPTIONS"],
+                ),
+                Route(
+                    _with_base("script-health-check", base_url),
+                    _script_health_endpoint,
+                    methods=["GET", "HEAD"],
+                ),
+                Route(
+                    _with_base("script-health-check", base_url),
+                    _health_options,
+                    methods=["OPTIONS"],
+                ),
+            ]
+        )
 
     if not dev_mode:
         static_dir = file_util.get_static_dir()
