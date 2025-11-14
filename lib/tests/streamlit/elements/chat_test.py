@@ -790,8 +790,12 @@ def _create_uploaded_file_info(
     info.name = name
     info.size = size
     info.file_urls.file_id = file_id
-    info.file_urls.delete_url = "delete-url"
-    info.file_urls.upload_url = "upload-url"
+    info.file_urls.delete_url = (
+        f"https://test-delete-url.example/uploaded-files/{file_id}"
+    )
+    info.file_urls.upload_url = (
+        f"https://test-upload-url.example/uploaded-files/{file_id}"
+    )
     return info
 
 
