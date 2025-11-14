@@ -56,6 +56,10 @@ interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLDivElement>
   sampleRate?: number | null
   events: WaveformControllerEvents
+  /**
+   * Vertical padding in pixels to apply around the waveform.
+   * This reduces the waveform height to prevent it from touching container edges.
+   */
   waveformPadding?: number
 }
 
