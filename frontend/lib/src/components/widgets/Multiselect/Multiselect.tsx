@@ -93,6 +93,7 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -129,6 +130,20 @@ const Multiselect: FC<Props> = props => {
           return []
         }
         case "select": {
+          // Handle "Select all matches" option
+          if (data.option?.value?.startsWith("__SELECT_ALL_MATCHES__")) {
+            // Extract the filtered option values from the encoded value
+            const parts = data.option.value.split("|||")
+            if (parts.length > 1) {
+              const filteredValues = parts.slice(1) // Remove the first part which is the marker
+              // Add only new options (excluding already selected ones)
+              const newOptions = filteredValues.filter(
+                (optionValue: string) => !value.includes(optionValue)
+              )
+              return [...value, ...newOptions]
+            }
+            return value
+          }
           return value.concat([data.option?.value])
         }
         default: {
@@ -191,7 +206,24 @@ const Multiselect: FC<Props> = props => {
       if (overMaxSelections) {
         return []
       }
-      return createFilterOptions(value)(options, filterValue)
+
+      const filteredOptions = createFilterOptions(value)(options, filterValue)
+
+      // Add "Select all matches" option when there's a search query and matching results
+      if (filterValue.trim() && filteredOptions.length > 0) {
+        // Encode the filtered option values in the special option's value
+        const filteredValues = filteredOptions
+          .map(opt => opt.value)
+          .join("|||")
+        const selectAllOption: Option = {
+          label: `Select all matches (${filteredOptions.length})`,
+          value: `__SELECT_ALL_MATCHES__|||${filteredValues}`,
+          id: "__SELECT_ALL_MATCHES__",
+        }
+        return [selectAllOption, ...filteredOptions]
+      }
+
+      return filteredOptions
     },
     [createFilterOptions, overMaxSelections, value]
   )
