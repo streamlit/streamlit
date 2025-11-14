@@ -95,7 +95,7 @@ const Header = ({
                   >
                     <DynamicIcon
                       size="xl"
-                      iconValue={":material/keyboard_double_arrow_right:"}
+                      iconValue=":material/keyboard_double_arrow_right:"
                       color={activeTheme.emotion.colors.fadedText60}
                     />
                   </BaseButton>

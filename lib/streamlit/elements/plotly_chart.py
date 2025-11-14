@@ -665,9 +665,10 @@ class PlotlyMixin:
 
         if kwargs:
             show_deprecation_warning(
-                "The keyword arguments have been deprecated and will be removed "
-                "in a future release. Use `config` instead to specify Plotly "
-                "configuration options."
+                "Variable keyword arguments for `st.plotly_chart` have been "
+                "deprecated and will be removed in a future release. Use the "
+                "`config` argument instead to specify Plotly configuration "
+                "options."
             )
 
         if theme not in ["streamlit", None]:

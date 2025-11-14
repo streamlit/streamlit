@@ -49,6 +49,8 @@ import {
   StyledTruncateText,
 } from "./styled-components"
 
+const LARGE_DATASET_POINT_THRESHOLD = 1000
+
 /**
  * Returns a Vega-Lite spec for a metric chart.
  *
@@ -168,8 +170,11 @@ export function getMetricChartSpec(
               type: "point",
               encodings: ["x"],
               nearest: true,
-              on: "mousemove",
-              clear: "mouseout",
+              on:
+                chartData.length > LARGE_DATASET_POINT_THRESHOLD
+                  ? "mousemove{16}" // Throttle hover events for large datasets to 16ms
+                  : "mousemove",
+              clear: "mouseleave",
             },
           },
         ],
@@ -183,17 +188,6 @@ export function getMetricChartSpec(
               param: `${baseName}_hover_selection`,
               empty: false,
             },
-          },
-          {
-            window: [
-              {
-                op: "row_number",
-                as: "hover_selection_rank",
-              },
-            ],
-          },
-          {
-            filter: "datum.hover_selection_rank === 1",
           },
         ],
         mark: {

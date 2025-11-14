@@ -19,8 +19,8 @@ import type { RefObject } from "react"
 export type RecordingState = "idle" | "recording"
 
 export interface WaveformControllerEvents {
-  onPermissionDenied?: () => void
-  onError?: (error: Error) => void
+  onPermissionDenied: () => void
+  onError: (error: Error) => void
   onRecordStart?: () => void
   onRecordReady?: (blob: Blob) => void
   onApprove?: (wav: Blob) => Promise<void>

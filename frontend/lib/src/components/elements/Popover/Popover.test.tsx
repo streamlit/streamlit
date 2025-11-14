@@ -61,10 +61,7 @@ describe("Popover container", () => {
       </Popover>
     )
 
-    const popover = screen.getByRole("button", {
-      name: `${props.element.label}`,
-    })
-    expect(popover).toBeInTheDocument()
+    expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
   it("should render the text when opened", async () => {
