@@ -25,6 +25,7 @@ import React, {
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
+import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 import { format } from "date-fns"
 import moment from "moment"
@@ -42,6 +43,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
+import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
+import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -53,8 +56,6 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-
-import { useIntlLocale } from "src/components/widgets/DateInput/useIntlLocale"
 
 export interface Props {
   disabled: boolean
@@ -127,6 +128,95 @@ function DatetimeInput({
   const maxDateString = useMemo(
     () => format(maxDate, dateFormat, { locale: loadedLocale }),
     [maxDate, dateFormat, loadedLocale]
+  )
+
+  const timeSelectOverrides = useMemo(
+    () => ({
+      Select: {
+        props: {
+          disabled,
+          overrides: {
+            ControlContainer: {
+              style: ({ $isFocused }: { $isFocused: boolean }) => {
+                const borderColor = getBorderColor(theme.colors, $isFocused)
+                return {
+                  height: theme.sizes.minElementHeight,
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
+                  borderTopColor: borderColor,
+                  borderRightColor: borderColor,
+                  borderBottomColor: borderColor,
+                  borderLeftColor: borderColor,
+                }
+              },
+            },
+            IconsContainer: {
+              style: {
+                paddingRight: theme.spacing.sm,
+              },
+            },
+            ValueContainer: {
+              style: {
+                lineHeight: theme.lineHeights.inputWidget,
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.md,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
+              },
+            },
+            SingleValue: {
+              style: {
+                fontWeight: theme.fontWeights.normal,
+              },
+            },
+            Dropdown: {
+              style: {
+                paddingTop: theme.spacing.none,
+                paddingBottom: theme.spacing.none,
+                boxShadow: "none",
+                maxHeight: theme.sizes.maxDropdownHeight,
+              },
+            },
+            DropdownListItem: {
+              component: StyledTimeDropdownListItem,
+            },
+            Popover: {
+              props: {
+                ignoreBoundary: isInSidebar,
+                overrides: {
+                  Body: {
+                    style: {
+                      marginTop: theme.spacing.px,
+                    },
+                  },
+                },
+              },
+            },
+            Placeholder: {
+              style: {
+                color: theme.colors.fadedText60,
+              },
+            },
+            SelectArrow: {
+              component: ChevronDown,
+              props: {
+                overrides: {
+                  Svg: {
+                    style: {
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    [disabled, isInSidebar, theme]
   )
 
   const createErrorMessage = useCallback(
@@ -242,6 +332,12 @@ function DatetimeInput({
           TimeSelectFormControl: {
             props: {
               label: "",
+            },
+          },
+          TimeSelect: {
+            props: {
+              format: "24",
+              overrides: timeSelectOverrides,
             },
           },
           CalendarContainer: {
