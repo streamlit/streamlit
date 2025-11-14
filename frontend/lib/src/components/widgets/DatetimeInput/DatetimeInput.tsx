@@ -239,6 +239,11 @@ function DatetimeInput({
               },
             },
           },
+          TimeSelectFormControl: {
+            props: {
+              label: "",
+            },
+          },
           CalendarContainer: {
             style: {
               fontSize: theme.fontSizes.sm,
