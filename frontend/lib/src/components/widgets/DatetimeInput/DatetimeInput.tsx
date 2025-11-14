@@ -105,18 +105,18 @@ function DatetimeInput({
   const clearable = !element.default && !disabled
   const selectedDate = useMemo(() => stringToDate(value), [value])
 
-  const dateMask = useMemo(
-    () => `${element.format.replaceAll(/[a-zA-Z]/g, "9")} 99:99`,
-    [element.format]
-  )
+  const dateMask = useMemo(() => {
+    const datePartMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
+    return `${datePartMask}, 99:99`
+  }, [element.format])
 
   const dateFormat = useMemo(
-    () => `${element.format.replaceAll("Y", "y").replaceAll("D", "d")} HH:mm`,
+    () => `${element.format.replaceAll("Y", "y").replaceAll("D", "d")}, HH:mm`,
     [element.format]
   )
 
   const placeholder = useMemo(
-    () => `${element.format} HH:MM`,
+    () => `${element.format}, HH:MM`,
     [element.format]
   )
 
