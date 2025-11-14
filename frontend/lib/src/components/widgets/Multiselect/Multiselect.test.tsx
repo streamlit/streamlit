@@ -504,10 +504,11 @@ describe("Multiselect widget", () => {
     await user.type(selectboxInput, "aa")
 
     const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(3)
-    expect(options[0]).toHaveTextContent("aa")
-    expect(options[1]).toHaveTextContent("Aa")
-    expect(options[2]).toHaveTextContent("aA")
+    expect(options).toHaveLength(4) // 3 matches + "Select all matches" option
+    expect(options[0]).toHaveTextContent("Select all matches (3)")
+    expect(options[1]).toHaveTextContent("aa")
+    expect(options[2]).toHaveTextContent("Aa")
+    expect(options[3]).toHaveTextContent("aA")
   })
 
   describe("on mobile", () => {
@@ -547,6 +548,193 @@ describe("Multiselect widget", () => {
       await user.type(input, "should not type")
       // No creatable option is shown, since typing is blocked
       expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe("Select all matches functionality", () => {
+    it("shows 'Select all matches' option when searching with multiple results", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select all matches" option with count
+      expect(screen.getByText("Select all matches (2)")).toBeInTheDocument()
+
+      // Should show filtered options
+      expect(screen.getByText("apple")).toBeInTheDocument()
+      expect(screen.getByText("apricot")).toBeInTheDocument()
+      expect(screen.queryByText("banana")).not.toBeInTheDocument()
+      expect(screen.queryByText("cherry")).not.toBeInTheDocument()
+    })
+
+    it("does not show 'Select all matches' when no search query", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      render(<Multiselect {...props} />)
+
+      const expandButton = screen.getAllByTitle("open")[0]
+      await user.click(expandButton)
+
+      // Should not show "Select all matches" option
+      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+
+      // Should show all options
+      expect(screen.getByText("apple")).toBeInTheDocument()
+      expect(screen.getByText("apricot")).toBeInTheDocument()
+      expect(screen.getByText("banana")).toBeInTheDocument()
+      expect(screen.getByText("cherry")).toBeInTheDocument()
+    })
+
+    it("does not show 'Select all matches' when no matches found", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "xyz")
+
+      // Should not show "Select all matches" option
+      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+
+      // Should show no results message
+      expect(screen.getByText("No results")).toBeInTheDocument()
+    })
+
+    it("does not show 'Select all matches' when only one match found", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "bana")
+
+      // Should not show "Select all matches" option when only one result
+      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+
+      // Should show the single matching option
+      expect(screen.getByText("banana")).toBeInTheDocument()
+      expect(screen.queryByText("apple")).not.toBeInTheDocument()
+      expect(screen.queryByText("apricot")).not.toBeInTheDocument()
+      expect(screen.queryByText("cherry")).not.toBeInTheDocument()
+    })
+
+    it("selects all matching options when 'Select all matches' is clicked", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      const selectAllOption = screen.getByText("Select all matches (2)")
+      await user.click(selectAllOption)
+
+      // Should have called setStringArrayValue with both apple and apricot
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("does not duplicate already selected options when using 'Select all matches'", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0], // "apple" is already selected (index 0)
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      const selectAllOption = screen.getByText("Select all matches (2)")
+      await user.click(selectAllOption)
+
+      // Should have called setStringArrayValue with apple (already selected) + apricot (new)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("works correctly with fuzzy search matching", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["streamlit", "stream", "lit", "steam", "stream processing"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      // Type "strem" which should fuzzy match "stream" and "streamlit"
+      await user.type(multiSelect, "strem")
+
+      // Check if fuzzy matching works and shows multiple results
+      const selectAllOption = screen.queryByText(/Select all matches/)
+      if (selectAllOption) {
+        await user.click(selectAllOption)
+
+        // Should select all fuzzy-matched options
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element,
+          expect.arrayContaining(["streamlit", "stream"]),
+          { fromUi: true },
+          undefined
+        )
+      }
+    })
+
+    it("respects maxSelections when using 'Select all matches'", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0], // "apple" is already selected (index 0)
+        options: ["apple", "apricot", "application", "cherry"],
+        maxSelections: 2,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select all matches" option
+      const selectAllOption = screen.getByText("Select all matches (3)")
+      await user.click(selectAllOption)
+
+      // Should add new options up to the max limit
+      // Since apple is already selected and maxSelections is 2,
+      // it should only add one more (apricot)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot"],
+        { fromUi: true },
+        undefined
+      )
     })
   })
 })

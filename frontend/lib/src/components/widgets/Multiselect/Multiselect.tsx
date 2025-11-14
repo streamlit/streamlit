@@ -43,6 +43,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -140,6 +141,14 @@ const Multiselect: FC<Props> = props => {
               const newOptions = filteredValues.filter(
                 (optionValue: string) => !value.includes(optionValue)
               )
+
+              // Respect maxSelections limit
+              if (element.maxSelections > 0) {
+                const remainingSlots = element.maxSelections - value.length
+                const optionsToAdd = newOptions.slice(0, remainingSlots)
+                return [...value, ...optionsToAdd]
+              }
+
               return [...value, ...newOptions]
             }
             return value
@@ -152,7 +161,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value]
+    [value, element.maxSelections]
   )
 
   /**
@@ -207,17 +216,26 @@ const Multiselect: FC<Props> = props => {
         return []
       }
 
+      // Get unfiltered matches to determine if we should show "Select all matches"
+      const allMatches = filterValue.trim()
+        ? fuzzyFilterSelectOptions(
+            options as readonly { label: string; value: string }[],
+            filterValue.trim()
+          )
+        : options
+
+      // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Add "Select all matches" option when there's a search query and matching results
-      if (filterValue.trim() && filteredOptions.length > 0) {
-        // Encode the filtered option values in the special option's value
-        const filteredValues = filteredOptions
-          .map(opt => opt.value)
+      // Add "Select all matches" option when there's a search query and multiple total matches
+      if (filterValue.trim() && allMatches.length > 1) {
+        // Encode the ALL matching option values (including already selected ones)
+        const allMatchedValues = allMatches
+          .map((opt: any) => opt.value)
           .join("|||")
         const selectAllOption: Option = {
-          label: `Select all matches (${filteredOptions.length})`,
-          value: `__SELECT_ALL_MATCHES__|||${filteredValues}`,
+          label: `Select all matches (${allMatches.length})`,
+          value: `__SELECT_ALL_MATCHES__|||${allMatchedValues}`,
           id: "__SELECT_ALL_MATCHES__",
         }
         return [selectAllOption, ...filteredOptions]
