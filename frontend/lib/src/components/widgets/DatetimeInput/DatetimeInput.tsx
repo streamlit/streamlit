@@ -19,12 +19,15 @@ import React, {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
+import type DatepickerClass from "baseui/datepicker/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 import { format } from "date-fns"
@@ -74,6 +77,7 @@ function DatetimeInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -88,7 +92,6 @@ function DatetimeInput({
     fragmentId,
   })
 
-  const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const { locale } = useContext(LibConfigContext)
@@ -104,7 +107,12 @@ function DatetimeInput({
   )
 
   const clearable = !element.default && !disabled
-  const selectedDate = useMemo(() => stringToDate(value), [value])
+  const committedDate = useMemo(() => stringToDate(value), [value])
+  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
+
+  useEffect(() => {
+    setPendingDate(committedDate)
+  }, [committedDate])
 
   const dateMask = useMemo(() => {
     const datePartMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
@@ -243,15 +251,13 @@ function DatetimeInput({
       setError(null)
 
       if (isNullOrUndefined(date)) {
-        setValueWithSource({ value: null, fromUi: true })
-        setIsEmpty(true)
+        setPendingDate(null)
         return
       }
 
       const nextDate = Array.isArray(date) ? date[0] : date
       if (!nextDate) {
-        setValueWithSource({ value: null, fromUi: true })
-        setIsEmpty(true)
+        setPendingDate(null)
         return
       }
 
@@ -263,24 +269,24 @@ function DatetimeInput({
         setError(createErrorMessage(errorType))
       }
 
-      setValueWithSource({
-        value: dateToString(snappedDate),
-        fromUi: true,
-      })
-      setIsEmpty(false)
+      setPendingDate(snappedDate)
+
+      datepickerRef.current?.open?.()
     },
-    [createErrorMessage, maxDate, minDate, setValueWithSource, stepSeconds]
+    [createErrorMessage, maxDate, minDate, stepSeconds]
   )
 
   const handleClose = useCallback((): void => {
-    if (!isEmpty) {
-      return
-    }
+    const nextValue = pendingDate ? dateToString(pendingDate) : null
+    const hasChanged = nextValue !== value
 
-    const nextValue = element.default || null
-    setValueWithSource({ value: nextValue, fromUi: true })
-    setIsEmpty(!nextValue)
-  }, [element.default, isEmpty, setValueWithSource])
+    if (hasChanged) {
+      setValueWithSource({
+        value: nextValue,
+        fromUi: true,
+      })
+    }
+  }, [pendingDate, setValueWithSource, value])
 
   return (
     <div className="stDatetimeInput" data-testid="stDatetimeInput">
@@ -301,6 +307,7 @@ function DatetimeInput({
         )}
       </WidgetLabel>
       <UIDatePicker
+        ref={datepickerRef}
         locale={loadedLocale}
         density={DENSITY.high}
         formatString={dateFormat}
@@ -310,7 +317,7 @@ function DatetimeInput({
         onChange={handleChange}
         onClose={handleClose}
         clearable={clearable}
-        value={selectedDate}
+        value={pendingDate}
         minDate={minDate}
         maxDate={maxDate}
         timeSelectStart
