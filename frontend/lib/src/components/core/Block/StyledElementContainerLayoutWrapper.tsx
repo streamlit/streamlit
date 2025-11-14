@@ -45,6 +45,7 @@ const LARGE_STRETCH_BEHAVIOR = [
 
 const MEDIUM_STRETCH_BEHAVIOR = [
   "dateInput",
+  "datetimeInput",
   "radio",
   "slider", // also includes st.select_slider
   "textArea",
