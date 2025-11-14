@@ -3647,9 +3647,9 @@ __metadata:
     urlpattern-polyfill: "npm:^10.1.0"
     uuid: "npm:^13.0.0"
     vega: "npm:^6.2.0"
-    vega-embed: "npm:^7.0.2"
-    vega-interpreter: "npm:^2.1.0"
-    vega-lite: "npm:6.3.1"
+    vega-embed: "npm:^7.1.0"
+    vega-interpreter: "npm:^2.2.1"
+    vega-lite: "npm:6.4.1"
     vite: "npm:^7.1.11"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.5.0"
@@ -19778,13 +19778,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-embed@npm:^7.0.2":
-  version: 7.0.2
-  resolution: "vega-embed@npm:7.0.2"
+"vega-embed@npm:^7.1.0":
+  version: 7.1.0
+  resolution: "vega-embed@npm:7.1.0"
   dependencies:
     fast-json-patch: "npm:^3.1.1"
     json-stringify-pretty-compact: "npm:^4.0.0"
-    semver: "npm:^7.7.1"
+    semver: "npm:^7.7.2"
     tslib: "npm:^2.8.1"
     vega-interpreter: "npm:^2.0.0"
     vega-schema-url-parser: "npm:^3.0.2"
@@ -19793,7 +19793,7 @@ __metadata:
   peerDependencies:
     vega: "*"
     vega-lite: "*"
-  checksum: 10c0/a3310db9609d13f7302440cf3037a4f600afb3f94171be9d4fd28a6f662aa8aa92cf96a8792ad625a7acec8170db13e0333707f8d712ec89e1ffca176bf51c59
+  checksum: 10c0/d51d26ca7e457693b4e609995e9cb4d28c4df72865baa23cdd5fe80a7a981d8234ac6307c4c312d4166d58ca83ea7e5a520a19f352806d9a79bf06fbadd7543e
   languageName: node
   linkType: hard
 
@@ -19824,16 +19824,6 @@ __metadata:
     "@types/estree": "npm:^1.0.8"
     vega-util: "npm:^2.1.0"
   checksum: 10c0/985ffcbc884a460c4d825de8b68c0bab167a6c7a42ac7b2642a29c04420ab239e78d8ec6527948db75c40e0700890ce270479e1b00fab919424a4b4ab915225a
-  languageName: node
-  linkType: hard
-
-"vega-expression@npm:~6.0.0":
-  version: 6.0.0
-  resolution: "vega-expression@npm:6.0.0"
-  dependencies:
-    "@types/estree": "npm:^1.0.6"
-    vega-util: "npm:^2.0.0"
-  checksum: 10c0/ccf6cc99a74f595bd96d7742cec81fce183a92824cf72377ddbecc189863459e5525d66ee2cdade89b12258116f0a149cabbddd92fd2e8501ccb59716b84c827
   languageName: node
   linkType: hard
 
@@ -19916,12 +19906,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "vega-interpreter@npm:2.1.0"
+"vega-interpreter@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "vega-interpreter@npm:2.2.1"
   dependencies:
     vega-util: "npm:^2.1.0"
-  checksum: 10c0/9af405426e9278edd73ff84438d5fe4167412ef89d07460b62c418b1ea8c0a159438e49893404f0277076f49766431020ac32c64759c63359a46281854efe37a
+  checksum: 10c0/91da8c4df70fbf54caea5bf30b45726a14d04016bf4eac76460b7c665435e33f86a5ecca9d40478afefa2e630571b0eee13bb184793da5cbcb43f82186749b9d
   languageName: node
   linkType: hard
 
@@ -19937,15 +19927,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-lite@npm:6.3.1":
-  version: 6.3.1
-  resolution: "vega-lite@npm:6.3.1"
+"vega-lite@npm:6.4.1":
+  version: 6.4.1
+  resolution: "vega-lite@npm:6.4.1"
   dependencies:
     json-stringify-pretty-compact: "npm:~4.0.0"
     tslib: "npm:~2.8.1"
     vega-event-selector: "npm:~4.0.0"
-    vega-expression: "npm:~6.0.0"
-    vega-util: "npm:~2.0.0"
+    vega-expression: "npm:~6.1.0"
+    vega-util: "npm:~2.1.0"
     yargs: "npm:~18.0.0"
   peerDependencies:
     vega: ^6.0.0
@@ -19954,7 +19944,7 @@ __metadata:
     vl2png: bin/vl2png
     vl2svg: bin/vl2svg
     vl2vg: bin/vl2vg
-  checksum: 10c0/b802a646d6bfd5af0dc37830cc685e270180055f6887c6191776fb56c8529e15c049206a57c97fd58138e9affe37069e261af4662417a545dd4413652d4fcaba
+  checksum: 10c0/7d9948fdc877f3c66786777c38811473731240e12f4d2dc7debb2e6868250a05431ea8796d133648e3d57187133b9aaf04a3d715dac7bab48ec4ccc89b863663
   languageName: node
   linkType: hard
 
@@ -20126,7 +20116,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-util@npm:^2.0.0, vega-util@npm:~2.0.0":
+"vega-util@npm:^2.0.0":
   version: 2.0.0
   resolution: "vega-util@npm:2.0.0"
   checksum: 10c0/462a3ce6d89783b50d29e4aa0784976bd55bbf10bc0d3fa8add341ebe2b053a01c3d3048321702a566dd6c08bed2cc8a0f5d6022b68d1b2daa3bacce292c5b2a
