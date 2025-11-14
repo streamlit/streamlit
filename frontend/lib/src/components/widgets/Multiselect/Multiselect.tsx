@@ -231,7 +231,7 @@ const Multiselect: FC<Props> = props => {
       if (filterValue.trim() && allMatches.length > 1) {
         // Encode the ALL matching option values (including already selected ones)
         const allMatchedValues = allMatches
-          .map((opt: any) => opt.value)
+          .map((opt: Option) => opt.value)
           .join("|||")
         const selectAllOption: Option = {
           label: `Select all matches (${allMatches.length})`,
