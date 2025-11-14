@@ -52,6 +52,8 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
 
+    fontSize: theme.fontSizes.sm,
+
     // our rounded highlight - same radius for ALL items
     "::before": {
       content: '""',
