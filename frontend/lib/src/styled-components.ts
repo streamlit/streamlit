@@ -56,3 +56,10 @@ export const StyledDataFrameOverlay = styled.div(({ theme }) => ({
       },
   }),
 }))
+
+export const StyledErrorMessage = styled.small(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  fontSize: theme.fontSizes.sm,
+  marginTop: theme.spacing.twoXS,
+  display: "block",
+}))

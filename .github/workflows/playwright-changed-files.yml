@@ -3,6 +3,9 @@ name: Playwright E2E Tests - Changed Files
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
   workflow_call:
     inputs:
       ref:
