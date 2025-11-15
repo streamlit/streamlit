@@ -432,6 +432,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
             }
         )
         await _set_cors_headers(request, response)
+        response.headers["Cache-Control"] = "no-cache"
         return response
 
     async def _websocket_endpoint(websocket: WebSocket) -> None:
