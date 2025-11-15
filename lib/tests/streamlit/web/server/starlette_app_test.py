@@ -259,13 +259,16 @@ def test_upload_delete_removes_file(
     assert "fileid" not in runtime.uploaded_file_mgr.file_storage["session123"]
 
 
-@patch_config_options(
-    {"global.developmentMode": False, "server.enableStaticServing": False}
-)
+@patch_config_options({"global.developmentMode": False})
 def test_host_config_excludes_localhost_when_not_dev(tmp_path: Path) -> None:
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
     runtime = _DummyRuntime(component_dir)
     app = create_starlette_app(runtime)
@@ -276,12 +279,19 @@ def test_host_config_excludes_localhost_when_not_dev(tmp_path: Path) -> None:
     body = response.json()
     assert "http://localhost" not in body["allowedOrigins"]
 
+    monkeypatch.undo()
+
 
 @patch_config_options({"global.developmentMode": True})
 def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
     runtime = _DummyRuntime(component_dir)
     app = create_starlette_app(runtime)
@@ -291,6 +301,8 @@ def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
     assert response.status_code == HTTPStatus.OK
     body = response.json()
     assert "http://localhost" in body["allowedOrigins"]
+
+    monkeypatch.undo()
 
 
 @patch_config_options({"global.developmentMode": True})
@@ -313,13 +325,17 @@ def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
         "server.enableXsrfProtection": True,
         "global.developmentMode": False,
         "server.cookieSecret": "test-signing-secret",
-        "server.enableStaticServing": False,
     }
 )
 def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
     runtime = _DummyRuntime(component_dir)
     app = create_starlette_app(runtime)
@@ -351,6 +367,8 @@ def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
     assert runtime.last_user_info is not None
     assert runtime.last_user_info.get("is_logged_in") is True
     assert runtime.last_user_info.get("email") == "user@example.com"
+
+    monkeypatch.undo()
 
 
 @patch_config_options({"server.enableXsrfProtection": False})
