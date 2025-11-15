@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from streamlit import config as _config
@@ -28,6 +28,7 @@ from streamlit.web.server.starlette_app import create_starlette_app
 
 if TYPE_CHECKING:
     from asyncio import Task
+    from collections.abc import Awaitable, Callable
 
     from starlette.applications import Starlette
 
@@ -70,12 +71,45 @@ async def status() -> JSONResponse:
     return JSONResponse({"ok": True})
 
 
+@app.middleware("http")
+async def set_cookie_with_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Example middleware that scopes a cookie to /streamlit responses."""
+
+    response = await call_next(request)
+    if request.url.path.startswith("/streamlit"):
+        response.set_cookie(
+            key="streamlit-middleware",
+            value="streamlit-path-cookie",
+            path="/streamlit",
+            httponly=True,
+            max_age=3600,
+        )
+    return response
+
+
 app.mount("/streamlit", streamlit_starlette, name="streamlit")
 
 
 @app.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
     return RedirectResponse("/streamlit/")
+
+
+@app.get("/set-cookie", include_in_schema=False)
+async def set_streamlit_cookie() -> RedirectResponse:
+    """Example endpoint that sets a cookie scoped to the /streamlit path."""
+
+    response = RedirectResponse("/streamlit/")
+    response.set_cookie(
+        key="streamlit-demo",
+        value="mounted-with-fastapi",
+        path="/streamlit",
+        httponly=True,
+        max_age=3600,
+    )
+    return response
 
 
 if __name__ == "__main__":
