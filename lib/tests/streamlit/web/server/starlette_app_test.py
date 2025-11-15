@@ -31,6 +31,7 @@ from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -57,12 +58,28 @@ class _DummyComponentRegistry:
         return self._paths.get(name)
 
 
+class _DummyBidiComponentRegistry:
+    def __init__(self) -> None:
+        self._paths: dict[str, str] = {}
+
+    def register(self, name: str, path: str) -> None:
+        self._paths[name] = path
+
+    def get(self, name: str) -> str | None:
+        return self._paths.get(name)
+
+    def get_component_path(self, name: str) -> str | None:
+        return self._paths.get(name)
+
+
 class _DummyRuntime:
     def __init__(self, component_dir: Path) -> None:
         self.media_file_mgr = MediaFileManager(MemoryMediaFileStorage("/media"))
         self.uploaded_file_mgr = MemoryUploadedFileManager("/_stcore/upload_file")
         self.component_registry = _DummyComponentRegistry()
         self.component_registry.register("comp", str(component_dir))
+        self.bidi_component_registry = _DummyBidiComponentRegistry()
+        self.bidi_component_registry.register("comp", str(component_dir))
         self.stats_mgr = _DummyStatsManager()
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
@@ -350,3 +367,58 @@ def test_websocket_accepts_existing_session(tmp_path: Path) -> None:
         websocket.close(code=1000)
 
     assert runtime.last_existing_session_id == "existing-456"
+
+
+@patch_config_options({"global.developmentMode": False})
+def test_static_files_fall_back_to_index(tmp_path: Path) -> None:
+    """Ensure unknown paths return index.html so multipage routes work."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>home</html>")
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+
+    with TestClient(app) as client:
+        response = client.get("/page/does/not/exist")
+        assert response.status_code == HTTPStatus.OK
+        assert response.text == "<html>home</html>"
+        assert response.headers["cache-control"] == "no-cache"
+
+    monkeypatch.undo()
+
+
+@patch_config_options({"global.developmentMode": False})
+def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
+    """Ensure hashed static assets receive long-lived cache headers."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>home</html>")
+    (static_dir / "app.123456.js").write_text("console.log('test')")
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+
+    with TestClient(app) as client:
+        response = client.get("/app.123456.js")
+        assert response.status_code == HTTPStatus.OK
+        assert (
+            response.headers["cache-control"]
+            == f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}"
+        )
+
+    monkeypatch.undo()

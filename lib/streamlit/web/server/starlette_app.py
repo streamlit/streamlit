@@ -25,7 +25,7 @@ import time
 from contextlib import suppress
 from pathlib import Path
 from shlex import quote
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
 from tornado.util import _websocket_mask
@@ -55,6 +55,8 @@ from streamlit.web.server.component_file_utils import (
 )
 from streamlit.web.server.routes import (
     _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    NO_CACHE_PATTERN,
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
     allow_all_cross_origin_requests,
     is_allowed_origin,
 )
@@ -62,6 +64,8 @@ from streamlit.web.server.server_util import get_cookie_secret, get_url, is_xsrf
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
     from starlette.applications import Starlette
     from starlette.datastructures import Headers
     from starlette.requests import Request
@@ -74,6 +78,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 _LOGGER = get_logger(__name__)
+_RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -292,6 +297,47 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         raise RuntimeError(
             "Starlette is not installed. Run `pip install streamlit[starlette]` or disable `server.useStarlette`."
         ) from exc
+
+    class _StreamlitStaticFiles(StaticFiles):
+        def __init__(self, directory: str, base_url: str | None) -> None:
+            super().__init__(directory=directory, html=True)
+            self._base_url = (base_url or "").strip("/")
+            self._index_path = os.path.join(directory, "index.html")
+
+        async def get_response(
+            self, path: str, scope: MutableMapping[str, Any]
+        ) -> Response:
+            served_path = path
+            try:
+                response = await super().get_response(path, scope)
+            except HTTPException as exc:
+                if exc.status_code != 404 or self._is_reserved(scope["path"]):
+                    raise
+                response = FileResponse(self._index_path)
+                served_path = "index.html"
+
+            self._apply_cache_headers(response, served_path)
+            return response
+
+        def _is_reserved(self, request_path: str) -> bool:
+            normalized = request_path.split("?", 1)[0].strip("/")
+            if self._base_url and normalized.startswith(self._base_url):
+                normalized = normalized[len(self._base_url) :].strip("/")
+            return any(
+                normalized.endswith(suffix) for suffix in _RESERVED_STATIC_PATH_SUFFIXES
+            )
+
+        def _apply_cache_headers(self, response: Response, served_path: str) -> None:
+            if response.status_code in {301, 302, 303, 304, 307, 308}:
+                return
+
+            normalized = served_path.replace("\\", "/").lstrip("./")
+            cache_value = (
+                "no-cache"
+                if not normalized or NO_CACHE_PATTERN.search(normalized)
+                else f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}"
+            )
+            response.headers["Cache-Control"] = cache_value
 
     routes: list[Any] = []
     media_manager: MediaFileManager = runtime.media_file_mgr
@@ -821,7 +867,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     if not dev_mode:
         static_dir = file_util.get_static_dir()
-        static_files = StaticFiles(directory=static_dir, html=True)
+        static_files = _StreamlitStaticFiles(directory=static_dir, base_url=base_url)
         routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
     app = Starlette(routes=routes)
