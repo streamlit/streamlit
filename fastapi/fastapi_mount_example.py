@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
-
 from streamlit import config as _config
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette_app import create_starlette_app
