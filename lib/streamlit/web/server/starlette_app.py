@@ -298,6 +298,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
             "Starlette is not installed. Run `pip install streamlit[starlette]` or disable `server.useStarlette`."
         ) from exc
 
+    # Mirror the Tornado StaticFileHandler behavior so the migration does not
+    # change how unknown routes or cache headers behave.
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
             super().__init__(directory=directory, html=True)
@@ -332,6 +334,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 return
 
             normalized = served_path.replace("\\", "/").lstrip("./")
+            # Tornado marks HTML/manifest assets as no-cache but lets hashed bundles
+            # live in cache. Keep that contract to avoid churning snapshots or CDNs.
             cache_value = (
                 "no-cache"
                 if not normalized or NO_CACHE_PATTERN.search(normalized)
