@@ -19907,16 +19907,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "vega-interpreter@npm:2.0.0"
-  dependencies:
-    vega-util: "npm:^2.0.0"
-  checksum: 10c0/5dfeeabb1af2ffbe08c6c99e9571398929f0f60841584ac95b3da9c6a4c779ebf7c86e5e7dba054fe285af9b7c2433bb3d78e25e8f7a3ee07c743bb8e7ff73b7
-  languageName: node
-  linkType: hard
-
-"vega-interpreter@npm:^2.2.1":
+"vega-interpreter@npm:^2.0.0, vega-interpreter@npm:^2.2.1":
   version: 2.2.1
   resolution: "vega-interpreter@npm:2.2.1"
   dependencies:
