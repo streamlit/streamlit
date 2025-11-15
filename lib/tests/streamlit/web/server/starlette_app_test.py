@@ -259,7 +259,9 @@ def test_upload_delete_removes_file(
     assert "fileid" not in runtime.uploaded_file_mgr.file_storage["session123"]
 
 
-@patch_config_options({"global.developmentMode": False})
+@patch_config_options(
+    {"global.developmentMode": False, "server.enableStaticServing": False}
+)
 def test_host_config_excludes_localhost_when_not_dev(tmp_path: Path) -> None:
     component_dir = tmp_path / "component"
     component_dir.mkdir()
@@ -311,6 +313,7 @@ def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
         "server.enableXsrfProtection": True,
         "global.developmentMode": False,
         "server.cookieSecret": "test-signing-secret",
+        "server.enableStaticServing": False,
     }
 )
 def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
