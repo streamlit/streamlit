@@ -26,6 +26,10 @@ import { Vector } from "apache-arrow"
 import { PageConfig } from "@streamlit/protobuf"
 
 import {
+  DownloadContext,
+  DownloadContextProps,
+} from "./components/core/DownloadContext"
+import {
   FormsContext,
   FormsContextProps,
 } from "./components/core/FormsContext"
@@ -179,6 +183,7 @@ export interface RenderWithContextsOptions {
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
+  downloadContext?: Partial<DownloadContextProps>
 }
 
 /**
@@ -278,6 +283,11 @@ export const renderWithContexts = (
     ...options.formsContext,
   }
 
+  let currentDownloadContextProps: DownloadContextProps = {
+    requestDeferredFile: undefined,
+    ...options.downloadContext,
+  }
+
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
@@ -296,9 +306,15 @@ export const renderWithContexts = (
                     <ScriptRunContext.Provider
                       value={currentScriptRunContextProps}
                     >
-                      <FormsContext.Provider value={currentFormsContextProps}>
-                        {children}
-                      </FormsContext.Provider>
+                      <DownloadContext.Provider
+                        value={currentDownloadContextProps}
+                      >
+                        <FormsContext.Provider
+                          value={currentFormsContextProps}
+                        >
+                          {children}
+                        </FormsContext.Provider>
+                      </DownloadContext.Provider>
                     </ScriptRunContext.Provider>
                   </ViewStateContext.Provider>
                 </NavigationContext.Provider>
@@ -355,6 +371,12 @@ export const renderWithContexts = (
         currentFormsContextProps = {
           ...currentFormsContextProps,
           ...newOptions.formsContext,
+        }
+      }
+      if (newOptions?.downloadContext) {
+        currentDownloadContextProps = {
+          ...currentDownloadContextProps,
+          ...newOptions.downloadContext,
         }
       }
       if (newOptions?.scriptRunContext) {

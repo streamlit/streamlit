@@ -9,6 +9,7 @@ on:
     paths:
       - "e2e_playwright/**"
       - "scripts/snapshot_cleanup.py"
+
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:

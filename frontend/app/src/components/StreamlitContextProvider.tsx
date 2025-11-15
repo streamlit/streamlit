@@ -17,6 +17,8 @@
 import React, { memo, PropsWithChildren, useMemo } from "react"
 
 import {
+  DownloadContext,
+  DownloadContextProps,
   FormsContext,
   FormsContextProps,
   FormsData,
@@ -35,7 +37,12 @@ import {
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
+import {
+  DeferredFileResponse,
+  IAppPage,
+  Logo,
+  PageConfig,
+} from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -82,6 +89,10 @@ type FormsContextValues = {
   formsData: FormsData
 }
 
+type DownloadContextValues = {
+  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
+}
+
 export type StreamlitContextProviderProps = PropsWithChildren<
   ViewStateContextValues &
     LibConfigContextValues &
@@ -89,7 +100,8 @@ export type StreamlitContextProviderProps = PropsWithChildren<
     SidebarConfigContextValues &
     ThemeContextValues &
     ScriptRunContextValues &
-    FormsContextValues
+    FormsContextValues &
+    DownloadContextValues
 >
 
 /**
@@ -127,6 +139,8 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   fragmentIdsThisRun,
   // FormsContext
   formsData,
+  // DownloadContext
+  requestDeferredFile,
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
@@ -210,6 +224,14 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     formsData,
   }
 
+  const downloadContextProps: DownloadContextProps =
+    useMemo<DownloadContextProps>(
+      () => ({
+        requestDeferredFile,
+      }),
+      [requestDeferredFile]
+    )
+
   /**
    * Providers conceptually grouped by stability (most to least) as follows:
    * Layer 1: App-level static configuration providers:
@@ -224,13 +246,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
           <NavigationContext.Provider value={navigationContextProps}>
-            <ViewStateContext.Provider value={viewStateContextProps}>
-              <ScriptRunContext.Provider value={scriptRunContextProps}>
-                <FormsContext.Provider value={formsContextProps}>
-                  {children}
-                </FormsContext.Provider>
-              </ScriptRunContext.Provider>
-            </ViewStateContext.Provider>
+            <DownloadContext.Provider value={downloadContextProps}>
+              <ViewStateContext.Provider value={viewStateContextProps}>
+                <ScriptRunContext.Provider value={scriptRunContextProps}>
+                  <FormsContext.Provider value={formsContextProps}>
+                    {children}
+                  </FormsContext.Provider>
+                </ScriptRunContext.Provider>
+              </ViewStateContext.Provider>
+            </DownloadContext.Provider>
           </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>
