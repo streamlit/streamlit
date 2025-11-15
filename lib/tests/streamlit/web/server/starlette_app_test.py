@@ -29,9 +29,9 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
