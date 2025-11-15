@@ -200,7 +200,7 @@ interface State {
   hostHideSidebarNav: boolean
   sidebarChevronDownshift: number
   pageLinkBaseUrl: string
-  queryParams: string
+  queryParams: string | null
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
@@ -330,7 +330,7 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      queryParams: null,
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -2024,13 +2024,8 @@ export class App extends PureComponent<Props, State> {
 
   getQueryString = (): string => {
     const { queryParams } = this.state
-
-    const queryString =
-      queryParams && queryParams.length > 0
-        ? queryParams
-        : document.location.search
-
-    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+    const rawQuery = queryParams ?? document.location.search
+    return rawQuery.startsWith("?") ? rawQuery.substring(1) : rawQuery
   }
 
   getThemeColorScheme = (): string => {
