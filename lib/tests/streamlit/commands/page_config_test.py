@@ -125,7 +125,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         st.set_page_config(initial_sidebar_state=400)
         c = self.get_message_from_queue().page_config_changed
         assert c.initial_sidebar_state == PageConfigProto.AUTO
-        assert c.initial_sidebar_width == 400
+        assert c.initial_sidebar_width.pixel_width == 400
 
     @parameterized.expand([param(0), param(-100)])
     def test_set_page_config_sidebar_width_invalid(self, invalid_value: int):

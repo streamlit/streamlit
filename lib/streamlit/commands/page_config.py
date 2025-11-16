@@ -268,7 +268,9 @@ def set_page_config(
                 initial_sidebar_state=f"width must be positive (got {initial_sidebar_state})"
             )
         pb_sidebar_state = PageConfigProto.AUTO
-        msg.page_config_changed.initial_sidebar_width = initial_sidebar_state
+        msg.page_config_changed.initial_sidebar_width.pixel_width = (
+            initial_sidebar_state
+        )
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidSidebarStateError(

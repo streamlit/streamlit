@@ -975,12 +975,18 @@ export class App extends PureComponent<Props, State> {
       }))
     }
 
+    // Extract pixelWidth from SidebarWidthConfig message
+    const sidebarWidthPixels =
+      initialSidebarWidth?.pixelWidth !== undefined
+        ? initialSidebarWidth.pixelWidth
+        : undefined
+
     if (
-      notNullOrUndefined(initialSidebarWidth) &&
-      initialSidebarWidth !== this.state.initialSidebarWidth
+      notNullOrUndefined(sidebarWidthPixels) &&
+      sidebarWidthPixels !== this.state.initialSidebarWidth
     ) {
       this.setState(() => ({
-        initialSidebarWidth,
+        initialSidebarWidth: sidebarWidthPixels,
       }))
     }
 
