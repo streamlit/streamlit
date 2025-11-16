@@ -482,4 +482,74 @@ describe("Sidebar Component", () => {
       expect(sidebar).toHaveStyle("width: 320px")
     })
   })
+
+  describe("Width Initialization Logic", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    describe("Priority: Cached > Initial > Default", () => {
+      it.each([
+        {
+          description: "uses default when no cached and no initial",
+          cached: null,
+          initial: undefined,
+          expected: "300px",
+        },
+        {
+          description: "uses cached when cached exists",
+          cached: "450",
+          initial: undefined,
+          expected: "450px",
+        },
+        {
+          description: "uses initial when no cached",
+          cached: null,
+          initial: 400,
+          expected: "400px",
+        },
+        {
+          description: "uses cached over initial when both exist",
+          cached: "500",
+          initial: 350,
+          expected: "500px",
+        },
+      ])("$description", ({ cached, initial, expected }) => {
+        if (cached) {
+          window.localStorage.setItem("sidebarWidth", cached)
+        }
+
+        renderSidebar(
+          {},
+          {
+            sidebarConfigContext: {
+              ...(initial !== undefined && { initialSidebarWidth: initial }),
+            },
+          }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Width Clamping", () => {
+      it.each([
+        { initial: 150, expected: "200px", description: "clamps to minimum" },
+        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        { initial: 400, expected: "400px", description: "uses value as-is" },
+        { initial: NaN, expected: "300px", description: "handles NaN" },
+      ])("$description", ({ initial, expected }) => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { initialSidebarWidth: initial } }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+  })
 })
