@@ -17,13 +17,14 @@
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
-import { zIndices } from "~lib/theme/primitives"
+
+import { EmotionTheme } from "~lib/theme"
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
 })(({ theme, $isHighlighted, $selected }) => {
   const hoverBg = theme.colors.darkenedBgMix15
-  const selectedBg = (theme as any).colors?.darkenedBgMix25 ?? hoverBg
+  const selectedBg = (theme as EmotionTheme).colors?.darkenedBgMix25 ?? hoverBg
   const hasBg = Boolean($selected || $isHighlighted)
   const bgColor = $selected
     ? selectedBg
