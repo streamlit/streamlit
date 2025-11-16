@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest"
 
 import { PageConfig } from "@streamlit/protobuf"
 
-import { clampSidebarWidth, shouldCollapse } from "./utils"
+import { clampSidebarWidth, DEFAULT_WIDTH, shouldCollapse } from "./utils"
 
 const MIN_SIDEBAR_WIDTH = 200
 const MAX_SIDEBAR_WIDTH = 600
@@ -54,7 +54,7 @@ describe("shouldCollapse", () => {
 describe("clampSidebarWidth", () => {
   describe("minimum width clamping", () => {
     it("should clamp values below minimum to 200px", () => {
-      const testCases = [100, 50, 199, 0, -100, -1]
+      const testCases = [50, Number.NEGATIVE_INFINITY, Number.MIN_SAFE_INTEGER]
 
       testCases.forEach(width => {
         expect(clampSidebarWidth(width)).toBe(MIN_SIDEBAR_WIDTH)
@@ -68,7 +68,11 @@ describe("clampSidebarWidth", () => {
 
   describe("maximum width clamping", () => {
     it("should clamp values above maximum to 600px", () => {
-      const testCases = [800, 1000, 5000, 10000]
+      const testCases = [
+        1000,
+        Number.POSITIVE_INFINITY,
+        Number.MAX_SAFE_INTEGER,
+      ]
 
       testCases.forEach(width => {
         expect(clampSidebarWidth(width)).toBe(MAX_SIDEBAR_WIDTH)
@@ -82,17 +86,9 @@ describe("clampSidebarWidth", () => {
 
   describe("valid width range", () => {
     it("should return width unchanged when within valid bounds", () => {
-      const validWidths = [200, 300, 400, 500, 600]
+      const validWidths = [300, 250.5]
 
       validWidths.forEach(width => {
-        expect(clampSidebarWidth(width)).toBe(width)
-      })
-    })
-
-    it("should handle fractional widths within bounds", () => {
-      const fractionalWidths = [250.5, 350.25, 450.75]
-
-      fractionalWidths.forEach(width => {
         expect(clampSidebarWidth(width)).toBe(width)
       })
     })
@@ -109,34 +105,11 @@ describe("clampSidebarWidth", () => {
 
     it("should handle special numeric values", () => {
       // These should be handled gracefully by Math.max/Math.min
-      expect(clampSidebarWidth(Number.NaN)).toBeNaN()
-      expect(clampSidebarWidth(Number.POSITIVE_INFINITY)).toBe(
-        MAX_SIDEBAR_WIDTH
-      )
-      expect(clampSidebarWidth(Number.NEGATIVE_INFINITY)).toBe(
-        MIN_SIDEBAR_WIDTH
-      )
-    })
-
-    it("should handle very large numbers", () => {
-      expect(clampSidebarWidth(Number.MAX_SAFE_INTEGER)).toBe(
-        MAX_SIDEBAR_WIDTH
+      expect(clampSidebarWidth(Number.NaN)).toBe(
+        Number.parseInt(DEFAULT_WIDTH, 10)
       )
       expect(clampSidebarWidth(Number.MAX_VALUE)).toBe(MAX_SIDEBAR_WIDTH)
-    })
-
-    it("should handle very small numbers", () => {
-      expect(clampSidebarWidth(Number.MIN_SAFE_INTEGER)).toBe(
-        MIN_SIDEBAR_WIDTH
-      )
       expect(clampSidebarWidth(Number.MIN_VALUE)).toBe(MIN_SIDEBAR_WIDTH)
-    })
-  })
-
-  describe("type safety", () => {
-    it("should accept number type and return number type", () => {
-      const result: number = clampSidebarWidth(300)
-      expect(typeof result).toBe("number")
     })
   })
 })

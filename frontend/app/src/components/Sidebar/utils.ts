@@ -16,6 +16,8 @@
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
+export const DEFAULT_WIDTH = "300"
+
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
   mediumBreakpointPx: number,
@@ -63,5 +65,8 @@ export const saveSidebarState = (
 }
 
 export function clampSidebarWidth(width: number): number {
+  if (Number.isNaN(width)) {
+    return Number.parseInt(DEFAULT_WIDTH, 10)
+  }
   return Math.min(600, Math.max(200, width))
 }

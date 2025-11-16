@@ -61,7 +61,7 @@ import {
   StyledSidebarHeaderContainer,
   StyledSidebarUserContent,
 } from "./styled-components"
-import { clampSidebarWidth } from "./utils"
+import { clampSidebarWidth, DEFAULT_WIDTH } from "./utils"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
@@ -71,8 +71,6 @@ export interface SidebarProps {
   onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
   widgetsDisabled: boolean
 }
-
-const DEFAULT_WIDTH = "300"
 
 function calculateMaxBreakpoint(value: string): number {
   // We subtract a margin of 0.02 to use as a max-width
