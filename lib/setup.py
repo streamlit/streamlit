@@ -55,7 +55,7 @@ INSTALL_REQUIRES = [
     # Starting from Python 3.11, Python has built in support for reading TOML files.
     # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
     "toml>=0.10.1, <2",
-    "typing-extensions>=4.7.1, <5",
+    "typing-extensions>=4.5.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5, <7; platform_system != 'Darwin'",
