@@ -39,10 +39,6 @@ SwitchPageQueryParams = (
     Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
 )
 
-_INVALID_QUERY_PARAMS_ERROR = (
-    "query_params must be a mapping or an iterable of (key, value) pairs."
-)
-
 
 @gather_metrics("stop")
 def stop() -> NoReturn:  # type: ignore[misc]
@@ -133,7 +129,9 @@ def _set_query_params_for_switch(
         query_params_state.update(new_query_params)
         return
 
-    raise StreamlitAPIException(_INVALID_QUERY_PARAMS_ERROR)
+    raise StreamlitAPIException(
+        f"`query_params` must be a mapping or an iterable of (key, value) pairs not a `{type(new_query_params)}`."
+    )
 
 
 @gather_metrics("rerun")
