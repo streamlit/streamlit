@@ -74,6 +74,35 @@ declare global {
 }
 const LOG = getLogger("theme:utils")
 
+/**
+ * Recursively sorts the theme input keys to ensure consistent theme hashing.
+ * Used in App.tsx
+ */
+export function sortThemeInputKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  // Handle arrays by recursively sorting their elements
+  if (Array.isArray(obj)) {
+    return obj.map(item => sortThemeInputKeys(item))
+  }
+
+  // Handle objects (including nested theme sections)
+  if (typeof obj === "object") {
+    const sorted: Record<string, unknown> = {}
+    Object.keys(obj)
+      .sort()
+      .forEach(key => {
+        sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
+      })
+    return sorted
+  }
+
+  // Return primitives as-is
+  return obj
+}
+
 function mergeTheme(
   theme: ThemeConfig,
   injectedTheme: ICustomThemeConfig | undefined

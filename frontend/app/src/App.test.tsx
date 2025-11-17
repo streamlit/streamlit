@@ -50,7 +50,6 @@ import {
   isEmbed,
   isToolbarDisplayed,
   lightTheme,
-  LocalStore,
   mockSessionInfoProps,
   RootStyleProvider,
   ScriptRunState,
@@ -801,31 +800,23 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
-    it("removes the cached custom theme from theme options", () => {
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
-      )
-      const props = getProps({
-        theme: {
-          activeTheme: {
-            ...lightTheme,
-            name: CUSTOM_THEME_NAME,
-          },
-          availableThemes: [],
-          setTheme: vi.fn(),
-          addThemes: vi.fn(),
-          setFonts: vi.fn(),
-          setImportedTheme: vi.fn(),
-        },
-      })
+    it("removes custom theme when server sends null for customTheme", () => {
+      const props = getProps()
       renderApp(props)
 
+      // First, send a custom theme to establish it
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // @ts-expect-error
+      props.theme.addThemes.mockClear()
+
+      // Then send null to remove the custom theme
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
 
+      // Should call addThemes with empty array to remove custom themes
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
       // @ts-expect-error
@@ -941,6 +932,93 @@ describe("App", () => {
 
       expect(props.theme.addThemes).not.toHaveBeenCalled()
       expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("does not update theme when receiving theme with nested objects in different key orders", () => {
+      const props = getProps()
+      renderApp(props)
+
+      // Create theme config with nested objects in a specific key order
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+        sidebar: {
+          backgroundColor: "gray",
+          textColor: "black",
+        },
+        light: {
+          primaryColor: "lightblue",
+          textColor: "darkgray",
+        },
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send same theme with keys in different order (including nested objects)
+      const theme2 = new CustomThemeConfig({
+        sidebar: {
+          textColor: "black",
+          backgroundColor: "gray",
+        },
+        primaryColor: "blue",
+        light: {
+          textColor: "darkgray",
+          primaryColor: "lightblue",
+        },
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should not update theme since the content is identical
+      expect(props.theme.addThemes).not.toHaveBeenCalled()
+      expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("updates theme when receiving theme with different values", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send different theme
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "red",
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should update theme since the content is different
+      expect(props.theme.addThemes).toHaveBeenCalled()
+      expect(props.theme.setTheme).toHaveBeenCalled()
     })
 
     it("performs one-time initialization", () => {
