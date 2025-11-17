@@ -406,7 +406,7 @@ def test_switch_page_with_query_params(app: Page, app_port: int):
     click_button(app, "page 5 with query params")
 
     expect(app).to_have_url(f"http://localhost:{app_port}/page_5?team=streamlit")
-    expect_prefixed_markdown(app, "Query Params:", "team=streamlit")
+    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
