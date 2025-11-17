@@ -210,10 +210,7 @@ def switch_page(  # type: ignore[misc]
     page : str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
         the page to switch to.
-    query_params : (
-        Mapping[str, str | Iterable[str]]
-        | Iterable[tuple[str, str | Iterable[str]]]
-    ) or None, optional
+    query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page. Values can
         be strings or iterables of strings (for repeated keys). When omitted,
         all non-embed query parameters are cleared during navigation.
