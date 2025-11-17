@@ -69,6 +69,27 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
+def get_datetime_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a datetime input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stDateTimeInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a camera input with the given label.
 
