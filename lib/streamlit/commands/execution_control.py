@@ -188,7 +188,7 @@ def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
     query_params: SwitchPageQueryParams | None = None,
-) -> NoReturn:
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
