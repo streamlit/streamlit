@@ -145,3 +145,67 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
     assert call_args.context_info == {"test_key": "test_value"}
     # check that query_params.clear() was called
     ctx.session_state.query_params.assert_called_once()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
+    """Test that providing query_params sets them before rerunning."""
+    ctx = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = set()
+    ctx.context_info = {"foo": "bar"}
+    ctx.script_requests = MagicMock()
+    ctx.session_state = MagicMock()
+
+    query_params_cm = MagicMock()
+    mock_query_params = MagicMock()
+    query_params_cm.__enter__.return_value = mock_query_params
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    def _update_side_effect(*args, **kwargs):
+        ctx.query_string = "team=streamlit"
+
+    mock_query_params.update.side_effect = _update_side_effect
+
+    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page._script_hash = "target_page_hash"
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    switch_page(mocked_page, query_params={"team": "streamlit"})
+
+    mock_query_params.clear.assert_called_once_with()
+    mock_query_params.update.assert_called_once_with({"team": "streamlit"})
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert isinstance(rerun_arg, RerunData)
+    assert rerun_arg.query_string == "team=streamlit"
+    assert rerun_arg.page_script_hash == "target_page_hash"
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx):
+    """Test that invalid query_params types raise a StreamlitAPIException."""
+    ctx = MagicMock()
+    ctx.session_state = MagicMock()
+    ctx.script_requests = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = set()
+    ctx.context_info = {}
+
+    query_params_cm = MagicMock()
+    query_params_cm.__enter__.return_value = MagicMock()
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page._script_hash = "target_page_hash"
+
+    with pytest.raises(StreamlitAPIException, match=r"query_params must be"):
+        switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
+
+    ctx.script_requests.request_rerun.assert_not_called()
