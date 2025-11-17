@@ -122,9 +122,17 @@ def _set_query_params_for_switch(
     if new_query_params is None:
         return
 
-    if isinstance(new_query_params, (Mapping, Iterable)):
+    if isinstance(new_query_params, Mapping):
         query_params_state.update(new_query_params)
         return
+
+    if isinstance(new_query_params, Iterable) and not isinstance(
+        new_query_params,  # type: ignore[unreachable]
+        (str, bytes),
+    ):
+        query_params_state.update(new_query_params)
+        return
+
     raise StreamlitAPIException(_INVALID_QUERY_PARAMS_ERROR)
 
 
