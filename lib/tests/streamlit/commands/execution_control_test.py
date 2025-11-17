@@ -249,7 +249,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
     mocked_page = MagicMock(spec=StreamlitPage)
     mocked_page._script_hash = "target_page_hash"
 
-    with pytest.raises(StreamlitAPIException, match=r"query_params must be"):
+    with pytest.raises(StreamlitAPIException, match=r"`query_params` must be"):
         switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
 
     ctx.script_requests.request_rerun.assert_not_called()
