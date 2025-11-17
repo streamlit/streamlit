@@ -116,14 +116,16 @@ def _set_query_params_for_switch(
     query_params_state: QueryParams,
     new_query_params: SwitchPageQueryParams | None,
 ) -> None:
+    """Set query params for a switch page."""
+
     query_params_state.clear()
     if new_query_params is None:
         return
 
     if isinstance(new_query_params, (Mapping, Iterable)):
         query_params_state.update(new_query_params)
-    else:
-        raise StreamlitAPIException(_INVALID_QUERY_PARAMS_ERROR)
+        return
+    raise StreamlitAPIException(_INVALID_QUERY_PARAMS_ERROR)
 
 
 @gather_metrics("rerun")

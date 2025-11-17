@@ -186,6 +186,50 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx):
+    """Test that tuple-based query_params are accepted."""
+    ctx = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = set()
+    ctx.context_info = {}
+    ctx.script_requests = MagicMock()
+    ctx.session_state = MagicMock()
+
+    query_params_cm = MagicMock()
+    mock_query_params = MagicMock()
+    query_params_cm.__enter__.return_value = mock_query_params
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    query_param_items = [
+        ("foo", "bar"),
+        ("stream", ["lit", "rocks"]),
+    ]
+
+    def _update_side_effect(value):
+        assert value == query_param_items
+        ctx.query_string = "foo=bar&stream=lit&stream=rocks"
+
+    mock_query_params.update.side_effect = _update_side_effect
+
+    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page._script_hash = "target_page_hash"
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    switch_page(mocked_page, query_params=query_param_items)
+
+    mock_query_params.clear.assert_called_once_with()
+    mock_query_params.update.assert_called_once()
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert isinstance(rerun_arg, RerunData)
+    assert rerun_arg.query_string == "foo=bar&stream=lit&stream=rocks"
+    assert rerun_arg.page_script_hash == "target_page_hash"
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx):
     """Test that invalid query_params types raise a StreamlitAPIException."""
     ctx = MagicMock()
