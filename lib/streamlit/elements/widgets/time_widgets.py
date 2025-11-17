@@ -268,8 +268,9 @@ def _convert_datetimelike_to_datetime(
             "%Y-%m-%d %H:%M",
             "%Y-%m-%d %H:%M:%S",
         ):
-            if parsed_dt := _try_parse_datetime_with_format(stripped_value, fmt):
-                return _normalize_datetime_value(parsed_dt)
+            maybe_parsed_dt = _try_parse_datetime_with_format(stripped_value, fmt)
+            if maybe_parsed_dt is not None:
+                return _normalize_datetime_value(maybe_parsed_dt)
 
         try:
             parsed_date = date.fromisoformat(stripped_value)
@@ -321,7 +322,7 @@ class _DateTimeInputValues:
             None
             if value is None
             else _convert_datetimelike_to_datetime(
-                cast("DateTimeScalarValue", value),
+                value,
                 fallback_date=date.today(),
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
             )
@@ -335,7 +336,7 @@ class _DateTimeInputValues:
             _default_min_datetime(base_date_for_bounds)
             if min_value is None
             else _convert_datetimelike_to_datetime(
-                cast("DateTimeScalarValue", min_value),
+                min_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
             )
@@ -345,7 +346,7 @@ class _DateTimeInputValues:
             _default_max_datetime(base_date_for_bounds)
             if max_value is None
             else _convert_datetimelike_to_datetime(
-                cast("DateTimeScalarValue", max_value),
+                max_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MAX_BOUND_TIME,
             )
@@ -778,26 +779,6 @@ class TimeWidgetsMixin:
     def datetime_input(
         self,
         label: str,
-        value: DateTimeValue = "now",
-        min_value: DateTimeValue = None,
-        max_value: DateTimeValue = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        format: str = "YYYY/MM/DD",
-        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: WidthWithoutContent = "stretch",
-    ) -> datetime: ...
-
-    @overload
-    def datetime_input(
-        self,
-        label: str,
         value: None,
         min_value: DateTimeValue = None,
         max_value: DateTimeValue = None,
@@ -813,6 +794,26 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> datetime | None: ...
+
+    @overload
+    def datetime_input(
+        self,
+        label: str,
+        value: DateTimeScalarValue = "now",
+        min_value: DateTimeValue = None,
+        max_value: DateTimeValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> datetime: ...
 
     @gather_metrics("datetime_input")
     def datetime_input(

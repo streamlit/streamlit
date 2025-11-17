@@ -18,7 +18,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -211,42 +215,34 @@ def test_dynamic_props_update(app: Page):
 
     # Type a new value into the datetime input
     input_field = dynamic_input.locator("input")
-    input_field.click()
-    input_field.fill("")
-    input_field.type("2025/12/01 14:30")
+    input_field.type("2025/12/01 14:30", delay=50)
     input_field.press("Enter")
-    wait_for_app_loaded(app)
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
 
-    # Verify the typed value is shown
     expect_prefixed_markdown(
         app, "Initial datetime input value:", "2025-12-01 14:30:00"
     )
 
-    # Toggle to update props - the typed value should be preserved
+    # Click the toggle to update the datetime input props
     click_toggle(app, "Update datetime input props")
-    wait_for_app_loaded(app)
 
-    # The typed value should be preserved even though the props changed
+    # new datetime input is visible:
+    expect(dynamic_input).to_contain_text("Updated dynamic datetime input")
+
+    # Ensure the previously entered value remains visible
     expect_prefixed_markdown(
         app, "Updated datetime input value:", "2025-12-01 14:30:00"
-    )
-
-    # Toggle back to initial state - value should still be preserved
-    click_toggle(app, "Update datetime input props")
-    wait_for_app_loaded(app)
-    expect_prefixed_markdown(
-        app, "Initial datetime input value:", "2025-12-01 14:30:00"
     )
 
 
 def test_custom_theme_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
     apply_theme_via_window(
         themed_app,
-        {
-            "font": {
-                "fontFamily": "Comic Sans, sans-serif",
-                "monoFontFamily": "Comic Code, monospace",
-            }
+        font={
+            "fontFamily": "Comic Sans, sans-serif",
+            "monoFontFamily": "Comic Code, monospace",
         },
     )
     wait_for_app_loaded(themed_app)

@@ -22,13 +22,15 @@ import React, {
   useMemo,
 } from "react"
 
-import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
+import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 import moment from "moment"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -36,6 +38,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
+import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
+import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -48,9 +52,6 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledTimeDropdownListItem } from "src/components/widgets/TimeInput/styled-components"
-
-const DATE_FORMAT = "YYYY/MM/DD"
 const DATE_TIME_FORMAT = "YYYY/MM/DD HH:mm"
 
 export interface Props {
@@ -81,6 +82,9 @@ function DateTimeInput({
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+
+  const { locale } = useContext(LibConfigContext)
+  const loadedLocale = useIntlLocale(locale)
 
   const step = useMemo(
     () => (element.step ? Number(element.step) : 900),
@@ -367,6 +371,14 @@ function DateTimeInput({
                       paddingTop: theme.spacing.sm,
                     }),
                   },
+                  SingleValue: {
+                    style: {
+                      fontWeight: theme.fontWeights.normal,
+                    },
+                    props: {
+                      "data-testid": "stDateTimeInputTimeDisplay",
+                    },
+                  },
                   Dropdown: {
                     style: () => ({
                       paddingTop: theme.spacing.none,
@@ -377,6 +389,36 @@ function DateTimeInput({
                   },
                   DropdownListItem: {
                     component: StyledTimeDropdownListItem,
+                  },
+                  Popover: {
+                    props: {
+                      ignoreBoundary: isInSidebar,
+                      overrides: {
+                        Body: {
+                          style: () => ({
+                            marginTop: theme.spacing.px,
+                          }),
+                        },
+                      },
+                    },
+                  },
+                  Placeholder: {
+                    style: () => ({
+                      color: theme.colors.fadedText60,
+                    }),
+                  },
+                  SelectArrow: {
+                    component: ChevronDown,
+                    props: {
+                      overrides: {
+                        Svg: {
+                          style: () => ({
+                            width: theme.iconSizes.xl,
+                            height: theme.iconSizes.xl,
+                          }),
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -415,6 +457,8 @@ function DateTimeInput({
         )}
       </WidgetLabel>
       <UIDatePicker
+        locale={loadedLocale}
+        density={DENSITY.high}
         value={selectedDate ?? null}
         onChange={handleChange}
         minDate={minDate}
