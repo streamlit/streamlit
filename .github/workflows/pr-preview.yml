@@ -6,9 +6,6 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
 
 # Avoid duplicate workflows on same branch
 concurrency:

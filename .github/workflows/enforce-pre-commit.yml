@@ -6,9 +6,6 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
 
   # Allows workflow to be called from other workflows
   workflow_call:
