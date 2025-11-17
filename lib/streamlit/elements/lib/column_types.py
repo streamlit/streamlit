@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -1011,7 +1011,7 @@ def SelectboxColumn(
     pinned: bool | None = None,
     default: SelectboxOptionValue | None = None,
     options: Iterable[SelectboxOptionValue] | None = None,
-    format_func: Callable[[Any], str] | None = None,
+    format_func: Callable[[SelectboxOptionValue], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
