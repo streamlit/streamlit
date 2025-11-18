@@ -68,6 +68,7 @@ import {
 import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,
+  StyledHelpIconWrapper,
   StyledLinkIcon,
   StyledPreWrapper,
   StyledStreamlitMarkdown,
@@ -452,6 +453,26 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
+interface CustomHelpIconProps {
+  children?: string
+}
+
+/**
+ * Custom component to render inline help icons in markdown.
+ * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
+ */
+export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+  // Ensure we only pass strings to the tooltip. Text directives should always
+  // pass plain strings, but we check defensively at runtime.
+  const tooltipContent = typeof children === "string" ? children : ""
+
+  return (
+    <StyledHelpIconWrapper>
+      <InlineTooltipIcon content={tooltipContent} />
+    </StyledHelpIconWrapper>
+  )
+}
+
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
   pre: CustomPreTag,
@@ -465,6 +486,7 @@ const BASE_RENDERERS = {
   img: CustomMediaTag,
   video: CustomMediaTag,
   audio: CustomMediaTag,
+  "streamlit-help-icon": CustomHelpIcon,
 }
 
 /**
@@ -514,6 +536,29 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
         ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
     })
   )
+}
+
+/**
+ * Factory function to create the help icon directive plugin
+ */
+function createRemarkHelpIcon() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  return () => (tree: any) => {
+    visit(tree, "textDirective", (node, _index, _parent) => {
+      const nodeName = String(node.name)
+
+      // Handle help icon directive (:help[tooltip content])
+      if (nodeName === "help") {
+        const data = node.data || (node.data = {})
+        data.hName = "streamlit-help-icon"
+        data.hProperties = data.hProperties || {}
+        // Pass the children through so CustomHelpIcon can extract the content
+        return
+      }
+    })
+
+    return tree
+  }
 }
 
 /**
@@ -590,9 +635,12 @@ function createRemarkColoringAndSmall(
       // We convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
-      node.type = "text"
-      node.value = `:${nodeName}`
-      node.data = {}
+      // Don't convert if the directive was already handled by another plugin
+      if (!node.data?.hName) {
+        node.type = "text"
+        node.value = `:${nodeName}`
+        node.data = {}
+      }
     })
     return tree
   }
@@ -725,6 +773,7 @@ const BASE_REMARK_PLUGINS = [
   remarkMathPlugin,
   remarkGfm,
   remarkDirective,
+  createRemarkHelpIcon(),
   createRemarkStreamlitLogo(),
   createRemarkTypographicalSymbols(),
 ]
