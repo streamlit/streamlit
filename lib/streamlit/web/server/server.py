@@ -523,7 +523,7 @@ class Server:
         self._runtime.stop()
 
     async def _start_starlette(self) -> None:
-        from streamlit.web.server.starlette_app import create_starlette_app
+        from streamlit.web.server.starlette.starlette_app import create_starlette_app
 
         try:
             import uvicorn

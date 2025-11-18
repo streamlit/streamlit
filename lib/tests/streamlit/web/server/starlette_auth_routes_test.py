@@ -24,8 +24,8 @@ from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.testclient import TestClient
 from tornado.web import decode_signed_value
 
-from streamlit.web.server import starlette_auth_routes
-from streamlit.web.server.starlette_auth_routes import get_auth_routes
+from streamlit.web.server.starlette import starlette_auth_routes
+from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -175,3 +175,23 @@ def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
         assert response.headers["location"] == "/redirect"
 
     assert captured_session is not None
+
+
+def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test redirect when origin cannot be determined from secrets."""
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_origin_from_secrets",
+        lambda: None,  # Simulate missing redirect_uri
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        lambda state: "default",
+    )
+
+    app = Starlette(routes=get_auth_routes(""))
+    with TestClient(app) as client:
+        response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/")

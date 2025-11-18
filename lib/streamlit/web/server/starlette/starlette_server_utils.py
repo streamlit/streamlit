@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Utility functions for the Starlette server implementation."""
+
 from __future__ import annotations
 
+import binascii
+import os
+import time
 from typing import Any
 
 from tornado.util import _websocket_mask as _tornado_websocket_mask
@@ -44,7 +49,10 @@ def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
 
     range_spec = range_spec.strip()
     if range_spec.startswith("-"):
-        suffix = int(range_spec[1:])
+        try:
+            suffix = int(range_spec[1:])
+        except ValueError:
+            raise ValueError("invalid suffix range") from None
         if suffix <= 0:
             raise ValueError("invalid suffix range")
         if suffix >= total_size:
@@ -100,3 +108,46 @@ def decode_signed_value(
         clock=clock,
         min_version=min_version,
     )
+
+
+def generate_xsrf_token_string(
+    token_bytes: bytes | None = None, timestamp: int | None = None
+) -> str:
+    """Generate a version 2 XSRF token string compatible with Tornado.
+
+    Format: 2|mask|masked_token|timestamp
+    """
+    if token_bytes is None:
+        token_bytes = os.urandom(16)
+    if timestamp is None:
+        timestamp = int(time.time())
+
+    mask = os.urandom(4)
+    masked_token = websocket_mask(mask, token_bytes)
+    return "2|{}|{}|{}".format(
+        binascii.b2a_hex(mask).decode("ascii"),
+        binascii.b2a_hex(masked_token).decode("ascii"),
+        timestamp,
+    )
+
+
+def decode_xsrf_token_string(
+    cookie_value: str,
+) -> tuple[bytes | None, int | None]:
+    """Decode a Tornado XSRF token string.
+
+    Supports version 2 (masked) and version 1 (unmasked) tokens.
+    """
+    value = cookie_value.strip("\"'")
+    try:
+        if value.startswith("2|"):
+            _, mask_hex, masked_hex, timestamp_str = value.split("|")
+            mask = binascii.a2b_hex(mask_hex.encode("ascii"))
+            masked = binascii.a2b_hex(masked_hex.encode("ascii"))
+            token = websocket_mask(mask, masked)
+            return token, int(timestamp_str)
+
+        token = binascii.a2b_hex(value.encode("ascii"))
+        return token, int(time.time())
+    except (binascii.Error, ValueError):
+        return None, None

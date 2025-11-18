@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import binascii
+import time
 import unittest
 from unittest.mock import patch
 
@@ -23,7 +25,7 @@ import pytest
 from tornado.util import _websocket_mask
 from tornado.web import create_signed_value
 
-from streamlit.web.server import starlette_server_utils
+from streamlit.web.server.starlette import starlette_server_utils
 
 
 class StarletteServerUtilsTest(unittest.TestCase):
@@ -111,3 +113,50 @@ class StarletteServerUtilsTest(unittest.TestCase):
         result = starlette_server_utils.decode_signed_value("secret", "name", "value")
         assert result == b"decoded"
         mock_tornado_decode.assert_called_once()
+
+    def test_xsrf_token_roundtrip(self):
+        """Test generating and then decoding an XSRF token."""
+        token = b"some_random_token_bytes"
+        timestamp = int(time.time())
+
+        # Generate string
+        cookie_val = starlette_server_utils.generate_xsrf_token_string(token, timestamp)
+
+        # Verify format
+        assert cookie_val.startswith("2|")
+        parts = cookie_val.split("|")
+        assert len(parts) == 4
+
+        # Decode string
+        decoded_token, decoded_timestamp = (
+            starlette_server_utils.decode_xsrf_token_string(cookie_val)
+        )
+
+        assert decoded_token == token
+        assert decoded_timestamp == timestamp
+
+    def test_decode_xsrf_token_v1(self):
+        """Test decoding a legacy v1 XSRF token (unmasked hex)."""
+        token = b"legacy_token"
+        hex_token = binascii.b2a_hex(token).decode("ascii")
+
+        # decode_xsrf_token_string treats anything not starting with '2|' as v1
+        decoded_token, decoded_timestamp = (
+            starlette_server_utils.decode_xsrf_token_string(hex_token)
+        )
+
+        assert decoded_token == token
+        # For v1 tokens, it returns current time as timestamp
+        assert decoded_timestamp is not None
+        assert abs(decoded_timestamp - time.time()) < 2
+
+    def test_decode_xsrf_token_invalid(self):
+        """Test decoding invalid tokens returns (None, None)."""
+        assert starlette_server_utils.decode_xsrf_token_string("invalid") == (
+            None,
+            None,
+        )
+        assert starlette_server_utils.decode_xsrf_token_string("2|bad|format") == (
+            None,
+            None,
+        )

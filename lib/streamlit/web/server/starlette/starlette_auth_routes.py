@@ -34,10 +34,15 @@ from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
+from streamlit.web.server.starlette import starlette_server_utils
 
 
 class _AsyncAuthCache:
-    """Adapter that exposes AuthCache with awaitable methods for Authlib."""
+    """Adapter that exposes AuthCache with awaitable methods for Authlib.
+
+    Streamlit's internal AuthCache is synchronous, but Authlib's Starlette integration
+    expects an async cache interface. This adapter bridges the two.
+    """
 
     def __init__(self, cache: AuthCache) -> None:
         self._cache = cache
@@ -85,7 +90,12 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
 
 
 class _AuthlibConfig(dict[str, Any]):
-    """Config adapter that exposes provider data via Authlib's flat lookup."""
+    """Config adapter that exposes provider data via Authlib's flat lookup.
+
+    Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").
+    Streamlit's secrets.toml structure is nested (e.g. [auth.google] client_id=...).
+    This class bridges the gap by normalizing nested keys into the format Authlib expects.
+    """
 
     def __init__(self, data: dict[str, Any]) -> None:
         normalized = {k: _normalize_nested_config(v) for k, v in data.items()}

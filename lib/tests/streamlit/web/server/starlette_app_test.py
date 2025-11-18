@@ -30,7 +30,7 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
-from streamlit.web.server.starlette_app import create_starlette_app
+from streamlit.web.server.starlette.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from tests.testutil import patch_config_options
 
@@ -86,12 +86,19 @@ class _DummyRuntime:
         self.last_backmsg = None
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
+        self.script_health = (True, "ok")
 
     @property
     def is_ready_for_browser_connection(self) -> asyncio.Future[tuple[bool, str]]:
         loop = asyncio.get_event_loop()
         fut: asyncio.Future[tuple[bool, str]] = loop.create_future()
         fut.set_result((True, "ok"))
+        return fut
+
+    def does_script_run_without_error(self) -> asyncio.Future[tuple[bool, str]]:
+        loop = asyncio.get_event_loop()
+        fut: asyncio.Future[tuple[bool, str]] = loop.create_future()
+        fut.set_result(self.script_health)
         return fut
 
     def is_active_session(self, session_id: str) -> bool:
@@ -276,11 +283,75 @@ def test_upload_put_adds_file(
     assert stored.data == b"payload"
 
 
+def test_upload_put_enforces_max_size(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that uploads exceeding server.maxUploadSize are rejected."""
+    client, _ = starlette_client
+
+    # Configure small max size (1MB)
+    with patch_config_options({"server.maxUploadSize": 1}):
+        # 1. Check Content-Length header rejection
+        response = client.put(
+            "_stcore/upload_file/session123/fileid",
+            files={"file": ("foo.txt", b"x" * (1024 * 1024 + 100), "text/plain")},
+            # TestClient automatically sets Content-Length
+        )
+        assert response.status_code == 413
+        assert response.text == "File too large"
+
+
 def test_component_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
     client, _ = starlette_client
     response = client.get("/component/comp/index.html")
     assert response.status_code == 200
     assert response.text == "component"
+
+
+def test_bidi_component_endpoint(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test the bidirectional component endpoint."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/bidi-components/comp/index.html")
+    assert response.status_code == 200
+    assert response.text == "component"
+
+
+def test_script_health_endpoint(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test the script health check endpoint."""
+    client, runtime = starlette_client
+
+    # Default enabled
+    with patch_config_options({"server.scriptHealthCheckEnabled": True}):
+        # Re-create app to apply config change
+        app = create_starlette_app(runtime)
+        with TestClient(app) as client:
+            response = client.get("/_stcore/script-health-check")
+            assert response.status_code == 200
+            assert response.text == "ok"
+
+            # Simulate failure
+            runtime.script_health = (False, "error")
+            response = client.get("/_stcore/script-health-check")
+            assert response.status_code == 503
+            assert response.text == "error"
+
+
+def test_websocket_rejects_text_frames(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that the WebSocket endpoint rejects text frames."""
+    client, _ = starlette_client
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        # Starlette/TestClient might raise on disconnect
+        with client.websocket_connect("/_stcore/stream") as websocket:
+            # Sending a text frame should trigger the TypeError logic
+            websocket.send_text("Hello")
+            # Reading might fail if server closed connection
+            websocket.receive_text()
 
 
 def test_upload_delete_removes_file(

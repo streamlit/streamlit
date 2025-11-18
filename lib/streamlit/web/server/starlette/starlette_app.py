@@ -21,7 +21,6 @@ import binascii
 import json
 import mimetypes
 import os
-import time
 from contextlib import suppress
 from pathlib import Path
 from shlex import quote
@@ -42,7 +41,6 @@ from streamlit.runtime.session_manager import (
     SessionClientDisconnectedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server import starlette_server_utils
 from streamlit.web.server.app_static_file_handler import (
     MAX_APP_STATIC_FILE_SIZE,
     SAFE_APP_STATIC_FILE_EXTENSIONS,
@@ -59,6 +57,7 @@ from streamlit.web.server.routes import (
     is_allowed_origin,
 )
 from streamlit.web.server.server_util import get_cookie_secret, get_url, is_xsrf_enabled
+from streamlit.web.server.starlette import starlette_server_utils
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 if TYPE_CHECKING:
@@ -123,6 +122,12 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
 
 
 def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
+    """Ensure that the XSRF cookie is set.
+
+    We manually manage XSRF generation and validation here to strictly match
+    Tornado's implementation and cookie format. This allows the frontend to share
+    XSRF logic between the WebSocket handshake and HTTP uploads regardless of the backend.
+    """
     if not is_xsrf_enabled():
         return
 
@@ -131,18 +136,29 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     token_bytes: bytes | None = None
     timestamp: int | None = None
     if raw_cookie:
-        token_bytes, timestamp = _decode_xsrf_cookie(raw_cookie)
+        token_bytes, timestamp = starlette_server_utils.decode_xsrf_token_string(
+            raw_cookie
+        )
 
-    if token_bytes is None or timestamp is None:
-        token_bytes = os.urandom(16)
-        timestamp = int(time.time())
+    # If we're missing a valid token or timestamp, generate a new one.
+    # Note: we don't re-use the timestamp from the cookie if it's valid;
+    # we let generate_xsrf_token_string handle creating a new one if needed,
+    # OR we pass it through.
+    # However, standard behavior is usually to refresh the mask even if the token
+    # is the same.
+    # If we have a valid token_bytes, we can re-use it to avoid invalidating
+    # existing forms, but we should probably generate a new masked string.
 
-    mask = os.urandom(4)
-    masked_token = starlette_server_utils.websocket_mask(mask, token_bytes)
-    cookie_value = "2|{}|{}|{}".format(
-        binascii.b2a_hex(mask).decode("ascii"),
-        binascii.b2a_hex(masked_token).decode("ascii"),
-        timestamp,
+    # Logic from original implementation:
+    # If raw_cookie was valid, we got token_bytes and timestamp.
+    # If not, we generate new ones.
+
+    # We'll let the utility function handle the generation.
+    # If token_bytes is None, it generates new random bytes.
+    # If timestamp is None, it uses current time.
+
+    cookie_value = starlette_server_utils.generate_xsrf_token_string(
+        token_bytes, timestamp
     )
 
     _set_unquoted_cookie(
@@ -151,24 +167,6 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         cookie_value,
         secure=bool(config.get_option("server.sslCertFile")),
     )
-
-
-def _decode_xsrf_cookie(
-    cookie_value: str,
-) -> tuple[bytes | None, int | None]:
-    value = cookie_value.strip("\"'")
-    try:
-        if value.startswith("2|"):
-            _, mask_hex, masked_hex, timestamp_str = value.split("|")
-            mask = binascii.a2b_hex(mask_hex.encode("ascii"))
-            masked = binascii.a2b_hex(masked_hex.encode("ascii"))
-            token = starlette_server_utils.websocket_mask(mask, masked)
-            return token, int(timestamp_str)
-
-        token = binascii.a2b_hex(value.encode("ascii"))
-        return token, int(time.time())
-    except (binascii.Error, ValueError):
-        return None, None
 
 
 def _set_unquoted_cookie(
@@ -246,6 +244,11 @@ class _StarletteSessionClient(SessionClient):
         self._closed = asyncio.Event()
 
     async def _sender(self) -> None:
+        """Background task to drain the send_queue and write to the WebSocket.
+
+        This decouples the message generation (which puts into the queue) from the
+        actual network I/O, allowing for non-blocking sends from the main thread.
+        """
         from starlette.websockets import WebSocketDisconnect
 
         try:
@@ -301,6 +304,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Mirror the Tornado StaticFileHandler behavior so the migration does not
     # change how unknown routes or cache headers behave.
+    # This is critical for SPA fallback (serving index.html on 404s) and long-term caching of hashed assets.
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
             super().__init__(directory=directory, html=True)
@@ -354,7 +358,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     dev_mode = bool(config.get_option("global.developmentMode"))
 
     try:
-        from streamlit.web.server.starlette_auth_routes import get_auth_routes
+        from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 
         routes.extend(get_auth_routes(base_url))
     except ModuleNotFoundError:  # pragma: no cover - auth optional
@@ -465,7 +469,9 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 except WebSocketDisconnect:
                     break
                 except RuntimeError:
-                    # Starlette raises RuntimeError when a text frame is received.
+                    # Starlette raises RuntimeError when a text frame is received by receive_bytes.
+                    # Streamlit strictly uses binary protobufs for communication.
+                    # We reject text frames to enforce the protocol and prevent ambiguity.
                     await websocket.close()
                     raise TypeError(
                         "WebSocket text frames are not supported; expected binary protobufs."
@@ -608,7 +614,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         upload = uploads[0]
 
         # 2. Check actual file size (python-multipart spools to disk, so we can check size before reading into RAM)
-        # If the underlying file is spooled/on-disk, we can check its size
+        # If the underlying file is spooled/on-disk, we can check its size without loading it all.
+        # This prevents MemoryErrors if a user uploads a huge file that bypasses the Nginx/ingress limit.
         upload.file.seek(0, 2)  # Seek to end
         size = upload.file.tell()
         upload.file.seek(0)  # Reset
