@@ -72,12 +72,13 @@ st.write("Value 7:", v7)
 v8 = st.datetime_input("Datetime input 8 (empty)", value=None)
 st.write("Value 8:", v8)
 
-if "datetime_input_9" not in st.session_state:
-    st.session_state["datetime_input_9"] = BASE_DATETIME + timedelta(minutes=5)
+# Initialize default value for datetime input 9
+if "datetime_input_9_default" not in st.session_state:
+    st.session_state["datetime_input_9_default"] = BASE_DATETIME + timedelta(minutes=5)
 
 v9 = st.datetime_input(
     "Datetime input 9 (empty, from state)",
-    value=None,
+    value=st.session_state["datetime_input_9_default"],
     key="datetime_input_9",
 )
 st.write("Value 9:", v9)

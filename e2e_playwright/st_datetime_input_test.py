@@ -122,6 +122,9 @@ def test_handles_typing_selection(app: Page):
 
     datetime_input_field.type("2026/01/01, 09:30")
     datetime_input_field.press("Enter")
+    # Click on the label of another widget to close the popover and commit the value
+    get_datetime_input(app, "Datetime input 2 (help)").click()
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 2026-01-01 09:30:00")
 
@@ -135,6 +138,9 @@ def test_handles_datetime_selection_with_popover(app: Page):
     datetime_input_field.fill("")
     datetime_input_field.type("2025/11/25, 09:30")
     datetime_input_field.press("Enter")
+    # Click on another element to close the popover and commit the value
+    get_datetime_input(app, "Datetime input 2 (help)").click()
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 2025-11-25 09:30:00")
 
@@ -146,6 +152,9 @@ def test_step_interval_applied(app: Page):
 
     datetime_input_field.type("2025/11/19, 16:46")
     datetime_input_field.press("Enter")
+    # Click on another element to close the popover and commit the value
+    get_datetime_input(app, "Datetime input 1 (base)").click()
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 7: 2025-11-19 16:46:00")
 
@@ -156,9 +165,15 @@ def test_clearable_datetime_input(app: Page):
 
     datetime_input_field.type("2025/11/19, 10:15")
     datetime_input_field.press("Enter")
+    # Click on another element to close the popover and commit the value
+    get_datetime_input(app, "Datetime input 1 (base)").click()
+    wait_for_app_run(app)
     expect_markdown(app, "Value 8: 2025-11-19 10:15:00")
 
     datetime_input.get_by_role("button", name="Clear value").click()
+    # Click on another element to close the popover and commit the cleared value
+    get_datetime_input(app, "Datetime input 1 (base)").click()
+    wait_for_app_run(app)
     expect_markdown(app, "Value 8: None")
 
 
@@ -169,6 +184,9 @@ def test_callback_invoked(app: Page):
 
     datetime_input_field.type("2025/12/01, 08:00")
     datetime_input_field.press("Enter")
+    # Click on another element to close the popover and commit the value, triggering callback
+    get_datetime_input(app, "Datetime input 1 (base)").click()
+    wait_for_app_run(app)
 
     expect_markdown(app, "datetime input changed: True")
 
@@ -178,7 +196,9 @@ def test_form_submission_resets_value(app: Page):
     form_input.type("2025/12/24, 12:00")
     form_input.press("Enter")
 
+    # Click submit button which will close the popover and submit the form
     app.get_by_role("button", name="Submit datetime form").click()
+    wait_for_app_run(app)
     expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
 
 
@@ -190,8 +210,11 @@ def test_fragment_reruns(app: Page):
     # Type a value in the fragment datetime input
     fragment_input_field.type("2025/11/19, 09:00")
     fragment_input_field.press("Enter")
+    # Click on another element to close the popover and commit the value
+    get_datetime_input(app, "Datetime input 1 (base)").click()
+    wait_for_app_run(app)
 
-    # Verify that other inputs are not affected
+    # Verify that other inputs are not affected (value1 should still be the original)
     expect_markdown(app, "Value 1: 2025-11-19 16:45:00")
 
 
@@ -217,7 +240,8 @@ def test_dynamic_props_update(app: Page):
     input_field = dynamic_input.locator("input")
     input_field.type("2025/12/01, 14:30", delay=50)
     input_field.press("Enter")
-    input_field.press("Escape")
+    # Click on a markdown element to close the popover without toggling
+    app.get_by_text("Dynamic datetime input:").click()
     wait_for_app_run(app)
     expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
 

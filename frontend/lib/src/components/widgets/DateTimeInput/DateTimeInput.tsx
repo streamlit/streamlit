@@ -19,12 +19,15 @@ import React, {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
+import type DatepickerClass from "baseui/datepicker/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 import moment from "moment"
@@ -71,6 +74,10 @@ function DateTimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
+  const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     DateTimeInputProto
@@ -86,9 +93,6 @@ function DateTimeInput({
 
   const [error, setError] = useState<string | null>(null)
 
-  const theme = useEmotionTheme()
-  const isInSidebar = useContext(IsSidebarContext)
-
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
@@ -100,7 +104,18 @@ function DateTimeInput({
   const minDateTime = useMemo(() => stringsToDate(element.min), [element.min])
   const maxDateTime = useMemo(() => stringsToDate(element.max), [element.max])
 
-  const selectedDate = useMemo(() => stringToDate(value), [value])
+  // committedDate is the value from the widget manager
+  const committedDate = useMemo(() => stringToDate(value), [value])
+
+  // pendingDate is the temporary value while the user is selecting
+  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
+
+  // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
+  useEffect(() => {
+    setPendingDate(committedDate)
+  }, [committedDate])
+
+  const selectedDate = pendingDate
 
   const minDate = useMemo(() => minDateTime ?? undefined, [minDateTime])
   const maxDate = useMemo(() => maxDateTime ?? undefined, [maxDateTime])
@@ -163,9 +178,6 @@ function DateTimeInput({
       setError(null)
 
       const normalizedDate = normalizeDateValue(date)
-      const newValue = normalizedDate
-        ? moment(normalizedDate).format(DATE_TIME_FORMAT)
-        : null
 
       // Validate against min/max bounds
       if (normalizedDate) {
@@ -177,10 +189,26 @@ function DateTimeInput({
         }
       }
 
-      setValueWithSource({ value: newValue, fromUi: true })
+      // Update pending state only - don't commit to widget manager yet
+      setPendingDate(normalizedDate)
+
+      // Keep the modal open so the user can continue selecting
+      datepickerRef.current?.open?.()
     },
-    [setValueWithSource, minDateTime, maxDateTime, createErrorMessage]
+    [minDateTime, maxDateTime, createErrorMessage]
   )
+
+  const handleClose = useCallback((): void => {
+    // Only commit to widget manager when the modal closes
+    const newValue = pendingDate
+      ? moment(pendingDate).format(DATE_TIME_FORMAT)
+      : null
+    const hasChanged = newValue !== value
+
+    if (hasChanged) {
+      setValueWithSource({ value: newValue, fromUi: true })
+    }
+  }, [pendingDate, value, setValueWithSource])
 
   const inputOverrides = useMemo(
     () => ({
@@ -500,10 +528,12 @@ function DateTimeInput({
         )}
       </WidgetLabel>
       <UIDatePicker
+        ref={datepickerRef}
         locale={loadedLocale}
         density={DENSITY.high}
-        value={selectedDate ?? null}
+        value={pendingDate}
         onChange={handleChange}
+        onClose={handleClose}
         minDate={minDate}
         maxDate={maxDate}
         disabled={disabled}
