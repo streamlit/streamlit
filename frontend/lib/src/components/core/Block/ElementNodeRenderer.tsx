@@ -74,7 +74,6 @@ import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
-import ArrowTable from "~lib/components/elements/ArrowTable"
 import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
 import Json from "~lib/components/elements/Json"
@@ -102,6 +101,7 @@ import {
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
 const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
 const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
 const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
