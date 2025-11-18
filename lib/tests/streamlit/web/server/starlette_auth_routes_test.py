@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from starlette.applications import Starlette
-from starlette.responses import PlainTextResponse
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.testclient import TestClient
 from tornado.web import decode_signed_value
 
@@ -42,6 +43,7 @@ def _build_app() -> Starlette:
     async def root(_: Any) -> PlainTextResponse:
         return PlainTextResponse("ok")
 
+    app.add_middleware(SessionMiddleware, secret_key="test-secret")
     return app
 
 
@@ -143,3 +145,33 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         payload = decoded.decode("utf-8")
         assert "user@example.com" in payload
         assert '"is_logged_in": true' in payload.lower()
+
+
+def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_session: dict[str, Any] | None = None
+
+    class _DummyClient:
+        async def authorize_redirect(
+            self, request: Any, redirect_uri: str
+        ) -> RedirectResponse:
+            nonlocal captured_session
+            captured_session = dict(request.session)
+            return RedirectResponse(redirect_uri)
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_parse_provider_token",
+        lambda token: "default",
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
+
+    with TestClient(_build_app()) as client:
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "/redirect"
+
+    assert captured_session is not None

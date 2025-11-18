@@ -283,6 +283,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         from starlette.applications import Starlette
         from starlette.datastructures import UploadFile
         from starlette.exceptions import HTTPException
+        from starlette.middleware.sessions import SessionMiddleware
         from starlette.responses import (
             FileResponse,
             JSONResponse,
@@ -556,6 +557,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 disposition = f"filename*=utf-8''{quote(filename)}"
             headers["Content-Disposition"] = f"attachment; {disposition}"
 
+        # Ensure support for range requests (e.g. for video files)
         headers["Accept-Ranges"] = "bytes"
         content = media_file.content
         content_length = len(content)
@@ -937,6 +939,20 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
     app = Starlette(routes=routes)
+
+    def _session_secret() -> str:
+        secret = get_cookie_secret()
+        if not secret:
+            secret = binascii.b2a_hex(os.urandom(32)).decode("ascii")
+        return secret
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=_session_secret(),
+        same_site="lax",
+        https_only=bool(config.get_option("server.sslCertFile")),
+        session_cookie="_streamlit_session",
+    )
 
     @app.route(_with_base("_stcore/metrics", base_url), methods=["OPTIONS"])
     async def _metrics_options(request: Request) -> Response:

@@ -90,6 +90,7 @@ EXTRA_REQUIRES = {
         "uvicorn>=0.30.0",
         "anyio>=4.0.0",
         "websockets>=12.0.0",
+        "itsdangerous>=2.1.2",
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
