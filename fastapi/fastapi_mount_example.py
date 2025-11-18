@@ -27,7 +27,6 @@ from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
 
 if TYPE_CHECKING:
-    from asyncio import Task
     from collections.abc import Awaitable, Callable
 
     from starlette.applications import Starlette
@@ -50,7 +49,7 @@ def _build_streamlit_starlette() -> tuple[Server, Starlette]:
 server, streamlit_starlette = _build_streamlit_starlette()
 
 app = FastAPI()
-_runtime_task: Task[None] | None = None
+_runtime_task: asyncio.Task[None] | None = None
 
 
 @app.on_event("startup")

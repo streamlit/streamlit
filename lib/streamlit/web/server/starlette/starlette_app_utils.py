@@ -83,7 +83,7 @@ def websocket_mask(mask: bytes, data: bytes) -> bytes:
 
     This is a bidirectional operation (XOR).
     """
-    # TODO(lukasmasuch): Replace with implementation that dosn't require Tornado.
+    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
     return _tornado_websocket_mask(mask, data)
 
 
@@ -99,7 +99,7 @@ def decode_signed_value(
 
     Currently wraps Tornado's implementation for compatibility.
     """
-    # TODO(lukasmasuch): Replace with implementation that dosn't require Tornado.
+    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
     return _tornado_decode_signed_value(
         secret,
         name,
