@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -54,7 +54,7 @@ describe("DateTimeInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<DateTimeInput {...props} />)
-    expect(screen.getByTestId("stDateTimeInput")).toBeInTheDocument()
+    expect(screen.getByTestId("stDateTimeInput")).toBeVisible()
   })
 
   it("shows a label", () => {
@@ -142,31 +142,40 @@ describe("DateTimeInput widget", () => {
     await user.type(inputField, "2026/03/15, 12:45")
     expect(inputField).toHaveValue("2026/03/15, 12:45")
 
-    // Note: Testing the clear functionality requires the value to be committed first,
-    // which happens when the popover closes. The pending state pattern with open()
-    // keeps the popover open in tests, so we test the input value change instead.
+    // Close the popover to commit the value
+    await user.click(document.body)
+
+    // Click the clear button
+    const clearButton = screen.getByRole("button", { name: /clear value/i })
+    await user.click(clearButton)
+
+    expect(inputField).toHaveValue("")
   })
 
   it("resets its value when form is cleared", async () => {
-    const user = userEvent.setup()
     const props = { ...getProps({ formId: "form" }), fragmentId: "fragment" }
     props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    props.widgetMgr.setStringValue(
+      props.element,
+      "2026/02/01, 10:15",
+      { fromUi: true },
+      props.fragmentId
+    )
 
     render(<DateTimeInput {...props} />)
 
     const inputField = screen.getByTestId("stDateTimeInputField")
 
-    // Verify initial default value
-    expect(inputField).toHaveValue("2025/11/19, 16:45")
-
-    // Type a new value (updates pending state)
-    await user.clear(inputField)
-    await user.type(inputField, "2026/02/01, 10:15")
     expect(inputField).toHaveValue("2026/02/01, 10:15")
 
-    // Note: Form reset behavior testing requires the value to be committed first,
-    // which happens when the popover closes. The pending state pattern keeps the
-    // popover open in tests, so we verify the input value changes instead.
+    act(() => {
+      props.widgetMgr.submitForm("form", props.fragmentId)
+    })
+
+    await waitFor(() => {
+      expect(inputField).toHaveValue("2025/11/19, 16:45")
+    })
   })
 
   describe("Validation and error handling", () => {
@@ -331,17 +340,18 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Help text and accessibility", () => {
-    it("displays help text tooltip", () => {
+    it("displays help text tooltip", async () => {
+      const user = userEvent.setup()
       const props = getProps({ help: "This is help text" })
 
       render(<DateTimeInput {...props} />)
 
-      const helpIcon = screen.getByTestId("stTooltipIcon")
-      expect(helpIcon).toBeVisible()
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
 
-      // Note: Testing tooltip hover behavior requires interaction simulation which
-      // can be complex with BaseWeb tooltips. We verify the icon is present which
-      // indicates the help text is configured correctly.
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      expect(tooltipContent).toBeVisible()
+      expect(tooltipContent).toHaveTextContent("This is help text")
     })
 
     it("sets aria-label from element label", () => {
@@ -354,7 +364,8 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Min/max time constraints", () => {
-    it("applies time constraints when min date is selected", () => {
+    it("applies time constraints when min date is selected", async () => {
+      const user = userEvent.setup()
       const props = getProps({
         min: "2025/11/19, 09:00",
         max: "2025/11/20, 17:00",
@@ -365,15 +376,22 @@ describe("DateTimeInput widget", () => {
 
       const inputField = screen.getByTestId("stDateTimeInputField")
 
-      // Verify the default value is set
       expect(inputField).toHaveValue("2025/11/19, 12:00")
 
-      // Note: Testing the actual time dropdown constraints requires interacting
-      // with the BaseWeb time select component, which is complex in unit tests.
-      // The logic is covered by the useMemo hooks for minTimeForSelection.
+      await user.click(inputField)
+
+      const timeSelectDisplay = await screen.findByTestId(
+        "stDateTimeInputTimeDisplay"
+      )
+      await user.click(timeSelectDisplay)
+
+      expect(await screen.findByText("09:00")).toBeVisible()
+
+      expect(screen.queryByText("08:45")).not.toBeInTheDocument()
     })
 
-    it("applies time constraints when max date is selected", () => {
+    it("applies time constraints when max date is selected", async () => {
+      const user = userEvent.setup()
       const props = getProps({
         min: "2025/11/19, 09:00",
         max: "2025/11/20, 17:00",
@@ -384,12 +402,18 @@ describe("DateTimeInput widget", () => {
 
       const inputField = screen.getByTestId("stDateTimeInputField")
 
-      // Verify the default value is set
       expect(inputField).toHaveValue("2025/11/20, 15:00")
 
-      // Note: Testing the actual time dropdown constraints requires interacting
-      // with the BaseWeb time select component, which is complex in unit tests.
-      // The logic is covered by the useMemo hooks for maxTimeForSelection.
+      await user.click(inputField)
+
+      const timeSelectDisplay = await screen.findByTestId(
+        "stDateTimeInputTimeDisplay"
+      )
+      await user.click(timeSelectDisplay)
+
+      expect(await screen.findByText("17:00")).toBeVisible()
+
+      expect(screen.queryByText("17:15")).not.toBeInTheDocument()
     })
 
     it("does not restrict time when date is between min and max", () => {
@@ -403,7 +427,6 @@ describe("DateTimeInput widget", () => {
 
       const inputField = screen.getByTestId("stDateTimeInputField")
 
-      // Verify the default value is set (middle date, no time restrictions)
       expect(inputField).toHaveValue("2025/11/20, 12:00")
     })
   })
@@ -413,15 +436,13 @@ describe("DateTimeInput widget", () => {
       const props = getProps({ step: undefined })
       render(<DateTimeInput {...props} />)
 
-      // Component should render successfully with default step
       expect(screen.getByTestId("stDateTimeInput")).toBeVisible()
     })
 
     it("respects custom step value", () => {
-      const props = getProps({ step: 1800 }) // 30 minutes
+      const props = getProps({ step: 1800 })
       render(<DateTimeInput {...props} />)
 
-      // Component should render successfully with custom step
       expect(screen.getByTestId("stDateTimeInput")).toBeVisible()
     })
 

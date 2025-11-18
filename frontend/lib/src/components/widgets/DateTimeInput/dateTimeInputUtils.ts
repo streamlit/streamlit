@@ -22,6 +22,7 @@ import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+// Date-time format for communication (protobuf) support
 export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
 
 export const getStateFromWidgetMgr = (
@@ -37,7 +38,29 @@ export const getCurrStateFromProto = (
   element: DateTimeInputProto
 ): string | null => (element.value?.length ? element.value : null)
 
-export const stringToDate = (value: string | null): Date | null => {
+export const normalizeDateValue = (
+  date: Date | (Date | null | undefined)[] | null | undefined
+): Date | null => {
+  let singleDate: Date | null | undefined
+
+  if (Array.isArray(date)) {
+    singleDate = date.find((d): d is Date => d instanceof Date)
+  } else {
+    singleDate = date
+  }
+
+  if (!singleDate || Number.isNaN(singleDate.getTime())) {
+    return null
+  }
+
+  const normalized = new Date(singleDate.getTime())
+  normalized.setSeconds(0, 0)
+  return normalized
+}
+
+export const stringToDate = (
+  value: string | null | undefined
+): Date | null => {
   if (isNullOrUndefined(value) || value === "") {
     return null
   }
@@ -45,41 +68,7 @@ export const stringToDate = (value: string | null): Date | null => {
   if (!parsed.isValid()) {
     return null
   }
-  const dateValue = parsed.toDate()
-  dateValue.setSeconds(0, 0)
-  return dateValue
-}
-
-export const stringsToDate = (value: string | undefined): Date | null => {
-  if (!value) {
-    return null
-  }
-  const parsed = moment(value, DATE_TIME_FORMAT, true)
-  if (!parsed.isValid()) {
-    return null
-  }
-  const dateValue = parsed.toDate()
-  dateValue.setSeconds(0, 0)
-  return dateValue
-}
-
-const normalizeSingleDate = (date: Date | null | undefined): Date | null => {
-  if (!date || Number.isNaN(date.getTime())) {
-    return null
-  }
-  const normalized = new Date(date.getTime())
-  normalized.setSeconds(0, 0)
-  return normalized
-}
-
-export const normalizeDateValue = (
-  date: Date | (Date | null | undefined)[] | null | undefined
-): Date | null => {
-  if (Array.isArray(date)) {
-    const firstValid = date.find((d): d is Date => d instanceof Date)
-    return normalizeSingleDate(firstValid)
-  }
-  return normalizeSingleDate(date)
+  return normalizeDateValue(parsed.toDate())
 }
 
 export const isSameDay = (a: Date, b: Date): boolean =>
@@ -102,8 +91,8 @@ export const updateWidgetMgrState = (
   vws: ValueWithSource<string | null>,
   fragmentId?: string
 ): void => {
-  const minDateTime = stringsToDate(element.min)
-  const maxDateTime = stringsToDate(element.max)
+  const minDateTime = stringToDate(element.min)
+  const maxDateTime = stringToDate(element.max)
 
   if (vws.value) {
     const dateValue = stringToDate(vws.value)

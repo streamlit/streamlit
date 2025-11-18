@@ -239,6 +239,41 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             id2 = proto2.id
             assert id1 != id2
 
+    def test_min_value_now(self):
+        """Test min_value='now'."""
+
+        class MockDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2024, 1, 1, 12, 0, 0)
+
+        with patch("streamlit.elements.widgets.time_widgets.datetime", MockDatetime):
+            # We must use MockDatetime for the value passed in, because time_widgets.datetime
+            # is patched to MockDatetime, so isinstance(val, datetime) checks against MockDatetime.
+            # Real datetime objects would fail this check.
+            val = MockDatetime(2024, 1, 1, 13, 0, 0)
+            st.datetime_input("min_now", value=val, min_value="now")
+            proto = self.get_delta_from_queue().new_element.date_time_input
+
+            # min should be exactly the mocked now
+            assert proto.min == "2024/01/01, 12:00"
+
+    def test_max_value_now(self):
+        """Test max_value='now'."""
+
+        class MockDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2024, 1, 1, 12, 0, 0)
+
+        with patch("streamlit.elements.widgets.time_widgets.datetime", MockDatetime):
+            val = MockDatetime(2024, 1, 1, 11, 0, 0)
+            st.datetime_input("max_now", value=val, max_value="now")
+            proto = self.get_delta_from_queue().new_element.date_time_input
+
+            # max should be exactly the mocked now
+            assert proto.max == "2024/01/01, 12:00"
+
 
 def test_datetime_input_interaction():
     """Test interactions with an empty datetime_input widget."""

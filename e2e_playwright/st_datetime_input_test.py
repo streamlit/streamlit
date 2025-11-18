@@ -38,62 +38,82 @@ NUM_DATETIME_INPUTS = 15
 
 
 def test_datetime_input_widget_rendering(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the datetime input widgets are correctly rendered via screenshot matching."""
-    datetime_inputs = themed_app.get_by_test_id("stDateTimeInput")
+    datetime_inputs = app.get_by_test_id("stDateTimeInput")
     expect(datetime_inputs).to_have_count(NUM_DATETIME_INPUTS)
 
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 1 (base)"),
+        get_datetime_input(app, "Datetime input 1 (base)"),
         name="st_datetime_input-base",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 2 (help)"),
+        get_datetime_input(app, "Datetime input 2 (help)"),
         name="st_datetime_input-help",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 3 (disabled)"),
+        get_datetime_input(app, "Datetime input 3 (disabled)"),
         name="st_datetime_input-disabled",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 4 (hidden label)"),
+        get_datetime_input(app, "Datetime input 4 (hidden label)"),
         name="st_datetime_input-hidden_label",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 5 (collapsed label)"),
+        get_datetime_input(app, "Datetime input 5 (collapsed label)"),
         name="st_datetime_input-collapsed_label",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 6 (with callback)"),
+        get_datetime_input(app, "Datetime input 6 (with callback)"),
         name="st_datetime_input-callback",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 7 (step=60)"),
+        get_datetime_input(app, "Datetime input 7 (step=60)"),
         name="st_datetime_input-step_60",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 8 (empty)"),
+        get_datetime_input(app, "Datetime input 8 (empty)"),
         name="st_datetime_input-empty",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 9 (empty, from state)"),
+        get_datetime_input(app, "Datetime input 9 (empty, from state)"),
         name="st_datetime_input-state",
     )
     assert_snapshot(
         get_datetime_input(
-            themed_app,
+            app,
             re.compile(r"^Datetime input 10"),
         ),
         name="st_datetime_input-markdown_label",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 11 (width=200px)"),
+        get_datetime_input(app, "Datetime input 11 (width=200px)"),
         name="st_datetime_input-width_200px",
     )
     assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 12 (width='stretch')"),
+        get_datetime_input(app, "Datetime input 12 (width='stretch')"),
         name="st_datetime_input-width_stretch",
+    )
+
+
+def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the datetime input dropdown is correctly rendered."""
+    datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
+    datetime_input.locator("input").click()
+
+    # Wait for the calendar to be visible
+    calendar = app.locator('[data-baseweb="calendar"]')
+    expect(calendar).to_be_visible()
+
+    assert_snapshot(calendar, name="st_datetime_input-dropdown")
+
+
+def test_themed_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that datetime input renders correctly in both light and dark themes."""
+    assert_snapshot(
+        get_datetime_input(themed_app, "Datetime input 1 (base)"),
+        name="st_datetime_input-themed",
     )
 
 
@@ -264,9 +284,12 @@ def test_dynamic_props_update(app: Page):
 def test_custom_theme_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
     apply_theme_via_window(
         themed_app,
+        primaryColor="#1A6CE7",
+        secondaryBackgroundColor="#F0F8FF",
+        baseRadius="1.2rem",
         font={
-            "fontFamily": "Comic Sans, sans-serif",
-            "monoFontFamily": "Comic Code, monospace",
+            "fontFamily": "Courier New, monospace",
+            "monoFontFamily": "Courier New, monospace",
         },
     )
     wait_for_app_loaded(themed_app)

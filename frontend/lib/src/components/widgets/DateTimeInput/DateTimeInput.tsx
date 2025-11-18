@@ -54,7 +54,6 @@ import {
   getStateFromWidgetMgr,
   isSameDay,
   normalizeDateValue,
-  stringsToDate,
   stringToDate,
   updateWidgetMgrState,
 } from "./dateTimeInputUtils"
@@ -89,18 +88,13 @@ function DateTimeInput({
     fragmentId,
   })
 
-  const [error, setError] = useState<string | null>(null)
-
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
-  const step = useMemo(
-    () => (element.step ? Number(element.step) : 900),
-    [element.step]
-  )
+  const step = element.step ? Number(element.step) : 900
 
-  const minDateTime = useMemo(() => stringsToDate(element.min), [element.min])
-  const maxDateTime = useMemo(() => stringsToDate(element.max), [element.max])
+  const minDateTime = useMemo(() => stringToDate(element.min), [element.min])
+  const maxDateTime = useMemo(() => stringToDate(element.max), [element.max])
 
   // committedDate is the value from the widget manager
   const committedDate = useMemo(() => stringToDate(value), [value])
@@ -115,8 +109,8 @@ function DateTimeInput({
 
   const selectedDate = pendingDate
 
-  const minDate = useMemo(() => minDateTime ?? undefined, [minDateTime])
-  const maxDate = useMemo(() => maxDateTime ?? undefined, [maxDateTime])
+  const minDate = minDateTime ?? undefined
+  const maxDate = maxDateTime ?? undefined
 
   const minTimeForSelection = useMemo(() => {
     if (!selectedDate || !minDateTime) {
@@ -138,33 +132,35 @@ function DateTimeInput({
       : undefined
   }, [selectedDate, maxDateTime])
 
-  const dateMask = useMemo(
-    () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
-    [element.format]
-  )
+  const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
 
-  const dateFormat = useMemo(
-    () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
-    [element.format]
-  )
+  const dateFormat = element.format.replaceAll("Y", "y").replaceAll("D", "d")
 
-  const formatString = useMemo(() => `${dateFormat}, HH:mm`, [dateFormat])
+  const formatString = `${dateFormat}, HH:mm`
 
-  const mask = useMemo(() => `${dateMask}, 99:99`, [dateMask])
+  const mask = `${dateMask}, 99:99`
 
-  const placeholder = useMemo(
-    () => `${element.format}, HH:MM`,
-    [element.format]
-  )
+  const placeholder = `${element.format}, HH:MM`
 
   const defaultValue = element.default ?? ""
   const clearable = defaultValue.length === 0 && !disabled
 
-  const createErrorMessage = useCallback((): string => {
-    const minStr = moment(minDateTime).format(formatString)
-    const maxStr = moment(maxDateTime).format(formatString)
-    return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minStr} and ${maxStr}.`
-  }, [minDateTime, maxDateTime, formatString])
+  const error = useMemo(() => {
+    if (!pendingDate) {
+      return null
+    }
+
+    if (
+      (minDateTime && pendingDate < minDateTime) ||
+      (maxDateTime && pendingDate > maxDateTime)
+    ) {
+      const minStr = moment(minDateTime).format(formatString)
+      const maxStr = moment(maxDateTime).format(formatString)
+      return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minStr} and ${maxStr}.`
+    }
+
+    return null
+  }, [pendingDate, minDateTime, maxDateTime, formatString])
 
   const handleChange = useCallback(
     ({
@@ -172,20 +168,7 @@ function DateTimeInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      // Reset error state
-      setError(null)
-
       const normalizedDate = normalizeDateValue(date)
-
-      // Validate against min/max bounds
-      if (normalizedDate) {
-        if (
-          (minDateTime && normalizedDate < minDateTime) ||
-          (maxDateTime && normalizedDate > maxDateTime)
-        ) {
-          setError(createErrorMessage())
-        }
-      }
 
       // Update pending state only - don't commit to widget manager yet
       setPendingDate(normalizedDate)
@@ -193,7 +176,7 @@ function DateTimeInput({
       // Keep the modal open so the user can continue selecting
       datepickerRef.current?.open?.()
     },
-    [minDateTime, maxDateTime, createErrorMessage]
+    []
   )
 
   const handleClose = useCallback((): void => {

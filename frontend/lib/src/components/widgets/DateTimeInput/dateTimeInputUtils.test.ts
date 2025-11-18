@@ -25,7 +25,6 @@ import {
   combineDateAndTime,
   isSameDay,
   normalizeDateValue,
-  stringsToDate,
   stringToDate,
   updateWidgetMgrState,
 } from "./dateTimeInputUtils"
@@ -38,15 +37,11 @@ describe("stringToDate", () => {
     expect(result?.getSeconds()).toBe(0)
   })
 
-  it("returns null for invalid datetime strings", () => {
+  it("returns null for invalid or falsy values", () => {
     expect(stringToDate("invalid")).toBeNull()
     expect(stringToDate(null)).toBeNull()
-  })
-})
-
-describe("stringsToDate", () => {
-  it("returns null when value is undefined", () => {
-    expect(stringsToDate(undefined)).toBeNull()
+    expect(stringToDate(undefined)).toBeNull()
+    expect(stringToDate("")).toBeNull()
   })
 })
 

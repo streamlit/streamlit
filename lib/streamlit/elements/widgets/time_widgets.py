@@ -83,7 +83,7 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
-DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
@@ -302,7 +302,7 @@ def _default_max_datetime(base_date: date) -> datetime:
 
 
 def _datetime_to_proto_string(value: datetime) -> str:
-    return _normalize_datetime_value(value).strftime(DATETIME_UI_FORMAT)
+    return _normalize_datetime_value(value).strftime(_DATETIME_UI_FORMAT)
 
 
 @dataclass(frozen=True)
@@ -439,7 +439,7 @@ class DateTimeInputSerde:
         if ui_value is None:
             return self.value
         deserialized = _normalize_datetime_value(
-            datetime.strptime(ui_value, DATETIME_UI_FORMAT)
+            datetime.strptime(ui_value, _DATETIME_UI_FORMAT)
         )
         # Validate against min/max bounds
         # If the value is out of bounds, return the previous valid value
@@ -883,15 +883,15 @@ class TimeWidgetsMixin:
             - ``None``: The widget initializes with no value and returns ``None``
               until the user selects a datetime.
 
-        min_value : datetime.datetime, datetime.date, datetime.time, str, or None
+        min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
             The minimum selectable datetime. Accepts the same input types as
-            ``value`` except ``None``. When ``None`` (default), the minimum selectable
+            ``value``. When ``None`` (default), the minimum selectable
             datetime is ten years before the initial value. If no initial value is set,
             the minimum selectable datetime is ten years before today at ``00:00``.
 
-        max_value : datetime.datetime, datetime.date, datetime.time, str, or None
+        max_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
             The maximum selectable datetime. Accepts the same input types as
-            ``value`` except ``None``. When ``None`` (default), the maximum selectable
+            ``value``. When ``None`` (default), the maximum selectable
             datetime is ten years after the initial value. If no initial value is set,
             the maximum selectable datetime is ten years after today at ``23:59``.
 
