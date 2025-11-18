@@ -9,7 +9,7 @@ Status: Draft
 ## Summary
 
 This proposal adds support for session-scoped values in `st.cache_resource` and `st.connection`. It also proposes using
-this new support to implement a new connection type, `snowflake-rcr`, which handles creating [restricted caller's rights sessions](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#label-spcs-additional-considerations-configuring-callers-rights) when running in Snowpark Conatiner Services.
+this new support to implement a new connection type, `snowflake-rcr`, which handles creating [restricted caller's rights sessions](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#label-spcs-additional-considerations-configuring-callers-rights) when running in Snowpark Container Services.
 
 ## Problem
 
@@ -97,7 +97,7 @@ def cache_resource(
         This is only useful for caches which will evict normally: Those with
         ``max_entries`` or ``ttl`` settings, or those using ``session_scoped=True``.
         Note that eviction only happens on read - so ``ttl`` should not be used
-        to guarantee timely cleanup, only cleanup when expired resources are accesssed.
+        to guarantee timely cleanup, only cleanup when expired resources are accessed.
 
         This will NOT be called when an app is shut down for global resources.
     """
