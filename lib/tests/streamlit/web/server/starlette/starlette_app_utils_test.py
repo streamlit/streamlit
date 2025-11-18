@@ -98,7 +98,9 @@ class StarletteServerUtilsTest(unittest.TestCase):
         decoded = starlette_app_utils.decode_signed_value(secret, name, signed_value)
         assert decoded.decode("utf-8") == value
 
-    @patch("streamlit.web.server.starlette_app_utils._tornado_decode_signed_value")
+    @patch(
+        "streamlit.web.server.starlette.starlette_app_utils._tornado_decode_signed_value"
+    )
     def test_decode_signed_value_fallback(self, mock_tornado_decode):
         """Test that it falls back gracefully (currently returns None) if Tornado is missing or mocking fails."""
         # Simulate tornado missing by mocking the internal import reference to None
