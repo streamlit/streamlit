@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Starlette application usable as alternative to Tornado."""
+"""Prototype Starlette application used while migrating away from Tornado."""
 
 from __future__ import annotations
 
