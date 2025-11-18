@@ -29,6 +29,7 @@ uvicorn
 httpx # only for unit tests
 websockets
 itsdangerous
+uvloop
 
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as

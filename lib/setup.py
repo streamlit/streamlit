@@ -91,6 +91,7 @@ EXTRA_REQUIRES = {
         "anyio>=4.0.0",
         "websockets>=12.0.0",
         "itsdangerous>=2.1.2",
+        "uvloop",
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
