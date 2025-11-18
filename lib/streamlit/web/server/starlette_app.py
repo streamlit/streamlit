@@ -500,6 +500,41 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 runtime.disconnect_session(session_id)
             await client.aclose()
 
+    def _parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
+        if total_size <= 0:
+            raise ValueError("empty content")
+
+        units, sep, range_spec = range_header.partition("=")
+        if units.strip().lower() != "bytes" or sep == "" or "," in range_spec:
+            raise ValueError("invalid range")
+
+        range_spec = range_spec.strip()
+        if range_spec.startswith("-"):
+            suffix = int(range_spec[1:])
+            if suffix <= 0:
+                raise ValueError("invalid suffix range")
+            if suffix >= total_size:
+                return 0, total_size - 1
+            return total_size - suffix, total_size - 1
+
+        start_str, sep, end_str = range_spec.partition("-")
+        if not start_str:
+            raise ValueError("missing range start")
+
+        start = int(start_str)
+        if start < 0 or start >= total_size:
+            raise ValueError("start out of range")
+
+        if sep == "" or not end_str:
+            end = total_size - 1
+        else:
+            end = int(end_str)
+            if end < start:
+                raise ValueError("end before start")
+            end = min(end, total_size - 1)
+
+        return start, end
+
     async def _media_endpoint(request: Request) -> Response:
         file_id = request.path_params["file_id"]
 
@@ -521,8 +556,34 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 disposition = f"filename*=utf-8''{quote(filename)}"
             headers["Content-Disposition"] = f"attachment; {disposition}"
 
-        response = StreamingResponse(
-            iter([media_file.content]),
+        headers["Accept-Ranges"] = "bytes"
+        content = media_file.content
+        content_length = len(content)
+        status_code = 200
+        range_header = request.headers.get("range")
+        if range_header:
+            try:
+                range_start, range_end = _parse_range_header(
+                    range_header, content_length
+                )
+            except ValueError:
+                raise HTTPException(
+                    status_code=416,
+                    detail="Invalid range",
+                    headers={"Content-Range": f"bytes */{content_length}"},
+                )
+            status_code = 206
+            content = content[range_start : range_end + 1]
+            headers["Content-Range"] = (
+                f"bytes {range_start}-{range_end}/{content_length}"
+            )
+            headers["Content-Length"] = str(len(content))
+        else:
+            headers["Content-Length"] = str(content_length)
+
+        response = Response(
+            content,
+            status_code=status_code,
             media_type=media_file.mimetype or "text/plain",
             headers=headers,
         )

@@ -221,6 +221,48 @@ def test_media_endpoint_download_headers(
     )
 
 
+def test_media_endpoint_supports_range_requests(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure the media endpoint serves byte ranges for streaming clients."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"abcdefghij", "video/mp4", MediaFileKind.MEDIA, "clip.mp4"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url, headers={"Range": "bytes=2-5"})
+
+    assert response.status_code == HTTPStatus.PARTIAL_CONTENT
+    assert response.content == b"cdef"
+    assert response.headers["Content-Range"] == "bytes 2-5/10"
+    assert response.headers["Accept-Ranges"] == "bytes"
+
+
+def test_media_endpoint_rejects_invalid_ranges(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure the media endpoint rejects unsatisfiable range headers."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"abcd", "video/mp4", MediaFileKind.MEDIA, "clip.mp4"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url, headers={"Range": "bytes=50-60"})
+
+    assert response.status_code == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
+    assert response.headers["Content-Range"] == "bytes */4"
+
+
 def test_upload_put_adds_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
