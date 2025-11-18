@@ -398,6 +398,12 @@ class ScriptRunner:
         """True if the calling function is running in the script thread."""
         return self._script_thread == threading.current_thread()
 
+    def _send_query_param_update(self, ctx: ScriptRunContext) -> None:
+        """Send the current query string to the frontend."""
+        msg = ForwardMsg()
+        msg.page_info_changed.query_string = ctx.query_string
+        ctx.enqueue(msg)
+
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
         This private function is called by ScriptRunContext only.
@@ -509,6 +515,7 @@ class ScriptRunner:
             )
 
             ctx = self._get_script_run_ctx()
+            previous_query_string = ctx.query_string
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
@@ -538,6 +545,13 @@ class ScriptRunner:
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
             )
+
+            # The frontend may miss the query-string update we send while the old
+            # page is shutting down if a rerun interrupts the script mid-flight.
+            # Re-announce the final value once the rerun completes so the browser
+            # always ends up with the same query params as the backend.
+            if ctx.query_string != previous_query_string:
+                self._send_query_param_update(ctx)
 
             self.on_event.send(
                 self,
