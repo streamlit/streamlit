@@ -248,7 +248,7 @@ function Slider({
         thumb2ValueDiv
       )
     }
-  }, [formattedValueArr, thumbRefs, thumbValueRefs]) // Ensure this effect runs when dependencies change
+  }, [thumbRefs, thumbValueRefs]) // Ensure this effect runs when dependencies change
 
   // Style that will be applied to BaseWeb's <InnerTrack>.
   const innerTrackStyle = useCallback(
