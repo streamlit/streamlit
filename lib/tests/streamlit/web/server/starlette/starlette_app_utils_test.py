@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for starlette_server_utils.py."""
+"""Unit tests for starlette_app_utils.py."""
 
 from __future__ import annotations
 
@@ -25,22 +25,22 @@ import pytest
 from tornado.util import _websocket_mask
 from tornado.web import create_signed_value
 
-from streamlit.web.server.starlette import starlette_server_utils
+from streamlit.web.server.starlette import starlette_app_utils
 
 
 class StarletteServerUtilsTest(unittest.TestCase):
     def test_parse_range_header_bytes(self):
         """Test parsing standard byte ranges."""
         # Entire file
-        assert starlette_server_utils.parse_range_header("bytes=0-", 100) == (0, 99)
+        assert starlette_app_utils.parse_range_header("bytes=0-", 100) == (0, 99)
         # First 10 bytes
-        assert starlette_server_utils.parse_range_header("bytes=0-9", 100) == (0, 9)
+        assert starlette_app_utils.parse_range_header("bytes=0-9", 100) == (0, 9)
         # Middle range
-        assert starlette_server_utils.parse_range_header("bytes=10-19", 100) == (10, 19)
+        assert starlette_app_utils.parse_range_header("bytes=10-19", 100) == (10, 19)
         # Last 10 bytes (suffix)
-        assert starlette_server_utils.parse_range_header("bytes=-10", 100) == (90, 99)
+        assert starlette_app_utils.parse_range_header("bytes=-10", 100) == (90, 99)
         # Range exceeding end caps at end
-        assert starlette_server_utils.parse_range_header("bytes=90-200", 100) == (
+        assert starlette_app_utils.parse_range_header("bytes=90-200", 100) == (
             90,
             99,
         )
@@ -49,27 +49,27 @@ class StarletteServerUtilsTest(unittest.TestCase):
         """Test invalid range headers raise ValueError."""
         # Empty content
         with pytest.raises(ValueError, match="empty content"):
-            starlette_server_utils.parse_range_header("bytes=0-10", 0)
+            starlette_app_utils.parse_range_header("bytes=0-10", 0)
 
         # Invalid units
         with pytest.raises(ValueError, match="invalid range"):
-            starlette_server_utils.parse_range_header("bits=0-10", 100)
+            starlette_app_utils.parse_range_header("bits=0-10", 100)
 
         # Multiple ranges not supported
         with pytest.raises(ValueError, match="invalid range"):
-            starlette_server_utils.parse_range_header("bytes=0-10, 20-30", 100)
+            starlette_app_utils.parse_range_header("bytes=0-10, 20-30", 100)
 
         # Invalid start
         with pytest.raises(ValueError, match="invalid suffix range"):
-            starlette_server_utils.parse_range_header("bytes=-5-10", 100)
+            starlette_app_utils.parse_range_header("bytes=-5-10", 100)
 
         # Start > total
         with pytest.raises(ValueError, match="start out of range"):
-            starlette_server_utils.parse_range_header("bytes=150-200", 100)
+            starlette_app_utils.parse_range_header("bytes=150-200", 100)
 
         # End before start
         with pytest.raises(ValueError, match="end before start"):
-            starlette_server_utils.parse_range_header("bytes=50-40", 100)
+            starlette_app_utils.parse_range_header("bytes=50-40", 100)
 
     def test_websocket_mask_compatibility(self):
         """Test that websocket_mask matches Tornado's implementation."""
@@ -77,12 +77,12 @@ class StarletteServerUtilsTest(unittest.TestCase):
         data = b"hello world"
 
         expected = _websocket_mask(mask, data)
-        actual = starlette_server_utils.websocket_mask(mask, data)
+        actual = starlette_app_utils.websocket_mask(mask, data)
         assert actual == expected
 
         # It should be reversible (XOR)
         masked = actual
-        unmasked = starlette_server_utils.websocket_mask(mask, masked)
+        unmasked = starlette_app_utils.websocket_mask(mask, masked)
         assert unmasked == data
 
     def test_decode_signed_value_compatibility(self):
@@ -95,10 +95,10 @@ class StarletteServerUtilsTest(unittest.TestCase):
         signed_value = create_signed_value(secret, name, value)
 
         # Decode using our utility
-        decoded = starlette_server_utils.decode_signed_value(secret, name, signed_value)
+        decoded = starlette_app_utils.decode_signed_value(secret, name, signed_value)
         assert decoded.decode("utf-8") == value
 
-    @patch("streamlit.web.server.starlette_server_utils._tornado_decode_signed_value")
+    @patch("streamlit.web.server.starlette_app_utils._tornado_decode_signed_value")
     def test_decode_signed_value_fallback(self, mock_tornado_decode):
         """Test that it falls back gracefully (currently returns None) if Tornado is missing or mocking fails."""
         # Simulate tornado missing by mocking the internal import reference to None
@@ -110,7 +110,7 @@ class StarletteServerUtilsTest(unittest.TestCase):
         # Since currently it wraps Tornado, we just verify it calls it.
         mock_tornado_decode.return_value = b"decoded"
 
-        result = starlette_server_utils.decode_signed_value("secret", "name", "value")
+        result = starlette_app_utils.decode_signed_value("secret", "name", "value")
         assert result == b"decoded"
         mock_tornado_decode.assert_called_once()
 
@@ -120,7 +120,7 @@ class StarletteServerUtilsTest(unittest.TestCase):
         timestamp = int(time.time())
 
         # Generate string
-        cookie_val = starlette_server_utils.generate_xsrf_token_string(token, timestamp)
+        cookie_val = starlette_app_utils.generate_xsrf_token_string(token, timestamp)
 
         # Verify format
         assert cookie_val.startswith("2|")
@@ -128,8 +128,8 @@ class StarletteServerUtilsTest(unittest.TestCase):
         assert len(parts) == 4
 
         # Decode string
-        decoded_token, decoded_timestamp = (
-            starlette_server_utils.decode_xsrf_token_string(cookie_val)
+        decoded_token, decoded_timestamp = starlette_app_utils.decode_xsrf_token_string(
+            cookie_val
         )
 
         assert decoded_token == token
@@ -141,8 +141,8 @@ class StarletteServerUtilsTest(unittest.TestCase):
         hex_token = binascii.b2a_hex(token).decode("ascii")
 
         # decode_xsrf_token_string treats anything not starting with '2|' as v1
-        decoded_token, decoded_timestamp = (
-            starlette_server_utils.decode_xsrf_token_string(hex_token)
+        decoded_token, decoded_timestamp = starlette_app_utils.decode_xsrf_token_string(
+            hex_token
         )
 
         assert decoded_token == token
@@ -152,11 +152,11 @@ class StarletteServerUtilsTest(unittest.TestCase):
 
     def test_decode_xsrf_token_invalid(self):
         """Test decoding invalid tokens returns (None, None)."""
-        assert starlette_server_utils.decode_xsrf_token_string("invalid") == (
+        assert starlette_app_utils.decode_xsrf_token_string("invalid") == (
             None,
             None,
         )
-        assert starlette_server_utils.decode_xsrf_token_string("2|bad|format") == (
+        assert starlette_app_utils.decode_xsrf_token_string("2|bad|format") == (
             None,
             None,
         )
