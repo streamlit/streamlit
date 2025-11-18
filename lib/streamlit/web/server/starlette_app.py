@@ -28,9 +28,6 @@ from shlex import quote
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
-from tornado.util import _websocket_mask
-from tornado.web import decode_signed_value
-
 from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -45,6 +42,7 @@ from streamlit.runtime.session_manager import (
     SessionClientDisconnectedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server import starlette_server_utils
 from streamlit.web.server.app_static_file_handler import (
     MAX_APP_STATIC_FILE_SIZE,
     SAFE_APP_STATIC_FILE_EXTENSIONS,
@@ -140,7 +138,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         timestamp = int(time.time())
 
     mask = os.urandom(4)
-    masked_token = _websocket_mask(mask, token_bytes)
+    masked_token = starlette_server_utils.websocket_mask(mask, token_bytes)
     cookie_value = "2|{}|{}|{}".format(
         binascii.b2a_hex(mask).decode("ascii"),
         binascii.b2a_hex(masked_token).decode("ascii"),
@@ -164,7 +162,7 @@ def _decode_xsrf_cookie(
             _, mask_hex, masked_hex, timestamp_str = value.split("|")
             mask = binascii.a2b_hex(mask_hex.encode("ascii"))
             masked = binascii.a2b_hex(masked_hex.encode("ascii"))
-            token = _websocket_mask(mask, masked)
+            token = starlette_server_utils.websocket_mask(mask, masked)
             return token, int(timestamp_str)
 
         token = binascii.a2b_hex(value.encode("ascii"))
@@ -208,7 +206,9 @@ def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[st
     if isinstance(signed_value, str):
         signed_value = signed_value.encode("latin-1")
 
-    decoded = decode_signed_value(secret, "_streamlit_user", signed_value)
+    decoded = starlette_server_utils.decode_signed_value(
+        secret, "_streamlit_user", signed_value
+    )
     if decoded is None:
         return {}
 
@@ -501,41 +501,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 runtime.disconnect_session(session_id)
             await client.aclose()
 
-    def _parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
-        if total_size <= 0:
-            raise ValueError("empty content")
-
-        units, sep, range_spec = range_header.partition("=")
-        if units.strip().lower() != "bytes" or sep == "" or "," in range_spec:
-            raise ValueError("invalid range")
-
-        range_spec = range_spec.strip()
-        if range_spec.startswith("-"):
-            suffix = int(range_spec[1:])
-            if suffix <= 0:
-                raise ValueError("invalid suffix range")
-            if suffix >= total_size:
-                return 0, total_size - 1
-            return total_size - suffix, total_size - 1
-
-        start_str, sep, end_str = range_spec.partition("-")
-        if not start_str:
-            raise ValueError("missing range start")
-
-        start = int(start_str)
-        if start < 0 or start >= total_size:
-            raise ValueError("start out of range")
-
-        if sep == "" or not end_str:
-            end = total_size - 1
-        else:
-            end = int(end_str)
-            if end < start:
-                raise ValueError("end before start")
-            end = min(end, total_size - 1)
-
-        return start, end
-
     async def _media_endpoint(request: Request) -> Response:
         file_id = request.path_params["file_id"]
 
@@ -565,7 +530,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         range_header = request.headers.get("range")
         if range_header:
             try:
-                range_start, range_end = _parse_range_header(
+                range_start, range_end = starlette_server_utils.parse_range_header(
                     range_header, content_length
                 )
             except ValueError:
@@ -632,7 +597,24 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                 status_code=400, detail=f"Expected 1 file, but got {len(uploads)}"
             )
 
+        max_size_mb = config.get_option("server.maxUploadSize")
+        max_size_bytes = max_size_mb * 1024 * 1024
+
+        # 1. Fast fail via header (if present)
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+
         upload = uploads[0]
+
+        # 2. Check actual file size (python-multipart spools to disk, so we can check size before reading into RAM)
+        # If the underlying file is spooled/on-disk, we can check its size
+        upload.file.seek(0, 2)  # Seek to end
+        size = upload.file.tell()
+        upload.file.seek(0)  # Reset
+        if size > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+
         data = await upload.read()
         upload.file.close()
 
