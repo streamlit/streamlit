@@ -25,41 +25,39 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import type DatepickerClass from "baseui/datepicker/datepicker"
-import { ChevronDown } from "baseui/icon"
-import { PLACEMENT } from "baseui/popover"
 import moment from "moment"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
-import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
-import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "~lib/hooks/useBasicWidgetState"
+import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
-import {
-  isNullOrUndefined,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
+import { createDateTimePickerOverrides } from "./createDateTimePickerOverrides"
+import {
+  combineDateAndTime,
+  DATE_TIME_FORMAT,
+  getCurrStateFromProto,
+  getDefaultStateFromProto,
+  getStateFromWidgetMgr,
+  isSameDay,
+  normalizeDateValue,
+  stringsToDate,
+  stringToDate,
+  updateWidgetMgrState,
+} from "./dateTimeInputUtils"
 
 export interface Props {
   disabled: boolean
@@ -211,292 +209,17 @@ function DateTimeInput({
   }, [pendingDate, value, setValueWithSource])
 
   const inputOverrides = useMemo(
-    () => ({
-      Popover: {
-        props: {
-          ignoreBoundary: isInSidebar,
-          placement: PLACEMENT.bottomLeft,
-          overrides: {
-            Body: {
-              style: {
-                marginTop: theme.spacing.px,
-              },
-            },
-          },
-        },
-      },
-      CalendarContainer: {
-        style: {
-          fontSize: theme.fontSizes.sm,
-          paddingRight: theme.spacing.sm,
-          paddingLeft: theme.spacing.sm,
-          paddingBottom: theme.spacing.sm,
-          paddingTop: theme.spacing.sm,
-        },
-      },
-      Week: {
-        style: {
-          fontSize: theme.fontSizes.sm,
-        },
-      },
-      Day: {
-        style: ({
-          $pseudoHighlighted,
-          $pseudoSelected,
-          $selected,
-          $isHovered,
-        }: {
-          $pseudoHighlighted: boolean
-          $pseudoSelected: boolean
-          $selected: boolean
-          $isHovered: boolean
-        }) => ({
-          fontSize: theme.fontSizes.sm,
-          lineHeight: theme.lineHeights.base,
-          "::before": {
-            backgroundColor:
-              $selected || $pseudoSelected || $pseudoHighlighted || $isHovered
-                ? `${theme.colors.darkenedBgMix15} !important`
-                : theme.colors.transparent,
-          },
-          "::after": {
-            borderColor: theme.colors.transparent,
-          },
-          ...(hasLightBackgroundColor(theme) &&
-          $isHovered &&
-          $pseudoSelected &&
-          !$selected
-            ? {
-                color: theme.colors.secondaryBg,
-              }
-            : {}),
-        }),
-      },
-      PrevButton: {
-        style: () => ({
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          ":active": {
-            backgroundColor: theme.colors.transparent,
-          },
-          ":focus": {
-            backgroundColor: theme.colors.transparent,
-            outline: 0,
-          },
-        }),
-      },
-      NextButton: {
-        style: () => ({
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          ":active": {
-            backgroundColor: theme.colors.transparent,
-          },
-          ":focus": {
-            backgroundColor: theme.colors.transparent,
-            outline: 0,
-          },
-        }),
-      },
-      Input: {
-        props: {
-          maskChar: null,
-          endEnhancer: error && (
-            <Tooltip
-              content={<StreamlitMarkdown source={error} allowHTML={false} />}
-              placement={Placement.TOP_RIGHT}
-              error
-            >
-              <Icon content={ErrorOutline} size="lg" />
-            </Tooltip>
-          ),
-          overrides: {
-            EndEnhancer: {
-              style: {
-                color: error
-                  ? theme.colors.redTextColor
-                  : theme.colors.grayTextColor,
-                backgroundColor: theme.colors.transparent,
-              },
-            },
-            Root: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => {
-                const borderColor = getBorderColor(theme.colors, $isFocused)
-                return {
-                  borderLeftWidth: theme.sizes.borderWidth,
-                  borderRightWidth: theme.sizes.borderWidth,
-                  borderTopWidth: theme.sizes.borderWidth,
-                  borderBottomWidth: theme.sizes.borderWidth,
-                  paddingRight: theme.spacing.twoXS,
-                  borderTopColor: borderColor,
-                  borderRightColor: borderColor,
-                  borderBottomColor: borderColor,
-                  borderLeftColor: borderColor,
-                  ...(error && {
-                    backgroundColor: theme.colors.redBackgroundColor,
-                  }),
-                }
-              },
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            InputContainer: {
-              style: {
-                backgroundColor: "transparent",
-              },
-            },
-            Input: {
-              style: {
-                fontWeight: theme.fontWeights.normal,
-                paddingRight: theme.spacing.sm,
-                paddingLeft: theme.spacing.md,
-                paddingBottom: theme.spacing.sm,
-                paddingTop: theme.spacing.sm,
-                lineHeight: theme.lineHeights.inputWidget,
-                "::placeholder": {
-                  color: theme.colors.fadedText60,
-                },
-                ...(error && {
-                  color: theme.colors.redTextColor,
-                }),
-              },
-              props: {
-                "data-testid": "stDateTimeInputField",
-              },
-            },
-          },
-        },
-      },
-      TimeSelectContainer: {
-        style: {
-          paddingTop: theme.spacing.sm,
-          paddingBottom: theme.spacing.none,
-        },
-      },
-      TimeSelectFormControl: {
-        style: {
-          marginBottom: theme.spacing.none,
-        },
-      },
-      TimeSelect: {
-        props: {
-          step,
-          format: "24" as const,
-          disabled,
-          nullable: clearable,
-          minTime: minTimeForSelection,
-          maxTime: maxTimeForSelection,
-          overrides: {
-            Select: {
-              props: {
-                disabled,
-                overrides: {
-                  ControlContainer: {
-                    style: ({ $isFocused }: { $isFocused: boolean }) => {
-                      const borderColor = getBorderColor(
-                        theme.colors,
-                        $isFocused
-                      )
-                      return {
-                        height: theme.sizes.minElementHeight,
-                        borderLeftWidth: theme.sizes.borderWidth,
-                        borderRightWidth: theme.sizes.borderWidth,
-                        borderTopWidth: theme.sizes.borderWidth,
-                        borderBottomWidth: theme.sizes.borderWidth,
-                        borderTopColor: borderColor,
-                        borderRightColor: borderColor,
-                        borderBottomColor: borderColor,
-                        borderLeftColor: borderColor,
-                      }
-                    },
-                  },
-                  IconsContainer: {
-                    style: () => ({
-                      paddingRight: theme.spacing.sm,
-                    }),
-                  },
-                  ValueContainer: {
-                    style: () => ({
-                      lineHeight: theme.lineHeights.inputWidget,
-                      paddingRight: theme.spacing.sm,
-                      paddingLeft: theme.spacing.md,
-                      paddingBottom: theme.spacing.sm,
-                      paddingTop: theme.spacing.sm,
-                    }),
-                  },
-                  SingleValue: {
-                    style: {
-                      fontWeight: theme.fontWeights.normal,
-                    },
-                    props: {
-                      "data-testid": "stDateTimeInputTimeDisplay",
-                    },
-                  },
-                  Dropdown: {
-                    style: () => ({
-                      paddingTop: theme.spacing.none,
-                      paddingBottom: theme.spacing.none,
-                      boxShadow: "none",
-                      maxHeight: theme.sizes.maxDropdownHeight,
-                    }),
-                  },
-                  DropdownListItem: {
-                    component: StyledTimeDropdownListItem,
-                  },
-                  Popover: {
-                    props: {
-                      ignoreBoundary: isInSidebar,
-                      overrides: {
-                        Body: {
-                          style: () => ({
-                            marginTop: theme.spacing.px,
-                          }),
-                        },
-                      },
-                    },
-                  },
-                  Placeholder: {
-                    style: () => ({
-                      color: theme.colors.fadedText60,
-                    }),
-                  },
-                  SelectArrow: {
-                    component: ChevronDown,
-                    props: {
-                      overrides: {
-                        Svg: {
-                          style: () => ({
-                            width: theme.iconSizes.xl,
-                            height: theme.iconSizes.xl,
-                          }),
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
+    () =>
+      createDateTimePickerOverrides({
+        theme,
+        isInSidebar,
+        step,
+        minTime: minTimeForSelection,
+        maxTime: maxTimeForSelection,
+        disabled,
+        clearable,
+        error,
+      }),
     [
       theme,
       isInSidebar,
@@ -547,121 +270,6 @@ function DateTimeInput({
       />
     </div>
   )
-}
-
-function getStateFromWidgetMgr(
-  widgetMgr: WidgetStateManager,
-  element: DateTimeInputProto
-): string | null {
-  return widgetMgr.getStringValue(element) ?? null
-}
-
-function getDefaultStateFromProto(element: DateTimeInputProto): string | null {
-  return element.default?.length ? element.default : null
-}
-
-function getCurrStateFromProto(element: DateTimeInputProto): string | null {
-  return element.value?.length ? element.value : null
-}
-
-function updateWidgetMgrState(
-  element: DateTimeInputProto,
-  widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<string | null>,
-  fragmentId?: string
-): void {
-  const minDateTime = stringsToDate(element.min)
-  const maxDateTime = stringsToDate(element.max)
-
-  // Validate the value against min/max bounds
-  if (vws.value) {
-    const dateValue = stringToDate(vws.value)
-    if (dateValue) {
-      const isOutOfBounds =
-        (minDateTime && dateValue < minDateTime) ||
-        (maxDateTime && dateValue > maxDateTime)
-
-      // Only update widget state if the value is valid
-      if (!isOutOfBounds) {
-        widgetMgr.setStringValue(
-          element,
-          vws.value,
-          { fromUi: vws.fromUi },
-          fragmentId
-        )
-      }
-      // If out of bounds, don't update the widget manager
-      // This prevents the invalid value from being sent to the backend
-      return
-    }
-  }
-
-  // Allow null/empty values
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
-}
-
-function stringToDate(value: string | null): Date | null {
-  if (isNullOrUndefined(value) || value === "") {
-    return null
-  }
-  const parsed = moment(value, DATE_TIME_FORMAT, true)
-  if (!parsed.isValid()) {
-    return null
-  }
-  const dateValue = parsed.toDate()
-  dateValue.setSeconds(0, 0)
-  return dateValue
-}
-
-function stringsToDate(value: string | undefined): Date | null {
-  if (!value) {
-    return null
-  }
-  const parsed = moment(value, DATE_TIME_FORMAT, true)
-  if (!parsed.isValid()) {
-    return null
-  }
-  const dateValue = parsed.toDate()
-  dateValue.setSeconds(0, 0)
-  return dateValue
-}
-
-function normalizeDateValue(
-  date: Date | (Date | null | undefined)[] | null | undefined
-): Date | null {
-  if (Array.isArray(date)) {
-    const firstValid = date.find((d): d is Date => d instanceof Date)
-    return normalizeSingleDate(firstValid)
-  }
-  return normalizeSingleDate(date)
-}
-
-function normalizeSingleDate(date: Date | null | undefined): Date | null {
-  if (!date || Number.isNaN(date.getTime())) {
-    return null
-  }
-  const normalized = new Date(date.getTime())
-  normalized.setSeconds(0, 0)
-  return normalized
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
-
-function combineDateAndTime(dateValue: Date, timeSource: Date): Date {
-  const merged = new Date(dateValue.getTime())
-  merged.setHours(timeSource.getHours(), timeSource.getMinutes(), 0, 0)
-  return merged
 }
 
 export default memo(DateTimeInput)
