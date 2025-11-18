@@ -14,16 +14,17 @@
 
 from __future__ import annotations
 
+import importlib
 import json
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
-from authlib.integrations.starlette_client import OAuth
 from starlette.responses import RedirectResponse, Response
 from starlette.routing import Route
 from tornado.web import create_signed_value
 
 from streamlit.auth_util import (
+    AuthCache,
     decode_provider_token,
     generate_default_provider_section,
     get_secrets_auth_section,
@@ -34,10 +35,83 @@ from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
 
+
+class _AsyncAuthCache:
+    """Adapter that exposes AuthCache with awaitable methods for Authlib."""
+
+    def __init__(self, cache: AuthCache) -> None:
+        self._cache = cache
+
+    async def get(self, key: str) -> Any:
+        return self._cache.get(key)
+
+    async def set(self, key: str, value: Any, expires_in: int | None = None) -> None:
+        self._cache.set(key, value, expires_in)
+
+    async def delete(self, key: str) -> None:
+        self._cache.delete(key)
+
+    def get_dict(self) -> dict[str, Any]:
+        return self._cache.get_dict()
+
+
+_STARLETTE_AUTH_CACHE = _AsyncAuthCache(auth_cache)
+
+
 if TYPE_CHECKING:
     from starlette.requests import Request
 
 _LOGGER: Final = get_logger(__name__)
+
+
+def _normalize_nested_config(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _normalize_nested_config(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_normalize_nested_config(item) for item in value]
+    return value
+
+
+def _looks_like_provider_section(value: dict[str, Any]) -> bool:
+    provider_keys = {
+        "client_id",
+        "client_secret",
+        "server_metadata_url",
+        "authorize_url",
+        "api_base_url",
+        "request_token_url",
+    }
+    return any(key in value for key in provider_keys)
+
+
+class _AuthlibConfig(dict[str, Any]):
+    """Config adapter that exposes provider data via Authlib's flat lookup."""
+
+    def __init__(self, data: dict[str, Any]) -> None:
+        normalized = {k: _normalize_nested_config(v) for k, v in data.items()}
+        super().__init__(normalized)
+        self._provider_sections: dict[str, dict[str, Any]] = {
+            key.lower(): value
+            for key, value in normalized.items()
+            if isinstance(value, dict) and _looks_like_provider_section(value)
+        }
+
+    def get(self, key: Any, default: Any = None) -> Any:
+        if key in self:
+            return super().get(key, default)
+
+        if not isinstance(key, str):
+            return default
+
+        provider_key, sep, param = key.partition("_")
+        if not sep:
+            return default
+
+        provider_section = self._provider_sections.get(provider_key.lower())
+        if provider_section is None:
+            return default
+
+        return provider_section.get(param.lower(), default)
 
 
 async def _redirect_to_base(base_url: str) -> RedirectResponse:
@@ -65,6 +139,17 @@ def _clear_auth_cookie(response: Response) -> None:
 
 
 def _create_oauth_client(provider: str) -> tuple[Any, str]:
+    try:
+        authlib_module = importlib.import_module(
+            "authlib.integrations.starlette_client"
+        )
+    except ModuleNotFoundError:  # pragma: no cover - optional dependency
+        raise StreamlitAuthError(
+            "Authentication requires Authlib>=1.3.2. "
+            "Install it via `pip install streamlit[auth]`."
+        )
+    oauth_cls = authlib_module.OAuth
+
     auth_section = get_secrets_auth_section()
     if auth_section:
         redirect_uri = auth_section.get("redirect_uri", None)
@@ -85,9 +170,9 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = OAuth(config=config, cache=auth_cache)  # type: ignore
+    oauth = oauth_cls(config=_AuthlibConfig(config), cache=_STARLETTE_AUTH_CACHE)
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri  # type: ignore
+    return oauth.create_client(provider), redirect_uri
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
@@ -137,8 +222,10 @@ async def _auth_login(request: Request, base_url: str) -> Response:
 
     client, redirect_uri = _create_oauth_client(provider)
     try:
-        return await client.authorize_redirect(request, redirect_uri)  # type: ignore
+        response = await client.authorize_redirect(request, redirect_uri)
+        return cast("Response", response)
     except Exception as exc:  # pragma: no cover - error path
+        _LOGGER.warning("Error during authentication.", exc_info=True)
         return Response(str(exc), status_code=400)
 
 
