@@ -159,7 +159,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
             "Authentication requires Authlib>=1.3.2. "
             "Install it via `pip install streamlit[auth]`."
         )
-    oauth_cls = authlib_module.OAuth
+    oauth_cls = authlib_module.OAuth  # ty: ignore
 
     auth_section = get_secrets_auth_section()
     if auth_section:
