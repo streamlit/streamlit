@@ -142,6 +142,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
+    (component_dir / "bundle.js").write_text("console.log('component');")
 
     with patch_config_options(
         {"server.baseUrlPath": "", "global.developmentMode": False}
@@ -306,6 +307,17 @@ def test_component_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) 
     response = client.get("/component/comp/index.html")
     assert response.status_code == 200
     assert response.text == "component"
+
+
+def test_component_endpoint_sets_content_type(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure the component endpoint sends the correct MIME type for JS assets."""
+    client, _ = starlette_client
+    response = client.get("/component/comp/bundle.js")
+    assert response.status_code == 200
+    assert response.headers["content-type"] is not None
+    assert "javascript" in response.headers["content-type"]
 
 
 def test_bidi_component_endpoint(

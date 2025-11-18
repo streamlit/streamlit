@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 import binascii
 import json
-import mimetypes
 import os
 from contextlib import suppress
 from pathlib import Path
@@ -674,21 +673,15 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         except OSError as exc:
             raise HTTPException(status_code=404, detail="read error") from exc
 
-        response = StreamingResponse(iter([data]))
+        response = StreamingResponse(
+            iter([data]), media_type=guess_content_type(abspath)
+        )
         await _set_cors_headers(request, response)
 
         if not filename or filename.endswith(".html"):
             response.headers["Cache-Control"] = "no-cache"
         else:
             response.headers["Cache-Control"] = "public"
-
-        mime_type, encoding = mimetypes.guess_type(abspath)
-        if encoding == "gzip":
-            response.media_type = "application/gzip"
-        elif mime_type is not None:
-            response.media_type = mime_type
-        else:
-            response.media_type = "application/octet-stream"
 
         return response
 

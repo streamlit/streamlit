@@ -39,7 +39,6 @@ def test_dataframe_supports_various_configurations(
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(NUM_DATAFRAME_ELEMENTS)
-
     # Wait for material icons font to be loaded for more stable tests:
     expect_font(themed_app, "Material Symbols Rounded")
 
