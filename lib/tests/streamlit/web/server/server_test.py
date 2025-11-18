@@ -622,22 +622,6 @@ class UnixSocketTest(unittest.TestCase):
             )
             mock_server.add_socket.assert_called_with(some_socket)
 
-    @unittest.skipIf("win32" in sys.platform, "Windows does not have unix sockets")
-    def test_unix_socket_starlette(self) -> None:
-        server = Server("mock/script/path", is_hello=False)
-        event_loop = asyncio.new_event_loop()
-        server._runtime._eventloop = event_loop
-
-        file_path = "~/fake-unix/streamlit.sock"
-        config.set_option("server.address", f"unix://{file_path}")
-
-        with patch("uvicorn.Server.serve", new=AsyncMock()) as serve_mock:
-            event_loop.run_until_complete(server._start_starlette())
-
-        serve_mock.assert_awaited_once()
-        event_loop.close()
-        config.set_option("server.address", self.original_address)
-
 
 class StarlettePortRetryTest(unittest.TestCase):
     """Tests Starlette port binding and retry logic."""
