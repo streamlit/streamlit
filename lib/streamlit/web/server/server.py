@@ -539,8 +539,9 @@ class Server:
 
         cert_file = config.get_option("server.sslCertFile")
         key_file = config.get_option("server.sslKeyFile")
-
         ws_ping_interval, ws_ping_timeout = _get_websocket_ping_interval_and_timeout()
+        ws_max_size = get_max_message_size_bytes()
+        ws_per_message_deflate = config.get_option("server.enableWebsocketCompression")
 
         if server_address_is_unix_socket():
             unix_address = config.get_option("server.address")
@@ -554,9 +555,11 @@ class Server:
                 uds=socket_path,
                 ssl_certfile=cert_file,
                 ssl_keyfile=key_file,
-                ws="websockets",
+                ws="auto",
                 ws_ping_interval=ws_ping_interval,
                 ws_ping_timeout=ws_ping_timeout,
+                ws_max_size=ws_max_size,
+                ws_per_message_deflate=ws_per_message_deflate,
                 log_config=None,
             )
 
@@ -579,6 +582,7 @@ class Server:
                 ws="websockets",
                 ws_ping_interval=ws_ping_interval,
                 ws_ping_timeout=ws_ping_timeout,
+                use_colors=False,
                 log_config=None,
             )
 

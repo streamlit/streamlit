@@ -85,12 +85,20 @@ EXTRA_REQUIRES = {
     ],
     # Optional dependency required for Starlette integration:
     "starlette": [
+        # ASGI web-framework:
         "starlette>=0.40.0",
-        "python-multipart>=0.0.10",
-        "uvicorn>=0.30.0",
+        # Required for async support:
         "anyio>=4.0.0",
+        # Required for file-upload support:
+        "python-multipart>=0.0.10",
+        # Fast ASGI server:
+        "uvicorn>=0.30.0",
+        # Required for websocket support:
         "websockets>=12.0.0",
         "itsdangerous>=2.1.2",
+        # Faster http parsing:
+        "httptools>=0.6.3",
+        # Faster event loop:
         "uvloop>=0.15.1; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
     ],
     # Optional dependency required for PDF rendering:
