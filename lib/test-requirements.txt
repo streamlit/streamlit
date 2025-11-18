@@ -5,7 +5,7 @@ matplotlib>=3.3.4
 plotly>=5.3.1
 seaborn>=0.11.2
 watchdog>=2.1.5
-streamlit-pdf>=1.0.0
+streamlit-pdf>=1.0.0,<2.0.0
 
 # Optional dependency used for improved exception formatting
 # in Community Cloud:
@@ -23,7 +23,7 @@ testfixtures
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.
-playwright==1.55.*
+playwright==1.56.*
 pytest-playwright>=0.3.3
 pixelmatch>=0.3.0
 pytest-xdist>=3.6.1
