@@ -83,7 +83,7 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
-DATETIME_UI_FORMAT: Final = "%Y/%m/%d %H:%M"
+DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
@@ -432,13 +432,20 @@ class _DateInputValues:
 @dataclass
 class DateTimeInputSerde:
     value: datetime | None
+    min: datetime
+    max: datetime
 
     def deserialize(self, ui_value: str | None) -> datetime | None:
         if ui_value is None:
             return self.value
-        return _normalize_datetime_value(
+        deserialized = _normalize_datetime_value(
             datetime.strptime(ui_value, DATETIME_UI_FORMAT)
         )
+        # Validate against min/max bounds
+        # If the value is out of bounds, return the previous valid value
+        if deserialized < self.min or deserialized > self.max:
+            return self.value
+        return deserialized
 
     def serialize(self, v: datetime | None) -> str | None:
         if v is None:
@@ -1086,7 +1093,11 @@ class TimeWidgetsMixin:
         if help is not None:
             date_time_input_proto.help = dedent(help)
 
-        serde = DateTimeInputSerde(default_value_for_proto)
+        serde = DateTimeInputSerde(
+            value=default_value_for_proto,
+            min=datetime_values.min,
+            max=datetime_values.max,
+        )
         widget_state = register_widget(
             date_time_input_proto.id,
             on_change_handler=on_change,

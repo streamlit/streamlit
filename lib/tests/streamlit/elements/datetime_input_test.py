@@ -30,7 +30,7 @@ from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
-DATETIME_FORMAT = "%Y/%m/%d %H:%M"
+DATETIME_FORMAT = "%Y/%m/%d, %H:%M"
 
 
 class DateTimeInputTest(DeltaGeneratorTestCase):
@@ -261,3 +261,45 @@ def test_datetime_input_interaction():
     at = widget.set_value(None).run()
     widget = at.datetime_input[0]
     assert widget.value is None
+
+
+def test_datetime_input_min_max_validation():
+    """Test that datetime_input rejects values outside min/max bounds."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        min_value = datetime(2020, 1, 1, 8, 0)
+        max_value = datetime(2030, 1, 1, 18, 0)
+        initial_value = datetime(2025, 1, 1, 12, 0)
+
+        st.datetime_input(
+            "the label",
+            value=initial_value,
+            min_value=min_value,
+            max_value=max_value,
+        )
+
+    at = AppTest.from_function(script).run()
+    widget = at.datetime_input[0]
+    assert widget.value == datetime(2025, 1, 1, 12, 0)
+
+    # Try to set a value below min - should keep the current value
+    below_min_value = datetime(2019, 12, 31, 23, 0)
+    at = widget.set_value(below_min_value).run()
+    widget = at.datetime_input[0]
+    assert widget.value == datetime(2025, 1, 1, 12, 0)
+
+    # Try to set a value above max - should keep the current value
+    above_max_value = datetime(2030, 1, 2, 0, 0)
+    at = widget.set_value(above_max_value).run()
+    widget = at.datetime_input[0]
+    assert widget.value == datetime(2025, 1, 1, 12, 0)
+
+    # Valid value within bounds should work
+    valid_value = datetime(2025, 6, 15, 14, 30)
+    at = widget.set_value(valid_value).run()
+    widget = at.datetime_input[0]
+    assert widget.value == valid_value

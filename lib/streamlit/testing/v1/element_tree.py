@@ -1411,10 +1411,18 @@ class DateTimeInput(Widget):
 
     @property
     def _widget_state(self) -> WidgetState:
+        from datetime import datetime
+
+        datetime_ui_format = "%Y/%m/%d, %H:%M"
+
         ws = WidgetState()
         ws.id = self.id
 
-        serde = DateTimeInputSerde(None)
+        # Parse min and max values for validation
+        min_dt = datetime.strptime(self.min, datetime_ui_format)
+        max_dt = datetime.strptime(self.max, datetime_ui_format)
+
+        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
         serialized_value = serde.serialize(self.value)
         if serialized_value is not None:
             ws.string_value = serialized_value

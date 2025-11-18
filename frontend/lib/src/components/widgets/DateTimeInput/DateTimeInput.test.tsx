@@ -36,9 +36,9 @@ const getProps = (
   element: DateTimeInputProto.create({
     id: "123",
     label: "Label",
-    default: "2025/11/19 16:45",
-    min: "2015/11/19 00:00",
-    max: "2035/11/19 23:59",
+    default: "2025/11/19, 16:45",
+    min: "2015/11/19, 00:00",
+    max: "2035/11/19, 23:59",
     step: 900,
     format: "YYYY/MM/DD",
     ...elementProps,
@@ -115,12 +115,12 @@ describe("DateTimeInput widget", () => {
     const inputField = screen.getByTestId("stDateTimeInputField")
 
     await user.clear(inputField)
-    await user.type(inputField, "2026/01/01 09:30")
+    await user.type(inputField, "2026/01/01, 09:30")
     await user.keyboard("{Enter}")
 
     expect(spy).toHaveBeenLastCalledWith(
       props.element,
-      "2026/01/01 09:30",
+      "2026/01/01, 09:30",
       { fromUi: true },
       undefined
     )
@@ -134,7 +134,7 @@ describe("DateTimeInput widget", () => {
     render(<DateTimeInput {...props} />)
 
     const inputField = screen.getByTestId("stDateTimeInputField")
-    await user.type(inputField, "2026/03/15 12:45")
+    await user.type(inputField, "2026/03/15, 12:45")
     await user.keyboard("{Enter}")
 
     const clearButton = screen.getByRole("button", { name: /clear value/i })
@@ -158,12 +158,12 @@ describe("DateTimeInput widget", () => {
 
     const inputField = screen.getByTestId("stDateTimeInputField")
     await user.clear(inputField)
-    await user.type(inputField, "2026/02/01 10:15")
+    await user.type(inputField, "2026/02/01, 10:15")
     await user.keyboard("{Enter}")
 
     expect(spy).toHaveBeenLastCalledWith(
       props.element,
-      "2026/02/01 10:15",
+      "2026/02/01, 10:15",
       { fromUi: true },
       "fragment"
     )

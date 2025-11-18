@@ -120,7 +120,7 @@ def test_handles_typing_selection(app: Page):
         "input"
     )
 
-    datetime_input_field.type("2026/01/01 09:30")
+    datetime_input_field.type("2026/01/01, 09:30")
     datetime_input_field.press("Enter")
 
     expect_markdown(app, "Value 1: 2026-01-01 09:30:00")
@@ -133,7 +133,7 @@ def test_handles_datetime_selection_with_popover(app: Page):
     # Clear the input and type the new value
     datetime_input_field.click()
     datetime_input_field.fill("")
-    datetime_input_field.type("2025/11/25 09:30")
+    datetime_input_field.type("2025/11/25, 09:30")
     datetime_input_field.press("Enter")
 
     expect_markdown(app, "Value 1: 2025-11-25 09:30:00")
@@ -144,7 +144,7 @@ def test_step_interval_applied(app: Page):
         app, "Datetime input 7 (step=60)"
     ).locator("input")
 
-    datetime_input_field.type("2025/11/19 16:46")
+    datetime_input_field.type("2025/11/19, 16:46")
     datetime_input_field.press("Enter")
 
     expect_markdown(app, "Value 7: 2025-11-19 16:46:00")
@@ -154,7 +154,7 @@ def test_clearable_datetime_input(app: Page):
     datetime_input = get_datetime_input(app, "Datetime input 8 (empty)")
     datetime_input_field = datetime_input.locator("input")
 
-    datetime_input_field.type("2025/11/19 10:15")
+    datetime_input_field.type("2025/11/19, 10:15")
     datetime_input_field.press("Enter")
     expect_markdown(app, "Value 8: 2025-11-19 10:15:00")
 
@@ -167,7 +167,7 @@ def test_callback_invoked(app: Page):
         app, "Datetime input 6 (with callback)"
     ).locator("input")
 
-    datetime_input_field.type("2025/12/01 08:00")
+    datetime_input_field.type("2025/12/01, 08:00")
     datetime_input_field.press("Enter")
 
     expect_markdown(app, "datetime input changed: True")
@@ -175,7 +175,7 @@ def test_callback_invoked(app: Page):
 
 def test_form_submission_resets_value(app: Page):
     form_input = get_datetime_input(app, "Datetime input 13 (form)").locator("input")
-    form_input.type("2025/12/24 12:00")
+    form_input.type("2025/12/24, 12:00")
     form_input.press("Enter")
 
     app.get_by_role("button", name="Submit datetime form").click()
@@ -188,7 +188,7 @@ def test_fragment_reruns(app: Page):
     fragment_input_field = fragment_input.locator("input")
 
     # Type a value in the fragment datetime input
-    fragment_input_field.type("2025/11/19 09:00")
+    fragment_input_field.type("2025/11/19, 09:00")
     fragment_input_field.press("Enter")
 
     # Verify that other inputs are not affected
@@ -215,7 +215,7 @@ def test_dynamic_props_update(app: Page):
 
     # Type a new value into the datetime input
     input_field = dynamic_input.locator("input")
-    input_field.type("2025/12/01 14:30", delay=50)
+    input_field.type("2025/12/01, 14:30", delay=50)
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)

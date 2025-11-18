@@ -20,8 +20,10 @@ import React, {
   useCallback,
   useContext,
   useMemo,
+  useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
@@ -32,7 +34,9 @@ import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { Placement } from "~lib/components/shared/Tooltip"
+import Icon from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
@@ -52,7 +56,7 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-const DATE_TIME_FORMAT = "YYYY/MM/DD HH:mm"
+const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
 
 export interface Props {
   disabled: boolean
@@ -79,6 +83,8 @@ function DateTimeInput({
     widgetMgr,
     fragmentId,
   })
+
+  const [error, setError] = useState<string | null>(null)
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -129,17 +135,23 @@ function DateTimeInput({
     [element.format]
   )
 
-  const formatString = useMemo(() => `${dateFormat} HH:mm`, [dateFormat])
+  const formatString = useMemo(() => `${dateFormat}, HH:mm`, [dateFormat])
 
-  const mask = useMemo(() => `${dateMask} 99:99`, [dateMask])
+  const mask = useMemo(() => `${dateMask}, 99:99`, [dateMask])
 
   const placeholder = useMemo(
-    () => `${element.format} HH:MM`,
+    () => `${element.format}, HH:MM`,
     [element.format]
   )
 
   const defaultValue = element.default ?? ""
   const clearable = defaultValue.length === 0 && !disabled
+
+  const createErrorMessage = useCallback((): string => {
+    const minStr = moment(minDateTime).format(formatString)
+    const maxStr = moment(maxDateTime).format(formatString)
+    return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minStr} and ${maxStr}.`
+  }, [minDateTime, maxDateTime, formatString])
 
   const handleChange = useCallback(
     ({
@@ -147,14 +159,27 @@ function DateTimeInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
+      // Reset error state
+      setError(null)
+
       const normalizedDate = normalizeDateValue(date)
       const newValue = normalizedDate
         ? moment(normalizedDate).format(DATE_TIME_FORMAT)
         : null
 
+      // Validate against min/max bounds
+      if (normalizedDate) {
+        if (
+          (minDateTime && normalizedDate < minDateTime) ||
+          (maxDateTime && normalizedDate > maxDateTime)
+        ) {
+          setError(createErrorMessage())
+        }
+      }
+
       setValueWithSource({ value: newValue, fromUi: true })
     },
-    [setValueWithSource]
+    [setValueWithSource, minDateTime, maxDateTime, createErrorMessage]
   )
 
   const inputOverrides = useMemo(
@@ -250,10 +275,21 @@ function DateTimeInput({
       Input: {
         props: {
           maskChar: null,
+          endEnhancer: error && (
+            <Tooltip
+              content={<StreamlitMarkdown source={error} allowHTML={false} />}
+              placement={Placement.TOP_RIGHT}
+              error
+            >
+              <Icon content={ErrorOutline} size="lg" />
+            </Tooltip>
+          ),
           overrides: {
             EndEnhancer: {
               style: {
-                color: theme.colors.grayTextColor,
+                color: error
+                  ? theme.colors.redTextColor
+                  : theme.colors.grayTextColor,
                 backgroundColor: theme.colors.transparent,
               },
             },
@@ -270,6 +306,9 @@ function DateTimeInput({
                   borderRightColor: borderColor,
                   borderBottomColor: borderColor,
                   borderLeftColor: borderColor,
+                  ...(error && {
+                    backgroundColor: theme.colors.redBackgroundColor,
+                  }),
                 }
               },
             },
@@ -306,6 +345,9 @@ function DateTimeInput({
                 "::placeholder": {
                   color: theme.colors.fadedText60,
                 },
+                ...(error && {
+                  color: theme.colors.redTextColor,
+                }),
               },
               props: {
                 "data-testid": "stDateTimeInputField",
@@ -435,6 +477,7 @@ function DateTimeInput({
       maxTimeForSelection,
       disabled,
       clearable,
+      error,
     ]
   )
 
@@ -497,6 +540,33 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId?: string
 ): void {
+  const minDateTime = stringsToDate(element.min)
+  const maxDateTime = stringsToDate(element.max)
+
+  // Validate the value against min/max bounds
+  if (vws.value) {
+    const dateValue = stringToDate(vws.value)
+    if (dateValue) {
+      const isOutOfBounds =
+        (minDateTime && dateValue < minDateTime) ||
+        (maxDateTime && dateValue > maxDateTime)
+
+      // Only update widget state if the value is valid
+      if (!isOutOfBounds) {
+        widgetMgr.setStringValue(
+          element,
+          vws.value,
+          { fromUi: vws.fromUi },
+          fragmentId
+        )
+      }
+      // If out of bounds, don't update the widget manager
+      // This prevents the invalid value from being sent to the backend
+      return
+    }
+  }
+
+  // Allow null/empty values
   widgetMgr.setStringValue(
     element,
     vws.value,
