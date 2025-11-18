@@ -929,7 +929,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         return secret
 
     app.add_middleware(
-        SessionMiddleware,
+        SessionMiddleware,  # ty: ignore[invalid-argument-type]
         secret_key=_session_secret(),
         same_site="lax",
         https_only=bool(config.get_option("server.sslCertFile")),
