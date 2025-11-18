@@ -78,7 +78,6 @@ import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
 import Json from "~lib/components/elements/Json"
 import Markdown from "~lib/components/elements/Markdown"
-import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
@@ -100,6 +99,7 @@ import {
 // Lazy-load elements.
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
 const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Metric = lazy(() => import("~lib/components/elements/Metric"))
 const Snow = lazy(() => import("~lib/components/elements/Snow"))
 const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
 const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
