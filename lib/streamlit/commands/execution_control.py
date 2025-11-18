@@ -114,19 +114,18 @@ def _set_query_params_for_switch(
 ) -> None:
     """Set query params for a switch page."""
 
-    query_params_state.clear()
     if new_query_params is None:
+        query_params_state.clear()
         return
 
-    if isinstance(new_query_params, Mapping):
-        query_params_state.update(new_query_params)
-        return
-
-    if isinstance(new_query_params, Iterable) and not isinstance(
-        new_query_params,  # type: ignore[unreachable]
-        (str, bytes),
+    if isinstance(new_query_params, Mapping) or (
+        isinstance(new_query_params, Iterable)
+        and not isinstance(
+            new_query_params,  # type: ignore[unreachable]
+            (str, bytes),
+        )
     ):
-        query_params_state.update(new_query_params)
+        query_params_state.from_dict(new_query_params)
         return
 
     raise StreamlitAPIException(
