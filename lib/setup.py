@@ -91,7 +91,7 @@ EXTRA_REQUIRES = {
         "anyio>=4.0.0",
         "websockets>=12.0.0",
         "itsdangerous>=2.1.2",
-        "uvloop",
+        "uvloop>=0.15.1; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
