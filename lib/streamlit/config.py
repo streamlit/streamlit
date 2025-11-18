@@ -1007,8 +1007,7 @@ _create_option(
     "server.useStarlette",
     description="""
         Enable the experimental Starlette-based server implementation instead of
-        Tornado. This option is intended for development and testing while the
-        migration is in progress.
+        Tornado. This is an experimental feature and may be removed in the future.
     """,
     default_val=False,
     type_=bool,

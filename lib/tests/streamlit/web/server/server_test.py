@@ -627,11 +627,13 @@ class StarlettePortRetryTest(unittest.TestCase):
     """Tests Starlette port binding and retry logic."""
 
     def setUp(self) -> None:
+        Runtime._instance = None
         self.original_port = config.get_option("server.port")
         config.set_option("server.port", 8600)
         self.loop = asyncio.new_event_loop()
 
     def tearDown(self) -> None:
+        Runtime._instance = None
         config.set_option("server.port", self.original_port)
         self.loop.close()
 
