@@ -34,7 +34,6 @@ from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
-from streamlit.web.server.starlette import starlette_server_utils
 
 
 class _AsyncAuthCache:
