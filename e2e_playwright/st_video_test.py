@@ -52,7 +52,7 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
         app,
         lambda: video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
         is True,
-        timeout=20000,
+        timeout=15000,
     )
     # Wait another 2 seconds to prevent some flakiness
     app.wait_for_timeout(2000)
@@ -139,7 +139,7 @@ def test_video_end_time(app: Page, video_option_label: str):
     wait_until(
         app,
         lambda: video_element.evaluate("el => !el.paused") is True,
-        timeout=10000,
+        timeout=5000,
     )
 
     # Wait until video reaches end_time and pauses
@@ -150,11 +150,7 @@ def test_video_end_time(app: Page, video_option_label: str):
     )
 
     # Verify the video stopped at the expected end_time (33 seconds)
-    wait_until(
-        app,
-        lambda: int(video_element.evaluate("el => el.currentTime")) == 33,
-        timeout=10000,
-    )
+    wait_until(app, lambda: int(video_element.evaluate("el => el.currentTime")) == 33)
 
 
 @pytest.mark.parametrize(
@@ -182,11 +178,7 @@ def test_video_end_time_loop(app: Page, video_option_label: str):
     # 4 seconds until end_time and 2 seconds starting from start time
     app.wait_for_timeout(6000)
     expect(video_element).to_have_js_property("paused", False)
-    wait_until(
-        app,
-        lambda: 36 < video_element.evaluate("el => el.currentTime") < 38,
-        timeout=10000,
-    )
+    wait_until(app, lambda: 36 < video_element.evaluate("el => el.currentTime") < 38)
 
 
 def test_video_autoplay(app: Page):
