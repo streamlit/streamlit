@@ -110,7 +110,7 @@ def normalize_shortcut(shortcut: str) -> str:
     tokens = [token.strip() for token in shortcut.split("+") if token.strip()]
     if not tokens:
         raise StreamlitAPIException(
-            "shortcut must contain at least one key or modifier."
+            "The `shortcut` must contain at least one key or modifier."
         )
 
     modifiers: list[str] = []
@@ -126,13 +126,13 @@ def normalize_shortcut(shortcut: str) -> str:
 
         if key is not None:
             raise StreamlitAPIException(
-                "shortcut may only specify a single non-modifier key."
+                "The `shortcut` may only specify a single non-modifier key."
             )
 
         normalized_key = _normalize_key_token(lower_token)
         if normalized_key in _RESERVED_KEYS:
             raise StreamlitAPIException(
-                "shortcut cannot use the keys 'C' or 'R', with or without modifiers."
+                "The `shortcut` cannot use the keys 'C' or 'R', with or without modifiers."
             )
 
         key = normalized_key
