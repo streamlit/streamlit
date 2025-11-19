@@ -266,7 +266,7 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
     def __init__(self, gap: object, element_type: str) -> None:
         super().__init__(
             'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, '
-            '`"none"`, or a positive integer number of pixels. \n'
+            "`None`, or a positive integer number of pixels. \n"
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
