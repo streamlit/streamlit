@@ -51,6 +51,19 @@ const KEY_DISPLAY: Record<string, string> = {
   down: "↓",
 }
 
+const NAVIGATION_KEYS = new Set([
+  "left",
+  "right",
+  "up",
+  "down",
+  "home",
+  "end",
+  "pageup",
+  "pagedown",
+  "backspace",
+  "delete",
+])
+
 interface ShortcutTokens {
   tokens: string[]
   baseKey?: string
@@ -164,7 +177,12 @@ function shouldBlockShortcutInInput(
     return true
   }
 
-  if (baseKey === "space" || baseKey === "tab" || baseKey === "enter") {
+  if (
+    baseKey === "space" ||
+    baseKey === "tab" ||
+    baseKey === "enter" ||
+    NAVIGATION_KEYS.has(baseKey)
+  ) {
     return true
   }
 

@@ -172,6 +172,59 @@ describe("useRegisterShortcut", () => {
     expect(onActivate).not.toHaveBeenCalled()
   })
 
+  it("prevents navigation shortcuts from firing in text inputs without modifiers", () => {
+    const shortcut = "left"
+    const onActivate = vi.fn()
+
+    render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    const input = document.createElement("input")
+    const handler = hotkeysWithHandlers.__handlers.get("left")
+    expect(handler).toBeDefined()
+
+    act(() => {
+      handler?.(createKeyboardEvent({ target: input, key: "ArrowLeft" }), {})
+    })
+
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it("allows navigation shortcuts with system modifiers in text inputs", () => {
+    const shortcut = "ctrl+left"
+    const onActivate = vi.fn()
+
+    render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    const input = document.createElement("input")
+    const handler = hotkeysWithHandlers.__handlers.get("ctrl+left")
+    expect(handler).toBeDefined()
+
+    act(() => {
+      handler?.(
+        createKeyboardEvent({
+          target: input,
+          ctrlKey: true,
+          key: "ArrowLeft",
+        }),
+        {}
+      )
+    })
+
+    expect(onActivate).toHaveBeenCalled()
+  })
+
   it("registers command shortcut aliases", () => {
     const shortcut = "cmd+n"
     const onActivate = vi.fn()
