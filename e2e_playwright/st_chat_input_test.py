@@ -575,7 +575,9 @@ def test_uploads_and_deletes_single_file(
 
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
-    uploaded_files.scroll_into_view_if_needed()
+
+    # Scroll chat input to top to ensure uploaded files aren't behind header
+    chat_input.scroll_into_view_if_needed()
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
