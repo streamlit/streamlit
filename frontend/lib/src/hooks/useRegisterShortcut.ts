@@ -22,6 +22,8 @@ import { useEffect, useMemo } from "react"
 
 import hotkeys, { HotkeysEvent } from "hotkeys-js"
 
+import { isFromMac } from "~lib/util/utils"
+
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"])
 const MODIFIER_TOKENS = new Set(["ctrl", "cmd", "alt", "shift"])
 const SYSTEM_MODIFIERS = new Set(["ctrl", "cmd", "alt"])
@@ -29,7 +31,7 @@ const SYSTEM_MODIFIERS = new Set(["ctrl", "cmd", "alt"])
 const MODIFIER_ORDER = ["ctrl", "cmd", "alt", "shift"] as const
 const MODIFIER_DISPLAY: Record<(typeof MODIFIER_ORDER)[number], string> = {
   ctrl: "Ctrl",
-  cmd: "Cmd",
+  cmd: "⌘",
   alt: "Alt",
   shift: "Shift",
 }
@@ -219,23 +221,22 @@ function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
     return []
   }
 
-  const sequences = new Set<string>()
   const { tokens } = parsedShortcut
-  sequences.add(toHotkeysSequenceFromTokens(tokens))
+  const isMac = isFromMac()
 
-  if (tokens.includes("cmd")) {
-    // Register a ctrl alias so that Cmd shortcuts also work on Windows/Linux.
-    const aliasTokens = tokens.map(token => (token === "cmd" ? "ctrl" : token))
-    sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
-  }
+  // Map both "cmd" and "ctrl" to the platform-specific primary modifier:
+  // - Mac: "cmd"
+  // - Windows/Linux: "ctrl"
+  const primaryModifier = isMac ? "cmd" : "ctrl"
 
-  if (tokens.includes("ctrl")) {
-    // And vice-versa: allow Ctrl shortcuts to work on macOS keyboards.
-    const aliasTokens = tokens.map(token => (token === "ctrl" ? "cmd" : token))
-    sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
-  }
+  const sequenceTokens = tokens.map(token =>
+    token === "cmd" || token === "ctrl" ? primaryModifier : token
+  )
 
-  return Array.from(sequences)
+  // Deduplicate tokens (e.g. "Ctrl+Cmd+K" -> "Cmd+K" on Mac)
+  const uniqueTokens = Array.from(new Set(sequenceTokens))
+
+  return [toHotkeysSequenceFromTokens(uniqueTokens)]
 }
 
 function getModifierLabel(
@@ -246,8 +247,12 @@ function getModifierLabel(
     return isMac ? MODIFIER_DISPLAY.cmd : MODIFIER_DISPLAY.ctrl
   }
 
+  if (modifier === "ctrl") {
+    return isMac ? MODIFIER_DISPLAY.cmd : MODIFIER_DISPLAY.ctrl
+  }
+
   if (modifier === "alt" && isMac) {
-    return "Option"
+    return "⌥"
   }
 
   return MODIFIER_DISPLAY[modifier as (typeof MODIFIER_ORDER)[number]]

@@ -247,9 +247,7 @@ describe("useRegisterShortcut", () => {
 
 describe("formatShortcutForDisplay", () => {
   it("renders Option for alt modifiers on macOS", () => {
-    expect(formatShortcutForDisplay("Alt+S", { isMac: true })).toBe(
-      "Option + S"
-    )
+    expect(formatShortcutForDisplay("Alt+S", { isMac: true })).toBe("⌥ + S")
   })
 
   it("renders Alt modifiers on non-mac platforms", () => {
