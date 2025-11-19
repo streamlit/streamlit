@@ -109,9 +109,9 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
             and not math.isinf(context.ttl_seconds)
         ):
             _LOGGER.warning(
-                f"The cached function '{context.function_display_name}' has a TTL "
-                "that will be ignored. Persistent cached functions currently don't "
-                "support TTL."
+                "The cached function '%s' has a TTL that will be ignored. "
+                "Persistent cached functions currently don't support TTL.",
+                context.function_display_name,
             )
 
 

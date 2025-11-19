@@ -250,7 +250,7 @@ describe("applyPandasStylerCss", () => {
     })
 
     styledCell = applyPandasStylerCss(MOCK_CELL, "invalid_key", CSS_STYLES)
-    expect(styledCell.themeOverride).toEqual({})
+    expect(styledCell.themeOverride).toEqual(undefined)
   })
 
   it("should use a grey color when background is yellow", () => {

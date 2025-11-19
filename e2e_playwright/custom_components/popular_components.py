@@ -38,9 +38,12 @@ Following actions/components are tested:
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def use_components_html():
@@ -202,14 +205,14 @@ def use_bokeh():
     y = [6, 7, 2, 4, 5]
 
     # Create Bokeh figure
-    YOUR_BOKEH_FIGURE = figure(
+    bokeh_figure = figure(
         title="Simple Line Example", x_axis_label="x", y_axis_label="y"
     )
-    YOUR_BOKEH_FIGURE.line(x, y, legend_label="Trend", line_width=2)
+    bokeh_figure.line(x, y, legend_label="Trend", line_width=2)
 
     # Render in Streamlit
     streamlit_bokeh(
-        YOUR_BOKEH_FIGURE,
+        bokeh_figure,
         use_container_width=True,
         theme="streamlit",
         key="my_unique_key",

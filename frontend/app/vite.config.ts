@@ -17,7 +17,6 @@ import { defineConfig } from "vite"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
@@ -67,14 +66,6 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      {
-        find: "~lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
-      {
-        find: "@streamlit/lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
@@ -109,12 +100,21 @@ export default defineConfig({
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
+      "^.*/auth/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/oauth2callback": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
     },
   },
   build: {
     outDir: "build",
     assetsDir: "static",
     sourcemap: DEV_BUILD,
+    manifest: true,
     rollupOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
@@ -122,9 +122,22 @@ export default defineConfig({
         entryFileNames: `static/js/[name]${HASH}.js`,
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
+          // For CSS files, place them in the /static/css/ directory
           if (assetInfo.name?.endsWith(".css")) {
-            // For CSS files, place them in the /static/css/ directory
-            return `static/css/[name]${HASH}[extname]`
+            // If OMIT_HASH_FROM_MAIN_FILES is set, we don't want to include the
+            // hash in the filename of the entry file at the minimum. There could
+            // be other files with the same name that cause a conflict, which would
+            // increment the entry file to index2.css, etc. This ensures the entry
+            // file is named index.css in this case.
+            if (
+              assetInfo.names.includes("index.css") &&
+              assetInfo.originalFileNames.includes("index.html")
+            ) {
+              return `static/css/[name]${HASH}[extname]`
+            }
+
+            // For chunk css files, include the hash in the filename.
+            return `static/css/[name].[hash][extname]`
           }
 
           // For other assets, use the /static/media/ directory

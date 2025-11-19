@@ -202,9 +202,8 @@ df = pd.DataFrame(
 styled_df = df.style
 
 # Apply formatting
-styled_df.format("{:.0f}").hide(
-    [("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns"
-)
+styled_df.format("{:.0f}")
+styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")
 
 cell_hover = {  # for row hover use <tr> instead of <td>
     "selector": "td:hover",
@@ -214,7 +213,7 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])
+styled_df.set_table_styles([cell_hover, headers])  # ty: ignore
 styled_df.set_table_styles(
     {
         ("Regression", "Tumour"): [
@@ -245,7 +244,6 @@ styled_df.set_tooltips(
 )
 
 st.table(styled_df)
-
 
 st.header("Markdown Support")
 index = pd.Index(
@@ -282,3 +280,18 @@ data = pd.DataFrame(
 )
 
 st.table(data)
+
+st.header("Border Parameter")
+
+st.subheader("No borders (border=False)")
+data = {
+    "A": [1, 2, 3],
+    "B": ["X", "Y", "Z"],
+    "C": [10.5, 20.3, 30.1],
+    "D": ["Alpha", "Beta", "Gamma"],
+    "E": [True, False, True],
+}
+st.table(data, border=False)
+
+st.subheader("Horizontal borders only (border='horizontal')")
+st.table(data, border="horizontal")

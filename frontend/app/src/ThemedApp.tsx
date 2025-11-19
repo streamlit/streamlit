@@ -16,13 +16,13 @@
 
 import React from "react"
 
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
+import FontSources from "@streamlit/app/src/components/FontSources"
 import {
-  CUSTOM_THEME_NAME,
   PortalProvider,
   RootStyleProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
@@ -34,17 +34,18 @@ export interface ThemedAppProps {
 const ThemedApp = ({
   streamlitExecutionStartedAt,
 }: ThemedAppProps): JSX.Element => {
-  const [themeManager, fontFaces] = useThemeManager()
+  const [themeManager, fontFaces, fontSources] = useThemeManager()
   const { activeTheme } = themeManager
-  const hasCustomFonts =
-    activeTheme.name === CUSTOM_THEME_NAME && fontFaces.length > 0
 
   return (
     <RootStyleProvider theme={activeTheme}>
       <WindowDimensionsProvider>
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <PortalProvider>
-          {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
+          {fontFaces.length > 0 && (
+            <FontFaceDeclaration fontFaces={fontFaces} />
+          )}
+          {fontSources && <FontSources fontSources={fontSources} />}
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}

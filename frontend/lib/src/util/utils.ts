@@ -30,7 +30,7 @@ import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 import { assertNever } from "./assertNever"
 
 // This prefix should be in sync with the value on the python side:
-const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
+export const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -62,7 +62,6 @@ export function debounce(delay: number, fn: any): any {
  */
 export const EMBED_QUERY_PARAM_KEY = "embed"
 export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
-export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
 export const EMBED_SHOW_TOOLBAR = "show_toolbar"
 export const EMBED_SHOW_PADDING = "show_padding"
 export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
@@ -73,7 +72,6 @@ export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
 export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
 export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
-  EMBED_SHOW_COLORED_LINE,
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
   EMBED_DISABLE_SCROLLING,
@@ -141,18 +139,6 @@ export function preserveEmbedQueryParams(): string {
  */
 export function isEmbed(): boolean {
   return getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has(EMBED_TRUE)
-}
-
-/**
- * Returns true if the URL parameters contain ?embed=true&embed_options=show_colored_line (case insensitive).
- */
-export function isColoredLineDisplayed(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-      EMBED_SHOW_COLORED_LINE
-    )
-  )
 }
 
 /**
@@ -228,6 +214,7 @@ export function getUrl(): string {
     } else {
       url = document.location.href
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     // CSP error might occur when trying to access parent frame
     url = document.location.href
@@ -271,8 +258,8 @@ export function getLoadingScreenType(): LoadingScreenType {
   return params.has(EMBED_HIDE_LOADING_SCREEN)
     ? LoadingScreenType.NONE
     : params.has(EMBED_SHOW_LOADING_SCREEN_V1)
-    ? LoadingScreenType.V1
-    : LoadingScreenType.V2
+      ? LoadingScreenType.V1
+      : LoadingScreenType.V2
 }
 
 /** Return an info Element protobuf with the given text. */
@@ -307,7 +294,6 @@ export function makeAppSkeletonElement(): Element {
  * Seed used: 0xDEADBEEF
  */
 export function hashString(s: string): string {
-  // eslint-disable-next-line import/no-named-as-default-member
   return xxhash.h32(s, 0xdeadbeef).toString(16)
 }
 
@@ -402,6 +388,52 @@ export function isInForm(widget: { formId?: string }): boolean {
   return isValidFormId(widget.formId)
 }
 
+/**
+ * Determines the appropriate placeholder text for select-type widgets.
+ * Handles both single-select and multi-select cases with appropriate pluralization.
+ *
+ * @param placeholder - The custom placeholder provided by the user (empty string means use defaults)
+ * @param options - Array of available options
+ * @param acceptNewOptions - Whether the widget accepts new options
+ * @param isMultiSelect - Whether this is for a multi-select widget (affects pluralization)
+ * @returns Object containing the placeholder text and whether the widget should be disabled
+ */
+export function getSelectPlaceholder(
+  placeholder: string,
+  options: readonly string[],
+  acceptNewOptions: boolean,
+  isMultiSelect = false
+): { placeholder: string; shouldDisable: boolean } {
+  let shouldDisable = false
+
+  // If custom placeholder is provided (not empty string), use it as-is
+  if (placeholder !== "") {
+    return { placeholder, shouldDisable }
+  }
+
+  // Determine appropriate default placeholder based on widget state
+  if (options.length === 0) {
+    if (!acceptNewOptions) {
+      placeholder = "No options to select"
+      // When a user cannot add new options and there are no options to select from, we disable the widget
+      shouldDisable = true
+    } else {
+      placeholder = isMultiSelect ? "Add options" : "Add an option"
+    }
+  } else {
+    // For non-empty options, set appropriate default placeholder
+    if (acceptNewOptions) {
+      placeholder = isMultiSelect
+        ? "Choose or add options"
+        : "Choose or add an option"
+    } else {
+      placeholder = isMultiSelect ? "Choose options" : "Choose an option"
+    }
+  }
+
+  return { placeholder, shouldDisable }
+}
+
 export enum LabelVisibilityOptions {
   Visible,
   Hidden,
@@ -427,6 +459,7 @@ export enum AcceptFileValue {
   None,
   Single,
   Multiple,
+  Directory,
 }
 
 export function chatInputAcceptFileProtoValueToEnum(
@@ -439,6 +472,8 @@ export function chatInputAcceptFileProtoValueToEnum(
       return AcceptFileValue.Single
     case ChatInputProto.AcceptFile.MULTIPLE:
       return AcceptFileValue.Multiple
+    case ChatInputProto.AcceptFile.DIRECTORY:
+      return AcceptFileValue.Directory
     default:
       assertNever(value)
       return AcceptFileValue.None
@@ -470,6 +505,7 @@ export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
     return false
   }
@@ -592,26 +628,31 @@ export function keysToSnakeCase(
   obj: Record<string, any>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = decamelize(key, {
-      preserveConsecutiveUppercase: true,
-    }).replace(".", "_")
-    let value = obj[key]
+  return Object.keys(obj).reduce(
+    (acc, key) => {
+      const newKey = decamelize(key, {
+        preserveConsecutiveUppercase: true,
+      }).replace(".", "_")
+      let value = obj[key]
 
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        value = keysToSnakeCase(value)
+      }
 
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
+      if (Array.isArray(value)) {
+        value = value.map(item =>
+          item !== null && typeof item === "object"
+            ? keysToSnakeCase(item)
+            : item
+        )
+      }
 
-    acc[newKey] = value
-    return acc
+      acc[newKey] = value
+      return acc
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  }, {} as Record<string, any>)
+    {} as Record<string, any>
+  )
 }
 
 // TODO: Update all imports to use @streamlit/utils and remove this line.

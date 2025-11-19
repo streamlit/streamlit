@@ -1,0 +1,41 @@
+name: "Copilot Setup Steps"
+
+on:
+  # Allow manual testing through the repository's "Actions" tab
+  workflow_dispatch:
+  # Automatically run the setup steps when they are changed to allow for easy validation
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      contents: read
+
+    # You can define any steps you want, and they will run before the agent starts.
+    # If you do not check out your code, Copilot will do this for you.
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Make frontend build
+        run: make frontend

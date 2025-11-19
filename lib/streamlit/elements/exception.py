@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import TYPE_CHECKING, Callable, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Final, TypeVar, cast
 
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
@@ -31,6 +31,8 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
@@ -60,13 +62,15 @@ class ExceptionMixin:
         ----------
         exception : Exception
             The exception to display.
-        width : int or "stretch"
-            The desired width of the exception expressed in pixels. If this is
-            ``"stretch"`` (default), Streamlit sets the width of the exception
-            to match the width of the parent container. Otherwise, this must be
-            an integer. If the specified width is greater than the width of the
-            parent container, Streamlit sets the width of the exception to
-            match the width of the parent container.
+        width : "stretch" or int
+            The width of the exception element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------

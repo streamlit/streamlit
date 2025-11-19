@@ -46,6 +46,19 @@ st.code(
     language="diff",
 )
 
+code_with_leading_whitespace = """
+    def hello():
+        print("Hello, Streamlit!")
+"""
+
+st.code(code_with_leading_whitespace, language="python")
+
+st.markdown("```python\n" + code_with_leading_whitespace + "\n```")
+
+st.code("\n" + code_with_leading_whitespace + "\n", language="python")
+
+st.markdown("```python\n\n" + code_with_leading_whitespace + "\n\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")
@@ -113,5 +126,34 @@ processed = process_data(data)
 print(processed)
 """
 
-st.code(long_code, width=400, wrap_lines=True)
+st.code(long_code, width=500, wrap_lines=True)
 st.code(long_code, width="stretch")
+st.code(long_code, width="content")
+
+long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
+
+st.code(long_single_word_string)
+st.code(long_single_word_string, wrap_lines=True)
+
+with st.form("form with a code block", height=400):
+    st.code(code, height="stretch")
+    st.form_submit_button("Submit")
+
+col1, col2, col3 = st.columns(3)
+
+narrow_code = """
+def hello():
+    print("Hello!")
+"""
+
+with col1:
+    st.code(narrow_code, height=300)
+    st.code(narrow_code, height="stretch")
+with col2:
+    st.code(narrow_code, height="stretch")
+with col3:
+    st.code(narrow_code, height="content")
+
+with st.container(height=300, key="container_with_code"):
+    st.code(code, height=100)
+    st.code(code, height="stretch")

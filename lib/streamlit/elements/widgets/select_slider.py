@@ -19,17 +19,16 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
+    TypeGuard,
+    TypeVar,
     cast,
     overload,
 )
 
-from typing_extensions import TypeGuard
-
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
@@ -49,7 +48,6 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -58,14 +56,16 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import T, check_python_comparable
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.runtime.state.common import RegisterWidgetResult
+
+T = TypeVar("T")
 
 
 def _is_range_value(value: T | Sequence[T]) -> TypeGuard[Sequence[T]]:
@@ -95,7 +95,7 @@ class SelectSliderSerde(Generic[T]):
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return return_value if self.is_range_value else return_value[0]
 
-    def _as_index_list(self, v: object) -> list[int]:
+    def _as_index_list(self, v: Any) -> list[int]:
         if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
@@ -229,8 +229,8 @@ class SelectSliderMixin:
         on_change : callable
             An optional callback invoked when this select_slider's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -246,15 +246,23 @@ class SelectSliderMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the slider. If "stretch", the slider will stretch to
-            fill the available space. If an integer, the slider will have a fixed
-            width in pixels.
+            The width of the slider widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
         any value or tuple of any value
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
+
+            This contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -347,7 +355,7 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        def as_index_list(v: object) -> list[int]:
+        def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value
@@ -369,7 +377,11 @@ class SelectSliderMixin:
         element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Treat the provided key as the main identity; only include
+            # changes to the options (and implicitly their formatting) in the
+            # identity computation as those can invalidate the current value.
+            key_as_main_identity={"options", "format_func"},
+            dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
@@ -396,14 +408,8 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        # Set width config
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        slider_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
@@ -431,7 +437,7 @@ class SelectSliderMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("slider", slider_proto)
+        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

@@ -39,6 +39,8 @@ class AudioInputTest(DeltaGeneratorTestCase):
             c.label_visibility.value
             == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
+        # Default sample_rate should be 16000
+        assert c.sample_rate == 16000
 
     @parameterized.expand(
         [
@@ -67,7 +69,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with 'stretch' value."""
         st.audio_input("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -78,7 +80,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with pixel value."""
         st.audio_input("the label", width=100)
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -89,7 +91,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with default value."""
         st.audio_input("the label")
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -108,6 +110,86 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.audio_input("the label", width=invalid_width)
+
+    @parameterized.expand(
+        [
+            (8000,),
+            (11025,),
+            (16000,),
+            (22050,),
+            (24000,),
+            (32000,),
+            (44100,),
+            (48000,),
+        ]
+    )
+    def test_valid_sample_rates(self, sample_rate):
+        """Test that valid sample rates are accepted and properly set in the protobuf."""
+        st.audio_input("the label", sample_rate=sample_rate)
+
+        c = self.get_delta_from_queue().new_element.audio_input
+        assert c.sample_rate == sample_rate
+
+    def test_sample_rate_none(self):
+        """Test that None sample_rate means browser default."""
+        st.audio_input("the label", sample_rate=None)
+
+        c = self.get_delta_from_queue().new_element.audio_input
+        # When sample_rate is None, the field should not be set in protobuf
+        assert not c.HasField("sample_rate")
+
+    def test_stable_id_with_key(self):
+        """Widget ID is stable when key is provided and non-whitelisted args change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=True,
+        ):
+            st.audio_input(
+                label="Label 1",
+                key="audio_input_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                label_visibility="visible",
+                sample_rate=8000,
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.audio_input
+            id1 = c1.id
+
+            # Change non-whitelisted params
+            st.audio_input(
+                label="Label 2",
+                key="audio_input_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                label_visibility="hidden",
+                sample_rate=16000,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.audio_input
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            (12345,),
+            (9000,),
+            (50000,),
+            (100000,),
+        ]
+    )
+    def test_invalid_sample_rates(self, sample_rate):
+        """Test that invalid sample rates raise an exception."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.audio_input("the label", sample_rate=sample_rate)
+        assert "Invalid sample_rate" in str(e.value)
+        assert "Must be one of" in str(e.value)
 
     @patch("streamlit.elements.widgets.audio_input._get_upload_files")
     def test_not_allowed_file_extension_raise_an_exception_for_camera_input(

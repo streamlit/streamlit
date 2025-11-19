@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Final
 
 from playwright.sync_api import FrameLocator, Locator, expect
 
 from e2e_playwright.conftest import IframedPageAttrs, wait_for_app_run
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction
 
 from pathlib import Path

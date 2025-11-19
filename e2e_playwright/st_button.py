@@ -51,20 +51,14 @@ st.write("value 3:", i4)
 i5 = st.button("button 4 (primary + disabled)", type="primary", disabled=True)
 st.write("value 4:", i5)
 
-st.button("button 5 (container_width)", use_container_width=True)
-
 st.button(
-    "button 6 (container_width + help)", use_container_width=True, help="help text"
+    ":material/search: _button 5_ (**styled** :green[label]) :material/arrow_forward:",
+    key="styled_label_button",
 )
 
-st.button(
-    ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
-)
-
-st.button(
-    "button 8 (just help)",
-    help="help text",
-)
+with st.container(key="help_button_container"):
+    st.write("help_button_container")
+    st.button("button 6 (just help)", help="help text", key="help_button_key")
 
 st.button("Like Button", icon=":material/thumb_up:")
 st.button("Star Button", icon="⭐")
@@ -75,11 +69,18 @@ st.button("Disabled Tertiary Button", type="tertiary", disabled=True)
 # We add this to test a regression that was happened previously
 # because of unused icon name processing
 # See: https://github.com/streamlit/streamlit/pull/10247#issuecomment-2612956073
-st.button("Button with material icon containing a digit", icon=":material/1k:")
-st.button("Button with material icon containing a digit in label :material/1k:")
+st.button(
+    "Button with material icon containing a digit",
+    icon=":material/1k:",
+    key="material_icon_digit_button",
+)
+st.button(
+    "Button with material icon containing a digit in label :material/1k:",
+    key="material_icon_digit_in_label_button",
+)
 
 
-cols = st.columns(3)
+cols = st.container(key="buttons_in_columns").columns(3)
 
 # Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot
 conn_types = [
@@ -93,8 +94,38 @@ conn_types = [
     "custom",
 ]
 for i in range(len(conn_types)):
-    cols[i % 3].button(conn_types[i], use_container_width=True)
+    cols[i % 3].button(conn_types[i], width="stretch")
 
-st.button("Foo :blue[bar] baz", type="primary")
-st.button("Foo :blue[bar] baz")
-st.button("Foo :blue[bar] baz", type="tertiary")
+st.button("Foo :blue[bar] baz", key="colored_text_primary", type="primary")
+st.button("Foo :blue[bar] baz", key="colored_text_secondary")
+st.button("Foo :blue[bar] baz", key="colored_text_tertiary", type="tertiary")
+
+with st.expander("Button Width Examples", expanded=True):
+    st.button("Content Width (Default)", width="content")
+    st.button("Stretch Width", width="stretch")
+    st.button("200px Width", width=200)
+
+st.markdown("Dynamic button props:")
+
+if st.toggle("Update button props"):
+    clicked = st.button(
+        "Updated dynamic button",
+        type="secondary",
+        icon=":material/looks_two:",
+        width="stretch",
+        help="updated help",
+        key="dynamic_button_with_key",
+    )
+    st.write("Clicked updated button:", clicked)
+else:
+    clicked = st.button(
+        "Initial dynamic button",
+        type="primary",
+        icon=":material/looks_one:",
+        width="content",
+        help="initial help",
+        key="dynamic_button_with_key",
+    )
+    st.write("Clicked initial button:", clicked)
+
+st.button("Button with spinner icon", icon="spinner")

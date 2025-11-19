@@ -56,7 +56,6 @@ const ScreencastDialog: React.FC<Props> = ({
   )
 
   const handleStartButton = useCallback((): void => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     startRecording()
     onClose()
   }, [startRecording, onClose])

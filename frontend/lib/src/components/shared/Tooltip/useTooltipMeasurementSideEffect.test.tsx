@@ -17,6 +17,8 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { MockInstance } from "vitest"
 
+import { TestAppWrapper } from "~lib/test_util"
+
 import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"
 
 const MOCK_INNER_WIDTH = 1000
@@ -112,7 +114,7 @@ describe("useTooltipMeasurementSideEffect", () => {
             transform: MOCK_TRANSFORM,
             getPropertyValue: (prop: string) =>
               prop === "transform" ? MOCK_TRANSFORM : "",
-          } as unknown as CSSStyleDeclaration)
+          }) as unknown as CSSStyleDeclaration
       )
 
     innerWidthSpy = vi
@@ -127,7 +129,9 @@ describe("useTooltipMeasurementSideEffect", () => {
   })
 
   it("does nothing when tooltipElement is null", () => {
-    renderHook(() => useTooltipMeasurementSideEffect(null, true))
+    renderHook(() => useTooltipMeasurementSideEffect(null, true), {
+      wrapper: TestAppWrapper,
+    })
     expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
   })
 
@@ -138,7 +142,9 @@ describe("useTooltipMeasurementSideEffect", () => {
       .spyOn(parentElement, "getBoundingClientRect")
       .mockReturnValue(createMockDOMRect(10, 10, 100, 50))
 
-    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true))
+    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true), {
+      wrapper: TestAppWrapper,
+    })
 
     await waitFor(() => {
       expect(getBoundingClientRectSpy).toHaveBeenCalled()
@@ -154,12 +160,13 @@ describe("useTooltipMeasurementSideEffect", () => {
       createMockDOMRect(900, 10, 200, 50)
     )
 
-    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true))
+    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true), {
+      wrapper: TestAppWrapper,
+    })
 
     // Wait for the position to be adjusted and verify
     await waitFor(() => {
       // The overflow is 100 (900 + 200 - 1000), so the transform should adjust X by -100
-      // eslint-disable-next-line testing-library/no-node-access
       expect(parentElement.parentElement?.style.transform).toBe(
         "translate3d(800px, 10px, 0px)"
       )
@@ -174,7 +181,9 @@ describe("useTooltipMeasurementSideEffect", () => {
       createMockDOMRect(-20, 10, 100, 50)
     )
 
-    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true))
+    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true), {
+      wrapper: TestAppWrapper,
+    })
 
     await waitFor(() => {
       expect(parentElement.style.left).toBe("20px")
@@ -190,14 +199,18 @@ describe("useTooltipMeasurementSideEffect", () => {
       .mockReturnValueOnce(createMockDOMRect(0, 0, 100, 50))
       .mockReturnValueOnce(createMockDOMRect(10, 10, 100, 50))
 
-    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true))
+    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true), {
+      wrapper: TestAppWrapper,
+    })
 
     await waitFor(() => {
       expect(requestAnimationFrameSpy).toHaveBeenCalled()
     })
 
     await waitFor(() =>
-      expect(getBoundingClientRectSpy).toHaveBeenCalledTimes(2)
+      expect(
+        getBoundingClientRectSpy.mock.calls.length
+      ).toBeGreaterThanOrEqual(2)
     )
   })
 
@@ -210,7 +223,9 @@ describe("useTooltipMeasurementSideEffect", () => {
       createMockDOMRect(900, 10, 200, 50)
     )
 
-    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true))
+    renderHook(() => useTooltipMeasurementSideEffect(tooltipElement, true), {
+      wrapper: TestAppWrapper,
+    })
 
     await waitFor(() => {
       expect(getComputedStyleSpy).toHaveBeenCalled()

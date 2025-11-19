@@ -16,7 +16,6 @@
 
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-/* eslint-disable import/no-extraneous-dependencies */
 import {
   renderHook as reactTestingLibraryRenderHook,
   RenderHookOptions,
@@ -35,10 +34,7 @@ import { TestAppWrapper, render as testUtilRender } from "~lib/test_util"
 const FullscreenHarness: FC<PropsWithChildren> = ({ children }) => {
   return (
     <TestAppWrapper>
-      {/* 500 is an arbitrary value for the width, as it's not actually used in the tests */}
-      <ElementFullscreenWrapper width={500}>
-        {children}
-      </ElementFullscreenWrapper>
+      <ElementFullscreenWrapper>{children}</ElementFullscreenWrapper>
     </TestAppWrapper>
   )
 }

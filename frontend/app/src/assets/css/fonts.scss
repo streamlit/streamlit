@@ -18,170 +18,64 @@
 
 @font-face {
   font-family: "Source Code Pro";
-  font-weight: 400;
-  font-style: regular;
+  font-weight: 100 900;
+  font-style: normal;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-Regular.woff2")
+  src: url("../fonts/Source_Code/SourceCodeVF-Upright.ttf.woff2")
     format("woff2");
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  font-weight: 600;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-SemiBold.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  font-weight: 700;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-Bold.woff2") format("woff2");
 }
 
 /* Mono, italic */
 
 @font-face {
   font-family: "Source Code Pro";
-  font-weight: 400;
+  font-weight: 100 900;
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-Italic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  font-weight: 600;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-SemiBoldItalic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  font-weight: 700;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code_Pro/SourceCodePro-BoldItalic.woff2")
+  src: url("../fonts/Source_Code/SourceCodeVF-Italic.ttf.woff2")
     format("woff2");
 }
 
 /* Sans, regular */
 
 @font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 400;
-  font-style: regular;
+  font-family: "Source Sans";
+  font-weight: 100 900;
+  font-style: normal;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-Regular.woff2")
+  src: url("../fonts/Source_Sans/SourceSansVF-Upright.ttf.woff2")
     format("woff2");
-}
-
-@font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 600;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-SemiBold.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 700;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-Bold.woff2") format("woff2");
 }
 
 /* Sans, italic */
 
 @font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 400;
+  font-family: "Source Sans";
+  font-weight: 100 900;
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-Italic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 600;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-SemiBoldItalic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Sans Pro";
-  font-weight: 700;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans_Pro/SourceSansPro-BoldItalic.woff2")
+  src: url("../fonts/Source_Sans/SourceSansVF-Italic.ttf.woff2")
     format("woff2");
 }
 
 /* Serif, regular */
 
 @font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 400;
-  font-style: regular;
+  font-family: "Source Serif";
+  font-weight: 100 900;
+  font-style: normal;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-Regular.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 600;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-SemiBold.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 700;
-  font-style: regular;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-Bold.woff2")
+  src: url("../fonts/Source_Serif/SourceSerifVariable-Roman.ttf.woff2")
     format("woff2");
 }
 
 /* Serif, italic */
 
 @font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 400;
+  font-family: "Source Serif";
+  font-weight: 100 900;
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-Italic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 600;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-SemiBoldItalic.woff2")
-    format("woff2");
-}
-
-@font-face {
-  font-family: "Source Serif Pro";
-  font-weight: 700;
-  font-style: italic;
-  /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-BoldItalic.woff2")
+  src: url("../fonts/Source_Serif/SourceSerifVariable-Italic.ttf.woff2")
     format("woff2");
 }

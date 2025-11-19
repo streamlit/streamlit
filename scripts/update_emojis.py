@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 
 from emoji.unicode_codes import EMOJI_DATA
 
@@ -36,6 +37,10 @@ emoji_unicodes = set(EMOJI_DATA.keys())
 
 print(f"Existing emoji collection: {len(ALL_EMOJIS)}")
 print(f"New emoji collection:  {len(emoji_unicodes)}")
+
+if len(ALL_EMOJIS) == len(emoji_unicodes):
+    print("No new emojis to add. Exiting.")
+    sys.exit(0)
 
 generated_code = f"""### EMOJIS START ###
 ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}

@@ -47,7 +47,14 @@ export const StyledExceptionLinks = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.md,
   justifyContent: "flex-end",
+  underline: true,
 }))
+
+export const StyledExceptionCopyButton = styled.button({
+  all: "unset",
+  font: "inherit",
+  textDecoration: "underline",
+})
 
 export const StyledExceptionWrapper = styled.div(({ theme }) => ({
   display: "flex",

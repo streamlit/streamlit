@@ -143,7 +143,7 @@ describe("AudioInputActionButton", () => {
     it("should render the uploading spinner", () => {
       render(<AudioInputActionButtons {...getProps()} isUploading={true} />)
 
-      expect(screen.getByLabelText("Uploading")).toBeInTheDocument()
+      expect(screen.getByTestId("stSpinnerIcon")).toBeVisible()
     })
   })
 

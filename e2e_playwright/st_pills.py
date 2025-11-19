@@ -16,14 +16,11 @@ import time
 
 import streamlit as st
 
+# Regression test for gh-12067: Pills at the start of the app should not wrap
+# The bug only reproduces when pills are among the first elements rendered
+st.pills("Regression test 3", ["1", "2", "3"], key="regression_3")
+
 st.header("Pills - standard")
-
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_pills = ["🧰 General widgets", "📊 Charts", "🧊 3D"]
-else:
-    st.session_state.default_pills = []
-
-default = st.session_state.default_pills
 
 pills_options = [
     "🧰 General widgets",
@@ -44,14 +41,13 @@ pills_options = [
     "🏗️ App builders",
     "🔌 Integrations with other tools",
     "📦 Collections of components",
-    "📦 Very very long text" * 20,  # pill with very long text
+    "📦 Very very long text" * 21,  # pill with very long text
 ]
 s1 = st.pills(
     "Select some options",
     pills_options,
     key="pills",
     selection_mode="multi",
-    default=default,
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {s1}")
@@ -116,7 +112,7 @@ st.write(
 st.header("Pills in fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.pills(
         "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
@@ -139,7 +135,101 @@ s6 = st.pills("Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sl
 st.write("pills-after-sleep:", str(s6))
 
 
+st.header("Pills - width examples")
+st.pills(
+    "Pills with content width (default)",
+    ["Option 1", "Option 2", "Option 3"],
+    width="content",
+    key="pills_content_width",
+)
+
+st.pills(
+    "Pills with stretch width",
+    ["Option 1", "Option 2", "Option 3"],
+    width="stretch",
+    key="pills_stretch_width",
+)
+
+st.pills(
+    "Pills with 300px width",
+    ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+    width=300,
+    key="pills_300px_width",
+)
+
+st.header("Pills - disabled and selected")
+s10 = st.pills(
+    "Elements",
+    ["Water", "Fire", "Earth", "Air"],
+    key="pills_disabled-selected",
+    default="Water",
+    disabled=True,
+)
+st.write("pills-disabled-selected:", str(s10))
+
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_pills = ["🧰 General widgets", "🎥 Video"]
+else:
+    st.session_state.default_pills = []
+
+default = st.session_state.default_pills
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.pills(
+    "Pills with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_pills,
+)
+st.write("Pills with default options:", str(val))
+
+st.markdown("Pills - dynamic props:")
+
+if st.toggle("Update pills props"):
+    dyn_val = st.pills(
+        "Updated dynamic pills",
+        key="dynamic_pills_with_key",
+        help="updated help",
+        width=300,
+        default="banana",
+        on_change=lambda a, param: print(
+            f"Updated pills - callback triggered: {a} {param}"
+        ),
+        args=("Updated pills arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated pills value:", dyn_val)
+else:
+    dyn_val = st.pills(
+        "Initial dynamic pills",
+        key="dynamic_pills_with_key",
+        help="initial help",
+        width="content",
+        default="apple",
+        on_change=lambda a, param: print(
+            f"Initial pills - callback triggered: {a} {param}"
+        ),
+        args=("Initial pills arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial pills value:", dyn_val)

@@ -30,6 +30,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -40,6 +41,7 @@ from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
 )
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class Multiselectbox(DeltaGeneratorTestCase):
@@ -144,7 +146,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.default[:] == expected
         assert c.options == ["Coffee", "Tea", "Water"]
-        assert c.placeholder == "Choose an option"
+        # Default placeholders are now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -214,7 +217,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.accept_new_options
-        assert c.placeholder == "Choose or add an option"
+        # Placeholder logic is now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -252,7 +256,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
 
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
 
         with col1:
             st.multiselect("foo", ["bar", "baz"])
@@ -317,6 +321,32 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.placeholder == "Select your beverage"
 
+    def test_empty_string_placeholder(self):
+        """Test that empty string placeholder is converted to single space to allow explicit empty placeholder."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder="")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == " "
+
+    def test_none_placeholder_uses_default(self):
+        """Test that None placeholder gets converted to empty string for frontend to handle."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
+
+    def test_none_placeholder_with_accept_new_options(self):
+        """Test that None placeholder gets converted to empty string with accept_new_options."""
+        st.multiselect(
+            "the label",
+            ["Coffee", "Tea", "Water"],
+            placeholder=None,
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
+
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
@@ -325,6 +355,94 @@ class Multiselectbox(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.multiselect(
+                label="Label",
+                default=["a"],
+                key="multiselect_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                placeholder="placeholder 1",
+                # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "cd"],
+                accept_new_options=True,
+                max_selections=3,
+            )
+            c1 = self.get_delta_from_queue().new_element.multiselect
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.multiselect(
+                label="Label 2",
+                default=["a", "b"],
+                key="multiselect_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                placeholder="placeholder 2",
+                # Whitelisted kwargs:
+                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "cd"],
+                accept_new_options=True,
+                max_selections=3,
+            )
+            c2 = self.get_delta_from_queue().new_element.multiselect
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "b"], ["a", "b", "c"]),
+            ("max_selections", 2, 3),
+            ("accept_new_options", True, False),
+            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "multiselect_key_whitelist",
+                "options": ["a", "b"],
+                "default": ["a"],
+                "max_selections": 2,
+                "accept_new_options": True,
+                "format_func": lambda x: x.lower(),
+            }
+
+            base_kwargs[kwarg_name] = value1
+            st.multiselect(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.multiselect
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.multiselect(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.multiselect
+            id2 = c2.id
+            assert id1 != id2
 
     def test_over_max_selections_initialization(self):
         with pytest.raises(StreamlitSelectionCountExceedsMaxError):
@@ -389,6 +507,53 @@ class Multiselectbox(DeltaGeneratorTestCase):
             max_selections_count=max_selections,
         )
         assert str(error) == expected_msg
+
+    def test_width_config_default(self):
+        """Test that default width is 'stretch'."""
+        st.multiselect("the label", ("m", "f"))
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    def test_width_config_pixel(self):
+        """Test that pixel width works properly."""
+        st.multiselect("the label", ("m", "f"), width=200)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 200
+
+    def test_width_config_stretch(self):
+        """Test that 'stretch' width works properly."""
+        st.multiselect("the label", ("m", "f"), width="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_invalid_width(self, width):
+        """Test that invalid width values raise exceptions."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.multiselect("the label", ("m", "f"), width=width)
 
 
 def test_multiselect_enum_coercion():

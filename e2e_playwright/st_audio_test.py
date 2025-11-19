@@ -16,11 +16,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
 )
 
 AUDIO_ELEMENTS_WITH_PATH = 3
@@ -190,7 +194,7 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with url
@@ -216,7 +220,7 @@ def test_audio_source_error_with_path(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with path

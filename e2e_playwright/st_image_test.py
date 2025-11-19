@@ -17,14 +17,19 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_no_skeletons,
     get_element_by_key,
     get_image,
+    goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 37
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -96,8 +101,14 @@ def test_image_formats(app: Page):
 
 
 def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
-    columns_container = app.get_by_test_id("stHorizontalBlock").first
+    columns_container = (
+        get_element_by_key(app, "use_column_width")
+        .get_by_test_id("stHorizontalBlock")
+        .first
+    )
+    expect(columns_container).to_be_visible()
     columns_container.scroll_into_view_if_needed()
+    expect_no_skeletons(columns_container)
     assert_snapshot(columns_container, name="st_image-use_column_width")
 
     expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
@@ -109,8 +120,14 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
 def test_st_image_use_container_width_parameter(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    columns_container = app.get_by_test_id("stHorizontalBlock").nth(1)
+    columns_container = (
+        get_element_by_key(app, "use_container_width")
+        .get_by_test_id("stHorizontalBlock")
+        .first
+    )
+    expect(columns_container).to_be_visible()
     columns_container.scroll_into_view_if_needed()
+    expect_no_skeletons(columns_container)
     assert_snapshot(columns_container, name="st_image-use_container_width")
 
 
@@ -255,6 +272,37 @@ def test_markdown_caption_support(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(image_element, name="st_image-markdown_caption_support")
 
 
+def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the new width parameter options: content, stretch, and pixel values."""
+    # Test content width with small image
+    small_content = get_image(app, "Small image with width='content' (default)")
+    assert_snapshot(small_content, name="st_image-width_content_small")
+
+    # Test content width with large image
+    large_content = get_image(app, "Large image with width='content'")
+    assert_snapshot(large_content, name="st_image-width_content_large")
+
+    # Test stretch width with small image
+    small_stretch = get_image(app, "Small image with width='stretch'")
+    assert_snapshot(small_stretch, name="st_image-width_stretch_small")
+
+    # Test stretch width with large image
+    large_stretch = get_image(app, "Large image with width='stretch'")
+    assert_snapshot(large_stretch, name="st_image-width_stretch_large")
+
+
+def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that width='stretch' works correctly in fullscreen mode."""
+    small_stretch_image = get_image(app, "Small image with width='stretch'")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), True)
+
+    fullscreen_image = small_stretch_image.locator("img")
+    assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
+
+    set_fullscreen(app, small_stretch_image.locator(".."), False)
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stImage")
@@ -275,7 +323,7 @@ def test_image_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     wait_until(
@@ -283,4 +331,5 @@ def test_image_source_error(app: Page, app_port: int):
         lambda: check_image_source_error_count(
             messages, IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT
         ),
+        timeout=10000,
     )

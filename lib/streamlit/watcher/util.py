@@ -23,13 +23,13 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
-from streamlit.errors import Error
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5
@@ -170,15 +170,18 @@ def _do_with_retries(
             file_path, # For pretty error message.
         )
     """
+
     for i in _retry_dance():
         try:
             return orig_fn()
-        except exceptions:  # noqa: PERF203
+        except exceptions as ex:  # noqa: PERF203
             if i >= _MAX_RETRIES - 1:
-                raise
+                raise StreamlitMaxRetriesError(
+                    f"Unable to access file or folder: {path}"
+                ) from ex
             # Continue with loop to either retry or raise MaxRetriesError.
 
-    raise MaxRetriesError(f"Unable to access file or folder: {path}")
+    raise StreamlitMaxRetriesError(f"Unable to access file or folder: {path}")
 
 
 def _retry_dance() -> Generator[int, None, None]:
@@ -202,7 +205,3 @@ def _retry_dance() -> Generator[int, None, None]:
     for i in range(_MAX_RETRIES):
         yield i
         time.sleep(_RETRY_WAIT_SECS)
-
-
-class MaxRetriesError(Error):
-    pass

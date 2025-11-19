@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""checkbox unit tests."""
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class SomeObj:
@@ -160,6 +161,59 @@ hello
         )
         assert c.type == CheckboxProto.StyleType.TOGGLE
 
+    @parameterized.expand(
+        [
+            (
+                "checkbox",
+                lambda label="Label", **kwargs: st.checkbox(label, **kwargs),
+                "checkbox",
+            ),
+            (
+                "toggle",
+                lambda label="Label", **kwargs: st.toggle(label, **kwargs),
+                "checkbox",
+            ),
+        ]
+    )
+    def test_stable_id_with_key(self, name, command, attr):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            command(
+                label="Label 1",
+                key=f"{name}_key",
+                value=True,
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = getattr(self.get_delta_from_queue().new_element, attr)
+            id1 = c1.id
+
+            # Second render with different params but same key
+            command(
+                label="Label 2",
+                key=f"{name}_key",
+                value=False,
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = getattr(self.get_delta_from_queue().new_element, attr)
+            id2 = c2.id
+            assert id1 == id2
+
     def test_checkbox_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.checkbox("the label"))()
@@ -177,3 +231,133 @@ hello
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_checkbox_with_width(self):
+        """Test st.checkbox with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for index, (
+            width_value,
+            expected_width_spec,
+            field_name,
+            field_value,
+        ) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                st.checkbox(f"checkbox width test {index}", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.checkbox.label == f"checkbox width test {index}"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_checkbox_with_invalid_width(self):
+        """Test st.checkbox with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for index, (width_value, expected_error_message) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.checkbox(
+                        f"invalid checkbox width test {index}", width=width_value
+                    )
+
+                assert str(exc.value) == expected_error_message
+
+    def test_checkbox_default_width(self):
+        """Test that st.checkbox defaults to content width."""
+        st.checkbox("the label")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.checkbox.label == "the label"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_toggle_with_width(self):
+        """Test st.toggle with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for index, (
+            width_value,
+            expected_width_spec,
+            field_name,
+            field_value,
+        ) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                st.toggle(f"toggle width test {index}", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.checkbox.label == f"toggle width test {index}"
+                assert el.checkbox.type == CheckboxProto.StyleType.TOGGLE
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_toggle_with_invalid_width(self):
+        """Test st.toggle with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for index, (width_value, expected_error_message) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.toggle(f"invalid toggle test {index}", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_toggle_default_width(self):
+        """Test that st.toggle defaults to content width."""
+        st.toggle("the label")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.checkbox.label == "the label"
+        assert el.checkbox.type == CheckboxProto.StyleType.TOGGLE
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True

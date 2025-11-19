@@ -20,8 +20,9 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   whiteSpace: "pre-wrap",
   wordWrap: "break-word",
   color: "inherit",
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
   fontFamily: theme.genericFonts.codeFont,
+  fontWeight: theme.fontWeights.code,
   backgroundColor: theme.colors.transparent,
   overflowX: "auto",
   margin: 0,
@@ -31,5 +32,5 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
 }))
 
 export const StyledErrorName = styled.strong(({ theme }) => ({
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.codeBold,
 }))

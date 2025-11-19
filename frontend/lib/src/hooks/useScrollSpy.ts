@@ -70,10 +70,13 @@ export function debounce(
         clearTimeout(timeout)
       }
 
-      timeout = setTimeout(() => {
-        fn(...args)
-        last = Date.now()
-      }, Math.max(0, ms - now + last))
+      timeout = setTimeout(
+        () => {
+          fn(...args)
+          last = Date.now()
+        },
+        Math.max(0, ms - now + last)
+      )
     }
   }
 }
@@ -99,14 +102,14 @@ const DEFAULT_DEBOUNCE_MS = 100
 export default function useScrollSpy(
   target: HTMLElement | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  eventHandler: ({ timeStampLow }: any) => void
+  eventHandler: ({ timeStampLow }: any) => void,
+  active: boolean
 ): void {
   const onEventRef = useRef(eventHandler)
 
   const debouncer = useMemo(
     () =>
-      // TODO: Update to match React best practices
-      // eslint-disable-next-line react-compiler/react-compiler
+      // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
       debounce(event => {
         onEventRef.current(event)
       }, DEFAULT_DEBOUNCE_MS),
@@ -124,7 +127,7 @@ export default function useScrollSpy(
   )
 
   useLayoutEffect(() => {
-    if (!target) {
+    if (!target || !active) {
       return () => {}
     }
 
@@ -132,5 +135,5 @@ export default function useScrollSpy(
     handleEvent({ target })
 
     return () => target.removeEventListener("scroll", handleEvent)
-  }, [handleEvent, target])
+  }, [handleEvent, target, active])
 }

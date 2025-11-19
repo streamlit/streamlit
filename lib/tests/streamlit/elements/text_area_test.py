@@ -21,11 +21,18 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidHeightError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class TextAreaTest(DeltaGeneratorTestCase):
@@ -57,7 +64,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         arg_values = ["some str", 123, {}, SomeObj()]
         proto_values = ["some str", "123", "{}", ".*SomeObj.*"]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.text_area("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_area
@@ -74,25 +81,6 @@ class TextAreaTest(DeltaGeneratorTestCase):
         # this value, but by the check via the HasField method:
         assert c.default == ""
         assert not c.HasField("default")
-
-    def test_height(self):
-        """Test that it can be called with height"""
-        st.text_area("the label", "", 300)
-
-        c = self.get_delta_from_queue().new_element.text_area
-        assert c.label == "the label"
-        assert c.default == ""
-        assert c.height == 300
-
-    def test_invalid_height(self):
-        """Test that it raises an error when passed an invalid height"""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.text_area("the label", "", height=50)
-
-        assert (
-            str(e.value)
-            == "Invalid height 50px for `st.text_area` - must be at least 68 pixels."
-        )
 
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
@@ -127,7 +115,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2, col3 = st.columns([2.5, 1.5, 8.3])
+        col1, _col2, _col3 = st.columns([2.5, 1.5, 8.3])
 
         with col1:
             st.text_area("foo")
@@ -165,7 +153,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that default width is 'stretch'."""
         st.text_area("the label")
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -176,7 +164,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that pixel width works properly."""
         st.text_area("the label", width=100)
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -187,7 +175,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that 'stretch' width works properly."""
         st.text_area("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -207,6 +195,60 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.text_area("the label", width=width)
+
+    def test_height_config_default(self):
+        """Test that default height is 122 pixels."""
+        st.text_area("the label")
+
+        c = self.get_delta_from_queue().new_element
+        # Default height should be set to 122 pixels.
+        assert c.height_config.pixel_height == 122
+
+    def test_height_config_pixel(self):
+        """Test that pixel height works properly."""
+        st.text_area("the label", height=150)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.PIXEL_HEIGHT.value
+        )
+        assert c.height_config.pixel_height == 150
+
+    def test_height_config_content(self):
+        """Test that 'content' height works properly."""
+        st.text_area("the label", height="content")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert c.height_config.use_content
+
+    def test_height_config_stretch(self):
+        """Test that 'stretch' height works properly."""
+        st.text_area("the label", height="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert c.height_config.use_stretch
+
+    @parameterized.expand(
+        [
+            100.5,
+            "invalid",
+            0,
+            -100,
+        ]
+    )
+    def test_invalid_height(self, height):
+        """Test that invalid height values raise exceptions."""
+        with pytest.raises(StreamlitInvalidHeightError):
+            st.text_area("the label", height=height)
 
     def test_help_dedents(self):
         """Test that help properly dedents"""
@@ -234,6 +276,81 @@ class TextAreaTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.text_area(
+                label="Label 1",
+                key="text_area_key",
+                value="abc",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                placeholder="placeholder 1",
+                max_chars=50,
+                height=200,
+            )
+            c1 = self.get_delta_from_queue().new_element.text_area
+            id1 = c1.id
+
+            # Second render with different params but same key (keep max_chars the same)
+            st.text_area(
+                label="Label 2",
+                key="text_area_key",
+                value="def",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                placeholder="placeholder 2",
+                max_chars=50,
+                height="content",
+            )
+            c2 = self.get_delta_from_queue().new_element.text_area
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("max_chars", 100, 200),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_area(
+                label="Label 1",
+                key="text_area_key",
+                **{kwarg_name: value1},
+            )
+            c1 = self.get_delta_from_queue().new_element.text_area
+            id1 = c1.id
+
+            st.text_area(
+                label="Label 2",
+                key="text_area_key",
+                **{kwarg_name: value2},
+            )
+            c2 = self.get_delta_from_queue().new_element.text_area
+            id2 = c2.id
+            assert id1 != id2
 
 
 class SomeObj:

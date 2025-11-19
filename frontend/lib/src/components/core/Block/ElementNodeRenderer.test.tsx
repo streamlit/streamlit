@@ -24,12 +24,13 @@ import {
   Snow as SnowProto,
 } from "@streamlit/protobuf"
 
-import { renderWithContexts } from "~lib/test_util"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { ElementNode } from "~lib/AppNode"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
@@ -82,6 +83,7 @@ function getProps(
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
+    componentRegistry: new ComponentRegistry(endpoints),
     ...props,
   }
 }
@@ -94,8 +96,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -104,7 +108,6 @@ describe("ElementNodeRenderer Block Component", () => {
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       expect(elementNodeRenderer).toHaveClass("stElementContainer")
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -114,7 +117,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>
@@ -122,7 +125,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stBalloons")
@@ -136,8 +138,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -145,7 +149,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -155,7 +158,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>
@@ -163,7 +166,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stSnow")

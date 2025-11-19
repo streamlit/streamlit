@@ -16,14 +16,15 @@
 
 import React from "react"
 
-import { act, fireEvent, screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Selectbox, { Props } from "./Selectbox"
 
@@ -46,14 +47,18 @@ const getProps = (
   ...widgetProps,
 })
 
-const pickOption = (selectbox: HTMLElement, value: string): void => {
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
-  fireEvent.click(selectbox)
+const pickOption = async (
+  selectbox: HTMLElement,
+  value: string
+): Promise<void> => {
+  const user = userEvent.setup()
+  // Click on the selectbox to open the dropdown
+  await user.click(selectbox)
+  // Find the desired option and click on it to select
   const valueElement = screen.getByText(value)
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
-  fireEvent.click(valueElement)
+  await user.click(valueElement)
+  // Select outside the widget to close the dropdown
+  await user.click(document.body)
 }
 
 describe("Selectbox widget", () => {
@@ -106,7 +111,7 @@ describe("Selectbox widget", () => {
     )
   })
 
-  it("handles the onChange event", () => {
+  it("handles the onChange event", async () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
     vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
@@ -115,7 +120,7 @@ describe("Selectbox widget", () => {
 
     const selectbox = screen.getByRole("combobox")
 
-    pickOption(selectbox, "b")
+    await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
@@ -127,7 +132,7 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("b")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -138,7 +143,7 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
 
     const selectbox = screen.getByRole("combobox")
-    pickOption(selectbox, "b")
+    await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,

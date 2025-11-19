@@ -22,6 +22,7 @@ import {
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
+import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -36,25 +37,83 @@ import {
   toSafeString,
 } from "./utils"
 
+type ChartAutoColor = "auto" | "auto-inverse"
+type ChartNamedSwatch =
+  | "red"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "violet"
+  | "orange"
+  | "gray"
+  | "grey"
+  | "primary"
+
+declare const __cssColorBrand: unique symbol
+type CSSColorString = string & { readonly [__cssColorBrand]?: never }
+
+type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
+
+/**
+ * Get the color mapping to map a user-defined color to the our
+ * theme colors.
+ *
+ * @param theme The theme to use.
+ * @returns The color mapping.
+ */
+const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
+  return new Map(
+    Object.entries({
+      red: theme.colors.redColor,
+      blue: theme.colors.blueColor,
+      green: theme.colors.greenColor,
+      yellow: theme.colors.yellowColor,
+      violet: theme.colors.violetColor,
+      orange: theme.colors.orangeColor,
+      gray: theme.colors.grayColor,
+      grey: theme.colors.grayColor,
+      primary: theme.colors.primary,
+    })
+  )
+}
 export interface ProgressColumnParams {
-  // The minimum permitted value. Defaults to 0.
+  /**
+   * The minimum permitted value. Defaults to 0.
+   */
   readonly min_value?: number
-  // The maximum permitted value. Defaults to 100 if the underlying data is integer,
-  // or 1 for all others types.
+  /**
+   * The maximum permitted value. Defaults to 100 if the underlying data is
+   * integer, or 1 for all others types.
+   */
   readonly max_value?: number
-  // A formatting syntax (e.g. sprintf) to format the display value.
-  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
+  /**
+   * A formatting syntax (e.g. sprintf) to format the display value.
+   * This can be used for adding prefix or suffix, or changing the number of
+   * decimals of the display value.
+   */
   readonly format?: string
-  // The stepping interval. Defaults to 0.01.
-  // Mainly useful once we provide editing capabilities.
+  /**
+   * The stepping interval. Defaults to 0.01.
+   * Mainly useful once we provide editing capabilities.
+   */
   readonly step?: number
+  /**
+   * The color to use for the progress bar. Can be:
+   * - auto & auto-inverse: To color the bar green or red depending on the value.
+   * - red, blue, green, yellow, orange, violet, gray/grey, primary (from theme)
+   * - a CSS color value compatible with canvas rendering
+   */
+  readonly color?: ChartColor
 }
 
 /**
  * A read-only column type to support rendering values that have a defined
  * range. This is rendered via a progress-bar-like visualization.
  */
-function ProgressColumn(props: BaseColumnProps): BaseColumn {
+function ProgressColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
   const isInteger = isIntegerType(props.arrowType)
 
   const parameters = mergeColumnParameters(
@@ -62,28 +121,32 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     {
       min_value: 0,
       max_value: isInteger ? 100 : 1,
-      step: isInteger ? 1 : 0.01,
       format: isInteger ? "%3d%%" : "percent",
+      step: isInteger ? 1 : undefined,
+      color: undefined,
     } as ProgressColumnParams,
     // User parameters:
     props.columnTypeOptions
   ) as ProgressColumnParams
+
+  const colorMapping = getColorMapping(theme)
+
+  const fixedDecimals =
+    isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
+      ? undefined
+      : countDecimals(parameters.step)
 
   // Measure the display value of the max value, so that all progress bars are aligned correctly:
   let measureLabel: string
   try {
     measureLabel = formatNumber(
       parameters.max_value as number,
-      parameters.format
+      parameters.format,
+      fixedDecimals
     )
-  } catch (error) {
+  } catch {
     measureLabel = toSafeString(parameters.max_value)
   }
-
-  const fixedDecimals =
-    isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
-      ? undefined
-      : countDecimals(parameters.step)
 
   const cellTemplate: RangeCellType = {
     kind: GridCellKind.Custom,
@@ -93,9 +156,12 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     readonly: true,
     data: {
       kind: "range-cell",
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       min: parameters.min_value!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       max: parameters.max_value!,
-      step: parameters.step!,
+      step: parameters.step ?? 0.01,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       value: parameters.min_value!,
       label: String(parameters.min_value),
       measureLabel,
@@ -106,6 +172,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "progress",
     sortMode: "smart",
+    typeIcon: ":material/commit:",
     isEditable: false, // Progress column is always readonly
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
@@ -128,7 +195,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       }
 
       if (
-        isNullOrUndefined(parameters.step) ||
+        notNullOrUndefined(parameters.step) &&
         Number.isNaN(parameters.step)
       ) {
         return getErrorCell(
@@ -176,6 +243,28 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
         Math.max(parameters.min_value, cellData)
       )
 
+      // Determine progress color if configured
+      let progressColor: string | undefined
+      if (parameters.color === "auto" || parameters.color === "auto-inverse") {
+        // Use min/max to determine threshold at 50%
+        const range = parameters.max_value - parameters.min_value
+        const ratio =
+          range === 0 ? 0 : (normalizeCellValue - parameters.min_value) / range
+        const isAbove = ratio > 0.5
+        if (parameters.color === "auto") {
+          progressColor = isAbove
+            ? theme?.colors.greenColor
+            : theme?.colors.redColor
+        } else {
+          progressColor = isAbove
+            ? theme?.colors.redColor
+            : theme?.colors.greenColor
+        }
+      } else if (parameters.color) {
+        progressColor =
+          colorMapping.get(parameters.color) ?? (parameters.color as string)
+      }
+
       return {
         ...cellTemplate,
         isMissingValue: isNullOrUndefined(data),
@@ -184,6 +273,13 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate.data,
           value: normalizeCellValue,
           label: displayData,
+          measureLabel:
+            displayData.length > measureLabel.length
+              ? // Use displayData if it's longer than measureLabel to determine
+                // the width of the progress bar label.
+                displayData
+              : measureLabel,
+          color: progressColor,
         },
       } as RangeCellType
     },

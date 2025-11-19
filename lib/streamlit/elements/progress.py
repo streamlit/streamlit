@@ -15,14 +15,11 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, TypeAlias, cast
 
-from typing_extensions import TypeAlias
-
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
@@ -32,7 +29,7 @@ if TYPE_CHECKING:
 
 # Currently, equates to just float, but we can't use `numbers.Real` due to
 # https://github.com/python/mypy/issues/3186
-FloatOrInt: TypeAlias = Union[int, float]
+FloatOrInt: TypeAlias = int | float
 
 
 def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:
@@ -124,9 +121,15 @@ class ProgressMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        width : int or str
-            The width of the progress bar. Can be either "stretch" to use the full
-            container width, or an integer for a fixed width in pixels.
+        width : "stretch" or int
+            The width of the progress element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -158,18 +161,10 @@ class ProgressMixin:
         if text is not None:
             progress_proto.text = text
 
-        width_config = WidthConfig()
-
         validate_width(width)
+        layout_config = LayoutConfig(width=width)
 
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        progress_proto.width_config.CopyFrom(width_config)
-
-        return self.dg._enqueue("progress", progress_proto)
+        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

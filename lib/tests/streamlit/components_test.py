@@ -44,6 +44,7 @@ from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_mock_script_run_ctx
@@ -88,6 +89,9 @@ class DeclareComponentTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
 
+    def mock_isdir(self, path: str) -> bool:
+        return path == PATH or path == os.path.abspath(PATH)
+
     def test_name(self):
         """Test component name generation"""
         # Test a component defined in a module with no package
@@ -122,12 +126,9 @@ class DeclareComponentTest(unittest.TestCase):
     def test_only_path_str(self):
         """Succeed when a path is provided via str."""
 
-        def isdir(path):
-            return path == PATH or path == os.path.abspath(PATH)
-
         with mock.patch(
             "streamlit.components.v1.component_registry.os.path.isdir",
-            side_effect=isdir,
+            side_effect=self.mock_isdir,
         ):
             component = components.declare_component("test", path=PATH)
 
@@ -142,12 +143,9 @@ class DeclareComponentTest(unittest.TestCase):
     def test_only_path_pathlib(self):
         """Succeed when a path is provided via Path."""
 
-        def isdir(path):
-            return path == PATH or path == os.path.abspath(PATH)
-
         with mock.patch(
             "streamlit.components.v1.component_registry.os.path.isdir",
-            side_effect=isdir,
+            side_effect=self.mock_isdir,
         ):
             component = components.declare_component("test", path=Path(PATH))
 
@@ -170,23 +168,37 @@ class DeclareComponentTest(unittest.TestCase):
             == component.abspath
         )
 
-    def test_path_and_url(self):
-        """Fail if path AND url are provided."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
-            components.declare_component("test", path=PATH, url=URL)
+    def test_both_path_and_url_ok(self):
+        with mock.patch(
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=self.mock_isdir,
+        ):
+            component = components.declare_component("test", path=PATH, url=URL)
+
+        assert component.url == URL
+        assert component.path == PATH
+
+    @patch_config_options(
+        {"server.customComponentBaseUrlPath": "https://example.com/my/custom/component"}
+    )
+    def test_url_via_base_path_config(self):
+        with mock.patch(
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=self.mock_isdir,
+        ):
+            component = components.declare_component("test", path=PATH)
+
         assert (
-            str(exception_message.value)
-            == "Either 'path' or 'url' must be set, but not both."
+            component.url
+            == "https://example.com/my/custom/component/tests.streamlit.components_test.test/"
         )
+        assert component.path == PATH
 
     def test_no_path_and_no_url(self):
         """Fail if neither path nor url is provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
             components.declare_component("test", path=None, url=None)
-        assert (
-            str(exception_message.value)
-            == "Either 'path' or 'url' must be set, but not both."
-        )
+        assert str(exception_message.value) == "Either 'path' or 'url' must be set."
 
     def test_module_name_not_none(self):
         caller_frame = inspect.currentframe()
@@ -227,7 +239,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.currentframe returns None."""
         mock_currentframe.return_value = None
         with pytest.raises(
-            RuntimeError, match="current_frame is None. This should never happen."
+            RuntimeError, match=r"current_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -240,7 +252,7 @@ class DeclareComponentTest(unittest.TestCase):
         mock_frame.f_back = None
         mock_currentframe.return_value = mock_frame
         with pytest.raises(
-            RuntimeError, match="caller_frame is None. This should never happen."
+            RuntimeError, match=r"caller_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -251,7 +263,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.getmodule returns None."""
         mock_getmodule.return_value = None
         with pytest.raises(
-            RuntimeError, match="module is None. This should never happen."
+            RuntimeError, match=r"module is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -440,7 +452,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
 
     def test_widget_id_with_key(self):
-        """UNLIKE OTHER WIDGET TYPES, a component with a user-supplied `key` will have a stable widget ID
+        """A component with a user-supplied `key` will have a stable widget ID
         even when the component's other parameters change.
 
         This is important because a component's iframe gets unmounted and remounted - wiping all its
@@ -628,9 +640,11 @@ class IFrameTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.iframe.src == "http://not.a.url"
         assert el.iframe.srcdoc == ""
-        assert el.iframe.width == 200
-        assert el.iframe.has_width
         assert el.iframe.scrolling
+
+        assert el.width_config.pixel_width == 200
+        assert el.iframe.width == 0.0  # deprecated field should remain at default
+        assert el.iframe.has_width is False  # deprecated field should remain at default
 
     def test_html(self):
         """Test components.html"""
@@ -640,9 +654,11 @@ class IFrameTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.iframe.src == ""
         assert el.iframe.srcdoc == html
-        assert el.iframe.width == 200
-        assert el.iframe.has_width
         assert el.iframe.scrolling
+
+        assert el.width_config.pixel_width == 200
+        assert el.iframe.width == 0.0  # deprecated field should remain at default
+        assert el.iframe.has_width is False  # deprecated field should remain at default
 
 
 class AlternativeComponentRegistryTest(unittest.TestCase):

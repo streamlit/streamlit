@@ -37,13 +37,16 @@ export type DOMRectKeys =
  *
  * @template T - The type of the HTML element being observed.
  * @param {DOMRectKeys[]} properties - The list of DOMRect properties to observe.
+ * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
+ * that will cause the observer to be re-evaluated.
  * @returns {{
  *   values: number[],
  *   elementRef: MutableRefObject<T | null>,
  *   }} An object containing the observed values, a ref to the observed element.
  */
 export const useResizeObserver = <T extends HTMLDivElement>(
-  properties: DOMRectKeys[]
+  properties: DOMRectKeys[],
+  dependencies: React.DependencyList = []
 ): {
   values: number[]
   elementRef: MutableRefObject<T | null>
@@ -60,6 +63,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       return []
     }
 
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const rect = elementRef.current.getBoundingClientRect()
 
     return properties.map(property => {
@@ -89,7 +93,8 @@ export const useResizeObserver = <T extends HTMLDivElement>(
         cancelAnimationFrame(frameId)
       }
     }
-  }, [properties, getValues])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  }, [properties, getValues, ...dependencies])
 
   return { values, elementRef }
 }

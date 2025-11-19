@@ -270,7 +270,7 @@ class SliderTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
 
         with col1:
             st.slider("foo")
@@ -358,32 +358,32 @@ class SliderWidthTest(DeltaGeneratorTestCase):
     def test_slider_with_width_pixels(self):
         """Test that slider can be displayed with a specific width in pixels."""
         st.slider("Label", min_value=0, max_value=10, width=500)
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert c.width_config.pixel_width == 500
+        assert element.width_config.pixel_width == 500
 
     def test_slider_with_width_stretch(self):
         """Test that slider can be displayed with a width of 'stretch'."""
         st.slider("Label", min_value=0, max_value=10, width="stretch")
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     def test_slider_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.slider("Label", min_value=0, max_value=10)
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     @parameterized.expand(
         [
@@ -411,3 +411,86 @@ def test_id_stability():
     s2 = at.slider[0]
 
     assert s1.id == s2.id
+
+
+class SliderStableIdTest(DeltaGeneratorTestCase):
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.slider(
+                label="Label 1",
+                key="slider_key",
+                value=5,
+                format="%0.2f",
+                help="help 1",
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                disabled=False,
+                # Whitelisted kwargs
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            st.slider(
+                label="Label 2",
+                key="slider_key",
+                value=7,
+                format="%d",
+                help="help 2",
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                disabled=True,
+                # Whitelisted kwargs
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("min_value", 0, 1),
+            ("max_value", 10, 20),
+            ("step", 1, 2),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "slider_key2",
+                "min_value": 0,
+                "max_value": 10,
+                "value": 5,
+                "step": 1,
+            }
+            base_kwargs[kwarg_name] = value1
+            st.slider(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.slider(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 != id2

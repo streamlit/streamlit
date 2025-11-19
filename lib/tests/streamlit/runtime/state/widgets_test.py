@@ -16,7 +16,6 @@
 
 import inspect
 import unittest
-from dataclasses import dataclass
 from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
@@ -39,6 +38,7 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import (
+    register_widget,
     register_widget_from_metadata,
     user_key_from_element_id,
 )
@@ -319,7 +319,11 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key", form_id=None
+            "button",
+            label="the label",
+            user_key="my_key",
+            dg=None,
+            key_as_main_identity=False,
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
@@ -357,7 +361,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["form_id", "user_key"]:
+        for kwarg in ["user_key", "dg", "key_as_main_identity"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -388,27 +392,11 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         """Test that active_script_hash and form ID are always included in
         element ID calculation."""
 
-        expected_form_id: str | None = "form_id"
-
-        @dataclass
-        class MockForm:
-            form_id = expected_form_id
-
         with patch(
             "streamlit.elements.lib.utils._compute_element_id",
             wraps=_compute_element_id,
         ) as patched_compute_element_id:
-            # Some elements cannot be used in a form:
-            if element_name not in ["button", "chat_input", "download_button"]:
-                with patch(
-                    "streamlit.elements.lib.form_utils._current_form",
-                    return_value=MockForm(),
-                ):
-                    widget_func()
-            else:
-                widget_func()
-                expected_form_id = None
-
+            widget_func()
         # Get call kwargs from patched_compute_element_id
         call_kwargs = patched_compute_element_id.call_args[1]
         assert "active_script_hash" in call_kwargs, (
@@ -416,10 +404,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         )
         "in element ID calculation."
 
-        # Elements that don't set a form ID
-        assert call_kwargs.get("form_id") == expected_form_id, (
-            "form_id is expected to be included in element ID calculation."
-        )
+        # Some elements cannot be used in a form
+        if element_name not in ["button", "chat_input", "download_button"]:
+            # For all other check that form_id is set:
+            assert call_kwargs.get("form_id") == "", (
+                "form_id is expected to be included in element ID calculation."
+            )
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
@@ -428,6 +418,17 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         """
         widget_func()
         with pytest.raises(errors.DuplicateWidgetID):
+            widget_func()
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_not_triggers_duplicate_id_error(self, _element_name: str, widget_func):
+        """
+        Test that duplicate ID error is not raised if the same widget is
+        both in the main and sidebar area.
+        """
+        with st.container():
+            widget_func()
+        with st.sidebar:
             widget_func()
 
     @parameterized.expand(
@@ -481,6 +482,10 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
+        # use_container_width is being deprecated and is not used for element ID calculation
+        if "use_container_width" in expected_sig:
+            del expected_sig["use_container_width"]
+
         if widget_func == st.button:
             expected_sig["is_form_submitter"] = ANY
         # we exclude `data` for `st.download_button` here and not
@@ -502,32 +507,41 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.feedback("stars", disabled=disabled),
+                style="",
+                label="",
+                help="",  # noqa: A006
+                width="content": st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
             (
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.pills does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.pills("some_label", options, disabled=disabled),
+                style="",
+                key="",
+                help="",  # noqa: A006
+                width="content": st.pills(label, options, disabled=disabled),
                 "button_group",
             ),
             (
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.feedback does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.segmented_control(
-                    "some_label", options, disabled=disabled
+                style="",
+                key="",
+                help="",  # noqa: A006
+                width="content": st.segmented_control(
+                    label, options, disabled=disabled
                 ),
                 "button_group",
             ),
@@ -578,6 +592,25 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         with pytest.raises(errors.DuplicateWidgetID):
             st.data_editor(data=[], disabled=True)
 
+    def test_duplicate_id_error_uses_element_type(self) -> None:
+        """Test that duplicate ID error uses element_type when style is None."""
+        with pytest.raises(
+            errors.StreamlitDuplicateElementId,
+            match="There are multiple `button` elements with the same",
+        ):
+            compute_and_register_element_id(
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
+            )
+            compute_and_register_element_id(
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
+            )
+
 
 class RegisterWidgetsTest(DeltaGeneratorTestCase):
     @parameterized.expand(WIDGET_ELEMENTS)
@@ -596,6 +629,21 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         assert widget_metadata_arg.value_type in get_args(ValueFieldName)
         # test that the value_type also maps to a protobuf field
         assert widget_metadata_arg.value_type in WidgetState.DESCRIPTOR.fields_by_name
+
+    def test_raises_exception_with_on_change_and_callbacks(self):
+        """Test that `register_widget` raises an exception when both `on_change`
+        and `callbacks` are provided.
+        """
+        with pytest.raises(errors.StreamlitAPIException):
+            register_widget(
+                "el_id",
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                ctx=None,
+                on_change_handler=lambda: None,
+                callbacks={"change": lambda: None},
+                value_type="bool_value",
+            )
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

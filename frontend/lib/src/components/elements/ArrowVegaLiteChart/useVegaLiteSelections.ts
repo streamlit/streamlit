@@ -16,12 +16,12 @@
 
 import { useCallback } from "react"
 
-import { SignalValue, View as VegaView } from "vega"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
+import { SignalValue, View as VegaView } from "vega"
 
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { debounce, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 

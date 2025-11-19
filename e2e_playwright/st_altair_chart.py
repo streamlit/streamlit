@@ -20,6 +20,27 @@ import streamlit as st
 
 np.random.seed(0)
 
+# mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
+# have to skip this part of the test when testing min versions.
+major, minor, patch = alt.__version__.split(".")
+if not (major == "4" and minor < "2"):
+    source = pd.DataFrame(
+        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
+    )
+
+    chart = (
+        alt.Chart(source)
+        .mark_arc(innerRadius=50)
+        .encode(
+            theta=alt.Theta(field="value", type="quantitative"),
+            color=alt.Color(field="category", type="nominal"),
+        )
+    )
+
+    st.write("Pie Chart with more than 4 Legend items")
+    st.altair_chart(chart, theme="streamlit", width="content")
+
+
 df1 = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
 chart = alt.Chart(df1).mark_circle().encode(x="a", y="b", size="c", color="c")
 
@@ -49,26 +70,6 @@ chart = alt.Chart(df2).mark_bar().encode(x="a", y="b")
 st.write("Bar chart with overwritten theme props:")
 st.altair_chart(chart.configure_mark(color="black"), theme="streamlit")
 
-# mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
-# have to skip this part of the test when testing min versions.
-major, minor, patch = alt.__version__.split(".")
-if not (major == "4" and minor < "2"):
-    source = pd.DataFrame(
-        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
-    )
-
-    chart = (
-        alt.Chart(source)
-        .mark_arc(innerRadius=50)
-        .encode(
-            theta=alt.Theta(field="value", type="quantitative"),
-            color=alt.Color(field="category", type="nominal"),
-        )
-    )
-
-    st.write("Pie Chart with more than 4 Legend items")
-    st.altair_chart(chart, theme="streamlit", use_container_width=False)
-
 # taken from vega_datasets barley example
 barley = alt.UrlData(
     "https://cdn.jsdelivr.net/npm/vega-datasets@v2.7.0/data/barley.json"
@@ -80,16 +81,16 @@ barley_chart = (
     .encode(x="year:O", y="sum(yield):Q", color="year:N", column="site:N")
 )
 
-st.write("Grouped Bar Chart with default theme:")
-st.altair_chart(barley_chart, theme=None)
+# TODO(lukasmasuch): This chart causes some flickering in webkit & chromium.
+# This points to an actual bug or issue that needs more investigation.
+# st.write("Grouped Bar Chart with default theme:")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme=None)  # noqa: ERA001
 
-st.write("Grouped Bar Chart with streamlit theme:")
-st.altair_chart(barley_chart, theme="streamlit")
+# st.write("Grouped Bar Chart with streamlit theme:")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme="streamlit")  # noqa: ERA001
 
-st.write(
-    "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)"
-)
-st.altair_chart(barley_chart, theme=None, use_container_width=True)
+# st.write( "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme=None, use_container_width=True)  # noqa: ERA001
 
 st.write("Layered chart")
 # Taken from vega_datasets
@@ -116,4 +117,26 @@ c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))
 
 c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))
 
-st.altair_chart(c1 & c2, use_container_width=True)
+st.altair_chart(c1 & c2)
+
+# Issue #9339: legend.title=None shouldn't cut chart off
+df_cut_off_issue = pd.DataFrame(
+    {
+        "x": [1, 2, 3, 4],
+        "y": [10, 20, 30, 40],
+        "category": ["A", "B", "C", "D"],
+    }
+)
+
+cut_off_chart = (
+    alt.Chart(df_cut_off_issue)
+    .mark_line(point=True)
+    .encode(
+        x=alt.X("x", title="Date"),
+        y=alt.Y("y:Q", title="Value"),
+        color=alt.Color("category:N").legend(orient="bottom", title=None),
+    )
+)
+
+st.write("Altair chart cut off if legend title is None (Issue #9339)")
+st.altair_chart(cut_off_chart)

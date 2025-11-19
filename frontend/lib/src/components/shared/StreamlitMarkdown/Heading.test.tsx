@@ -20,9 +20,9 @@ import { screen } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { render } from "~lib/test_util"
 
 import Heading, { HeadingProtoProps } from "./Heading"
 
@@ -172,7 +172,7 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
     )
     expect(screen.getByRole("heading")).toHaveTextContent(
       `| Syntax | Description |`

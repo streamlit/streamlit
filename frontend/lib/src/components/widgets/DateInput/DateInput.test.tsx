@@ -16,8 +16,16 @@
 
 import React from "react"
 
-import { act, fireEvent, screen, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import moment from "moment"
+import { MockInstance } from "vitest"
 
 import {
   DateInput as DateInputProto,
@@ -405,9 +413,8 @@ describe("DateInput widget", () => {
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByLabelText("Calendar.")
-      const presentations = await within(calendar).findAllByRole(
-        "presentation"
-      )
+      const presentations =
+        await within(calendar).findAllByRole("presentation")
       return presentations[presentations.length - 1]
     }
 
@@ -417,7 +424,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -431,7 +440,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -445,7 +456,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -459,11 +472,169 @@ describe("DateInput widget", () => {
       it("falls back to en-US locale", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
         expect(await getCalendarHeader()).toHaveTextContent("SuMoTuWeThFrSa")
+      })
+    })
+  })
+
+  describe("quick select feature", () => {
+    it("hides quick select for range date inputs if minDate is within 2 years", async () => {
+      const user = userEvent.setup()
+      const recentMinDate = moment().subtract(1, "year").format("YYYY/MM/DD")
+      const props = getProps({
+        isRange: true,
+        min: recentMinDate,
+        default: [
+          recentMinDate,
+          moment(recentMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should not be visible
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    })
+
+    it("shows quick select for range date inputs if minDate is older than 2 years", async () => {
+      const user = userEvent.setup()
+      const oldMinDate = "2020/01/01"
+      const props = getProps({
+        isRange: true,
+        min: oldMinDate,
+        default: [
+          oldMinDate,
+          moment(oldMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should be visible
+      const quickSelect = screen.getByRole("combobox")
+      expect(quickSelect).toBeVisible()
+    })
+
+    it("shows quick select by default because minDate is 1970", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2020/01/01", "2020/01/31"],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should be visible for range inputs with old minDate
+      const quickSelect = screen.getByRole("combobox")
+      expect(quickSelect).toBeVisible()
+    })
+
+    it("does not show quick select for single date inputs", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: false,
+        default: ["2020/01/01"],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should not be visible for single date inputs
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    })
+
+    describe("quick select range", () => {
+      let spy: MockInstance
+      const RealDate = Date
+
+      beforeEach(() => {
+        const STATIC_NOW = 1732112581000
+        // Freeze both Date and moment.now so BaseWeb quick select and our code
+        // agree on "now"
+        const MockDate = class extends RealDate {
+          // @ts-expect-error Mocked constructor
+          constructor(...args: unknown[]) {
+            // If no args, return fixed date instance
+            if (args.length === 0) {
+              return new RealDate(STATIC_NOW)
+            }
+
+            return new RealDate(
+              ...(args as ConstructorParameters<typeof RealDate>)
+            )
+          }
+
+          static override now(): number {
+            return STATIC_NOW
+          }
+        }
+
+        globalThis.Date = MockDate as never
+        spy = vi.spyOn(moment, "now").mockReturnValue(STATIC_NOW)
+      })
+
+      afterEach(() => {
+        spy.mockRestore()
+        globalThis.Date = RealDate as never
+      })
+
+      it("commits quick select range ending today within max without error", async () => {
+        const user = userEvent.setup()
+
+        const today = moment().format("YYYY/MM/DD")
+        const minDate = moment().subtract(800, "days").format("YYYY/MM/DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+          format: "MM.DD.YYYY",
+        })
+
+        render(<DateInput {...props} />)
+
+        // Spy after initial mount commit
+        vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+        const dateInput = screen.getByTestId("stDateInputField")
+        await user.click(dateInput)
+
+        // Quick select should be visible
+        const quickSelect = screen.getByRole("combobox")
+        expect(quickSelect).toBeVisible()
+
+        // Open quick select options and choose "Past Week" via accessible role/name
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: /Past\s*Week/i,
+        })
+        await user.click(pastWeekOption)
+
+        // Expect no error icon (wait for async updates) and the selection to be committed
+        await waitFor(() => {
+          expect(
+            screen.queryByTestId("stTooltipErrorHoverTarget")
+          ).not.toBeInTheDocument()
+        })
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
       })
     })
   })

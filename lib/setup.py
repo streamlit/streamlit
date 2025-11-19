@@ -23,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.45.1"  # PEP-440
+VERSION = "1.51.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -31,7 +31,10 @@ VERSION = "1.45.1"  # PEP-440
 # - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
-    "altair>=4.0, <6",
+    # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
+    # that cause st.line_chart and other built-in charts to fail rendering.
+    # See: https://github.com/streamlit/streamlit/issues/12064
+    "altair>=4.0, <7, !=5.4.0, !=5.4.1",
     "blinker>=1.5.0, <2",
     "cachetools>=4.0, <7",
     "click>=7.0, <9",
@@ -40,7 +43,7 @@ INSTALL_REQUIRES = [
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
-    "pillow>=7.1.0, <12",
+    "pillow>=7.1.0, <13",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
     "protobuf>=3.20, <7",
     # pyarrow is not semantically versioned, gets new major versions frequently, and
@@ -75,10 +78,37 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 EXTRA_REQUIRES = {
+    # Optional dependency required for Snowflake connection:
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-    ]
+    ],
+    # Optional dependency required for PDF rendering:
+    "pdf": [
+        "streamlit-pdf>=1.0.0",
+    ],
+    # Optional dependency required for auth:
+    "auth": [
+        "Authlib>=1.3.2",
+    ],
+    # Optional charting dependencies:
+    "charts": [
+        "matplotlib>=3.0.0",
+        "graphviz>=0.19.0",
+        "plotly>=4.0.0",
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+    ],
+    # Optional SQL connection dependency:
+    "sql": [
+        "SQLAlchemy>=2.0.0",
+    ],
+    # Install all optional dependencies:
+    "all": [
+        "streamlit[auth,charts,snowflake,sql,pdf]",
+        # Improved exception traceback formatting:
+        "rich>=11.0.0",
+    ],
 }
 
 
@@ -97,7 +127,7 @@ class VerifyVersionCommand(install):
 
 readme_path = THIS_DIRECTORY / ".." / "README.md"
 if readme_path.exists():
-    long_description = readme_path.read_text()
+    long_description = readme_path.read_text(encoding="utf-8")
 else:
     # In some build environments (specifically in conda), we may not have the README file
     # readily available. In these cases, just let long_description be the empty string.
@@ -130,11 +160,11 @@ setup(
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",
@@ -142,10 +172,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Application Frameworks",
         "Topic :: Software Development :: Widget Sets",
     ],
-    # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
-    # with typing.Protocol. See https://github.com/streamlit/streamlit/issues/5140 and
-    # https://bugs.python.org/issue45121
-    python_requires=">=3.9, !=3.9.7",
+    python_requires=">=3.10",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=find_packages(exclude=["tests", "tests.*"]),

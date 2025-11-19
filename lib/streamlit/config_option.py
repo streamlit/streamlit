@@ -19,10 +19,13 @@ from __future__ import annotations
 import datetime
 import re
 import textwrap
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from streamlit.string_util import to_snake_case
 from streamlit.util import repr_
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ConfigOption:
@@ -108,6 +111,7 @@ class ConfigOption:
         replaced_by: str | None = None,
         type_: type = str,
         sensitive: bool = False,
+        multiple: bool = False,
     ) -> None:
         """Create a ConfigOption with the given name.
 
@@ -142,6 +146,8 @@ class ConfigOption:
             Useful to cast the config params sent by cmd option parameter.
         sensitive: bool
             Sensitive configuration options cannot be set by CLI parameter.
+        multiple: bool
+            Whether this config option can have multiple values.
         """
         # Parse out the section and name.
         self.key = key
@@ -183,8 +189,7 @@ class ConfigOption:
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
-        # infer multiple values if the default value is a list or tuple
-        self.multiple = isinstance(default_val, (list, tuple))
+        self.multiple = multiple
 
         if self.replaced_by:
             self.deprecated = True
@@ -261,8 +266,7 @@ class ConfigOption:
                 # Import here to avoid circular imports
                 from streamlit.logger import get_logger
 
-                LOGGER = get_logger(__name__)
-                LOGGER.error(
+                get_logger(__name__).error(
                     textwrap.dedent(
                         f"""
                     ════════════════════════════════════════════════
@@ -279,8 +283,7 @@ class ConfigOption:
                 # Import here to avoid circular imports
                 from streamlit.logger import get_logger
 
-                LOGGER = get_logger(__name__)
-                LOGGER.warning(
+                get_logger(__name__).warning(
                     textwrap.dedent(
                         f"""s
                     ════════════════════════════════════════════════

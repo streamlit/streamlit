@@ -151,9 +151,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        assert (
-            computed_bytes
-            == b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+        assert computed_bytes == (
+            b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00\x88X\x01\x00\x02\x00\x10\x00data"
+            b"\x00\x00\x00\x00"
         )
 
     def test_maybe_convert_to_wave_numpy_arr_mono(self):
@@ -165,9 +165,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        assert (
-            computed_bytes
-            == b"RIFF(\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x07\x00\x00\x00\x0e\x00\x00\x00\x02\x00\x10\x00data\x04\x00\x00\x008\x0e\xff\x7f"
+        assert computed_bytes == (
+            b"RIFF(\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x07\x00\x00\x00\x0e\x00\x00\x00"
+            b"\x02\x00\x10\x00data\x04\x00\x00\x008\x0e\xff\x7f"
         )
 
     def test_maybe_convert_to_wave_numpy_arr_stereo(self):
@@ -182,9 +182,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        assert (
-            computed_bytes
-            == b"RIFF,\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00D\xac\x00\x00\x10\xb1\x02\x00\x04\x00\x10\x00data\x08\x00\x00\x008\x0eTU\xff\x7f8\x0e"
+        assert computed_bytes == (
+            b"RIFF,\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00D\xac\x00\x00\x10\xb1\x02\x00"
+            b"\x04\x00\x10\x00data\x08\x00\x00\x008\x0eTU\xff\x7f8\x0e"
         )
 
     def test_maybe_convert_to_wave_bytes_with_sample_rate(self):

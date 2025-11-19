@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, expect_markdown
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_markdown,
+    expect_prefixed_markdown,
+)
 
 
 def _expect_initial_reruns_finished(app: Page):
@@ -25,7 +29,7 @@ def _expect_initial_reruns_finished(app: Page):
 
 
 def _expect_initial_reruns_count_text(app: Page):
-    expect_markdown(app, "app run count: 4")
+    expect_prefixed_markdown(app, "app run count:", "4")
 
 
 def test_st_rerun_restarts_the_session_when_invoked(app: Page):
@@ -57,12 +61,12 @@ def test_rerun_works_in_try_except_block(app: Page):
     click_button(app, "rerun try_fragment")
     # the rerun in the try-block worked as expected, so the session_state count
     # incremented
-    expect_markdown(app, "app run count: 5")
+    expect_prefixed_markdown(app, "app run count:", "5")
 
 
 def test_state_retained_on_app_scoped_rerun(app: Page):
     # Sanity check 1
-    expect_markdown(app, "selectbox selection: None")
+    expect_prefixed_markdown(app, "selectbox selection:", "None")
 
     # Click on the selectbox and select the first option.
     app.get_by_test_id("stSelectbox").first.locator("input").click()

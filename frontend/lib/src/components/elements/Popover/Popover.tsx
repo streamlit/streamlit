@@ -16,43 +16,60 @@
 
 import React, { memo, ReactElement, useContext, useState } from "react"
 
-import { useTheme } from "@emotion/react"
-import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-import { StyledIcon } from "~lib/components/shared/Icon"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { Box } from "~lib/components/shared/Base/styled-components"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
-import { StyledPopoverButtonIcon } from "./styled-components"
+import {
+  StyledPopoverExpansionIcon,
+  StyledPopoverLabelContainer,
+} from "./styled-components"
 
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
+  // TODO (lawilby): This is can probably be simplified if we
+  // rewrite the min width calculation to translate rem to px.
+  stretchWidth: boolean
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   element,
   empty,
   children,
+  stretchWidth,
 }): ReactElement => {
   const [open, setOpen] = useState(false)
   const isInSidebar = useContext(IsSidebarContext)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const lightBackground = hasLightBackgroundColor(theme)
 
-  const [width, elementRef] = useCalculatedWidth()
+  // It would be nice to remove this since it uses a resize observer
+  // and therefore has a performance overhead. However, this is needed
+  // to link the width of the button to the popover width. I think we
+  // can remove the need for this as part of the BaseWeb migration.
+  const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  let kind = BaseButtonKind.SECONDARY
+  if (element.type === "primary") {
+    kind = BaseButtonKind.PRIMARY
+  } else if (element.type === "tertiary") {
+    kind = BaseButtonKind.TERTIARY
+  }
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
@@ -85,9 +102,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               maxHeight: "70vh",
               overflow: "auto",
               maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-              minWidth: element.useContainerWidth
-                ? // If use_container_width==True, we use the container width as minimum:
-                  `${Math.max(width, 160)}px` // 10rem ~= 160px
+              minWidth: stretchWidth
+                ? // If width="stretch", we use the container width as minimum:
+                  `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
                 : theme.sizes.minPopupWidth,
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
                 maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
@@ -127,29 +144,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         {/* This needs to be wrapped into a div, otherwise
         the BaseWeb popover implementation will not work correctly. */}
         <div>
-          <BaseButtonTooltip
-            help={element.help}
-            containerWidth={element.useContainerWidth}
-          >
+          <BaseButtonTooltip help={element.help} containerWidth={true}>
             <BaseButton
               data-testid="stPopoverButton"
-              kind={BaseButtonKind.SECONDARY}
+              kind={kind}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
-              containerWidth={element.useContainerWidth}
+              containerWidth={true}
               onClick={() => setOpen(!open)}
             >
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
-              <StyledPopoverButtonIcon>
-                <StyledIcon
-                  as={open ? ExpandLess : ExpandMore}
-                  color="inherit"
-                  aria-hidden="true"
-                  size="lg"
-                  margin={theme.spacing.none}
-                  padding={theme.spacing.none}
+              <StyledPopoverLabelContainer>
+                <DynamicButtonLabel
+                  icon={element.icon}
+                  label={element.label}
                 />
-              </StyledPopoverButtonIcon>
+                <StyledPopoverExpansionIcon>
+                  <DynamicIcon
+                    iconValue={
+                      open
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledPopoverExpansionIcon>
+              </StyledPopoverLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>
         </div>

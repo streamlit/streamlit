@@ -73,10 +73,6 @@ export const StyledInputControl = styled.button(({ theme }) => ({
     outline: "none",
     border: "none",
   },
-  "&:last-of-type": {
-    borderTopRightRadius: theme.radii.default,
-    borderBottomRightRadius: theme.radii.default,
-  },
   "&:disabled": {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,

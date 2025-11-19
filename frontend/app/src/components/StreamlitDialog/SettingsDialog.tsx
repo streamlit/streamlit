@@ -25,21 +25,20 @@ import React, {
   useState,
 } from "react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
-  BaseButton,
-  BaseButtonKind,
-  LibContext,
+  CUSTOM_THEME_NAME,
   Modal,
   ModalBody,
   ModalHeader,
+  SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
+  ThemeContext,
   UISelectbox,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
-  StyledButtonContainer,
   StyledCheckbox,
   StyledDialogBody,
   StyledFullRow,
@@ -54,22 +53,9 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  developerMode: boolean
-  openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
-}
-
-const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
-  openThemeCreator,
-}) => {
-  return (
-    <StyledButtonContainer data-testid="edit-theme">
-      <BaseButton onClick={openThemeCreator} kind={BaseButtonKind.SECONDARY}>
-        Edit active theme
-      </BaseButton>
-    </StyledButtonContainer>
-  )
+  sessionInfo: SessionInfo
 }
 
 /**
@@ -81,12 +67,12 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   onSave,
   settings,
   allowRunOnSave,
-  developerMode,
-  openThemeCreator,
   animateModal,
   metricsMgr,
+  sessionInfo,
 }) {
-  const libContext = useContext(LibContext)
+  const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
+
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
@@ -117,24 +103,35 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
   const handleThemeChange = useCallback(
     (themeName: string | null): void => {
+      // The themeName from selector will always be Light, Dark, or Use System Setting
+      // These are the names for default themes, and the display names for custom themes
       let newTheme = undefined
       if (themeName) {
-        newTheme = libContext.availableThemes.find(
-          (theme: ThemeConfig) => theme.name === themeName
+        newTheme = availableThemes.find((theme: ThemeConfig) =>
+          theme.name.startsWith("Custom Theme")
+            ? theme.displayName === themeName
+            : theme.name === themeName
         )
       }
       if (newTheme === undefined) {
-        newTheme = libContext.availableThemes[0]
+        newTheme = availableThemes[0]
       }
 
       metricsMgr.enqueue("menuClick", {
         label: "changeTheme",
       })
 
-      libContext.setTheme(newTheme)
+      setTheme(newTheme)
     },
-    [libContext, metricsMgr]
+    [setTheme, metricsMgr, availableThemes]
   )
+
+  const getAvailableThemeChoices = useCallback(() => {
+    return availableThemes.map(theme => {
+      // Custom themes have a display name, default themes just use their name
+      return theme.displayName ?? theme.name
+    })
+  }, [availableThemes])
 
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
@@ -180,21 +177,30 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
             />
           </StyledFullRow>
 
-          {!!libContext.availableThemes.length && (
+          {!!availableThemes.length && (
             <StyledFullRow>
-              <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
+              <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
-                options={libContext.availableThemes.map(
-                  (theme: ThemeConfig) => theme.name
-                )}
-                disabled={false}
+                options={getAvailableThemeChoices()}
+                disabled={activeTheme.name === CUSTOM_THEME_NAME}
                 onChange={handleThemeChange}
-                value={libContext.activeTheme.name}
+                value={activeTheme.displayName ?? activeTheme.name}
+                placeholder=""
+                acceptNewOptions={false}
               />
-              {developerMode && (
-                <ThemeCreatorButton openThemeCreator={openThemeCreator} />
-              )}
             </StyledFullRow>
+          )}
+
+          {/* Show our version string only if SessionInfo has been created. If Streamlit
+          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+          {sessionInfo.isSet && (
+            <div data-testid="stVersionInfo">
+              <StreamlitMarkdown
+                source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
+                allowHTML={false}
+                isCaption
+              />
+            </div>
           )}
         </StyledDialogBody>
       </ModalBody>

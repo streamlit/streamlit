@@ -23,13 +23,13 @@ import textwrap
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 
-_CONFIG_FILE_PATH = (
+_CONFIG_FILE_PATH: Final = (
     r"%userprofile%/.streamlit/config.toml"
     if env_util.IS_WINDOWS
     else "~/.streamlit/config.toml"
@@ -263,7 +263,7 @@ class Credentials:
                 if self.activation.is_valid:
                     self.save()
                     # IMPORTANT: Break the text below at 80 chars.
-                    TELEMETRY_TEXT = f"""
+                    telemetry_text = f"""
   You can find our privacy policy at {cli_util.style_for_cli("https://streamlit.io/privacy-policy", underline=True)}
 
   Summary:
@@ -278,15 +278,15 @@ class Credentials:
     gatherUsageStats = false
 """
 
-                    cli_util.print_to_cli(TELEMETRY_TEXT)
+                    cli_util.print_to_cli(telemetry_text)
                     if show_instructions:
                         # IMPORTANT: Break the text below at 80 chars.
-                        INSTRUCTIONS_TEXT = f"""
+                        instructions_text = f"""
   {cli_util.style_for_cli("Get started by typing:", fg="blue", bold=True)}
   {cli_util.style_for_cli("$", fg="blue")} {cli_util.style_for_cli("streamlit hello", bold=True)}
 """
 
-                        cli_util.print_to_cli(INSTRUCTIONS_TEXT)
+                        cli_util.print_to_cli(instructions_text)
                     activated = True
                 else:  # pragma: nocover
                     _LOGGER.error("Please try again.")
@@ -343,9 +343,11 @@ def check_credentials() -> None:
     check, since credential would be automatically set to an empty string.
 
     """
-    from streamlit import config
 
-    if not _check_credential_file_exists() and config.get_option("server.headless"):
+    if not _check_credential_file_exists() and (
+        config.get_option("server.headless")
+        or not config.get_option("server.showEmailPrompt")
+    ):
         if not config.is_manually_set("browser.gatherUsageStats"):
             # If not manually defined, show short message about usage stats gathering.
             cli_util.print_to_cli(_TELEMETRY_HEADLESS_TEXT)

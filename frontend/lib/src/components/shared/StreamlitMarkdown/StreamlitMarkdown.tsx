@@ -15,57 +15,53 @@
  */
 
 import React, {
-  createElement,
   CSSProperties,
-  FC,
-  FunctionComponent,
-  HTMLProps,
+  type FC,
+  type HTMLProps,
   memo,
-  PropsWithChildren,
-  ReactElement,
-  ReactNode,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react"
 
-import xxhash from "xxhashjs"
 import slugify from "@sindresorhus/slugify"
-import { visit } from "unist-util-visit"
-import { useTheme } from "@emotion/react"
-import ReactMarkdown from "react-markdown"
-import { PluggableList } from "react-markdown/lib/react-markdown"
-import {
-  Components,
-  ReactMarkdownProps,
-} from "react-markdown/lib/ast-to-react"
-import once from "lodash/once"
+import { type Element, type Root } from "hast"
 import omit from "lodash/omit"
-import remarkDirective from "remark-directive"
-import remarkMathPlugin from "remark-math"
-import rehypeRaw from "rehype-raw"
-import rehypeKatex from "rehype-katex"
+import once from "lodash/once"
+import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
+import ReactMarkdown, {
+  Components,
+  Options as ReactMarkdownProps,
+} from "react-markdown"
+import rehypeKatex from "rehype-katex"
+import rehypeRaw from "rehype-raw"
+import remarkDirective from "remark-directive"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import { findAndReplace } from "mdast-util-find-and-replace"
+import remarkMathPlugin from "remark-math"
+import { PluggableList } from "unified"
+import { visit } from "unist-util-visit"
+import xxhash from "xxhashjs"
 
-import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
-import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
+import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   convertRemToPx,
   EmotionTheme,
   getMarkdownBgColors,
   getMarkdownTextColors,
 } from "~lib/theme"
-import { LibContext } from "~lib/components/core/LibContext"
-import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 
 import {
   StyledHeadingActionElements,
@@ -121,6 +117,32 @@ export interface Props {
    * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
+
+  /**
+   * Inherit font family, size, and weight from parent
+   */
+  inheritFont?: boolean
+}
+
+/**
+ * A rehype plugin to add an `inline` property to code blocks.
+ * This is used to distinguish between inline code and code blocks.
+ * It is needed for versions of react-markdown from v9 onwards.
+ */
+function rehypeSetCodeInlineProperty() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element, _index, parent) => {
+      if (node.tagName !== "code") {
+        return
+      }
+
+      if (parent?.type === "element" && parent.tagName === "pre") {
+        node.properties = { ...node.properties, inline: false }
+      } else {
+        node.properties = { ...node.properties, inline: true }
+      }
+    })
+  }
 }
 
 /**
@@ -153,7 +175,6 @@ export function createAnchorFromText(text: string | null): string {
   }
 
   // If slugify is not able to create a slug, fallback to hash
-  // eslint-disable-next-line import/no-named-as-default-member
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
@@ -175,12 +196,12 @@ interface HeadingActionElements {
   hideAnchor?: boolean
 }
 
-const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
+const HeaderActionElements: FC<HeadingActionElements> = ({
   elementId,
   help,
   hideAnchor,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   if (!help && hideAnchor) {
     return <></>
   }
@@ -207,35 +228,20 @@ interface HeadingWithActionElementsProps {
   help?: string
 }
 
-export const HeadingWithActionElements: FunctionComponent<
-  PropsWithChildren<HeadingWithActionElementsProps>
-> = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
+export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
+  tag,
+  anchor: propsAnchor,
+  help,
+  hideAnchor,
+  children,
+  tagProps,
+}) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-
-  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
-    useContext(LibContext)
-  const onScriptFinished = useCallback(() => {
-    if (target !== null) {
-      // wait a bit for everything on page to finish loading
-      window.setTimeout(() => {
-        scrollNodeIntoView(target)
-      }, 300)
-    }
-  }, [target])
-
-  useEffect(() => {
-    addScriptFinishedHandler(onScriptFinished)
-    return () => {
-      removeScriptFinishedHandler(onScriptFinished)
-    }
-  }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
 
   const ref = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (node: any) => {
+    (node: HTMLElement | null) => {
       if (node === null) {
         return
       }
@@ -244,7 +250,7 @@ export const HeadingWithActionElements: FunctionComponent<
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
-        setTarget(node)
+        scrollNodeIntoView(node)
       }
     },
     [propsAnchor]
@@ -260,19 +266,15 @@ export const HeadingWithActionElements: FunctionComponent<
   )
 
   const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  const Tag = tag
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
-  const headerElementWithActions = createElement(
-    tag,
-    {
-      ...tagProps,
-      ...attributes,
-    },
-    <>
+  const headerElementWithActions = (
+    <Tag {...tagProps} {...attributes}>
       {children}
       {actionElements}
-    </>
+    </Tag>
   )
 
   // we don't want to apply styling, so return the "raw" header
@@ -288,11 +290,17 @@ export const HeadingWithActionElements: FunctionComponent<
 }
 
 type HeadingProps = JSX.IntrinsicElements["h1"] &
-  ReactMarkdownProps & { level: number; "data-anchor"?: string }
+  ReactMarkdownProps & {
+    level: number
+    "data-anchor"?: string
+    node: Element
+  }
 
-export const CustomHeading: FunctionComponent<
-  PropsWithChildren<HeadingProps>
-> = ({ node, children, ...rest }) => {
+export const CustomHeading: FC<HeadingProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -335,13 +343,17 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 /**
  * Renders code tag with highlighting based on requested language.
  */
-export const CustomCodeTag: FunctionComponent<
-  PropsWithChildren<CustomCodeTagProps>
-> = ({ inline, className, children, ...props }) => {
+export const CustomCodeTag: FC<CustomCodeTagProps> = ({
+  inline,
+  className,
+  children,
+  ...props
+}) => {
   const match = /language-(\w+)/.exec(className || "")
-  const codeText = String(children).trim().replace(/\n$/, "")
 
-  const language = (match && match[1]) || ""
+  const codeText = String(children).replace(/^\n/, "").replace(/\n$/, "")
+
+  const language = match?.[1] || ""
   return !inline ? (
     <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
       {codeText}
@@ -356,16 +368,28 @@ export const CustomCodeTag: FunctionComponent<
 /**
  * Renders pre tag with added margin.
  */
-export const CustomPreTag: FunctionComponent<
-  PropsWithChildren<ReactMarkdownProps>
-> = ({ children }) => {
+export const CustomPreTag: FC<ReactMarkdownProps> = ({ children }) => {
   return (
     <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
   )
 }
 
+export const CustomMediaTag: FC<
+  JSX.IntrinsicElements["img" | "video" | "audio"] &
+    ReactMarkdownProps & { node: Element }
+> = ({ node, ...props }) => {
+  const crossOrigin = useCrossOriginAttribute(props.src)
+  const Tag = node.tagName
+
+  const attributes = {
+    ...props,
+    crossOrigin,
+  }
+  return <Tag {...attributes} />
+}
+
 // These are common renderers that don't depend on props or context
-const BASE_RENDERERS: Components = {
+const BASE_RENDERERS = {
   pre: CustomPreTag,
   code: CustomCodeTag,
   h1: CustomHeading,
@@ -374,6 +398,9 @@ const BASE_RENDERERS: Components = {
   h4: CustomHeading,
   h5: CustomHeading,
   h6: CustomHeading,
+  img: CustomMediaTag,
+  video: CustomMediaTag,
+  audio: CustomMediaTag,
 }
 
 /**
@@ -398,10 +425,11 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
   return new Map(
     Object.entries({
       red: `color: ${red}`,
+      orange: `color: ${orange}`,
+      yellow: `color: ${yellow}`,
       blue: `color: ${blue}`,
       green: `color: ${green}`,
       violet: `color: ${violet}`,
-      orange: `color: ${orange}`,
       gray: `color: ${gray}`,
       grey: `color: ${gray}`,
       primary: `color: ${primary}`,
@@ -409,10 +437,11 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
       rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
         ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
       "red-background": `background-color: ${redbg}`,
+      "orange-background": `background-color: ${orangebg}`,
+      "yellow-background": `background-color: ${yellowbg}`,
       "blue-background": `background-color: ${bluebg}`,
       "green-background": `background-color: ${greenbg}`,
       "violet-background": `background-color: ${violetbg}`,
-      "orange-background": `background-color: ${orangebg}`,
       "gray-background": `background-color: ${graybg}`,
       "grey-background": `background-color: ${graybg}`,
       "primary-background": `background-color: ${primarybg}`,
@@ -467,7 +496,7 @@ function createRemarkColoringAndSmall(
           const data = node.data || (node.data = {})
           data.hName = "span"
           data.hProperties = data.hProperties || {}
-          data.hProperties.className = "is-badge"
+          data.hProperties.className = "stMarkdownBadge"
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
         }
@@ -482,13 +511,13 @@ function createRemarkColoringAndSmall(
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
-        data.hProperties.className = "colored-text"
+        data.hProperties.className = "stMarkdownColoredText"
         // Add class for background color for custom styling
         if (
           style &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
-          data.hProperties.className = "has-background-color"
+          data.hProperties.className = "stMarkdownColoredBackground"
         }
         return
       }
@@ -525,18 +554,17 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
             // this would break the icon display in the UI.
             // https://github.com/streamlit/streamlit/issues/10168
             translate: "no",
-            style: {
-              display: "inline-block",
-              fontFamily: theme.genericFonts.iconFont,
-              fontWeight: theme.fontWeights.normal,
-              // Disable selection for copying it as text.
-              // Allowing this leads to copying the underlying icon name,
-              // which can be confusing / unexpected.
-              userSelect: "none",
-              verticalAlign: "bottom",
-              whiteSpace: "nowrap",
-              wordWrap: "normal",
-            },
+            // We need to use string-style CSS here so that it works
+            // correctly with the rehype-raw plugin.
+            style: `
+            display: inline-block;
+            font-family: ${theme.genericFonts.iconFont};
+            font-weight: ${theme.fontWeights.normal};
+            user-select: none;
+            vertical-align: bottom;
+            white-space: nowrap;
+            word-wrap: normal;
+            `,
           },
           hChildren: [{ type: "text", value: iconName }],
         },
@@ -568,19 +596,11 @@ function createRemarkStreamlitLogo() {
           hProperties: {
             src: streamlitLogo,
             alt: "Streamlit logo",
-            style: {
-              display: "inline-block",
-              // Disable selection for copying it as text.
-              // Allowing this leads to copying the alt text,
-              // which can be confusing / unexpected.
-              userSelect: "none",
-              height: "0.75em",
-              verticalAlign: "baseline",
-              // The base of the Streamlit logo is curved, so move it down a bit to
-              // make it look aligned with the text.
-              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-              marginBottom: "-0.05ex",
-            },
+            // We need to use string-style CSS here so that it works
+            // correctly with the rehype-raw plugin.
+            // The base of the Streamlit logo is curved, so move it down a bit to
+            // make it look aligned with the text.
+            style: `display: inline-block; user-select: none; height: 0.75em; vertical-align: baseline; margin-bottom: -0.05ex;`,
           },
         },
       }
@@ -674,8 +694,8 @@ const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
 
 interface LinkProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  node: any
-  children: ReactNode[]
+  node?: any
+  children?: ReactNode
   href?: string
   title?: string
   target?: string
@@ -687,7 +707,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href && href.startsWith("#")) {
+  if (href?.startsWith("#")) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }
@@ -713,7 +733,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
@@ -726,17 +746,27 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     [theme, colorMapping]
   )
 
-  const rehypePlugins: PluggableList = useMemo(
-    () => (allowHTML ? [rehypeKatex, rehypeRaw] : [rehypeKatex]),
-    [allowHTML]
-  )
+  const rehypePlugins = useMemo<PluggableList>(() => {
+    const plugins: PluggableList = [rehypeKatex]
+
+    if (allowHTML) {
+      plugins.push(rehypeRaw)
+    }
+
+    // This plugin must run last to ensure the inline property is set correctly
+    // and not overwritten by other plugins like rehypeRaw
+    plugins.push(rehypeSetCodeInlineProperty)
+
+    return plugins
+  }, [allowHTML])
 
   const renderers = useMemo(
-    () => ({
-      ...BASE_RENDERERS,
-      a: LinkWithTargetBlank,
-      ...(overrideComponents || {}),
-    }),
+    () =>
+      ({
+        ...BASE_RENDERERS,
+        a: LinkWithTargetBlank,
+        ...(overrideComponents || {}),
+      }) as Components,
     [overrideComponents]
   )
 
@@ -756,7 +786,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
         components={renderers}
-        transformLinkUri={transformLinkUri}
+        urlTransform={transformLinkUri}
         disallowedElements={disallowed}
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
@@ -781,15 +811,16 @@ const StreamlitMarkdown: FC<Props> = ({
   largerLabel,
   disableLinks,
   isToast,
+  inheritFont,
 }) => {
-  const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
 
   return (
     <StyledStreamlitMarkdown
       isCaption={Boolean(isCaption)}
-      isInSidebarOrDialog={isInSidebar || isInDialog}
+      isInDialog={isInDialog}
       isLabel={isLabel}
+      inheritFont={inheritFont}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}

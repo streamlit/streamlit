@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
+import pytest
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import IframedPage, wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import IframedPage, rerun_app, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_no_skeletons, goto_app
 
 if TYPE_CHECKING:
     from playwright.sync_api import ConsoleMessage, FrameLocator, Page
@@ -36,7 +39,7 @@ def is_expected_error(
 
     # There is an expected error with pydeck and firefox related to WebGL rendering
     # This seems to be an issue with firefox used with playwright:
-    if msg.text == "deck: o is null undefined" and browser_name == "firefox":
+    if re.search(r"deck:.*is null undefined", msg.text) and browser_name == "firefox":
         return True
 
     # TODO(lukasmasuch): Investigate why firefox is running into this eval issue:
@@ -80,12 +83,12 @@ def test_no_console_errors(page: Page, app_port: int, browser_name: str):
             )
 
     page.on("console", on_console_message)
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}")
+
     page.wait_for_load_state()
 
     # Make sure that all elements are rendered and no skeletons are shown:
-    expect(page.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+    expect_no_skeletons(page, timeout=25000)
 
     # There should be only one exception in the app:
     expect(page.get_by_test_id("stException")).to_have_count(1)
@@ -126,7 +129,7 @@ def test_mega_tester_app_in_iframe(iframed_app: IframedPage, browser_name: str):
     page.wait_for_load_state()
 
     # Make sure that all elements are rendered and no skeletons are shown:
-    expect(frame_locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+    expect_no_skeletons(frame_locator, timeout=25000)
 
     # Check that title is visible:
     expect(frame_locator.get_by_text("🎈 Mega tester app")).to_be_visible()
@@ -138,3 +141,12 @@ def test_mega_tester_app_in_iframe(iframed_app: IframedPage, browser_name: str):
 
     # There should be no unexpected console errors:
     assert not console_errors, "Console errors were logged " + str(console_errors)
+
+
+@pytest.mark.performance
+@pytest.mark.repeat(5)  # only repeat 5 times since otherwise it would take too long
+def test_mega_tester_app_rendering_performance(app: Page):
+    """Test the performance of the mega tester app rendering."""
+    # Rerun the app 5 times:
+    for _ in range(5):
+        rerun_app(app)

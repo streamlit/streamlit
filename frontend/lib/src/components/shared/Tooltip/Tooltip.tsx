@@ -22,14 +22,14 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   ACCESSIBILITY_TYPE,
   PLACEMENT,
-  PopoverOverrides,
+  type PopoverOverrides,
   StatefulTooltip,
 } from "baseui/tooltip"
 
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
@@ -123,7 +123,7 @@ function Tooltip({
   containerWidth,
   error,
 }: TooltipProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   // This section of code is to work around a timing issue with BaseWeb's Tooltip component
   const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(

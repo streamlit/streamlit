@@ -22,9 +22,9 @@ import {
   useState,
 } from "react"
 
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { isNullOrUndefined } from "~lib/util/utils"
+import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type ValueWithSource<T> = {
   value: T
@@ -37,7 +37,7 @@ interface ValueElementProtoInterface {
 
 interface BaseArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 > {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -56,7 +56,7 @@ interface BaseArgs<
 
 export interface UseBasicWidgetClientStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 > extends BaseArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -70,7 +70,7 @@ export interface UseBasicWidgetClientStateArgs<
  */
 export function useBasicWidgetClientState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 >({
   getStateFromWidgetMgr,
   getDefaultState,
@@ -81,7 +81,7 @@ export function useBasicWidgetClientState<
   onFormCleared,
 }: UseBasicWidgetClientStateArgs<T, P>): [
   T,
-  Dispatch<SetStateAction<ValueWithSource<T> | null>>
+  Dispatch<SetStateAction<ValueWithSource<T> | null>>,
 ] {
   const [currentValue, setCurrentValue] = useState<T>(() => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -107,6 +107,7 @@ export function useBasicWidgetClientState<
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     setNextValueWithSource(null) // Clear "event".
 
     setCurrentValue(nextValueWithSource.value)
@@ -151,7 +152,7 @@ interface ValueElementProtoInterfaceWithSetValue
 
 export interface UseBasicWidgetStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterfaceWithSetValue // Proto for this widget.
+  P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
 > extends BaseArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -164,7 +165,7 @@ export interface UseBasicWidgetStateArgs<
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterfaceWithSetValue // Proto for this widget.
+  P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
 >({
   getStateFromWidgetMgr,
   getDefaultStateFromProto,
@@ -176,7 +177,7 @@ export function useBasicWidgetState<
   onFormCleared,
 }: UseBasicWidgetStateArgs<T, P>): [
   T,
-  Dispatch<SetStateAction<ValueWithSource<T> | null>>
+  Dispatch<SetStateAction<ValueWithSource<T> | null>>,
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
@@ -199,8 +200,7 @@ export function useBasicWidgetState<
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

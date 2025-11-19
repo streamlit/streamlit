@@ -14,7 +14,7 @@
 
 """camera_input unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -101,7 +101,7 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
     def test_camera_input_with_width_pixels(self):
         """Test that camera_input can be displayed with a specific width in pixels."""
         st.camera_input("Label", width=500)
-        c = self.get_delta_from_queue().new_element.camera_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -111,7 +111,7 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
     def test_camera_input_with_width_stretch(self):
         """Test that camera_input can be displayed with a width of 'stretch'."""
         st.camera_input("Label", width="stretch")
-        c = self.get_delta_from_queue().new_element.camera_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -121,7 +121,7 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
     def test_camera_input_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.camera_input("Label")
-        c = self.get_delta_from_queue().new_element.camera_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -140,3 +140,40 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.camera_input("the label", width=invalid_width)
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.camera_input(
+                label="Label 1",
+                key="camera_input_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = self.get_delta_from_queue().new_element.camera_input
+            id1 = c1.id
+
+            # Second render with different params but same key
+            st.camera_input(
+                label="Label 2",
+                key="camera_input_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = self.get_delta_from_queue().new_element.camera_input
+            id2 = c2.id
+            assert id1 == id2

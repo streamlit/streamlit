@@ -1,0 +1,102 @@
+# Composite action to install Playwright browsers quickly and reliably.
+#
+# Key ideas:
+# - Cache the browser binaries that Playwright downloads in ~/.cache/ms-playwright.
+# - Use a cache key that includes OS, architecture, and Playwright version so
+#   upgrades automatically bust the cache while maximizing hit rate otherwise.
+# - Restore the cache BEFORE running the installer so the install becomes a
+#   quick validation/no-op on cache hits.
+# - On Linux, remove man-db to avoid costly apt trigger processing during
+#   playwright's --with-deps step.
+name: Install Playwright with Cache
+description: Install Playwright browsers with OS- and version-aware caching
+
+inputs:
+  with-deps:
+    description: Install system dependencies required by Playwright browsers
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    # Determine the Playwright Python package version from the active environment.
+    # We use this to key the browser-cache so that browser upgrades (driven by
+    # Playwright version changes) automatically invalidate the cache.
+    - id: pw-version
+      name: Determine Playwright version
+      shell: bash
+      run: |
+        set -e
+        VERSION_RAW=$(python -m playwright --version || true)
+        if [[ -z "$VERSION_RAW" ]]; then
+          echo "Playwright is not available in the current Python environment. Ensure it is installed before running this action." 1>&2
+          exit 1
+        fi
+        # Extract a plain semver like 1.54.0 from e.g. "Version 1.54.0".
+        VERSION=$(echo "$VERSION_RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+        if [[ -z "$VERSION" ]]; then
+          echo "Could not parse Playwright version from: $VERSION_RAW" 1>&2
+          exit 1
+        fi
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+    # Restore the Playwright browser cache. Playwright downloads browsers into
+    # ~/.cache/ms-playwright. These binaries are OS/arch-specific (not
+    # Python-version-specific), so our cache key includes:
+    #   - runner.os and runner.arch: to scope to the correct platform
+    #   - Playwright version: to bust cache on browser upgrades
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.pw-version.outputs.version }}
+        # `playwright install` validates required browser revisions for the
+        # current Playwright package and downloads mismatches, so we won't run
+        # playwright with non-matching browsers in the case of a Playwright
+        # version upgrade.
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-playwright-
+
+    # On Ubuntu runners, apt triggers for man-db can take significant time.
+    # Purging man-db (which we don't need in CI) avoids those triggers during
+    # Playwright's --with-deps step and speeds up installs considerably.
+    - name: Disable man-db to speed up apt (Linux only)
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        set -e
+        # Prevent automatic man-db updates and remove the package to avoid triggers.
+        sudo rm -f /var/lib/man-db/auto-update || true
+        if dpkg -s man-db >/dev/null 2>&1; then
+          sudo apt-get -y purge man-db || true
+          sudo apt-get -y autoremove || true
+        fi
+
+    # Install the Playwright browsers. On cache hits, this is mostly a quick
+    # validation and no-op. When inputs.with-deps is true, Playwright installs
+    # required system packages using apt; we set DEBIAN_FRONTEND=noninteractive
+    # to suppress prompts for fully non-interactive CI runs.
+    - name: Install Playwright browsers
+      shell: bash
+      run: |
+        # Usage in CI:
+        #   - Run `./.github/actions/make_init` first
+        #   - Then run this action to install browsers
+        # This ensures a single source of truth and proper caching.
+        if [[ "${{ inputs.with-deps }}" == "true" ]]; then
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            # Adjust apt mirror priorities to avoid slow Azure mirror (see
+            # https://github.com/actions/runner-images/issues/7048). Inspired by
+            # https://github.com/CrowdStrike/glide-core/pull/1113 and
+            # https://github.com/servo/servo/pull/39190 and
+            sudo sed -i '/archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:2/priority:0/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/azure.archive.ubuntu.com\/ubuntu\/\tpriority/ s/priority:0/priority:1/' /etc/apt/apt-mirrors.txt
+            sudo sed -i '/security.ubuntu.com\/ubuntu\/\tpriority/ s/priority:3/priority:2/' /etc/apt/apt-mirrors.txt
+            sudo cat /etc/apt/apt-mirrors.txt
+            sudo apt-get update
+          fi
+          DEBIAN_FRONTEND=noninteractive python -m playwright install --with-deps
+        else
+          python -m playwright install
+        fi

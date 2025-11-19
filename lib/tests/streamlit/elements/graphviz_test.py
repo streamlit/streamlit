@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Graphviz unit test."""
+from __future__ import annotations
 
 import graphviz
+import pytest
+from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -47,17 +50,25 @@ class GraphvizTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.graphviz_chart
         assert hasattr(c, "spec")
 
-    def test_use_container_width_true(self):
-        """Test that it can be called with use_container_width."""
+    @parameterized.expand(
+        [
+            (True, "use_stretch", True),
+            (False, "use_content", True),
+        ]
+    )
+    def test_use_container_width(
+        self, use_container_width_value, expected_field, expected_value
+    ):
+        """Test that use_container_width is properly converted to width parameter."""
         graph = graphviz.Graph(comment="The Round Table")
         graph.node("A", "King Arthur")
         graph.node("B", "Sir Bedevere the Wise")
         graph.edges(["AB"])
 
-        st.graphviz_chart(graph, use_container_width=True)
+        st.graphviz_chart(graph, use_container_width=use_container_width_value)
 
-        c = self.get_delta_from_queue().new_element.graphviz_chart
-        assert c.use_container_width
+        delta = self.get_delta_from_queue()
+        assert getattr(delta.new_element.width_config, expected_field) == expected_value
 
     def test_engines(self):
         """Test that it can be called with engines."""
@@ -84,3 +95,77 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
         assert "grenade" in c.spec
+
+    @parameterized.expand(
+        [
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (400, "pixel_width", 400),
+        ]
+    )
+    def test_width_parameter(self, width_value, expected_field, expected_value):
+        """Test that it can be called with different width values."""
+        graph = graphviz.Graph(comment="The Round Table")
+        graph.node("A", "King Arthur")
+        graph.node("B", "Sir Bedevere the Wise")
+        graph.edges(["AB"])
+
+        st.graphviz_chart(graph, width=width_value)
+
+        delta = self.get_delta_from_queue()
+        assert getattr(delta.new_element.width_config, expected_field) == expected_value
+
+    @parameterized.expand(
+        [
+            ("content", "use_content", True),
+            ("stretch", "use_stretch", True),
+            (300, "pixel_height", 300),
+        ]
+    )
+    def test_height_parameter(self, height_value, expected_field, expected_value):
+        """Test that it can be called with different height values."""
+        graph = graphviz.Graph(comment="The Round Table")
+        graph.node("A", "King Arthur")
+        graph.node("B", "Sir Bedevere the Wise")
+        graph.edges(["AB"])
+
+        st.graphviz_chart(graph, height=height_value)
+
+        delta = self.get_delta_from_queue()
+        assert (
+            getattr(delta.new_element.height_config, expected_field) == expected_value
+        )
+
+    @parameterized.expand(
+        [
+            ("invalid_width",),
+            (0,),  # width must be positive
+            (-100,),  # negative width
+        ]
+    )
+    def test_graphviz_chart_width_validation_errors(self, invalid_width: str | int):
+        """Test that invalid width values raise validation errors."""
+        graph = graphviz.Graph(comment="The Round Table")
+        graph.node("A", "King Arthur")
+        graph.node("B", "Sir Bedevere the Wise")
+        graph.edges(["AB"])
+
+        with pytest.raises(StreamlitAPIException):
+            st.graphviz_chart(graph, width=invalid_width)
+
+    @parameterized.expand(
+        [
+            ("invalid_height",),
+            (0,),  # height must be positive
+            (-100,),  # negative height
+        ]
+    )
+    def test_graphviz_chart_height_validation_errors(self, invalid_height: str | int):
+        """Test that invalid height values raise validation errors."""
+        graph = graphviz.Graph(comment="The Round Table")
+        graph.node("A", "King Arthur")
+        graph.node("B", "Sir Bedevere the Wise")
+        graph.edges(["AB"])
+
+        with pytest.raises(StreamlitAPIException):
+            st.graphviz_chart(graph, height=invalid_height)

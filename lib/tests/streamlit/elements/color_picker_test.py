@@ -23,6 +23,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class ColorPickerTest(DeltaGeneratorTestCase):
@@ -118,3 +119,116 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_color_picker_with_width(self):
+        """Test st.color_picker with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for index, (
+            width_value,
+            expected_width_spec,
+            field_name,
+            field_value,
+        ) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                st.color_picker(f"test label {index}", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.color_picker.label == f"test label {index}"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_color_picker_with_invalid_width(self):
+        """Test st.color_picker with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.color_picker("test label", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_color_picker_default_width(self):
+        """Test that st.color_picker defaults to content width."""
+        st.color_picker("test label")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.color_picker.label == "test label"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_color_picker_enforces_minimum_width(self):
+        """Test that st.color_picker enforces minimum width of 40px."""
+        test_cases = [
+            (10, 40),  # Below minimum -> enforced to 40
+            (40, 40),  # Exactly minimum -> stays 40
+            (100, 100),  # Above minimum -> stays as specified
+        ]
+
+        for specified_width, expected_width in test_cases:
+            with self.subTest(specified_width=specified_width):
+                st.color_picker(f"test label {specified_width}", width=specified_width)
+
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.PIXEL_WIDTH.value
+                )
+                assert el.width_config.pixel_width == expected_width
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.color_picker(
+                label="Label 1",
+                key="color_picker_key",
+                value="#112233",
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = self.get_delta_from_queue().new_element.color_picker
+            id1 = c1.id
+
+            # Second render with different params but same key
+            st.color_picker(
+                label="Label 2",
+                key="color_picker_key",
+                value="#abcdef",
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = self.get_delta_from_queue().new_element.color_picker
+            id2 = c2.id
+            assert id1 == id2

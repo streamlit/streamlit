@@ -27,12 +27,13 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  ComponentRegistry,
   ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
   FormsData,
   AppConfig as LibAppConfig,
-  LibConfig as LibLibConfig,
+  LibConfigContextProps,
   render,
   ScriptRunState,
   SessionInfo,
@@ -74,7 +75,15 @@ class Endpoints implements StreamlitEndpoints {
     return path
   }
 
+  public buildBidiComponentURL(componentName: string, path: string): string {
+    return path
+  }
+
   public buildMediaURL(url: string): string {
+    return url
+  }
+
+  public buildDownloadUrl(url: string): string {
     return url
   }
 
@@ -95,6 +104,7 @@ class Endpoints implements StreamlitEndpoints {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Props {}
 
 interface State {
@@ -124,6 +134,8 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
+  private readonly componentRegistry: ComponentRegistry
+
   public constructor(props: Props) {
     super(props)
 
@@ -132,6 +144,8 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    this.componentRegistry = new ComponentRegistry(this.endpoints)
 
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
@@ -229,6 +243,8 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
+        componentRegistry={this.componentRegistry}
+        height="auto"
       />
     )
   }
@@ -284,12 +300,20 @@ describe("StreamlitLibExample", () => {
     expect(await screen.findByText("Hello, world!")).toBeInTheDocument()
   })
 
-  it("sees app config as the same structure", () => {
+  it("sees config types as compatible structures", () => {
+    // Verify AppConfig is structurally identical between packages
     const appConfig: ConnectionAppConfig = {} as LibAppConfig
-    const libConfig: ConnectionLibConfig = {} as LibLibConfig
 
-    // Creating a test to ensure this just passes. The above will break
-    // the typechecker if the structures are not the same.
+    // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
+    // LibContextProps extends LibConfig, so this verifies the inheritance is valid
+    const libConfigCheck: Partial<LibConfigContextProps> = {
+      mapboxToken: "test",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "anonymous",
+    } as ConnectionLibConfig
+
+    // This test passes if TypeScript compilation succeeds
     expect(true).toBe(true)
   })
 })

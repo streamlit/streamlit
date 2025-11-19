@@ -6,6 +6,9 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -23,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -32,7 +35,7 @@ jobs:
       - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Create or update comment (Building)
         id: initial-comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
         with:
@@ -42,6 +45,7 @@ jobs:
                                     "| Name | Link |\n" +
                                     "| :----: | ---- |\n" +
                                     "| 📦 Wheel file | *Building...* |\n" +
+                                    "| 📦 \`@streamlit/component-v2-lib\` | *Building...* |\n" +
                                     "| 🕹️ Preview app | *Building...* |";
 
             // Find an existing comment; if it exists, we will update it
@@ -114,7 +118,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -122,7 +126,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
@@ -131,10 +135,16 @@ jobs:
         timeout-minutes: 120
         run: |
           sudo apt update
-          sudo apt install rsync
+          sudo apt install rsync jq
           make package
+          INDEX_NAME=$(jq '."index.html".name' lib/streamlit/static/manifest.json | tr -d '"')
+          if [[ "${INDEX_NAME}" != "index" ]]
+          then
+            echo 'lib/streamlit/static/manifest.json is missing or malformatted!'
+            exit 1
+          fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -181,7 +191,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -216,7 +226,7 @@ jobs:
     steps:
       - name: Compare wheel sizes
         id: compare-sizes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
@@ -307,7 +317,7 @@ jobs:
 
       - name: Add PR comment for significant size change
         if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const result = JSON.parse(process.env.COMPARE_RESULT);
@@ -370,6 +380,63 @@ jobs:
         env:
           COMPARE_RESULT: ${{ steps.compare-sizes.outputs.result }}
 
+  build-component-v2-lib:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # This is required for actions/checkout
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      package-built: ${{ steps.build-package.outputs.package-built }}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install dependencies
+        working-directory: frontend/component-v2-lib
+        run: yarn install --frozen-lockfile
+
+      - name: Build package
+        id: build-package
+        working-directory: frontend/component-v2-lib
+        run: |
+          echo "Building @streamlit/component-v2-lib..."
+          yarn build
+          echo "Creating npm package..."
+          npm pack
+
+          # List the created package for verification
+          echo "Created package:"
+          ls -la *.tgz
+
+          # Set output to indicate package was built
+          echo "package-built=true" >> $GITHUB_OUTPUT
+
+      - name: Store npm package
+        uses: actions/upload-artifact@v5
+        with:
+          name: component-v2-lib-package
+          path: frontend/component-v2-lib/*.tgz
+          retention-days: 30
+
   setup-preview:
     runs-on: ubuntu-latest
 
@@ -385,7 +452,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
@@ -420,7 +487,8 @@ jobs:
 
   update-pr-comment:
     runs-on: ubuntu-latest
-    needs: [initial-pr-comment, upload-whl, setup-preview]
+    needs:
+      [initial-pr-comment, upload-whl, build-component-v2-lib, setup-preview]
     # Only run on PRs that are not from forks
     if: needs.upload-whl.outputs.enable-setup == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
 
@@ -429,12 +497,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
       - name: Update comment (Ready)
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // Find the existing comment
@@ -464,10 +532,17 @@ jobs:
             const viewUrl = `${previewBranch}.streamlit.app`;
 
             // Define the ready template once
+            const componentPackageBuilt = '${{ needs.build-component-v2-lib.outputs.package-built }}';
+            const workflowRunUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const componentRow = componentPackageBuilt === 'true' ?
+              `| 📦 \`@streamlit/component-v2-lib\` | [Download from artifacts](${workflowRunUrl}) |\n` :
+              `| 📦 \`@streamlit/component-v2-lib\` | *Build failed* |\n`;
+
             const readyTemplate = "### ✅ PR preview is ready!\n\n" +
                                  "| Name | Link |\n" +
                                  "| :----: | ---- |\n" +
                                  "| 📦 Wheel file | " + s3Url + " |\n" +
+                                 componentRow +
                                  "| 🕹️ Preview app | [" + viewUrl + "](https://" + viewUrl + ") (☁️ Deploy [here](" + deployUrl + ") if not accessible)| ";
 
             await github.rest.issues.updateComment({

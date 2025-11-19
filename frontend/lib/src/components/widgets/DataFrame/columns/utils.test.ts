@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { Field, Utf8 } from "apache-arrow"
+import { Field, makeVector, Utf8 } from "apache-arrow"
 import moment, { Moment } from "moment-timezone"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { withTimezones } from "~lib/util/withTimezones"
 
 import {
+  arrayToCopyValue,
   BaseColumnProps,
   countDecimals,
   formatMoment,
@@ -29,6 +30,7 @@ import {
   getErrorCell,
   getLinkDisplayValueFromRegex,
   getTextCell,
+  isEditableArrayValue,
   isErrorCell,
   isMissingValueCell,
   mergeColumnParameters,
@@ -154,6 +156,50 @@ describe("toSafeArray", () => {
   })
 })
 
+describe("isEditableArrayValue", () => {
+  it.each([
+    // strings
+    ["foo", true],
+    [new String("bar"), true],
+    // arrays
+    [["a", "b"], true],
+    [[new String("a"), new String("b")], true],
+    [[], true],
+    [["a", 1], false],
+    [[1, 2, 3], false],
+    // numbers/booleans/objects
+    [123, false],
+    [true, false],
+    [false, false],
+    [{ foo: "bar" }, false],
+    [null, false],
+    [undefined, false],
+    // Apache Arrow vectors
+    [makeVector(Int32Array.from([1, 2, 3])), false],
+  ])("interprets %s as editable array value: %s", (input, expected) => {
+    expect(isEditableArrayValue(input)).toBe(expected)
+  })
+})
+
+describe("arrayToCopyValue", () => {
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    [[], ""],
+    [["a"], "a"],
+    [["a", "b"], "a,b"],
+    // commas inside values are replaced by spaces before joining
+    [["a,b"], "a b"],
+    [["a,b", "c,d"], "a b,c d"],
+    [[1, "a,b"], "1,a b"],
+    [["hello,world", 42, true], "hello world,42,true"],
+    [[{ foo: "bar" }], "[object Object]"],
+  ])("converts %s to copy string '%s'", (input, expected) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(arrayToCopyValue(input as any)).toBe(expected)
+  })
+})
+
 describe("toSafeString", () => {
   it.each([
     [null, ""],
@@ -248,6 +294,25 @@ describe("toSafeNumber", () => {
 })
 
 describe("formatNumber", () => {
+  it("enforces localized currency format as narrow", () => {
+    const originalLanguages = navigator.languages
+    // Change locale for this test:
+    Object.defineProperty(navigator, "languages", {
+      value: ["pt-BR"],
+      configurable: true,
+    })
+
+    expect(formatNumber(10.123, "euro")).toEqual("€ 10,12")
+    expect(formatNumber(10.123, "dollar")).toEqual("$ 10,12")
+    expect(formatNumber(10.123, "yen")).toEqual("¥ 10") // would be JP¥ 10 if narrow symbol is not used
+
+    // Restore original navigator languages
+    Object.defineProperty(navigator, "languages", {
+      value: originalLanguages,
+      configurable: true,
+    })
+  })
+
   it.each([
     [10, "10"],
     [10.1, "10.1"],
@@ -308,13 +373,19 @@ describe("formatNumber", () => {
     [-1234.456789, "plain", "-1234.456789"],
     [0.00000001, "plain", "0.00000001"],
     // dollar
+    [10, "dollar", "$10.00"],
     [10.123, "dollar", "$10.12"],
     [-1234.456789, "dollar", "-$1,234.46"],
     [0.00000001, "dollar", "$0.00"],
     // euro
+    [10, "euro", "€10.00"],
     [10.123, "euro", "€10.12"],
     [-1234.456789, "euro", "-€1,234.46"],
     [0.00000001, "euro", "€0.00"],
+    // yen
+    [10.123, "yen", "¥10"],
+    [-1234.456789, "yen", "-¥1,234"],
+    [0.00000001, "yen", "¥0"],
     // localized
     [10.123, "localized", "10.123"],
     [-1234.456789, "localized", "-1,234.457"],
@@ -325,6 +396,15 @@ describe("formatNumber", () => {
     [-10.1, "accounting", "(10.10)"],
     [1000000.123412, "accounting", "1,000,000.12"],
     [-1000000.123412, "accounting", "(1,000,000.12)"],
+    // bytes
+    [0, "bytes", "0B"],
+    [12, "bytes", "12B"],
+    [123, "bytes", "123B"],
+    [12345, "bytes", "12.3KB"],
+    [123456789, "bytes", "123.5MB"],
+    [1234567890, "bytes", "1.2GB"],
+    [1234567890000, "bytes", "1.2TB"],
+    [1234567890000000, "bytes", "1234.6TB"],
     // sprintf format
     [10.123, "%d", "10"],
     [10.123, "%i", "10"],
@@ -388,6 +468,51 @@ describe("formatNumber", () => {
       expect(() => {
         formatNumber(input, format)
       }).toThrow()
+    }
+  )
+
+  it.each([
+    // No format (default)
+    [10.123, undefined, 2, "10.12"],
+    [10.123, undefined, 5, "10.12300"],
+    // localized
+    [10.12345, "localized", undefined, "10.123"],
+    [10.12345, "localized", 2, "10.12"],
+    [10, "localized", 3, "10.000"],
+    // percent - the max precision is applied to the raw value:
+    [0.12345, "percent", undefined, "12.35%"],
+    [0.12345, "percent", 3, "12.3%"],
+    [0.12345, "percent", 4, "12.35%"],
+    [0.123, "percent", 5, "12.300%"],
+    [0.123, "percent", 0, "12%"],
+    // dollar
+    [10.129, "dollar", undefined, "$10.13"],
+    [10.129, "dollar", 2, "$10.13"],
+    [10.129, "dollar", 0, "$10"],
+    [10, "dollar", 3, "$10.000"],
+    // euro
+    [10.129, "euro", undefined, "€10.13"],
+    [10.129, "euro", 2, "€10.13"],
+    [10.129, "euro", 0, "€10"],
+    [10, "euro", 3, "€10.000"],
+    // yen
+    [10.129, "yen", undefined, "¥10"],
+    [10.129, "yen", 0, "¥10"],
+    [10.129, "yen", 2, "¥10.13"],
+    // bytes - doesn't impact bytes:
+    [10.129, "bytes", undefined, "10.1B"],
+    [10.129, "bytes", 2, "10.1B"],
+    [10.129, "bytes", 0, "10.1B"],
+    // accounting
+    [-10.129, "accounting", undefined, "(10.13)"],
+    [-10.129, "accounting", 2, "(10.13)"],
+    [-10.129, "accounting", 1, "(10.1)"],
+    [1000, "accounting", 0, "1,000"],
+    [-10, "accounting", 3, "(10.000)"],
+  ])(
+    "formats %s with format %s and maxPrecision %d to '%s'",
+    (value, format, maxPrecision, expected) => {
+      expect(formatNumber(value, format, maxPrecision)).toEqual(expected)
     }
   )
 })
@@ -533,10 +658,10 @@ describe("countDecimals", () => {
     [0.0000000000000000001, 19],
     [-0.12345, 5],
     [123456789432, 0],
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [123456789876543212312313, 0],
     // It is expected that very large and small numbers won't work correctly:
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [1234567898765432.1, 0],
     [0.0000000000000000000001, 0],
     [1.234567890123456e-20, 20],
@@ -559,6 +684,8 @@ describe("truncateDecimals", () => {
     [42, 0, 42],
     [-42, 0, -42],
     [0.1 + 0.2, 2, 0.3],
+    [4.52, 2, 4.52],
+    [0.0099999, 2, 0.0],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {

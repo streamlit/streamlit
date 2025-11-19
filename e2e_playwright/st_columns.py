@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 
 import streamlit as st
 
@@ -22,7 +24,7 @@ LOREM_IPSUM = (
     "incididunt ut labore et dolore magna aliqua."
 )
 
-BLACK_IMG = np.repeat(0, 601350).reshape(633, 950)
+BLACK_IMG: npt.NDArray[np.int64] = np.repeat(0, 601350).reshape(633, 950)
 
 # Basic columns:
 c1, c2, c3 = st.columns(3)
@@ -70,7 +72,7 @@ with st.expander("Column gap large", expanded=True):
     c12.image(BLACK_IMG)
 
 with st.expander("Column gap none", expanded=True):
-    c13, c14, c15 = st.columns(3, gap="none")
+    c13, c14, c15 = st.columns(3, gap=None)
     c13.image(BLACK_IMG)
     c14.image(BLACK_IMG)
     c15.image(BLACK_IMG)
@@ -135,3 +137,16 @@ if st.button("Nested columns - in sidebar"):
         col3.text_input("Text input 3")
         col4.text_input("Text input 4")
         st.text_input("Text input 5")
+
+with st.expander("Columns with width configuration", expanded=True):
+    col1, col2, col3 = st.columns(3, width=300, border=True)
+    col1.write("column one")
+    col2.write("column two")
+    col3.write("column three")
+
+    st.divider()
+
+    col4, col5, col6 = st.columns(3, width="stretch", border=True)
+    col4.write("column four")
+    col5.write("column five")
+    col6.write("column six")

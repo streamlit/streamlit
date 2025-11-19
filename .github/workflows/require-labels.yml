@@ -3,6 +3,9 @@ name: Pull Request Labels
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
 
 jobs:
   check-required-labels:
@@ -13,7 +16,7 @@ jobs:
 
     steps:
       - name: Check required labels
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const requiredLabels = {

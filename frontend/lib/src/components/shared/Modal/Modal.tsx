@@ -16,9 +16,8 @@
 
 import React, { FunctionComponent, ReactElement, ReactNode } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
-  ModalProps,
+  type ModalProps,
   SIZE,
   Modal as UIModal,
   ModalBody as UIModalBody,
@@ -28,7 +27,7 @@ import {
 import merge from "lodash/merge"
 
 import BaseButton, { BaseButtonProps } from "~lib/components/shared/BaseButton"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledModalButton } from "./styled-components"
 
@@ -41,13 +40,8 @@ function ModalHeader({
   children,
   overrides,
 }: Readonly<ModalHeaderProps>): ReactElement {
-  const {
-    genericFonts,
-    fontSizes,
-    spacing,
-    fontWeights,
-    lineHeights,
-  }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing, fontWeights, lineHeights } =
+    useEmotionTheme()
 
   return (
     <UIModalHeader
@@ -83,7 +77,7 @@ export interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { colors, fontSizes, spacing } = useEmotionTheme()
 
   return (
     <UIModalBody
@@ -110,7 +104,7 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: Readonly<ModalFooterProps>): ReactElement {
-  const { spacing }: EmotionTheme = useTheme()
+  const { spacing } = useEmotionTheme()
 
   return (
     <UIModalFooter
@@ -139,7 +133,7 @@ const ModalButton: FunctionComponent<
 )
 
 export type StreamlitModalProps = Omit<ModalProps, "size"> & {
-  size?: "auto" | "default" | "full"
+  size?: "auto" | "default" | "medium" | "large"
 }
 
 /**
@@ -148,8 +142,8 @@ export type StreamlitModalProps = Omit<ModalProps, "size"> & {
  * the other components again.
  *
  * @param size the StreamlitModal size to be mapped
- * @param width the width of the modal if 'full' size is selected
- * @param padding the padding added to the modal if 'full' size is selected
+ * @param width the width of the modal if 'medium' size is selected
+ * @param padding the padding added to the modal if 'medium' size is selected
  * @returns the Baseweb Modal compatible size
  */
 export function calculateModalSize(
@@ -157,7 +151,10 @@ export function calculateModalSize(
   width?: string,
   padding?: string
 ): ModalProps["size"] {
-  if (size === "full" && width && padding) {
+  if (size === "large") {
+    return "80rem"
+  }
+  if (size === "medium" && width && padding) {
     // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
     // The dialog's total left and right padding is 48px. So the dialog needs a total width of 752px (=704px + 48px).
     // The used calculation here makes the relation to the app content width more comprehendable than hardcoding.
@@ -172,7 +169,7 @@ export function calculateModalSize(
 }
 
 function Modal(props: StreamlitModalProps): ReactElement {
-  const { spacing, radii, colors, sizes }: EmotionTheme = useTheme()
+  const { spacing, radii, colors, sizes } = useEmotionTheme()
 
   const defaultOverrides = {
     Root: {

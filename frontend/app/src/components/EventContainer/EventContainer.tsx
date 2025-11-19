@@ -17,9 +17,8 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { PLACEMENT, ToasterContainer } from "baseui/toast"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
   children?: ReactNode
@@ -28,13 +27,15 @@ export interface EventContainerProps {
 function EventContainer({
   children,
 }: Readonly<EventContainerProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <>
       <ToasterContainer
         placement={PLACEMENT.topRight}
-        autoHideDuration={4 * 1000} // in milliseconds
+        // Default autoHideDuration ( in milliseconds), can be adapted by the user
+        // in the Toast.tsx component
+        autoHideDuration={4 * 1000}
         overrides={{
           Root: {
             style: {

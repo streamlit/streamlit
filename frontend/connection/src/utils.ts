@@ -22,12 +22,8 @@ const INITIAL_SLASH_RE = /^\/+/
 /**
  * Return the BaseUriParts for either the given url or the global window
  */
-export function getBaseUriParts(url?: string): URL {
+export function parseUriIntoBaseParts(url?: string): URL {
   const currentUrl = new URL(url ?? window.location.href)
-
-  if (!currentUrl.port) {
-    currentUrl.port = currentUrl.protocol === "https:" ? "443" : "80"
-  }
 
   currentUrl.pathname = currentUrl.pathname
     .replace(FINAL_SLASH_RE, "")
@@ -49,7 +45,9 @@ export function getBaseUriParts(url?: string): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = getBaseUriParts(window.__STREAMLIT_BACKEND_BASE_URL)
+  const baseUriParts = parseUriIntoBaseParts(
+    window.__streamlit?.BACKEND_BASE_URL
+  )
   const { pathname } = baseUriParts
 
   if (pathname === "/") {

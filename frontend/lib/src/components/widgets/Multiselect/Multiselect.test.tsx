@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -24,10 +24,11 @@ import {
   MultiSelect as MultiSelectProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Multiselect, { Props } from "./Multiselect"
 
@@ -159,24 +160,47 @@ describe("Multiselect widget", () => {
       expect(placeholder).toBeInTheDocument()
     })
 
-    it("renders with empty options", () => {
-      const props = getProps({ default: [], options: [] })
-      render(<Multiselect {...props} />)
-
-      const placeholder = screen.getByText("No options to select")
-      expect(placeholder).toBeInTheDocument()
-    })
-
-    it("renders with empty options when acceptNewOptions is true", () => {
+    it("renders with custom placeholder", () => {
       const props = getProps({
         default: [],
-        options: [],
-        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+        placeholder: "Custom placeholder text",
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Add options")).toBeInTheDocument()
-      expect(screen.getByRole("combobox")).not.toBeDisabled()
+      expect(screen.getByText("Custom placeholder text")).toBeInTheDocument()
+    })
+
+    it("integrates with placeholder utility for default behavior", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: "", // Empty string to trigger default placeholder
+        acceptNewOptions: false,
+      })
+      render(<Multiselect {...props} />)
+
+      // Verifies that the integration with getSelectPlaceholder utility works
+      expect(screen.getByText("Choose options")).toBeInTheDocument()
+    })
+
+    it("handles single space placeholder as a valid placeholder", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: " ",
+      })
+      render(<Multiselect {...props} />)
+
+      // Should not show any default placeholder text since single space is provided
+      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Choose or add options")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("No options to select")
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -223,10 +247,11 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
+    // Add new selection (b) in addition to existing selection (a)
+    // by typing in the preferred option
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
     await user.click(match)
 
@@ -285,13 +310,12 @@ describe("Multiselect widget", () => {
 
     render(<Multiselect {...props} />)
 
-    // Change the widget value
+    // Change the widget value - add selection (b)
+    // to existing selection (a) by typing in
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
-    // Select b
     await user.click(match)
 
     // Options list should only have c available - a & b selected
@@ -385,13 +409,17 @@ describe("Multiselect widget", () => {
       )
       render(<Multiselect {...props} />)
 
-      // Select another option, b
-      const multiSelect = screen.getByRole("combobox")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(multiSelect, { target: { value: "b" } })
-      const match = screen.getByRole("option")
-      await user.click(match)
+      // Select another option, b, from the dropdown list
+      const expandListButton = screen.getAllByTitle("open")[0]
+      // Open the list
+      await user.click(expandListButton)
+      // Options list should only have b & c available - default a selected
+      const options = screen.getAllByRole("option")
+      expect(options.length).toBe(2)
+      expect(options[0]).toHaveTextContent("b")
+      expect(options[1]).toHaveTextContent("c")
+      // Select b from the list
+      await user.click(options[0])
 
       expect(
         screen.getByText(
@@ -480,5 +508,45 @@ describe("Multiselect widget", () => {
     expect(options[0]).toHaveTextContent("aa")
     expect(options[1]).toHaveTextContent("Aa")
     expect(options[2]).toHaveTextContent("aA")
+  })
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<Multiselect {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "mobile new option"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptNewOptions: false,
+        options: ["a", "b", "c"],
+      })
+      render(<Multiselect {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
   })
 })

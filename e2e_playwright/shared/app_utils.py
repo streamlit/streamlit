@@ -21,14 +21,269 @@ from typing import Literal, cast
 
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
+COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
+
+
+def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
+    """Get a chat input container by its label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stChatInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a time input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stTimeInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a camera input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str | Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCameraInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a color picker with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stColorPicker").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a text input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stTextInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a text area with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stTextArea").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a selectbox with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stSelectbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a multiselect with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # like "multiselect 1" also matching "multiselect 11".
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stMultiSelect").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a date input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stDateInput").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a slider with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    # Prefer matching the widget label exactly to avoid substring collisions
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stSlider").filter(has=label_locator)
+    expect(element).to_be_visible()
+    return element
 
 
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCheckbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a toggle widget with the given label.
 
     Parameters
     ----------
@@ -80,7 +335,16 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     label : str or Pattern[str]
         The label of the element to get.
     """
-    element = locator.get_by_test_id("stRadio").filter(has_text=label)
+    # Prefer matching the widget label exactly to avoid substring collisions
+    # similar to multiselect/date input helpers.
+    if isinstance(label, Pattern):
+        label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
+    else:
+        label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
+            label, exact=True
+        )
+
+    element = locator.get_by_test_id("stRadio").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
 
@@ -275,6 +539,49 @@ def get_markdown(
     return markdown_element
 
 
+def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
+    """Get a text element with the given text."""
+    if isinstance(text, str):
+        text = re.compile(text)
+
+    text_element = locator.get_by_test_id("stText").filter(has_text=text)
+
+    expect(text_element).to_be_visible()
+    return text_element
+
+
+def get_heading(
+    locator: Locator | Page, text_inside_heading: str | Pattern[str]
+) -> Locator:
+    """Get a heading element with the given text inside.
+
+    Works for st.title (h1), st.header (h2), and st.subheader (h3) since they
+    all use the same stHeading test ID.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the heading.
+
+    text_inside_heading : str or Pattern[str]
+        Some text to use to identify the heading element. The text should be contained
+        in the heading content.
+
+    Returns
+    -------
+    Locator
+        The heading element container (stHeading).
+    """
+    if isinstance(text_inside_heading, str):
+        text_inside_heading = re.compile(text_inside_heading)
+
+    heading_element = locator.get_by_test_id("stHeading").filter(
+        has_text=text_inside_heading
+    )
+    expect(heading_element).to_be_visible()
+    return heading_element
+
+
 def expect_prefixed_markdown(
     locator: FrameLocator | Locator | Page,
     expected_prefix: str,
@@ -345,6 +652,24 @@ def expect_markdown(
     expect(markdown_el).to_be_visible()
 
 
+def expect_text(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect a st.text element with the given message to be visible.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the text element.
+
+    expected_message : str or Pattern[str]
+        The expected message to be displayed in the text element.
+    """
+    text_el = locator.get_by_test_id("stText").filter(has_text=expected_message)
+    expect(text_el).to_be_visible()
+
+
 def expect_exception(
     locator: Locator | Page,
     expected_message: str | Pattern[str] | None = None,
@@ -408,8 +733,8 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    #  Click the checkbox label to be more reliable
-    checkbox_element.locator("label").click()
+    # Click the checkbox label to be more reliable:
+    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
     wait_for_app_run(page)
 
 
@@ -550,6 +875,9 @@ def expect_help_tooltip(
     tooltip_text : str or Pattern[str]
         The text of the tooltip to expect.
     """
+    # Reset hover state to ensure no stale tooltips are visible
+    reset_hovering(app)
+
     hover_target = element_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
@@ -577,6 +905,12 @@ def reset_hovering(locator: Locator | Page) -> None:
     page.get_by_test_id("stApp").hover(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
+
+
+def reset_focus(locator: Locator | Page) -> None:
+    """Reset the focus of the app."""
+    page = locator.page if isinstance(locator, Locator) else locator
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
 
 def expect_script_state(
@@ -637,7 +971,7 @@ def expand_sidebar(app: Page) -> Locator:
     Locator
         The sidebar element.
     """
-    app.get_by_test_id("stSidebarCollapsedControl").click()
+    app.get_by_test_id("stExpandSidebarButton").click()
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
     return sidebar
@@ -788,6 +1122,16 @@ def expect_connection_status(
     assert status == expected_status, status
 
 
+def expect_no_skeletons(
+    locator: Locator | Page | FrameLocator, timeout: int = 10000
+) -> None:
+    """Expect no skeletons to be visible on the page.
+
+    This is useful to check that all elements have fully loaded.
+    """
+    expect(locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=timeout)
+
+
 def wait_for_all_images_to_be_loaded(page: Page) -> None:
     # Wait to make sure that the images have been loaded
     page.wait_for_function("""() => {
@@ -797,7 +1141,13 @@ def wait_for_all_images_to_be_loaded(page: Page) -> None:
     """)
 
 
-def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
+def expect_font(
+    page: Page,
+    font_family: str,
+    style: str = "normal",
+    weight: str = "normal",
+    timeout: int = 20000,
+) -> None:
     """
     Wait until the given font_family is recognized as available by the browser.
     Uses document.fonts.check within a wait_for_function call.
@@ -811,6 +1161,10 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
             The Playwright Page object.
         font_family: str
             The name of the font family to check.
+        style: str
+            The style of the font to check (default: "normal").
+        weight: str
+            The weight of the font to check (default: "normal").
         timeout: int
             How long to wait in milliseconds (default: 20000).
 
@@ -818,15 +1172,18 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
     ------
         TimeoutError: If the font isn't recognized in time
     """
+    font = f"{style} {weight} 16px '{font_family}'"
+    # Remove single quotes if the font name has a space in it
+    if " " in font_family:
+        font = font.replace("'", "")
+
     check_script = """
-    (fontName) => {
-        if (!('fonts' in document)) {
-            return false;
-        }
-        return document.fonts.check('16px ' + fontName);
+    (font) => {
+    if (!('fonts' in document)) return false;
+    return document.fonts.ready.then(() => document.fonts.check(font));
     }
     """
-    page.wait_for_function(check_script, arg=font_family, timeout=timeout)
+    page.wait_for_function(check_script, arg=font, timeout=timeout)
 
 
 def is_child_bounding_box_inside_parent(
@@ -905,3 +1262,39 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     return locator.get_by_test_id(
         re.compile("stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
+
+
+def goto_app(page: Page, url: str) -> None:
+    """Navigate to an app based on a given URL and wait for the app to be loaded.
+
+    Parameters
+    ----------
+    page : Page
+        The page to navigate to the given URL.
+
+    url : str
+        The URL to navigate to.
+    """
+    page.goto(url)
+    wait_for_app_loaded(page)
+
+
+def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a metric element with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the metric element.
+
+    label : str | Pattern[str]
+        The label of the metric element to get.
+
+    Returns
+    -------
+    Locator
+        The metric element.
+    """
+    element = locator.get_by_test_id("stMetric").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element

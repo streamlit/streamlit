@@ -96,27 +96,24 @@ class StHelpAPITest(DeltaGeneratorTestCase):
 
     def test_help_width(self):
         """Test that help() correctly handles width parameter."""
-        # Test with stretch width
         st.help(st, width="stretch")
-        c = self.get_delta_from_queue().new_element.doc_string
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
         assert c.width_config.use_stretch
 
-        # Test with pixel width
         st.help(st, width=500)
-        c = self.get_delta_from_queue().new_element.doc_string
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
         assert c.width_config.pixel_width == 500
 
-        # Test default width (should be stretch)
         st.help(st)
-        c = self.get_delta_from_queue().new_element.doc_string
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

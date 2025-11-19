@@ -16,18 +16,19 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.watcher.folder_black_list import FolderBlackList
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
+    PathWatcherType,
     get_default_path_watcher_class,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import ModuleType
 
     from streamlit.runtime.pages_manager import PagesManager
@@ -37,18 +38,27 @@ _LOGGER: Final = get_logger(__name__)
 
 class WatchedModule(NamedTuple):
     watcher: Any
-    module_name: Any
+    module_name: str | None
 
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
-PathWatcher = None
+PathWatcher: PathWatcherType | None = None
 
 
 class LocalSourcesWatcher:
+    """Watch local Python sources and pages to trigger app reruns.
+
+    Purpose
+    -------
+    This watcher powers Streamlit's core developer workflow: save a Python file
+    and the app reruns. It tracks Python modules, the main script directory, and
+    configured watch folders to notify the runtime when a relevant file changes.
+    """
+
     def __init__(self, pages_manager: PagesManager) -> None:
         self._pages_manager = pages_manager
-        self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
+        self._main_script_path = os.path.realpath(self._pages_manager.main_script_path)
         self._watch_folders = config.get_option("server.folderWatchList")
         self._script_folder = os.path.dirname(self._main_script_path)
         self._on_path_changed: list[Callable[[str], None]] = []
@@ -73,10 +83,11 @@ class LocalSourcesWatcher:
             if not page_info["script_path"]:
                 continue
 
-            new_pages_paths.add(page_info["script_path"])
-            if page_info["script_path"] not in self._watched_pages:
+            page_path = os.path.realpath(page_info["script_path"])
+            new_pages_paths.add(page_path)
+            if page_path not in self._watched_pages:
                 self._register_watcher(
-                    page_info["script_path"],
+                    page_path,
                     module_name=None,
                 )
 
@@ -88,9 +99,10 @@ class LocalSourcesWatcher:
                 _LOGGER.warning("Watch folder is not a directory: %s", watch_folder)
                 continue
             _LOGGER.debug("Registering watch folder: %s", watch_folder)
-            if watch_folder not in self._watched_pages:
+            watch_folder_path = os.path.realpath(watch_folder)
+            if watch_folder_path not in self._watched_pages:
                 self._register_watcher(
-                    watch_folder,
+                    watch_folder_path,
                     module_name=None,
                     is_directory=True,
                 )
@@ -110,14 +122,17 @@ class LocalSourcesWatcher:
 
     def on_path_changed(self, filepath: str) -> None:
         _LOGGER.debug("Path changed: %s", filepath)
-        if filepath not in self._watched_modules:
+
+        norm_filepath = os.path.realpath(filepath)
+        if norm_filepath not in self._watched_modules:
             # Check if this is a file in a watched directory
-            for watched_dir in self._watched_modules:
+            for watched_path in self._watched_modules:
                 if (
-                    os.path.isdir(watched_dir)
-                    and os.path.commonpath([watched_dir, filepath]) == watched_dir
+                    os.path.isdir(watched_path)
+                    and os.path.commonpath([watched_path, norm_filepath])
+                    == watched_path
                 ):
-                    _LOGGER.info("File changed in watched directory: %s", filepath)
+                    _LOGGER.debug("File changed in watched directory: %s", filepath)
                     for cb in self._on_path_changed:
                         cb(filepath)
                     return
@@ -165,7 +180,7 @@ class LocalSourcesWatcher:
             glob_pattern = "**/*" if is_directory else None
 
             wm = WatchedModule(
-                watcher=PathWatcher(
+                watcher=PathWatcher(  # ty: ignore
                     filepath,
                     self.on_path_changed,
                     glob_pattern=glob_pattern,  # Pass as named parameter
@@ -174,12 +189,11 @@ class LocalSourcesWatcher:
                 module_name=module_name,
             )
             self._watched_modules[filepath] = wm
-        except PermissionError:
-            # If you don't have permission to read this file, don't even add it
-            # to watchers.
+        except Exception as ex:
+            # If we don't have permission to read this file, or if the file
+            # doesn't exist, don't even add it to watchers.
+            _LOGGER.warning("Failed to watch file %s: %s", filepath, exc_info=ex)
             return
-
-        self._watched_modules[filepath] = wm
 
     def _deregister_watcher(self, filepath: str) -> None:
         if filepath not in self._watched_modules:
@@ -218,7 +232,7 @@ class LocalSourcesWatcher:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
-                    self._register_watcher(str(Path(path).resolve()), name)
+                    self._register_watcher(os.path.realpath(path), name)
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
@@ -230,7 +244,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: [m.__file__],
+        lambda m: [m.__file__] if hasattr(m, "__file__") else [],
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -240,12 +254,20 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # (or resource within a system) from which a module originates
         # ... It is up to the loader to decide on how to interpret
         # and use a module's origin, if at all.
-        lambda m: [m.__spec__.origin],  # type: ignore[union-attr]
+        lambda m: [m.__spec__.origin]
+        if hasattr(m, "__spec__") and m.__spec__ is not None
+        else [],
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: list(m.__path__._path),  # type: ignore[attr-defined]
+        lambda m: list(m.__path__._path)
+        if hasattr(m, "__path__")
+        # This check prevents issues with torch classes:
+        # https://github.com/streamlit/streamlit/issues/10992
+        and type(m.__path__).__name__ == "_NamespacePath"
+        and hasattr(m.__path__, "_path")
+        else [],
     ]
 
     all_paths = set()
@@ -258,11 +280,11 @@ def get_module_paths(module: ModuleType) -> set[str]:
             pass
         except Exception:
             _LOGGER.warning(
-                f"Examining the path of {module.__name__} raised:", exc_info=True
+                "Examining the path of %s raised:", module.__name__, exc_info=True
             )
 
         all_paths.update(
-            [os.path.abspath(str(p)) for p in potential_paths if _is_valid_path(p)]
+            [os.path.realpath(str(p)) for p in potential_paths if _is_valid_path(p)]
         )
     return all_paths
 

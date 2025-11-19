@@ -19,6 +19,10 @@ import React, { memo } from "react"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
+  configureFileInputProps,
+  getUploadDescription,
+} from "./fileUploadUtils"
+import {
   StyledChatFileUploadDropzone,
   StyledChatFileUploadDropzoneLabel,
 } from "./styled-components"
@@ -37,17 +41,19 @@ const ChatFileUploadDropzone = ({
   getInputProps,
   acceptFile,
   inputHeight,
-}: Props): React.ReactElement => (
-  <>
-    <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
-      <input {...getInputProps()} />
-    </StyledChatFileUploadDropzone>
-    <StyledChatFileUploadDropzoneLabel height={inputHeight}>
-      {`Drag and drop ${
-        acceptFile === AcceptFileValue.Multiple ? "files" : "a file"
-      } here`}
-    </StyledChatFileUploadDropzoneLabel>
-  </>
-)
+}: Props): React.ReactElement => {
+  const inputProps = configureFileInputProps(getInputProps(), acceptFile)
+
+  return (
+    <>
+      <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
+        <input {...inputProps} />
+      </StyledChatFileUploadDropzone>
+      <StyledChatFileUploadDropzoneLabel height={inputHeight}>
+        {`Drag and drop ${getUploadDescription(acceptFile)} here`}
+      </StyledChatFileUploadDropzoneLabel>
+    </>
+  )
+}
 
 export default memo(ChatFileUploadDropzone)

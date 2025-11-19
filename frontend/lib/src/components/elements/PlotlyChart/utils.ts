@@ -134,8 +134,6 @@ export function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
-
 /**
  * Apply theming to the Plotly figure.
  *

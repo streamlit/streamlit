@@ -50,5 +50,7 @@ with st.expander("Show URL"):
 
 st.write("Is app embedded: ", st.context.is_embedded)
 
+st.write(f"Theme type: {st.context.theme.type}")
+
 # Allows for testing of script re-run / stop behavior
 time.sleep(3)

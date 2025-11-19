@@ -23,8 +23,11 @@ import BaseButton, {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton"
 
-import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
+import {
+  StyledButtonNoWrapContainer,
+  StyledFileDropzoneSection,
+} from "./styled-components"
 import { getAccept } from "./utils"
 
 export interface Props {
@@ -34,6 +37,7 @@ export interface Props {
   acceptedExtensions: string[]
   maxSizeBytes: number
   label: string
+  acceptDirectory?: boolean
 }
 
 const FileDropzone = ({
@@ -43,6 +47,7 @@ const FileDropzone = ({
   maxSizeBytes,
   disabled,
   label,
+  acceptDirectory = false,
 }: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
@@ -54,31 +59,43 @@ const FileDropzone = ({
     // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
     useFsAccessApi={false}
   >
-    {({ getRootProps, getInputProps }) => (
-      <StyledFileDropzoneSection
-        {...getRootProps()}
-        data-testid="stFileUploaderDropzone"
-        isDisabled={disabled}
-        aria-label={label}
-      >
-        <input
-          data-testid="stFileUploaderDropzoneInput"
-          {...getInputProps()}
-        />
-        <FileDropzoneInstructions
-          multiple={multiple}
-          acceptedExtensions={acceptedExtensions}
-          maxSizeBytes={maxSizeBytes}
-        />
-        <BaseButton
-          kind={BaseButtonKind.SECONDARY}
-          disabled={disabled}
-          size={BaseButtonSize.SMALL}
+    {({ getRootProps, getInputProps }) => {
+      const inputProps = getInputProps({
+        multiple: multiple || !!acceptDirectory,
+      })
+
+      return (
+        <StyledFileDropzoneSection
+          {...getRootProps()}
+          data-testid="stFileUploaderDropzone"
+          isDisabled={disabled}
+          aria-label={label}
+          aria-disabled={disabled}
         >
-          Browse files
-        </BaseButton>
-      </StyledFileDropzoneSection>
-    )}
+          <input
+            data-testid="stFileUploaderDropzoneInput"
+            {...inputProps}
+            {...(acceptDirectory && { webkitdirectory: "" })}
+          />
+          <FileDropzoneInstructions
+            multiple={multiple}
+            acceptedExtensions={acceptedExtensions}
+            maxSizeBytes={maxSizeBytes}
+            acceptDirectory={acceptDirectory}
+            disabled={disabled}
+          />
+          <StyledButtonNoWrapContainer>
+            <BaseButton
+              kind={BaseButtonKind.SECONDARY}
+              disabled={disabled}
+              size={BaseButtonSize.SMALL}
+            >
+              {acceptDirectory ? "Browse directories" : "Browse files"}
+            </BaseButton>
+          </StyledButtonNoWrapContainer>
+        </StyledFileDropzoneSection>
+      )
+    }}
   </Dropzone>
 )
 

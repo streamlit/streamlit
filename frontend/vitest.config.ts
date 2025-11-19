@@ -19,14 +19,18 @@ import { coverageConfigDefaults, defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     // Include all packages that have a vite.config.ts file
-    workspace: ["*/vite.config.ts"],
+    projects: ["*/vite.config.ts"],
 
     // Global coverage configuration
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "html"],
       include: ["*/src/**/*"],
-      exclude: ["lib/src/vendor/**", ...coverageConfigDefaults.exclude],
+      exclude: [
+        "lib/src/vendor/**",
+        "**/*.interface.ts",
+        ...coverageConfigDefaults.exclude,
+      ],
     },
   },
 })

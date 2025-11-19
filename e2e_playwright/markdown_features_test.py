@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import get_element_by_key, select_radio_option
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # List of markdown features that are not allowed in (widget) labels:
 
@@ -80,6 +83,7 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_image": DISALLOWED_FEATURES_IN_LABEL,
     "st_progress": DISALLOWED_FEATURES_IN_LABEL,
     "st_table": [],
+    "st_dialog": DISALLOWED_FEATURES_IN_LABEL,
 }
 
 # Mapping between a markdown feature and the playwright locator to detect the feature:
@@ -99,7 +103,7 @@ MARKDOWN_FEATURE_PLAYWRIGHT_LOCATORS: dict[str, Callable[[Locator], Locator]] = 
     "Colored Text": lambda locator: locator.locator("span"),
     "Colored Background": lambda locator: locator.locator("span"),
     "Badge": lambda locator: locator.locator("span"),
-    "Latex": lambda locator: locator.locator("span .katex"),
+    "Latex": lambda locator: locator.locator("span.katex"),
     "Link": lambda locator: locator.locator("a"),
     "Blockquote": lambda locator: locator.locator("blockquote"),
     "Heading 1": lambda locator: locator.locator("h1"),
@@ -126,6 +130,15 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             container = get_element_by_key(app, element_name)
             expect(container).to_be_visible()
 
+            if element_name == "st_dialog":
+                # Click the button to open the dialog
+                button = container.get_by_role("button", name="Open Dialog")
+                button.click()
+
+                # Set the container to the dialog so we can test the markdown
+                container = app.get_by_test_id("stDialog")
+                expect(container).to_be_visible()
+
             markdown_container_test_id = "stMarkdownContainer"
 
             # st.caption and st.image caption uses a different container
@@ -142,3 +155,8 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             else:
                 # Feature should be present
                 expect(element_locator.first).to_be_visible()
+
+            if element_name == "st_dialog":
+                # Close the dialog
+                app.keyboard.press("Escape")
+                expect(container).not_to_be_visible()

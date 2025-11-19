@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { getLogger } from "loglevel"
 
 import { IAppPage } from "@streamlit/protobuf"
@@ -26,6 +26,7 @@ import {
 } from "@streamlit/utils"
 
 import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
+import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DefaultStreamlitEndpoints")
 
@@ -46,6 +47,7 @@ interface Props {
 const MEDIA_ENDPOINT = "/media"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
+const BIDI_COMPONENT_ENDPOINT_BASE = "/_stcore/bidi-components"
 
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
@@ -144,6 +146,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     )
   }
 
+  public buildBidiComponentURL(componentName: string, path: string): string {
+    return buildHttpUri(
+      this.requireServerUri(),
+      `${BIDI_COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
+    )
+  }
+
   public setFileUploadClientConfig({
     prefix,
     headers,
@@ -177,6 +186,25 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       return buildHttpUri(this.requireServerUri(), url)
     }
     return url
+  }
+
+  /**
+   * Construct a URL for a download file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance. The target server can
+   * be changed by setting window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL.
+   */
+  public buildDownloadUrl(url: string): string {
+    if (!url.startsWith(MEDIA_ENDPOINT)) {
+      return url
+    }
+
+    // The url is relative, so we need to build the full URL.
+    const downloadAssetBaseUrl = window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
+    return downloadAssetBaseUrl
+      ? buildHttpUri(parseUriIntoBaseParts(downloadAssetBaseUrl), url)
+      : buildHttpUri(this.requireServerUri(), url)
   }
 
   /**
@@ -229,10 +257,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     _sessionId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    signal?: AbortSignal
   ): Promise<void> {
     const form = new FormData()
-    form.append(file.name, file)
+    const { name, webkitRelativePath } = file
+    // For directory uploads, use the relative path as fileName to preserve directory structure
+    const fileName = webkitRelativePath || name
+    form.append(name, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()
 
@@ -240,7 +271,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     try {
       await this.csrfRequest<number>(uploadUrl, {
-        cancelToken,
+        signal,
         method: "PUT",
         data: form,
         responseType: "text",

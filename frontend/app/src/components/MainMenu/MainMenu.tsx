@@ -16,11 +16,12 @@
 
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
+import { MoreVert } from "@emotion-icons/material-rounded"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
-import { MoreVert } from "@emotion-icons/material-rounded"
-import { useTheme } from "@emotion/react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
@@ -29,11 +30,10 @@ import {
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
-import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledCoreItem,
@@ -201,7 +201,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors, sizes, spacing }: EmotionTheme = useTheme()
+  const { colors, sizes, spacing } = useEmotionTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
 
   return (
@@ -335,14 +335,9 @@ function getPreferredMenuOrder(
 }
 
 function MainMenu(props: Readonly<Props>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const isServerDisconnected = !props.isServerConnected
-
-  const showAboutMenu =
-    props.toolbarMode != Config.ToolbarMode.MINIMAL ||
-    (props.toolbarMode == Config.ToolbarMode.MINIMAL &&
-      props.menuItems?.aboutSectionMd)
 
   const coreMenuItems = {
     DIVIDER: { isDivider: true },
@@ -378,7 +373,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         },
       }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
-    ...(showAboutMenu && {
+    ...(props.menuItems?.aboutSectionMd && {
       about: { onClick: props.aboutCallback, label: "About" },
     }),
   }

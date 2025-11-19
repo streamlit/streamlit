@@ -41,6 +41,10 @@ if TYPE_CHECKING:
         SnowflakeConnection as InternalSnowflakeConnection,
     )
 
+# the ANSI-compliant SQL code for "connection was not established"
+# (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
+SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
+
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Connector for Python.
@@ -64,12 +68,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
 
-    .. Tip::
+    .. Important::
         `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
         must be installed in your environment to use this connection. You can
-        install Snowflake extras along with Streamlit:
+        install it as an extra with Streamlit:
 
-        >>> pip install streamlit[snowflake]
+        .. code-block:: shell
+
+           pip install streamlit[snowflake]
 
     .. Important::
         Account identifiers must be of the form ``<orgname>-<account_name>``
@@ -334,9 +340,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         """
         from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
-
-        # the ANSI-compliant SQL code for "connection was not established" (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
-        SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED = "08001"
 
         @retry(
             after=lambda _: self.reset(),

@@ -54,10 +54,14 @@ v6: str = st.radio(
 )
 st.write("value 6:", v6)
 
-v7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
+v7 = st.radio(
+    "radio 7 (hidden label)", options, label_visibility="hidden", key="radio_7"
+)
 st.write("value 7:", v7)
 
-v8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
+v8 = st.radio(
+    "radio 8 (collapsed label)", options, label_visibility="collapsed", key="radio_8"
+)
 st.write("value 8:", v8)
 
 v9 = st.radio("radio 9 (markdown options)", options=markdown_options)
@@ -104,3 +108,60 @@ st.radio(
     "radio 14 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     options=markdown_options,
 )
+
+st.header("Radio - width examples")
+
+st.radio(
+    "Radio with content width (default)",
+    ["Option 1", "Option 2", "Option 3"],
+    width="content",
+)
+
+st.radio(
+    "Radio with stretch width",
+    ["Option A", "Option B", "Option C"],
+    width="stretch",
+)
+
+st.radio(
+    "Radio with 200px width. Label is too long to fit in the width",
+    ["Choice 1", "Choice 2", "Choice 3"],
+    width=200,
+)
+
+if st.toggle("Update radio props"):
+    dr_value = st.radio(
+        "Updated dynamic radio",
+        key="dynamic_radio_with_key",
+        help="updated help",
+        width=300,
+        horizontal=True,
+        on_change=lambda a, param: print(
+            f"Updated radio - callback triggered: {a} {param}"
+        ),
+        args=("Updated radio arg",),
+        kwargs={"param": "updated kwarg param"},
+        captions=["🍎", "🍌", "🍊"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated radio value:", dr_value)
+else:
+    dr_value = st.radio(
+        "Initial dynamic radio",
+        key="dynamic_radio_with_key",
+        help="initial help",
+        width="content",
+        horizontal=False,
+        on_change=lambda a, param: print(
+            f"Initial radio - callback triggered: {a} {param}"
+        ),
+        args=("Initial radio arg",),
+        kwargs={"param": "initial kwarg param"},
+        captions=["🍎 Apple", "🍌 Banana", "🍊 Orange"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial radio value:", dr_value)

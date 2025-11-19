@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from blinker import Signal
 
@@ -62,7 +62,7 @@ from streamlit.runtime.state import (
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -130,14 +130,14 @@ def _mpa_v1(main_script_path: str) -> None:
     from streamlit.navigation.page import StreamlitPage
 
     # Select the folder that should be used for the pages:
-    MAIN_SCRIPT_PATH = Path(main_script_path).resolve()
-    PAGES_FOLDER = MAIN_SCRIPT_PATH.parent / "pages"
+    resolved_main_script_path: Final = Path(main_script_path).resolve()
+    pages_folder: Final = resolved_main_script_path.parent / "pages"
 
     # Read out the my_pages folder and create a page for every script:
     pages = sorted(
         [
             page
-            for page in PAGES_FOLDER.glob("*.py")
+            for page in pages_folder.glob("*.py")
             if page.name.endswith(".py")
             and not page.name.startswith(".")
             and page.name != "__init__.py"
@@ -146,12 +146,12 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(MAIN_SCRIPT_PATH, default=True)
+    main_page = StreamlitPage(resolved_main_script_path, default=True)
     all_pages = [main_page] + [
-        StreamlitPage(PAGES_FOLDER / page.name) for page in pages
+        StreamlitPage(pages_folder / page.name) for page in pages
     ]
     # Initialize the navigation with all the pages:
-    position: Literal["sidebar", "hidden"] = (
+    position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
         if config.get_option("client.showSidebarNavigation") is False
         else "sidebar"
@@ -388,6 +388,8 @@ class ScriptRunner:
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
+        if ctx.context_info:
+            client_state.context_info.CopyFrom(ctx.context_info)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )
@@ -639,13 +641,14 @@ class ScriptRunner:
                                 # (see https://github.com/streamlit/streamlit/issues/9080).
                                 if not rerun_data.is_auto_rerun:
                                     _LOGGER.warning(
-                                        f"Couldn't find fragment with id {fragment_id}."
+                                        "Couldn't find fragment with id %s."
                                         " This can happen if the fragment does not"
                                         " exist anymore when this request is processed,"
                                         " for example because a full app rerun happened"
                                         " that did not register the fragment."
                                         " Usually this doesn't happen or no action is"
-                                        " required, so its mainly for debugging."
+                                        " required, so its mainly for debugging.",
+                                        fragment_id,
                                     )
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed
@@ -759,7 +762,7 @@ def _clean_problem_modules() -> None:
     if "keras" in sys.modules:
         try:
             keras = sys.modules["keras"]
-            keras.backend.clear_session()
+            cast("Any", keras).backend.clear_session()
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't clear the Keras session.
             pass
@@ -767,7 +770,7 @@ def _clean_problem_modules() -> None:
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
-            plt.close("all")
+            cast("Any", plt).close("all")
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't close matplotlib
             pass

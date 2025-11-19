@@ -24,13 +24,13 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   BaseButtonKind,
   BaseButtonSize,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
 
@@ -103,6 +103,9 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  widthConfig: {
+    useContent: true,
+  },
   ...widgetProps,
 })
 const EXPECTED_BUTTONS_LENGTH = materialIconOnlyOptions.length + options.length

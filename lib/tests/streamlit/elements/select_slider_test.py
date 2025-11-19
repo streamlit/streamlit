@@ -272,6 +272,80 @@ class SliderTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    def test_stable_id_with_key_non_whitelisted_params(self):
+        """Changing non-whitelisted params should not change the ID when key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.select_slider(
+                label="Label 1",
+                key="select_slider_key3",
+                value="green",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                # Whitelisted kwargs
+                options=["red", "green", "blue"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            st.select_slider(
+                label="Label 2",
+                key="select_slider_key3",
+                value="red",
+                help="Help 2",
+                disabled=True,
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                # Whitelisted kwargs
+                format_func=lambda x: x.capitalize(),
+                options=["red", "green", "blue"],
+            )
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "bb"], ["a", "bb", "c"]),
+            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "select_slider_key",
+                "options": ["a", "b", "c", "d"],
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.select_slider(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.select_slider(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 != id2
+
 
 def test_select_slider_enum_coercion():
     """Test E2E Enum Coercion on a select_slider."""
@@ -349,32 +423,32 @@ class SelectSliderWidthTest(DeltaGeneratorTestCase):
     def test_select_slider_with_width_pixels(self):
         """Test that select_slider can be displayed with a specific width in pixels."""
         st.select_slider("Label", options=["a", "b", "c"], width=500)
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert c.width_config.pixel_width == 500
+        assert element.width_config.pixel_width == 500
 
     def test_select_slider_with_width_stretch(self):
         """Test that select_slider can be displayed with a width of 'stretch'."""
         st.select_slider("Label", options=["a", "b", "c"], width="stretch")
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     def test_select_slider_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.select_slider("Label", options=["a", "b", "c"])
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     @parameterized.expand(
         [

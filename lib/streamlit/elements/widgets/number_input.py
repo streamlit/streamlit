@@ -17,13 +17,15 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -43,7 +45,6 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
 )
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -59,7 +60,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Number: TypeAlias = Union[int, float]
+Number: TypeAlias = int | float
 IntOrNone = TypeVar("IntOrNone", int, None)
 FloatOrNone = TypeVar("FloatOrNone", float, None)
 
@@ -314,8 +315,8 @@ class NumberInputMixin:
         on_change : callable
             An optional callback invoked when this number_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -352,8 +353,18 @@ class NumberInputMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-        width : WidthWithoutContent
-            The width of the number input. Can be an integer or "stretch". Defaults to "stretch".
+            - ``"spinner"``: Displays a spinner as an icon.
+
+        width : "stretch" or int
+            The width of the number input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -437,12 +448,14 @@ class NumberInputMixin:
             default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; explicitly whitelist parameters
+            # that might invalidate the current widget state.
+            key_as_main_identity={"min_value", "max_value", "step"},
+            dg=self.dg,
             label=label,
             min_value=min_value,
             max_value=max_value,
@@ -605,14 +618,6 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        number_input_proto.width_config.CopyFrom(width_config)
-
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
             number_input_proto.id,
@@ -647,7 +652,12 @@ class NumberInputMixin:
                 number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
-        self.dg._enqueue("number_input", number_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue(
+            "number_input", number_input_proto, layout_config=layout_config
+        )
         return widget_state.value
 
     @property

@@ -15,11 +15,14 @@
 import pytest
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     expect_markdown,
+    get_element_by_key,
 )
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_clicking_a_lot_still_keeps_state(app: Page):
@@ -27,8 +30,8 @@ def test_clicking_a_lot_still_keeps_state(app: Page):
 
     Related to: https://github.com/streamlit/streamlit/issues/4836
     """
-    number_input_down_button = app.get_by_test_id("stNumberInput").get_by_test_id(
-        "stNumberInputStepUp"
+    number_input_down_button = (
+        app.get_by_test_id("stNumberInput").get_by_test_id("stNumberInputStepUp").first
     )
     for _ in range(40):
         number_input_down_button.click()
@@ -99,3 +102,46 @@ def test_click_button_after_input_change_without_losing_focus_first(app: Page):
     click_button(app, "Submit text_area")
 
     expect_markdown(app, f"Input: {new_text}")
+
+
+def test_show_widget_border_when_enabled(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test `showWidgetBorder=true` config option applies to expected widgets when widgets are enabled."""
+    # Apply custom theme configs using window injection
+    apply_theme_via_window(
+        app, base="light", showWidgetBorder=True, borderColor="mediumSlateBlue"
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    # Get the widget container
+    widget_container = get_element_by_key(app, "widget_container")
+    assert_snapshot(
+        widget_container, name="widget_state-show_widget_border_when_enabled"
+    )
+
+
+def test_show_widget_border_when_disabled(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test `showWidgetBorder=true` config option applies to expected widgets when widgets are disabled."""
+    # Apply custom theme configs using window injection
+    apply_theme_via_window(
+        app, base="light", showWidgetBorder=True, borderColor="mediumSlateBlue"
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    # Disable widgets
+    click_checkbox(app, "Disable widgets")
+
+    # Get the widget container
+    widget_container = get_element_by_key(app, "widget_container")
+    assert_snapshot(
+        widget_container, name="widget_state-show_widget_border_when_disabled"
+    )

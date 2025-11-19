@@ -128,7 +128,9 @@ class CacheDataTest(unittest.TestCase):
         class TestClass:
             @st.cache_data(
                 hash_funcs={
-                    "tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_cached_member_function_with_hash_func.<locals>.TestClass": id
+                    "tests.streamlit.runtime.caching.cache_data_api_test."
+                    "CacheDataTest.test_cached_member_function_with_hash_func."
+                    "<locals>.TestClass": id
                 }
             )
             def member_func(self):
@@ -166,17 +168,6 @@ class CacheDataTest(unittest.TestCase):
         foo("ahoy")
         str_hash_func.assert_called_once_with("ahoy")
 
-    @patch("streamlit.runtime.caching.cache_data_api.show_widget_replay_deprecation")
-    def test_widget_replay_deprecation(self, show_warning_mock: Mock):
-        """We show deprecation warnings when using the `experimental_allow_widgets` parameter."""
-
-        # We show the deprecation warning at declaration time:
-        @st.cache_data(experimental_allow_widgets=True)
-        def foo():
-            return 42
-
-        show_warning_mock.assert_called_once()
-
     def test_user_hash_error(self):
         class MyObj:
             # we specify __repr__ here, to avoid `MyObj object at 0x1347a3f70`
@@ -212,7 +203,7 @@ Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest
 ```
 
 If you think this is actually a Streamlit bug, please
-[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""  # noqa: E501
         assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):
@@ -658,6 +649,73 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     def tearDown(self):
         st.cache_data.clear()
 
+    def test_media_data_tracking_only_in_cached_functions(self):
+        """Test that media data gets tracked only when called inside a cache_data function.
+
+        The test creates:
+        1. A cached function that uses st.image (should save media data)
+        2. A non-cached function that uses st.image (should NOT save media data)
+        """
+        # Create some test image data (numpy array) that will trigger media processing
+        import numpy as np
+
+        from streamlit.runtime.caching.cache_data_api import (
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+        )
+
+        test_image = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
+
+        # Track when media data is actually added vs when it's skipped
+        original_save_media_data = CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data
+        media_data_saved = []
+
+        def tracking_save_media_data(media_data, mimetype, media_id):
+            # Call original first to check the in_cached_function logic
+            list_length_before = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+            result = original_save_media_data(media_data, mimetype, media_id)
+            list_length_after = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+
+            # Record whether media data was actually added
+            was_added = list_length_after > list_length_before
+            media_data_saved.append(was_added)
+            return result
+
+        with patch.object(
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+            "save_media_data",
+            side_effect=tracking_save_media_data,
+        ):
+            # Test 1: Call a cached function - should add media data
+            @st.cache_data
+            def cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "cached_result"
+
+            media_data_saved.clear()
+            cached_function_with_image()
+
+            # Should have at least one call where media data was added
+            cached_saves = sum(media_data_saved)
+            assert cached_saves > 0, (
+                f"Media data should be saved when in cached function. "
+                f"Got {cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
+            # Test 2: Call a non-cached function - should NOT add media data
+            def non_cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "non_cached_result"
+
+            media_data_saved.clear()
+            non_cached_function_with_image()
+
+            # Should have no calls where media data was added
+            non_cached_saves = sum(media_data_saved)
+            assert non_cached_saves == 0, (
+                f"Media data should NOT be saved when not in cached function. "
+                f"Got {non_cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_shows_cached_widget_replay_warning(
         self, _widget_name: str, widget_producer: ELEMENT_PRODUCER
@@ -714,6 +772,78 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
             assert self.get_delta_from_queue().HasField("new_element") is True
             # The third time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called()
+
+    def _assert_layout_config(
+        self, element, expected_width: int, expected_height: int, description: str
+    ):
+        """Helper to assert both width and height config are set correctly."""
+        assert element.HasField("width_config"), (
+            f"{description} should have width_config"
+        )
+        assert element.width_config.HasField("pixel_width"), (
+            "Should have pixel_width set"
+        )
+        actual_width = element.width_config.pixel_width
+        expected_msg = (
+            f"Expected {description.lower()} width {expected_width}, got {actual_width}"
+        )
+        assert actual_width == expected_width, expected_msg
+
+        assert element.HasField("height_config"), (
+            f"{description} should have height_config"
+        )
+        assert element.height_config.HasField("pixel_height"), (
+            "Should have pixel_height set"
+        )
+        actual_height = element.height_config.pixel_height
+        expected_msg = f"Expected {description.lower()} height {expected_height}, got {actual_height}"
+        assert actual_height == expected_height, expected_msg
+
+    def test_layout_config_preserved_during_replay(self):
+        """Test that width_config and height_config are preserved during cache replay."""
+        expected_width = 400
+        expected_height = 200
+
+        @st.cache_data
+        def cache_code_with_layout():
+            st.code(
+                "print('Hello, World!')", width=expected_width, height=expected_height
+            )
+
+        # Call first time to cache the element
+        cache_code_with_layout()
+        first_delta = self.get_delta_from_queue()
+
+        assert first_delta.HasField("new_element"), (
+            "First call should create new_element"
+        )
+        first_element = first_delta.new_element
+        self._assert_layout_config(
+            first_element, expected_width, expected_height, "First element"
+        )
+
+        # Call second time to trigger cache replay
+        cache_code_with_layout()
+        second_delta = self.get_delta_from_queue()
+
+        assert second_delta.HasField("new_element"), (
+            "Replayed call should create new_element"
+        )
+        second_element = second_delta.new_element
+        self._assert_layout_config(
+            second_element, expected_width, expected_height, "Replayed element"
+        )
+
+        # Verify both are identical
+        assert (
+            first_element.width_config.pixel_width
+            == second_element.width_config.pixel_width
+        ), "Width config should be identical between original and replayed elements"
+
+        assert (
+            first_element.height_config.pixel_height
+            == second_element.height_config.pixel_height
+        ), "Height config should be identical between original and replayed elements"
 
 
 def get_byte_length(value):

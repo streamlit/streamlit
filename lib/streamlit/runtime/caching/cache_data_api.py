@@ -21,16 +21,14 @@ import threading
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
+    TypeAlias,
     TypeVar,
-    Union,
-    cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime
@@ -40,6 +38,7 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunc,
     CachedFuncInfo,
     make_cached_func_wrapper,
 )
@@ -47,7 +46,6 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
     MsgData,
-    show_widget_replay_deprecation,
 )
 from streamlit.runtime.caching.storage import (
     CacheStorage,
@@ -67,7 +65,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
-    import types
+    from collections.abc import Callable
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -77,10 +75,14 @@ _LOGGER: Final = get_logger(__name__)
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
-CachePersistType: TypeAlias = Union[Literal["disk"], None]
+CachePersistType: TypeAlias = Literal["disk"] | None
 
 
-class CachedDataFuncInfo(CachedFuncInfo):
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+class CachedDataFuncInfo(CachedFuncInfo[P, R]):
     """Implements the CachedFuncInfo interface for @st.cache_data."""
 
     persist: CachePersistType
@@ -89,17 +91,19 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     def __init__(
         self,
-        func: types.FunctionType,
-        show_spinner: bool | str,
+        func: Callable[P, R],
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | str | None,
+        show_spinner: bool | str,
+        show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> None:
         super().__init__(
             func,
-            show_spinner=show_spinner,
             hash_funcs=hash_funcs,
+            show_spinner=show_spinner,
+            show_time=show_time,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -120,7 +124,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
         """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
-    def get_function_cache(self, function_key: str) -> Cache:
+    def get_function_cache(self, function_key: str) -> Cache[R]:
         return _data_caches.get_cache(
             key=function_key,
             persist=self.persist,
@@ -149,7 +153,7 @@ class DataCaches(CacheStatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, DataCache] = {}
+        self._function_caches: dict[str, DataCache[Any]] = {}
 
     def get_cache(
         self,
@@ -158,7 +162,7 @@ class DataCaches(CacheStatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
         display_name: str,
-    ) -> DataCache:
+    ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -316,11 +320,6 @@ def get_data_cache_stats_provider() -> CacheStatsProvider:
     return _data_caches
 
 
-# Type-annotate the decorator function.
-# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-F = TypeVar("F", bound=Callable[..., Any])
-
-
 class CacheDataAPI:
     """Implements the public st.cache_data API: the @st.cache_data decorator, and
     st.cache_data.clear().
@@ -341,9 +340,12 @@ class CacheDataAPI:
             decorator_metric_name, self._decorator
         )
 
+    # Type-annotate the decorator function.
+    # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F: ...
+    def __call__(self, func: Callable[P, R]) -> CachedFunc[P, R]: ...
 
     # Decorator with arguments
     @overload
@@ -353,43 +355,43 @@ class CacheDataAPI:
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]: ...
+    ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
         self,
-        func: F | None = None,
+        func: Callable[P, R] | None = None,
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
-        experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
-            func,
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             persist=persist,
             show_spinner=show_spinner,
-            experimental_allow_widgets=experimental_allow_widgets,
+            show_time=show_time,
             hash_funcs=hash_funcs,
         )
 
     def _decorator(
         self,
-        func: F | None = None,
+        func: Callable[P, R] | None = None,
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
+        show_time: bool = False,
         persist: CachePersistType | bool,
-        experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
         Cached objects are stored in "pickled" form, which means that the return
@@ -406,8 +408,21 @@ class CacheDataAPI:
         arguments match a previous function call. Alternatively, you can
         declare custom hashing functions with ``hash_funcs``.
 
-        To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
+        Cached values are available to all users of your app. If you need to
+        save results that should only be accessible within a session, use
+        `Session State
+        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
+        instead. Within each user session, an ``@st.cache_data``-decorated
+        function returns a *copy* of the cached return value (if the value is
+        already cached). To cache shared global resources (singletons), use
+        ``st.cache_resource`` instead. To learn more about caching, see
+        `Caching overview
+        <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
+
+        .. note::
+            Caching async functions is not supported. To upvote this feature,
+            see GitHub issue `#8308
+            <https://github.com/streamlit/streamlit/issues/8308>`_.
 
         Parameters
         ----------
@@ -438,13 +453,16 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
+
         persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
-
-        experimental_allow_widgets : bool
-            Allow widgets to be used in the cached function. Defaults to False.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -453,12 +471,6 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
-
-        .. deprecated::
-            The cached widget replay functionality was removed in 1.38. Please
-            remove the ``experimental_allow_widgets`` parameter from your
-            caching decorators. This parameter will be removed in a future
-            version.
 
         Example
         -------
@@ -564,22 +576,17 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        if experimental_allow_widgets:
-            show_widget_replay_deprecation("cache_data")
-
-        def wrapper(f: F) -> F:
-            return cast(
-                "F",
-                make_cached_func_wrapper(
-                    CachedDataFuncInfo(
-                        func=f,  # type: ignore
-                        persist=persist_string,
-                        show_spinner=show_spinner,
-                        max_entries=max_entries,
-                        ttl=ttl,
-                        hash_funcs=hash_funcs,
-                    )
-                ),
+        def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
+            return make_cached_func_wrapper(
+                CachedDataFuncInfo(
+                    func=f,
+                    persist=persist_string,
+                    show_spinner=show_spinner,
+                    show_time=show_time,
+                    max_entries=max_entries,
+                    ttl=ttl,
+                    hash_funcs=hash_funcs,
+                )
             )
 
         if func is None:
@@ -587,9 +594,10 @@ class CacheDataAPI:
 
         return make_cached_func_wrapper(
             CachedDataFuncInfo(
-                func=cast("types.FunctionType", func),
+                func=func,
                 persist=persist_string,
                 show_spinner=show_spinner,
+                show_time=show_time,
                 max_entries=max_entries,
                 ttl=ttl,
                 hash_funcs=hash_funcs,
@@ -602,7 +610,7 @@ class CacheDataAPI:
         _data_caches.clear_all()
 
 
-class DataCache(Cache):
+class DataCache(Cache[R]):
     """Manages cached values for a single st.cache_data function."""
 
     def __init__(
@@ -627,7 +635,7 @@ class DataCache(Cache):
             return self.storage.get_stats()
         return []
 
-    def read_result(self, key: str) -> CachedResult:
+    def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
         if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
@@ -651,7 +659,7 @@ class DataCache(Cache):
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     @gather_metrics("_cache_data_object")
-    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
+    def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """

@@ -24,3 +24,18 @@ st.toast(
 )
 
 st.toast("Your edited image was saved!", icon=":material/cabin:")
+
+if st.button("Show duration toasts"):
+    st.toast("I am a toast with a short duration", duration=2)
+    st.toast("I am a toast with a long duration", duration="long")
+    st.toast("I am a persistent toast", duration="infinite")
+
+
+@st.dialog("Streamlit Toast Notification")
+def toast_notification():
+    activate_toast = st.button(label="Toast from dialog")
+    if activate_toast:
+        st.toast("Toast above dialog", icon="🎉")
+
+
+st.button("Trigger dialog", on_click=toast_notification)

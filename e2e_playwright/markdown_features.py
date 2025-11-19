@@ -170,3 +170,16 @@ st.container(key="st_table").table(
         "Header": [selected_feature_markdown],
     }
 )
+
+
+@st.dialog(selected_feature_markdown)
+def test_dialog():
+    st.image(
+        np.repeat(0, 10000).reshape(100, 100)
+    )  # element that doesn't support markdown
+
+
+# Add dialog test - we need to create a button to trigger it
+# and the dialog will be tested when opened
+if st.container(key="st_dialog").button("Open Dialog"):
+    test_dialog()

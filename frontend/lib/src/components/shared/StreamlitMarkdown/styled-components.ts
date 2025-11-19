@@ -17,10 +17,13 @@
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
-  isInSidebarOrDialog: boolean
+  isInDialog: boolean
   isLabel?: boolean
+  inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
@@ -35,26 +38,34 @@ function sharedMarkdownStyle(theme: Theme): any {
   return {
     a: {
       color: theme.colors.link,
-      textDecoration: "underline",
+      textDecoration: theme.linkUnderline ? "underline" : "none",
     },
   }
 }
 
 /**
  * Caption sizes taken from default styles, but using em instead of rem, so it
- * inherits the <small>'s shrunk size
- *
+ * inherits the <small>'s shrunk size. Also handles reduced heading font sizes
+ * in dialogs.
  */
 function convertFontSizes(
   fontSize: string,
-  smallFontSize: string,
-  useSmallerHeadings: boolean,
+  isInDialog: boolean,
   isCaption: boolean
 ): string {
-  if (useSmallerHeadings) {
-    // For headers in `st.caption`, we use `em` values, so the headers automatically
-    // become a bit smaller by adapting to the font size of the caption.
-    return isCaption ? convertRemToEm(smallFontSize) : smallFontSize
+  // For headers in `st.caption`, we use `em` values, so the headers automatically
+  // become a bit smaller by adapting to the font size of the caption.
+
+  if (isInDialog) {
+    // Dialogs also reduce the font size of the headings to 65% of the base font size
+    // Round the font size to the nearest eighth of a rem to try to keep to round px values
+    const roundedFontSize = roundFontSizeToNearestEighth(
+      parseFloat(fontSize) * 0.65
+    )
+
+    // Ensure the font size is at least 0.75rem
+    const dialogFontSize = `${Math.max(roundedFontSize, 0.75)}rem`
+    return isCaption ? convertRemToEm(dialogFontSize) : dialogFontSize
   }
 
   return isCaption ? convertRemToEm(fontSize) : fontSize
@@ -62,79 +73,80 @@ function convertFontSizes(
 
 function getMarkdownHeadingDefinitions(
   theme: Theme,
-  useSmallerHeadings: boolean,
+  isInDialog: boolean,
   isCaption: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
-      fontWeight: theme.fontWeights.bold,
       lineHeight: theme.lineHeights.headings,
       margin: 0,
       color: "inherit",
     },
     h1: {
       fontSize: convertFontSizes(
-        theme.fontSizes.fourXL,
-        theme.fontSizes.xl,
-        useSmallerHeadings,
+        theme.fontSizes.h1FontSize,
+        isInDialog,
         isCaption
       ),
-      fontWeight: useSmallerHeadings
-        ? theme.fontWeights.bold
-        : theme.fontWeights.extrabold,
+
+      fontWeight: theme.fontWeights.h1FontWeight,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: theme.fontWeights.extrabold,
+      // Per Pull Request #9395, setting text to bold in headers
+      // should NOT change its font-weight
+      fontWeight: theme.fontWeights.h1FontWeight,
     },
     "h2, h3": {
       letterSpacing: "-0.005em",
     },
     h2: {
       fontSize: convertFontSizes(
-        theme.fontSizes.threeXL,
-        theme.fontSizes.lg,
-        useSmallerHeadings,
+        theme.fontSizes.h2FontSize,
+        isInDialog,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h2FontWeight,
       padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
       fontSize: convertFontSizes(
-        theme.fontSizes.twoXL,
-        theme.fontSizes.mdLg,
-        useSmallerHeadings,
+        theme.fontSizes.h3FontSize,
+        isInDialog,
         isCaption
       ),
+
+      fontWeight: theme.fontWeights.h3FontWeight,
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
-        theme.fontSizes.xl,
-        theme.fontSizes.md,
-        useSmallerHeadings,
+        theme.fontSizes.h4FontSize,
+        isInDialog,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h4FontWeight,
       padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
       fontSize: convertFontSizes(
-        theme.fontSizes.lg,
-        theme.fontSizes.sm,
-        useSmallerHeadings,
+        theme.fontSizes.h5FontSize,
+        isInDialog,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h5FontWeight,
       padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
-        theme.fontSizes.md,
-        theme.fontSizes.twoSm,
-        useSmallerHeadings,
+        theme.fontSizes.h6FontSize,
+        isInDialog,
         isCaption
       ),
+
+      fontWeight: theme.fontWeights.h6FontWeight,
       padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
@@ -145,8 +157,9 @@ export const StyledStreamlitMarkdown =
     ({
       theme,
       isCaption,
-      isInSidebarOrDialog,
+      isInDialog,
       isLabel,
+      inheritFont,
       boldLabel,
       largerLabel,
       isToast,
@@ -157,17 +170,21 @@ export const StyledStreamlitMarkdown =
         (isLabel && !largerLabel) || isToast || isCaption
 
       return {
-        fontFamily: theme.genericFonts.bodyFont,
-        fontSize: useSmallerFontSize ? theme.fontSizes.sm : theme.fontSizes.md,
+        fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
+        fontSize: inheritFont
+          ? "inherit"
+          : useSmallerFontSize
+            ? theme.fontSizes.sm
+            : theme.fontSizes.md,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
+        // Always respect the width of the parent container:
+        maxWidth: "100%",
+        // Break long words to prevent them from overflowing the container:
+        overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(
-          theme,
-          isInSidebarOrDialog,
-          isCaption
-        ),
+        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).
@@ -178,7 +195,11 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? theme.spacing.none : "",
-          fontWeight: boldLabel ? theme.fontWeights.bold : "",
+          fontWeight: inheritFont
+            ? "inherit"
+            : boldLabel
+              ? theme.fontWeights.bold
+              : "",
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -191,25 +212,40 @@ export const StyledStreamlitMarkdown =
           // In labels, widgets should never be taller than the text.
           maxHeight: isLabel ? "1em" : undefined,
           verticalAlign: "middle",
+          // Ensure that images are not distorted:
+          objectFit: "scale-down",
         },
 
         li: {
-          // TODO(lukasmasuch): We might want to refactor
-          // these settings to use our spacing props instead.
-          // But this would require some styling changes.
-          margin: "0.2em 0 0.2em 1.2em",
-          padding: "0 0 0 0.6em",
+          margin: "0.2em 0 0.2em 1.15em",
+          padding: "0 0 0 0.3em",
+        },
+
+        "li.task-list-item": {
+          listStyleType: "none",
+          padding: "0",
+          marginLeft: "0",
+          "input[type='checkbox']": {
+            verticalAlign: "middle",
+            margin: "0 0.35em 0.1em 0",
+          },
         },
 
         // Handles quotes:
         blockquote: {
           margin: "1em 0 1em 0",
-          padding: "0 0 0 1.2em",
-          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.lightGray}`,
+          padding: `0 0 0 0.75em`,
+          borderLeft: `0.15em solid ${theme.colors.borderColor}`,
+          opacity: 0.6,
         },
 
         "b, strong": {
           fontWeight: theme.fontWeights.bold,
+        },
+
+        // Issue #11976: Handle bolded inline code
+        "b code, strong code": {
+          fontWeight: theme.fontWeights.codeBold,
         },
 
         // Handles the horizontal divider:
@@ -236,25 +272,28 @@ export const StyledStreamlitMarkdown =
         },
 
         tr: {
-          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
         th: {
+          // TODO: check whether this should be adjusted
+          // defaults to font-weight: "bold" (700)
           textAlign: "inherit",
         },
 
         "th, td": {
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
-        "span.has-background-color": {
+        "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
+          boxDecorationBreak: "clone",
         },
 
-        "span.is-badge": {
+        "span.stMarkdownBadge": {
           borderRadius: theme.radii.md,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.
@@ -281,6 +320,10 @@ export const StyledStreamlitMarkdown =
         ".katex-display": {
           overflowX: "auto",
           overflowY: "hidden",
+        },
+
+        ".katex": {
+          fontWeight: theme.fontWeights.normal,
         },
       }
     }

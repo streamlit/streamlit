@@ -18,12 +18,17 @@ import React, {
   memo,
   ReactElement,
   ReactNode,
+  useContext,
   useEffect,
   useState,
 } from "react"
 
+import { FormsContext } from "~lib/components/core/FormsContext"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledErrorContainer, StyledForm } from "./styled-components"
@@ -32,11 +37,13 @@ export interface Props {
   formId: string
   clearOnSubmit: boolean
   enterToSubmit: boolean
-  hasSubmitButton: boolean
-  scriptNotRunning: boolean
   children?: ReactNode
   widgetMgr: WidgetStateManager
   border: boolean
+  // TODO(lawilby): This prop drill-down can be removed once
+  // we are using a portal to render the toolbars. But we want to
+  // do a patch to reduce the impact on existing usages of st.form.
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -51,13 +58,24 @@ function Form(props: Props): ReactElement {
   const {
     formId,
     widgetMgr,
-    hasSubmitButton,
     children,
-    scriptNotRunning,
     clearOnSubmit,
     enterToSubmit,
     border,
+    overflow,
   } = props
+
+  // Consume FormsContext to get submit button state
+  // This ensures only Form components re-render when form data changes,
+  // not all Block components in the tree.
+  const { formsData } = useRequiredContext(FormsContext)
+  const submitButtons = formsData.submitButtons.get(formId)
+  const hasSubmitButton =
+    submitButtons !== undefined && submitButtons.length > 0
+
+  // Consume ScriptRunContext to get script run state
+  const { scriptRunState } = useContext(ScriptRunContext)
+  const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
@@ -88,7 +106,12 @@ function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm className="stForm" data-testid="stForm" border={border}>
+    <StyledForm
+      className="stForm"
+      data-testid="stForm"
+      border={border}
+      overflow={overflow}
+    >
       {children}
       {submitWarning}
     </StyledForm>

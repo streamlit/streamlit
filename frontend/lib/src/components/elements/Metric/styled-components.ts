@@ -19,6 +19,10 @@ import styled from "@emotion/styled"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
+import {
+  getMetricBackgroundColor,
+  getMetricTextColor,
+} from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface StyledMetricContainerProps {
@@ -27,13 +31,30 @@ export interface StyledMetricContainerProps {
 
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
   ({ theme, showBorder }) => ({
+    height: "100%",
     ...(showBorder && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
+      overflow: "hidden",
+    }),
+  })
+)
+
+export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
+  ({ theme, showBorder }) => ({
+    ...(showBorder && {
       padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
     }),
   })
 )
+
+export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
+  ({ theme, showBorder }) => ({
+    marginTop: showBorder ? undefined : theme.spacing.lg,
+    marginBottom: showBorder ? theme.spacing.twoXL : undefined,
+  })
+)
+
 export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions
 }
@@ -80,29 +101,22 @@ export interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
 }
 
-const getMetricColor = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any,
-  color: MetricProto.MetricColor
-): string => {
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return theme.colors.metricNegativeDeltaColor
-    case MetricProto.MetricColor.GREEN:
-      return theme.colors.metricPositiveDeltaColor
-    // this must be grey
-    default:
-      return theme.colors.metricNeutralDeltaColor
-  }
-}
-
 export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
   ({ theme, metricColor }) => ({
-    color: getMetricColor(theme, metricColor),
-    fontSize: theme.fontSizes.md,
-    display: "flex",
+    // Uses text colors
+    color: getMetricTextColor(theme, metricColor),
+    // Uses same color as shaded bg of area chart (bg color)
+    backgroundColor: getMetricBackgroundColor(theme, metricColor),
+    fontSize: theme.fontSizes.sm,
+    display: "inline-flex",
     flexDirection: "row",
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
+    borderRadius: theme.radii.full,
+    // Using only twoXS (4px) on the left side because the arrow icon has an additional
+    // 2px padding. Note that this should be adjusted in case we change the arrow icon
+    // or don't show it (right now it's always shown).
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
+    maxWidth: "100%",
   })
 )

@@ -14,24 +14,32 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useEffect, useRef, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
-import { OnChangeParams, Option, Select as UISelect } from "baseui/select"
-import { useTheme } from "@emotion/react"
-import sortBy from "lodash/sortBy"
+import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
-import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   value: string | null
@@ -42,40 +50,12 @@ export interface Props {
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
-  placeholder?: string
+  placeholder: string
   clearable?: boolean
-  acceptNewOptions?: boolean | null
+  acceptNewOptions: boolean
 }
 
-interface SelectOption {
-  label: string
-  value: string
-}
-
-// Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indices
-// More details: https://github.com/streamlit/streamlit/issues/1010
-// Also filters using fuzzy search.
-export function fuzzyFilterSelectOptions(
-  options: SelectOption[],
-  pattern: string
-): readonly SelectOption[] {
-  if (!pattern) {
-    return options
-  }
-
-  const filteredOptions = options.filter((opt: SelectOption) =>
-    hasMatch(pattern, opt.label)
-  )
-  return sortBy(
-    filteredOptions,
-    // Use the negative score to sort the list in a stable manner
-    // This ensures highest score is first
-    (opt: SelectOption) => -score(pattern, opt.label, true)
-  )
-}
-
-const Selectbox: React.FC<Props> = ({
+const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
   onChange,
@@ -87,7 +67,8 @@ const Selectbox: React.FC<Props> = ({
   clearable,
   acceptNewOptions,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   const [value, setValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
@@ -131,44 +112,30 @@ const Selectbox: React.FC<Props> = ({
     }
   }, [])
 
-  const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] =>
-      fuzzyFilterSelectOptions(options as SelectOption[], filterValue),
-    []
-  )
-
-  let selectDisabled = disabled
   const opts = propOptions
 
-  let selectValue: Option[] = []
-  if (!isNullOrUndefined(value)) {
-    selectValue = [{ label: value, value }]
-  }
+  const {
+    placeholder: selectboxPlaceholder,
+    disabled: shouldDisable,
+    selectOptions,
+    inputReadOnly,
+    valueToUiSingle,
+    createFilterOptions,
+  } = useSelectCommon({
+    options: opts as string[],
+    isMulti: false,
+    acceptNewOptions,
+    placeholderInput: placeholder,
+  })
 
-  let selectboxPlaceholder = placeholder
-  if (opts.length === 0) {
-    if (!acceptNewOptions) {
-      selectboxPlaceholder = "No options to select"
-      // When a user cannot add new options and there are no options to select from, we disable the selectbox
-      selectDisabled = true
-    } else {
-      selectboxPlaceholder = "Add an option"
-    }
-  }
+  const selectDisabled = disabled || shouldDisable
 
-  const selectOptions: SelectOption[] = opts.map(
-    (option: string, index: number) => ({
-      label: option,
-      value: option,
-      // We are using an id because if multiple options are equal,
-      // we have observed weird UI glitches
-      id: `${option}_${index}`,
-    })
+  const filterOptions = useMemo(
+    () => createFilterOptions(),
+    [createFilterOptions]
   )
 
-  // Check if we have more than 10 options in the selectbox.
-  // If that's true, we show the keyboard on mobile. If not, we hide it.
-  const showKeyboardOnMobile = opts.length > 10
+  const selectValue = valueToUiSingle(value)
 
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
@@ -184,7 +151,7 @@ const Selectbox: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <UISelect
-        creatable={acceptNewOptions ?? false}
+        creatable={acceptNewOptions}
         disabled={selectDisabled}
         labelKey="label"
         aria-label={label || ""}
@@ -202,6 +169,7 @@ const Selectbox: React.FC<Props> = ({
           Root: {
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              fontWeight: theme.fontWeights.normal,
             }),
           },
           Dropdown: { component: VirtualDropdown },
@@ -210,7 +178,7 @@ const Selectbox: React.FC<Props> = ({
               overrides: {
                 Svg: {
                   style: {
-                    color: theme.colors.darkGray,
+                    color: theme.colors.grayTextColor,
                     // Setting this width and height makes the clear-icon align with dropdown arrows
                     padding: theme.spacing.threeXS,
                     height: theme.sizes.clearIconSize,
@@ -224,14 +192,22 @@ const Selectbox: React.FC<Props> = ({
             },
           },
           ControlContainer: {
-            style: () => ({
-              height: theme.sizes.minElementHeight,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-            }),
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                height: theme.sizes.minElementHeight,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+              }
+            },
           },
           IconsContainer: {
             style: () => ({
@@ -256,8 +232,7 @@ const Selectbox: React.FC<Props> = ({
           },
           Input: {
             props: {
-              // Change the 'readonly' prop to hide the mobile keyboard if options < 10
-              readOnly: isMobile && !showKeyboardOnMobile ? "readonly" : null,
+              readOnly: inputReadOnly,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
@@ -266,6 +241,7 @@ const Selectbox: React.FC<Props> = ({
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
                   style: () => ({
@@ -284,6 +260,11 @@ const Selectbox: React.FC<Props> = ({
           SelectArrow: {
             component: ChevronDown,
             props: {
+              style: {
+                ...(selectDisabled && {
+                  cursor: "not-allowed",
+                }),
+              },
               overrides: {
                 Svg: {
                   style: () => ({

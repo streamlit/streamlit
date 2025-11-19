@@ -46,6 +46,7 @@ class ScreenCastRecorder {
         notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // In the event of an error, assume it won't support screencasts
       return false

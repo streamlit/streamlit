@@ -14,38 +14,35 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
-import {
-  convertRemToPx,
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 
+import FormattingMenu from "./FormattingMenu"
 import {
+  StyledColumnHeaderRow,
+  StyledColumnNameText,
+  StyledColumnNameWithIcon,
+  StyledIconButton,
   StyledMenuDivider,
   StyledMenuList,
   StyledMenuListItem,
+  StyledTypeIconContainer,
 } from "./styled-components"
-import FormattingMenu from "./FormattingMenu"
 
 export interface ColumnMenuProps {
   // The top position of the menu
   top: number
   // The left position of the menu
   left: number
-  // The kind of the column
-  columnKind: string
+  // The selected column:
+  column: BaseColumn
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -77,13 +74,15 @@ function ColumnMenu({
   onCloseMenu,
   onSortColumn,
   onHideColumn,
-  columnKind,
+  column,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const { colors, fontSizes, radii, fontWeights } = theme
+
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   // Disable page scrolling while the menu is open to keep the menu und
   // column header aligned.
@@ -106,12 +105,40 @@ function ColumnMenu({
     onCloseMenu()
   }, [onCloseMenu])
 
+  const handleCopyNameToClipboard = useCallback((): void => {
+    copyToClipboard(column.title)
+  }, [column.title, copyToClipboard])
+
   return (
     <Popover
       autoFocus
       aria-label="Dataframe column menu"
       content={
         <StyledMenuList>
+          <StyledColumnHeaderRow>
+            <StyledTypeIconContainer title={column.kind}>
+              <DynamicIcon
+                size="base"
+                iconValue={column.typeIcon || ":material/notes:"}
+              />
+            </StyledTypeIconContainer>
+            <StyledColumnNameWithIcon title={column.title}>
+              <StyledColumnNameText>{column.title}</StyledColumnNameText>
+              <StyledIconButton
+                onClick={handleCopyNameToClipboard}
+                title="Copy column name"
+                aria-label="Copy column name"
+              >
+                <DynamicIcon
+                  size="sm"
+                  iconValue={
+                    isCopied ? ":material/check:" : ":material/content_copy:"
+                  }
+                />
+              </StyledIconButton>
+            </StyledColumnNameWithIcon>
+          </StyledColumnHeaderRow>
+
           {onSortColumn && (
             <>
               <StyledMenuListItem
@@ -121,12 +148,7 @@ function ColumnMenu({
                 }}
                 role="menuitem"
               >
-                <DynamicIcon
-                  size={"base"}
-                  margin="0"
-                  color="inherit"
-                  iconValue=":material/arrow_upward:"
-                />
+                <DynamicIcon size="base" iconValue=":material/arrow_upward:" />
                 Sort ascending
               </StyledMenuListItem>
               <StyledMenuListItem
@@ -137,9 +159,7 @@ function ColumnMenu({
                 role="menuitem"
               >
                 <DynamicIcon
-                  size={"base"}
-                  margin="0"
-                  color="inherit"
+                  size="base"
                   iconValue=":material/arrow_downward:"
                 />
                 Sort descending
@@ -149,7 +169,7 @@ function ColumnMenu({
           )}
           {onChangeFormat && (
             <FormattingMenu
-              columnKind={columnKind}
+              columnKind={column.kind}
               isOpen={formatMenuOpen}
               onMouseEnter={() => setFormatMenuOpen(true)}
               onMouseLeave={() => setFormatMenuOpen(false)}
@@ -164,18 +184,14 @@ function ColumnMenu({
               >
                 <div>
                   <DynamicIcon
-                    size={"base"}
-                    margin="0"
-                    color="inherit"
+                    size="base"
                     iconValue=":material/format_list_numbered:"
                   />
                   Format
                 </div>
 
                 <DynamicIcon
-                  size={"base"}
-                  margin="0"
-                  color="inherit"
+                  size="base"
                   iconValue=":material/chevron_right:"
                 />
               </StyledMenuListItem>
@@ -188,12 +204,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue=":material/arrows_outward:"
-              />
+              <DynamicIcon size="base" iconValue=":material/arrows_outward:" />
               Autosize
             </StyledMenuListItem>
           )}
@@ -204,12 +215,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue=":material/keep_off:"
-              />
+              <DynamicIcon size="base" iconValue=":material/keep_off:" />
               Unpin column
             </StyledMenuListItem>
           )}
@@ -220,12 +226,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue=":material/keep:"
-              />
+              <DynamicIcon size="base" iconValue=":material/keep:" />
               Pin column
             </StyledMenuListItem>
           )}
@@ -236,12 +237,7 @@ function ColumnMenu({
                 closeMenu()
               }}
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue=":material/visibility_off:"
-              />
+              <DynamicIcon size="base" iconValue=":material/visibility_off:" />
               Hide column
             </StyledMenuListItem>
           )}

@@ -38,12 +38,10 @@ from typing import (
     Literal,
     NamedTuple,
     Protocol,
-    TypeVar,
-    Union,
+    TypeAlias,
+    TypeGuard,
     overload,
 )
-
-from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit.errors import StreamlitAPIException
 
@@ -54,8 +52,6 @@ if TYPE_CHECKING:
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-
-T = TypeVar("T")
 
 # we define our own type here because mypy doesn't seem to support the shape type and
 # reports unreachable code. When mypy supports it, we can remove this custom type.
@@ -127,6 +123,16 @@ def _is_type_instance(obj: object, type_to_check: str) -> bool:
     return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
 
 
+def get_object_name(obj: object) -> str:
+    """Get a simplified name of the given object."""
+    if hasattr(obj, "__qualname__") and isinstance(obj.__qualname__, str):
+        return obj.__qualname__
+    if hasattr(obj, "__name__") and isinstance(obj.__name__, str):
+        return obj.__name__
+
+    return type(obj).__qualname__
+
+
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     return f"{the_type.__module__}.{the_type.__qualname__}"
@@ -142,7 +148,7 @@ _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
     bytearray,
 )
 
-BytesLike: TypeAlias = Union[bytes, bytearray]
+BytesLike: TypeAlias = bytes | bytearray
 
 
 def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:

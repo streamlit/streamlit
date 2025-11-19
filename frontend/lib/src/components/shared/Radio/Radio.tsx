@@ -22,18 +22,18 @@ import React, {
   useState,
 } from "react"
 
-import { Theme, useTheme } from "@emotion/react"
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
-import { Placement } from "~lib/components/shared/Tooltip"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { addCssUnit, convertRemToPx } from "~lib/theme"
 
 export interface Props {
   disabled: boolean
@@ -50,7 +50,7 @@ export interface Props {
   help?: string
 }
 
-function getRadioInnerSizes(theme: Theme): [string, string] {
+function getRadioInnerSizes(theme: EmotionTheme): [string, string] {
   // If checked, the radio inner circle should fill 37.5% of the total radio size.
   // If not checked, it should show a border of spacing.threeXS.
 
@@ -95,9 +95,7 @@ function Radio({
     setValue(defaultValue ?? null)
 
     // Exclude value from the dependency list on purpose to avoid a loop.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [defaultValue])
 
   const onChangeCallback = useCallback(
@@ -109,7 +107,7 @@ function Radio({
     [onChange]
   )
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const hasCaptions = captions.length > 0
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]

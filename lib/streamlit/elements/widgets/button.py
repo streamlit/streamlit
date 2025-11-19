@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -25,14 +26,13 @@ from typing import (
     Final,
     Literal,
     TextIO,
-    Union,
+    TypeAlias,
     cast,
 )
 
-from typing_extensions import TypeAlias
-
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
+from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
@@ -51,6 +51,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
+from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer_mime
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -62,6 +63,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
+from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -72,7 +74,14 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
-DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
+DownloadButtonDataType: TypeAlias = (
+    str
+    | bytes
+    | TextIO
+    | BinaryIO
+    | io.RawIOBase
+    | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
+)
 
 
 @dataclass
@@ -98,7 +107,8 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> bool:
         r"""Display a button widget.
 
@@ -138,8 +148,8 @@ class ButtonMixin:
         on_click : callable
             An optional callback invoked when this button is clicked.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -153,7 +163,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -172,6 +182,8 @@ class ButtonMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
             The default is ``False``.
@@ -184,6 +196,25 @@ class ButtonMixin:
 
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
+
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
+        width : "content", "stretch", or int
+            The width of the button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
         Returns
         -------
@@ -218,11 +249,11 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> left, middle, right = st.columns(3)
-        >>> if left.button("Plain button", use_container_width=True):
+        >>> if left.button("Plain button", width="stretch"):
         ...     left.markdown("You clicked the plain button.")
-        >>> if middle.button("Emoji button", icon="😃", use_container_width=True):
+        >>> if middle.button("Emoji button", icon="😃", width="stretch"):
         ...     middle.markdown("You clicked the emoji button.")
-        >>> if right.button("Material button", icon=":material/mood:", use_container_width=True):
+        >>> if right.button("Material button", icon=":material/mood:", width="stretch"):
         ...     right.markdown("You clicked the Material button.")
 
         .. output::
@@ -232,6 +263,9 @@ class ButtonMixin:
         """
         key = to_key(key)
         ctx = get_script_run_ctx()
+
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
@@ -251,8 +285,8 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @gather_metrics("download_button")
@@ -271,7 +305,8 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> bool:
         r"""Display a download button widget.
 
@@ -306,10 +341,17 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, or file
+        data : str, bytes, file, or callable
             The contents of the file to be downloaded.
 
-            To prevent unncecessary recomputation, use caching when converting
+            You can also pass a ``callable`` (no-arg function) that returns
+            ``str``, ``bytes``, or a file-like object. The callable is executed
+            when the user clicks the download button (deferred generation).
+            Streamlit commands inside the callable (for example,
+            ``st.write("Deferred data prepared")``) are ignored and will not
+            render.
+
+            To prevent unnecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
             below.
 
@@ -359,8 +401,8 @@ class ButtonMixin:
             - ``None``: This is same as ``on_click="rerun"``. This value exists
               for backwards compatibility and shouldn't be used.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -374,7 +416,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -393,6 +435,8 @@ class ButtonMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             An optional boolean that disables the download button if set to
             ``True``. The default is ``False``.
@@ -405,6 +449,25 @@ class ButtonMixin:
 
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
+
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
+        width : "content", "stretch", or int
+            The width of the download button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
         Returns
         -------
@@ -516,8 +579,32 @@ class ButtonMixin:
            https://doc-download-button-file.streamlit.app/
            height: 200px
 
+        **Example 4: Generate the data on click with a callable**
+
+        Pass a function to ``data`` to generate the bytes lazily when the user
+        clicks the button. Streamlit commands inside this function are ignored.
+
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> def make_report():
+        >>>     # Runs on click; Streamlit commands here won't render
+        >>>     time.sleep(1)
+        >>>     # st.write("Deferred data prepared")  # Ignored
+        >>>     return "col1,col2\n1,2\n3,4".encode("utf-8")
+        >>>
+        >>> st.download_button(
+        ...     label="Download report",
+        ...     data=make_report,  # pass the function, don't call it
+        ...     file_name="report.csv",
+        ...     mime="text/csv",
+        ... )
+
         """
         ctx = get_script_run_ctx()
+
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
 
         if type not in ["primary", "secondary", "tertiary"]:
             raise StreamlitAPIException(
@@ -538,8 +625,8 @@ class ButtonMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @gather_metrics("link_button")
@@ -552,7 +639,8 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         r"""Display a link button element.
 
@@ -599,7 +687,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -618,6 +706,8 @@ class ButtonMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             An optional boolean that disables the link button if set to
             ``True``. The default is ``False``.
@@ -630,6 +720,25 @@ class ButtonMixin:
 
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
+
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
+        width : "content", "stretch", or int
+            The width of the link button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
         Example
         -------
@@ -649,6 +758,9 @@ class ButtonMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
+
         return self._link_button(
             label=label,
             url=url,
@@ -656,7 +768,7 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
-            use_container_width=use_container_width,
+            width=width,
         )
 
     @gather_metrics("page_link")
@@ -669,6 +781,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -682,10 +795,10 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or st.Page
-            The file path (relative to the main script) or an st.Page indicating
-            the page to switch to. Alternatively, this can be the URL to an
-            external page (must start with "http://" or "https://").
+        page : str, Path, or StreamlitPage
+            The file path (relative to the main script) or a ``StreamlitPage``
+            indicating the page to switch to. Alternatively, this can be the
+            URL to an external page (must start with "http://" or "https://").
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -706,8 +819,9 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            An optional emoji or icon to display next to the button label. If
+            ``icon`` is ``None`` (default), the icon is inferred from the
+            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -721,6 +835,8 @@ class ButtonMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
@@ -738,6 +854,25 @@ class ButtonMixin:
             Whether to expand the link's width to fill its parent container.
             The default is ``True`` for page links in the sidebar and ``False``
             for those in the main app.
+
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
+
+        width : "content", "stretch", or int
+            The width of the page-link button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
         Example
         -------
@@ -769,6 +904,12 @@ class ButtonMixin:
             height: 350px
 
         """
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
+
+        if in_sidebar(self.dg):
+            # Sidebar page links should always be stretch width.
+            width = "stretch"
 
         return self._page_link(
             page=page,
@@ -776,7 +917,7 @@ class ButtonMixin:
             icon=icon,
             help=help,
             disabled=disabled,
-            use_container_width=use_container_width,
+            width=width,
         )
 
     def _download_button(
@@ -794,8 +935,8 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         key = to_key(key)
 
@@ -816,15 +957,15 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
-            # download_button is not allowed to be used in a form.
-            form_id=None,
+            key_as_main_identity=True,
+            dg=self.dg,
             label=label,
             icon=icon,
             file_name=file_name,
             mime=mime,
             help=help,
             type=type,
-            use_container_width=use_container_width,
+            width=width,
         )
 
         if is_in_form(self.dg):
@@ -834,7 +975,6 @@ class ButtonMixin:
 
         download_button_proto = DownloadButtonProto()
         download_button_proto.id = element_id
-        download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
@@ -867,7 +1007,11 @@ class ButtonMixin:
             value_type="trigger_value",
         )
 
-        self.dg._enqueue("download_button", download_button_proto)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+        self.dg._enqueue(
+            "download_button", download_button_proto, layout_config=layout_config
+        )
         return button_state.value
 
     def _link_button(
@@ -879,13 +1023,12 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        width: Width = "content",
     ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
-        link_button_proto.use_container_width = use_container_width
         link_button_proto.disabled = disabled
 
         if help is not None:
@@ -894,7 +1037,11 @@ class ButtonMixin:
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
 
-        return self.dg._enqueue("link_button", link_button_proto)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+        return self.dg._enqueue(
+            "link_button", link_button_proto, layout_config=layout_config
+        )
 
     def _page_link(
         self,
@@ -904,13 +1051,17 @@ class ButtonMixin:
         icon: str | None = None,
         help: str | None = None,
         disabled: bool = False,
-        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
+        validate_width(width, allow_content=True)
 
         ctx = get_script_run_ctx()
         if not ctx:
-            return self.dg._enqueue("page_link", page_link_proto)
+            layout_config = LayoutConfig(width=width)
+            return self.dg._enqueue(
+                "page_link", page_link_proto, layout_config=layout_config
+            )
 
         page_link_proto.disabled = disabled
 
@@ -923,14 +1074,15 @@ class ButtonMixin:
         if help is not None:
             page_link_proto.help = dedent(help)
 
-        if use_container_width is not None:
-            page_link_proto.use_container_width = use_container_width
-
         if isinstance(page, StreamlitPage):
             page_link_proto.page_script_hash = page._script_hash
             page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
+            if icon is None:
+                page_link_proto.icon = page.icon
+                # Here the StreamlitPage's icon is already validated
+                # (using validate_icon_or_emoji) during its initialization
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):
@@ -942,7 +1094,10 @@ class ButtonMixin:
                     raise StreamlitMissingPageLabelError()
                 page_link_proto.page = page
                 page_link_proto.external = True
-                return self.dg._enqueue("page_link", page_link_proto)
+                layout_config = LayoutConfig(width=width)
+                return self.dg._enqueue(
+                    "page_link", page_link_proto, layout_config=layout_config
+                )
 
             ctx_main_script = ""
             all_app_pages = {}
@@ -973,7 +1128,10 @@ class ButtonMixin:
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
 
-        return self.dg._enqueue("page_link", page_link_proto)
+        layout_config = LayoutConfig(width=width)
+        return self.dg._enqueue(
+            "page_link", page_link_proto, layout_config=layout_config
+        )
 
     def _button(
         self,
@@ -988,8 +1146,8 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         key = to_key(key)
 
@@ -1005,16 +1163,16 @@ class ButtonMixin:
         # Only the form submitter button needs a form ID at the moment.
         form_id = current_form_id(self.dg) if is_form_submitter else ""
         element_id = compute_and_register_element_id(
-            "button",
+            "form_submit_button" if is_form_submitter else "button",
             user_key=key,
-            # Only the
-            form_id=form_id,
+            key_as_main_identity=True,
+            dg=self.dg,
             label=label,
             icon=icon,
             help=help,
             is_form_submitter=is_form_submitter,
             type=type,
-            use_container_width=use_container_width,
+            width=width,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -1039,7 +1197,6 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = form_id
         button_proto.type = type
-        button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled
 
         if help is not None:
@@ -1063,7 +1220,10 @@ class ButtonMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, button_state.value)
-        self.dg._enqueue("button", button_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+        self.dg._enqueue("button", button_proto, layout_config=layout_config)
 
         return button_state.value
 
@@ -1080,32 +1240,33 @@ def marshall_file(
     mimetype: str | None,
     file_name: str | None = None,
 ) -> None:
-    data_as_bytes: bytes
-    if isinstance(data, str):
-        data_as_bytes = data.encode()
-        mimetype = mimetype or "text/plain"
-    elif isinstance(data, io.TextIOWrapper):
-        string_data = data.read()
-        data_as_bytes = string_data.encode()
-        mimetype = mimetype or "text/plain"
-    # Assume bytes; try methods until we run out.
-    elif isinstance(data, bytes):
-        data_as_bytes = data
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.BytesIO):
-        data.seek(0)
-        data_as_bytes = data.getvalue()
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.BufferedReader):
-        data.seek(0)
-        data_as_bytes = data.read()
-        mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.RawIOBase):
-        data.seek(0)
-        data_as_bytes = data.read() or b""
-        mimetype = mimetype or "application/octet-stream"
-    else:
-        raise StreamlitAPIException(f"Invalid binary data format: {type(data)}")
+    # Check if data is a callable (for deferred downloads)
+    if callable(data):
+        if not runtime.exists():
+            # When running in "raw mode", we can't access the MediaFileManager.
+            proto_download_button.url = ""
+            return
+
+        # Register the callable for deferred execution
+        file_id = runtime.get_instance().media_file_mgr.add_deferred(
+            data,
+            mimetype,
+            coordinates,
+            file_name=file_name,
+        )
+        proto_download_button.deferred_file_id = file_id
+        proto_download_button.url = ""  # No URL yet, will be generated on click
+        return
+
+    # Existing logic for non-callable data
+    data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
+        data,
+        unsupported_error=StreamlitAPIException(
+            f"Invalid binary data format: {type(data)}"
+        ),
+    )
+    if mimetype is None:
+        mimetype = inferred_mime_type
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(

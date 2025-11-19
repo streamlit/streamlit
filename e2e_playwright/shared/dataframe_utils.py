@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from playwright.sync_api import (
     Locator,
@@ -25,6 +25,9 @@ from playwright.sync_api import (
 )
 
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Determined by measuring a screenshot
 ROW_MARKER_COLUMN_WIDTH_PX: Final = 30

@@ -23,15 +23,17 @@ from typing import (
     Any,
     Final,
     Literal,
-    Union,
+    TypeAlias,
     cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
-
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -46,7 +48,6 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -62,21 +63,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 # Type for things that point to a specific time (even if a default time, though not None).
-TimeValue: TypeAlias = Union[time, datetime, str, Literal["now"]]
+TimeValue: TypeAlias = time | datetime | str | Literal["now"]
 
 # Type for things that point to a specific date (even if a default date, including None).
-NullableScalarDateValue: TypeAlias = Union[date, datetime, str, Literal["today"], None]
+NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | None
 
 # The accepted input value for st.date_input. Can be a date scalar or a date range.
-DateValue: TypeAlias = Union[NullableScalarDateValue, Sequence[NullableScalarDateValue]]
+DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValue]
 
 # The return value of st.date_input.
-DateWidgetRangeReturn: TypeAlias = Union[
-    tuple[()],
-    tuple[date],
-    tuple[date, date],
-]
-DateWidgetReturn: TypeAlias = Union[date, DateWidgetRangeReturn, None]
+DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
+DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 
 DEFAULT_STEP_MINUTES: Final = 15
@@ -161,7 +158,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
             "0 - 2 date/datetime values"
         )
 
-    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
+    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]  # ty: ignore[invalid-argument-type]
 
     return parsed_dates, is_range
 
@@ -417,8 +414,8 @@ class TimeWidgetsMixin:
         on_change : callable
             An optional callback invoked when this time_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -438,9 +435,14 @@ class TimeWidgetsMixin:
             You can also pass a datetime.timedelta object.
 
         width : "stretch" or int
-            The width of the time input. If "stretch", the time input will stretch
-            to fill the available space. If a number, the time input will have a
-            fixed width of that many pixels. Defaults to "stretch".
+            The width of the time input widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -514,7 +516,6 @@ class TimeWidgetsMixin:
             default_value=value if value != "now" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         parsed_time: time | None
         parsed_time = None if value is None else _convert_timelike_to_time(value)
@@ -522,7 +523,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; only whitelist step since it
+            # affects the selection granularity and available options.
+            key_as_main_identity={"step"},
+            dg=self.dg,
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
             help=help,
@@ -560,14 +564,6 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        time_input_proto.width_config.CopyFrom(width_config)
-
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
             time_input_proto.id,
@@ -585,7 +581,10 @@ class TimeWidgetsMixin:
                 time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
-        self.dg._enqueue("time_input", time_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("time_input", time_input_proto, layout_config=layout_config)
         return widget_state.value
 
     @overload
@@ -750,8 +749,8 @@ class TimeWidgetsMixin:
         on_change : callable
             An optional callback invoked when this date_input's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -772,9 +771,14 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the date input. If "stretch", the date input will stretch
-            to fill the available space. If a number, the date input will have a
-            fixed width of that many pixels. Defaults to "stretch".
+            The width of the date input widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -873,7 +877,6 @@ class TimeWidgetsMixin:
             default_value=value if value != "today" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         def parse_date_deterministic_for_id(v: NullableScalarDateValue) -> str | None:
             if v == "today":
@@ -896,10 +899,7 @@ class TimeWidgetsMixin:
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
-            parsed = [
-                parse_date_deterministic_for_id(cast("NullableScalarDateValue", v))
-                for v in value
-            ]
+            parsed = [parse_date_deterministic_for_id(v) for v in value]
         else:
             parsed = parse_date_deterministic_for_id(value)
 
@@ -908,7 +908,13 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Ensure stable ID when key is provided; explicitly whitelist parameters
+            # that might invalidate the current widget state.
+            # format should be supported. However, there is a bug in baseweb where
+            # changing the format dynamically leads to a wrongly formatted date.
+            # So, we whitelist it for now until we migrate this away from baseweb.
+            key_as_main_identity={"min_value", "max_value", "format"},
+            dg=self.dg,
             label=label,
             value=parsed,
             min_value=parsed_min_date,
@@ -973,14 +979,6 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        date_input_proto.width_config.CopyFrom(width_config)
-
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
@@ -998,7 +996,10 @@ class TimeWidgetsMixin:
             date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True
 
-        self.dg._enqueue("date_input", date_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

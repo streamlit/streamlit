@@ -16,12 +16,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -47,14 +52,15 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -98,6 +104,7 @@ class RadioMixin:
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> None: ...
 
     @overload
@@ -117,6 +124,7 @@ class RadioMixin:
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> T: ...
 
     @overload
@@ -136,6 +144,7 @@ class RadioMixin:
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -155,6 +164,7 @@ class RadioMixin:
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -219,8 +229,8 @@ class RadioMixin:
         on_change : callable
             An optional callback invoked when this radio's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -243,10 +253,26 @@ class RadioMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        width : "content", "stretch", or int
+            The width of the radio button widget. This can be one of the
+            following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
+
         Returns
         -------
         any
             The selected option or ``None`` if no option is selected.
+
+            This is a copy of the selected option, not the original.
 
         Example
         -------
@@ -304,6 +330,7 @@ class RadioMixin:
             captions=captions,
             label_visibility=label_visibility,
             ctx=ctx,
+            width=width,
         )
 
     def _radio(
@@ -323,6 +350,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
         ctx: ScriptRunContext | None,
+        width: Width = "content",
     ) -> T | None:
         key = to_key(key)
 
@@ -334,19 +362,29 @@ class RadioMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Treat provided key as the main widget identity. Only include the
+            # following parameters in the identity computation since they can
+            # invalidate the current selection mapping.
+            # Changes to format_func also invalidate the current selection,
+            # but this is already handled via the `options` parameter below:
+            key_as_main_identity={"options"},
+            dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
             help=help,
             horizontal=horizontal,
             captions=captions,
+            width=width,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -414,7 +452,7 @@ class RadioMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
-        self.dg._enqueue("radio", radio_proto)
+        self.dg._enqueue("radio", radio_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

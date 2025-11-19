@@ -205,7 +205,6 @@ export class MetricsManager {
     this.pendingEvents = []
   }
 
-  // eslint-disable-next-line class-methods-use-this
   private async track(data: MetricsEvent): Promise<void> {
     // Send the event to the metrics URL
     // @ts-expect-error - send func calls track & checks metricsUrl defined

@@ -19,6 +19,7 @@ import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, List } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import {
   AREA_CHART_TYPE,
@@ -61,28 +62,37 @@ const CHART_COLUMN_TEMPLATE = {
 function getLineChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof LineChartColumn> {
-  return LineChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return LineChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getBarChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof BarChartColumn> {
-  return BarChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return BarChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getAreaChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof AreaChartColumn> {
-  return AreaChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return AreaChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 describe("ChartColumn", () => {
@@ -135,8 +145,10 @@ describe("ChartColumn", () => {
   it("supports configuring min/max scale", () => {
     const mockColumn = getLineChartColumn()
     const mockCell = mockColumn.getCell([-100, 0, 100])
-    // Default min/max scale is 0/1 so the values should be normalized:
-    expect((mockCell as SparklineCellType).data?.values).toEqual([0, 0.5, 1])
+    // Default min/max scale is the min and max of each cell, so nothing happens:
+    expect((mockCell as SparklineCellType).data?.values).toEqual([
+      -100, 0, 100,
+    ])
 
     // Use a different scale
     const mockColumn1 = getLineChartColumn({
@@ -194,8 +206,41 @@ describe("ChartColumn", () => {
       y_max: -100,
     })
     const mockCell6 = mockColumn6.getCell([-100, 0, 100])
-    // min and max need to be defined, so this should be an error cell:
+    // min and max can't be the same number, so this should be an error cell:
     expect(isErrorCell(mockCell6)).toEqual(true)
+  })
+
+  it("supports negative numbers", () => {
+    const mockColumn = getLineChartColumn()
+
+    const mockCell = mockColumn.getCell([-50, 50, 150])
+    // The default values for y_min and y_max are -50 and 150, so don't do anything
+    expect((mockCell as SparklineCellType).data?.values).toEqual([
+      -50, 50, 150,
+    ])
+
+    const mockColumn1 = getLineChartColumn()
+
+    const mockCell1 = mockColumn1.getCell([-50, -40, -30])
+    // The default values for y_min and y_max are -50 and -30, so don't do anything
+    expect((mockCell1 as SparklineCellType).data?.values).toEqual([
+      -50, -40, -30,
+    ])
+
+    const mockColumn2 = getLineChartColumn({
+      y_min: undefined,
+      y_max: -60,
+    })
+
+    const mockCell2 = mockColumn2.getCell([-50, -40, -30])
+    // y_max is -60 and the default for y_min is -50,  so this should be an error cell:
+    expect(isErrorCell(mockCell2)).toEqual(true)
+
+    const mockColumn3 = getLineChartColumn()
+
+    const mockCell3 = mockColumn3.getCell([-50])
+    // The min/max scale is -50/0 for this case, so don't do anything:
+    expect((mockCell3 as SparklineCellType).data?.values).toEqual([-50])
   })
 
   it("works with single values or only same values without running into division by zero", () => {
@@ -215,6 +260,45 @@ describe("ChartColumn", () => {
     const mockCell3 = mockColumn.getCell([-1, -1])
     // All values should be normalized to 0:
     expect((mockCell3 as SparklineCellType).data?.values).toEqual([0, 0])
+  })
+
+  it("supports named color mapping and custom colors", () => {
+    const blueColumn = getLineChartColumn({ color: "blue" })
+    const blueCell = blueColumn.getCell([0, 1]) as SparklineCellType
+    expect(blueCell.data?.color).toEqual(mockTheme.emotion.colors.blueColor)
+
+    const greyColumn = getBarChartColumn({ color: "grey" })
+    const greyCell = greyColumn.getCell([0, 1]) as SparklineCellType
+    expect(greyCell.data?.color).toEqual(mockTheme.emotion.colors.grayColor)
+
+    const customColor = "#123456"
+    const customColumn = getAreaChartColumn({ color: customColor })
+    const customCell = customColumn.getCell([0, 1]) as SparklineCellType
+    expect(customCell.data?.color).toEqual(customColor)
+  })
+
+  it("applies auto color based on trend", () => {
+    // auto: default is green; red if trend down
+    const autoUp = getLineChartColumn({ color: "auto" })
+    const cellUp = autoUp.getCell([0, 1]) as SparklineCellType
+    expect(cellUp.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
+
+    const autoDown = getLineChartColumn({ color: "auto" })
+    const cellDown = autoDown.getCell([1, 0]) as SparklineCellType
+    expect(cellDown.data?.color).toEqual(mockTheme.emotion.colors.redColor)
+  })
+
+  it("applies auto-inverse color based on trend", () => {
+    // auto-inverse: default is green; red if trend up
+    const autoInvDown = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvDown = autoInvDown.getCell([1, 0]) as SparklineCellType
+    expect(cellInvDown.data?.color).toEqual(
+      mockTheme.emotion.colors.greenColor
+    )
+
+    const autoInvUp = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvUp = autoInvUp.getCell([0, 1]) as SparklineCellType
+    expect(cellInvUp.data?.color).toEqual(mockTheme.emotion.colors.redColor)
   })
 
   it.each([

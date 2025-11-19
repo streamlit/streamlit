@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable import/no-extraneous-dependencies */
 import { fireEvent, RenderResult, Screen } from "@testing-library/react"
 
 export function openMenu(screen: Screen): void {
@@ -38,7 +37,7 @@ export function getMenuStructure(
     ).map(d =>
       d.getAttribute("data-testid") == "stMainMenuDivider"
         ? { type: "separator" }
-        : { type: "option", label: d.textContent as string }
+        : { type: "option", label: d.textContent }
     )
   })
 }

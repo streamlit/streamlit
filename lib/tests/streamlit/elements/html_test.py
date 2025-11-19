@@ -19,10 +19,36 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class StHtmlAPITest(DeltaGeneratorTestCase):
     """Test st.html API."""
+
+    def test_unsafe_allow_javascript_default_false(self):
+        """By default JS execution is disabled (flag False)."""
+        st.html("<div>Hi</div>")
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is False
+
+    def test_unsafe_allow_javascript_true(self):
+        """When enabled, the flag is serialized as True."""
+        st.html("<div>Hi</div>", unsafe_allow_javascript=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is True
+
+    def test_unsafe_allow_javascript_style_only_ignores_flag(self):
+        """Style-only HTML ignores the JS flag since no scripts can execute."""
+        css = "<style>body{background:red}</style>"
+        st.html(css, unsafe_allow_javascript=True)
+        # First message routes the style-only tag to the event container; then
+        # the element
+        _ = self.get_message_from_queue()
+        style_el = self.get_delta_from_queue().new_element
+        assert style_el.html.body == css
+        assert style_el.html.unsafe_allow_javascript is False
 
     def test_st_html(self):
         """Test st.html."""
@@ -167,6 +193,79 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.html.body == "<div>html</div>"
+
+    def test_st_html_with_width(self):
+        """Test st.html with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                st.html("<p>test html</p>", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.html.body == "<p>test html</p>"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_st_html_with_invalid_width(self):
+        """Test st.html with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.html("<p>test html</p>", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_st_html_default_width(self):
+        """Test that st.html defaults to stretch width."""
+        st.html("<p>test html</p>")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<p>test html</p>"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_st_html_style_only_no_width_config(self):
+        """Test that st.html with only style tags doesn't apply width configuration."""
+        st.html("<style>.test { color: red; }</style>", width=300)
+
+        # The style tag should be enqueued to the event delta generator
+        style_msg = self.get_message_from_queue()
+        assert style_msg.metadata.delta_path == [2, 0]
+
+        # Check that html body is the expected style tag
+        style_el = self.get_delta_from_queue().new_element
+        assert style_el.html.body == "<style>.test { color: red; }</style>"
+
+        # Verify that no width configuration is applied for style-only HTML
+        assert not style_el.HasField("width_config")
 
     def test_st_html_with_nonhtml_filelike_str(self):
         """Test st.html with a string that's neither HTML-like nor a real file."""

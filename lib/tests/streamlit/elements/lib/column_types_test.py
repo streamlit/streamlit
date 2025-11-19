@@ -15,6 +15,8 @@
 import datetime
 import unittest
 
+import pytest
+
 from streamlit.elements.lib.column_types import (
     BarChartColumn,
     CheckboxColumn,
@@ -26,13 +28,16 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
+    MultiselectColumn,
     NumberColumn,
     ProgressColumn,
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    _validate_chart_color,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
+from streamlit.errors import StreamlitValueError
 
 
 class ColumnTypesTest(unittest.TestCase):
@@ -70,7 +75,7 @@ class ColumnTypesTest(unittest.TestCase):
         assert remove_none_values(
             NumberColumn(
                 "Col1",
-                width="small",
+                width=100,
                 help="Help text",
                 disabled=False,
                 required=True,
@@ -83,7 +88,7 @@ class ColumnTypesTest(unittest.TestCase):
             )
         ) == {
             "label": "Col1",
-            "width": "small",
+            "width": 100,
             "help": "Help text",
             "disabled": False,
             "required": True,
@@ -184,6 +189,21 @@ class ColumnTypesTest(unittest.TestCase):
             "default": "a",
             "type_config": {"type": "selectbox", "options": ["a", "b", "c"]},
         }, "Should have all the properties defined."
+
+    def test_selectbox_column_with_format_func(self):
+        """Test SelectboxColumn creation with format_func applied to options."""
+
+        assert remove_none_values(
+            SelectboxColumn(options=["a", "b"], format_func=str.upper)
+        ) == {
+            "type_config": {
+                "type": "selectbox",
+                "options": [
+                    {"value": "a", "label": "A"},
+                    {"value": "b", "label": "B"},
+                ],
+            }
+        }, "Options should be transformed into value/label pairs via format_func."
 
     def test_datetime_column(self):
         """Test DatetimeColumn creation."""
@@ -315,6 +335,7 @@ class ColumnTypesTest(unittest.TestCase):
                 min_value=0,
                 max_value=100,
                 format="%.1f%%",
+                color="red",
             )
         ) == {
             "label": "Col1",
@@ -326,6 +347,7 @@ class ColumnTypesTest(unittest.TestCase):
                 "format": "%.1f%%",
                 "min_value": 0,
                 "max_value": 100,
+                "color": "red",
             },
         }, "Should have all the properties defined."
 
@@ -411,12 +433,23 @@ class ColumnTypesTest(unittest.TestCase):
         )
 
         assert remove_none_values(
-            ListColumn("Col1", width="small", help="Help text", pinned=True)
+            ListColumn(
+                "Col1",
+                width="small",
+                help="Help text",
+                pinned=True,
+                disabled=False,
+                required=True,
+                default=["a", "b", "c"],
+            )
         ) == {
             "label": "Col1",
             "width": "small",
             "help": "Help text",
             "pinned": True,
+            "disabled": False,
+            "required": True,
+            "default": ["a", "b", "c"],
             "type_config": {"type": "list"},
         }, "Should have all the properties defined."
 
@@ -453,3 +486,138 @@ class ColumnTypesTest(unittest.TestCase):
             "pinned": True,
             "type_config": {"type": "json"},
         }, "Should have all the properties defined."
+
+    def test_multiselect_column(self):
+        """Test MultiselectColumn creation (basic)."""
+
+        assert remove_none_values(MultiselectColumn()) == {
+            "type_config": {"type": "multiselect"}
+        }, "Should only have the type defined and nothing else."
+
+    def test_multiselect_column_full(self):
+        """Test MultiselectColumn creation with common properties and simple options."""
+
+        assert remove_none_values(
+            MultiselectColumn(
+                "Col1",
+                width="small",
+                help="Help text",
+                disabled=False,
+                required=True,
+                pinned=True,
+                default=["a", "b"],
+                options=["a", "b", "c"],
+                accept_new_options=True,
+            )
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "disabled": False,
+            "required": True,
+            "pinned": True,
+            "default": ["a", "b"],
+            "type_config": {
+                "type": "multiselect",
+                "options": [
+                    {"value": "a"},
+                    {"value": "b"},
+                    {"value": "c"},
+                ],
+                "accept_new_options": True,
+            },
+        }, "Should have all the properties defined."
+
+    def test_multiselect_column_with_format_and_single_color(self):
+        """Test MultiselectColumn options transformed via format_func and colored uniformly."""
+
+        assert remove_none_values(
+            MultiselectColumn(
+                options=["exploration", "visualization", "llm"],
+                color="orange",
+                format_func=lambda x: x.capitalize(),
+            )
+        ) == {
+            "type_config": {
+                "type": "multiselect",
+                "options": [
+                    {"value": "exploration", "label": "Exploration", "color": "orange"},
+                    {
+                        "value": "visualization",
+                        "label": "Visualization",
+                        "color": "orange",
+                    },
+                    {"value": "llm", "label": "Llm", "color": "orange"},
+                ],
+            }
+        }, "Options should include formatted labels and a single repeated color."
+
+    def test_multiselect_column_with_color_iterable(self):
+        """Test MultiselectColumn color cycling when an iterable of colors is provided."""
+
+        assert remove_none_values(
+            MultiselectColumn(
+                options=["a", "b", "c", "d"],
+                color=["red", "blue"],
+            )
+        ) == {
+            "type_config": {
+                "type": "multiselect",
+                "options": [
+                    {"value": "a", "color": "red"},
+                    {"value": "b", "color": "blue"},
+                    {"value": "c", "color": "red"},
+                    {"value": "d", "color": "blue"},
+                ],
+            }
+        }, "Colors should cycle through the provided iterable."
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        # Supported named colors
+        "auto",
+        "auto-inverse",
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "orange",
+        "gray",
+        "grey",
+        "primary",
+        # CSS-like colors accepted by is_css_color_like
+        "#fff",
+        "#ffff",
+        "#ffffff",
+        "#ffffffff",
+        "rgb(255, 0, 0)",
+        "rgba(0, 0, 0, 0.5)",
+    ],
+)
+def test__validate_chart_color_valid(color: str) -> None:
+    """Validate that supported names and CSS-like colors do not raise."""
+    _validate_chart_color(color)
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        "purple",
+        "hsl(0,0%,0%)",
+        "#12",
+        "#12345",
+        "#1234567",
+        "auto-invers",
+        "",
+        " ",
+        "not-a-color",
+        ":material/open_in_new:",
+    ],
+)
+def test__validate_chart_color_invalid(color: str) -> None:
+    """Validate that unsupported names and non CSS-like strings raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError):
+        _validate_chart_color(color)

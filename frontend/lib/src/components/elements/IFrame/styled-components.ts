@@ -23,6 +23,7 @@ interface StyledIframeProps {
 export const StyledIframe = styled.iframe<StyledIframeProps>(
   ({ theme, disableScrolling }) => ({
     width: "100%",
+    height: "100%",
     colorScheme: "normal",
     border: "none",
     padding: theme.spacing.none,

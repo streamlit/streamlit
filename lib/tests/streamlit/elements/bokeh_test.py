@@ -60,6 +60,23 @@ class BokehTest(DeltaGeneratorTestCase):
             with pytest.raises(StreamlitAPIException):
                 st.bokeh_chart(plot)
 
+    @unittest.skipIf(
+        is_version_less_than(np.__version__, "2.0.0") is False,
+        "This test only runs if numpy is < 2.0.0. The bokeh version supported "
+        "by Streamlit is not compatible with numpy 2.x.",
+    )
+    @patch("streamlit.elements.bokeh_chart.show_deprecation_warning")
+    def test_calling_bokeh_chart_shows_deprecation_warning(
+        self, patched_show_deprecation_warning
+    ):
+        from bokeh.plotting import figure
+
+        plot = figure()
+        plot.line([1], [1])
+        st.bokeh_chart(plot)
+
+        patched_show_deprecation_warning.assert_called_once()
+
 
 class BokehMissingTest(DeltaGeneratorTestCase):
     """Test that appropriate error is raised when bokeh is not installed."""

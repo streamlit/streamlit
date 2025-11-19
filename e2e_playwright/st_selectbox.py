@@ -60,9 +60,9 @@ st.write("value 7:", v7)
 
 if runtime.exists():
 
-    def on_change():
+    def on_change(x: int, y: int, z: int):
         st.session_state.selectbox_changed = True
-        st.text("Selectbox widget callback triggered")
+        st.text(f"Selectbox widget callback triggered: x={x}, y={y}, z={z}")
 
     st.selectbox(
         "selectbox 8 (with callback, help)",
@@ -70,6 +70,8 @@ if runtime.exists():
         1,
         key="selectbox8",
         on_change=on_change,
+        args=[1, 2],
+        kwargs={"z": 3},
         help="Help text",
     )
     st.write("value 8:", st.session_state.selectbox8)
@@ -144,3 +146,42 @@ st.write("value 17:", v17)
 
 st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
 st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")
+
+if st.toggle("Update selectbox props"):
+    sel_value = st.selectbox(
+        "Updated dynamic selectbox",
+        index=1,
+        width=200,
+        help="updated help",
+        key="dynamic_selectbox_with_key",
+        on_change=lambda a, param: print(
+            f"Updated selectbox - callback triggered: {a} {param}"
+        ),
+        args=("Updated select arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        # options, format_func & accept_new_options are not yet supported for
+        # dynamic changes keeping it at the same value for now:
+        options=["apple", "banana", "orange"],
+        accept_new_options=True,
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated selectbox value:", sel_value)
+else:
+    sel_value = st.selectbox(
+        "Initial dynamic selectbox",
+        index=0,
+        width="stretch",
+        help="initial help",
+        key="dynamic_selectbox_with_key",
+        on_change=lambda a, param: print(
+            f"Initial selectbox - callback triggered: {a} {param}"
+        ),
+        args=("Initial select arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        options=["apple", "banana", "orange"],
+        accept_new_options=True,
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial selectbox value:", sel_value)

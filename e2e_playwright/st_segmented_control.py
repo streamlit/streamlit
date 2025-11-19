@@ -32,15 +32,7 @@ with st.sidebar:
     )
 
 st.header("Multi Select - Segmented Control", anchor="multi-select-segmented-control")
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_segmented_control_options = [
-        "Foobar",
-        "🧰 General widgets",
-    ]
-else:
-    st.session_state.default_segmented_control_options = []
 
-default = st.session_state.default_segmented_control_options
 
 s1 = st.segmented_control(
     "Select some options",
@@ -55,11 +47,12 @@ s1 = st.segmented_control(
         "🎥 Video",
         "📝 Text",
         "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝"
+        ", yes, long long long long text"
+        ", yes, long long long long text"
         ", yes, long long long long text",
     ],
     key="segmented_control_multi_selection",
     selection_mode="multi",
-    default=default,
     help="You can choose multiple options",
 )
 st.write(f"Multi selection: {s1}")
@@ -147,7 +140,7 @@ st.write(
 st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.segmented_control(
         "Select an emotion:",
@@ -175,8 +168,90 @@ s6 = st.segmented_control(
 )
 st.write("segmented-control-after-sleep:", str(s6))
 
+st.segmented_control(
+    "Segmented control with content width",
+    ["Option 1", "Option 2", "Option 3 with more content"],
+    width="content",
+    key="segmented_control_content_width",
+)
+
+st.segmented_control(
+    "Segmented control with stretch width",
+    ["Option 1", "Option 2", "Option 3 more content"],
+    width="stretch",
+    key="segmented_control_stretch_width",
+)
+
+st.segmented_control(
+    "Segmented control with 300px width",
+    ["Option 1", "Option 2", "Option 3 with more content"],
+    width=300,
+    key="segmented_control_300px_width",
+)
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_segmented_control_options = [
+        "🧰 General widgets",
+        "🎥 Video",
+    ]
+else:
+    st.session_state.default_segmented_control_options = []
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.segmented_control(
+    "Segmented control with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_segmented_control_options,
+)
+st.write("Segmented control with default options:", str(val))
+
+st.markdown("Dynamic segmented control:")
+
+if st.toggle("Update segmented control props"):
+    dyn_val = st.segmented_control(
+        "Updated dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="updated help",
+        width=300,
+        default="banana",
+        on_change=lambda a, param: print(
+            f"Updated segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Updated segmented control arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Updated segmented control value:", dyn_val)
+else:
+    dyn_val = st.segmented_control(
+        "Initial dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="initial help",
+        width="content",
+        default="apple",
+        on_change=lambda a, param: print(
+            f"Initial segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Initial segmented control arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Initial segmented control value:", dyn_val)

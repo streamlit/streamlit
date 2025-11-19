@@ -16,24 +16,19 @@
 
 import styled from "@emotion/styled"
 
-import {
-  StyledEmojiIcon,
-  StyledIcon,
-} from "~lib/components/shared/Icon/styled-components"
 import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
-import { StyledMaterialIcon } from "~lib/components/shared/Icon/Material/styled-components"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.sm,
   width: "100%",
 
-  [`${StyledEmojiIcon}, ${StyledIcon}, ${StyledMaterialIcon}`]: {
-    position: "relative",
-    top: "2px",
-  },
-
   [`${StyledCodeBlock} code`]: {
     paddingRight: theme.spacing.lg,
   },
+}))
+
+export const StyledAlertIcon = styled.div(({ theme }) => ({
+  position: "relative",
+  top: theme.spacing.threeXS,
 }))

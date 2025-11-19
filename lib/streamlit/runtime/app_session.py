@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -45,12 +45,15 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
-    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from collections.abc import Callable
+
+    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -301,6 +304,15 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                # Execute deferred callable in a separate thread to avoid blocking
+                # the main event loop. Use create_task to run the async handler.
+                # Store task reference to prevent garbage collection.
+                task = asyncio.create_task(
+                    self._handle_deferred_file_request(msg.deferred_file_request)
+                )
+                # Add task name for better debugging
+                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -375,8 +387,9 @@ class AppSession:
             # sometimes stays open.
             if fragment_id and not self._fragment_storage.contains(fragment_id):
                 _LOGGER.info(
-                    f"The fragment with id {fragment_id} does not exist anymore - "
-                    "it might have been removed during a preceding full-app rerun."
+                    "The fragment with id %s does not exist anymore - "
+                    "it might have been removed during a preceding full-app rerun.",
+                    fragment_id,
                 )
                 return
 
@@ -734,10 +747,34 @@ class AppSession:
             msg.new_session, pages or self._pages_manager.get_pages()
         )
         _populate_config_msg(msg.new_session.config)
+
+        # Handles theme sections
+        # [theme] configs
         _populate_theme_msg(msg.new_session.custom_theme)
+        # [theme.light] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light,
+            f"theme.{config.CustomThemeCategories.LIGHT.value}",
+        )
+        # [theme.dark] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark,
+            f"theme.{config.CustomThemeCategories.DARK.value}",
+        )
+        # [theme.sidebar] configs
         _populate_theme_msg(
             msg.new_session.custom_theme.sidebar,
             f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
+        )
+        # [theme.light.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light.sidebar,
+            f"theme.{config.CustomThemeCategories.LIGHT_SIDEBAR.value}",
+        )
+        # [theme.dark.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark.sidebar,
+            f"theme.{config.CustomThemeCategories.DARK_SIDEBAR.value}",
         )
 
         # Immutable session data. We send this every time a new session is
@@ -809,6 +846,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
@@ -888,6 +931,34 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
+    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
+        """Handle a deferred_file_request BackMsg sent by the client.
+
+        Execute the deferred callable in a separate thread and send the URL back
+        to the frontend. This prevents blocking the main event loop if the callable
+        is slow.
+        """
+        response = ForwardMsg()
+        response.deferred_file_response.file_id = request.file_id
+
+        try:
+            # Execute the deferred callable in a separate thread to avoid blocking
+            # the main event loop. This is critical for shared apps where a slow
+            # callable could freeze all sessions.
+            url = await asyncio.to_thread(
+                runtime.get_instance().media_file_mgr.execute_deferred,
+                request.file_id,
+            )
+            response.deferred_file_response.url = url
+        except Exception as e:
+            # Send error response if callable execution fails
+            _LOGGER.exception(
+                "Error executing deferred callable for file_id %s", request.file_id
+            )
+            response.deferred_file_response.error_msg = str(e)
+
+        self._enqueue_forward_msg(response)
+
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]
     ) -> None:
@@ -939,7 +1010,21 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     for option_name, option_val in theme_opts.items():
         # We need to ignore some config options here that need special handling
         # and cannot directly be set on the protobuf.
-        if option_name not in {"base", "font", "fontFaces"} and option_val is not None:
+        if (
+            option_name
+            not in {
+                "base",
+                "font",
+                "fontFaces",
+                "codeFont",
+                "headingFont",
+                "headingFontSizes",
+                "headingFontWeights",
+                "chartCategoricalColors",
+                "chartSequentialColors",
+            }
+            and option_val is not None
+        ):
             setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base and font will default to the protobuf enum zero
@@ -954,18 +1039,23 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if base is not None:
         if base not in base_map:
             _LOGGER.warning(
-                f'"{base}" is an invalid value for theme.base.'
-                f" Allowed values include {list(base_map.keys())}."
-                ' Setting theme.base to "light".'
+                '"%s" is an invalid value for theme.base. Allowed values include %s. '
+                'Setting theme.base to "light".',
+                base,
+                list(base_map.keys()),
             )
         else:
             msg.base = base_map[base]
 
-    # Since the font field uses the deprecated enum, we need to put the font
-    # config into the body_font field instead:
-    body_font = theme_opts.get("font", None)
-    if body_font:
-        msg.body_font = body_font
+    # Handle font, codeFont, and headingFont config options and if they are
+    # specified with a source URL
+    msg = parse_fonts_with_source(
+        msg,
+        theme_opts.get("font", None),
+        theme_opts.get("codeFont", None),
+        theme_opts.get("headingFont", None),
+        section,
+    )
 
     font_faces = theme_opts.get("fontFaces", None)
     # If fontFaces was configured via config.toml, it's already a parsed list of
@@ -976,8 +1066,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             font_faces = json.loads(font_faces)
         except Exception as e:
             _LOGGER.warning(
-                "Failed to parse the theme.fontFaces config option with json.loads: "
-                f"{font_faces}.",
+                "Failed to parse the theme.fontFaces config option with json.loads: %s.",
+                font_faces,
                 exc_info=e,
             )
             font_faces = None
@@ -985,10 +1075,153 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if font_faces is not None:
         for font_face in font_faces:
             try:
+                if "weight" in font_face:
+                    font_face["weight_range"] = str(font_face["weight"])
+                    del font_face["weight"]
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
-                    f"Failed to parse the theme.fontFaces config option: {font_face}.",
+                    "Failed to parse the theme.fontFaces config option: %s.",
+                    font_face,
+                    exc_info=e,
+                )
+
+    heading_font_sizes = theme_opts.get("headingFontSizes", None)
+    # headingFontSizes is either an single string value (set for all headings) or
+    # a list of strings (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+
+    if isinstance(heading_font_sizes, str):
+        heading_font_sizes = heading_font_sizes.strip().lower()
+        if heading_font_sizes.endswith(("px", "rem")):
+            # Handle the case where headingFontSizes is a single string value to be applied to all headings
+            heading_font_sizes = [heading_font_sizes] * 6
+        else:
+            # Handle the case where headingFontSizes is a json string (coming from CLI or env variable)
+            try:
+                heading_font_sizes = json.loads(heading_font_sizes)
+            except Exception as e:
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option with json.loads: %s.",
+                    heading_font_sizes,
+                    exc_info=e,
+                )
+                heading_font_sizes = None
+
+    if heading_font_sizes is not None:
+        # Check that the list has between 1 and 6 values
+        if not heading_font_sizes or len(heading_font_sizes) > 6:
+            raise ValueError(
+                f"Config theme.headingFontSizes should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_sizes)}"
+            )
+        for size in heading_font_sizes:
+            try:
+                msg.heading_font_sizes.append(size)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option: %s.",
+                    size,
+                    exc_info=e,
+                )
+
+    heading_font_weights = theme_opts.get("headingFontWeights", None)
+    # headingFontWeights is either an integer (set for all headings) or
+    # a list of integers (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(heading_font_weights, str):
+        try:
+            heading_font_weights = json.loads(heading_font_weights)
+        except Exception as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.headingFontWeights config option with json.loads: %s.",
+                heading_font_weights,
+                exc_info=e,
+            )
+            heading_font_weights = None
+
+    if isinstance(heading_font_weights, int):
+        # Set all heading font weights to the same value
+        for _ in range(1, 7):
+            msg.heading_font_weights.append(heading_font_weights)
+    elif isinstance(heading_font_weights, list):
+        # Check that the list has between 1 and 6 values
+        if not heading_font_weights or len(heading_font_weights) > 6:
+            raise ValueError(
+                f"Config theme.headingFontWeights should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_weights)}"
+            )
+        # Ensure we have exactly 6 heading font weights (h1-h6), padding with 600 as default
+        heading_weights = heading_font_weights[:6] + [600] * (
+            6 - len(heading_font_weights)
+        )
+
+        for weight in heading_weights:
+            try:
+                msg.heading_font_weights.append(weight)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontWeights config option: %s.",
+                    weight,
+                    exc_info=e,
+                )
+
+    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
+    # If chartCategoricalColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_categorical_colors, str):
+        try:
+            chart_categorical_colors = json.loads(chart_categorical_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                chart_categorical_colors,
+                exc_info=e,
+            )
+            chart_categorical_colors = None
+
+    if chart_categorical_colors is not None:
+        for color in chart_categorical_colors:
+            try:
+                msg.chart_categorical_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
+                    exc_info=e,
+                )
+
+    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
+    # If chartSequentialColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_sequential_colors, str):
+        try:
+            chart_sequential_colors = json.loads(chart_sequential_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartSequentialColors config option: %s.",
+                chart_sequential_colors,
+                exc_info=e,
+            )
+            chart_sequential_colors = None
+
+    if chart_sequential_colors is not None:
+        # Check that the list has 10 color values
+        if len(chart_sequential_colors) != 10:
+            _LOGGER.error(
+                "Config theme.chartSequentialColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_sequential_colors),
+            )
+        for color in chart_sequential_colors:
+            try:
+                msg.chart_sequential_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartSequentialColors config option: %s.",
+                    color,
                     exc_info=e,
                 )
 

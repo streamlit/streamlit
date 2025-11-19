@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+from parameterized import parameterized
+
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class StTextAPITest(DeltaGeneratorTestCase):
@@ -32,3 +37,100 @@ class StTextAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.text.body == "some text"
         assert el.text.help == "help text"
+
+    def test_st_text_with_width(self):
+        """Test st.text with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+            (None, WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                if width_value is None:
+                    st.text("some text")
+                else:
+                    st.text("some text", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.text.body == "some text"
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_st_text_with_invalid_width(self):
+        """Test st.text with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.text("some text", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+
+class StTextTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.text text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ],
+        name_func=lambda func,
+        num,
+        param: f"{func.__name__}_{param.args[0] or 'default'}",
+    )
+    def test_st_text_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.text with various text_alignment values.
+
+        Parameters
+        ----------
+        text_alignment : str | None
+            The text alignment value to test, or None for default behavior.
+        expected_alignment : int
+            The expected protobuf alignment enum value (1=LEFT, 2=CENTER, 3=RIGHT, 4=JUSTIFY).
+        """
+        if text_alignment is None:
+            st.text("Test text")
+        else:
+            st.text("Test text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.text.body == "Test text"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_text_text_alignment_invalid(self):
+        """Test st.text with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text("Test text", text_alignment="middle")
+
+        assert 'Invalid text_alignment value: "middle"' in str(exc.value)
+        assert "left" in str(exc.value)
+        assert "center" in str(exc.value)
+        assert "right" in str(exc.value)
+        assert "justify" in str(exc.value)

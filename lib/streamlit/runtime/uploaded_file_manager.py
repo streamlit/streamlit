@@ -82,6 +82,9 @@ class UploadedFile(io.BytesIO):
             return NotImplemented
         return self.file_id == other.file_id
 
+    def __hash__(self) -> int:
+        return hash(self.file_id)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

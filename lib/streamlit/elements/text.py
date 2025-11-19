@@ -16,12 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import TextAlignment, Width
     from streamlit.type_util import SupportsStr
 
 
@@ -32,6 +34,8 @@ class TextMixin:
         body: SupportsStr,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "content",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         r"""Write text without Markdown or HTML parsing.
 
@@ -53,6 +57,29 @@ class TextMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : "content", "stretch", or int
+            The width of the text element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to align on both
+              left and right edges, with the last line left-aligned).
+
         Example
         -------
         >>> import streamlit as st
@@ -68,7 +95,11 @@ class TextMixin:
         text_proto.body = clean_text(body)
         if help:
             text_proto.help = help
-        return self.dg._enqueue("text", text_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+
+        return self.dg._enqueue("text", text_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

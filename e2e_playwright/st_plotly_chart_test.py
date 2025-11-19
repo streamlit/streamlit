@@ -16,8 +16,9 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 # Only do chromium as this can create a lot of screenshots
@@ -28,7 +29,7 @@ def test_plotly_has_consistent_visuals(
 ):
     snapshot_names = [
         "st_plotly_chart-none_theme",
-        "st_plotly_chart-streamlit_theme_use_container_width",
+        "st_plotly_chart-streamlit_theme",
         "st_plotly_chart-candlestick_streamlit_theme",
         "st_plotly_chart-sunburst_custom_color",
         "st_plotly_chart-contour_heatmap_together",
@@ -40,8 +41,9 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-layout_customization",
         "st_plotly_chart-template_customization",
         "st_plotly_chart-histogram_chart",
+        "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(16)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(14)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
@@ -49,63 +51,50 @@ def test_plotly_has_consistent_visuals(
         )
 
 
-def test_plotly_has_correct_visuals(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    snapshot_names = [
-        "st_plotly_chart-line_chart_specific_height_width",
-        "st_plotly_chart-use_container_width_false_and_specified_height",
-        "st_plotly_chart-none_theme_and_use_container_width",
-    ]
-    plotly_indices = [13, 14, 15]
-    for i, name in enumerate(snapshot_names):
-        assert_snapshot(
-            themed_app.get_by_test_id("stPlotlyChart").nth(plotly_indices[i]),
-            name=name,
-        )
+def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFunction):
+    index = 13
+    chart = app.get_by_test_id("stPlotlyChart").nth(index)
 
-
-def test_plotly_use_container_width_false_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 14
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
+    chart.hover()
+    fullscreen_button = app.locator('[data-title="Fullscreen"]').nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
+
+    chart_bbox = chart.bounding_box()
+
+    # Type narrowing: after the null check, mypy knows chart_bbox is not None
+    assert chart_bbox is not None
+    start_x = chart_bbox["x"] + chart_bbox["width"] * 0.3
+    start_y = chart_bbox["y"] + chart_bbox["height"] * 0.4
+    end_x = chart_bbox["x"] + chart_bbox["width"] * 0.7
+    end_y = chart_bbox["y"] + chart_bbox["height"] * 0.6
+    app.mouse.move(start_x, start_y)
+    app.mouse.down()
+    app.mouse.move(end_x, end_y)
+    app.mouse.up()
+
+    # Assert snapshot after zoom selection to verify the zoom was applied
     assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_fullscreen",
+        chart,
+        name="st_plotly_chart-fullscreen_zoomed_selection",
     )
 
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_false_exited_fullscreen",
-    )
+    exit_fullscreen_button = app.locator('[data-title="Close fullscreen"]').nth(0)
+    exit_fullscreen_button.hover()
+    exit_fullscreen_button.click()
 
+    # Find and click the reset axes button (usually appears as "Reset axes" or similar)
+    reset_button = app.locator('[data-title="Reset axes"]').nth(0)
+    reset_button.hover()
+    reset_button.click()
 
-def test_plotly_use_container_width_true_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 15
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_fullscreen",
-    )
+    wait_for_app_loaded(app)
+    # Give time for CSS styles to resettle after the reset button click
+    app.wait_for_timeout(200)
 
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
     assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-container_width_true_exited_fullscreen",
+        chart,
+        name="st_plotly_chart-fullscreen_reset_axis",
     )
 
 
@@ -123,3 +112,35 @@ def test_allows_custom_toolbar_modifications(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPlotlyChart")
+
+
+def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that plotly chart adjusts for custom theme."""
+    # Apply custom theme using window injection
+    apply_theme_via_window(
+        app,
+        base="light",
+        chartCategoricalColors=[
+            "#ff7f0e",  # orange
+            "#2ca02c",  # green
+            "#1f77b4",  # blue
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ],
+    )
+
+    # Reload to apply the theme
+    app.reload()
+    wait_for_app_loaded(app)
+
+    plotly_elements = app.get_by_test_id("stPlotlyChart")
+    expect(plotly_elements).to_have_count(14)
+
+    # Take a snapshot of the single mark chart, shows it applies the first color
+    # from chartCategoricalColors (orange):
+    assert_snapshot(plotly_elements.nth(6), name="st_plotly_chart-custom-theme")

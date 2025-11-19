@@ -19,8 +19,6 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "CodeProto";
 
-import "streamlit/proto/WidthConfig.proto";
-
 // st.code
 message Code {
   // Content to display.

@@ -20,6 +20,8 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_prefixed_markdown,
+    get_element_by_key,
 )
 
 
@@ -125,6 +127,8 @@ def test_changes_widget_values_after_form_submitted(app: Page):
     expect(markdown_elements.nth(9)).to_have_text("Text Input: bar")
     expect(markdown_elements.nth(10)).to_have_text("Time Input: 00:00:00")
     expect(markdown_elements.nth(11)).to_have_text("Toggle Input: True")
+
+    expect_prefixed_markdown(app, "Submit button session state:", "True")
 
 
 def test_form_with_stretched_button(
@@ -278,3 +282,107 @@ def test_check_form_submit_button_types(
     form_11 = app.get_by_test_id("stForm").nth(10)
     expect(form_11.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_11, name="st_form-submit_button_just_help")
+
+
+def test_form_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Check that forms with different width configurations render correctly."""
+    form_12 = app.get_by_test_id("stForm").nth(11)
+    expect(form_12.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_12, name="st_form-pixel_width")
+
+    form_13 = app.get_by_test_id("stForm").nth(12)
+    expect(form_13.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_13, name="st_form-content_width")
+
+    form_14 = app.get_by_test_id("stForm").nth(13)
+    expect(form_14.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_14, name="st_form-stretch_width")
+
+
+def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Check that forms with different height configurations render correctly."""
+    form_15 = app.get_by_test_id("stForm").nth(14)
+    expect(form_15.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_15, name="st_form-pixel_height")
+
+    form_16 = app.get_by_test_id("stForm").nth(15)
+    expect(form_16.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_16, name="st_form-content_height")
+
+    # Stretch height is tested inside containers and columns below.
+
+
+def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that forms render correctly within columns."""
+    # Get the columns container and snapshot the entire columns layout
+    columns_container = app.get_by_test_id("stHorizontalBlock").last
+    columns_container.scroll_into_view_if_needed()
+    assert_snapshot(columns_container, name="st_form-columns")
+
+
+def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that forms render correctly within containers with fixed height."""
+    # Get the container with height and snapshot the entire container
+    height_container = app.get_by_test_id("stVerticalBlock").nth(24)
+    height_container.scroll_into_view_if_needed()
+    assert_snapshot(height_container, name="st_form-height_container")
+
+
+def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a form with a dataframe renders correctly with the toolbar."""
+    form_container = app.get_by_test_id("stVerticalBlock").nth(27)
+    dataframe = form_container.get_by_test_id("stDataFrame")
+    dataframe.hover()
+
+    dataframe_toolbar = dataframe.get_by_test_id("stElementToolbar")
+    expect(dataframe_toolbar).to_be_visible()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    # Take a snapshot of the container that contains the form and the dataframe so
+    # that we can see the toolbar.
+    assert_snapshot(
+        form_container,
+        name="st_form-with_dataframe_toolbar",
+    )
+
+
+def test_form_submit_button_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test form submit button width examples via screenshot matching."""
+    form = get_element_by_key(app, "width_tests")
+    submit_elements = form.get_by_test_id("stFormSubmitButton")
+
+    assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
+    assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
+    assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")
+
+
+def test_submit_button_with_key(app: Page):
+    """Test that the submit button can have a custom css class via the key argument."""
+    submit_button = get_element_by_key(app, "submit_button_form_1")
+    expect(submit_button).to_be_visible()
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
+def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the submit button can be updated dynamically."""
+    submit_button = get_element_by_key(app, "dynamic_button_with_key")
+    expect(submit_button).to_be_visible()
+
+    expect(submit_button).to_contain_text("Initial dynamic button")
+    assert_snapshot(submit_button, name="st_form_submit_button-dynamic_initial")
+    # Click the toggle to update the button props
+    click_toggle(app, "Update button props")
+
+    expect(submit_button).to_contain_text("Updated dynamic button")
+    submit_button.scroll_into_view_if_needed()
+    assert_snapshot(submit_button, name="st_form_submit_button-dynamic_updated")
+
+    # Click the submit button:
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")

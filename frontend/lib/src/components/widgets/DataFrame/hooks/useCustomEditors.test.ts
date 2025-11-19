@@ -39,6 +39,7 @@ describe("useCustomEditors hook", () => {
       displayData: '{"key": "value"}',
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const editor = result.current.provideEditor!(cell)
     expect(editor).toEqual({
       editor: JsonTextCellEditor,
@@ -56,6 +57,7 @@ describe("useCustomEditors hook", () => {
       displayData: "not json",
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const editor = result.current.provideEditor!(cell)
     expect(editor).toBeUndefined()
   })
@@ -71,6 +73,7 @@ describe("useCustomEditors hook", () => {
       displayData: '{"key": "value"}',
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const editor = result.current.provideEditor!(cell)
     expect(editor).toBeUndefined()
   })
@@ -87,6 +90,7 @@ describe("useCustomEditors hook", () => {
       contentAlign: "right",
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const editor = result.current.provideEditor!(cell)
     expect(editor).toBeUndefined()
   })

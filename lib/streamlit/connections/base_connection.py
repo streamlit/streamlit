@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -109,14 +109,16 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         are implementing their class' ``_connect`` method. User scripts should, for the
         most part, have no reason to use this property.
         """
-        connections_section = None
+        connections_section: AttrDict | None = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
 
-        if type(connections_section) is not AttrDict:
+        if connections_section is None or type(connections_section) is not AttrDict:
             return AttrDict({})
 
-        return connections_section.get(self._connection_name, AttrDict({}))
+        return cast(
+            "AttrDict", connections_section.get(self._connection_name, AttrDict({}))
+        )
 
     def reset(self) -> None:
         """Reset this connection so that it gets reinitialized the next time it's used.

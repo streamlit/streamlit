@@ -20,4 +20,7 @@
 
 import { createContext } from "react"
 
-export default createContext(false)
+const IsDialogContext = createContext(false)
+IsDialogContext.displayName = "IsDialogContext"
+
+export default IsDialogContext

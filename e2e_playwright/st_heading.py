@@ -46,7 +46,17 @@ st.subheader(
 )
 
 # Test dividers
-colors = ["blue", "gray", "green", "grey", "orange", "rainbow", "red", "violet"]
+colors = [
+    "blue",
+    "gray",
+    "green",
+    "grey",
+    "orange",
+    "rainbow",
+    "red",
+    "violet",
+    "yellow",
+]
 lorem_ipsum_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
 # Headers with specified color
 for color in colors:
@@ -59,3 +69,16 @@ for color in colors:
 
 # Empty subheader to test correct anchor behavior:
 st.subheader("")
+
+# Width examples
+st.title("Title with 400px width", width=400)
+st.title("Title with stretch width", width="stretch")
+st.title("Title with content width", width="content")
+
+st.header("Header with 400px width", width=400, divider="blue")
+st.header("Header with stretch width", width="stretch")
+st.header("Header with content width", width="content")
+
+st.subheader("Subheader with 300px width", width=300, divider="blue")
+st.subheader("Subheader with stretch width", width="stretch")
+st.subheader("Subheader with content width", width="content")

@@ -31,7 +31,7 @@ def mapping_demo() -> None:
         return pd.read_json(url)
 
     try:
-        ALL_LAYERS = {
+        all_layers = {
             "Bike rentals": pdk.Layer(
                 "HexagonLayer",
                 data=from_data_file("bike_rental_stats.json"),
@@ -75,7 +75,7 @@ def mapping_demo() -> None:
         st.sidebar.subheader("Map layers")
         selected_layers = [
             layer
-            for layer_name, layer in ALL_LAYERS.items()
+            for layer_name, layer in all_layers.items()
             if st.sidebar.checkbox(layer_name, True)
         ]
         if selected_layers:

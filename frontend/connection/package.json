@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.45.1",
+  "version": "1.51.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/streamlit-connection.cjs.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/streamlit-connection.es.js",
+      "require": "./dist/streamlit-connection.cjs.js",
       "default": "./dist/streamlit-connection.umd.js"
     }
   },
@@ -20,7 +21,8 @@
     "buildWatch": "env DEV_WATCH=1 vite build --watch",
     "test": "vitest run",
     "testWatch": "vitest",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
+    "lint": "eslint --max-warnings 0 src",
+    "lint:fix": "eslint --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
@@ -30,22 +32,22 @@
   "dependencies": {
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "axios": "^1.9.0",
+    "axios": "^1.12.1",
     "lodash": "^4.17.21",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
-    "@types/eslint": "~8.56.12",
-    "@types/lodash": "~4.17.17",
+    "@types/eslint": "^9.6.1",
+    "@types/lodash": "~4.17.20",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^8.33.0",
-    "prettier": "^2.8.3",
+    "eslint": "^9.39.0",
+    "prettier": "^3.6.2",
     "typesync": "^0.14.3",
-    "vite": "^6.3.5",
+    "vite": "^7.1.11",
     "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-svgr": "^4.3.0",
+    "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.1.4",
+    "vitest": "^3.2.4",
     "vitest-websocket-mock": "^0.5.0"
   },
   "browserslist": [

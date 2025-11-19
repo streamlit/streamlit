@@ -16,11 +16,10 @@ from __future__ import annotations
 
 import os
 import threading
-from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
+from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, ValuesView
 from copy import deepcopy
 from typing import (
     Any,
-    Callable,
     Final,
     NoReturn,
 )
@@ -29,7 +28,7 @@ from blinker import Signal
 
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
-from streamlit.errors import StreamlitSecretNotFoundError
+from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -429,9 +428,9 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except FileNotFoundError:  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
                     # A user may only have one secrets.toml file defined, so we'd expect
-                    # FileNotFoundErrors to be raised when attempting to install a
+                    # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
                     pass
 
@@ -461,8 +460,7 @@ class Secrets(Mapping[str, Any]):
                 return value
             return AttrDict(value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
-        # AttributeError. Without handling FileNotFoundError, unittests.mocks
-        # fails during mock creation on Python3.9
+        # AttributeError and mocking utilities expect that contract.
         except (KeyError, FileNotFoundError):
             raise AttributeError(_missing_attr_error_message(key))
 

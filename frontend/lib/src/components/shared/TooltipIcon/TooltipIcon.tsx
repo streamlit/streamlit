@@ -17,13 +17,13 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
-import { useTheme } from "@emotion/react"
 
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown, {
   StreamlitMarkdownProps,
 } from "~lib/components/shared/StreamlitMarkdown"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 
 import {
   StyledLabelHelpInline,
@@ -49,7 +49,7 @@ function TooltipIcon({
   onMouseEnterDelay,
   containerWidth = false,
 }: TooltipIconProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   return (
     <StyledTooltipIconWrapper
       className="stTooltipIcon"

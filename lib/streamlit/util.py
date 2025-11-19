@@ -19,7 +19,14 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
+
+from streamlit.proto.RootContainer_pb2 import RootContainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from streamlit.delta_generator import DeltaGenerator
 
 
 def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -70,3 +77,32 @@ def calc_md5(s: bytes | str) -> str:
 
     h.update(b)
     return h.hexdigest()
+
+
+class AttributeDictionary(dict[Any, Any]):
+    """
+    A dictionary subclass that supports attribute-style access.
+
+    This class extends the functionality of a standard dictionary to allow items
+    to be accessed via attribute-style dot notation in addition to the traditional
+    key-based access. If a dictionary item is accessed and is itself a dictionary,
+    it is automatically wrapped in another `AttributeDictionary`, enabling recursive
+    attribute-style access.
+    """
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            item = self.__getitem__(key)
+            return AttributeDictionary(item) if isinstance(item, dict) else item
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self[name] = value
+
+
+def in_sidebar(dg: DeltaGenerator) -> bool:
+    """Check if the DeltaGenerator is in the sidebar."""
+    return dg._active_dg._root_container == RootContainer.SIDEBAR

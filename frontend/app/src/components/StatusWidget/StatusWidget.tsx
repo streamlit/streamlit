@@ -22,31 +22,27 @@ import React, {
   useState,
 } from "react"
 
-import { Info } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
-import { SignalConnection } from "typed-signals"
 
+import { ConnectionState } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
+  DynamicIcon,
   Icon,
   Placement,
   ScriptRunState,
   Timer,
   Tooltip,
+  useEmotionTheme,
 } from "@streamlit/lib"
-import { SessionEvent } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
-import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
-import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
-import { ConnectionState } from "@streamlit/connection"
-import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
+import { getConnectionStateUI } from "./getConnectionStateUI"
+import IconRunning from "./IconRunning"
 import {
   StyledAppButtonContainer,
-  StyledAppRunningIcon,
   StyledAppStatus,
   StyledAppStatusLabel,
   StyledConnectionStatus,
@@ -54,15 +50,11 @@ import {
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
-import { getConnectionStateUI } from "./getConnectionStateUI"
 
 /** Component props */
 export interface StatusWidgetProps {
   /** State of our connection to the server. */
   connectionState: ConnectionState
-
-  /** Dispatches transient SessionEvents received from the server. */
-  sessionEventDispatcher: SessionEventDispatcher
 
   /** Script's current run state */
   scriptRunState: ScriptRunState
@@ -81,14 +73,10 @@ export interface StatusWidgetProps {
 
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
+
+  /** Whether to show script changed actions (rerun/always rerun buttons) */
+  showScriptChangedActions: boolean
 }
-
-// Amount of time to display the "Script Changed. Rerun?" prompt when it first appears.
-const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
-
-// Amount of time to display the Script Changed prompt after the user has hovered
-// and then unhovered on it.
-const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
 // Delay time for displaying running man animation.
 const RUNNING_MAN_DISPLAY_DELAY_TIME_MS = 500
@@ -97,12 +85,11 @@ interface PromptButtonProps {
   title: ReactNode
   disabled: boolean
   onClick: () => void
-  isMinimized: boolean
 }
 
 const PromptButton = (props: PromptButtonProps): ReactElement => {
   return (
-    <StyledAppButtonContainer isMinimized={props.isMinimized}>
+    <StyledAppButtonContainer>
       <BaseButton
         kind={BaseButtonKind.HEADER_BUTTON}
         disabled={props.disabled}
@@ -121,26 +108,18 @@ const PromptButton = (props: PromptButtonProps): ReactElement => {
  */
 const StatusWidget: React.FC<StatusWidgetProps> = ({
   connectionState,
-  sessionEventDispatcher,
   scriptRunState,
   rerunScript,
   stopScript,
   allowRunOnSave,
+  showScriptChangedActions,
 }) => {
-  const shouldMinimize = useCallback((): boolean => {
-    return window.scrollY > 32
-  }, [])
-  const [statusMinimized, setStatusMinimized] = useState(shouldMinimize)
-  const [scriptChangedOnDisk, setScriptChangedOnDisk] = useState(false)
-  const [promptMinimized, setPromptMinimized] = useState(false)
-  const [promptHovered, setPromptHovered] = useState(false)
   const [showRunningMan, setShowRunningMan] = useState(false)
   const minimizePromptTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
   const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
-  const sessionEventConn = useRef<SignalConnection>()
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const handleAlwaysRerunClick = (): void => {
     if (allowRunOnSave) {
@@ -157,30 +136,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const isConnected = connectionState === ConnectionState.CONNECTED
 
-  const minimizePromptAfterTimeout = useCallback((timeout: number): void => {
-    // Don't cut an existing timer short. If our timer is already
-    // running, and is due to expire later than the new timeout
-    // value, leave the timer alone.
-    if (minimizePromptTimer.current !== null) {
-      if (timeout > minimizePromptTimer.current.remainingTime) {
-        minimizePromptTimer.current.setTimeout(() => {
-          setPromptMinimized(true)
-        }, timeout)
-      }
-    }
-  }, [])
-
-  const handleSessionEvent = useCallback(
-    (event: SessionEvent): void => {
-      if (event.type === "scriptChangedOnDisk") {
-        setScriptChangedOnDisk(true)
-        setPromptMinimized(false)
-        minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
-      }
-    },
-    [minimizePromptAfterTimeout]
-  )
-
   const showRunningManAfterInitialDelay = useCallback(
     (delay: number): void => {
       if (delayShowRunningManTimer.current !== null) {
@@ -192,20 +147,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     []
   )
 
-  const handleScroll = useCallback((): void => {
-    setStatusMinimized(shouldMinimize())
-  }, [shouldMinimize])
-
-  const onAppPromptHover = (): void => {
-    setPromptHovered(true)
-  }
-
-  const onAppPromptUnhover = (): void => {
-    setPromptHovered(false)
-    setPromptMinimized(false)
-    minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
-  }
-
   const handleStopScriptClick = (): void => {
     stopScript()
   }
@@ -213,29 +154,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   const handleRerunClick = (): void => {
     rerunScript(false)
   }
-
-  const isNewYears = (): boolean => {
-    // Test if current date between 12/31 & 1/06
-    const currentDate = new Date()
-    const month = currentDate.getMonth()
-    const date = currentDate.getDate()
-    // Check if Dec 31st
-    if (month === 11 && date === 31) return true
-    // Check if Jan 1st through 6th
-    if (month === 0 && date <= 6) return true
-    return false
-  }
-
-  useEffect(() => {
-    sessionEventConn.current =
-      sessionEventDispatcher.onSessionEvent.connect(handleSessionEvent)
-    return () => {
-      if (sessionEventConn.current !== undefined) {
-        sessionEventConn.current.disconnect()
-        sessionEventConn.current = undefined
-      }
-    }
-  }, [handleSessionEvent, sessionEventDispatcher.onSessionEvent])
 
   useEffect(() => {
     if (minimizePromptTimer.current === null) {
@@ -255,21 +173,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }, [])
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll)
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-    }
-  }, [handleScroll])
-
-  useEffect(() => {
-    if (scriptRunState === ScriptRunState.RUNNING) {
-      setScriptChangedOnDisk(false)
-
-      setPromptHovered(false)
-    }
-  }, [scriptRunState])
-
-  useEffect(() => {
     if (isConnected) {
       if (
         scriptRunState === ScriptRunState.RUNNING ||
@@ -284,34 +187,12 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }, [scriptRunState, showRunningManAfterInitialDelay, isConnected])
 
   const renderScriptIsRunning = (): ReactNode => {
-    const minimized = statusMinimized
     const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
-    const isNewYear = isNewYears()
-    const runningSrc = isNewYear ? newYearsRunning : iconRunning
-    const runningIcon = (
-      <StyledAppRunningIcon
-        isNewYears={isNewYear}
-        src={runningSrc}
-        alt="Running..."
-      />
-    )
+
     return showRunningMan ? (
       <StyledAppStatus>
-        {minimized ? (
-          <Tooltip
-            placement={Placement.BOTTOM}
-            content="This script is currently running"
-          >
-            {runningIcon}
-          </Tooltip>
-        ) : (
-          runningIcon
-        )}
-        <StyledAppStatusLabel isMinimized={statusMinimized} isPrompt={false}>
-          Running...
-        </StyledAppStatusLabel>
+        <IconRunning />
         <PromptButton
-          isMinimized={statusMinimized}
           title={stopRequested ? "Stopping..." : "Stop"}
           disabled={stopRequested}
           onClick={handleStopScriptClick}
@@ -324,32 +205,28 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const renderRerunScriptPrompt = (): ReactNode => {
     const rerunRequested = scriptRunState === ScriptRunState.RERUN_REQUESTED
-    const minimized = promptMinimized && !promptHovered
-    const { colors } = theme
     return (
       <Hotkeys keyName="a" onKeyDown={handleKeyDown}>
-        <div onMouseEnter={onAppPromptHover} onMouseLeave={onAppPromptUnhover}>
-          <StyledAppStatus>
-            <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
-            <StyledAppStatusLabel isMinimized={minimized} isPrompt>
-              Source file changed.
-            </StyledAppStatusLabel>
+        <StyledAppStatus>
+          <DynamicIcon
+            size="lg"
+            iconValue=":material/info:"
+            color={theme.colors.fadedText60}
+          />
+          <StyledAppStatusLabel isPrompt>File change.</StyledAppStatusLabel>
+          <PromptButton
+            title={<StyledShortcutLabel>Rerun</StyledShortcutLabel>}
+            disabled={rerunRequested}
+            onClick={handleRerunClick}
+          />
+          {allowRunOnSave && (
             <PromptButton
-              isMinimized={minimized}
-              title={<StyledShortcutLabel>Rerun</StyledShortcutLabel>}
+              title={<StyledShortcutLabel>Always rerun</StyledShortcutLabel>}
               disabled={rerunRequested}
-              onClick={handleRerunClick}
+              onClick={handleAlwaysRerunClick}
             />
-            {allowRunOnSave && (
-              <PromptButton
-                isMinimized={minimized}
-                title={<StyledShortcutLabel>Always rerun</StyledShortcutLabel>}
-                disabled={rerunRequested}
-                onClick={handleAlwaysRerunClick}
-              />
-            )}
-          </StyledAppStatus>
-        </div>
+          )}
+        </StyledAppStatus>
       </Hotkeys>
     )
   }
@@ -366,9 +243,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
           data-testid="stConnectionStatus"
         >
           <Icon size="sm" content={ui.icon} />
-          <StyledConnectionStatusLabel isMinimized={statusMinimized}>
-            {ui.label}
-          </StyledConnectionStatusLabel>
+          <StyledConnectionStatusLabel>{ui.label}</StyledConnectionStatusLabel>
         </StyledConnectionStatus>
       </Tooltip>
     )
@@ -387,7 +262,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
         // more responsive by claiming it's started immediately.
         return renderScriptIsRunning()
       }
-      if (scriptChangedOnDisk) {
+      if (showScriptChangedActions) {
         return renderRerunScriptPrompt()
       }
     }
@@ -400,27 +275,22 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curView = useRef<ReactNode>()
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const prevView = curView.current
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   curView.current = renderWidget()
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (notNullOrUndefined(curView.current)) {
     animateIn = true
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     renderView = curView.current
   } else {
     animateIn = false

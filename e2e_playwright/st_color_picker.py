@@ -28,10 +28,14 @@ st.write("Color 2", c2)
 c3 = st.color_picker("Disabled", disabled=True)
 st.write("Color 3", c3)
 
-c4 = st.color_picker("Hidden Label", label_visibility="hidden")
+c4 = st.color_picker(
+    "Hidden Label", label_visibility="hidden", key="color_picker_hidden"
+)
 st.write("Color 4", c4)
 
-c5 = st.color_picker("Collapsed Label", label_visibility="collapsed")
+c5 = st.color_picker(
+    "Collapsed Label", label_visibility="collapsed", key="color_picker_collapsed"
+)
 st.write("Color 5", c5)
 
 with st.form(key="my_form", clear_on_submit=True):
@@ -54,7 +58,67 @@ def test_fragment():
 
 test_fragment()
 
-st.color_picker(":material/check: :rainbow[Fancy] _**markdown** `label` _support_")
+st.color_picker(
+    ":material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="color_picker_markdown_label",
+)
+
+# Width examples
+st.color_picker(
+    "Color picker with content width (default)",
+    "#FF6B6B",
+    width="content",
+)
+
+st.color_picker(
+    "Color picker with stretch width",
+    "#4ECDC4",
+    width="stretch",
+)
+
+st.color_picker(
+    "Color picker with 100px width",
+    "#45B7D1",
+    width=100,
+)
+
+st.color_picker(
+    "Color picker with 20px width (enforces 40px minimum)",
+    "#95E1D3",
+    width=20,
+    key="color_picker_min_width",
+)
+
+if st.toggle("Update color picker props"):
+    dyn_val = st.color_picker(
+        "Updated dynamic color picker",
+        value="#00ff00",
+        width="stretch",
+        help="updated help",
+        key="dynamic_color_picker_with_key",
+        on_change=lambda a, param: print(
+            f"Updated color picker - callback triggered: {a} {param}"
+        ),
+        args=("Updated color arg",),
+        kwargs={"param": "updated kwarg param"},
+        label_visibility="visible",
+    )
+    st.write("Updated color picker value:", dyn_val)
+else:
+    dyn_val = st.color_picker(
+        "Initial dynamic color picker",
+        value="#ff0000",
+        width="content",
+        help="initial help",
+        key="dynamic_color_picker_with_key",
+        on_change=lambda a, param: print(
+            f"Initial color picker - callback triggered: {a} {param}"
+        ),
+        args=("Initial color arg",),
+        kwargs={"param": "initial kwarg param"},
+        label_visibility="visible",
+    )
+    st.write("Initial color picker value:", dyn_val)
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

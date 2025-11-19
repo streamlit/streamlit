@@ -20,6 +20,7 @@ import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
+  Element,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/protobuf"
@@ -29,6 +30,15 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
+
+// Mock Element for tests
+class MockElement implements Element {
+  constructor() {}
+
+  toJSON(): MockElement {
+    return this
+  }
+}
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},
@@ -46,7 +56,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-
+  outerElement: new MockElement(),
   ...widgetProps,
 })
 

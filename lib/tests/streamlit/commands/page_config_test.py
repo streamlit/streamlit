@@ -88,6 +88,11 @@ class PageConfigTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed
         assert c.layout == PageConfigProto.CENTERED
 
+    def test_set_page_config_layout_none(self):
+        st.set_page_config(layout=None)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.layout == PageConfigProto.LAYOUT_UNSET
+
     def test_set_page_config_layout_invalid(self):
         with pytest.raises(StreamlitAPIException):
             st.set_page_config(layout="invalid")
@@ -106,6 +111,11 @@ class PageConfigTest(DeltaGeneratorTestCase):
         st.set_page_config(initial_sidebar_state="collapsed")
         c = self.get_message_from_queue().page_config_changed
         assert c.initial_sidebar_state == PageConfigProto.COLLAPSED
+
+    def test_set_page_config_sidebar_none(self):
+        st.set_page_config(initial_sidebar_state=None)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.SIDEBAR_UNSET
 
     def test_set_page_config_sidebar_invalid(self):
         with pytest.raises(StreamlitInvalidSidebarStateError):
@@ -147,9 +157,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-        assert (
-            str(e.value)
-            == 'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` (`"invalid"` is not a valid key.)'
+        assert str(e.value) == (
+            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` '
+            '(`"invalid"` is not a valid key.)'
         )
 
     def test_set_page_config_menu_items_empty_dict(self):

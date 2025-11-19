@@ -375,3 +375,86 @@ class NavigationTest(DeltaGeneratorTestCase):
                     "foo.py",
                 ]
             )
+
+    def test_navigation_with_top_position(self):
+        """Test that position="top" produces NavigationProto.Position.TOP"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            position="top",
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.position == NavigationProto.Position.TOP
+        assert c.app_pages[0].is_default
+        assert not c.app_pages[1].is_default
+        assert not c.app_pages[2].is_default
+
+    def test_navigation_with_invalid_position(self):
+        """Test that invalid position value raises appropriate error"""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py")],
+                position="foo",  # Invalid position
+            )
+        assert "Invalid position" in str(exc_info.value) or "position must be" in str(
+            exc_info.value
+        )
+
+    def test_navigation_top_position_no_fallback_with_config(self):
+        """Test that position="top" remains TOP even when client.showSidebarNavigation=False"""
+        with patch_config_options({"client.showSidebarNavigation": False}):
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+                position="top",
+            )
+            c = self.get_message_from_queue().navigation
+            assert (
+                c.position == NavigationProto.Position.TOP
+            )  # Should remain TOP, not fallback to HIDDEN
+
+    def test_navigation_with_sidebar_position_explicit(self):
+        """Test that position="sidebar" produces NavigationProto.Position.SIDEBAR"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py")],
+            position="sidebar",
+        )
+        c = self.get_message_from_queue().navigation
+        assert c.position == NavigationProto.Position.SIDEBAR
+
+    def test_navigation_with_hidden_position_explicit(self):
+        """Test that position="hidden" produces NavigationProto.Position.HIDDEN"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py")],
+            position="hidden",
+        )
+        c = self.get_message_from_queue().navigation
+        assert c.position == NavigationProto.Position.HIDDEN
+
+    def test_navigation_top_position_with_sections(self):
+        """Test top navigation with sections"""
+        st.navigation(
+            {
+                "Section 1": [st.Page("page1.py"), st.Page("page2.py")],
+                "Section 2": [st.Page("page3.py"), st.Page("page4.py")],
+            },
+            position="top",
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 4
+        assert c.position == NavigationProto.Position.TOP
+        assert c.app_pages[0].section_header == "Section 1"
+        assert c.app_pages[1].section_header == "Section 1"
+        assert c.app_pages[2].section_header == "Section 2"
+        assert c.app_pages[3].section_header == "Section 2"
+        assert c.sections == ["Section 1", "Section 2"]
+
+    def test_navigation_position_parameter_type(self):
+        """Test that position parameter only accepts valid literal values"""
+        # Test with valid positions - should not raise
+        for pos in ["sidebar", "hidden", "top"]:
+            st.navigation([st.Page("page1.py")], position=pos)
+            self.get_message_from_queue()  # Clear queue
+
+        # Test with invalid type
+        with pytest.raises(StreamlitAPIException):
+            st.navigation([st.Page("page1.py")], position=123)  # type: ignore

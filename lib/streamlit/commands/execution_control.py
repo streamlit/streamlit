@@ -103,7 +103,7 @@ def _new_fragment_id_queue(
 def rerun(  # type: ignore[misc]
     *,  # The scope argument can only be passed via keyword.
     scope: Literal["app", "fragment"] = "app",
-) -> NoReturn:
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
     When ``st.rerun()`` is called, Streamlit halts the current script run and
@@ -236,6 +236,7 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
             cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
         )
     )
     # Force a yield point so the runner can do the rerun

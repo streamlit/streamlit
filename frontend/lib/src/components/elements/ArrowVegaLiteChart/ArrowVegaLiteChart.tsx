@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useRef } from "react"
+import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
 
 import { Global } from "@emotion/react"
+import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { streamlit } from "@streamlit/protobuf"
+
+import {
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
   StyledToolbarElementContainer,
+  ToolbarAction,
 } from "~lib/components/shared/Toolbar"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import {
@@ -34,11 +44,30 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
+function isFacetChart(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    return !!(
+      parsedSpec.facet ||
+      // TODO (lawilby): do some tests for row/column
+      // shorthand facet charts to confirm they work with
+      // sizing in the same way.
+      parsedSpec.encoding?.row ||
+      parsedSpec.encoding?.column ||
+      parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
+  }
+}
 export interface Props {
   element: VegaLiteChartElement
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disableFullscreenMode?: boolean
+  widthConfig: streamlit.IWidthConfig | null | undefined
+  heightConfig: streamlit.IHeightConfig | null | undefined
 }
 
 const ArrowVegaLiteChart: FC<Props> = ({
@@ -46,15 +75,46 @@ const ArrowVegaLiteChart: FC<Props> = ({
   element: inputElement,
   fragmentId,
   widgetMgr,
+  widthConfig,
+  heightConfig,
 }) => {
+  const [showData, setShowData] = useState(false)
+  const [enableShowData, setEnableShowData] = useState(false)
+
   const {
     expanded: isFullScreen,
-    width,
-    height,
+    height: fullScreenHeight,
+    width: fullScreenWidth,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // When we are in full screen mode, this will be the
+  // width/height of the screen based on the expansion
+  // of the parent StyledFullScreenFrame.
+  // Otherwise, it will be according to the user's settings
+  // determined by styling on the StyledElementContainer.
+  const {
+    width: chartContainerWidth,
+    height: chartContainerHeight,
+    elementRef: containerRef,
+  } = useCalculatedDimensions(
+    // We need to update whenever the showData state changes because
+    // the underlying element ref that needs to be observed is updated.
+    [showData],
+    // Use 0 as fallback instead of -1 because Vega-Lite cannot handle negative dimensions
+    0
+  )
+
+  const useStretchWidth =
+    shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
+
+  const useStretchHeight = shouldHeightStretch(heightConfig)
+
+  // Facet charts need the container element to have a width and also
+  // do not work well with stretch/container width
+  // so they cannot use the width from the StyledVegaLiteChartContainer.
+  const isFacet = isFacetChart(inputElement.spec)
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -62,7 +122,14 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // 2. Stabilize some aspects of the input element to detect changes in the
   //    configuration of the chart since each element will always provide new references
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
-  const element = useVegaElementPreprocessor(inputElement)
+  const element = useVegaElementPreprocessor(
+    inputElement,
+    // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
+    isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
+    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
+    isFullScreen ? true : useStretchWidth,
+    isFullScreen ? true : useStretchHeight
+  )
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
@@ -79,30 +146,84 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // We utilize useLayoutEffect to ensure that the view is created
   // after the container is mounted to avoid layout shift.
   useLayoutEffect(() => {
+    // TODO(lawilby): Can we just update the view if the width/height changes?
     if (containerRef.current !== null) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       createView(containerRef, spec)
     }
 
     return finalizeView
-  }, [createView, finalizeView, spec, width, height])
+    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
+    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
+    // Are the changes in the spec enough?
+  }, [
+    createView,
+    finalizeView,
+    spec,
+    fullScreenWidth,
+    fullScreenHeight,
+    showData,
+    containerRef,
+  ])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
   // this function will run regularly to update the view.
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-    updateView(data, datasets)
-  }, [data, datasets, updateView])
+    void updateView(data, datasets)
+
+    // We only want to update the view if the data or datasets change.
+    // updateView isn't stable because its updated via the isCreatingView flag.
+    // With updateView as dependency, the chart seems to
+    // expand within the parent container (less left/right padding).
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  }, [data, datasets])
+
+  useEffect(() => {
+    // We only show data if its provided via data or if there
+    // is one data set in the datasets array. In this case,
+    // only the first dataset is shown:
+    if (data || datasets?.[0]?.data) {
+      setEnableShowData(true)
+    } else {
+      setEnableShowData(false)
+    }
+  }, [data, datasets])
+
+  if (showData) {
+    return (
+      <ReadOnlyGrid
+        data={data ?? datasets[0]?.data}
+        height={fullScreenHeight ?? chartContainerHeight ?? undefined}
+        width={widthConfig ?? undefined}
+        customToolbarActions={[
+          <ToolbarAction
+            key="show-chart"
+            label="Show chart"
+            icon={InsertChart}
+            onClick={() => {
+              setShowData(false)
+            }}
+          />,
+        ]}
+      />
+    )
+  }
 
   // Create the container inside which Vega draws its content.
   // To style the Vega tooltip, we need to apply global styles since
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
-      width={width}
-      height={height}
-      useContainerWidth={element.useContainerWidth}
+      height={
+        useStretchHeight
+          ? isFullScreen
+            ? fullScreenHeight
+            : "100%"
+          : fullScreenHeight
+      }
+      useContainerWidth={isFullScreen ? true : useStretchWidth}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -110,13 +231,23 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
-      ></Toolbar>
+      >
+        {enableShowData && (
+          <ToolbarAction
+            label="Show data"
+            icon={TableChart}
+            onClick={() => {
+              setShowData(true)
+            }}
+          />
+        )}
+      </Toolbar>
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
-        useContainerWidth={element.useContainerWidth}
-        isFullScreen={isFullScreen}
+        useContainerWidth={useStretchWidth}
+        useContainerHeight={useStretchHeight}
         ref={containerRef}
       />
     </StyledToolbarElementContainer>

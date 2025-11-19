@@ -135,6 +135,7 @@ def _click_point_and_verify_selection(
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     """
     Test single selection, multi selection, and deselection all function
@@ -178,6 +179,7 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_single_select_interactions_and_return_values(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -231,6 +233,7 @@ def test_pydeck_chart_single_select_interactions_and_return_values(
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_multiselect_has_consistent_visuals(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -286,6 +289,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_selection_state_remains_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -322,6 +326,7 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_selection_callback(app: Page):
     """Test the callback functionality of a PyDeck chart."""
     _select_chart_type(app, "callback")
@@ -346,6 +351,7 @@ def test_pydeck_chart_selection_callback(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_selection_in_form(app: Page):
     """Test the selection functionality of a PyDeck chart within a form."""
     _select_chart_type(app, "form")
@@ -387,6 +393,7 @@ def test_pydeck_chart_selection_in_form(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_pydeck_chart_selection_in_fragment(app: Page):
     """Test the selection functionality of a PyDeck chart within a fragment."""
     _select_chart_type(app, "fragment")
