@@ -615,7 +615,7 @@ class Server:
                 raise
 
             server = uvicorn.Server(uvicorn_config)
-            _LOGGER.debug("Starting Starlette server on %s:%s", address, port)
+            _LOGGER.info("Starting Starlette server on %s:%s", address, port)
 
             try:
                 config.set_option(
