@@ -74,37 +74,37 @@ async def status() -> JSONResponse:
 async def set_cookie_with_middleware(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
-    """Example middleware that scopes a cookie to /streamlit responses."""
+    """Example middleware that scopes a cookie to /app responses."""
 
     response = await call_next(request)
-    if request.url.path.startswith("/streamlit"):
+    if request.url.path.startswith("/app"):
         response.set_cookie(
             key="streamlit-middleware",
             value="streamlit-path-cookie",
-            path="/streamlit",
+            path="/app",
             httponly=True,
             max_age=3600,
         )
     return response
 
 
-app.mount("/streamlit", streamlit_starlette, name="streamlit")
+app.mount("/app", streamlit_starlette, name="app")
 
 
 @app.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
-    return RedirectResponse("/streamlit/")
+    return RedirectResponse("/app/")
 
 
 @app.get("/set-cookie", include_in_schema=False)
 async def set_streamlit_cookie() -> RedirectResponse:
-    """Example endpoint that sets a cookie scoped to the /streamlit path."""
+    """Example endpoint that sets a cookie scoped to the /app path."""
 
-    response = RedirectResponse("/streamlit/")
+    response = RedirectResponse("/app/")
     response.set_cookie(
         key="streamlit-demo",
         value="mounted-with-fastapi",
-        path="/streamlit",
+        path="/app",
         httponly=True,
         max_age=3600,
     )
