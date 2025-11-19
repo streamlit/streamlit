@@ -21,14 +21,23 @@
 import React, { act, ReactElement } from "react"
 
 import * as hotkeysModule from "hotkeys-js"
-import { vi } from "vitest"
+import { vi, Mock } from "vitest"
 
 import { render } from "~lib/test_util"
+import * as Utils from "~lib/util/utils"
 
 import {
   formatShortcutForDisplay,
   useRegisterShortcut,
 } from "./useRegisterShortcut"
+
+vi.mock("~lib/util/utils", async () => {
+  const actual = await vi.importActual<typeof Utils>("~lib/util/utils")
+  return {
+    ...actual,
+    isFromMac: vi.fn(),
+  }
+})
 
 vi.mock("hotkeys-js", () => {
   const handlers = new Map<
@@ -225,7 +234,8 @@ describe("useRegisterShortcut", () => {
     expect(onActivate).toHaveBeenCalled()
   })
 
-  it("registers command shortcut aliases", () => {
+  it("registers command shortcut as Cmd on Mac", () => {
+    ;(Utils.isFromMac as Mock).mockReturnValue(true)
     const shortcut = "cmd+n"
     const onActivate = vi.fn()
 
@@ -241,6 +251,26 @@ describe("useRegisterShortcut", () => {
     const ctrlHandler = hotkeysWithHandlers.__handlers.get("ctrl+n")
 
     expect(commandHandler).toBeDefined()
+    expect(ctrlHandler).toBeUndefined()
+  })
+
+  it("registers command shortcut as Ctrl on non-Mac", () => {
+    ;(Utils.isFromMac as Mock).mockReturnValue(false)
+    const shortcut = "cmd+n"
+    const onActivate = vi.fn()
+
+    render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    const commandHandler = hotkeysWithHandlers.__handlers.get("command+n")
+    const ctrlHandler = hotkeysWithHandlers.__handlers.get("ctrl+n")
+
+    expect(commandHandler).toBeUndefined()
     expect(ctrlHandler).toBeDefined()
   })
 })
