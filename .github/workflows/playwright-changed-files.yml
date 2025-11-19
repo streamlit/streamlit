@@ -202,7 +202,7 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
+          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html -m "not performance"
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()

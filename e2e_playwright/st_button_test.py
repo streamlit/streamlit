@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 28
+TOTAL_BUTTONS = 29
 
 
 def test_button_widget_rendering(
@@ -275,3 +275,10 @@ def test_button_shortcut_triggers(app: Page):
     app.keyboard.press("Control+J")
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut button pressed!")
+
+
+def test_button_with_spinner_icon(app: Page):
+    """Test that the button with spinner icon is rendered."""
+    button = get_button(app, "Button with spinner icon")
+    # Check that the spinner icon is visible:
+    expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()

@@ -132,3 +132,5 @@ else:
         key="dynamic_button_with_key",
     )
     st.write("Clicked initial button:", clicked)
+
+st.button("Button with spinner icon", icon="spinner")

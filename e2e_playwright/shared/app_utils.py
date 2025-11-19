@@ -539,6 +539,17 @@ def get_markdown(
     return markdown_element
 
 
+def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
+    """Get a text element with the given text."""
+    if isinstance(text, str):
+        text = re.compile(text)
+
+    text_element = locator.get_by_test_id("stText").filter(has_text=text)
+
+    expect(text_element).to_be_visible()
+    return text_element
+
+
 def expect_prefixed_markdown(
     locator: FrameLocator | Locator | Page,
     expected_prefix: str,
@@ -832,6 +843,9 @@ def expect_help_tooltip(
     tooltip_text : str or Pattern[str]
         The text of the tooltip to expect.
     """
+    # Reset hover state to ensure no stale tooltips are visible
+    reset_hovering(app)
+
     hover_target = element_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
