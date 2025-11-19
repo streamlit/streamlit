@@ -191,29 +191,16 @@ function DateTimeInput({
     }
   }, [pendingDate, value, setValueWithSource])
 
-  const inputOverrides = useMemo(
-    () =>
-      createDateTimePickerOverrides({
-        theme,
-        isInSidebar,
-        step,
-        minTime: minTimeForSelection,
-        maxTime: maxTimeForSelection,
-        disabled,
-        clearable,
-        error,
-      }),
-    [
-      theme,
-      isInSidebar,
-      step,
-      minTimeForSelection,
-      maxTimeForSelection,
-      disabled,
-      clearable,
-      error,
-    ]
-  )
+  const inputOverrides = createDateTimePickerOverrides({
+    theme,
+    isInSidebar,
+    step,
+    minTime: minTimeForSelection,
+    maxTime: maxTimeForSelection,
+    disabled,
+    clearable,
+    error,
+  })
 
   return (
     <div className="stDateTimeInput" data-testid="stDateTimeInput">
