@@ -79,6 +79,9 @@ interface UseRegisterShortcutOptions {
 let filterConfigured = false
 
 function ensureHotkeysFilterConfigured(): void {
+  // `hotkeys-js` uses a single global filter. Configure it once so that
+  // shortcuts never fire while the user is typing in a text input unless a
+  // system modifier is pressed (mirrors native browser behavior).
   if (filterConfigured) {
     return
   }
@@ -183,6 +186,8 @@ function shouldBlockShortcutInInput(
     baseKey === "enter" ||
     NAVIGATION_KEYS.has(baseKey)
   ) {
+    // Prevent overriding default text-editing behavior (e.g. arrows, delete)
+    // when the user has not pressed a system modifier.
     return true
   }
 
@@ -203,11 +208,13 @@ function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
   sequences.add(toHotkeysSequenceFromTokens(tokens))
 
   if (tokens.includes("cmd")) {
+    // Register a ctrl alias so that Cmd shortcuts also work on Windows/Linux.
     const aliasTokens = tokens.map(token => (token === "cmd" ? "ctrl" : token))
     sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
   }
 
   if (tokens.includes("ctrl")) {
+    // And vice-versa: allow Ctrl shortcuts to work on macOS keyboards.
     const aliasTokens = tokens.map(token => (token === "ctrl" ? "cmd" : token))
     sequences.add(toHotkeysSequenceFromTokens(aliasTokens))
   }
@@ -322,6 +329,7 @@ export function useRegisterShortcut({
     })
 
     return () => {
+      // Clean up the exact handler instance registered above.
       sequences.forEach(sequence => {
         hotkeys.unbind(sequence, handler)
       })
