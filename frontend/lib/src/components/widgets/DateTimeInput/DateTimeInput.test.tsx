@@ -29,6 +29,27 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateTimeInput, { type Props } from "./DateTimeInput"
 
+vi.mock("baseui/datepicker", async importOriginal => {
+  const React = await import("react")
+  const actual = await importOriginal<typeof import("baseui/datepicker")>()
+  const Datepicker = React.forwardRef((props: any, ref: any) => (
+    <>
+      <actual.Datepicker {...props} ref={ref} />
+      <button
+        data-testid="mock-datepicker-close"
+        onClick={() => props.onClose && props.onClose()}
+        style={{ display: "none" }}
+      >
+        Close Datepicker
+      </button>
+    </>
+  ))
+  return {
+    ...actual,
+    Datepicker,
+  }
+})
+
 const getProps = (
   elementProps: Partial<DateTimeInputProto> = {},
   disabled = false
@@ -108,8 +129,12 @@ describe("DateTimeInput widget", () => {
   it("sets the widget value on change", async () => {
     const user = userEvent.setup()
     const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<DateTimeInput {...props} />)
+
+    // Clear initial mount call
+    spy.mockClear()
 
     const inputField = screen.getByTestId("stDateTimeInputField")
 
@@ -120,10 +145,18 @@ describe("DateTimeInput widget", () => {
     // Verify the input field shows the new value
     expect(inputField).toHaveValue("2026/01/01, 09:30")
 
-    // Note: The pending state pattern means the value is only committed when
-    // the popover closes. In tests, the open() call in handleChange keeps the
-    // popover open, so we verify the input value changed rather than testing
-    // the commit behavior which requires user interaction to close the modal.
+    // Close the popover to commit the value
+    const closeButton = screen.getByTestId("mock-datepicker-close")
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element,
+        "2026/01/01, 09:30",
+        { fromUi: true },
+        undefined
+      )
+    })
   })
 
   it("clears the widget value", async () => {
