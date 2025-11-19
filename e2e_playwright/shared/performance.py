@@ -26,7 +26,7 @@ from e2e_playwright.shared.git_utils import get_git_root
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from playwright.sync_api import CDPSession, Page, Response, WebSocket
+    from playwright.sync_api import CDPSession, Page, WebSocket
 
 
 # Observe long tasks, measure, marks, and paints with PerformanceObserver
@@ -118,28 +118,6 @@ def measure_performance(
         client.send("Performance.enable")
         client.send("Network.enable")
 
-        # Track HTTP response sizes
-        total_http_response_size_bytes = 0
-
-        def on_http_response(response: Response) -> None:
-            nonlocal total_http_response_size_bytes
-
-            try:
-                # First try content-length header
-                content_length = response.headers.get("content-length")
-                if content_length:
-                    total_http_response_size_bytes += int(content_length)
-                else:
-                    # Failed to get the content length, calculating
-                    # the length based on the full body would be a bit
-                    # expensive, so we just skip it.
-                    print("Failed to get the content length for response.")
-            except Exception as ex:
-                print(f"Error calculating size of web assets: {ex}")
-
-        # Register the HTTP response handler
-        page.on("response", on_http_response)
-
         # Track network requests
         total_network_encoded_bytes = 0  # Compressed bytes on the wire
         total_network_decoded_bytes = 0  # Uncompressed data bytes
@@ -220,10 +198,6 @@ def measure_performance(
             {
                 "name": "NumWebsocketMessagesReceived",
                 "value": total_websocket_messages_received,
-            },
-            {
-                "name": "TotalHttpResponseSizeBytes",
-                "value": total_http_response_size_bytes,
             },
         ]
         # Get metrics from Chrome DevTools Protocol
