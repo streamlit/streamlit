@@ -634,7 +634,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # type: ignore[invalid-return-type]
 
 
 def _maybe_convert_color_column_in_place(
@@ -672,7 +672,7 @@ def _convert_col_names_to_str_in_place(
 
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
-    df.columns = pd.Index(str_column_names)  # type: ignore[assignment]
+    df.columns = pd.Index(str_column_names)
 
     return (
         None if x_column is None else str(x_column),

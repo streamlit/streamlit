@@ -18,7 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, Union, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType

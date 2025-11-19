@@ -155,13 +155,13 @@ class DataEditorSerde:
 
         # Make sure that all editing state keys are present:
         if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
+            data_editor_state["edited_rows"] = {}
 
         if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
+            data_editor_state["deleted_rows"] = []
 
         if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
+            data_editor_state["added_rows"] = []
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
@@ -297,7 +297,7 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(
+                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
                     value, dataframe_schema[col_name]
                 )
 

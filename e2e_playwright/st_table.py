@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))  # type: ignore[attr-defined]
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[attr-defined]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 

@@ -698,7 +698,7 @@ def convert_anything_to_pandas_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `fetchall()` on the Cursor to show more."
             )
-        return data
+        return cast("DataFrame", data)  # ty: ignore[redundant-cast]
 
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
