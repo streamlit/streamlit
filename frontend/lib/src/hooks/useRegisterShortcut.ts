@@ -78,6 +78,9 @@ interface UseRegisterShortcutOptions {
 
 let filterConfigured = false
 
+/**
+ * Ensure the hotkeys filter is configured.
+ */
 function ensureHotkeysFilterConfigured(): void {
   // `hotkeys-js` uses a single global filter. Configure it once so that
   // shortcuts never fire while the user is typing in a text input unless a
@@ -121,6 +124,12 @@ function ensureHotkeysFilterConfigured(): void {
   filterConfigured = true
 }
 
+/**
+ * Parse a shortcut string into its tokens.
+ *
+ * @param shortcut - The shortcut string to parse.
+ * @returns The parsed shortcut tokens.
+ */
 export function parseShortcutString(
   shortcut?: string | null
 ): ShortcutTokens | undefined {
@@ -151,6 +160,13 @@ export function parseShortcutString(
   return { tokens, baseKey, hasSystemModifier }
 }
 
+/**
+ * Determine if a shortcut should be blocked in an input element.
+ *
+ * @param parsedShortcut - The parsed shortcut tokens.
+ * @param event - The keyboard event.
+ * @returns True if the shortcut should be blocked, false otherwise.
+ */
 function shouldBlockShortcutInInput(
   parsedShortcut: ShortcutTokens,
   event: KeyboardEvent
@@ -253,6 +269,13 @@ function getKeyLabel(baseKey: string): string {
   return baseKey.toUpperCase()
 }
 
+/**
+ * Format a shortcut string for display.
+ *
+ * @param shortcut - The shortcut string to format.
+ * @param options - The options for formatting.
+ * @returns The formatted shortcut string.
+ */
 export function formatShortcutForDisplay(
   shortcut?: string | null,
   options?: { isMac?: boolean }
@@ -285,6 +308,13 @@ export function formatShortcutForDisplay(
   return displayTokens.join(" + ")
 }
 
+/**
+ * Custom hook to register a keyboard shortcut.
+ *
+ * @param shortcut - The shortcut string to register.
+ * @param disabled - Whether the shortcut is disabled.
+ * @param onActivate - The function to call when the shortcut is activated.
+ */
 export function useRegisterShortcut({
   shortcut,
   disabled = false,
