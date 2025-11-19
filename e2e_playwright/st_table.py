@@ -213,7 +213,7 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])
+styled_df.set_table_styles([cell_hover, headers])  # ty: ignore
 styled_df.set_table_styles(
     {
         ("Regression", "Tumour"): [

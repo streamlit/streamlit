@@ -219,7 +219,7 @@ class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
         if isinstance(self._info.show_spinner, str):
             spinner_message = self._info.show_spinner
         elif self._info.show_spinner is True:
-            name = self._info.func.__qualname__
+            name = cast("types.FunctionType", self._info.func).__qualname__
             if len(args) == 0 and len(kwargs) == 0:
                 spinner_message = f"Running `{name}()`."
             else:

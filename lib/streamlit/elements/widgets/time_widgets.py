@@ -158,7 +158,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
             "0 - 2 date/datetime values"
         )
 
-    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
+    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]  # ty: ignore[invalid-argument-type]
 
     return parsed_dates, is_range
 

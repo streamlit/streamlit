@@ -141,14 +141,15 @@ class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
     def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = (
+        data_editor_state: EditingState = cast(
+            "EditingState",
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value)
+            else json.loads(ui_value),
         )
 
         # Make sure that all editing state keys are present:

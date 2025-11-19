@@ -165,6 +165,16 @@ class BidiComponentDefinition:
         return False, None
 
     @property
+    def is_placeholder(self) -> bool:
+        """Return True if this definition is a placeholder (no content).
+
+        Placeholders are typically created during the manifest scanning phase
+        when we discover a component's existence but haven't yet loaded its
+        content via the public API.
+        """
+        return self.html is None and self.css is None and self.js is None
+
+    @property
     def css_url(self) -> str | None:
         """Return the asset-dir-relative URL path for CSS when file-backed.
 
@@ -329,7 +339,14 @@ class BidiComponentRegistry:
             name = definition.name
             if name in self._components:
                 existing_definition = self._components[name]
-                if existing_definition != definition:
+                # Check if the existing definition is different and NOT a placeholder.
+                # We expect placeholders (from manifest scanning) to be overwritten
+                # by the actual definition from the script execution, so we silence
+                # the warning in that specific case.
+                if (
+                    existing_definition != definition
+                    and not existing_definition.is_placeholder
+                ):
                     _LOGGER.warning(
                         "Component %s is already registered. Overwriting "
                         "previous definition. This may lead to unexpected behavior "
