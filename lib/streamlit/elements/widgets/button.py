@@ -34,6 +34,7 @@ from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
@@ -82,111 +83,6 @@ DownloadButtonDataType: TypeAlias = (
     | io.RawIOBase
     | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
 )
-
-
-_MODIFIER_ALIASES: Final[dict[str, str]] = {
-    "ctrl": "ctrl",
-    "control": "ctrl",
-    "cmd": "cmd",
-    "command": "cmd",
-    "meta": "cmd",
-    "alt": "alt",
-    "option": "alt",
-    "shift": "shift",
-}
-
-_MODIFIER_ORDER: Final[tuple[str, ...]] = ("ctrl", "cmd", "alt", "shift")
-
-_KEY_ALIASES: Final[dict[str, str]] = {
-    "enter": "enter",
-    "return": "enter",
-    "space": "space",
-    "spacebar": "space",
-    "tab": "tab",
-    "escape": "escape",
-    "esc": "escape",
-    "backspace": "backspace",
-    "delete": "delete",
-    "del": "delete",
-    "home": "home",
-    "end": "end",
-    "pageup": "pageup",
-    "pagedown": "pagedown",
-    "left": "left",
-    "arrowleft": "left",
-    "right": "right",
-    "arrowright": "right",
-    "up": "up",
-    "arrowup": "up",
-    "down": "down",
-    "arrowdown": "down",
-}
-
-_RESERVED_KEYS: Final[set[str]] = {"c", "r"}
-
-
-def _normalize_shortcut(shortcut: str) -> str:
-    if not isinstance(shortcut, str):
-        raise StreamlitAPIException("shortcut must be a string value.")
-
-    tokens = [token.strip() for token in shortcut.split("+") if token.strip()]
-    if not tokens:
-        raise StreamlitAPIException(
-            "shortcut must contain at least one key or modifier."
-        )
-
-    modifiers: list[str] = []
-    key: str | None = None
-
-    for raw_token in tokens:
-        lower_token = raw_token.lower()
-        if lower_token in _MODIFIER_ALIASES:
-            normalized_modifier = _MODIFIER_ALIASES[lower_token]
-            if normalized_modifier not in modifiers:
-                modifiers.append(normalized_modifier)
-            continue
-
-        if key is not None:
-            raise StreamlitAPIException(
-                "shortcut may only specify a single non-modifier key."
-            )
-
-        normalized_key = _normalize_key_token(lower_token)
-        if normalized_key in _RESERVED_KEYS:
-            raise StreamlitAPIException(
-                "shortcut cannot use the keys 'C' or 'R', with or without modifiers."
-            )
-
-        key = normalized_key
-
-    if key is None and not modifiers:
-        raise StreamlitAPIException(
-            "shortcut must contain a key, a modifier, or a modifier key combination."
-        )
-
-    normalized_tokens: list[str] = [
-        modifier for modifier in _MODIFIER_ORDER if modifier in modifiers
-    ]
-    if key is not None:
-        normalized_tokens.append(key)
-
-    return "+".join(normalized_tokens)
-
-
-def _normalize_key_token(lower_token: str) -> str:
-    if lower_token in _KEY_ALIASES:
-        return _KEY_ALIASES[lower_token]
-
-    if len(lower_token) == 1 and lower_token.isalnum():
-        return lower_token
-
-    if lower_token.startswith("f") and lower_token[1:].isdigit():
-        return lower_token
-
-    raise StreamlitAPIException(
-        "shortcut must include a single character or one of the supported keys "
-        "(e.g. Enter, Space, Tab, Escape)."
-    )
 
 
 @dataclass
@@ -1070,7 +966,7 @@ class ButtonMixin:
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
-            normalized_shortcut = _normalize_shortcut(shortcut)
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -1159,7 +1055,7 @@ class ButtonMixin:
         link_button_proto = LinkButtonProto()
         normalized_shortcut: str | None = None
         if shortcut is not None:
-            normalized_shortcut = _normalize_shortcut(shortcut)
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         if normalized_shortcut is not None:
             # We only register the element ID if a shortcut is provide.
@@ -1309,7 +1205,7 @@ class ButtonMixin:
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
-            normalized_shortcut = _normalize_shortcut(shortcut)
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
