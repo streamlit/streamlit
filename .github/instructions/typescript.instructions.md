@@ -53,10 +53,10 @@ const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
 } as const
 
 function getAlignment(config: AlignmentConfig) {
-return ALIGNMENT_MAP[config.alignment]
+  return ALIGNMENT_MAP[config.alignment]
 }
 
-````
+```
 </good-example>
 
 <bad-example>
@@ -66,7 +66,7 @@ function getAlignment(config: AlignmentConfig) {
   const alignmentMap = { /* same data */ }
   return alignmentMap[config.alignment]
 }
-````
+```
 
 </bad-example>
 
