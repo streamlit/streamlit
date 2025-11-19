@@ -213,7 +213,7 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])  # ty: ignore
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore
 styled_df.set_table_styles(
     {
         ("Regression", "Tumour"): [
@@ -284,14 +284,14 @@ st.table(data)
 st.header("Border Parameter")
 
 st.subheader("No borders (border=False)")
-data = {
+data_dict = {
     "A": [1, 2, 3],
     "B": ["X", "Y", "Z"],
     "C": [10.5, 20.3, 30.1],
     "D": ["Alpha", "Beta", "Gamma"],
     "E": [True, False, True],
 }
-st.table(data, border=False)
+st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
-st.table(data, border="horizontal")
+st.table(data_dict, border="horizontal")

@@ -502,7 +502,7 @@ def _fix_column_naming(data_df: DataFrame) -> DataFrame:
     which is not very descriptive.
     """
 
-    if len(data_df.columns) == 1 and data_df.columns[0] == 0:
+    if len(data_df.columns) == 1 and cast("Any", data_df.columns[0]) == 0:
         # Pandas automatically names the first column with 0 if it is not named.
         # We rename it to "value" to make it more descriptive if there is only
         # one column in the dataframe.
@@ -727,7 +727,7 @@ def convert_anything_to_pandas_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Convert the data to a list to show more."
             )
-        return data
+        return cast("DataFrame", data)  # ty: ignore[redundant-cast]
 
     if isinstance(data, EnumMeta):
         # Support for enum classes

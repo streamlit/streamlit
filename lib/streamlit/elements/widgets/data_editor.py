@@ -22,7 +22,6 @@ from typing import (
     Any,
     Final,
     Literal,
-    Required,
     TypeAlias,
     TypedDict,
     TypeVar,
@@ -30,6 +29,8 @@ from typing import (
     cast,
     overload,
 )
+
+from typing_extensions import Required
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -155,13 +156,13 @@ class DataEditorSerde:
 
         # Make sure that all editing state keys are present:
         if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}
+            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
 
         if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []
+            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
 
         if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []
+            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
@@ -239,8 +240,8 @@ def _parse_value(
         ]:
             datetime_value = pd.Timestamp(value)  # ty: ignore
 
-            if datetime_value is pd.NaT:
-                return None
+            if pd.isna(datetime_value):
+                return None  # type: ignore[unreachable]
 
             if column_data_kind == ColumnDataKind.DATETIME:
                 return datetime_value

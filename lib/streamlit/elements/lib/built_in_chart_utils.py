@@ -634,7 +634,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]  # type: ignore[invalid-return-type]
+    return df[keep]  # ty: ignore[invalid-return-type]
 
 
 def _maybe_convert_color_column_in_place(
