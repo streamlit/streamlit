@@ -148,8 +148,5 @@ def test_mega_tester_app_in_iframe(iframed_app: IframedPage, browser_name: str):
 def test_mega_tester_app_rendering_performance(app: Page):
     """Test the performance of the mega tester app rendering."""
     # Rerun the app 5 times:
-    rerun_app(app)
-    rerun_app(app)
-    rerun_app(app)
-    rerun_app(app)
-    rerun_app(app)
+    for _ in range(5):
+        rerun_app(app)
