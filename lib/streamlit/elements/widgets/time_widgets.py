@@ -789,12 +789,12 @@ class TimeWidgetsMixin:
         value: None,
         min_value: DateTimeValue = None,
         max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
@@ -809,12 +809,12 @@ class TimeWidgetsMixin:
         value: DateTimeScalarValue = "now",
         min_value: DateTimeValue = None,
         max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
@@ -829,12 +829,12 @@ class TimeWidgetsMixin:
         value: DateTimeValue = "now",
         min_value: DateTimeValue = None,
         max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
@@ -989,12 +989,12 @@ class TimeWidgetsMixin:
         value: DateTimeValue = "now",
         min_value: DateTimeValue = None,
         max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,

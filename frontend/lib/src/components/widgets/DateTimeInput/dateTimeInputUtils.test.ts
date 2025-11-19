@@ -59,7 +59,7 @@ describe("normalizeDateValue", () => {
   })
 })
 
-describe("date helpers", () => {
+describe("dateHelpers", () => {
   it("identifies same day values", () => {
     expect(
       isSameDay(
