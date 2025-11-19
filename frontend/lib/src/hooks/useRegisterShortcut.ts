@@ -25,15 +25,16 @@ import hotkeys, { HotkeysEvent } from "hotkeys-js"
 import { isFromMac } from "~lib/util/utils"
 
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"])
-const MODIFIER_TOKENS = new Set(["ctrl", "cmd", "alt", "shift"])
-const SYSTEM_MODIFIERS = new Set(["ctrl", "cmd", "alt"])
+const MODIFIER_TOKENS = new Set(["ctrl", "cmd", "alt", "shift", "mod"])
+const SYSTEM_MODIFIERS = new Set(["ctrl", "cmd", "alt", "mod"])
 
-const MODIFIER_ORDER = ["ctrl", "cmd", "alt", "shift"] as const
+const MODIFIER_ORDER = ["ctrl", "cmd", "alt", "shift", "mod"] as const
 const MODIFIER_DISPLAY: Record<(typeof MODIFIER_ORDER)[number], string> = {
   ctrl: "Ctrl",
   cmd: "⌘",
   alt: "Alt",
   shift: "Shift",
+  mod: "Mod", // Placeholder, will be replaced by getModifierLabel
 }
 
 const KEY_DISPLAY: Record<string, string> = {
@@ -230,7 +231,9 @@ function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
   const primaryModifier = isMac ? "cmd" : "ctrl"
 
   const sequenceTokens = tokens.map(token =>
-    token === "cmd" || token === "ctrl" ? primaryModifier : token
+    token === "cmd" || token === "ctrl" || token === "mod"
+      ? primaryModifier
+      : token
   )
 
   // Deduplicate tokens (e.g. "Ctrl+Cmd+K" -> "Cmd+K" on Mac)
@@ -248,6 +251,10 @@ function getModifierLabel(
   }
 
   if (modifier === "ctrl") {
+    return isMac ? MODIFIER_DISPLAY.cmd : MODIFIER_DISPLAY.ctrl
+  }
+
+  if (modifier === "mod") {
     return isMac ? MODIFIER_DISPLAY.cmd : MODIFIER_DISPLAY.ctrl
   }
 

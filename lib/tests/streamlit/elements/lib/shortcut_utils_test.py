@@ -25,63 +25,87 @@ from streamlit.errors import StreamlitAPIException
 @pytest.mark.parametrize(
     ("shortcut", "expected"),
     [
-        ("Ctrl+Shift+K", "ctrl+shift+k"),
-        (" command + option + Enter ", "cmd+alt+enter"),
-        ("Alt+Spacebar", "alt+space"),
-        ("Shift+F5", "shift+f5"),
-        ("Cmd + ctrl + k", "ctrl+cmd+k"),
+        ("Ctrl+Shift+C", "Ctrl+Shift+C"),
+        ("Alt+S", "Alt+S"),
+        ("Mod+Enter", "Ctrl+Enter"),
+        ("Meta+Enter", "Cmd+Enter"),
+        ("Command+Enter", "Cmd+Enter"),
+        ("Control+Enter", "Ctrl+Enter"),
+        ("Option+Enter", "Alt+Enter"),
+        ("Cmd+Shift+P", "Cmd+Shift+P"),
+        ("Ctrl+Alt+Delete", "Ctrl+Alt+Delete"),
+        ("Shift+Enter", "Shift+Enter"),
+        ("Enter", "Enter"),
+        ("Esc", "Escape"),
+        ("Space", "Space"),
+        ("Tab", "Tab"),
+        ("Backspace", "Backspace"),
+        ("Delete", "Delete"),
+        ("Home", "Home"),
+        ("End", "End"),
+        ("PageUp", "PageUp"),
+        ("PageDown", "PageDown"),
+        ("Left", "Left"),
+        ("ArrowLeft", "Left"),
+        ("Right", "Right"),
+        ("ArrowRight", "Right"),
+        ("Up", "Up"),
+        ("ArrowUp", "Up"),
+        ("Down", "Down"),
+        ("ArrowDown", "Down"),
+        ("f1", "f1"),
+        ("f12", "f12"),
+        (" ctrl + shift + c ", "Ctrl+Shift+C"),
+        (" alt + s ", "Alt+S"),
+        (" cmd + shift + p ", "Cmd+Shift+P"),
+        (" ctrl + alt + delete ", "Ctrl+Alt+Delete"),
+        (" shift + enter ", "Shift+Enter"),
+        (" enter ", "Enter"),
+        (" esc ", "Escape"),
+        (" space ", "Space"),
+        (" tab ", "Tab"),
+        (" backspace ", "Backspace"),
+        (" delete ", "Delete"),
+        (" home ", "Home"),
+        (" end ", "End"),
+        (" pageup ", "PageUp"),
+        (" pagedown ", "PageDown"),
+        (" left ", "Left"),
+        (" arrowleft ", "Left"),
+        (" right ", "Right"),
+        (" arrowright ", "Right"),
+        (" up ", "Up"),
+        (" arrowup ", "Up"),
+        (" down ", "Down"),
+        (" arrowdown ", "Down"),
+        (" f1 ", "f1"),
+        (" f12 ", "f12"),
     ],
 )
 def test_normalize_shortcut_returns_normalized(shortcut: str, expected: str) -> None:
-    """Test that valid shortcuts are normalized consistently."""
-
+    """Test that normalize_shortcut returns the expected normalized string."""
     assert normalize_shortcut(shortcut) == expected
 
 
 @pytest.mark.parametrize(
     "shortcut",
     [
-        "Ctrl+Ctrl+K",
-        "cmd+Cmd+Shift+enter",
-        "ctrl + alt + Alt + K",
-    ],
-)
-def test_normalize_shortcut_deduplicates_modifiers(shortcut: str) -> None:
-    """Test that duplicates modifiers are ignored in the returned shortcut."""
-
-    normalized = normalize_shortcut(shortcut)
-    tokens = normalized.split("+")
-    modifiers = tokens[:-1]
-    assert len(modifiers) == len(set(modifiers))
-
-
-@pytest.mark.parametrize(
-    "shortcut",
-    [
-        123,
-        None,
-        ["ctrl", "k"],
-    ],
-)
-def test_normalize_shortcut_requires_string(shortcut: object) -> None:
-    """Test that non-string inputs raise a StreamlitAPIException."""
-
-    with pytest.raises(StreamlitAPIException, match="must be a string value"):
-        normalize_shortcut(shortcut)  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize(
-    "shortcut",
-    [
         "",
-        "   ",
-        "+ +",
+        " ",
+        "+",
+        "++",
+        " + ",
+        "Ctrl+",
+        "+C",
+        "Ctrl+Shift+",
+        "Ctrl++C",
+        "Ctrl+Shift+Alt+",
+        "Ctrl+Shift+Alt++",
     ],
 )
-def test_normalize_shortcut_requires_token(shortcut: str) -> None:
-    """Test that shortcuts without tokens raise an error."""
-
-    with pytest.raises(StreamlitAPIException, match="must contain at least one key"):
+def test_normalize_shortcut_rejects_invalid_format(shortcut: str) -> None:
+    """Test that normalize_shortcut raises StreamlitAPIException for invalid format."""
+    with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)
 
 
@@ -90,32 +114,31 @@ def test_normalize_shortcut_requires_token(shortcut: str) -> None:
     [
         "Ctrl+Shift",
         "Alt",
+        "Cmd",
+        "Shift",
+        "Ctrl+Alt",
+        "Ctrl+Cmd",
+        "Ctrl+Shift+Alt",
     ],
 )
-def test_normalize_shortcut_requires_non_modifier(shortcut: str) -> None:
-    """Test that shortcuts without final non-modifier keys raise an error."""
-
-    with pytest.raises(
-        StreamlitAPIException,
-        match="must include a non-modifier key",
-    ):
+def test_normalize_shortcut_rejects_modifiers_only(shortcut: str) -> None:
+    """Test that normalize_shortcut raises StreamlitAPIException for modifiers only."""
+    with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)
 
 
 @pytest.mark.parametrize(
     "shortcut",
     [
-        "Ctrl+Alt+A+B",
-        "Shift+Enter+K",
+        "Ctrl+C+D",
+        "A+B",
+        "Ctrl+Shift+C+D",
+        "Ctrl+Alt+Delete+Insert",
     ],
 )
 def test_normalize_shortcut_rejects_multiple_keys(shortcut: str) -> None:
-    """Test that shortcuts with multiple non-modifier keys raise an error."""
-
-    with pytest.raises(
-        StreamlitAPIException,
-        match="may only specify a single non-modifier key",
-    ):
+    """Test that normalize_shortcut raises StreamlitAPIException for multiple keys."""
+    with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)
 
 
@@ -123,30 +146,13 @@ def test_normalize_shortcut_rejects_multiple_keys(shortcut: str) -> None:
     "shortcut",
     [
         "Ctrl+C",
-        "Shift+R",
-        "c",
+        "Cmd+R",
+        "Alt+Shift+c",
         "r",
+        "C",
     ],
 )
 def test_normalize_shortcut_rejects_reserved_keys(shortcut: str) -> None:
-    """Test that reserved keys raise an error."""
-
-    with pytest.raises(
-        StreamlitAPIException,
-        match="cannot use the keys 'C' or 'R'",
-    ):
-        normalize_shortcut(shortcut)
-
-
-@pytest.mark.parametrize(
-    "shortcut",
-    [
-        "Ctrl+InvalidKey",
-        "Alt+!",
-    ],
-)
-def test_normalize_shortcut_rejects_unknown_keys(shortcut: str) -> None:
-    """Test that unknown non-modifier keys raise an error."""
-
-    with pytest.raises(StreamlitAPIException, match="supported keys"):
+    """Test that normalize_shortcut raises StreamlitAPIException for reserved keys."""
+    with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)

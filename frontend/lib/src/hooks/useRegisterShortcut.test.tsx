@@ -250,6 +250,16 @@ describe("formatShortcutForDisplay", () => {
     expect(formatShortcutForDisplay("Alt+S", { isMac: true })).toBe("⌥ + S")
   })
 
+  it("renders correct modifier for mod on macOS", () => {
+    expect(formatShortcutForDisplay("Mod+S", { isMac: true })).toBe("⌘ + S")
+  })
+
+  it("renders correct modifier for mod on non-mac platforms", () => {
+    expect(formatShortcutForDisplay("Mod+S", { isMac: false })).toBe(
+      "Ctrl + S"
+    )
+  })
+
   it("renders Alt modifiers on non-mac platforms", () => {
     expect(formatShortcutForDisplay("Alt+S", { isMac: false })).toBe("Alt + S")
   })

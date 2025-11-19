@@ -32,6 +32,7 @@ _MODIFIER_ALIASES: Final[dict[str, str]] = {
     "alt": "alt",
     "option": "alt",
     "shift": "shift",
+    "mod": "ctrl",
 }
 
 _MODIFIER_ORDER: Final[tuple[str, ...]] = ("ctrl", "cmd", "alt", "shift")
