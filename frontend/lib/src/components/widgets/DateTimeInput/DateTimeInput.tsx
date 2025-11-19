@@ -19,7 +19,6 @@ import {
   ReactElement,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -102,35 +101,39 @@ function DateTimeInput({
   // pendingDate is the temporary value while the user is selecting
   const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
 
-  // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
-  useEffect(() => {
-    setPendingDate(committedDate)
-  }, [committedDate])
+  // Store the previous committedDate to detect changes from the widget manager
+  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
+    committedDate
+  )
 
-  const selectedDate = pendingDate
+  // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
+  if (committedDate !== prevCommittedDate) {
+    setPendingDate(committedDate)
+    setPrevCommittedDate(committedDate)
+  }
 
   const minDate = minDateTime ?? undefined
   const maxDate = maxDateTime ?? undefined
 
   const minTimeForSelection = useMemo(() => {
-    if (!selectedDate || !minDateTime) {
+    if (!pendingDate || !minDateTime) {
       return undefined
     }
 
-    return isSameDay(selectedDate, minDateTime)
-      ? combineDateAndTime(selectedDate, minDateTime)
+    return isSameDay(pendingDate, minDateTime)
+      ? combineDateAndTime(pendingDate, minDateTime)
       : undefined
-  }, [selectedDate, minDateTime])
+  }, [pendingDate, minDateTime])
 
   const maxTimeForSelection = useMemo(() => {
-    if (!selectedDate || !maxDateTime) {
+    if (!pendingDate || !maxDateTime) {
       return undefined
     }
 
-    return isSameDay(selectedDate, maxDateTime)
-      ? combineDateAndTime(selectedDate, maxDateTime)
+    return isSameDay(pendingDate, maxDateTime)
+      ? combineDateAndTime(pendingDate, maxDateTime)
       : undefined
-  }, [selectedDate, maxDateTime])
+  }, [pendingDate, maxDateTime])
 
   const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import type { ComponentProps, ComponentRef, ForwardedRef } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -32,18 +32,25 @@ import DateTimeInput, { type Props } from "./DateTimeInput"
 vi.mock("baseui/datepicker", async importOriginal => {
   const React = await import("react")
   const actual = await importOriginal<typeof import("baseui/datepicker")>()
-  const Datepicker = React.forwardRef((props: any, ref: any) => (
-    <>
-      <actual.Datepicker {...props} ref={ref} />
-      <button
-        data-testid="mock-datepicker-close"
-        onClick={() => props.onClose && props.onClose()}
-        style={{ display: "none" }}
-      >
-        Close Datepicker
-      </button>
-    </>
-  ))
+  const Datepicker = React.forwardRef(
+    (
+      props: ComponentProps<typeof actual.Datepicker> & {
+        onClose?: () => void
+      },
+      ref: ForwardedRef<ComponentRef<typeof actual.Datepicker>>
+    ) => (
+      <>
+        <actual.Datepicker {...props} ref={ref} />
+        <button
+          data-testid="mock-datepicker-close"
+          onClick={() => props.onClose?.()}
+          style={{ display: "none" }}
+        >
+          Close Datepicker
+        </button>
+      </>
+    )
+  )
   return {
     ...actual,
     Datepicker,
