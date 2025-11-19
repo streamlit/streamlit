@@ -256,3 +256,10 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_button_with_spinner_icon(app: Page):
+    """Test that the button with spinner icon is rendered."""
+    button = get_button(app, "Button with spinner icon")
+    # Check that the spinner icon is visible:
+    expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()
