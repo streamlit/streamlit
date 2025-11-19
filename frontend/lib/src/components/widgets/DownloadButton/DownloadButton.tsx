@@ -187,6 +187,7 @@ function DownloadButton(props: Props): ReactElement {
           <DynamicButtonLabel
             icon={isLoading ? "spinner" : icon}
             label={label}
+            shortcut={shortcut}
           />
         </BaseButton>
       </BaseButtonTooltip>

@@ -156,8 +156,8 @@ function shouldBlockShortcutInInput(
 
   const baseKey = parsedShortcut.baseKey
   if (!baseKey) {
-    // Modifier-only shortcuts are allowed.
-    return false
+    // Modifier-only shortcuts are blocked in inputs.
+    return true
   }
 
   if (baseKey.length === 1 && /^[a-z0-9]$/i.test(baseKey)) {

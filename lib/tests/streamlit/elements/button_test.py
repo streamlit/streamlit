@@ -171,13 +171,6 @@ class ButtonTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.button
         assert proto.shortcut == "cmd+o"
 
-    def test_modifier_only_shortcut(self) -> None:
-        """Test that modifier-only shortcuts are supported."""
-        st.button("the label", shortcut="Ctrl")
-
-        proto = self.get_delta_from_queue().new_element.button
-        assert proto.shortcut == "ctrl"
-
     @parameterized.expand(
         [
             (name, command)
@@ -201,14 +194,15 @@ class ButtonTest(DeltaGeneratorTestCase):
             if name in {"button", "download_button", "link_button"}
         ]
     )
-    def test_modifier_only_shortcut_with_whitespace(
+    def test_modifier_only_shortcuts_raise(
         self, name: str, command: Callable[..., Any]
     ) -> None:
-        """Test that modifier-only shortcuts handle additional whitespace."""
-        command(shortcut="   shift   ")
+        """Test that modifier-only shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="ctrl")
 
-        proto = getattr(self.get_delta_from_queue().new_element, name)
-        assert proto.shortcut == "shift"
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="   shift   ")
 
     @parameterized.expand(
         [

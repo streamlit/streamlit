@@ -102,7 +102,7 @@ def normalize_shortcut(shortcut: str) -> str:
         If the shortcut does not contain at least one key or modifier.
         If the shortcut contains a single non-modifier key.
         If the shortcut uses the keys 'C' or 'R', with or without modifiers.
-        If the shortcut does not contain a key, a modifier, or a modifier key combination.
+        If the shortcut does not include a non-modifier key.
     """
     if not isinstance(shortcut, str):
         raise StreamlitAPIException("shortcut must be a string value.")
@@ -137,9 +137,9 @@ def normalize_shortcut(shortcut: str) -> str:
 
         key = normalized_key
 
-    if key is None and not modifiers:
+    if key is None:
         raise StreamlitAPIException(
-            "shortcut must contain a key, a modifier, or a modifier key combination."
+            "The `shortcut` must include a non-modifier key such as 'K' or 'Ctrl+K'."
         )
 
     normalized_tokens: list[str] = [
