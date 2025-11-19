@@ -85,7 +85,7 @@ def Page(  # noqa: N802
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
 
-        - ``"spinner"``: Displays a spinner icon.
+        - ``"spinner"``: Displays a spinner as an icon.
 
     url_path : str or None
         The page's URL pathname, which is the path relative to the app's root

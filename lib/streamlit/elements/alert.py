@@ -68,7 +68,7 @@ class AlertMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner icon.
+            - ``"spinner"``: Displays a spinner as an icon.
 
         width : "stretch" or int
             The width of the alert element. This can be one of the following:
@@ -145,7 +145,7 @@ class AlertMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner icon.
+            - ``"spinner"``: Displays a spinner as an icon.
 
         width : "stretch" or int
             The width of the warning element. This can be one of the following:
@@ -221,7 +221,7 @@ class AlertMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner icon.
+            - ``"spinner"``: Displays a spinner as an icon.
 
         width : "stretch" or int
             The width of the info element. This can be one of the following:
@@ -298,7 +298,7 @@ class AlertMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner icon.
+            - ``"spinner"``: Displays a spinner as an icon.
 
         width : "stretch" or int
             The width of the success element. This can be one of the following:
