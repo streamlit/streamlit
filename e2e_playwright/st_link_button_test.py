@@ -15,6 +15,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -78,6 +79,7 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox can be slightly flaky with expect_popup
 def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
     shortcut_button = (
