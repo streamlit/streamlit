@@ -22,7 +22,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -207,19 +207,43 @@ class LayoutUtilsTest(unittest.TestCase):
             ("small", GapSize.SMALL),
             ("medium", GapSize.MEDIUM),
             ("large", GapSize.LARGE),
-            (None, GapSize.NONE),
         ]
     )
-    def test_get_gap_size_valid(self, gap: str | None, expected: GapSize.ValueType):
-        """get_gap_size maps valid inputs to GapSize values, None to GapSize.NONE."""
+    def test_get_gap_config_valid_named(self, gap: str, expected: GapSize.ValueType):
+        """get_gap_config maps valid inputs to GapSize values."""
 
-        assert get_gap_size(gap, "st.columns") == expected
+        config = get_gap_config(gap, "st.columns")
+        assert config.WhichOneof("gap_spec") == "gap_size"
+        assert config.gap_size == expected
 
-    def test_get_gap_size_invalid(self):
-        """get_gap_size raises for invalid gap strings."""
+    def test_get_gap_config_none(self):
+        """get_gap_config maps None to GapSize.NONE."""
+
+        config = get_gap_config(None, "st.columns")
+        assert config.WhichOneof("gap_spec") == "gap_size"
+        assert config.gap_size == GapSize.NONE
+
+    def test_get_gap_config_pixel(self):
+        """get_gap_config stores integer gaps as pixel values."""
+
+        config = get_gap_config(12, "st.columns")
+        assert config.WhichOneof("gap_spec") == "pixel_gap"
+        assert config.pixel_gap == 12
+
+    @parameterized.expand(
+        [
+            ("tiny",),
+            (-5,),
+            (0,),
+            (5.5,),
+            (True,),
+        ]
+    )
+    def test_get_gap_config_invalid(self, gap):
+        """get_gap_config raises for invalid gap values."""
 
         with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_size("tiny", "st.columns")
+            get_gap_config(gap, "st.columns")  # type: ignore[arg-type]
 
     @parameterized.expand(
         [

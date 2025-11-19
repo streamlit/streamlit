@@ -25,7 +25,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 
@@ -34,7 +34,7 @@ Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
 Height: TypeAlias = int | Literal["stretch", "content"]
 SpaceSize: TypeAlias = int | Literal["stretch", "small", "medium", "large"]
-Gap: TypeAlias = Literal["small", "medium", "large"]
+Gap: TypeAlias = int | Literal["small", "medium", "large"]
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 
@@ -176,22 +176,31 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
-    """Convert a gap string or None to a GapSize proto value."""
+def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
+    """Convert a gap spec into a GapConfig proto."""
     gap_mapping = {
         "small": GapSize.SMALL,
         "medium": GapSize.MEDIUM,
         "large": GapSize.LARGE,
     }
 
+    gap_config = GapConfig()
+
     if isinstance(gap, str):
         gap_size = gap.lower()
         valid_sizes = gap_mapping.keys()
 
         if gap_size in valid_sizes:
-            return gap_mapping[gap_size]
+            gap_config.gap_size = gap_mapping[gap_size]
+            return gap_config
     elif gap is None:
-        return GapSize.NONE
+        gap_config.gap_size = GapSize.NONE
+        return gap_config
+    elif isinstance(gap, int) and not isinstance(gap, bool):
+        if gap <= 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        gap_config.pixel_gap = gap
+        return gap_config
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 

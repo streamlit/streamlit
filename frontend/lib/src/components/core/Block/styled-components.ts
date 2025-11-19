@@ -19,24 +19,38 @@ import React, { CSSProperties } from "react"
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import { isNullOrUndefined } from "@streamlit/utils"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
-  gap: streamlit.GapSize | undefined,
+  gapConfig: streamlit.IGapConfig | undefined | null,
   theme: EmotionTheme
 ): string {
-  let gapWidth = theme.spacing.lg
-  if (gap === streamlit.GapSize.MEDIUM) {
-    gapWidth = theme.spacing.threeXL
-  } else if (gap === streamlit.GapSize.LARGE) {
-    gapWidth = theme.spacing.fourXL
-  } else if (gap === streamlit.GapSize.NONE) {
-    gapWidth = theme.spacing.none
+  const pixelGap = gapConfig?.pixelGap
+  if (pixelGap !== undefined && pixelGap !== null) {
+    return `${pixelGap}px`
   }
-  return gapWidth
+  const gapSizeValue = gapConfig?.gapSize
+
+  const gapSize =
+    isNullOrUndefined(gapSizeValue) ||
+    gapSizeValue === streamlit.GapSize.GAP_UNDEFINED
+      ? streamlit.GapSize.SMALL
+      : gapSizeValue
+
+  switch (gapSize) {
+    case streamlit.GapSize.MEDIUM:
+      return theme.spacing.threeXL
+    case streamlit.GapSize.LARGE:
+      return theme.spacing.fourXL
+    case streamlit.GapSize.NONE:
+      return theme.spacing.none
+    default:
+      return theme.spacing.lg
+  }
 }
 
 export interface StyledElementContainerProps {
@@ -128,16 +142,16 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gapConfig?: streamlit.IGapConfig | null
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({ theme, weight, gapConfig, showBorder, verticalAlignment }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
-    const gapWidth = translateGapWidth(gap, theme)
+    const gapWidth = translateGapWidth(gapConfig, theme)
     const width =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
@@ -224,7 +238,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gapConfig?: streamlit.IGapConfig | null
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
@@ -242,7 +256,7 @@ export const StyledFlexContainerBlock =
     ({
       theme,
       direction,
-      gap,
+      gapConfig,
       flex,
       $wrap,
       height,
@@ -251,10 +265,7 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
     }) => {
-      let gapWidth
-      if (gap !== undefined) {
-        gapWidth = translateGapWidth(gap, theme)
-      }
+      const gapWidth = translateGapWidth(gapConfig, theme)
 
       return {
         display: "flex",

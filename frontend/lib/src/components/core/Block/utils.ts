@@ -183,21 +183,37 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function backwardsCompatibleColumnGapSize(
+export function backwardsCompatibleColumnGapConfig(
   columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
-  } else if (columnProto.gap) {
-    if (columnProto.gap === "small") {
-      return streamlit.GapSize.SMALL
-    } else if (columnProto.gap === "medium") {
-      return streamlit.GapSize.MEDIUM
-    } else if (columnProto.gap === "large") {
-      return streamlit.GapSize.LARGE
+): streamlit.IGapConfig {
+  const gapConfig = columnProto.gapConfig
+
+  if (gapConfig) {
+    if (gapConfig.pixelGap !== undefined && gapConfig.pixelGap !== null) {
+      return { pixelGap: gapConfig.pixelGap }
+    }
+
+    if (
+      gapConfig.gapSize !== undefined &&
+      gapConfig.gapSize !== null &&
+      gapConfig.gapSize !== streamlit.GapSize.GAP_UNDEFINED
+    ) {
+      return { gapSize: gapConfig.gapSize }
     }
   }
-  return streamlit.GapSize.SMALL
+
+  const gap = columnProto.gap?.toLowerCase()
+  if (gap === "small") {
+    return { gapSize: streamlit.GapSize.SMALL }
+  }
+  if (gap === "medium") {
+    return { gapSize: streamlit.GapSize.MEDIUM }
+  }
+  if (gap === "large") {
+    return { gapSize: streamlit.GapSize.LARGE }
+  }
+
+  return { gapSize: streamlit.GapSize.SMALL }
 }
 
 export function checkFlexContainerBackwardsCompatibile(

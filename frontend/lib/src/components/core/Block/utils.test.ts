@@ -20,7 +20,7 @@ import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
-  backwardsCompatibleColumnGapSize,
+  backwardsCompatibleColumnGapConfig,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getActivateScrollToBottomBackwardsCompatible,
@@ -167,16 +167,16 @@ describe("getKeyFromId", () => {
   )
 })
 
-describe("backwardsCompatibleColumnGapSize", () => {
+describe("backwardsCompatibleColumnGapConfig", () => {
   it("returns gapSize when it exists", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.MEDIUM
-    )
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.MEDIUM,
+    })
   })
 
   it("returns default gapSize when gapSize is undefined", () => {
@@ -185,9 +185,20 @@ describe("backwardsCompatibleColumnGapSize", () => {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.SMALL
-    )
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.SMALL,
+    })
+  })
+
+  it("returns pixel gap when pixelGap exists", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 16,
+      },
+    }
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      pixelGap: 16,
+    })
   })
 
   const gapStringCases = [
@@ -200,7 +211,9 @@ describe("backwardsCompatibleColumnGapSize", () => {
     "converts '$gap' gap to corresponding GapSize",
     ({ gap, expected }) => {
       const columnProto = { gap }
-      expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(expected)
+      expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+        gapSize: expected,
+      })
     }
   )
 
@@ -208,19 +221,19 @@ describe("backwardsCompatibleColumnGapSize", () => {
     {
       description: "when neither gapSize nor gap exists",
       proto: {},
-      expected: streamlit.GapSize.SMALL,
+      expected: { gapSize: streamlit.GapSize.SMALL },
     },
     {
       description: "with unrecognized gap string",
       proto: { gap: "unrecognized" },
-      expected: streamlit.GapSize.SMALL,
+      expected: { gapSize: streamlit.GapSize.SMALL },
     },
   ]
 
   test.each(fallbackCases)(
     "returns GapSize.SMALL $description",
     ({ proto, expected }) => {
-      expect(backwardsCompatibleColumnGapSize(proto)).toBe(expected)
+      expect(backwardsCompatibleColumnGapConfig(proto)).toEqual(expected)
     }
   )
 
@@ -231,9 +244,9 @@ describe("backwardsCompatibleColumnGapSize", () => {
       },
       gap: "small",
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.LARGE
-    )
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.LARGE,
+    })
   })
 })
 
