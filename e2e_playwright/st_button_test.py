@@ -29,12 +29,14 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
+TOTAL_BUTTONS = 28
+
 
 def test_button_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the button widgets are correctly rendered via screenshot matching."""
-    expect(themed_app.get_by_test_id("stButton")).to_have_count(28)
+    expect(themed_app.get_by_test_id("stButton")).to_have_count(TOTAL_BUTTONS)
 
     assert_snapshot(
         get_button(themed_app, "button 1"),
