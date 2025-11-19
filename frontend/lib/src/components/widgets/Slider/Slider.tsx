@@ -227,27 +227,22 @@ function Slider({
     // If, after rendering, the thumb value's is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
-    const sliderDiv = sliderRef.current
-    const thumb1Div = thumbRefs[0]?.current
+    const sliderDiv = sliderRef.current ?? null
+    const thumb1Div = thumbRefs[0].current
     const thumb2Div = thumbRefs[1]?.current
-    const thumb1ValueDiv = thumbValueRefs[0]?.current
+    const thumb1ValueDiv = thumbValueRefs[0].current
     const thumb2ValueDiv = thumbValueRefs[1]?.current
 
-    if (
-      sliderDiv &&
-      thumb1Div &&
-      thumb1ValueDiv &&
-      thumb2Div &&
+    fixLabelPositions(
+      sliderDiv,
+      thumb1Div,
+      thumb2Div,
+      thumb1ValueDiv,
       thumb2ValueDiv
-    ) {
-      fixLabelPositions(
-        sliderDiv,
-        thumb1Div,
-        thumb2Div,
-        thumb1ValueDiv,
-        thumb2ValueDiv
-      )
-    }
+    )
+    // formattedValueArr can not be added to the dependencies array because that would lead to visual glitches.
+    // so the linting error from not adding it need to be suppressed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [thumbRefs, thumbValueRefs]) // Ensure this effect runs when dependencies change
 
   // Style that will be applied to BaseWeb's <InnerTrack>.
