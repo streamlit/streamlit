@@ -29,15 +29,43 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+# @gather_metrics("Page")
+# def Page(  # noqa: N802
+#     page: str | Path | Callable[[], None],
+#     *,
+#     title: str | None = None,
+#     icon: str | None = None,
+#     url_path: str | None = None,
+#     default: bool = False,
+# ) -> StreamlitPage:
 @gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-) -> StreamlitPage:
+class Page:
+    """Represents a Streamlit page.
+    Do not instantiate this class directly; use st.page instead.
+    """
+    def __init__(
+        self,
+        page: str | Path | Callable[[], None],
+        title: str | None = None,
+        icon: str | None = None,
+        url_path: str | None = None,
+        default: bool = False,
+    ) -> None:
+        self.page = page
+        self.title = title
+        self.icon = icon
+        self.url_path = url_path
+        self.default = default
+
+    def __call__(self) -> StreamlitPage:
+        """This allows the class to be called like the original function."""
+        return StreamlitPage(
+            page=self.page,
+            title=self.title,
+            icon=self.icon,
+            url_path=self.url_path,
+            default=self.default,
+        )
     """Configure a page for ``st.navigation`` in a multipage app.
 
     Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
