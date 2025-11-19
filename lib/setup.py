@@ -112,7 +112,7 @@ EXTRA_REQUIRES = {
     ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake,sql,pdf]",
+        "streamlit[auth,charts,snowflake,sql,pdf,performance]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],
