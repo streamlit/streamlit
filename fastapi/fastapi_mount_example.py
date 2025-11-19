@@ -24,7 +24,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from streamlit import config as _config
 from streamlit.web.server.server import Server
-from streamlit.web.server.starlette.starlette_app import create_starlette_app
+from streamlit.web.server.starlette import create_starlette_app
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
