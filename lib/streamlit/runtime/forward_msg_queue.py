@@ -137,6 +137,7 @@ class ForwardMsgQueue:
                     "script_finished",
                     "session_status_changed",
                     "parent_message",
+                    "page_info_changed",
                 }
                 or (
                     # preserve all messages if this is a fragment rerun and...
