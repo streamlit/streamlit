@@ -531,7 +531,7 @@ export const StyledButtonMainLabel = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: theme.spacing.xs,
+  gap: theme.spacing.sm,
   minWidth: 0,
 }))
 
@@ -540,7 +540,6 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   whiteSpace: "nowrap",
-  padding: theme.spacing.threeXS,
   fontSize: theme.fontSizes.sm,
   opacity: 0.6,
   fontFamily: "inherit",
