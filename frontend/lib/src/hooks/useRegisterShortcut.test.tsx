@@ -21,7 +21,7 @@
 import React, { act, ReactElement } from "react"
 
 import * as hotkeysModule from "hotkeys-js"
-import { vi, Mock } from "vitest"
+import { Mock, vi } from "vitest"
 
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/util/utils"
