@@ -698,7 +698,7 @@ def convert_anything_to_pandas_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `fetchall()` on the Cursor to show more."
             )
-        return cast("pd.DataFrame", data)
+        return data
 
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
@@ -727,7 +727,7 @@ def convert_anything_to_pandas_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Convert the data to a list to show more."
             )
-        return cast("pd.DataFrame", data)
+        return data
 
     if isinstance(data, EnumMeta):
         # Support for enum classes
