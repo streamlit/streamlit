@@ -21,10 +21,12 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useState,
 } from "react"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
+import { DownloadContext } from "~lib/components/core/DownloadContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
   BaseButtonKind,
@@ -34,6 +36,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -47,11 +50,15 @@ export interface Props {
 
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
-  const { help, label, icon, ignoreRerun, type, url } = element
+  const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
   const shortcut = element.shortcut ? element.shortcut : undefined
+
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { requestDeferredFile } = useContext(DownloadContext)
 
   let kind = BaseButtonKind.SECONDARY
   if (type === "primary") {
@@ -65,6 +72,57 @@ function DownloadButton(props: Props): ReactElement {
     [endpoints, url]
   )
 
+  useEffect(() => {
+    const isDeferred = Boolean(deferredFileId?.length)
+    if (!isDeferred) {
+      // Since we use a hidden link to download, we can't use the onerror event
+      // to catch src url load errors. Catch with direct check instead.
+      void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
+    }
+  }, [downloadUrl, endpoints, deferredFileId])
+
+  const handleDeferredDownload = useCallback(async (): Promise<void> => {
+    if (!requestDeferredFile || !deferredFileId) {
+      setError("Deferred download not properly configured")
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await requestDeferredFile(deferredFileId)
+
+      if (response.errorMsg) {
+        setError(response.errorMsg)
+        setIsLoading(false)
+        return
+      }
+
+      const resolvedDownloadUrl = endpoints.buildDownloadUrl(response.url)
+
+      // Proactively check the resolved URL for load errors to surface metrics.
+      void endpoints.checkSourceUrlResponse(
+        resolvedDownloadUrl,
+        "Download Button"
+      )
+
+      // Trigger download with the returned URL
+      const link = createDownloadLinkElement({
+        filename: "",
+        url: resolvedDownloadUrl,
+        enforceDownloadInNewTab,
+      })
+      link.click()
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Download failed"
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [requestDeferredFile, deferredFileId, endpoints, enforceDownloadInNewTab])
+
   const handleDownloadClick = useCallback((): void => {
     if (disabled) {
       return
@@ -74,27 +132,32 @@ function DownloadButton(props: Props): ReactElement {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
-    const link = createDownloadLinkElement({
-      filename: "",
-      url: downloadUrl,
-      enforceDownloadInNewTab,
-    })
-    link.click()
+
+    const isDeferred = Boolean(deferredFileId?.length)
+    if (isDeferred) {
+      // Handle deferred download
+      void handleDeferredDownload()
+    } else {
+      // Downloads are only done on links, so create a hidden one and click it
+      // for the user.
+      const link = createDownloadLinkElement({
+        filename: "",
+        url: downloadUrl,
+        enforceDownloadInNewTab,
+      })
+      link.click()
+    }
   }, [
     disabled,
     ignoreRerun,
     widgetMgr,
     element,
     fragmentId,
+    deferredFileId,
+    handleDeferredDownload,
     downloadUrl,
     enforceDownloadInNewTab,
   ])
-
-  useEffect(() => {
-    // Since we use a hidden link to download, we can't use the onerror event
-    // to catch src url load errors. Catch with direct check instead.
-    void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
-  }, [downloadUrl, endpoints])
 
   useRegisterShortcut({
     shortcut,
@@ -102,19 +165,36 @@ function DownloadButton(props: Props): ReactElement {
     onActivate: handleDownloadClick,
   })
 
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000)
+      return (): void => clearTimeout(timer)
+    }
+    return undefined
+  }, [error])
+
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
       <BaseButtonTooltip help={help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={disabled}
+          disabled={disabled || isLoading}
           onClick={handleDownloadClick}
           containerWidth={true}
         >
-          <DynamicButtonLabel icon={icon} label={label} shortcut={shortcut} />
+          <DynamicButtonLabel
+            icon={isLoading ? "spinner" : icon}
+            label={label}
+          />
         </BaseButton>
       </BaseButtonTooltip>
+      {error && (
+        <StyledErrorMessage data-testid="stDownloadButtonError">
+          {error}
+        </StyledErrorMessage>
+      )}
     </div>
   )
 }

@@ -913,3 +913,64 @@ def test_runtime_override_removes_field(
     assert getattr(definition, target_field) is None
     # Provided non-target field should remain present
     assert getattr(definition, expect_present_field) is not None
+
+
+def test_register_overwrites_placeholder_without_warning() -> None:
+    """Verify that overwriting a placeholder definition does not log a warning.
+
+    This scenario happens when a component is first discovered via manifest scan
+    (creating a placeholder) and then registered via the public API at runtime.
+    """
+    reg = BidiComponentRegistry()
+    name = "test_component"
+
+    # 1. Register placeholder (mimics manifest scanning)
+    placeholder = BidiComponentDefinition(name=name, html=None, css=None, js=None)
+    reg.register(placeholder)
+    assert placeholder.is_placeholder
+
+    # 2. Register actual definition (mimics runtime API call)
+    real_def = BidiComponentDefinition(
+        name=name,
+        html="<div>Content</div>",
+        css=None,
+        js=None,
+    )
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        reg.register(real_def)
+
+        # Verify registration succeeded
+        stored = reg.get(name)
+        assert stored == real_def
+        assert not stored.is_placeholder
+
+        # Verify NO warning was logged
+        mock_logger.warning.assert_not_called()
+
+
+def test_register_overwrites_real_definition_with_warning() -> None:
+    """Verify that overwriting a real definition LOGS a warning."""
+    reg = BidiComponentRegistry()
+    name = "test_component"
+
+    # 1. Register real definition
+    def1 = BidiComponentDefinition(
+        name=name, html="<div>Initial</div>", css=None, js=None
+    )
+    reg.register(def1)
+
+    # 2. Register different definition
+    def2 = BidiComponentDefinition(
+        name=name, html="<div>Updated</div>", css=None, js=None
+    )
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        reg.register(def2)
+
+        # Verify registration succeeded
+        stored = reg.get(name)
+        assert stored == def2
+
+        # Verify warning WAS logged
+        mock_logger.warning.assert_called_once()

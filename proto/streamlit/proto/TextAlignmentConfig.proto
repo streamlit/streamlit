@@ -17,20 +17,19 @@
 syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "DownloadButtonProto";
+option java_outer_classname = "TextAlignmentConfigProto";
 
-message DownloadButton {
-  string id = 1;
-  string label = 2;
-  bool default = 3;
-  string help = 4;
-  string form_id = 5;
-  string url = 6;
-  bool disabled = 7;
-  bool use_container_width = 8;
-  string type = 9;
-  string icon = 10;
-  bool ignore_rerun = 11;
-  optional string deferred_file_id = 12;
-  string shortcut = 13;
+package streamlit;
+
+// Text alignment configuration for text elements
+message TextAlignmentConfig {
+  enum Alignment {
+    UNSPECIFIED = 0;
+    LEFT = 1;
+    CENTER = 2;
+    RIGHT = 3;
+    JUSTIFY = 4;
+  }
+
+  Alignment alignment = 1;
 }

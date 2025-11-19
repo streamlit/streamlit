@@ -3,6 +3,9 @@ name: Pull Request Labels
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
 
 jobs:
   check-required-labels:
