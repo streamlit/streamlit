@@ -545,5 +545,5 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   opacity: 0.6,
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
-  letterSpacing: "0.03em",
+  letterSpacing: "0.01em",
 }))
