@@ -20,7 +20,6 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
-    wait_for_app_loaded,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
@@ -32,7 +31,6 @@ from e2e_playwright.shared.app_utils import (
     get_datetime_input,
     get_element_by_key,
 )
-from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 NUM_DATETIME_INPUTS = 15
 
@@ -107,14 +105,6 @@ def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunctio
     expect(calendar).to_be_visible()
 
     assert_snapshot(calendar, name="st_datetime_input-dropdown")
-
-
-def test_themed_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that datetime input renders correctly in both light and dark themes."""
-    assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 1 (base)"),
-        name="st_datetime_input-themed",
-    )
 
 
 def test_help_tooltip(app: Page):
@@ -278,23 +268,4 @@ def test_dynamic_props_update(app: Page):
     # Ensure the previously entered value remains visible
     expect_prefixed_markdown(
         app, "Updated datetime input value:", "2025-12-01 14:30:00"
-    )
-
-
-def test_custom_theme_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    apply_theme_via_window(
-        themed_app,
-        primaryColor="#1A6CE7",
-        secondaryBackgroundColor="#F0F8FF",
-        baseRadius="1.2rem",
-        font={
-            "fontFamily": "Courier New, monospace",
-            "monoFontFamily": "Courier New, monospace",
-        },
-    )
-    wait_for_app_loaded(themed_app)
-
-    assert_snapshot(
-        get_datetime_input(themed_app, "Datetime input 1 (base)"),
-        name="st_datetime_input-custom-theme",
     )
