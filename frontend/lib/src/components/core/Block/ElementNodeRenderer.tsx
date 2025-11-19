@@ -35,6 +35,7 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
+  DatetimeInput as DatetimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
@@ -148,6 +149,9 @@ const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
 const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
 const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
 const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const DatetimeInput = lazy(
+  () => import("~lib/components/widgets/DatetimeInput")
+)
 const Html = lazy(() => import("~lib/components/elements/Html"))
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
 const Progress = lazy(() => import("~lib/components/elements/Progress"))
@@ -574,6 +578,20 @@ const RawElementNodeRenderer = (
         <DateInput
           key={dateInputProto.id}
           element={dateInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "datetimeInput": {
+      const datetimeInputProto = node.element
+        .datetimeInput as DatetimeInputProto
+      widgetProps.disabled =
+        widgetProps.disabled || datetimeInputProto.disabled
+      return (
+        <DatetimeInput
+          key={datetimeInputProto.id}
+          element={datetimeInputProto}
           {...widgetProps}
         />
       )
