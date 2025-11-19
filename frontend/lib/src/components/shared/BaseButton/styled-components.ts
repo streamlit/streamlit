@@ -531,7 +531,7 @@ export const StyledButtonMainLabel = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: theme.spacing.sm,
+  gap: theme.spacing.xs,
   minWidth: 0,
 }))
 
@@ -540,13 +540,10 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   whiteSpace: "nowrap",
-  padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
-  borderRadius: theme.radii.button,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  backgroundColor: theme.colors.fadedText05,
-  color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.twoSm,
+  padding: theme.spacing.threeXS,
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
-  letterSpacing: "0.02em",
+  letterSpacing: "0.03em",
 }))
