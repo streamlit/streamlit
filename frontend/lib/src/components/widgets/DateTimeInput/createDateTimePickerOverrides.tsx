@@ -67,7 +67,7 @@ export const createDateTimePickerOverrides = ({
       fontSize: theme.fontSizes.sm,
       paddingRight: theme.spacing.sm,
       paddingLeft: theme.spacing.sm,
-      paddingBottom: theme.spacing.sm,
+      paddingBottom: theme.spacing.none,
       paddingTop: theme.spacing.sm,
     },
   },
@@ -223,13 +223,20 @@ export const createDateTimePickerOverrides = ({
   },
   TimeSelectContainer: {
     style: {
-      paddingTop: theme.spacing.sm,
+      paddingTop: theme.spacing.none,
       paddingBottom: theme.spacing.none,
     },
   },
   TimeSelectFormControl: {
     style: {
       marginBottom: theme.spacing.none,
+    },
+    props: {
+      overrides: {
+        Label: {
+          component: () => null,
+        },
+      },
     },
   },
   TimeSelect: {
