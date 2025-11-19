@@ -132,9 +132,8 @@ def measure_performance(
                 else:
                     # Failed to get the content length, calculating
                     # the length based on the full body would be a bit
-                    # expensive, so we just pass.
+                    # expensive, so we just skip it.
                     print("Failed to get the content length for response.")
-                    pass
             except Exception as ex:
                 print(f"Error calculating size of web assets: {ex}")
 
