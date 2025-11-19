@@ -130,9 +130,11 @@ def measure_performance(
                 if content_length:
                     total_http_response_size_bytes += int(content_length)
                 else:
-                    # If that fails, read the body (expensive for large files)
-                    body = response.body()
-                    total_http_response_size_bytes += len(body)
+                    # Failed to get the content length, calculating
+                    # the length based on the full body would be a bit
+                    # expensive, so we just pass.
+                    print("Failed to get the content length for response.")
+                    pass
             except Exception as ex:
                 print(f"Error calculating size of web assets: {ex}")
 
