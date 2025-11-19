@@ -80,7 +80,7 @@ class ToastMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner a icon.
+            - ``"spinner"``: Displays a spinner icon.
 
         duration : "short", "long", "infinite", or int
             The time to display the toast message. This can be one of the

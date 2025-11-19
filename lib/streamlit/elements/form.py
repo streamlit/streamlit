@@ -332,7 +332,7 @@ class FormMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-            - ``"spinner"``: Displays a spinner a icon.
+            - ``"spinner"``: Displays a spinner icon.
 
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
