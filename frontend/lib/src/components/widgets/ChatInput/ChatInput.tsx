@@ -445,6 +445,7 @@ function ChatInput({
   // Create waveform controller for audio recording
   const controller = useWaveformController({
     containerRef: waveformContainerRef,
+    sampleRate: element.audioSampleRate ?? undefined,
     events: controllerEvents,
   })
 

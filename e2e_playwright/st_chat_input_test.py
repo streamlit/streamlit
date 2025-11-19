@@ -1572,3 +1572,5 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     textarea.fill("Error cleared")
     # After typing, tooltip should not appear on hover anymore
     expect(tooltip).not_to_be_visible()
+
+
