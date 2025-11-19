@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import os
-import time
 from collections.abc import Iterable, Mapping
 from itertools import dropwhile
 from pathlib import Path
@@ -272,7 +271,6 @@ def switch_page(  # type: ignore[misc]
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
-        time.sleep(0.01)
 
     ctx.script_requests.request_rerun(
         RerunData(
