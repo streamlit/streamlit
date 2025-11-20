@@ -14,6 +14,8 @@
 
 """Unit test of dg.add_rows()."""
 
+from unittest.mock import patch
+
 import pandas as pd
 from parameterized import parameterized
 
@@ -203,3 +205,14 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         )
 
         pd.testing.assert_frame_equal(proto, expected)
+
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_add_rows_logs_deprecation_warning(self, mock_show_deprecation_warning):
+        """Test that add_rows logs a deprecation warning."""
+        element = st.table(DATAFRAME)
+        element.add_rows(NEW_ROWS)
+
+        mock_show_deprecation_warning.assert_called_once()
+        args = mock_show_deprecation_warning.call_args
+        assert "`add_rows` is deprecated" in args[0][0]
+        assert not args[1]["show_in_browser"]
