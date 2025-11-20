@@ -1576,13 +1576,30 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
 
 @use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_sample_rate_16khz(app: Page):
-    """Test recording audio at 16 kHz (default) sample rate."""
+@pytest.mark.parametrize(
+    ("option_text", "expected_hz", "is_default"),
+    [
+        ("16 kHz (Default)", 16000, True),
+        ("48 kHz (High quality)", 48000, False),
+        ("8 kHz (Low quality)", 8000, False),
+    ],
+)
+def test_audio_sample_rate_validation(
+    app: Page, option_text: str, expected_hz: int, is_default: bool
+):
+    """Test recording audio at various sample rates and validate the output."""
     grant_microphone_permissions(app)
 
-    # Verify the default selection is 16 kHz
     selectbox = app.get_by_test_id("stSelectbox").first
-    expect(selectbox).to_contain_text("16 kHz (Default)")
+
+    if not is_default:
+        # Select the specified sample rate from dropdown
+        selectbox.click()
+        app.get_by_text(option_text).click()
+        wait_for_app_run(app)
+
+    # Verify the selection
+    expect(selectbox).to_contain_text(option_text)
 
     # Get the chat input for audio recording
     chat_input = get_element_by_key(app, "audio_sample_rate_test")
@@ -1595,68 +1612,8 @@ def test_audio_sample_rate_16khz(app: Page):
     expect(
         app.get_by_text("Sample rate validation PASSED", exact=False)
     ).to_be_visible()
-    expect(app.get_by_text("Expected 16000 Hz", exact=False)).to_be_visible()
-    expect(app.get_by_text("Actual sample rate: 16000 Hz")).to_be_visible()
-
-
-@use_chat_input("audio_sample_rate")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_sample_rate_48khz(app: Page):
-    """Test recording audio at 48 kHz (high quality) sample rate."""
-    grant_microphone_permissions(app)
-
-    # Select 48 kHz from dropdown
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    app.get_by_text("48 kHz (High quality)").click()
-    wait_for_app_run(app)
-
-    # Verify the selection changed
-    expect(selectbox).to_contain_text("48 kHz (High quality)")
-
-    # Get the chat input for audio recording
-    chat_input = get_element_by_key(app, "audio_sample_rate_test")
-    chat_input.scroll_into_view_if_needed()
-
-    # Record audio
-    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
-
-    # Verify the validation message appears
-    expect(
-        app.get_by_text("Sample rate validation PASSED", exact=False)
-    ).to_be_visible()
-    expect(app.get_by_text("Expected 48000 Hz", exact=False)).to_be_visible()
-    expect(app.get_by_text("Actual sample rate: 48000 Hz")).to_be_visible()
-
-
-@use_chat_input("audio_sample_rate")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_sample_rate_8khz(app: Page):
-    """Test recording audio at 8 kHz (low quality) sample rate."""
-    grant_microphone_permissions(app)
-
-    # Select 8 kHz from dropdown
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    app.get_by_text("8 kHz (Low quality)").click()
-    wait_for_app_run(app)
-
-    # Verify the selection changed
-    expect(selectbox).to_contain_text("8 kHz (Low quality)")
-
-    # Get the chat input for audio recording
-    chat_input = get_element_by_key(app, "audio_sample_rate_test")
-    chat_input.scroll_into_view_if_needed()
-
-    # Record audio
-    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
-
-    # Verify the validation message appears
-    expect(
-        app.get_by_text("Sample rate validation PASSED", exact=False)
-    ).to_be_visible()
-    expect(app.get_by_text("Expected 8000 Hz", exact=False)).to_be_visible()
-    expect(app.get_by_text("Actual sample rate: 8000 Hz")).to_be_visible()
+    expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
+    expect(app.get_by_text(f"Actual sample rate: {expected_hz} Hz")).to_be_visible()
 
 
 @use_chat_input("audio_sample_rate")
