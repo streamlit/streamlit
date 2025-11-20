@@ -1577,26 +1577,22 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
 @use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 @pytest.mark.parametrize(
-    ("option_text", "expected_hz", "is_default"),
+    ("option_text", "expected_hz"),
     [
-        ("16 kHz (Default)", 16000, True),
-        ("48 kHz (High quality)", 48000, False),
-        ("8 kHz (Low quality)", 8000, False),
+        ("16 kHz (Default)", 16000),
+        ("48 kHz (High quality)", 48000),
+        ("8 kHz (Low quality)", 8000),
     ],
 )
-def test_audio_sample_rate_validation(
-    app: Page, option_text: str, expected_hz: int, is_default: bool
-):
+def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: int):
     """Test recording audio at various sample rates and validate the output."""
     grant_microphone_permissions(app)
 
+    # Select the specified sample rate from dropdown
     selectbox = app.get_by_test_id("stSelectbox").first
-
-    if not is_default:
-        # Select the specified sample rate from dropdown
-        selectbox.click()
-        app.get_by_text(option_text).click()
-        wait_for_app_run(app)
+    selectbox.click()
+    app.get_by_text(option_text).click()
+    wait_for_app_run(app)
 
     # Verify the selection
     expect(selectbox).to_contain_text(option_text)
