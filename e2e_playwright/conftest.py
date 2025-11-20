@@ -791,7 +791,7 @@ def assert_snapshot(
             The file type of the screenshot. Defaults to "png".
         show_app_header : bool or None
             Whether to make the app header background transparent before taking the screenshot.
-            If None (default), the app header will be shown be shown based on the
+            If None (default), the app header will be shown based on the
             element type (page will always show the app header, other elements will hide it).
         """
         nonlocal test_failure_messages
