@@ -18,9 +18,11 @@ import React, {
   CSSProperties,
   type FC,
   type HTMLProps,
+  lazy,
   memo,
   type ReactElement,
   type ReactNode,
+  Suspense,
   useCallback,
   useContext,
   useMemo,
@@ -47,11 +49,13 @@ import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
+import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
+
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
+import { Skeleton } from "~lib/components/elements/Skeleton"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -72,6 +76,10 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+
+const StreamlitSyntaxHighlighter = lazy(
+  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
 
 export enum Tags {
   H1 = "h1",
@@ -357,9 +365,24 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
   return !inline ? (
-    <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
-      {codeText}
-    </StreamlitSyntaxHighlighter>
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <Skeleton
+            element={SkeletonProto.create({
+              style: SkeletonProto.SkeletonStyle.ELEMENT,
+            })}
+          />
+        }
+      >
+        <StreamlitSyntaxHighlighter
+          language={language}
+          showLineNumbers={false}
+        >
+          {codeText}
+        </StreamlitSyntaxHighlighter>
+      </Suspense>
+    </ErrorBoundary>
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
       {children}
