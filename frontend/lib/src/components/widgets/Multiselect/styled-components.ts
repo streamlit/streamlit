@@ -20,20 +20,4 @@ export const StyledUISelect = styled.div(({ theme }) => ({
   "span[aria-disabled='true']": {
     background: theme.colors.fadedText05,
   },
-  // Style the "Select all matches" option
-  "[data-id='__SELECT_ALL_MATCHES__']": {
-    fontWeight: theme.fontWeights.bold,
-    borderBottom: `1px solid ${theme.colors.fadedText10}`,
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.primary,
-    backgroundColor: `${theme.colors.secondaryBg} !important`,
-  },
-  // Style the "Select all" option
-  "[data-id='__SELECT_ALL__']": {
-    fontWeight: theme.fontWeights.bold,
-    borderBottom: `1px solid ${theme.colors.fadedText10}`,
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.primary,
-    backgroundColor: `${theme.colors.secondaryBg} !important`,
-  },
 }))

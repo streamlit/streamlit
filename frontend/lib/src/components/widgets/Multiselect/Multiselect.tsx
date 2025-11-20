@@ -249,13 +249,17 @@ const Multiselect: FC<Props> = props => {
 
       // Add "Select all" or "Select all matches" option
       if (filterValue.trim()) {
-        // Add "Select all matches" option when searching and multiple matches found
-        if (allMatches.length > 1) {
+        // Filter out already selected options from the matches first
+        const unselectedMatches = allMatches.filter(
+          (opt: Option) => !value.includes(opt.value as string)
+        )
+        // Add "Select all matches" option when searching and multiple unselected matches found
+        if (unselectedMatches.length > 1) {
           const allMatchedValues = allMatches
             .map((opt: Option) => opt.value)
             .join("|||")
           const selectAllOption: Option = {
-            label: `Select all matches (${allMatches.length})`,
+            label: `Select all matches (${unselectedMatches.length})`,
             value: `__SELECT_ALL_MATCHES__|||${allMatchedValues}`,
             id: "__SELECT_ALL_MATCHES__",
           }

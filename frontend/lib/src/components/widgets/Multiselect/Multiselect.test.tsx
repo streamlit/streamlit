@@ -701,8 +701,12 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "ap")
 
-      const selectAllOption = screen.getByText("Select all matches (2)")
-      await user.click(selectAllOption)
+      // Should not show "Select all matches" option when only one match is unselected
+      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+
+      // Click on the single available option
+      const apricotOption = screen.getByText("apricot")
+      await user.click(apricotOption)
 
       // Should have called setStringArrayValue with apple (already selected) + apricot (new)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -755,7 +759,7 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "ap")
 
       // Should show "Select all matches" option
-      const selectAllOption = screen.getByText("Select all matches (3)")
+      const selectAllOption = screen.getByText("Select all matches (2)")
       await user.click(selectAllOption)
 
       // Should add new options up to the max limit
@@ -858,8 +862,8 @@ describe("Multiselect widget", () => {
 
       // Should not show "Select all" option when searching
       expect(screen.queryByText(/^Select all \(/)).not.toBeInTheDocument()
-      // Should show "Select all matches" instead (apple, apricot = 2 matches)
-      expect(screen.getByText("Select all matches (2)")).toBeInTheDocument()
+      // Should also not show "Select all matches" since there's only 1 unselected match (apricot)
+      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
     })
 
     it("updates the count when options are selected/deselected", async () => {

@@ -48,10 +48,23 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
   const label = item.isCreatable ? `Add: ${item.label}` : item.label
 
+  // Check if this is a "Select all" or "Select all matches" option
+  const isSelectAllOption =
+    item.id === "__SELECT_ALL__" || item.id === "__SELECT_ALL_MATCHES__"
+
+  const theme = useEmotionTheme()
+
+  // Add divider styling for select all options
+  const selectAllStyle = isSelectAllOption
+    ? {
+        borderBottom: `1px solid ${theme.colors.fadedText10}`,
+      }
+    : {}
+
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
-      style={style}
+      style={{ ...style, ...selectAllStyle }}
       {...restChildProps}
     >
       <OverflowTooltip content={label} placement={Placement.AUTO}>
