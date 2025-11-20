@@ -789,6 +789,11 @@ def assert_snapshot(
             If True, the comparison will stop at the first pixel mismatch.
         file_type: "png" or "jpg"
             The file type of the screenshot. Defaults to "png".
+        show_app_header : bool
+            If True, the app header will be shown in the screenshot.
+            If False (default), the app header will be hidden in the screenshot.
+            If the element is a Page, we assume we want to always show the
+            app header.
         """
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
@@ -796,8 +801,10 @@ def assert_snapshot(
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
 
-        if not show_app_header:
-            # Make the app header transparent
+        if not show_app_header and isinstance(element, Page):
+            # Make the app header background transparent, if its a page
+            # (fullscreen screenshot) we assume we want to always show the
+            # app header.
             if style is None:
                 style = ""
             style += " .stAppHeader { background: transparent; }"
