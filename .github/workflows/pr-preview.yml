@@ -102,6 +102,39 @@ jobs:
               console.log('Created new comment with ID:', newComment.id);
             }
 
+  analyze-frontend-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Build Frontend & Analyze
+        env:
+          ANALYZE_BUNDLE: "true"
+        run: |
+          make frontend
+      - name: Upload Bundle Stats JSON
+        uses: actions/upload-artifact@v5
+        with:
+          name: bundle_analysis_json
+          path: frontend/app/bundle-analysis.json
+      - name: Upload Bundle Stats HTML
+        uses: actions/upload-artifact@v5
+        with:
+          name: bundle_analysis_html
+          path: frontend/app/bundle-analysis.html
+
   upload-whl:
     runs-on: ubuntu-latest
 

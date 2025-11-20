@@ -3479,6 +3479,7 @@ __metadata:
     util: "npm:^0.12.5"
     uuid: "npm:^13.0.0"
     vite: "npm:^7.1.11"
+    vite-bundle-analyzer: "npm:^1.2.3"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -20253,6 +20254,15 @@ __metadata:
   dependencies:
     "@math.gl/web-mercator": "npm:^3.5.5"
   checksum: 10c0/9a8a12f4bd68355a8162a23d4b161133b45aee71b2453fd8d57f54c55466007428cf502d0c02f58620d4c92ba934c29608613bc3176dd8c1d348f8a9deb34e32
+  languageName: node
+  linkType: hard
+
+"vite-bundle-analyzer@npm:^1.2.3":
+  version: 1.2.3
+  resolution: "vite-bundle-analyzer@npm:1.2.3"
+  bin:
+    analyze: dist/bin.js
+  checksum: 10c0/e99c49cde7ec57ca6f70f02faa4bd96f0ed43da7a98b86b9e129b99e65c29eba7fec9fefa2bb3d8fd24db5bd0988258ae213cd70978cf3894905118b9eedb495
   languageName: node
   linkType: hard
 
