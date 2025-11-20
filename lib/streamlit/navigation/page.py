@@ -29,15 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# @gather_metrics("Page")
-# def Page(  # noqa: N802
-#     page: str | Path | Callable[[], None],
-#     *,
-#     title: str | None = None,
-#     icon: str | None = None,
-#     url_path: str | None = None,
-#     default: bool = False,
-# ) -> StreamlitPage:
+
 @gather_metrics("Page")
 class Page:
     """Represents a Streamlit page.
