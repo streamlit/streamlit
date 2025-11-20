@@ -23,21 +23,23 @@ import {
   StyledPre,
 } from "./styled-components"
 
-export interface StreamlitCodeBlockProps {
+export interface StreamlitErrorCodeBlockProps {
   children: string | string[]
-  height?: number
 }
 
 function StreamlitErrorCodeBlock({
   children,
-}: Readonly<StreamlitCodeBlockProps>): ReactElement {
+}: Readonly<StreamlitErrorCodeBlockProps>): ReactElement {
+  const shouldShowCopyButton =
+    typeof children === "string" && children.trim().length > 0
+
   return (
     <StyledCodeBlock
       className="stErrorCodeBlock"
       data-testid="stErrorCodeBlock"
     >
       <StyledPre wrapLines={false}>{children}</StyledPre>
-      {typeof children === "string" && children.trim() !== "" && (
+      {shouldShowCopyButton && (
         <StyledCopyButtonContainer>
           <CopyButton text={children} />
         </StyledCopyButtonContainer>

@@ -21,7 +21,7 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StreamlitErrorCodeBlock, {
-  StreamlitCodeBlockProps,
+  StreamlitErrorCodeBlockProps,
 } from "./StreamlitErrorCodeBlock"
 
 // Realistic Python exception traceback example
@@ -33,8 +33,8 @@ const EXCEPTION_TRACEBACK = `Traceback (most recent call last):
 ZeroDivisionError: division by zero`
 
 const getStreamlitCodeBlockProps = (
-  props: Partial<StreamlitCodeBlockProps> = {}
-): StreamlitCodeBlockProps => ({
+  props: Partial<StreamlitErrorCodeBlockProps> = {}
+): StreamlitErrorCodeBlockProps => ({
   children: EXCEPTION_TRACEBACK,
   ...props,
 })
@@ -66,26 +66,12 @@ describe("StreamlitErrorCodeBlock", () => {
     expect(copyButton).toBeInTheDocument()
   })
 
-  it("should not render copy button when children is an empty string", () => {
-    const props = getStreamlitCodeBlockProps({ children: "" })
-    render(<StreamlitErrorCodeBlock {...props} />)
-
-    const copyButton = screen.queryByTestId("stCodeCopyButton")
-    expect(copyButton).not.toBeInTheDocument()
-  })
-
-  it("should not render copy button when children is only whitespace", () => {
-    const props = getStreamlitCodeBlockProps({ children: "   \n\t  " })
-    render(<StreamlitErrorCodeBlock {...props} />)
-
-    const copyButton = screen.queryByTestId("stCodeCopyButton")
-    expect(copyButton).not.toBeInTheDocument()
-  })
-
-  it("should not render copy button when children is an array", () => {
-    const props = getStreamlitCodeBlockProps({
-      children: ["Line 1\n", "Line 2\n"],
-    })
+  it.each([
+    { label: "empty string", value: "" },
+    { label: "only whitespace", value: "   \n\t  " },
+    { label: "array", value: ["Line 1\n", "Line 2\n"] },
+  ])("should not render copy button when children is $label", ({ value }) => {
+    const props = getStreamlitCodeBlockProps({ children: value })
     render(<StreamlitErrorCodeBlock {...props} />)
 
     const copyButton = screen.queryByTestId("stCodeCopyButton")
