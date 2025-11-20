@@ -970,7 +970,7 @@ class ArrowMixin:
         """  # noqa: E501
         show_deprecation_warning(
             "`add_rows` is deprecated and might be removed in a future version."
-            "If you have a specific use-case that requires the `add_rows` "
+            " If you have a specific use-case that requires the `add_rows` "
             "functionality, please tell us via this "
             "[issue on Github](https://github.com/streamlit/streamlit/issues/13063).",
             show_in_browser=False,
