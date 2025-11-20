@@ -214,12 +214,12 @@ class BidiComponentInvalidCallbackNameErrorTest(DeltaGeneratorTestCase):
 
     def setUp(self):
         super().setUp()
-        registry = Runtime.instance().bidi_component_registry
+        manager = Runtime.instance().bidi_component_registry
         component_def = BidiComponentDefinition(
             name="my_component",
             js="console.log('hello');",
         )
-        registry._components["my_component"] = component_def
+        manager.register(component_def)
         self.dg = st_main
 
     def test_bidi_component_disallowed_on_change_callbacks(self):

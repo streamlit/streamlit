@@ -285,6 +285,17 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
+    """Exception raised when an invalid text_alignment value is provided."""
+
+    def __init__(self, text_alignment: Any) -> None:
+        super().__init__(
+            'Invalid text_alignment value: "{text_alignment}". '
+            'Valid values are: `"left"`, `"center"`, `"right"`, or `"justify"`.',
+            text_alignment=text_alignment,
+        )
+
+
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""

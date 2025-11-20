@@ -87,7 +87,7 @@ body:
 
         Example:
           - **Streamlit version**: 1.50.0 _(get it with `$ streamlit version`)_
-          - **Python version**: 3.13 _(get it with `$ python --version`)_
+          - **Python version**: 3.14 _(get it with `$ python --version`)_
           - **Operating System**: MacOs 12.6
           - **Browser**: Chrome
       value: |
