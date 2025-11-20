@@ -3,6 +3,11 @@ name: Playwright E2E Tests - Changed Files
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
+      # Don't run CI if changes are only in the agent-knowledge folder:
+      - "agent-knowledge/**"
   workflow_call:
     inputs:
       ref:
@@ -71,6 +76,7 @@ jobs:
         if: inputs.ref == '' && github.event_name == 'pull_request'
         uses: actions/checkout@v5
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
           persist-credentials: false
           submodules: "recursive"
@@ -198,7 +204,7 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
+          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html -m "not performance"
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()

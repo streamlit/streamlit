@@ -20,6 +20,8 @@ import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { IconSize } from "~lib/theme"
 
+import { StyledButtonLabel } from "./styled-components"
+
 export interface DynamicButtonLabelProps {
   icon?: string
   label?: string
@@ -33,21 +35,9 @@ export const DynamicButtonLabel = ({
   iconSize,
   useSmallerFont = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
-  const isMaterialIcon = icon?.startsWith(":material")
-  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
-  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
-  const dynamicIconSize = iconSize ?? (isMaterialIcon ? "lg" : "base")
-
   return (
-    <>
-      {icon && (
-        <DynamicIcon
-          size={dynamicIconSize}
-          margin={label ? iconMargin : "0"}
-          color="inherit"
-          iconValue={icon}
-        />
-      )}
+    <StyledButtonLabel>
+      {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
       {label && (
         <StreamlitMarkdown
           source={label}
@@ -57,6 +47,6 @@ export const DynamicButtonLabel = ({
           disableLinks
         />
       )}
-    </>
+    </StyledButtonLabel>
   )
 }

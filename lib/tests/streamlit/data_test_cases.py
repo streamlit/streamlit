@@ -35,7 +35,10 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.dataframe_util import DataFormat, is_pandas_version_less_than
+from streamlit.dataframe_util import (
+    DataFormat,
+    is_pandas_version_less_than,
+)
 from tests.streamlit.data_mocks.dask_mocks import DataFrame as DaskDataFrame
 from tests.streamlit.data_mocks.dask_mocks import Index as DaskIndex
 from tests.streamlit.data_mocks.dask_mocks import Series as DaskSeries
@@ -1081,7 +1084,10 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
 ###################################
 ###### Dataframe Interchange ######
 ###################################
-if is_pandas_version_less_than("1.5.0") is False:
+
+if is_pandas_version_less_than("1.5.0") is False and pa.__version__ != "22.0.0":
+    # Ignoring pyarrow v22.0.0 since it has issues with the interchange protocol.
+    # This was fixed in: https://github.com/apache/arrow/pull/47977
     SHARED_TEST_CASES.extend(
         [
             (

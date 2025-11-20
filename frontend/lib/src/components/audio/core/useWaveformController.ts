@@ -39,7 +39,7 @@ import type {
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { blend } from "~lib/theme/utils"
+import { blend, convertRemToPx } from "~lib/theme/utils"
 
 const BAR_WIDTH = 4
 const BAR_GAP = 4
@@ -55,13 +55,19 @@ interface ReadyResolver {
 interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLDivElement>
   sampleRate?: number | null
-  events?: WaveformControllerEvents
+  events: WaveformControllerEvents
+  /**
+   * Vertical padding in pixels to apply around the waveform.
+   * This reduces the waveform height to prevent it from touching container edges.
+   */
+  waveformPadding?: number
 }
 
 export function useWaveformController({
   containerRef,
   sampleRate,
   events,
+  waveformPadding = 0,
 }: UseWaveformControllerParams): WaveformController {
   const theme = useEmotionTheme()
 
@@ -72,7 +78,7 @@ export function useWaveformController({
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const recordBackendRef = useRef<WaveSurferRecordBackend | null>(null)
   const playerRef = useRef<WaveSurferPlayer | null>(null)
-  const eventsRef = useRef<WaveformControllerEvents>(events || {})
+  const eventsRef = useRef<WaveformControllerEvents>(events)
   const isInitializedRef = useRef(false)
   const isInitializingRef = useRef(false)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
@@ -160,7 +166,7 @@ export function useWaveformController({
   // a side effect: mutating the WaveSurfer player instance by setting event handlers.
   // This must happen after render commits to ensure the player is in a stable state.
   useEffect(() => {
-    eventsRef.current = events || {}
+    eventsRef.current = events
     // Reconfigure player events to avoid stale closures
     if (playerRef.current) {
       configurePlayerEvents(playerRef.current)
@@ -190,7 +196,11 @@ export function useWaveformController({
         container: containerRef.current,
         waveColor: theme.colors.primary,
         progressColor: theme.colors.bodyText,
-        height: "auto",
+        height:
+          waveformPadding > 0
+            ? convertRemToPx(theme.sizes.largestElementHeight) -
+              2 * waveformPadding
+            : "auto",
         barWidth: BAR_WIDTH,
         barGap: BAR_GAP,
         barRadius: BAR_RADIUS,
@@ -210,11 +220,11 @@ export function useWaveformController({
           void eventsRef.current.onProgressMs?.(ms)
         },
         onPermissionDenied: () => {
-          void eventsRef.current.onPermissionDenied?.()
+          eventsRef.current.onPermissionDenied()
           setCurrentState("idle")
         },
         onError: (error: Error) => {
-          void eventsRef.current.onError?.(error)
+          eventsRef.current.onError(error)
           setCurrentState("idle")
         },
       })
@@ -233,7 +243,13 @@ export function useWaveformController({
     } finally {
       isInitializingRef.current = false
     }
-  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
+  }, [
+    containerRef,
+    theme,
+    effectiveSampleRate,
+    configurePlayerEvents,
+    waveformPadding,
+  ])
 
   useEffect(() => {
     void initializeWaveSurfer()
@@ -398,7 +414,18 @@ export function useWaveformController({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       setIsPlaybackPlaying(false)
-      throw err
+      setCurrentState("idle")
+      eventsRef.current.onError(err)
+      // Return a dummy result to avoid breaking the flow
+      return {
+        blob: new Blob(),
+        meta: {
+          durationMs: 0,
+          sampleRate: null,
+          mimeType: "audio/webm",
+          size: 0,
+        },
+      }
     }
   }, [currentState, enterPlaybackMode, effectiveSampleRate])
 
@@ -406,7 +433,9 @@ export function useWaveformController({
     async (blob?: Blob): Promise<void> => {
       const blobToUse = blob ?? currentBlob
       if (!blobToUse) {
-        throw new Error("No recorded audio to approve")
+        const err = new Error("No recorded audio to approve")
+        eventsRef.current.onError(err)
+        return
       }
 
       try {
@@ -417,8 +446,7 @@ export function useWaveformController({
         setCurrentState("idle")
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
-        void eventsRef.current.onError?.(err)
-        throw err
+        eventsRef.current.onError(err)
       }
     },
     [currentBlob, effectiveSampleRate]

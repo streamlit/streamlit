@@ -39,6 +39,39 @@ alwaysApply: false
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 
+## Static Data Structures
+
+- Extract static lookup maps and constants to module-level scope outside functions/components
+- Static data recreated on every call/render wastes memory and CPU
+- Exception: Keep inside function only if data depends on parameters, props, or state
+
+<good-example>
+```tsx
+// ✅ Module-level - created once
+const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
+  [Alignment.LEFT]: "left",
+  [Alignment.CENTER]: "center",
+  // ...
+} as const
+
+function getAlignment(config: AlignmentConfig) {
+  return ALIGNMENT_MAP[config.alignment]
+}
+
+```
+</good-example>
+
+<bad-example>
+```tsx
+// ❌ Recreated every call
+function getAlignment(config: AlignmentConfig) {
+  const alignmentMap = { /* same data */ }
+  return alignmentMap[config.alignment]
+}
+```
+
+</bad-example>
+
 ## Yarn Workspaces
 
 - Project Structure: Monorepo managed with Yarn Workspaces.

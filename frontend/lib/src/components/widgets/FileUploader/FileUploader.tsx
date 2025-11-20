@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, PureComponent } from "react"
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
@@ -29,15 +36,15 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   FileSize,
   getRejectedFileInfo,
@@ -54,126 +61,231 @@ import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
 import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
-interface InnerProps {
-  disabled: boolean
-  element: FileUploaderProto
+type FilesUpdater =
+  | UploadFileInfo[]
+  | ((prev: UploadFileInfo[]) => UploadFileInfo[])
+
+const createInitialFiles = (
+  element: FileUploaderProto,
   widgetMgr: WidgetStateManager
-  uploadClient: FileUploadClient
-  fragmentId?: string
-  width: number
+): { files: UploadFileInfo[]; nextLocalId: number } => {
+  const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+  if (isNullOrUndefined(widgetValue)) {
+    return { files: [], nextLocalId: 1 }
+  }
+
+  const { uploadedFileInfo } = widgetValue
+  if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
+    return { files: [], nextLocalId: 1 }
+  }
+
+  let nextLocalId = 1
+  const files = uploadedFileInfo.map(f => {
+    const name = f.name as string
+    const size = f.size as number
+    const fileId = f.fileId as string
+    const fileUrls = f.fileUrls as FileURLsProto
+
+    const uploadFile = new UploadFileInfo(name, size, nextLocalId, {
+      type: "uploaded",
+      fileId,
+      fileUrls,
+    })
+    nextLocalId += 1
+    return uploadFile
+  })
+
+  return { files, nextLocalId }
 }
 
-export type Props = Omit<InnerProps, "width">
+/**
+ * Convert a list of uploaded file info to the widget state.
+ */
+const toWidgetState = (
+  targetFiles: UploadFileInfo[]
+): FileUploaderStateProto => {
+  const uploadedFileInfo: UploadedFileInfoProto[] = targetFiles
+    .filter(f => f.status.type === "uploaded")
+    .map(f => {
+      const { name, size, status } = f
+      const { fileId, fileUrls } = status as UploadedStatus
+
+      return new UploadedFileInfoProto({
+        fileId,
+        fileUrls,
+        name,
+        size,
+      })
+    })
+
+  return new FileUploaderStateProto({ uploadedFileInfo })
+}
 
 type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-export interface State {
-  /**
-   * List of files dropped on the FileUploader by the user. This list includes
-   * rejected files that will not be updated.
-   */
-  files: UploadFileInfo[]
+export interface Props {
+  disabled: boolean
+  element: FileUploaderProto
+  widgetMgr: WidgetStateManager
+  uploadClient: FileUploadClient
+  fragmentId?: string
 }
 
-class FileUploader extends PureComponent<InnerProps, State> {
-  private readonly formClearHelper = new FormClearHelper()
+const FileUploader = ({
+  disabled,
+  element,
+  widgetMgr,
+  uploadClient,
+  fragmentId,
+}: Props): React.ReactElement => {
+  const { width, elementRef } = useCalculatedDimensions()
+
+  const { files: initialFiles, nextLocalId: initialNextLocalId } = useMemo(
+    () => createInitialFiles(element, widgetMgr),
+    [element, widgetMgr]
+  )
+
+  const localFileIdCounterRef = useRef(initialNextLocalId)
+  const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
+  const filesRef = useRef<UploadFileInfo[]>(files)
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
+  const [isForceUpdating, setIsForceUpdating] = useState(false)
 
   /**
-   * A counter for assigning unique internal IDs to each file tracked
-   * by the uploader. These IDs are used to update file state internally,
-   * and are separate from the serverFileIds that are returned by the server.
+   * Generate a unique ID for a new file.
    */
-  private localFileIdCounter = 1
+  const nextLocalFileId = useCallback((): number => {
+    const id = localFileIdCounterRef.current
+    localFileIdCounterRef.current += 1
+    return id
+  }, [])
 
-  /**
-   * A flag to handle the case where a file uploader that only accepts one file
-   * at a time has its file replaced, which we want to treat as a single change
-   * rather than the deletion of a file followed by the upload of another.
-   * Doing this ensures that the script (and thus callbacks, etc) is only run a
-   * single time when replacing a file.  Note that deleting a file and uploading
-   * a new one with two interactions (clicking the 'X', then dragging a file
-   * into the file uploader) will still cause the script to execute twice.
-   */
-  private forceUpdatingStatus = false
-
-  public constructor(props: InnerProps) {
-    super(props)
-    this.state = this.initialValue
-  }
-
-  get initialValue(): State {
-    const emptyState = { files: [] }
-    const { widgetMgr, element } = this.props
-
-    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (isNullOrUndefined(widgetValue)) {
-      return emptyState
-    }
-
-    const { uploadedFileInfo } = widgetValue
-    if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
-      return emptyState
-    }
-
-    return {
-      files: uploadedFileInfo.map(f => {
-        const name = f.name as string
-        const size = f.size as number
-
-        const fileId = f.fileId as string
-        const fileUrls = f.fileUrls as FileURLsProto
-
-        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
-          type: "uploaded",
-          fileId,
-          fileUrls,
-        })
-      }),
-    }
-  }
-
-  public override componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
-
-  /**
-   * Return this.props.element.maxUploadSizeMb, converted to bytes.
-   */
-  private get maxUploadSizeInBytes(): number {
-    const maxMbs = this.props.element.maxUploadSizeMb
+  const maxUploadSizeInBytes = useMemo(() => {
+    const maxMbs = element.maxUploadSizeMb
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
-  }
+  }, [element.maxUploadSizeMb])
 
   /**
-   * Return the FileUploader's current status, which is derived from
-   * its state.
+   * Set the files immediately.
    */
-  public get status(): FileUploaderStatus {
-    const isFileUpdating = (file: UploadFileInfo): boolean =>
-      file.status.type === "uploading"
+  const setFilesImmediate = useCallback((updater: FilesUpdater): void => {
+    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+     * Using flushSync here because we need the state to be immediately updated
+     * before any subsequent file upload operations occur. Without this, React
+     * can defer the commit and our upload callbacks (progress, completion, or
+     * abort) may run while filesRef.current still points to the previous state.
+     * Those callbacks rely on filesRef.current to locate the in-flight upload,
+     * so deferring the update would cause them to no-op and break progress
+     * tracking.
+     */
+    flushSync(() => {
+      setFiles(prev => {
+        const next = typeof updater === "function" ? updater(prev) : updater
+        filesRef.current = next
+        return next
+      })
+    })
+  }, [])
 
-    // If any of our files is Uploading or Deleting, then we're currently
-    // updating.
-    if (this.state.files.some(isFileUpdating) || this.forceUpdatingStatus) {
-      return "updating"
+  const setForceUpdatingStatus = useCallback(
+    (value: boolean): void => {
+      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+       * We need the status flag to update synchronously so that subsequent
+       * renders treat the widget as updating. Otherwise, the status could
+       * briefly report as ready and trigger widget state propagation while
+       * we're still replacing an existing file.
+       */
+      flushSync(() => {
+        setIsForceUpdating(value)
+      })
+    },
+    [setIsForceUpdating]
+  )
+
+  /**
+   * Add a file to the list of files.
+   */
+  const addFile = useCallback(
+    (file: UploadFileInfo): void => {
+      setFilesImmediate(prev => [...prev, file])
+    },
+    [setFilesImmediate]
+  )
+
+  /**
+   * Add multiple files to the list of files.
+   */
+  const addFiles = useCallback(
+    (filesToAdd: UploadFileInfo[]): void => {
+      if (filesToAdd.length === 0) {
+        return
+      }
+      setFilesImmediate(prev => [...prev, ...filesToAdd])
+    },
+    [setFilesImmediate]
+  )
+
+  /**
+   * Remove a file from the list of files.
+   */
+  const removeFile = useCallback(
+    (idToRemove: number): void => {
+      setFilesImmediate(prev => prev.filter(file => file.id !== idToRemove))
+    },
+    [setFilesImmediate]
+  )
+
+  /**
+   * Update a file in the list of files.
+   */
+  const updateFile = useCallback(
+    (curFileId: number, newFile: UploadFileInfo): void => {
+      setFilesImmediate(prev =>
+        prev.map(file => (file.id === curFileId ? newFile : file))
+      )
+    },
+    [setFilesImmediate]
+  )
+
+  const getFile = useCallback((fileId: number): UploadFileInfo | undefined => {
+    return filesRef.current.find(file => file.id === fileId)
+  }, [])
+
+  const status: FileUploaderStatus =
+    files.some(file => file.status.type === "uploading") || isForceUpdating
+      ? "updating"
+      : "ready"
+
+  /**
+   * Set the initial widget value on mount.
+   */
+  useEffect(() => {
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        toWidgetState(filesRef.current),
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
     }
+  }, [widgetMgr, element, fragmentId])
 
-    return "ready"
-  }
-
-  public override componentDidUpdate = (): void => {
-    // If our status is not "ready", then we have uploads in progress.
-    // We won't submit a new widgetValue until all uploads have resolved.
-    if (this.status !== "ready") {
+  /**
+   * Set the widget value when the status is ready.
+   */
+  useEffect(() => {
+    if (status !== "ready") {
       return
     }
 
-    const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr, fragmentId } = this.props
-
-    // Maybe send a widgetValue update to the widgetStateManager.
+    const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(
@@ -185,460 +297,345 @@ class FileUploader extends PureComponent<InnerProps, State> {
         fragmentId
       )
     }
-  }
+  }, [status, files, widgetMgr, element, fragmentId])
 
-  public override componentDidMount(): void {
-    const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr, fragmentId } = this.props
+  const onFormCleared = useCallback((): void => {
+    setFilesImmediate(() => [])
+    const newWidgetValue = toWidgetState([])
+    widgetMgr.setFileUploaderStateValue(
+      element,
+      newWidgetValue,
+      { fromUi: true },
+      fragmentId
+    )
+  }, [element, fragmentId, setFilesImmediate, widgetMgr])
 
-    // Set the state value on mount, to avoid triggering an extra rerun after
-    // the first rerun.
-    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        {
-          fromUi: false,
-        },
-        fragmentId
-      )
-    }
-  }
-
-  private createWidgetValue(): FileUploaderStateProto {
-    const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
-      .filter(f => f.status.type === "uploaded")
-      .map(f => {
-        const { name, size, status } = f
-        const { fileId, fileUrls } = status as UploadedStatus
-        return new UploadedFileInfoProto({
-          fileId,
-          fileUrls,
-          name,
-          size,
-        })
-      })
-
-    return new FileUploaderStateProto({ uploadedFileInfo })
-  }
+  useFormClearHelper({
+    element,
+    widgetMgr,
+    onFormCleared,
+  })
 
   /**
-   * Helper function to check if a file matches the accepted extensions
+   * Check if the file type is allowed.
    */
-  private isFileTypeAllowed = (file: File): boolean => {
-    const { element } = this.props
-    const { type: acceptedExtensions } = element
+  const isFileTypeAllowed = useCallback(
+    (file: File): boolean => {
+      const acceptedExtensions = element.type
 
-    // If no extensions are specified, allow all files
-    if (!acceptedExtensions || acceptedExtensions.length === 0) {
-      return true
-    }
-
-    // Check if the file extension matches any of the accepted extensions
-    const fileName = file.name.toLowerCase()
-    return acceptedExtensions.some(ext => fileName.endsWith(ext.toLowerCase()))
-  }
-
-  /**
-   * Helper function to separate directory files into accepted and rejected based on file type
-   */
-  private filterDirectoryFiles = (
-    files: File[]
-  ): { accepted: File[]; rejected: FileRejection[] } => {
-    const accepted: File[] = []
-    const rejected: FileRejection[] = []
-
-    files.forEach(file => {
-      if (this.isFileTypeAllowed(file)) {
-        accepted.push(file)
-      } else {
-        rejected.push({
-          file,
-          errors: [
-            {
-              code: "file-invalid-type",
-              message: `${file.type} files are not allowed.`,
-            },
-          ],
-        })
+      if (!acceptedExtensions || acceptedExtensions.length === 0) {
+        return true
       }
-    })
 
-    return { accepted, rejected }
-  }
-
-  /**
-   * Called by react-dropzone when files and drag-and-dropped onto the widget.
-   *
-   * @param acceptedFiles an array of files.
-   * @param rejectedFiles an array of FileRejections. A FileRejection
-   * encapsulates a File and an error indicating why it was rejected by
-   * the dropzone widget.
-   */
-  private dropHandler = (
-    acceptedFiles: File[],
-    rejectedFiles: FileRejection[]
-  ): void => {
-    const { element } = this.props
-    const { multipleFiles } = element
-    const isDirectoryUpload = Boolean(element.acceptDirectory)
-
-    // For directory uploads, we need to do our own file type filtering
-    // because webkitdirectory bypasses react-dropzone's normal validation.
-    // TODO: Consider unifying validation logic to avoid divergence between
-    // single/multiple file uploads and directory uploads. Currently, regular
-    // uploads use react-dropzone's built-in validation while directory uploads
-    // use our custom filterDirectoryFiles method. This could lead to
-    // inconsistent behavior.
-    if (isDirectoryUpload && acceptedFiles.length > 0) {
-      const { accepted, rejected } = this.filterDirectoryFiles(acceptedFiles)
-      acceptedFiles = accepted
-      rejectedFiles = [...rejectedFiles, ...rejected]
-    }
-
-    // If this is a single-file uploader and multiple files were dropped,
-    // all the files will be rejected. In this case, we pull out the first
-    // valid file into acceptedFiles, and reject the rest.
-    if (
-      !multipleFiles &&
-      acceptedFiles.length === 0 &&
-      rejectedFiles.length > 1
-    ) {
-      const firstFileIndex = rejectedFiles.findIndex(
-        file =>
-          file.errors.length === 1 && file.errors[0].code === "too-many-files"
+      const fileName = file.name.toLowerCase()
+      return acceptedExtensions.some(ext =>
+        fileName.endsWith(ext.toLowerCase())
       )
+    },
+    [element.type]
+  )
 
-      if (firstFileIndex >= 0) {
-        acceptedFiles.push(rejectedFiles[firstFileIndex].file)
-        rejectedFiles.splice(firstFileIndex, 1)
-      }
-    }
+  const filterDirectoryFiles = useCallback(
+    (
+      filesToFilter: File[]
+    ): { accepted: File[]; rejected: FileRejection[] } => {
+      const accepted: File[] = []
+      const rejected: FileRejection[] = []
 
-    this.props.uploadClient
-      .fetchFileURLs(acceptedFiles)
-      .then((fileURLsArray: IFileURLs[]) => {
-        // If this is a single-file uploader that already has an uploaded file,
-        // remove that file so that it can be replaced with our new one.
-        if (!multipleFiles && acceptedFiles.length > 0) {
-          const existingFile = this.state.files.find(
-            f => f.status.type !== "error"
-          )
-          if (existingFile) {
-            this.forceUpdatingStatus = true
-            this.deleteFile(existingFile.id)
-            this.forceUpdatingStatus = false
-          }
-        }
-
-        zip(fileURLsArray, acceptedFiles).forEach(
-          ([fileURLs, acceptedFile]) => {
-            this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
-          }
-        )
-      })
-      .catch((errorMessage: string) => {
-        this.addFiles(
-          acceptedFiles.map(f => {
-            return new UploadFileInfo(f.name, f.size, this.nextLocalFileId(), {
-              type: "error",
-              errorMessage,
-            })
+      filesToFilter.forEach(file => {
+        if (isFileTypeAllowed(file)) {
+          accepted.push(file)
+        } else {
+          rejected.push({
+            file,
+            errors: [
+              {
+                code: "file-invalid-type",
+                message: `${file.type} files are not allowed.`,
+              },
+            ],
           })
-        )
+        }
       })
 
-    // Create an UploadFileInfo for each of our rejected files, and add them to
-    // our state.
-    if (rejectedFiles.length > 0) {
-      const rejectedInfos = rejectedFiles.map(rejected =>
-        getRejectedFileInfo(
-          rejected,
-          this.nextLocalFileId(),
-          this.maxUploadSizeInBytes
-        )
-      )
-      this.addFiles(rejectedInfos)
-    }
-  }
+      return { accepted, rejected }
+    },
+    [isFileTypeAllowed]
+  )
 
-  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
-    // Create an UploadFileInfo for this file and add it to our state.
-    const abortController = new AbortController()
-
-    // For directory uploads, use the relative path to preserve directory structure
-    const fileName = file.webkitRelativePath || file.name
-
-    const uploadingFileInfo = new UploadFileInfo(
-      fileName,
-      file.size,
-      this.nextLocalFileId(),
-      {
-        type: "uploading",
-        abortController,
-        progress: 1,
+  /**
+   * Update the file status when the upload has finished.
+   */
+  const onUploadComplete = useCallback(
+    (localFileId: number, fileUrls: IFileURLs): void => {
+      const curFile = getFile(localFileId)
+      if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
+        return
       }
-    )
-    this.addFile(uploadingFileInfo)
 
-    this.props.uploadClient
-      .uploadFile(
-        this.props.element,
-        fileURLs.uploadUrl as string,
-        file,
-        e => this.onUploadProgress(e, uploadingFileInfo.id),
-        abortController.signal
+      updateFile(
+        curFile.id,
+        curFile.setStatus({
+          type: "uploaded",
+          fileId: fileUrls.fileId as string,
+          fileUrls,
+        })
       )
-      .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
-      .catch(err => {
-        // If this was an abort error, we don't show the user an error -
-        // the cancellation was in response to an action they took.
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
-          this.updateFile(
-            uploadingFileInfo.id,
-            uploadingFileInfo.setStatus({
-              type: "error",
-              errorMessage: err ? err.toString() : "Unknown error",
-            })
-          )
+    },
+    [getFile, updateFile]
+  )
+
+  /**
+   * Update the file status when the upload has progressed.
+   */
+  const onUploadProgress = useCallback(
+    (event: ProgressEvent, fileId: number): void => {
+      const file = getFile(fileId)
+      if (isNullOrUndefined(file) || file.status.type !== "uploading") {
+        return
+      }
+
+      const newProgress = Math.round((event.loaded * 100) / event.total)
+      if (file.status.progress === newProgress) {
+        return
+      }
+
+      updateFile(
+        fileId,
+        file.setStatus({
+          type: "uploading",
+          abortController: file.status.abortController,
+          progress: newProgress,
+        })
+      )
+    },
+    [getFile, updateFile]
+  )
+
+  /**
+   * Upload a file to the backend.
+   */
+  const uploadFile = useCallback(
+    (fileURLs: IFileURLs, file: File): void => {
+      const abortController = new AbortController()
+      const fileName = file.webkitRelativePath || file.name
+
+      const uploadingFileInfo = new UploadFileInfo(
+        fileName,
+        file.size,
+        nextLocalFileId(),
+        {
+          type: "uploading",
+          abortController,
+          progress: 1,
         }
-      })
-  }
+      )
+      addFile(uploadingFileInfo)
 
-  /**
-   * Called when an upload has completed. Updates the file's status, and
-   * assigns it the new file ID returned from the server.
-   */
-  private onUploadComplete = (
-    localFileId: number,
-    fileUrls: IFileURLs
-  ): void => {
-    const curFile = this.getFile(localFileId)
-    if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
-      // The file may have been canceled right before the upload
-      // completed. In this case, we just bail.
-      return
-    }
-
-    this.updateFile(
-      curFile.id,
-      curFile.setStatus({
-        type: "uploaded",
-        fileId: fileUrls.fileId as string,
-        fileUrls,
-      })
-    )
-  }
-
-  /**
-   * Delete the file with the given ID:
-   * - Cancel the file upload if it's in progress
-   * - Remove the fileID from our local state
-   * We don't actually tell the server to delete the file. It will garbage
-   * collect it.
-   */
-  public deleteFile = (fileId: number): void => {
-    if (this.props.disabled) {
-      return
-    }
-    const file = this.getFile(fileId)
-    if (isNullOrUndefined(file)) {
-      return
-    }
-
-    if (file.status.type === "uploading") {
-      // The file hasn't been uploaded. Let's cancel the request.
-      // However, it may have been received by the server so we'll still
-      // send out a request to delete.
-      file.status.abortController.abort()
-    }
-
-    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
-    }
-
-    this.removeFile(fileId)
-  }
-
-  /** Append the given file to `state.files`. */
-  private addFile = (file: UploadFileInfo): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-     * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
-     */
-    flushSync(() => {
-      this.setState(state => ({ files: [...state.files, file] }))
-    })
-  }
-
-  /** Append the given files to `state.files`. */
-  private addFiles = (files: UploadFileInfo[]): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-     * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
-     */
-    flushSync(() => {
-      this.setState(state => ({ files: [...state.files, ...files] }))
-    })
-  }
-
-  /** Remove the file with the given ID from `state.files`. */
-  private removeFile = (idToRemove: number): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-     * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
-     */
-    flushSync(() => {
-      this.setState(state => ({
-        files: state.files.filter(file => file.id !== idToRemove),
-      }))
-    })
-  }
-
-  /**
-   * Return the file with the given ID, if one exists.
-   */
-  private getFile = (fileId: number): UploadFileInfo | undefined => {
-    return this.state.files.find(file => file.id === fileId)
-  }
-
-  /** Replace the file with the given id in `state.files`. */
-  private updateFile = (curFileId: number, newFile: UploadFileInfo): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-     * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
-     */
-    flushSync(() => {
-      this.setState(curState => {
-        return {
-          files: curState.files.map(file =>
-            file.id === curFileId ? newFile : file
-          ),
-        }
-      })
-    })
-  }
-
-  /**
-   * Callback for file upload progress. Updates a single file's local `progress`
-   * state.
-   */
-  private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
-    const file = this.getFile(fileId)
-    if (isNullOrUndefined(file) || file.status.type !== "uploading") {
-      return
-    }
-
-    const newProgress = Math.round((event.loaded * 100) / event.total)
-    if (file.status.progress === newProgress) {
-      return
-    }
-
-    // Update file.progress
-    this.updateFile(
-      fileId,
-      file.setStatus({
-        type: "uploading",
-        abortController: file.status.abortController,
-        progress: newProgress,
-      })
-    )
-  }
-
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  private onFormCleared = (): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-     * Using flushSync here because we need the state to be immediately updated
-     * before any subsequent file upload operations occur.
-     */
-    flushSync(() => {
-      this.setState({ files: [] }, () => {
-        const newWidgetValue = this.createWidgetValue()
-        if (isNullOrUndefined(newWidgetValue)) {
-          return
-        }
-
-        const { widgetMgr, element, fragmentId } = this.props
-        widgetMgr.setFileUploaderStateValue(
+      uploadClient
+        .uploadFile(
           element,
-          newWidgetValue,
-          { fromUi: true },
-          fragmentId
+          fileURLs.uploadUrl as string,
+          file,
+          e => onUploadProgress(e, uploadingFileInfo.id),
+          abortController.signal
         )
-      })
-    })
-  }
+        .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
+        .catch(err => {
+          if (!(err instanceof DOMException && err.name === "AbortError")) {
+            updateFile(
+              uploadingFileInfo.id,
+              uploadingFileInfo.setStatus({
+                type: "error",
+                errorMessage: err ? err.toString() : "Unknown error",
+              })
+            )
+          }
+        })
+    },
+    [
+      addFile,
+      element,
+      nextLocalFileId,
+      onUploadComplete,
+      onUploadProgress,
+      updateFile,
+      uploadClient,
+    ]
+  )
 
-  public override render(): React.ReactNode {
-    const { files } = this.state
-    const { element, disabled, widgetMgr, width } = this.props
-    const acceptedExtensions = element.type
+  /**
+   * Delete a file from the backend and client.
+   */
+  const deleteFile = useCallback(
+    (fileId: number): void => {
+      if (disabled) {
+        return
+      }
 
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      this.onFormCleared
-    )
+      const file = getFile(fileId)
+      if (isNullOrUndefined(file)) {
+        return
+      }
 
-    // We display files in the reverse order they were added.
-    // This way, if you have multiple pages of uploaded files and then drop
-    // another one, you'll see that newest file at the top of the first page.
-    const newestToOldestFiles = files.slice().reverse()
+      if (file.status.type === "uploading") {
+        file.status.abortController.abort()
+      }
 
-    return (
-      <StyledFileUploader
-        className="stFileUploader"
-        data-testid="stFileUploader"
-        width={width}
-      >
-        <WidgetLabel
-          label={element.label}
-          disabled={disabled}
-          labelVisibility={labelVisibilityProtoValueToEnum(
-            element.labelVisibility?.value
-          )}
-        >
-          {element.help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelp>
-          )}
-        </WidgetLabel>
-        <FileDropzone
-          onDrop={this.dropHandler}
-          multiple={element.multipleFiles}
-          acceptedExtensions={acceptedExtensions}
-          maxSizeBytes={this.maxUploadSizeInBytes}
-          label={element.label}
-          disabled={disabled}
-          acceptDirectory={Boolean(element.acceptDirectory)}
-        />
-        {newestToOldestFiles.length > 0 && (
-          <UploadedFiles
-            items={newestToOldestFiles}
-            pageSize={3}
-            onDelete={this.deleteFile}
-            resetOnAdd
-            disabled={disabled}
-          />
+      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+        void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
+      }
+
+      removeFile(fileId)
+    },
+    [disabled, getFile, removeFile, uploadClient]
+  )
+
+  /**
+   * Handle the drag-and-drop event for file-upload.
+   */
+  const dropHandler = useCallback(
+    (
+      acceptedFilesParam: File[],
+      rejectedFilesParam: FileRejection[]
+    ): void => {
+      const { multipleFiles } = element
+      const isDirectoryUpload = Boolean(element.acceptDirectory)
+
+      let acceptedFiles = [...acceptedFilesParam]
+      let rejectedFiles = [...rejectedFilesParam]
+
+      if (isDirectoryUpload && acceptedFiles.length > 0) {
+        const { accepted, rejected } = filterDirectoryFiles(acceptedFiles)
+        acceptedFiles = accepted
+        rejectedFiles = [...rejectedFiles, ...rejected]
+      }
+
+      if (
+        !multipleFiles &&
+        acceptedFiles.length === 0 &&
+        rejectedFiles.length > 1
+      ) {
+        const firstFileIndex = rejectedFiles.findIndex(
+          file =>
+            file.errors.length === 1 &&
+            file.errors[0].code === "too-many-files"
+        )
+
+        if (firstFileIndex >= 0) {
+          acceptedFiles.push(rejectedFiles[firstFileIndex].file)
+          rejectedFiles.splice(firstFileIndex, 1)
+        }
+      }
+
+      uploadClient
+        .fetchFileURLs(acceptedFiles)
+        .then((fileURLsArray: IFileURLs[]) => {
+          if (!multipleFiles && acceptedFiles.length > 0) {
+            const existingFile = filesRef.current.find(
+              f => f.status.type !== "error"
+            )
+            if (existingFile) {
+              setForceUpdatingStatus(true)
+              try {
+                deleteFile(existingFile.id)
+              } finally {
+                setForceUpdatingStatus(false)
+              }
+            }
+          }
+
+          zip(fileURLsArray, acceptedFiles).forEach(
+            ([fileURLs, acceptedFile]) => {
+              uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
+            }
+          )
+        })
+        .catch((errorMessage: string) => {
+          addFiles(
+            acceptedFiles.map(
+              f =>
+                new UploadFileInfo(f.name, f.size, nextLocalFileId(), {
+                  type: "error",
+                  errorMessage,
+                })
+            )
+          )
+        })
+
+      if (rejectedFiles.length > 0) {
+        const rejectedInfos = rejectedFiles.map(rejected =>
+          getRejectedFileInfo(
+            rejected,
+            nextLocalFileId(),
+            maxUploadSizeInBytes
+          )
+        )
+        addFiles(rejectedInfos)
+      }
+    },
+    [
+      addFiles,
+      deleteFile,
+      element,
+      filterDirectoryFiles,
+      maxUploadSizeInBytes,
+      nextLocalFileId,
+      uploadClient,
+      uploadFile,
+      setForceUpdatingStatus,
+    ]
+  )
+
+  const newestToOldestFiles = useMemo(() => {
+    return files.slice().reverse()
+  }, [files])
+
+  const acceptedExtensions = element.type
+
+  return (
+    <StyledFileUploader
+      className="stFileUploader"
+      data-testid="stFileUploader"
+      width={width}
+      ref={elementRef}
+    >
+      <WidgetLabel
+        label={element.label}
+        disabled={disabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
         )}
-      </StyledFileUploader>
-    )
-  }
-
-  private nextLocalFileId(): number {
-    return this.localFileIdCounter++
-  }
+      >
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
+      </WidgetLabel>
+      <FileDropzone
+        onDrop={dropHandler}
+        multiple={element.multipleFiles}
+        acceptedExtensions={acceptedExtensions}
+        maxSizeBytes={maxUploadSizeInBytes}
+        label={element.label}
+        disabled={disabled}
+        acceptDirectory={Boolean(element.acceptDirectory)}
+      />
+      {newestToOldestFiles.length > 0 && (
+        <UploadedFiles
+          items={newestToOldestFiles}
+          pageSize={3}
+          onDelete={deleteFile}
+          resetOnAdd
+          disabled={disabled}
+        />
+      )}
+    </StyledFileUploader>
+  )
 }
 
-const FileUploaderWithCalculatedWidth = withCalculatedWidth(memo(FileUploader))
-export default FileUploaderWithCalculatedWidth
+export default memo(FileUploader)

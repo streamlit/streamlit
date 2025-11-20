@@ -473,6 +473,10 @@ def test_uploads_and_deletes_single_file(
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     uploaded_files.scroll_into_view_if_needed()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
     # Upload a second file. This one will replace the first.
@@ -514,6 +518,9 @@ def test_uploads_and_deletes_multiple_files(
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
 
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
@@ -553,7 +560,14 @@ def test_file_upload_error_message_disallowed_files(
         .first
     )
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
+
+    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
+    reset_hovering(themed_app)
 
     uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
     expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
@@ -562,6 +576,7 @@ def test_file_upload_error_message_disallowed_files(
 @pytest.mark.skip_browser("chromium")
 def test_file_upload_error_message_file_too_large(app: Page):
     """Test that shows error message for files exceeding max size limit."""
+    app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "large.txt"
     file1 = FilePayload(
@@ -570,15 +585,16 @@ def test_file_upload_error_message_file_too_large(app: Page):
         buffer=b"x" * (2 * 1024 * 1024),  # 2MB
     )
 
-    expect(app.get_by_text(file_name1)).not_to_be_attached()
     chat_input = get_element_by_key(app, "chat_input_4")
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
-    expect(app.get_by_text(file_name1)).to_be_visible()
-
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
+
+    # Verify the file appears in the uploaded files list
+    expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
     uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
     expect(uploaded_file).to_be_visible()
 
@@ -587,11 +603,21 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # Reset hovering to not cause issues with the upload tooltip being
     # shown over the uploaded file tooltip hover target:
     reset_hovering(app)
+
+    # Ensure the upload button tooltip has disappeared before checking the error tooltip
+    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
+
+    # Ensure the tooltip hover target is in viewport before hovering (WebKit requirement)
+    hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget")
+    hover_target.scroll_into_view_if_needed()
+
     expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
 
 
 def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_4").get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -604,6 +630,8 @@ def test_single_file_upload_button_tooltip(app: Page):
 
 def test_multi_file_upload_button_tooltip(app: Page):
     """Test that the multi file upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_5").get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -615,6 +643,8 @@ def test_multi_file_upload_button_tooltip(app: Page):
 
 def test_directory_upload_button_tooltip(app: Page):
     """Test that the directory upload button tooltip renders correctly."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
     chat_input_upload_button = get_element_by_key(app, "chat_input_9").get_by_test_id(
         "stChatInputFileUploadButton"
     )
@@ -990,6 +1020,7 @@ def test_audio_rapid_re_recordings(app: Page):
     for i in range(3):
         mic_button = chat_input.get_by_test_id("stChatInputMicButton")
         expect(mic_button).to_be_visible()
+        expect(mic_button).to_be_enabled()
         mic_button.click()
 
         # Wait for approve button to appear
@@ -1003,8 +1034,11 @@ def test_audio_rapid_re_recordings(app: Page):
         approve_button.click()
 
         if i < 2:  # Don't wait after last recording
-            # Wait for approve button to disappear (indicates ready for next recording)
-            expect(approve_button).not_to_be_visible()
+            # Wait for upload to complete and component to reset before next recording
+            wait_for_app_run(app)
+            # Ensure mic button is ready for next recording
+            expect(mic_button).to_be_visible()
+            expect(mic_button).to_be_enabled()
 
     # Wait for the final upload to complete
     wait_for_app_run(app)
@@ -1309,3 +1343,97 @@ def test_audio_disabled_states(app: Page):
     # Verify submit button is also disabled
     submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
     expect(submit_button).to_have_attribute("disabled", "")
+
+
+@pytest.mark.only_browser("chromium")  # Webkit CI audio issue, Firefox tooltip issue
+def test_chat_input_permission_denied_error(
+    app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that permission denied error is displayed in chat input."""
+    chat_input = get_element_by_key(
+        app_with_microphone_permission_denied, "chat_input_11"
+    )
+    chat_input.scroll_into_view_if_needed()
+
+    # Try to click mic without permissions
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    mic_button.click()
+
+    # Wait for error state to apply by waiting for the tooltip hover target to appear
+    # Firefox may take longer to trigger permission denied and update React state
+    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(hover_target).to_be_visible(timeout=10000)
+
+    # Hover over the tooltip hover target to show tooltip
+    hover_target.hover()
+
+    # Verify tooltip appears with error message
+    tooltip = app_with_microphone_permission_denied.get_by_test_id(
+        "stTooltipErrorContent"
+    )
+    expect(tooltip).to_have_text(
+        "Microphone access denied",
+        use_inner_text=True,
+    )
+
+    # Take snapshot of error state with tooltip
+    assert_snapshot(chat_input, name="st_chat_input-mic_permission_denied")
+
+    # Verify error clears when user types
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Some text")
+    # After typing, tooltip should not appear on hover anymore
+    expect(tooltip).not_to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")  # Webkit CI audio issue, Firefox tooltip issue
+def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that recording errors are displayed in chat input."""
+    from playwright.sync_api import Route
+
+    grant_microphone_permissions(app)
+
+    # Mock recording failure by intercepting audio upload
+    def handle_route(route: Route):
+        if "upload_file" in route.request.url:
+            route.abort("failed")
+        else:
+            route.continue_()
+
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    chat_input = get_element_by_key(app, "chat_input_11")
+    chat_input.scroll_into_view_if_needed()
+
+    # Start recording
+    start_audio_recording(chat_input)
+    app.wait_for_timeout(1000)
+
+    # Try to approve (will fail upload)
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    approve_button.click()
+    app.wait_for_timeout(1000)
+
+    # Verify mic button shows error state
+    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    expect(mic_button).to_be_visible()
+
+    # Hover over the tooltip hover target to show tooltip
+    hover_target = chat_input.get_by_test_id("stTooltipErrorHoverTarget")
+    hover_target.hover()
+
+    # Verify tooltip appears with error message
+    tooltip = app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_have_text(
+        "Recording failed",
+        use_inner_text=True,
+    )
+
+    # Take snapshot
+    assert_snapshot(chat_input, name="st_chat_input-recording_error")
+
+    # Verify error clears when user starts typing
+    textarea = chat_input.locator("textarea").first
+    textarea.fill("Error cleared")
+    # After typing, tooltip should not appear on hover anymore
+    expect(tooltip).not_to_be_visible()

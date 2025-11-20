@@ -23,8 +23,8 @@ runs:
       shell: bash
       run: |
         PYTHON_MIN_VERSION="3.10"
-        PYTHON_MAX_VERSION="3.13"
-        PYTHON_VERSIONS='["min", "3.11", "3.12", "max"]'
+        PYTHON_MAX_VERSION="3.14"
+        PYTHON_VERSIONS='["min", "3.11", "3.12", "3.13", "max"]'
 
         echo "Setting step outputs and environment variables..."
 

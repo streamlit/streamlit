@@ -37,6 +37,25 @@ def get_pill_button(locator: Locator, text: str) -> Locator:
     )
 
 
+def test_pills_regression_no_wrap_at_app_start(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test regression for gh-12067: Pills at the start of the app should not wrap.
+
+    The bug caused pills with 3+ options to have their last option wrap to a new line
+    when pills were among the first elements rendered in the app. This was due to
+    maxWidth: "100%" causing flexbox width calculation errors.
+    """
+    # This pills is at the very start of the app (before the header)
+    # With the bug, the last option ("3") would wrap to a new line
+    regression_pills = get_element_by_key(app, "regression_3")
+
+    assert_snapshot(
+        regression_pills,
+        name="st_pills-regression_no_wrap_3_options",
+    )
+
+
 def test_click_multiple_pills_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
