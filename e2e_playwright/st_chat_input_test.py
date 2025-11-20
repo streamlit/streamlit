@@ -1572,3 +1572,159 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     textarea.fill("Error cleared")
     # After typing, tooltip should not appear on hover anymore
     expect(tooltip).not_to_be_visible()
+
+
+def goto_audio_sample_rate_test(app: Page) -> None:
+    """Navigate to the audio sample rate test widget."""
+    parsed = urlparse(app.url)
+    if parsed.port is None:
+        raise ValueError(f"Could not parse port from URL: {app.url}")
+
+    existing_params = parse_qs(parsed.query)
+    params = {k: v[0] for k, v in existing_params.items() if v}
+    params["key"] = "audio_sample_rate"
+
+    query_string = urlencode(params)
+    app.goto(f"http://localhost:{parsed.port}/?{query_string}")
+    wait_for_app_loaded(app)
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_sample_rate_16khz(app: Page):
+    """Test recording audio at 16 kHz (default) sample rate."""
+    grant_microphone_permissions(app)
+    goto_audio_sample_rate_test(app)
+
+    # Verify the default selection is 16 kHz
+    selectbox = app.get_by_test_id("stSelectbox").first
+    expect(selectbox).to_contain_text("16 kHz (Default)")
+
+    # Get the chat input for audio recording
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+    # Verify the validation message appears
+    expect(
+        app.get_by_text("Sample rate validation PASSED", exact=False)
+    ).to_be_visible()
+    expect(app.get_by_text("Expected 16000 Hz", exact=False)).to_be_visible()
+    expect(app.get_by_text("Actual sample rate: 16000 Hz")).to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_sample_rate_48khz(app: Page):
+    """Test recording audio at 48 kHz (high quality) sample rate."""
+    grant_microphone_permissions(app)
+    goto_audio_sample_rate_test(app)
+
+    # Select 48 kHz from dropdown
+    selectbox = app.get_by_test_id("stSelectbox").first
+    selectbox.click()
+    app.get_by_text("48 kHz (High quality)").click()
+    wait_for_app_run(app)
+
+    # Verify the selection changed
+    expect(selectbox).to_contain_text("48 kHz (High quality)")
+
+    # Get the chat input for audio recording
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+    # Verify the validation message appears
+    expect(
+        app.get_by_text("Sample rate validation PASSED", exact=False)
+    ).to_be_visible()
+    expect(app.get_by_text("Expected 48000 Hz", exact=False)).to_be_visible()
+    expect(app.get_by_text("Actual sample rate: 48000 Hz")).to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_sample_rate_8khz(app: Page):
+    """Test recording audio at 8 kHz (low quality) sample rate."""
+    grant_microphone_permissions(app)
+    goto_audio_sample_rate_test(app)
+
+    # Select 8 kHz from dropdown
+    selectbox = app.get_by_test_id("stSelectbox").first
+    selectbox.click()
+    app.get_by_text("8 kHz (Low quality)").click()
+    wait_for_app_run(app)
+
+    # Verify the selection changed
+    expect(selectbox).to_contain_text("8 kHz (Low quality)")
+
+    # Get the chat input for audio recording
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+    # Verify the validation message appears
+    expect(
+        app.get_by_text("Sample rate validation PASSED", exact=False)
+    ).to_be_visible()
+    expect(app.get_by_text("Expected 8000 Hz", exact=False)).to_be_visible()
+    expect(app.get_by_text("Actual sample rate: 8000 Hz")).to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_sample_rate_browser_default(app: Page):
+    """Test recording audio with browser default sample rate (None)."""
+    grant_microphone_permissions(app)
+    goto_audio_sample_rate_test(app)
+
+    # Select browser default from dropdown
+    selectbox = app.get_by_test_id("stSelectbox").first
+    selectbox.click()
+    app.get_by_text("Browser default (None)").click()
+    wait_for_app_run(app)
+
+    # Verify the selection changed
+    expect(selectbox).to_contain_text("Browser default (None)")
+
+    # Get the chat input for audio recording
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+    # Verify the info message appears (browser default doesn't validate against expected)
+    expect(app.get_by_text("Browser default used:", exact=False)).to_be_visible()
+    # Verify actual sample rate is displayed (value may vary by browser)
+    expect(app.get_by_text("Actual sample rate:", exact=False)).to_be_visible()
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_sample_rate_dropdown_interaction(app: Page):
+    """Test that changing sample rate updates the chat input placeholder."""
+    grant_microphone_permissions(app)
+    goto_audio_sample_rate_test(app)
+
+    # Get the chat input
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Check initial placeholder (16 kHz default)
+    textarea = chat_input.locator("textarea").first
+    expect(textarea).to_have_attribute(
+        "placeholder", "Chat input (audio with 16 kHz (Default))"
+    )
+
+    # Change to 44.1 kHz
+    selectbox = app.get_by_test_id("stSelectbox").first
+    selectbox.click()
+    app.get_by_text("44.1 kHz (CD quality)").click()
+    wait_for_app_run(app)
+
+    # Verify placeholder updated
+    expect(textarea).to_have_attribute(
+        "placeholder", "Chat input (audio with 44.1 kHz (CD quality))"
+    )
