@@ -1106,6 +1106,16 @@ export class App extends PureComponent<Props, State> {
         newDialog,
         sessionEvent.scriptCompilationException?.message ?? "No message"
       )
+    } else if (sessionEvent.type === "scriptRuntimeException") {
+      // Send runtime exception to parent iframe via CLIENT_ERROR
+      const exception = sessionEvent.scriptRuntimeException
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "CLIENT_ERROR",
+        component: "Script Runtime",
+        error: exception?.type ?? "RuntimeError",
+        message: exception?.message ?? "An uncaught exception occurred",
+        source: "runtime",
+      })
     } else if (sessionEvent.type === "scriptChangedOnDisk") {
       this.setState({ scriptChangedOnDisk: true })
     }

@@ -570,8 +570,10 @@ class AppSession:
             ENQUEUE_FORWARD_MSG event.
 
         exception : BaseException | None
-            An exception thrown during compilation. Set only for the
-            SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
+            An exception thrown during compilation or runtime. Set for the
+            SCRIPT_STOPPED_WITH_COMPILE_ERROR event (compilation error),
+            and optionally for SCRIPT_STOPPED_WITH_SUCCESS and
+            FRAGMENT_STOPPED_WITH_SUCCESS events (runtime exception).
 
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ScriptRunner's final ClientState. Set only for the
@@ -659,6 +661,15 @@ class AppSession:
                 if self._local_sources_watcher:
                     self._local_sources_watcher.update_watched_modules()
                     self._local_sources_watcher.update_watched_pages()
+
+                # If the script had an uncaught runtime exception, send it to the frontend
+                # so it can be forwarded to the parent iframe.
+                if exception is not None:
+                    msg = ForwardMsg()
+                    exception_utils.marshall(
+                        msg.session_event.script_runtime_exception, exception
+                    )
+                    self._enqueue_forward_msg(msg)
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.

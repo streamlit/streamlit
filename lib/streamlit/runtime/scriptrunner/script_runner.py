@@ -715,7 +715,9 @@ class ScriptRunner:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
                     _LOGGER.debug("Failed to create page profile", exc_info=ex)
-            self._on_script_finished(ctx, finished_event, premature_stop)
+            self._on_script_finished(
+                ctx, finished_event, premature_stop, uncaught_exception
+            )
 
             # # Use _log_if_error() to make sure we never ever ever stop running the
             # # script without meaning to.
@@ -727,7 +729,11 @@ class ScriptRunner:
                 break
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        uncaught_exception: Exception | None,
     ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
@@ -738,7 +744,7 @@ class ScriptRunner:
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, exception=uncaught_exception)
 
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.

@@ -133,14 +133,18 @@ class LocalScriptRunner(ScriptRunner):
         return any(e == ScriptRunnerEvent.SHUTDOWN for e in self.events)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        uncaught_exception: Exception | None,
     ) -> None:
         if not premature_stop:
             self._session_state.on_script_finished(ctx.widget_ids_this_run)
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, exception=uncaught_exception)
 
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.

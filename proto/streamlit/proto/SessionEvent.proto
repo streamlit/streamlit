@@ -35,5 +35,9 @@ message SessionEvent {
     // Script compilation failed with an exception.
     // We can't start running the script.
     Exception script_compilation_exception = 3;
+
+    // Script runtime failed with an uncaught exception.
+    // The script was running but encountered an error during execution.
+    Exception script_runtime_exception = 4;
   }
 }
