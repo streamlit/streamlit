@@ -92,7 +92,7 @@ describe("updateWidgetMgrState", () => {
 
   const makeWidgetMgr = (): WidgetStateManager =>
     ({
-      setStringValue: vi.fn(),
+      setStringArrayValue: vi.fn(),
     }) as unknown as WidgetStateManager
 
   it("commits values within bounds", () => {
@@ -104,9 +104,9 @@ describe("updateWidgetMgrState", () => {
 
     updateWidgetMgrState(element, widgetMgr, vws, "fragment")
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       element,
-      "2024/06/01, 12:00",
+      ["2024/06/01, 12:00"],
       { fromUi: true },
       "fragment"
     )
@@ -121,7 +121,7 @@ describe("updateWidgetMgrState", () => {
 
     updateWidgetMgrState(element, widgetMgr, vws)
 
-    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   it("allows null values", () => {
@@ -133,9 +133,9 @@ describe("updateWidgetMgrState", () => {
 
     updateWidgetMgrState(element, widgetMgr, vws)
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       element,
-      null,
+      [],
       { fromUi: false },
       undefined
     )
