@@ -213,10 +213,22 @@ function shouldBlockShortcutInInput(
   return false
 }
 
+/**
+ * Convert a list of shortcut tokens to a hotkeys sequence.
+ *
+ * @param tokens - The list of shortcut tokens.
+ * @returns The hotkeys sequence.
+ */
 function toHotkeysSequenceFromTokens(tokens: string[]): string {
   return tokens.map(token => (token === "cmd" ? "command" : token)).join("+")
 }
 
+/**
+ * Build the hotkeys sequences for a parsed shortcut.
+ *
+ * @param parsedShortcut - The parsed shortcut.
+ * @returns The hotkeys sequences.
+ */
 function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
   if (!parsedShortcut) {
     return []
@@ -242,6 +254,13 @@ function buildSequences(parsedShortcut?: ShortcutTokens): string[] {
   return [toHotkeysSequenceFromTokens(uniqueTokens)]
 }
 
+/**
+ * Get the label for a modifier.
+ *
+ * @param modifier - The modifier.
+ * @param isMac - Whether the platform is Mac.
+ * @returns The modifier label.
+ */
 function getModifierLabel(
   modifier: string,
   isMac: boolean
@@ -265,6 +284,12 @@ function getModifierLabel(
   return MODIFIER_DISPLAY[modifier as (typeof MODIFIER_ORDER)[number]]
 }
 
+/**
+ * Get the label for a key.
+ *
+ * @param baseKey - The key.
+ * @returns The key label.
+ */
 function getKeyLabel(baseKey: string): string {
   if (KEY_DISPLAY[baseKey]) {
     return KEY_DISPLAY[baseKey]
