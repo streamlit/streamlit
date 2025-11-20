@@ -910,7 +910,7 @@ class ArrowMixin:
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
-        ... important::
+        .. important::
             ``add_rows`` is deprecated and might be removed in a future version.
             If you have a specific use-case that requires the ``add_rows``
             functionality, please tell us via this
