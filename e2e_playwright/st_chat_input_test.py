@@ -1610,4 +1610,4 @@ def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: 
         app.get_by_text("Sample rate validation PASSED", exact=False)
     ).to_be_visible()
     expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
-    expect(app.get_by_text(f"Actual sample rate: {expected_hz} Hz")).to_be_visible()
+    expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()
