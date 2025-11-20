@@ -19,10 +19,13 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import {
+  DeferredFileResponse,
+  DownloadButton as DownloadButtonProto,
+} from "@streamlit/protobuf"
 
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -30,6 +33,14 @@ import DownloadButton, { Props } from "./DownloadButton"
 
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
+
+const anchorClickSpy = vi
+  .spyOn(HTMLAnchorElement.prototype, "click")
+  .mockImplementation(() => {})
+
+afterAll(() => {
+  anchorClickSpy.mockRestore()
+})
 
 const getProps = (
   elementProps: Partial<DownloadButtonProto> = {},
@@ -168,5 +179,244 @@ describe("DownloadButton widget", () => {
       props.element.url,
       "Download Button"
     )
+  })
+
+  describe("Deferred downloads", () => {
+    it("renders deferred download button", () => {
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      render(<DownloadButton {...props} />)
+
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toBeInTheDocument()
+    })
+
+    it("checks URL once deferred download URL resolves", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "/media/generated_file",
+          errorMsg: "",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      props.endpoints.buildDownloadUrl = vi.fn(url => `resolved${url}`)
+
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      // Should not check before the download starts.
+      expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should request deferred file
+      expect(mockRequestDeferredFile).toHaveBeenCalledWith("test_file_id")
+
+      await vi.waitFor(() => {
+        expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(
+          "resolved/media/generated_file",
+          "Download Button"
+        )
+      })
+    })
+
+    it("handles successful deferred download", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "/media/generated_file",
+          errorMsg: "",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should request deferred file
+      expect(mockRequestDeferredFile).toHaveBeenCalledWith("test_file_id")
+
+      // Should build download URL with returned URL
+      await vi.waitFor(() => {
+        expect(props.endpoints.buildDownloadUrl).toHaveBeenCalledWith(
+          "/media/generated_file"
+        )
+      })
+    })
+
+    it("shows loading state during deferred download", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi.fn().mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve(
+                  DeferredFileResponse.create({
+                    url: "/media/generated_file",
+                    errorMsg: "",
+                  })
+                ),
+              100
+            )
+          )
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+        label: "Download File",
+      })
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should show spinner and keep original label
+      await screen.findByTestId("stSpinnerIcon")
+      expect(screen.getByText("Download File")).toBeInTheDocument()
+
+      // Button should be disabled during loading
+      expect(downloadButton).toBeDisabled()
+
+      // Wait for completion
+      await vi.waitFor(() => {
+        expect(mockRequestDeferredFile).toHaveBeenCalled()
+      })
+    })
+
+    it("displays error message when deferred download fails", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "",
+          errorMsg: "Callable execution failed: Test error",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should display error message
+      await vi.waitFor(() => {
+        const error = screen.getByTestId("stDownloadButtonError")
+        expect(error).toHaveTextContent(
+          "Callable execution failed: Test error"
+        )
+      })
+    })
+
+    it("displays error when request promise rejects", async () => {
+      const user = userEvent.setup()
+      const mockRequestDeferredFile = vi
+        .fn()
+        .mockRejectedValue(new Error("Network error")) as (
+        fileId: string
+      ) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should display error message
+      await vi.waitFor(() => {
+        const error = screen.getByTestId("stDownloadButtonError")
+        expect(error).toHaveTextContent("Network error")
+      })
+    })
+
+    it("clears error after 5 seconds", async () => {
+      vi.useFakeTimers()
+      const user = userEvent.setup({ delay: null })
+      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
+        DeferredFileResponse.create({
+          url: "",
+          errorMsg: "Test error",
+        })
+      ) as (fileId: string) => Promise<DeferredFileResponse>
+
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+        label: "Download File",
+      })
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Wait for error to appear
+      await vi.waitFor(() => {
+        expect(screen.getByTestId("stDownloadButtonError")).toBeInTheDocument()
+      })
+
+      // Fast-forward 5 seconds
+      vi.advanceTimersByTime(5000)
+
+      // Error should be cleared
+      await vi.waitFor(() => {
+        expect(
+          screen.queryByTestId("stDownloadButtonError")
+        ).not.toBeInTheDocument()
+      })
+
+      vi.useRealTimers()
+    })
+
+    it("shows error when requestDeferredFile is not provided", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        deferredFileId: "test_file_id",
+        url: "",
+      })
+      // Don't provide requestDeferredFile prop
+      render(<DownloadButton {...props} />)
+
+      const downloadButton = screen.getByRole("button")
+      await user.click(downloadButton)
+
+      // Should display configuration error
+      await vi.waitFor(() => {
+        const error = screen.getByTestId("stDownloadButtonError")
+        expect(error).toHaveTextContent(
+          "Deferred download not properly configured"
+        )
+      })
+    })
   })
 })

@@ -2707,6 +2707,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"data": {"items": ["plot_3"], "descriptions": ["This plot_4 shows..."]}}',
                 '{"data": {"items": ["plot_1"], "descriptions": ["This plot_4 shows..."]}}',
             ),  # Only replace actual IDs, not text content
+            (
+                "param_",
+                '{"config": {"settings": ["param_e4f9", "param_a1b2c3"]}}',
+                '{"config": {"settings": ["param_1", "param_2"]}}',
+            ),  # Hash-based suffixes should be replaced as well
+            (
+                "view_",
+                '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
+                '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
+            ),  # Hash-based suffixes with duplicates
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):

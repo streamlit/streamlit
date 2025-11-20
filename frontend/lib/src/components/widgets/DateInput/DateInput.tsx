@@ -33,6 +33,7 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -403,19 +404,27 @@ function DateInput({
                   },
                 },
                 Root: {
-                  style: {
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                    paddingRight: spacing.twoXS,
+                  style: ({ $isFocused }: { $isFocused: boolean }) => {
+                    const borderColor = getBorderColor(colors, $isFocused)
+                    return {
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      borderLeftWidth: sizes.borderWidth,
+                      borderRightWidth: sizes.borderWidth,
+                      borderTopWidth: sizes.borderWidth,
+                      borderBottomWidth: sizes.borderWidth,
+                      paddingRight: spacing.twoXS,
 
-                    // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                    // with our dark theme - we handle error state coloring manually here
-                    ...(error && {
-                      backgroundColor: colors.redBackgroundColor,
-                    }),
+                      borderTopColor: borderColor,
+                      borderRightColor: borderColor,
+                      borderBottomColor: borderColor,
+                      borderLeftColor: borderColor,
+
+                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
+                      // with our dark theme - we handle error state coloring manually here
+                      ...(error && {
+                        backgroundColor: colors.redBackgroundColor,
+                      }),
+                    }
                   },
                 },
                 ClearIcon: {

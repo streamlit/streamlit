@@ -23,7 +23,7 @@ import {
   StyledLabelHelpWrapper,
 } from "~lib/components/shared/TooltipIcon"
 
-import { StyledText } from "./styled-components"
+import { StyledInlineHelpIcon, StyledText } from "./styled-components"
 
 export interface TextProps {
   element: TextProto
@@ -35,8 +35,14 @@ export interface TextProps {
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   return (
     <StyledLabelHelpWrapper className="stText" data-testid="stText">
-      <StyledText>{element.body}</StyledText>
-      {element.help && <InlineTooltipIcon content={element.help} />}
+      <StyledText>
+        {element.body}
+        {element.help && (
+          <StyledInlineHelpIcon>
+            <InlineTooltipIcon content={element.help} />
+          </StyledInlineHelpIcon>
+        )}
+      </StyledText>
     </StyledLabelHelpWrapper>
   )
 }

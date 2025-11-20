@@ -2,6 +2,7 @@
   "name": "eslint-plugin-streamlit-custom",
   "license": "Apache-2.0",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "files": [
