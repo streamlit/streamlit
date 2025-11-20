@@ -769,7 +769,7 @@ def assert_snapshot(
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
         style: str | None = None,
-        show_app_header: bool | None = False,
+        show_app_header: bool | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
