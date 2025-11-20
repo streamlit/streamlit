@@ -575,9 +575,7 @@ def test_uploads_and_deletes_single_file(
 
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
-
-    # Scroll chat input to top to ensure uploaded files aren't behind header
-    chat_input.scroll_into_view_if_needed()
+    uploaded_files.scroll_into_view_if_needed()
 
     # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
     reset_hovering(themed_app)
@@ -1574,5 +1572,3 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     textarea.fill("Error cleared")
     # After typing, tooltip should not appear on hover anymore
     expect(tooltip).not_to_be_visible()
-
-
