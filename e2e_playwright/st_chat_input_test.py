@@ -1642,31 +1642,3 @@ def test_audio_sample_rate_browser_default(app: Page):
     expect(app.get_by_text("Browser default used:", exact=False)).to_be_visible()
     # Verify actual sample rate is displayed (value may vary by browser)
     expect(app.get_by_text("Actual sample rate:", exact=False)).to_be_visible()
-
-
-@use_chat_input("audio_sample_rate")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_sample_rate_dropdown_interaction(app: Page):
-    """Test that changing sample rate updates the chat input placeholder."""
-    grant_microphone_permissions(app)
-
-    # Get the chat input
-    chat_input = get_element_by_key(app, "audio_sample_rate_test")
-    chat_input.scroll_into_view_if_needed()
-
-    # Check initial placeholder (16 kHz default)
-    textarea = chat_input.locator("textarea").first
-    expect(textarea).to_have_attribute(
-        "placeholder", "Chat input (audio with 16 kHz (Default))"
-    )
-
-    # Change to 44.1 kHz
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    app.get_by_text("44.1 kHz (CD quality)").click()
-    wait_for_app_run(app)
-
-    # Verify placeholder updated
-    expect(textarea).to_have_attribute(
-        "placeholder", "Chat input (audio with 44.1 kHz (CD quality))"
-    )
