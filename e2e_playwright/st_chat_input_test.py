@@ -1574,26 +1574,11 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     expect(tooltip).not_to_be_visible()
 
 
-def goto_audio_sample_rate_test(app: Page) -> None:
-    """Navigate to the audio sample rate test widget."""
-    parsed = urlparse(app.url)
-    if parsed.port is None:
-        raise ValueError(f"Could not parse port from URL: {app.url}")
-
-    existing_params = parse_qs(parsed.query)
-    params = {k: v[0] for k, v in existing_params.items() if v}
-    params["key"] = "audio_sample_rate"
-
-    query_string = urlencode(params)
-    app.goto(f"http://localhost:{parsed.port}/?{query_string}")
-    wait_for_app_loaded(app)
-
-
+@use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_audio_sample_rate_16khz(app: Page):
     """Test recording audio at 16 kHz (default) sample rate."""
     grant_microphone_permissions(app)
-    goto_audio_sample_rate_test(app)
 
     # Verify the default selection is 16 kHz
     selectbox = app.get_by_test_id("stSelectbox").first
@@ -1614,11 +1599,11 @@ def test_audio_sample_rate_16khz(app: Page):
     expect(app.get_by_text("Actual sample rate: 16000 Hz")).to_be_visible()
 
 
+@use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_audio_sample_rate_48khz(app: Page):
     """Test recording audio at 48 kHz (high quality) sample rate."""
     grant_microphone_permissions(app)
-    goto_audio_sample_rate_test(app)
 
     # Select 48 kHz from dropdown
     selectbox = app.get_by_test_id("stSelectbox").first
@@ -1644,11 +1629,11 @@ def test_audio_sample_rate_48khz(app: Page):
     expect(app.get_by_text("Actual sample rate: 48000 Hz")).to_be_visible()
 
 
+@use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_audio_sample_rate_8khz(app: Page):
     """Test recording audio at 8 kHz (low quality) sample rate."""
     grant_microphone_permissions(app)
-    goto_audio_sample_rate_test(app)
 
     # Select 8 kHz from dropdown
     selectbox = app.get_by_test_id("stSelectbox").first
@@ -1674,11 +1659,11 @@ def test_audio_sample_rate_8khz(app: Page):
     expect(app.get_by_text("Actual sample rate: 8000 Hz")).to_be_visible()
 
 
+@use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_audio_sample_rate_browser_default(app: Page):
     """Test recording audio with browser default sample rate (None)."""
     grant_microphone_permissions(app)
-    goto_audio_sample_rate_test(app)
 
     # Select browser default from dropdown
     selectbox = app.get_by_test_id("stSelectbox").first
@@ -1702,11 +1687,11 @@ def test_audio_sample_rate_browser_default(app: Page):
     expect(app.get_by_text("Actual sample rate:", exact=False)).to_be_visible()
 
 
+@use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_audio_sample_rate_dropdown_interaction(app: Page):
     """Test that changing sample rate updates the chat input placeholder."""
     grant_microphone_permissions(app)
-    goto_audio_sample_rate_test(app)
 
     # Get the chat input
     chat_input = get_element_by_key(app, "audio_sample_rate_test")
