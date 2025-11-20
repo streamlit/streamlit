@@ -801,8 +801,8 @@ def assert_snapshot(
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
 
-        if not show_app_header and isinstance(element, Page):
-            # Make the app header background transparent, if its a page
+        if not show_app_header and not isinstance(element, Page):
+            # Make the app header background transparent, if it's a page
             # (fullscreen screenshot) we assume we want to always show the
             # app header.
             if style is None:
