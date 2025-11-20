@@ -100,6 +100,14 @@ export default defineConfig({
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
+      "^.*/auth/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/oauth2callback": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
     },
   },
   build: {

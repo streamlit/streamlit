@@ -175,3 +175,26 @@ class StringUtilTest(unittest.TestCase):
         """Test that from_number raises TypeError for invalid objects."""
         with pytest.raises(TypeError):
             string_util.from_number(None)
+
+    @parameterized.expand(
+        [
+            (None, ""),
+            ("spinner", "spinner"),
+            ("😃", "😃"),
+            (":material/thumb_up:", ":material/thumb_up:"),
+        ]
+    )
+    def test_validate_icon_or_emoji(self, icon, expected):
+        """Test streamlit.string_util.validate_icon_or_emoji."""
+        assert string_util.validate_icon_or_emoji(icon) == expected
+
+    @parameterized.expand(
+        [
+            ("invalid"),
+            (":material/invalid:"),
+        ]
+    )
+    def test_validate_icon_or_emoji_raises(self, icon):
+        """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
+        with pytest.raises(StreamlitAPIException):
+            string_util.validate_icon_or_emoji(icon)
