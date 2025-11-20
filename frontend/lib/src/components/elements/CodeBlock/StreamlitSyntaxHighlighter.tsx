@@ -19,6 +19,7 @@ import React, { memo, ReactElement, useCallback, useMemo } from "react"
 import {
   createElement,
   Prism as SyntaxHighlighter,
+  SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
@@ -36,6 +37,12 @@ export interface StreamlitSyntaxHighlighterProps {
   height?: number
 }
 
+interface RendererInput {
+  rows: SyntaxHighlighterProps["children"] extends Array<infer R> ? R[] : never
+  stylesheet: Record<string, unknown>
+  useInlineStyles: boolean
+}
+
 function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
@@ -43,14 +50,16 @@ function StreamlitSyntaxHighlighter({
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
-    ({ rows, stylesheet, useInlineStyles }: any): any =>
-      rows.map((row: any, index: any): any => {
-        const rowChildren = row.children
+    (input: RendererInput): ReactElement[] =>
+      input.rows.map((row, index): ReactElement => {
+        // @ts-expect-error: react-syntax-highlighter internal node shape
+        const rowChildren = row.children as unknown[]
 
-        if (rowChildren) {
+        if (Array.isArray(rowChildren)) {
           const lineNumberElement = rowChildren.shift()
 
           if (lineNumberElement) {
+            // @ts-expect-error: react-syntax-highlighter internal node shape
             row.children = [
               lineNumberElement,
               {
@@ -64,9 +73,10 @@ function StreamlitSyntaxHighlighter({
         }
 
         return createElement({
+          // @ts-expect-error: node type provided by syntax-highlighter
           node: row,
-          stylesheet,
-          useInlineStyles,
+          stylesheet: input.stylesheet,
+          useInlineStyles: input.useInlineStyles,
           key: index,
         })
       }),
@@ -74,7 +84,7 @@ function StreamlitSyntaxHighlighter({
   )
 
   const text = useMemo(() => {
-    if (children == null) {
+    if (children === undefined || children === null) {
       return ""
     }
 
@@ -82,15 +92,13 @@ function StreamlitSyntaxHighlighter({
 
     if (Array.isArray(children)) {
       value = children.join("")
-    } else if (typeof children === "string") {
-      value = children
     } else {
-      return ""
+      value = children
     }
 
     const trimmed = value.trim()
 
-    if (trimmed === "undefined" || trimmed === "" || trimmed === "null") {
+    if (trimmed === "" || trimmed === "undefined" || trimmed === "null") {
       return ""
     }
 
@@ -113,6 +121,7 @@ function StreamlitSyntaxHighlighter({
           {text}
         </SyntaxHighlighter>
       </StyledPre>
+
       {text.trim() !== "" && (
         <StyledCopyButtonContainer>
           <CopyButton text={text} />
