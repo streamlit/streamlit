@@ -40,8 +40,9 @@ class BokehMixin:
         more about Bokeh at https://bokeh.pydata.org.
 
         .. Important::
-            This command has been deprecated and removed. Please use the
-            |streamlit-bokeh|_ custom component instead.
+            This command has been deprecated and removed. Please use our custom
+            component, |streamlit-bokeh|_, instead. Calling st.bokeh_chart will
+            do nothing.
 
         .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
         .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
