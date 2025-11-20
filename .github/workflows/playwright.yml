@@ -29,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 35
 
-
     defaults:
       run:
         shell: bash
