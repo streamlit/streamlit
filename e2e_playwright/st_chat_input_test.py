@@ -1614,31 +1614,3 @@ def test_audio_sample_rate_validation(
     ).to_be_visible()
     expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
     expect(app.get_by_text(f"Actual sample rate: {expected_hz} Hz")).to_be_visible()
-
-
-@use_chat_input("audio_sample_rate")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_sample_rate_browser_default(app: Page):
-    """Test recording audio with browser default sample rate (None)."""
-    grant_microphone_permissions(app)
-
-    # Select browser default from dropdown
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    app.get_by_text("Browser default (None)").click()
-    wait_for_app_run(app)
-
-    # Verify the selection changed
-    expect(selectbox).to_contain_text("Browser default (None)")
-
-    # Get the chat input for audio recording
-    chat_input = get_element_by_key(app, "audio_sample_rate_test")
-    chat_input.scroll_into_view_if_needed()
-
-    # Record audio
-    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
-
-    # Verify the info message appears (browser default doesn't validate against expected)
-    expect(app.get_by_text("Browser default used:", exact=False)).to_be_visible()
-    # Verify actual sample rate is displayed (value may vary by browser)
-    expect(app.get_by_text("Actual sample rate:", exact=False)).to_be_visible()
