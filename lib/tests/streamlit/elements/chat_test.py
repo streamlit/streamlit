@@ -732,4 +732,4 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that invalid audio_sample_rate raises an error."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.chat_input(accept_audio=True, audio_sample_rate=12345)
-        assert "audio_sample_rate must be one of" in str(exc.value)
+        assert "Invalid audio_sample_rate" in str(exc.value)
