@@ -515,6 +515,7 @@ class ChatMixin:
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
