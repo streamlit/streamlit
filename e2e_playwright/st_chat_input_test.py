@@ -1591,7 +1591,8 @@ def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: 
     # Select the specified sample rate from dropdown
     selectbox = app.get_by_test_id("stSelectbox").first
     selectbox.click()
-    app.get_by_text(option_text).click()
+    # Click the option in the dropdown (not the selected value display)
+    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(option_text).click()
     wait_for_app_run(app)
 
     # Verify the selection
