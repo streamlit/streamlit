@@ -28,4 +28,12 @@ export const StyledUISelect = styled.div(({ theme }) => ({
     color: theme.colors.primary,
     backgroundColor: `${theme.colors.secondaryBg} !important`,
   },
+  // Style the "Select all" option
+  "[data-id='__SELECT_ALL__']": {
+    fontWeight: theme.fontWeights.bold,
+    borderBottom: `1px solid ${theme.colors.fadedText10}`,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.primary,
+    backgroundColor: `${theme.colors.secondaryBg} !important`,
+  },
 }))
