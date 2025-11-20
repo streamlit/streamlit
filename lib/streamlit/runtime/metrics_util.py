@@ -155,6 +155,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "authlib",
     "fastapi",
     "starlette",
+    "uvloop",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
