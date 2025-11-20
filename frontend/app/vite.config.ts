@@ -69,10 +69,14 @@ export default defineConfig({
       ? [
           analyzer({
             analyzerMode: "json",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.json" will be created in the project root (frontend/app/bundle-analysis.json).
             fileName: "../bundle-analysis.json",
           }),
           analyzer({
             analyzerMode: "static",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.html" will be created in the project root (frontend/app/bundle-analysis.html).
             fileName: "../bundle-analysis.html",
           }),
         ]
