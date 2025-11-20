@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
+import wave
+
 import streamlit as st
 from streamlit import config, runtime
 
@@ -238,9 +241,6 @@ if key is None or key == "audio_column":
                 st.audio(audio_column_b_value.audio)
 
 if key is None or key == "audio_sample_rate":
-    import io
-    import wave
-
     st.subheader("Audio Sample Rate Testing")
 
     # Dropdown to select sample rate
