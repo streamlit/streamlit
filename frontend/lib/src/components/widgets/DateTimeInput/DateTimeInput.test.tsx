@@ -64,7 +64,7 @@ const getProps = (
   element: DateTimeInputProto.create({
     id: "123",
     label: "Label",
-    default: "2025/11/19, 16:45",
+    default: ["2025/11/19, 16:45"],
     min: "2015/11/19, 00:00",
     max: "2035/11/19, 23:59",
     step: 900,
@@ -113,7 +113,7 @@ describe("DateTimeInput widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    const spy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateTimeInput {...props} />)
 
@@ -136,7 +136,7 @@ describe("DateTimeInput widget", () => {
   it("sets the widget value on change", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    const spy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateTimeInput {...props} />)
 
@@ -159,7 +159,7 @@ describe("DateTimeInput widget", () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
         props.element,
-        "2026/01/01, 09:30",
+        ["2026/01/01, 09:30"],
         { fromUi: true },
         undefined
       )
@@ -168,7 +168,7 @@ describe("DateTimeInput widget", () => {
 
   it("clears the widget value", async () => {
     const user = userEvent.setup()
-    const props = getProps({ default: "" })
+    const props = getProps({ default: [] })
     render(<DateTimeInput {...props} />)
 
     const inputField = screen.getByTestId("stDateTimeInputField")
@@ -196,9 +196,9 @@ describe("DateTimeInput widget", () => {
     const props = { ...getProps({ formId: "form" }), fragmentId: "fragment" }
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    props.widgetMgr.setStringValue(
+    props.widgetMgr.setStringArrayValue(
       props.element,
-      "2026/02/01, 10:15",
+      ["2026/02/01, 10:15"],
       { fromUi: true },
       props.fragmentId
     )
@@ -317,7 +317,7 @@ describe("DateTimeInput widget", () => {
 
   describe("Date parsing edge cases", () => {
     it("handles empty string as null date", () => {
-      const props = getProps({ default: "" })
+      const props = getProps({ default: [] })
       render(<DateTimeInput {...props} />)
 
       const inputField = screen.getByTestId("stDateTimeInputField")
@@ -325,7 +325,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("initializes with default value", () => {
-      const props = getProps({ default: "2024/03/15, 10:30" })
+      const props = getProps({ default: ["2024/03/15, 10:30"] })
       render(<DateTimeInput {...props} />)
 
       const inputField = screen.getByTestId("stDateTimeInputField")
@@ -345,7 +345,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with DD/MM/YYYY format", () => {
       const props = getProps({
         format: "DD/MM/YYYY",
-        default: "2025/11/19, 16:45",
+        default: ["2025/11/19, 16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -357,7 +357,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with MM-DD-YYYY format", () => {
       const props = getProps({
         format: "MM-DD-YYYY",
-        default: "2025/11/19, 16:45",
+        default: ["2025/11/19, 16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -369,7 +369,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with YYYY-MM-DD format", () => {
       const props = getProps({
         format: "YYYY-MM-DD",
-        default: "2025/11/19, 16:45",
+        default: ["2025/11/19, 16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -409,7 +409,7 @@ describe("DateTimeInput widget", () => {
       const props = getProps({
         min: "2025/11/19, 09:00",
         max: "2025/11/20, 17:00",
-        default: "2025/11/19, 12:00",
+        default: ["2025/11/19, 12:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -435,7 +435,7 @@ describe("DateTimeInput widget", () => {
       const props = getProps({
         min: "2025/11/19, 09:00",
         max: "2025/11/20, 17:00",
-        default: "2025/11/20, 15:00",
+        default: ["2025/11/20, 15:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -460,7 +460,7 @@ describe("DateTimeInput widget", () => {
       const props = getProps({
         min: "2025/11/19, 09:00",
         max: "2025/11/21, 17:00",
-        default: "2025/11/20, 12:00",
+        default: ["2025/11/20, 12:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -496,7 +496,7 @@ describe("DateTimeInput widget", () => {
 
   describe("Clearable behavior", () => {
     it("is clearable when default is empty and not disabled", () => {
-      const props = getProps({ default: "" }, false)
+      const props = getProps({ default: [] }, false)
       render(<DateTimeInput {...props} />)
 
       // Component should render in clearable state
@@ -504,7 +504,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("is not clearable when default has value", () => {
-      const props = getProps({ default: "2025/11/19, 16:45" }, false)
+      const props = getProps({ default: ["2025/11/19, 16:45"] }, false)
       render(<DateTimeInput {...props} />)
 
       // Component should render in non-clearable state
@@ -512,7 +512,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("is not clearable when disabled even with empty default", () => {
-      const props = getProps({ default: "" }, true)
+      const props = getProps({ default: [] }, true)
       render(<DateTimeInput {...props} />)
 
       // Component should render in non-clearable state
@@ -526,9 +526,9 @@ describe("DateTimeInput widget", () => {
       const props = getProps({
         min: "2020/01/01, 00:00",
         max: "2030/12/31, 23:59",
-        default: "2025/06/15, 12:00",
+        default: ["2025/06/15, 12:00"],
       })
-      const spy = vi.spyOn(props.widgetMgr, "setStringValue")
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<DateTimeInput {...props} />)
 
@@ -554,7 +554,7 @@ describe("DateTimeInput widget", () => {
         ...getProps(),
         fragmentId: "test-fragment-id",
       }
-      const spy = vi.spyOn(props.widgetMgr, "setStringValue")
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<DateTimeInput {...props} />)
 

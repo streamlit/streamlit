@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,9 +49,10 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.format == "YYYY/MM/DD"
         assert proto.step == timedelta(minutes=15).seconds
         assert not proto.disabled
-        assert proto.HasField("default")
+        assert len(proto.default) == 1
+        assert proto.default[0] is not None
 
-        parsed_default = datetime.strptime(proto.default, DATETIME_FORMAT)
+        parsed_default = datetime.strptime(proto.default[0], DATETIME_FORMAT)
         assert parsed_default <= datetime.now()
 
         parsed_min = datetime.strptime(proto.min, DATETIME_FORMAT)
@@ -64,8 +65,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.date_time_input
         assert proto.label == "the label"
-        assert proto.default == ""
-        assert not proto.HasField("default")
+        assert not proto.default
 
     @parameterized.expand(
         [
@@ -95,7 +95,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.date_time_input
         assert proto.label == "the label"
-        assert proto.default == expected.strftime(DATETIME_FORMAT)
+        assert proto.default[0] == expected.strftime(DATETIME_FORMAT)
 
     def test_min_max_values(self):
         """Test custom min/max values."""
@@ -274,6 +274,58 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             # max should be exactly the mocked now
             assert proto.max == "2024/01/01, 12:00"
 
+    def test_min_max_exception(self):
+        """Test that min_value > max_value raises an exception."""
+        min_value = datetime(2030, 1, 1, 12, 0)
+        max_value = datetime(2020, 1, 1, 12, 0)
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input("Label", min_value=min_value, max_value=max_value)
+
+    def test_initial_value_out_of_bounds_exception(self):
+        """Test that initial value out of min/max bounds raises an exception."""
+        min_value = datetime(2020, 1, 1, 12, 0)
+        max_value = datetime(2030, 1, 1, 12, 0)
+
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input(
+                "Label",
+                value=datetime(2010, 1, 1),
+                min_value=min_value,
+                max_value=max_value,
+            )
+
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input(
+                "Label",
+                value=datetime(2040, 1, 1),
+                min_value=min_value,
+                max_value=max_value,
+            )
+
+    def test_timezone_handling(self):
+        """Test that timezone-aware datetimes are normalized to naive."""
+        # Create a timezone-aware datetime
+        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+        st.datetime_input("Label", value=dt_aware)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        # Proto string should not contain timezone info
+        assert proto.default[0] == "2025/01/01, 12:00"
+
+    def test_invalid_value_exception(self):
+        """Test that passing an invalid value raises an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input("Label", value="invalid-date-string")
+
+    def test_help_and_disabled(self):
+        """Test help and disabled parameters."""
+        st.datetime_input("Label", help="The help text", disabled=True)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.help == "The help text"
+        assert proto.disabled is True
+
 
 def test_datetime_input_interaction():
     """Test interactions with an empty datetime_input widget."""
@@ -338,3 +390,48 @@ def test_datetime_input_min_max_validation():
     at = widget.set_value(valid_value).run()
     widget = at.datetime_input[0]
     assert widget.value == valid_value
+
+
+def test_datetime_input_callback():
+    """Test that on_change callback is triggered."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "called" not in st.session_state:
+            st.session_state.called = False
+
+        def callback():
+            st.session_state.called = True
+
+        st.datetime_input(
+            "Label", value=datetime(2020, 1, 1, 10, 0), on_change=callback, key="dt"
+        )
+
+    at = AppTest.from_function(script).run()
+
+    new_value = datetime(2025, 1, 1, 12, 0)
+    at.datetime_input[0].set_value(new_value).run()
+
+    assert at.session_state.called
+    assert at.session_state.dt == new_value
+
+
+def test_session_state_takes_precedence():
+    """Test that session state value takes precedence over default value."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "my_datetime" not in st.session_state:
+            st.session_state.my_datetime = datetime(2024, 12, 25, 10, 0)
+
+        st.datetime_input("Label", value=datetime(2025, 1, 1), key="my_datetime")
+
+    at = AppTest.from_function(script).run()
+    widget = at.datetime_input[0]
+    assert widget.value == datetime(2024, 12, 25, 10, 0)

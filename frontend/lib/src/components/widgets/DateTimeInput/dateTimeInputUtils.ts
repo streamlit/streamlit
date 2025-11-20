@@ -28,15 +28,18 @@ export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
 export const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: DateTimeInputProto
-): string | null => widgetMgr.getStringValue(element) ?? null
+): string | null => {
+  const values = widgetMgr.getStringArrayValue(element)
+  return values && values.length > 0 ? values[0] : null
+}
 
 export const getDefaultStateFromProto = (
   element: DateTimeInputProto
-): string | null => (element.default?.length ? element.default : null)
+): string | null => (element.default?.length ? element.default[0] : null)
 
 export const getCurrStateFromProto = (
   element: DateTimeInputProto
-): string | null => (element.value?.length ? element.value : null)
+): string | null => (element.value?.length ? element.value[0] : null)
 
 export const normalizeDateValue = (
   date: Date | (Date | null | undefined)[] | null | undefined
@@ -94,6 +97,15 @@ export const updateWidgetMgrState = (
   const minDateTime = stringToDate(element.min)
   const maxDateTime = stringToDate(element.max)
 
+  const setArrayValue = (val: string | null): void => {
+    widgetMgr.setStringArrayValue(
+      element,
+      val ? [val] : [],
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  }
+
   if (vws.value) {
     const dateValue = stringToDate(vws.value)
     if (dateValue) {
@@ -102,21 +114,11 @@ export const updateWidgetMgrState = (
         (maxDateTime && dateValue > maxDateTime)
 
       if (!isOutOfBounds) {
-        widgetMgr.setStringValue(
-          element,
-          vws.value,
-          { fromUi: vws.fromUi },
-          fragmentId
-        )
+        setArrayValue(vws.value)
       }
       return
     }
   }
 
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  setArrayValue(vws.value)
 }

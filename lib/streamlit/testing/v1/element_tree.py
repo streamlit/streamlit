@@ -1425,7 +1425,7 @@ class DateTimeInput(Widget):
         serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
         serialized_value = serde.serialize(self.value)
         if serialized_value is not None:
-            ws.string_value = serialized_value
+            ws.string_array_value.data[:] = serialized_value
         return ws
 
     @property

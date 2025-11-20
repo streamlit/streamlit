@@ -24,15 +24,16 @@ import "streamlit/proto/LabelVisibilityMessage.proto";
 message DateTimeInput {
   string id = 1;
   string label = 2;
-  optional string default = 3;
+  repeated string default = 3;
   string min = 4;
   string max = 5;
   string help = 6;
   string form_id = 7;
-  optional string value = 8;
+  repeated string value = 8;
   bool set_value = 9;
   bool disabled = 10;
   LabelVisibilityMessage label_visibility = 11;
   string format = 12;
   int64 step = 13;
+  bool is_range = 14;
 }

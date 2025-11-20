@@ -145,7 +145,8 @@ function DateTimeInput({
 
   const placeholder = `${element.format}, HH:MM`
 
-  const defaultValue = element.default ?? ""
+  const defaultValue =
+    element.default && element.default.length > 0 ? element.default[0] : ""
   const clearable = defaultValue.length === 0 && !disabled
 
   const error = useMemo(() => {

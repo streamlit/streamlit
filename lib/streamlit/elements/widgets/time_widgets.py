@@ -435,22 +435,22 @@ class DateTimeInputSerde:
     min: datetime
     max: datetime
 
-    def deserialize(self, ui_value: str | None) -> datetime | None:
-        if ui_value is None:
-            return self.value
-        deserialized = _normalize_datetime_value(
-            datetime.strptime(ui_value, _DATETIME_UI_FORMAT)
-        )
-        # Validate against min/max bounds
-        # If the value is out of bounds, return the previous valid value
-        if deserialized < self.min or deserialized > self.max:
-            return self.value
-        return deserialized
+    def deserialize(self, ui_value: list[str] | None) -> datetime | None:
+        if ui_value is not None and len(ui_value) > 0:
+            deserialized = _normalize_datetime_value(
+                datetime.strptime(ui_value[0], _DATETIME_UI_FORMAT)
+            )
+            # Validate against min/max bounds
+            # If the value is out of bounds, return the previous valid value
+            if deserialized < self.min or deserialized > self.max:
+                return self.value
+            return deserialized
+        return self.value
 
-    def serialize(self, v: datetime | None) -> str | None:
+    def serialize(self, v: datetime | None) -> list[str]:
         if v is None:
-            return None
-        return _datetime_to_proto_string(v)
+            return []
+        return [_datetime_to_proto_string(v)]
 
 
 @dataclass
@@ -873,7 +873,7 @@ class TimeWidgetsMixin:
 
             - ``"now"`` (default): The widget initializes with the current date and time.
             - A ``datetime.datetime`` object: The widget initializes with the given
-              datetime, ignoring any timezone information.
+              datetime, stripping any timezone information.
             - A ``datetime.date`` object: The widget initializes with the given date
               at ``00:00``.
             - A ``datetime.time`` object: The widget initializes with today's date
@@ -950,8 +950,8 @@ class TimeWidgetsMixin:
         Returns
         -------
         datetime.datetime or None
-            The current value of the datetime input widget or ``None`` if no value
-            has been selected.
+            The current value of the datetime input widget (timezone-naive) or ``None``
+            if no value has been selected.
 
         Example
         -------
@@ -1077,9 +1077,9 @@ class TimeWidgetsMixin:
         date_time_input_proto.id = element_id
         date_time_input_proto.label = label
         if default_value_for_proto is not None:
-            date_time_input_proto.default = _datetime_to_proto_string(
-                default_value_for_proto
-            )
+            date_time_input_proto.default[:] = [
+                _datetime_to_proto_string(default_value_for_proto)
+            ]
         date_time_input_proto.min = min_value_proto
         date_time_input_proto.max = max_value_proto
         date_time_input_proto.form_id = current_form_id(self.dg)
@@ -1089,6 +1089,7 @@ class TimeWidgetsMixin:
             label_visibility
         )
         date_time_input_proto.format = format
+        date_time_input_proto.is_range = False
 
         if help is not None:
             date_time_input_proto.help = dedent(help)
@@ -1106,12 +1107,11 @@ class TimeWidgetsMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="string_value",
+            value_type="string_array_value",
         )
 
         if widget_state.value_changed:
-            if (serialized_value := serde.serialize(widget_state.value)) is not None:
-                date_time_input_proto.value = serialized_value
+            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
             date_time_input_proto.set_value = True
 
         validate_width(width)
