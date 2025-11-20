@@ -769,6 +769,7 @@ def assert_snapshot(
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
         style: str | None = None,
+        show_app_header: bool = False,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -794,6 +795,12 @@ def assert_snapshot(
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
+
+        if not show_app_header:
+            # Make the app header transparent
+            if style is None:
+                style = ""
+            style += " .stAppHeader { background: transparent; }"
 
         if file_type == "jpg":
             file_extension = ".jpg"
