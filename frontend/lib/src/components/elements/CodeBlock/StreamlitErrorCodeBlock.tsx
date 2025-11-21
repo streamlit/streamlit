@@ -18,6 +18,7 @@ import React, { memo, ReactElement } from "react"
 
 import CopyButton from "./CopyButton"
 import {
+  StyledCode,
   StyledCodeBlock,
   StyledCopyButtonContainer,
   StyledPre,
@@ -38,7 +39,9 @@ function StreamlitErrorCodeBlock({
       className="stErrorCodeBlock"
       data-testid="stErrorCodeBlock"
     >
-      <StyledPre wrapLines={false}>{children}</StyledPre>
+      <StyledPre wrapLines={false}>
+        <StyledCode wrapLines={false}>{children}</StyledCode>
+      </StyledPre>
       {shouldShowCopyButton && (
         <StyledCopyButtonContainer>
           <CopyButton text={children} />
