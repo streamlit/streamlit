@@ -351,7 +351,9 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 }) => {
   const match = /language-(\w+)/.exec(className || "")
 
-  const codeText = String(children).replace(/^\n/, "").replace(/\n$/, "")
+  const codeText = String(children ?? "")
+    .replace(/^\n/, "")
+    .replace(/\n$/, "")
 
   const language = match?.[1] || ""
   return !inline ? (

@@ -579,6 +579,21 @@ describe("CustomCodeTag Element", () => {
         "</code></div>"
     )
   })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getCustomCodeTagProps({
+      children: children as unknown as string,
+    })
+    render(<CustomCodeTag {...props} />)
+    const stCode = screen.getByTestId("stCode")
+    expect(stCode).toBeInTheDocument()
+    expect(stCode).toHaveTextContent(expected)
+  })
 })
 
 describe("CustomPreTag", () => {

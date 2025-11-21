@@ -88,12 +88,6 @@ function StreamlitSyntaxHighlighter({
 
     const value = Array.isArray(children) ? children.join("") : children
 
-    // Handle upstream issue where empty code blocks are serialized as "undefined" or "null" strings.
-    // We use strict check to avoid hiding valid code that might contain these words with whitespace.
-    if (value === "undefined" || value === "null") {
-      return ""
-    }
-
     return value
   }, [children])
 
