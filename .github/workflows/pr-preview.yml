@@ -458,6 +458,7 @@ jobs:
 
       - name: Download develop bundle analysis
         uses: actions/download-artifact@v6
+        continue-on-error: true
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -488,43 +489,30 @@ jobs:
                 }
             };
 
-            const calculateMetrics = (data) => {
-                let totalGzip = 0;
-                let entryGzip = 0;
-                if (data) {
-                    for (const item of data) {
-                        totalGzip += (item.gzipSize || 0);
-                        if (item.isEntry) {
-                            entryGzip += (item.gzipSize || 0);
-                        }
-                    }
-                }
-                return { totalGzip, entryGzip };
-            };
-
-            const formatBytes = (bytes) => {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KiB', 'MiB', 'GiB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            };
-
             const currentData = loadBundle('current_bundle');
             const developData = loadBundle('develop_bundle');
 
-            if (!currentData || !developData) {
-                console.log('Missing bundle data, skipping comparison.');
+            if (!currentData) {
+                console.log('Missing current bundle data, skipping comparison.');
                 return;
             }
 
-            const currentMetrics = calculateMetrics(currentData);
+            if (!developData) {
+                console.log('Missing develop bundle data, skipping comparison.');
+                return;
+            }
+
+            const calculateMetrics = (data) => {
             const developMetrics = calculateMetrics(developData);
 
             const threshold = parseFloat(process.env.THRESHOLD);
 
             const checkSignificant = (current, develop) => {
-                if (develop === 0) return { diff: 0, percent: 0, isSignificant: false };
+                if (develop === 0) {
+                    return current === 0
+                        ? { diff: 0, percent: 0, isSignificant: false }
+                        : { diff: current, percent: 100, isSignificant: true };
+                }
                 const diff = current - develop;
                 const percent = (diff / develop) * 100;
                 return {
