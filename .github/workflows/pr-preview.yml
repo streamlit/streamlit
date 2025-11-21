@@ -590,13 +590,6 @@ jobs:
                 }
 
                 lines.push(
-                    '<details>',
-                    '<summary>Debug Info</summary>',
-                    `Run ID: ${context.runId}`,
-                    '</details>'
-                );
-
-                lines.push(
                     '',
                     `📊 [View detailed bundle comparison](https://issues.streamlit.app/frontend_bundle_analysis?pr=${context.issue.number})`
                 );
