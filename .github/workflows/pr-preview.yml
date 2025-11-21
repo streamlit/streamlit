@@ -596,6 +596,11 @@ jobs:
                     '</details>'
                 );
 
+                lines.push(
+                    '',
+                    `📊 [View detailed bundle comparison](https://issues.streamlit.app/frontend_bundle_analysis?pr=${context.issue.number})`
+                );
+
                 const commentBody = lines.join('\n');
 
                 const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
