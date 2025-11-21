@@ -37,6 +37,8 @@ The app features a bunch of examples of what you can do with Streamlit. Jump to 
 ### A little example
 
 Create a new file named `streamlit_app.py` in your project directory with the following code:
+Make sure `streamlit_app.py` is saved inside the same folder where you will run the Streamlit command.
+
 ```python
 import streamlit as st
 x = st.slider("Select a value")
