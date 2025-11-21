@@ -15,12 +15,12 @@
  */
 
 import React, {
+  CSSProperties,
   memo,
   ReactElement,
   ReactNode,
   useCallback,
   useMemo,
-  CSSProperties,
 } from "react"
 
 import {
@@ -46,10 +46,10 @@ export interface StreamlitSyntaxHighlighterProps {
 // Interface aligned with react-syntax-highlighter internal structure to satisfy TS
 interface SyntaxHighlighterNode {
   type: "text" | "element"
-  tagName?: keyof JSX.IntrinsicElements | React.ComponentType<any>
+  tagName?: keyof JSX.IntrinsicElements | React.ComponentType<unknown>
   properties?: {
     className: string[] // Must be required to match library's expectation of any[]
-    [key: string]: any
+    [key: string]: unknown
   }
   children?: SyntaxHighlighterNode[]
   value?: string | number
