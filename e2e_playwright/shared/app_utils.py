@@ -571,6 +571,35 @@ def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
     return text_element
 
 
+def get_caption(
+    locator: Locator | Page, text_inside_caption: str | Pattern[str]
+) -> Locator:
+    """Get a caption element with the given text inside.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the caption.
+
+    text_inside_caption : str or Pattern[str]
+        Some text to use to identify the caption element. The text should be contained
+        in the caption content.
+
+    Returns
+    -------
+    Locator
+        The caption element.
+    """
+    if isinstance(text_inside_caption, str):
+        text_inside_caption = re.compile(text_inside_caption)
+
+    caption_element = locator.get_by_test_id("stCaptionContainer").filter(
+        has_text=text_inside_caption
+    )
+    expect(caption_element).to_be_visible()
+    return caption_element
+
+
 def get_heading(
     locator: Locator | Page, text_inside_heading: str | Pattern[str]
 ) -> Locator:
