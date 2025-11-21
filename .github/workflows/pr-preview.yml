@@ -427,7 +427,7 @@ jobs:
       actions: read
 
     env:
-      BUNDLE_SIZE_CHANGE_THRESHOLD: 0.5
+      BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: 0.5
 
     steps:
       - name: Download current bundle analysis
@@ -470,7 +470,7 @@ jobs:
       - name: Compare bundle sizes and comment
         uses: actions/github-script@v8
         env:
-          THRESHOLD: ${{ env.BUNDLE_SIZE_CHANGE_THRESHOLD }}
+          BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: ${{ env.BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD }}
         with:
           script: |
             const fs = require('fs');
@@ -528,7 +528,7 @@ jobs:
             const currentMetrics = calculateMetrics(currentData);
             const developMetrics = calculateMetrics(developData);
 
-            const threshold = parseFloat(process.env.THRESHOLD);
+            const threshold = parseFloat(process.env.BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD);
 
             const checkSignificant = (current, develop) => {
                 if (develop === 0) {
