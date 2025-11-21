@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useMemo } from "react"
+import React, {
+  memo,
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useMemo,
+  CSSProperties,
+} from "react"
 
 import {
   createElement,
@@ -36,20 +43,21 @@ export interface StreamlitSyntaxHighlighterProps {
   height?: number
 }
 
-interface RendererNode {
-  type: string
-  tagName?: string
-  children?: RendererNode[]
+// Interface aligned with react-syntax-highlighter internal structure to satisfy TS
+interface SyntaxHighlighterNode {
+  type: "text" | "element"
+  tagName?: keyof JSX.IntrinsicElements | React.ComponentType<any>
   properties?: {
-    className?: string[]
-    [key: string]: unknown
+    className: string[] // Must be required to match library's expectation of any[]
+    [key: string]: any
   }
-  value?: string
+  children?: SyntaxHighlighterNode[]
+  value?: string | number
 }
 
 interface RendererProps {
-  rows: RendererNode[]
-  stylesheet: Record<string, unknown>
+  rows: SyntaxHighlighterNode[]
+  stylesheet: { [key: string]: CSSProperties }
   useInlineStyles: boolean
 }
 
@@ -60,8 +68,8 @@ function StreamlitSyntaxHighlighter({
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
-    ({ rows, stylesheet, useInlineStyles }: RendererProps): ReactElement[] =>
-      rows.map((row, index) => {
+    ({ rows, stylesheet, useInlineStyles }: RendererProps): ReactNode => {
+      return rows.map((row, index) => {
         const rowChildren = row.children
 
         if (rowChildren) {
@@ -86,7 +94,8 @@ function StreamlitSyntaxHighlighter({
           useInlineStyles,
           key: index,
         })
-      }),
+      })
+    },
     []
   )
 
