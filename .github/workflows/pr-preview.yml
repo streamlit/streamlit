@@ -451,7 +451,8 @@ jobs:
             });
 
             if (runs.workflow_runs.length === 0) {
-              throw new Error('No successful workflow runs found on develop branch');
+              core.warning('No successful workflow runs found on develop branch');
+              return;
             }
 
             core.setOutput('run_id', runs.workflow_runs[0].id);
