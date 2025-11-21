@@ -589,7 +589,6 @@ describe("CustomCodeTag Element", () => {
     const props = getCustomCodeTagProps({ children })
     render(<CustomCodeTag {...props} />)
     const stCode = screen.getByTestId("stCode")
-    expect(stCode).toBeInTheDocument()
     expect(stCode).toHaveTextContent(expected)
   })
 })
