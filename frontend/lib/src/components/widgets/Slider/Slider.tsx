@@ -167,7 +167,7 @@ function Slider({
   const renderThumb = useCallback(
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
-        const { $thumbIndex } = props
+        const { $thumbIndex, $value } = props
         const thumbIndex = $thumbIndex || 0
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         // eslint-disable-next-line @eslint-react/no-create-ref
@@ -190,7 +190,15 @@ function Slider({
           "draggable",
         ])
 
-        const formattedValue = formattedValueArr[thumbIndex]
+        // We intentionally re-compute the formatted value here from the latest
+        // thumb value instead of reading from `formattedValueArr` in the outer
+        // closure. This keeps `renderThumb`'s dependencies empty (preserving
+        // referential stability and focus behavior) while still rendering the
+        // correct label content as Base Web re-renders this component with
+        // updated `$value` during interaction.
+        const thumbValues = $value ?? uiValue
+        const thumbValue = thumbValues[thumbIndex] ?? element.min
+        const formattedValue = formatValue(thumbValue, element)
 
         return (
           <StyledThumb
@@ -219,7 +227,7 @@ function Slider({
     // Only run this on first render, to avoid losing the focus state.
     // Then, when the value written about the thumb needs to change, that
     // happens with the function below instead.
-    [formattedValueArr]
+    []
   )
 
   useLayoutEffect(() => {
