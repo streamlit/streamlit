@@ -504,6 +504,28 @@ jobs:
             }
 
             const calculateMetrics = (data) => {
+                let totalGzip = 0;
+                let entryGzip = 0;
+                if (data) {
+                    for (const item of data) {
+                        totalGzip += (item.gzipSize || 0);
+                        if (item.isEntry) {
+                            entryGzip += (item.gzipSize || 0);
+                        }
+                    }
+                }
+                return { totalGzip, entryGzip };
+            };
+
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KiB', 'MiB', 'GiB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const currentMetrics = calculateMetrics(currentData);
             const developMetrics = calculateMetrics(developData);
 
             const threshold = parseFloat(process.env.THRESHOLD);
