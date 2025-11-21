@@ -135,11 +135,15 @@ function Slider({
 
   const theme = useEmotionTheme()
 
+  // Keep a ref to the latest element so stable callbacks (`renderThumb`) can
+  // always read the current format/options without depending on `element` in
+  // their dependency arrays (which would hurt referential stability).
+  const elementRef = useRef(element)
+  elementRef.current = element
+
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)
   const formattedMaxValue = formatValue(element.max, element)
-
-  const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
@@ -190,15 +194,17 @@ function Slider({
           "draggable",
         ])
 
+        const currentElement = elementRef.current
+
         // We intentionally re-compute the formatted value here from the latest
-        // thumb value instead of reading from `formattedValueArr` in the outer
-        // closure. This keeps `renderThumb`'s dependencies empty (preserving
-        // referential stability and focus behavior) while still rendering the
-        // correct label content as Base Web re-renders this component with
-        // updated `$value` during interaction.
-        const thumbValues = $value ?? uiValue
-        const thumbValue = thumbValues[thumbIndex] ?? element.min
-        const formattedValue = formatValue(thumbValue, element)
+        // thumb value and the latest element (via `elementRef`) instead of
+        // reading from `formattedValueArr` in the outer closure. This keeps
+        // `renderThumb` referentially stable across user interactions while
+        // still reflecting changes to formatting-related props like
+        // `element.format`.
+        const thumbValues = $value ?? [currentElement.min]
+        const thumbValue = thumbValues[thumbIndex] ?? currentElement.min
+        const formattedValue = formatValue(thumbValue, currentElement)
 
         return (
           <StyledThumb
@@ -207,7 +213,7 @@ function Slider({
             isDragged={props.$isDragged === true}
             ref={thumbRefs[thumbIndex]}
             aria-valuetext={formattedValue}
-            aria-label={thumbAriaLabel}
+            aria-label={currentElement.label}
           >
             <StyledThumbValue
               data-testid="stSliderThumbValue"
