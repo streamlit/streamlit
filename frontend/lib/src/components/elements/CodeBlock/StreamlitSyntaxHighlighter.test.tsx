@@ -80,9 +80,7 @@ describe("CustomCodeTag Element", () => {
     ["null", "null"],
     ["undefined", "undefined"],
   ])("renders children '%s' as '%s'", (children, expected) => {
-    const props = getStreamlitSyntaxHighlighterProps({
-      children: children as unknown as string,
-    })
+    const props = getStreamlitSyntaxHighlighterProps({ children })
     const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
     expect(baseElement.querySelector("pre code")?.textContent).toBe(expected)
   })

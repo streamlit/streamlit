@@ -22,6 +22,8 @@ import {
   SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
 
+import { isNullOrUndefined } from "@streamlit/utils"
+
 import CopyButton from "./CopyButton"
 import {
   StyledCodeBlock,
@@ -30,7 +32,7 @@ import {
 } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
-  children?: string | string[]
+  children: string | string[] | undefined | null
   language?: string
   showLineNumbers?: boolean
   wrapLines?: boolean
@@ -82,13 +84,11 @@ function StreamlitSyntaxHighlighter({
   )
 
   const text = useMemo(() => {
-    if (children === undefined || children === null) {
+    if (isNullOrUndefined(children)) {
       return ""
     }
 
-    const value = Array.isArray(children) ? children.join("") : children
-
-    return value
+    return Array.isArray(children) ? children.join("") : children
   }, [children])
 
   const isEmpty = !text || text.trim().length === 0

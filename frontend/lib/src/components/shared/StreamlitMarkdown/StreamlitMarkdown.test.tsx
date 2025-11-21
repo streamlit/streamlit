@@ -586,9 +586,7 @@ describe("CustomCodeTag Element", () => {
     ["null", "null"],
     ["undefined", "undefined"],
   ])("renders children '%s' as '%s'", (children, expected) => {
-    const props = getCustomCodeTagProps({
-      children: children as unknown as string,
-    })
+    const props = getCustomCodeTagProps({ children })
     render(<CustomCodeTag {...props} />)
     const stCode = screen.getByTestId("stCode")
     expect(stCode).toBeInTheDocument()
