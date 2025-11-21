@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-import React, {
-  CSSProperties,
-  memo,
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useMemo,
-} from "react"
+import { memo, ReactElement, ReactNode, useCallback, useMemo } from "react"
 
 import {
   createElement,
   Prism as SyntaxHighlighter,
+  SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
@@ -43,23 +37,11 @@ export interface StreamlitSyntaxHighlighterProps {
   height?: number
 }
 
-// Interface aligned with react-syntax-highlighter internal structure to satisfy TS
-interface SyntaxHighlighterNode {
-  type: "text" | "element"
-  tagName?: keyof JSX.IntrinsicElements | React.ComponentType<unknown>
-  properties?: {
-    className: string[] // Must be required to match library's expectation of any[]
-    [key: string]: unknown
-  }
-  children?: SyntaxHighlighterNode[]
-  value?: string | number
-}
-
-interface RendererProps {
-  rows: SyntaxHighlighterNode[]
-  stylesheet: { [key: string]: CSSProperties }
-  useInlineStyles: boolean
-}
+/** Extracted Renderer Props from `react-syntax-highlighter`'s internal
+ * structure since it isn't exported */
+type RendererProps = Parameters<
+  NonNullable<SyntaxHighlighterProps["renderer"]>
+>[0]
 
 function StreamlitSyntaxHighlighter({
   language,
