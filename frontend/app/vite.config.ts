@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { defineConfig } from "vite"
+import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
@@ -25,6 +26,7 @@ const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // This is a convenience for developers for debugging purposes
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
+const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -63,6 +65,22 @@ export default defineConfig({
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
+    ...(ANALYZE_BUNDLE
+      ? [
+          analyzer({
+            analyzerMode: "json",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.json" will be created in the project root (frontend/app/bundle-analysis.json).
+            fileName: "../bundle-analysis.json",
+          }),
+          analyzer({
+            analyzerMode: "static",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.html" will be created in the project root (frontend/app/bundle-analysis.html).
+            fileName: "../bundle-analysis.html",
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: [
@@ -113,7 +131,7 @@ export default defineConfig({
   build: {
     outDir: "build",
     assetsDir: "static",
-    sourcemap: DEV_BUILD,
+    sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
     rollupOptions: {
       output: {

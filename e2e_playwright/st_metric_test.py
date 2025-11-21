@@ -45,6 +45,29 @@ def test_third_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20 ")
 
 
+def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
+    metric = get_metric(app, "Arrow up override")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" -10 ")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -5 ")
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_be_visible()
+
+    metric = get_metric(app, "Arrow down override")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 15 ")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" 5 ")
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_be_visible()
+
+    metric = get_metric(app, "Arrow hidden")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 42 ")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" No delta ")
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
+
+    assert_snapshot(
+        get_element_by_key(app, "metric_arrow_config"),
+        name="st_metric-delta_arrow_config",
+    )
+
+
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_metric(themed_app, "User growth"),
