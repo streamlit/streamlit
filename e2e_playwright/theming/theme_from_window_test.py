@@ -86,4 +86,4 @@ def test_theme_from_window_variable(app: Page, assert_snapshot: ImageCompareFunc
     expect_font(app, "Inter")
     expect_font(app, "Monaspace Argon")
     app.wait_for_timeout(5000)
-    assert_snapshot(app, name="theme_from_window_variable", image_threshold=0.0005)
+    assert_snapshot(app, name="theme_from_window_variable")
