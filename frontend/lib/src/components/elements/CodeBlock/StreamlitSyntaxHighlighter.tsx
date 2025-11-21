@@ -36,6 +36,23 @@ export interface StreamlitSyntaxHighlighterProps {
   height?: number
 }
 
+interface RendererNode {
+  type: string
+  tagName?: string
+  children?: RendererNode[]
+  properties?: {
+    className?: string[]
+    [key: string]: unknown
+  }
+  value?: string
+}
+
+interface RendererProps {
+  rows: RendererNode[]
+  stylesheet: Record<string, unknown>
+  useInlineStyles: boolean
+}
+
 function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
@@ -43,10 +60,8 @@ function StreamlitSyntaxHighlighter({
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ({ rows, stylesheet, useInlineStyles }: any): any =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      rows.map((row: any, index: any): any => {
+    ({ rows, stylesheet, useInlineStyles }: RendererProps): ReactElement[] =>
+      rows.map((row, index) => {
         const rowChildren = row.children
 
         if (rowChildren) {
@@ -80,22 +95,18 @@ function StreamlitSyntaxHighlighter({
       return ""
     }
 
-    let value: string
+    const value = Array.isArray(children) ? children.join("") : children
 
-    if (Array.isArray(children)) {
-      value = children.join("")
-    } else {
-      value = children
-    }
-
-    const trimmed = value.trim()
-
-    if (trimmed === "" || trimmed === "undefined" || trimmed === "null") {
+    // Handle upstream issue where empty code blocks are serialized as "undefined" or "null" strings.
+    // We use strict check to avoid hiding valid code that might contain these words with whitespace.
+    if (value === "undefined" || value === "null") {
       return ""
     }
 
     return value
   }, [children])
+
+  const isEmpty = !text || text.trim().length === 0
 
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
@@ -104,16 +115,22 @@ function StreamlitSyntaxHighlighter({
           language={language}
           PreTag="div"
           customStyle={{ backgroundColor: "transparent" }}
+          // We set an empty style object here because we have our own CSS styling that
+          // reacts on our theme.
           style={{}}
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
           wrapLongLines={wrapLines}
+          // Fix bug with wrapLongLines+showLineNumbers (see link below) by
+          // using a renderer that wraps individual lines of code in their
+          // own spans.
+          // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
           renderer={showLineNumbers && wrapLines ? renderer : undefined}
         >
           {text}
         </SyntaxHighlighter>
       </StyledPre>
-      {text.trim() !== "" && (
+      {!isEmpty && (
         <StyledCopyButtonContainer>
           <CopyButton text={text} />
         </StyledCopyButtonContainer>
