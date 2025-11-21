@@ -469,8 +469,6 @@ jobs:
 
       - name: Compare bundle sizes and comment
         uses: actions/github-script@v8
-        env:
-          BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: ${{ env.BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD }}
         with:
           script: |
             const fs = require('fs');
