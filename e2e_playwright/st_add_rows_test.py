@@ -17,20 +17,23 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_that_no_new_elements_are_created(themed_app: Page):
-    expect(themed_app.get_by_test_id("stTable")).to_have_count(1)
-    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
-    expect(themed_app.get_by_test_id("stVegaLiteChart")).to_have_count(7)
+def test_that_no_new_elements_are_created(app: Page):
+    """Test that add_rows doesn't create new elements (functional behavior)."""
+    expect(app.get_by_test_id("stTable")).to_have_count(1)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+    expect(app.get_by_test_id("stVegaLiteChart")).to_have_count(7)
 
 
-def test_correctly_adds_rows_to_table(themed_app: Page):
-    expect(themed_app.get_by_test_id("stTable").locator("tbody tr")).to_have_count(4)
+def test_correctly_adds_rows_to_table(app: Page):
+    """Test that add_rows correctly updates table row count (functional behavior)."""
+    expect(app.get_by_test_id("stTable").locator("tbody tr")).to_have_count(4)
 
 
 def test_correctly_adds_rows_to_charts(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    charts = themed_app.get_by_test_id("stVegaLiteChart")
+    """Test that add_rows correctly updates chart data (theme-independent)."""
+    charts = app.get_by_test_id("stVegaLiteChart")
     for index in range(charts.count()):
         assert_snapshot(
             charts.nth(index), name=f"st_vega_lite_chart-added_rows-{index}"
@@ -44,5 +47,6 @@ def test_correctly_adds_rows_to_dataframe(
     assert_snapshot(dataframe, name="st_dataframe-added_rows")
 
 
-def test_raises_an_exception_when_shapes_dont_match(themed_app: Page):
-    expect(themed_app.get_by_test_id("stAlert")).to_be_visible()
+def test_raises_an_exception_when_shapes_dont_match(app: Page):
+    """Test that add_rows raises error for mismatched shapes (functional behavior)."""
+    expect(app.get_by_test_id("stAlert")).to_be_visible()

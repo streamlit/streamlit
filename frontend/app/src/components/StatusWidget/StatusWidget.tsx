@@ -210,7 +210,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
         <StyledAppStatus>
           <DynamicIcon
             size="lg"
-            iconValue={":material/info:"}
+            iconValue=":material/info:"
             color={theme.colors.fadedText60}
           />
           <StyledAppStatusLabel isPrompt>File change.</StyledAppStatusLabel>

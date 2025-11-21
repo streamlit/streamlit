@@ -14,6 +14,8 @@
 
 """download_button unit test."""
 
+import io
+
 from parameterized import parameterized
 
 import streamlit as st
@@ -85,3 +87,78 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_callable_data_detected(self):
+        """Test that callable data is properly detected and deferred."""
+
+        def generate_data():
+            return "generated content"
+
+        st.download_button("Download", data=generate_data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+        assert c.deferred_file_id != ""  # Value set by runtime
+        assert c.url == ""
+
+    def test_callable_with_lambda(self):
+        """Test that lambda functions work as callables."""
+        st.download_button("Download", data=lambda: "lambda content")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+        assert c.deferred_file_id != ""
+        assert c.url == ""
+
+    def test_callable_returns_bytes(self):
+        """Test that callable returning bytes is handled correctly."""
+        st.download_button("Download", data=lambda: b"bytes content")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+        assert c.deferred_file_id != ""
+
+    def test_callable_returns_string(self):
+        """Test that callable returning string is handled correctly."""
+        st.download_button("Download", data=lambda: "string content")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+
+    def test_callable_returns_io(self):
+        """Test that callable returning IO object is handled correctly."""
+
+        def generate_io():
+            return io.BytesIO(b"io content")
+
+        st.download_button("Download", data=generate_io)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+
+    def test_callable_with_mime_type(self):
+        """Test that callable with mime type is handled correctly."""
+        st.download_button("Download CSV", data=lambda: "csv,data", mime="text/csv")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+        assert c.deferred_file_id != ""
+
+    def test_callable_with_file_name(self):
+        """Test that callable with file_name is handled correctly."""
+        st.download_button("Download", data=lambda: "content", file_name="output.txt")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.HasField("deferred_file_id")
+
+    def test_non_callable_data_unchanged(self):
+        """Test that non-callable data types still work as before."""
+        st.download_button("Download String", data="string data")
+        c1 = self.get_delta_from_queue().new_element.download_button
+        assert not c1.HasField("deferred_file_id")
+        assert "/media/" in c1.url
+
+        st.download_button("Download Bytes", data=b"bytes data")
+        c2 = self.get_delta_from_queue().new_element.download_button
+        assert not c2.HasField("deferred_file_id")
+        assert "/media/" in c2.url
