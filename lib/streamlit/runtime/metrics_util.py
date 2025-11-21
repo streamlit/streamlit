@@ -153,6 +153,8 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pydantic",
     "plost",
     "authlib",
+    "fastapi",
+    "starlette",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"

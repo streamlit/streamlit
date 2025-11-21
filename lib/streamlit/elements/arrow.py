@@ -297,6 +297,7 @@ class ArrowMixin:
         on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -314,6 +315,7 @@ class ArrowMixin:
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -331,6 +333,7 @@ class ArrowMixin:
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
+        placeholder: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -513,6 +516,11 @@ class ArrowMixin:
             is ``None`` (default), Streamlit will use a default row height,
             which fits one line of text.
 
+        placeholder : str or None
+            The text that should be shown for missing values (such as ``"None"``,
+            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
+            missing values are displayed as ``"None"``.
+
         Returns
         -------
         element or dict
@@ -694,6 +702,9 @@ class ArrowMixin:
         if column_order:
             proto.column_order[:] = column_order
 
+        if placeholder is not None:
+            proto.placeholder = placeholder
+
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         has_range_index: bool = False
@@ -770,6 +781,7 @@ class ArrowMixin:
                 selection_mode=selection_mode,
                 is_selection_activated=is_selection_activated,
                 row_height=row_height,
+                placeholder=placeholder,
             )
 
             serde = DataframeSelectionSerde()

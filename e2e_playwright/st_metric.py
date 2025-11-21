@@ -63,6 +63,37 @@ with col3:
     )
 
 
+arrow_auto_col, arrow_up_col, arrow_down_col, arrow_off_col = st.container(
+    key="metric_arrow_config"
+).columns(4)
+
+with arrow_auto_col:
+    st.metric("Arrow auto", 10, -5, delta_arrow="auto", delta_color="inverse")
+with arrow_up_col:
+    st.metric(
+        "Arrow up override",
+        -10,
+        -5,
+        delta_arrow="up",
+        delta_color="off",
+    )
+with arrow_down_col:
+    st.metric(
+        "Arrow down override",
+        15,
+        5,
+        delta_arrow="down",
+    )
+
+with arrow_off_col:
+    st.metric(
+        "Arrow hidden",
+        42,
+        "No delta",
+        delta_color="off",
+        delta_arrow="off",
+    )
+
 with col1:
     st.metric("Test 3", -4.56, 1.23, label_visibility="visible")
 with col2:

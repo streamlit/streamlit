@@ -232,6 +232,7 @@ const AudioInput: React.FC<Props> = ({
   const controller = useWaveformController({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
+    waveformPadding: 4, // Pixels of vertical padding to prevent waveform from touching edges
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)

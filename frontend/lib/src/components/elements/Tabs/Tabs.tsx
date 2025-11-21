@@ -71,9 +71,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(defaultTabIndex)
       setActiveTabName(allTabLabels[defaultTabIndex])
     }
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
   useEffect(() => {
@@ -93,9 +91,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabName(allTabLabels[defaultTabIndex])
     }
 
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [node.children.length])
 
   const TAB_HEIGHT = theme.sizes.tabHeight

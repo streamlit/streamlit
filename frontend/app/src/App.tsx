@@ -111,6 +111,7 @@ import {
   BackMsg,
   Config,
   CustomThemeConfig,
+  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -251,6 +252,12 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  // Listener registry for deferred file responses: fileId -> set of listeners
+  private readonly deferredFileListeners = new Map<
+    string,
+    Set<(response: DeferredFileResponse) => void>
+  >()
 
   private readonly appNavigation: AppNavigation
 
@@ -868,6 +875,8 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
+          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -2054,6 +2063,57 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
+    const isConnected = this.isServerConnected()
+    const isSessionInfoSet = this.sessionInfo.isSet
+
+    if (!isConnected || !isSessionInfoSet) {
+      return Promise.reject(
+        new Error("Not connected to server or session not initialized")
+      )
+    }
+
+    const resolver = Promise.withResolvers<DeferredFileResponse>()
+
+    // Register a one-time listener for this fileId
+    const listeners =
+      this.deferredFileListeners.get(fileId) ??
+      new Set<(response: DeferredFileResponse) => void>()
+    const once = (response: DeferredFileResponse): void => {
+      listeners.delete(once)
+      resolver.resolve(response)
+    }
+    listeners.add(once)
+    this.deferredFileListeners.set(fileId, listeners)
+
+    const backMsg = new BackMsg({
+      deferredFileRequest: {
+        fileId,
+        sessionId: this.sessionInfo.current.sessionId,
+      },
+    })
+
+    backMsg.type = "deferredFileRequest"
+    this.sendBackMsg(backMsg)
+
+    return resolver.promise
+  }
+
+  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
+    const listeners = this.deferredFileListeners.get(response.fileId)
+    if (!listeners || listeners.size === 0) return
+
+    // Notify and clear all listeners for this fileId
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener(response)
+      } catch {
+        // Swallow listener errors to avoid breaking notification fanout
+      }
+    }
+    this.deferredFileListeners.delete(response.fileId)
+  }
+
   handleKeyDown = (keyName: string): void => {
     switch (keyName) {
       case "c":
@@ -2202,6 +2262,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
           keyName="r,c,esc"

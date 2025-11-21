@@ -82,6 +82,13 @@ st.color_picker(
     width=100,
 )
 
+st.color_picker(
+    "Color picker with 20px width (enforces 40px minimum)",
+    "#95E1D3",
+    width=20,
+    key="color_picker_min_width",
+)
+
 if st.toggle("Update color picker props"):
     dyn_val = st.color_picker(
         "Updated dynamic color picker",

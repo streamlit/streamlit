@@ -23,20 +23,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.pdf import _get_pdf_component
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class PdfComponentAvailabilityTest(DeltaGeneratorTestCase):
     """Test the PDF component availability check."""
-
-    def test_pdf_component_available(self):
-        """Test when PDF component is available."""
-        with patch(
-            "streamlit.elements.pdf._get_pdf_component", return_value=lambda: None
-        ):
-            assert _get_pdf_component() is not None
 
     def test_pdf_component_not_available(self):
         """Test when PDF component is not available."""
@@ -82,13 +74,12 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(url)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
         # Parse the JSON args to check the parameters
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"] == url
         assert json_args["height"] == "500"  # Height is converted to string
-        assert json_args["key"] is None
 
     def test_pdf_with_height(self):
         """Test PDF with custom height."""
@@ -96,9 +87,9 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(url, height=600)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"] == url
         assert json_args["height"] == "600"  # Height is converted to string
 
@@ -108,9 +99,9 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(url, height="stretch")
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"] == url
         assert (
             json_args["height"] == "stretch"
@@ -121,10 +112,10 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(self.DUMMY_PDF_BYTES)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
         # Check that bytes are uploaded to media storage and passed as URL
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"].startswith("/media/")  # Media URL
         assert json_args["height"] == "500"
 
@@ -134,10 +125,10 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(pdf_bytesio)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
         # Check that bytes are uploaded to media storage and passed as URL
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"].startswith("/media/")  # Media URL
         assert json_args["height"] == "500"
 
@@ -156,10 +147,10 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(mock_file)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+        assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
         # Check that bytes are uploaded to media storage and passed as URL
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         assert json_args["file"].startswith("/media/")  # Media URL
         assert json_args["height"] == "500"
 
@@ -178,11 +169,9 @@ class PdfTest(DeltaGeneratorTestCase):
             st.pdf(path_obj)
 
             element = self.get_delta_from_queue().new_element
-            assert (
-                element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
-            )
+            assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
-            json_args = json.loads(element.component_instance.json_args)
+            json_args = json.loads(element.bidi_component.json)
             # For file paths, the content is uploaded to media storage
             assert json_args["file"].startswith("/media/")  # Media URL
             assert json_args["height"] == "500"
@@ -204,11 +193,9 @@ class PdfTest(DeltaGeneratorTestCase):
             st.pdf(tmp_file_path)
 
             element = self.get_delta_from_queue().new_element
-            assert (
-                element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
-            )
+            assert element.bidi_component.component_name == "streamlit-pdf.pdf_viewer"
 
-            json_args = json.loads(element.component_instance.json_args)
+            json_args = json.loads(element.bidi_component.json)
             # For file paths, the content is uploaded to media storage
             assert json_args["file"].startswith("/media/")  # Media URL
             assert json_args["height"] == "500"
@@ -255,40 +242,13 @@ class PdfTest(DeltaGeneratorTestCase):
             st.pdf(url, height=height)
         assert "Invalid height" in str(e.value)
 
-    def test_pdf_element_id_generation(self):
-        """Test that PDF elements get unique IDs when they have different parameters."""
-        url1 = "https://example.com/document1.pdf"
-        url2 = "https://example.com/document2.pdf"
-
-        st.pdf(url1)
-        element1 = self.get_delta_from_queue().new_element
-
-        st.pdf(url2)
-        element2 = self.get_delta_from_queue().new_element
-
-        # Elements should have different IDs when they have different parameters
-        assert element1.component_instance.id != element2.component_instance.id
-        assert element1.component_instance.id != ""
-        assert element2.component_instance.id != ""
-
-    def test_pdf_with_key(self):
-        """Test PDF with custom key."""
-        url = "https://example.com/fake-document.pdf"
-        st.pdf(url, key="test_key")
-
-        element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
-
-        json_args = json.loads(element.component_instance.json_args)
-        assert json_args["key"] == "test_key"
-
     def test_pdf_height_as_integer_gets_stringified(self):
         """Test that integer height values are converted to strings for the component."""
         url = "https://example.com/fake-document.pdf"
         st.pdf(url, height=450)
 
         element = self.get_delta_from_queue().new_element
-        json_args = json.loads(element.component_instance.json_args)
+        json_args = json.loads(element.bidi_component.json)
         # Component should receive height as string
         assert json_args["height"] == "450"
         assert isinstance(json_args["height"], str)

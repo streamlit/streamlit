@@ -2217,3 +2217,154 @@ class ShouldRerunOnFileChangeTest(unittest.TestCase):
         session._client_state.page_script_hash = "hash2"
 
         assert not session._should_rerun_on_file_change("page1.py")
+
+
+class DeferredFileRequestTest(unittest.TestCase):
+    """Tests for deferred file request handling in AppSession."""
+
+    def setUp(self):
+        super().setUp()
+        # Create a test session
+        self.event_loop = MagicMock()
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=self.event_loop,
+            ),
+            patch(
+                "streamlit.runtime.app_session.LocalSourcesWatcher",
+                MagicMock(spec=LocalSourcesWatcher),
+            ),
+        ):
+            self.session = AppSession(
+                script_data=ScriptData("/fake/script_path.py", is_hello=False),
+                uploaded_file_manager=MagicMock(spec=UploadedFileManager),
+                script_cache=MagicMock(),
+                message_enqueued_callback=None,
+                user_info={"email": "test@example.com"},
+            )
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_success(self, mock_get_runtime):
+        """Test successful deferred file request handling."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        mock_media_mgr.execute_deferred.return_value = "/media/test_file_url"
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create the request
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "test_file_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Verify execute_deferred was called
+        mock_media_mgr.execute_deferred.assert_called_once_with("test_file_id")
+
+        # Check that a response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "test_file_id"
+        assert msg.deferred_file_response.url == "/media/test_file_url"
+        assert msg.deferred_file_response.error_msg == ""
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_error(self, mock_get_runtime):
+        """Test deferred file request handling when callable fails."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
+            "Callable execution failed: Test error"
+        )
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create the request
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "test_file_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Check that an error response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "test_file_id"
+        assert msg.deferred_file_response.url == ""
+        assert "Callable execution failed" in msg.deferred_file_response.error_msg
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_file_not_found(self, mock_get_runtime):
+        """Test deferred file request handling when file_id doesn't exist."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
+            "Deferred file nonexistent_id not found"
+        )
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create request for non-existent file
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "nonexistent_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Check that an error response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "nonexistent_id"
+        assert msg.deferred_file_response.url == ""
+        assert "not found" in msg.deferred_file_response.error_msg
+
+    def test_handle_backmsg_routes_deferred_file_request(self):
+        """Test that handle_backmsg routes deferred_file_request correctly."""
+
+        # Create a mock async handler that returns a coroutine
+        async def mock_async_handler(request):
+            pass
+
+        # Create a BackMsg with deferred_file_request
+        from streamlit.proto.BackMsg_pb2 import BackMsg
+
+        msg = BackMsg()
+        msg.deferred_file_request.file_id = "test_id"
+        msg.deferred_file_request.session_id = self.session.id
+
+        # Mock the async handler and asyncio.create_task
+        with (
+            patch.object(
+                self.session,
+                "_handle_deferred_file_request",
+                side_effect=mock_async_handler,
+            ),
+            patch(
+                "streamlit.runtime.app_session.asyncio.create_task"
+            ) as mock_create_task,
+        ):
+            # Handle the message
+            self.session.handle_backmsg(msg)
+
+            # Verify create_task was called with a coroutine
+            mock_create_task.assert_called_once()
+            # The argument to create_task should be a coroutine
+            assert asyncio.iscoroutine(mock_create_task.call_args[0][0])

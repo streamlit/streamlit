@@ -64,6 +64,7 @@ export const useWindowDimensions = (): WindowDimensions => {
 
   useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     updateWindowDimensions()
   }, [updateWindowDimensions])
 

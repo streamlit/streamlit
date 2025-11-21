@@ -136,7 +136,7 @@ function rehypeSetCodeInlineProperty() {
         return
       }
 
-      if (parent && parent.type === "element" && parent.tagName === "pre") {
+      if (parent?.type === "element" && parent.tagName === "pre") {
         node.properties = { ...node.properties, inline: false }
       } else {
         node.properties = { ...node.properties, inline: true }

@@ -45,3 +45,31 @@ st.text(
     regardless of the content or surrounding elements.""",
     width=300,
 )
+
+st.header("Text Alignment Tests")
+
+st.text(
+    "Left aligned text (default)",
+    text_alignment="left",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    "Center aligned text",
+    text_alignment="center",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    "Right aligned text",
+    text_alignment="right",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    """Justified text. This is a longer text to demonstrate justification. This is a longer text to
+    demonstrate justification and the help tooltip styling works properly.""",
+    text_alignment="justify",
+    width="stretch",
+    help="This is a help tooltip!",
+)
