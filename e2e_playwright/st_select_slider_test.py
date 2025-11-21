@@ -68,6 +68,10 @@ def test_select_slider_rendering(
         get_slider(themed_app, "Label 14 - Width Stretch"),
         name="st_select_slider-width_stretch",
     )
+    assert_snapshot(
+        get_slider(themed_app, "Label 15 - Markdown in options"),
+        name="st_select_slider-markdown_in_options",
+    )
 
 
 def test_help_tooltip_works(app: Page):
