@@ -21,6 +21,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -80,8 +81,8 @@ function SliderTickBar({
       isHovered={isHovered}
       isDisabled={isDisabled}
     >
-      <StreamlitMarkdown source={minLabel} allowHTML={false} />
-      <StreamlitMarkdown source={maxLabel} allowHTML={false} />
+      <StreamlitMarkdown source={minLabel} allowHTML={false} inheritFont />
+      <StreamlitMarkdown source={maxLabel} allowHTML={false} inheritFont />
     </StyledSliderTickBar>
   )
 }
@@ -205,7 +206,11 @@ function Slider({
               disabled={props.$disabled === true}
               ref={thumbValueRefs[thumbIndex]}
             >
-              <StreamlitMarkdown source={formattedValue} allowHTML={false} />
+              <StreamlitMarkdown
+                source={formattedValue}
+                allowHTML={false}
+                inheritFont
+              />
             </StyledThumbValue>
           </StyledThumb>
         )
@@ -217,14 +222,15 @@ function Slider({
     [formattedValueArr]
   )
 
-  useEffect(() => {
-    thumbRefs.map((ref, i) => {
+  useLayoutEffect(() => {
+    // Keep aria-valuetext in sync with the formatted values for accessibility.
+    thumbRefs.forEach((ref, i) => {
       if (ref.current) {
         ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
       }
     })
 
-    // If, after rendering, the thumb value's is outside the container (too
+    // If, after rendering, the thumb value is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
     const sliderDiv = sliderRef.current ?? null
@@ -240,10 +246,7 @@ function Slider({
       thumb1ValueDiv,
       thumb2ValueDiv
     )
-    // formattedValueArr can not be added to the dependencies array because that would lead to visual glitches.
-    // so the linting error from not adding it need to be suppressed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [thumbRefs, thumbValueRefs]) // Ensure this effect runs when dependencies change
+  })
 
   // Style that will be applied to BaseWeb's <InnerTrack>.
   const innerTrackStyle = useCallback(
