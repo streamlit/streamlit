@@ -112,9 +112,6 @@ updates:
       - "autofix"
 
     ignore:
-      - dependency-name: "bokeh"
-        # We only support bokeh 2.4.3
-        versions: [">=2.4.3"]
       - dependency-name: "langchain"
         # Newer langchain version conflict with our test setup
         # see: https://github.com/streamlit/streamlit/pull/10227

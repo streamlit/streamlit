@@ -36,6 +36,7 @@ import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
+import "streamlit/proto/DateTimeInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
@@ -138,13 +139,14 @@ message Element {
     TextArea text_area = 22;
     TextInput text_input = 24;
     TimeInput time_input = 26;
+    DateTimeInput date_time_input = 62;
     Toast toast = 50;
     // DEPRECATED: This element is deprecated and unused:
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 62
+    // Next ID: 63
   }
 
   reserved 9;

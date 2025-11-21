@@ -224,6 +224,17 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
 
 
+def test_feedback_minimum_width_enforcement(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.feedback enforces minimum width to prevent icon wrapping (gh-12068)."""
+    thumbs_min = get_element_by_key(app, "thumbs_min_width")
+    assert_snapshot(thumbs_min, name="st_feedback-thumbs_min_width_enforced")
+
+    stars_min = get_element_by_key(app, "stars_min_width")
+    assert_snapshot(stars_min, name="st_feedback-stars_min_width_enforced")
+
+
 def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the feedback can be updated dynamically while keeping the state."""
     feedback_widget = get_button_group(app, "dynamic_feedback_widget")

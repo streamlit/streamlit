@@ -69,6 +69,27 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
+def get_datetime_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a datetime input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stDateTimeInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
 def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a camera input with the given label.
 
@@ -548,6 +569,67 @@ def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
 
     expect(text_element).to_be_visible()
     return text_element
+
+
+def get_caption(
+    locator: Locator | Page, text_inside_caption: str | Pattern[str]
+) -> Locator:
+    """Get a caption element with the given text inside.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the caption.
+
+    text_inside_caption : str or Pattern[str]
+        Some text to use to identify the caption element. The text should be contained
+        in the caption content.
+
+    Returns
+    -------
+    Locator
+        The caption element.
+    """
+    if isinstance(text_inside_caption, str):
+        text_inside_caption = re.compile(text_inside_caption)
+
+    caption_element = locator.get_by_test_id("stCaptionContainer").filter(
+        has_text=text_inside_caption
+    )
+    expect(caption_element).to_be_visible()
+    return caption_element
+
+
+def get_heading(
+    locator: Locator | Page, text_inside_heading: str | Pattern[str]
+) -> Locator:
+    """Get a heading element with the given text inside.
+
+    Works for st.title (h1), st.header (h2), and st.subheader (h3) since they
+    all use the same stHeading test ID.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the heading.
+
+    text_inside_heading : str or Pattern[str]
+        Some text to use to identify the heading element. The text should be contained
+        in the heading content.
+
+    Returns
+    -------
+    Locator
+        The heading element container (stHeading).
+    """
+    if isinstance(text_inside_heading, str):
+        text_inside_heading = re.compile(text_inside_heading)
+
+    heading_element = locator.get_by_test_id("stHeading").filter(
+        has_text=text_inside_heading
+    )
+    expect(heading_element).to_be_visible()
+    return heading_element
 
 
 def expect_prefixed_markdown(

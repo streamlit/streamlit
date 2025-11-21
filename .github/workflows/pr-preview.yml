@@ -9,6 +9,8 @@ on:
     paths-ignore:
       # Don't run CI if changes are only in the specs folder:
       - "specs/**"
+      # Don't run CI if changes are only in the agent-knowledge folder:
+      - "agent-knowledge/**"
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -26,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -100,6 +102,39 @@ jobs:
               console.log('Created new comment with ID:', newComment.id);
             }
 
+  analyze-frontend-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Build Frontend & Analyze
+        env:
+          ANALYZE_BUNDLE: "true"
+        run: |
+          make frontend
+      - name: Upload Bundle Stats JSON
+        uses: actions/upload-artifact@v5
+        with:
+          name: bundle_analysis_json
+          path: frontend/app/bundle-analysis.json
+      - name: Upload Bundle Stats HTML
+        uses: actions/upload-artifact@v5
+        with:
+          name: bundle_analysis_html
+          path: frontend/app/bundle-analysis.html
+
   upload-whl:
     runs-on: ubuntu-latest
 
@@ -118,7 +153,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -395,7 +430,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -452,7 +487,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
@@ -497,7 +532,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 

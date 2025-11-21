@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -412,3 +413,105 @@ class StTitleTest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_STRETCH.value
         )
         assert el.width_config.use_stretch is True
+
+
+class StTitleTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.title text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_title_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.title with various text_alignment values."""
+        if text_alignment is None:
+            st.title("Title text")
+        else:
+            st.title("Title text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Title text"
+        assert el.heading.tag == "h1"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_title_text_alignment_invalid(self):
+        """Test st.title with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.title("Title text", text_alignment="bottom")
+
+        assert 'Invalid text_alignment value: "bottom"' in str(exc.value)
+
+
+class StHeaderTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.header text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_header_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.header with various text_alignment values."""
+        if text_alignment is None:
+            st.header("Header text")
+        else:
+            st.header("Header text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Header text"
+        assert el.heading.tag == "h2"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_header_text_alignment_invalid(self):
+        """Test st.header with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.header("Header text", text_alignment="start")
+
+        assert 'Invalid text_alignment value: "start"' in str(exc.value)
+
+
+class StSubheaderTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.subheader text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_subheader_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.subheader with various text_alignment values."""
+        if text_alignment is None:
+            st.subheader("Subheader text")
+        else:
+            st.subheader("Subheader text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Subheader text"
+        assert el.heading.tag == "h3"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_subheader_text_alignment_invalid(self):
+        """Test st.subheader with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.subheader("Subheader text", text_alignment="middle")
+
+        assert 'Invalid text_alignment value: "middle"' in str(exc.value)
