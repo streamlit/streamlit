@@ -32,7 +32,7 @@ what's shown here.
 
 st.date_input(
     ...,
-    quick_select_options: Mapping[str, Sequence[date, date]] | bool | None = None,
+    quick_select_options: Mapping[str, Sequence[date]] | bool | None = None,
 )
 ```
 
