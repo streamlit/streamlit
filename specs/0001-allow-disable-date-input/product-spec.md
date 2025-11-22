@@ -48,11 +48,10 @@ st.date_input(
 ## Naming
 
 - `enabled_dates` and `disabled_dates`: symmetric, rhymes with `disabled` parameter,
-  even though "enabled" doesn't make it very obvious that others are disabled
+  even though "enabled" doesn't make it very obvious that other dates are disabled
 - `allowed_dates` and `disabled_dates`: slightly more explicit, but not very symmetric
 - `selectable_dates` and `unselectable_dates`: a bit odd and long
 - `include_dates` and `exclude_dates`: sounds good but "include" isn't very intuitive
-
 
 ### Behavior
 
