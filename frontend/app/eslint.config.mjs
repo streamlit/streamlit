@@ -14,24 +14,32 @@
  * limitations under the License.
  */
 
-import baseConfig from "../eslint.config.mjs"
+import baseConfig, { getNoRestrictedImports } from "../eslint.config.mjs"
+
+const LIB_RESTRICTION_PATTERN = {
+  group: ["~lib/*"],
+  message:
+    "Direct imports from '~lib/*' are not allowed. Please import from '@streamlit/lib' instead.",
+}
 
 export default [
   ...baseConfig,
   {
+    files: ["**/*.ts", "**/*.tsx"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["~lib/*"],
-              message:
-                "Direct imports from '~lib/*' are not allowed. Please import from '@streamlit/lib' instead.",
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": getNoRestrictedImports([
+        LIB_RESTRICTION_PATTERN,
+      ]),
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-imports": getNoRestrictedImports(
+        [LIB_RESTRICTION_PATTERN],
+        true
+      ),
     },
   },
 ]
