@@ -47,7 +47,11 @@ Allowed values for `quick_select_options`:
 
 ```python
 # Hide quick select completely
-st.date_input("Future release window", quick_select_options="off")
+st.date_input(
+    "Future release window",
+    value=(date.today(), date.today() + timedelta(days=30)),
+    quick_select_options="off"
+)
 
 # Provide custom forward-looking options
 st.date_input(
