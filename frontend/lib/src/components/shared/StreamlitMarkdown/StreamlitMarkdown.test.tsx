@@ -245,9 +245,13 @@ describe("StreamlitMarkdown", () => {
 
   test.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
-    ({ input, tag, expected }) => {
+    async ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
-      const markdownText = screen.getByText(expected)
+      // Use findByText for emoji shortcodes since remark-emoji is lazy-loaded
+      const markdownText =
+        input === ":joy:"
+          ? await screen.findByText(expected)
+          : screen.getByText(expected)
       expect(markdownText).toBeInTheDocument()
 
       const expectedTag = markdownText.nodeName.toLowerCase()

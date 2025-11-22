@@ -42,7 +42,6 @@ import ReactMarkdown, {
   Options as ReactMarkdownProps,
 } from "react-markdown"
 import remarkDirective from "remark-directive"
-import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
 import { PluggableList } from "unified"
@@ -89,6 +88,24 @@ const loadKatexStyles = once((): void => {
 // Lazy load rehype-raw (pulls in parse5)
 const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
   import("rehype-raw")
+
+// Lazy load remark-emoji (pulls in node-emoji and @sindresorhus/is)
+const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
+  import("remark-emoji")
+
+/**
+ * Detects if the markdown source contains emoji shortcodes that require remark-emoji.
+ * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
+ * :streamlit: syntax which are handled separately.
+ *
+ * @param source - The markdown source string to check
+ * @returns true if emoji shortcodes are detected, false otherwise
+ */
+function containsEmojiShortcodes(source: string): boolean {
+  // Match :word: or :word_with_underscores: but not :material/ or :streamlit:
+  // This is a heuristic - we'll load the plugin if we see any potential shortcodes
+  return /:(?!material\/|streamlit:)\w[\w_]*:/.test(source)
+}
 
 /**
  * Detects if the markdown source contains math syntax that requires KaTeX.
@@ -702,9 +719,9 @@ function createRemarkTypographicalSymbols() {
 }
 
 // Standard remark plugins that don't depend on theme or props
+// Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
 const BASE_REMARK_PLUGINS = [
   remarkMathPlugin,
-  remarkEmoji,
   remarkGfm,
   remarkDirective,
   createRemarkStreamlitLogo(),
@@ -782,12 +799,16 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   const theme = useEmotionTheme()
   type KatexPlugin = Awaited<ReturnType<typeof loadKatexPlugin>>["default"]
   type RawPlugin = Awaited<ReturnType<typeof loadRehypeRaw>>["default"]
+  type EmojiPlugin = Awaited<ReturnType<typeof loadRemarkEmoji>>["default"]
   const [katexPlugin, setKatexPlugin] = useState<KatexPlugin | null>(null)
   const isLoadingKatexRef = useRef(false)
   const [rawPlugin, setRawPlugin] = useState<RawPlugin | null>(null)
   const isLoadingRawRef = useRef(false)
+  const [emojiPlugin, setEmojiPlugin] = useState<EmojiPlugin | null>(null)
+  const isLoadingEmojiRef = useRef(false)
 
   const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+  const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
 
   // Load katex plugin when needed
   useEffect(() => {
@@ -824,16 +845,39 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     }
   }, [allowHTML, rawPlugin])
 
+  // Load remark-emoji plugin when emoji shortcodes are detected
+  useEffect(() => {
+    if (needsEmoji && !emojiPlugin && !isLoadingEmojiRef.current) {
+      isLoadingEmojiRef.current = true
+      void loadRemarkEmoji()
+        .then(module => {
+          setEmojiPlugin(() => module.default)
+        })
+        .catch(() => {
+          // Silently fail - emoji shortcodes will render as plain text
+        })
+        .finally(() => {
+          isLoadingEmojiRef.current = false
+        })
+    }
+  }, [needsEmoji, emojiPlugin])
+
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
-  const remarkPlugins = useMemo(
-    () => [
+  const remarkPlugins = useMemo<PluggableList>(() => {
+    const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
-    ],
-    [theme, colorMapping]
-  )
+    ]
+
+    // Only add emoji plugin if it's loaded (lazy-loaded when emoji shortcodes detected)
+    if (emojiPlugin) {
+      plugins.push(emojiPlugin)
+    }
+
+    return plugins
+  }, [theme, colorMapping, emojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
@@ -876,7 +920,11 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }, [isLabel, disableLinks])
 
   // Show skeleton while dependencies are loading
-  if ((needsKatex && !katexPlugin) || (allowHTML && !rawPlugin)) {
+  if (
+    (needsKatex && !katexPlugin) ||
+    (allowHTML && !rawPlugin) ||
+    (needsEmoji && !emojiPlugin)
+  ) {
     return (
       <ErrorBoundary>
         <Skeleton
