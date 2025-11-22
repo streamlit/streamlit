@@ -180,15 +180,13 @@ describe("StreamlitMarkdown", () => {
     ).toBeInTheDocument()
   })
 
-  it("passes props properly", () => {
+  it("passes props properly", async () => {
     const source =
       "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    expect(screen.getByText("Some Page")).toHaveAttribute(
-      "href",
-      "//0.0.0.0:8501/?p=some_page"
-    )
-    expect(screen.getByText("Some Page")).toHaveAttribute("target", "_self")
+    const link = await screen.findByText("Some Page")
+    expect(link).toHaveAttribute("href", "//0.0.0.0:8501/?p=some_page")
+    expect(link).toHaveAttribute("target", "_self")
   })
 
   it("doesn't render header anchors when isInSidebar is true", () => {
@@ -215,10 +213,10 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("propagates header attributes to custom header", () => {
+  it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
-    const h1 = screen.getByRole("heading")
+    const h1 = await screen.findByRole("heading")
     expect(h1).toHaveAttribute("data-test", "lol")
   })
 
@@ -268,18 +266,18 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
-  it("renders streamlit logo with allowHTML=true", () => {
+  it("renders streamlit logo with allowHTML=true", async () => {
     render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
-    const image = screen.getByRole("img")
+    const image = await screen.findByRole("img")
     expect(image).toHaveAttribute("alt", "Streamlit logo")
     expect(image).toHaveStyle("display: inline-block")
     expect(image).toHaveStyle("user-select: none")
   })
 
-  it("renders material icons with allowHTML=true", () => {
+  it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    const markdown = screen.getByText("search")
+    const markdown = await screen.findByText("search")
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")

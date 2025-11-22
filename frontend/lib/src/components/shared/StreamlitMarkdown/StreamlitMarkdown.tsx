@@ -25,7 +25,9 @@ import React, {
   Suspense,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -39,8 +41,6 @@ import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
 } from "react-markdown"
-import rehypeKatex from "rehype-katex"
-import rehypeRaw from "rehype-raw"
 import remarkDirective from "remark-directive"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
@@ -75,11 +75,32 @@ import {
   StyledStreamlitMarkdown,
 } from "./styled-components"
 
-import "katex/dist/katex.min.css"
-
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
+
+// Lazy load katex dependencies
+const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
+  import("rehype-katex")
+const loadKatexStyles = once((): void => {
+  void import("katex/dist/katex.min.css")
+})
+
+// Lazy load rehype-raw (pulls in parse5)
+const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
+  import("rehype-raw")
+
+/**
+ * Detects if the markdown source contains math syntax that requires KaTeX.
+ * Checks for inline math ($...$) and display math ($$...$$) patterns.
+ *
+ * @param source - The markdown source string to check
+ * @returns true if math syntax is detected, false otherwise
+ */
+function containsMathSyntax(source: string): boolean {
+  // Detect inline math: $...$ or display math: $$...$$
+  return /\$\$[\s\S]+?\$\$|\$[^$\n]+?\$/.test(source)
+}
 
 export enum Tags {
   H1 = "h1",
@@ -759,6 +780,49 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
+  type KatexPlugin = Awaited<ReturnType<typeof loadKatexPlugin>>["default"]
+  type RawPlugin = Awaited<ReturnType<typeof loadRehypeRaw>>["default"]
+  const [katexPlugin, setKatexPlugin] = useState<KatexPlugin | null>(null)
+  const isLoadingKatexRef = useRef(false)
+  const [rawPlugin, setRawPlugin] = useState<RawPlugin | null>(null)
+  const isLoadingRawRef = useRef(false)
+
+  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+
+  // Load katex plugin when needed
+  useEffect(() => {
+    if (needsKatex && !katexPlugin && !isLoadingKatexRef.current) {
+      isLoadingKatexRef.current = true
+      loadKatexStyles()
+      void loadKatexPlugin()
+        .then(module => {
+          setKatexPlugin(() => module.default)
+        })
+        .catch(() => {
+          // Silently fail - math will render as plain text
+        })
+        .finally(() => {
+          isLoadingKatexRef.current = false
+        })
+    }
+  }, [needsKatex, katexPlugin])
+
+  // Load rehype-raw plugin when HTML is allowed
+  useEffect(() => {
+    if (allowHTML && !rawPlugin && !isLoadingRawRef.current) {
+      isLoadingRawRef.current = true
+      void loadRehypeRaw()
+        .then(module => {
+          setRawPlugin(() => module.default)
+        })
+        .catch(() => {
+          // Silently fail - HTML will be escaped
+        })
+        .finally(() => {
+          isLoadingRawRef.current = false
+        })
+    }
+  }, [allowHTML, rawPlugin])
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
@@ -772,10 +836,16 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeKatex]
+    const plugins: PluggableList = []
 
-    if (allowHTML) {
-      plugins.push(rehypeRaw)
+    // Only add katex plugin if it's loaded
+    if (katexPlugin) {
+      plugins.push(katexPlugin)
+    }
+
+    // Only add raw plugin if it's loaded and HTML is allowed
+    if (allowHTML && rawPlugin) {
+      plugins.push(rawPlugin)
     }
 
     // This plugin must run last to ensure the inline property is set correctly
@@ -783,7 +853,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML])
+  }, [allowHTML, katexPlugin, rawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -804,6 +874,19 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     if (!isLabel) return []
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
   }, [isLabel, disableLinks])
+
+  // Show skeleton while dependencies are loading
+  if ((needsKatex && !katexPlugin) || (allowHTML && !rawPlugin)) {
+    return (
+      <ErrorBoundary>
+        <Skeleton
+          element={SkeletonProto.create({
+            style: SkeletonProto.SkeletonStyle.ELEMENT,
+          })}
+        />
+      </ErrorBoundary>
+    )
+  }
 
   return (
     <ErrorBoundary>
