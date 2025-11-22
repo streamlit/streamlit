@@ -22,7 +22,7 @@ what's shown here.
 
 **Requests:**
 
-- (4 👍) [#12331](https://github.com/streamlit/streamlit/issues/12331)
+- [#12331](https://github.com/streamlit/streamlit/issues/12331)
 
 ## Proposal
 
