@@ -1,10 +1,10 @@
-# Custom quick select for `st.date_input`
+---
+author: @jrieke
+created: 2025-11-22
+status: Draft
+---
 
-|         |            |
-|---------|------------|
-| Author  | @jrieke    |
-| Created | 2025-11-22 |
-| Status  | Draft      |
+# Custom quick select for `st.date_input`
 
 ## Summary
 
