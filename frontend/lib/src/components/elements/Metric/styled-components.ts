@@ -99,10 +99,11 @@ export const StyledMetricValueText = styled.div(({ theme }) => ({
 
 export interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
+  showArrow: boolean
 }
 
 export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
-  ({ theme, metricColor }) => ({
+  ({ theme, metricColor, showArrow }) => ({
     // Uses text colors
     color: getMetricTextColor(theme, metricColor),
     // Uses same color as shaded bg of area chart (bg color)
@@ -113,10 +114,13 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
-    // Using only twoXS (4px) on the left side because the arrow icon has an additional
-    // 2px padding. Note that this should be adjusted in case we change the arrow icon
-    // or don't show it (right now it's always shown).
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    ...(showArrow && {
+      // Using only twoXS (4px) on the left side because the arrow icon has an additional
+      // 2px padding. Note that this should be adjusted in case we change the arrow icon
+      // or if the arrow is not shown (controlled by the showArrow prop).
+      paddingLeft: theme.spacing.twoXS,
+    }),
   })
 )
