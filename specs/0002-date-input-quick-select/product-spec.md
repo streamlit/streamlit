@@ -21,7 +21,7 @@ what's shown here.
 
 Requests:
 
-- (4 👍) [#12331](https://github.com/streamlit/streamlit/issues/12331).
+- (4 👍) [#12331](https://github.com/streamlit/streamlit/issues/12331)
 
 ## Proposal
 
@@ -54,7 +54,7 @@ Allowed values for `quick_select_options`:
 st.date_input(
     "Future release window",
     value=(date.today(), date.today() + timedelta(days=30)),
-    quick_select_options="off"
+    quick_select_options=False
 )
 
 # Provide custom forward-looking options
