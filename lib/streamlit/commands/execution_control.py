@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Iterable, Mapping
 from itertools import dropwhile
 from pathlib import Path
@@ -271,6 +272,11 @@ def switch_page(  # type: ignore[misc]
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
+        # Additional safeguard and yield point to ensure the query params
+        #  are sent out to the frontend before the new rerun might clear
+        # outstanding messages. This uses the same time that is used as waiting
+        # in our event loop.
+        time.sleep(0.01)
 
     ctx.script_requests.request_rerun(
         RerunData(
