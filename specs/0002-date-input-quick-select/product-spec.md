@@ -31,7 +31,7 @@ Requests:
 
 st.date_input(
     ...,
-    quick_select_options: None | False | Mapping[str, Sequence[date, date]] = None,
+    quick_select_options: Mapping[str, Sequence[date, date]] | bool | None = None,
 )
 ```
 
@@ -40,7 +40,9 @@ Allowed values for `quick_select_options`:
 - `None` to show the default options, just like today. Note that the quick select should
   still only show up if `value` is a range. If `value` is a single date, the value of
   `quick_select_options` can be ignored.
-- `False` to hide the quick select entirely.
+- `False` to hide the quick select entirely (note that `False` = hidden and
+  `None` = default is the same pattern we use in other places, e.g. for `anchor` on
+  `st.title` or `border` on `st.container`).
 - A dict mapping a string label (to be shown in the dropdown) to a sequence containing
   exactly one start and ond end date (e.g.
   `{"Last 30 days": [date.today() - timedelta(days=30), date.today()], ...}`).
