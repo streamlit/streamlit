@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -61,6 +61,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import in_sidebar
@@ -782,6 +783,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        query_params: dict[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -874,6 +876,10 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        query_params : dict or None
+            The query parameters to set when switching pages. This can be a
+            dictionary or an iterable of key-value pairs.
+
         Example
         -------
         Consider the following example given this file structure:
@@ -918,6 +924,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             width=width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -1052,8 +1059,12 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        query_params: dict[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
+        if query_params:
+            page_link_proto.query_string = process_query_params(query_params)
+
         validate_width(width, allow_content=True)
 
         ctx = get_script_run_ctx()

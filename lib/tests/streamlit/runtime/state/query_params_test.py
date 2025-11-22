@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.state.query_params import QueryParams, process_query_params
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 QUERY_PARAMS_DICT_WITH_EMBED_KEY: dict[str, list[str] | str] = {
@@ -384,3 +384,40 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self.query_params._query_params["embed_options"] == (
             ["disable_scrolling", "show_colored_line"]
         )
+
+
+class ProcessQueryParamsTest(DeltaGeneratorTestCase):
+    def test_process_query_params_with_dict(self):
+        """Test process_query_params with a dictionary."""
+        params = {"foo": "bar", "baz": "qux"}
+        assert process_query_params(params) == "foo=bar&baz=qux"
+
+    def test_process_query_params_with_iterable(self):
+        """Test process_query_params with an iterable."""
+        params = [("foo", "bar"), ("baz", "qux")]
+        assert process_query_params(params) == "foo=bar&baz=qux"
+
+    def test_process_query_params_with_list_values(self):
+        """Test process_query_params with list values."""
+        params = {"foo": ["bar", "baz"]}
+        assert process_query_params(params) == "foo=bar&foo=baz"
+
+    def test_process_query_params_converts_types(self):
+        """Test process_query_params converts types to string."""
+        params = {"foo": 1, "bar": 1.5}
+        assert process_query_params(params) == "foo=1&bar=1.5"
+
+    def test_process_query_params_raises_on_embed(self):
+        """Test process_query_params raises exception on embed key."""
+        with pytest.raises(StreamlitAPIException):
+            process_query_params({"embed": "true"})
+
+    def test_process_query_params_raises_on_embed_options(self):
+        """Test process_query_params raises exception on embed_options key."""
+        with pytest.raises(StreamlitAPIException):
+            process_query_params({"embed_options": "show_toolbar"})
+
+    def test_process_query_params_raises_on_dict_value(self):
+        """Test process_query_params raises exception on dictionary value."""
+        with pytest.raises(StreamlitAPIException):
+            process_query_params({"foo": {"bar": "baz"}})

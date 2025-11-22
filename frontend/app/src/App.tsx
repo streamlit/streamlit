@@ -1652,7 +1652,7 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (pageScriptHash: string, queryString?: string): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1676,7 +1676,9 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString
     )
   }
 
@@ -1693,7 +1695,8 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryStringOverride?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1706,7 +1709,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1725,11 +1728,21 @@ export class App extends PureComponent<Props, State> {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
         const preservedQueryParams = preserveEmbedQueryParams()
-        queryString = preservedQueryParams
-        this.setState({ queryParams: preservedQueryParams })
+
+        if (queryStringOverride !== undefined) {
+          if (preservedQueryParams && queryStringOverride) {
+            queryString = `${preservedQueryParams}&${queryStringOverride}`
+          } else {
+            queryString = queryStringOverride || preservedQueryParams
+          }
+        } else {
+          queryString = preservedQueryParams
+        }
+
+        this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: preservedQueryParams,
+          queryParams: queryString,
         })
       }
     } else if (currentPageScriptHash) {

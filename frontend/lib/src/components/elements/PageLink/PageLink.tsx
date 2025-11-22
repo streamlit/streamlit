@@ -55,9 +55,14 @@ function PageLink(props: Readonly<Props>): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash)
+        onPageChange(element.pageScriptHash, element.queryString)
       }
     }
+  }
+
+  let href = element.page
+  if (element.external && element.queryString) {
+    href += (href.includes("?") ? "&" : "?") + element.queryString
   }
 
   return (
@@ -72,7 +77,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            href={element.page}
+            href={href}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}

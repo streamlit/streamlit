@@ -471,6 +471,19 @@ def test_page_link_with_st_file(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
+def test_page_link_with_query_params(app: Page, app_port: int):
+    """Test st.page_link with query params works."""
+
+    app.get_by_test_id("stPageLink-NavLink").filter(
+        has_text="page 9 with query params"
+    ).click()
+    wait_for_app_loaded(app)
+
+    expect(page_heading(app)).to_contain_text("Page 9")
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_9?foo=bar&baz=1&baz=2")
+    expect_prefixed_markdown(app, "Query Params:", "{'foo': 'bar', 'baz': ['1', '2']}")
+
+
 def test_hidden_navigation(app: Page):
     """Test position=hidden hides the navigation."""
 

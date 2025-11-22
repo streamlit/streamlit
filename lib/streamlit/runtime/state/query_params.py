@@ -202,3 +202,46 @@ class QueryParams(MutableMapping[str, str]):
 
 def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}".'
+
+
+def _set_item_in_dict(
+    target_dict: dict[str, list[str] | str], key: str, value: str | Iterable[str]
+) -> None:
+    """Set an item in a dictionary."""
+    if isinstance(value, dict):
+        raise StreamlitAPIException(
+            f"You cannot set a query params key `{key}` to a dictionary."
+        )
+
+    if key in EMBED_QUERY_PARAMS_KEYS:
+        raise StreamlitAPIException(
+            "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+        )
+    # Type checking users should handle the string serialization themselves
+    # We will accept any type for the list and serialize to str just in case
+    if isinstance(value, Iterable) and not isinstance(value, str):
+        target_dict[key] = [str(item) for item in value]
+    else:
+        target_dict[key] = str(value)
+
+
+def process_query_params(
+    query_params: Iterable[tuple[str, str | Iterable[str]]]
+    | SupportsKeysAndGetItem[str, str | Iterable[str]],
+) -> str:
+    """Convert query params into a URL-encoded query string."""
+    processed_params: dict[str, list[str] | str] = {}
+
+    if hasattr(query_params, "keys") and hasattr(query_params, "__getitem__"):
+        query_params = cast(
+            "SupportsKeysAndGetItem[str, str | Iterable[str]]", query_params
+        )
+        for key in query_params.keys():  # noqa: SIM118
+            value = query_params[key]
+            _set_item_in_dict(processed_params, key, value)
+    else:
+        query_params = cast("Iterable[tuple[str, str | Iterable[str]]]", query_params)
+        for key, value in query_params:
+            _set_item_in_dict(processed_params, key, value)
+
+    return parse.urlencode(processed_params, doseq=True)
