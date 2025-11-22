@@ -99,6 +99,21 @@ describe("PageLink", () => {
     expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
   })
 
+  it("triggers onPageChange with pageScriptHash and queryString when clicked", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ queryString: "foo=bar" })
+
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
+    })
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    await user.click(pageNavLink)
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", "foo=bar")
+  })
+
   it("does not trigger onPageChange when disabled", async () => {
     const user = userEvent.setup()
     const props = getProps({}, { disabled: true })
@@ -196,6 +211,33 @@ describe("PageLink", () => {
     expect(pageLink).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
     const pageLinkText = screen.getByText(props.element.label)
     expect(pageLinkText).not.toHaveStyle(`font-weight: 600`)
+  })
+
+  it("constructs href with queryString for external links", () => {
+    const props = getProps({
+      page: "http://example.com",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("href", "http://example.com?foo=bar")
+  })
+
+  it("constructs href with queryString for external links when URL already has query params", () => {
+    const props = getProps({
+      page: "http://example.com?baz=qux",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute(
+      "href",
+      "http://example.com?baz=qux&foo=bar"
+    )
   })
 
   it("renders with help properly", async () => {
