@@ -14,9 +14,14 @@ so apps can whitelist or block specific dates and weekdays.
 
 Requests:
 
-- (27 :thumbsup:) #1839 and (16 :thumbsup:) #7062 want to block selecting weekends and holidays on dashboards, e.g. for
-  stock-market data.
+- (27 :thumbsup:) #1839 and (16 :thumbsup:) #7062 want to block selecting weekends and
+  holidays on dashboards, e.g. for stock-market data.
 - (12 :thumbsup:) #8058 wants to allow users to only select dates with data availability.
+
+Note that we didn't want to add this in the past because we were thinking about moving
+`st.date_input` away from BaseWeb to support `st.datetime_input` (#6089). But we found
+(and merged) a solution that works with BaseWeb, so I think it's safe to do these
+additional improvements for `st.date_input` now.
 
 ## Proposal
 
