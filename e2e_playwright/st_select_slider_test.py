@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_slider,
 )
 
-NUM_SELECT_SLIDERS = 15
+NUM_SELECT_SLIDERS = 16
 
 
 def test_select_slider_rendering(
