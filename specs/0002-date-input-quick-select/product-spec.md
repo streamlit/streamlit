@@ -1,8 +1,8 @@
 # Custom quick select for `st.date_input`
 
-Authors: @jrieke
+**Author(s):** @jrieke
 
-Status: Draft
+**Status:** Draft
 
 ## Summary
 
