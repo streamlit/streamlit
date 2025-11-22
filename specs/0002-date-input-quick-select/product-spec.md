@@ -19,7 +19,7 @@ of the date picker:
 This has the default options from BaseWeb. Sometimes it can be useful to customize
 what's shown here.
 
-Requests:
+**Requests:**
 
 - (4 👍) [#12331](https://github.com/streamlit/streamlit/issues/12331)
 
