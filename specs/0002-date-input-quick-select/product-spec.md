@@ -31,17 +31,19 @@ Requests:
 
 st.date_input(
     ...,
-    quick_select_options: "off" | None | Mapping[str, Tuple[date, date]] = None,
+    quick_select_options: None | False | Mapping[str, Sequence[date, date]] = None,
 )
 ```
 
 Allowed values for `quick_select_options`:
 
 - `None` to show the default options, just like today. Note that the quick select should
-  still only show up if `value` is a range.
-- `"off"` to hide the quick select entirely.
-- A dict mapping labels to a tuple/list of start and end date (e.g.
-  `{"Last 30 days": (date.today() - timedelta(days=30), date.today()), ...}`).
+  still only show up if `value` is a range. If `value` is a single date, the value of
+  `quick_select_options` can be ignored.
+- `False` to hide the quick select entirely.
+- A dict mapping a string label (to be shown in the dropdown) to a sequence containing
+  exactly one start and ond end date (e.g.
+  `{"Last 30 days": [date.today() - timedelta(days=30), date.today()], ...}`).
 
 ### Examples
 
@@ -56,6 +58,7 @@ st.date_input(
 # Provide custom forward-looking options
 st.date_input(
     "Forecast horizon",
+    value=(date.today(), date.today() + timedelta(days=30)),
     quick_select_options={
         "Next week": (date.today(), date.today() + timedelta(days=7)),
         "Next quarter": (
