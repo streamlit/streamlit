@@ -45,7 +45,7 @@ st.date_input(
 - It should be possible to mix and match (e.g.
   `enabled_dates=[date(2025, 2, 10), "monday"]`).
 
-## Naming
+### Naming
 
 - `enabled_dates` and `disabled_dates`: symmetric, rhymes with `disabled` parameter,
   even though "enabled" doesn't make it very obvious that other dates are disabled
