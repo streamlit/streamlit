@@ -45,7 +45,7 @@ Allowed values for `quick_select_options`:
   `None` = default is the same pattern we use in other places, e.g. for `anchor` on
   `st.title` or `border` on `st.container`).
 - A dict mapping a string label (to be shown in the dropdown) to a sequence containing
-  exactly one start and ond end date (e.g.
+  exactly one start and one end date (e.g.
   `{"Last 30 days": [date.today() - timedelta(days=30), date.today()], ...}`).
 
 ### Examples
