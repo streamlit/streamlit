@@ -18,6 +18,7 @@ import { useMemo } from "react"
 
 import type { Locale } from "date-fns"
 import { enUS } from "date-fns/locale/en-US"
+import * as dateFnsLocales from "date-fns/locale"
 
 /**
  * 1 = Monday, 7 = Sunday
@@ -83,10 +84,15 @@ export const useIntlLocale = (locale: string): Locale => {
    */
   const firstDay = weekInfo.firstDay === 7 ? 0 : weekInfo.firstDay
 
+  const loadedLocale =
+    locale in dateFnsLocales
+      ? (dateFnsLocales[locale as keyof typeof dateFnsLocales] as Locale)
+      : enUS
+
   return {
-    ...enUS,
+    ...loadedLocale,
     options: {
-      ...enUS.options,
+      ...loadedLocale.options,
       weekStartsOn: firstDay,
     },
   }
