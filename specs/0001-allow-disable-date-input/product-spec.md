@@ -31,23 +31,24 @@ additional improvements for `st.date_input` now.
 ```python
 st.date_input(
     ...,
-    allowed_dates: Collection[date | str] | None = None,
-    disabled_dates: Collection[date | str] | None = None,
+    allowed_dates: Sequence[date | str] | None = None,
+    disabled_dates: Sequence[date | str] | None = None,
 )
 ```
 
 - Both parameters should accept a list of dates, which can be either:
-  - One of the types accepted by `value` (e.g. `datetime.date` or ISO `YYYY-MM-DD`
-    strings).
+  - One of the types accepted by `value` except for `"today"` (e.g. `datetime.date` or
+    `"YYYY-MM-DD"` string)
   - A weekday name: `"monday"`, `"tuesday"`, `"wednesday"`, `"thursday"`, `"friday"`,
     `"saturday"`, `"sunday"`. We should trim and lowercase the input strings (so
-    "Monday" should be treated as "monday"). All days of the week that match the name
-    should be allowed/disabled.
+    "Monday" should be treated as "monday"). Invalid weekday names should raise an exception.
 - It should be possible to mix and match (e.g.
   `allowed_dates=[date(2025, 2, 10), "monday"]`).
 
 ### Behavior
 
+- If a weekday name is provided in `allowed_dates` or `disabled_dates`, all days of the
+  week that match the name should be allowed/disabled.
 - Always start from the `min_value`/`max_value` window. If an allowed/disabled date is
   outside this window, ignore it.
 - If both `allowed_dates` and `disabled_dates` are provided, raise an exception.
@@ -56,7 +57,8 @@ st.date_input(
 - If only `disabled_dates` is provided, all dates should be enabled except for the ones
   in the list.
 - If the date for `value` (or both if it's a range) isn't an allowed date, raise an
-  exception.
+  exception. This also means that if *no* dates are allowed, it should raise an
+  exception (since we need to at least have one allowed date for `value`).
 
 ### Examples
 
