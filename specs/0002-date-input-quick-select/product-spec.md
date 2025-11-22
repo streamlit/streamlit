@@ -21,7 +21,7 @@ what's shown here.
 
 Requests:
 
-- (4 :thumbsup:) [#12331](https://github.com/streamlit/streamlit/issues/12331).
+- (4 👍) [#12331](https://github.com/streamlit/streamlit/issues/12331).
 
 ## Proposal
 
