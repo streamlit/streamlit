@@ -25,6 +25,7 @@ import { FixedSizeList } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
@@ -84,6 +85,12 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
           // Somehow this adds an additional shadow, even though we already have
           // one on the popover, so we need to remove it here.
           boxShadow: "none",
+          ...(!hasLightBackgroundColor(theme) && {
+            borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+            borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+            borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+            borderRight: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+          }),
         }}
         ref={ref}
         data-testid="stSelectboxVirtualDropdownEmpty"
@@ -116,6 +123,12 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
+        ...(!hasLightBackgroundColor(theme) && {
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+          borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+          borderRight: `${theme.sizes.borderWidth} solid ${theme.colors.gray70}`,
+        }),
       }}
       data-testid="stSelectboxVirtualDropdown"
     >
