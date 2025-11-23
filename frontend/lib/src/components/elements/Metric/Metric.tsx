@@ -331,7 +331,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText> {body} </StyledTruncateText>
+          <StyledTruncateText>
+            <StreamlitMarkdown source={body} allowHTML={false} inheritFont />
+          </StyledTruncateText>
         </StyledMetricValueText>
         {deltaExists && (
           <StyledMetricDeltaText
@@ -351,7 +353,13 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 margin={arrowMargin}
               />
             )}
-            <StyledTruncateText> {delta} </StyledTruncateText>
+            <StyledTruncateText>
+              <StreamlitMarkdown
+                source={delta}
+                allowHTML={false}
+                inheritFont
+              />
+            </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
       </StyledMetricContent>
