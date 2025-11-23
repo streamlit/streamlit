@@ -421,3 +421,8 @@ class ProcessQueryParamsTest(DeltaGeneratorTestCase):
         """Test process_query_params raises exception on dictionary value."""
         with pytest.raises(StreamlitAPIException):
             process_query_params({"foo": {"bar": "baz"}})
+
+    def test_process_query_params_accumulates_values_from_iterable(self):
+        """Test process_query_params accumulates values from iterable with duplicate keys."""
+        params = [("foo", "bar"), ("baz", "1"), ("baz", "2")]
+        assert process_query_params(params) == "foo=bar&baz=1&baz=2"

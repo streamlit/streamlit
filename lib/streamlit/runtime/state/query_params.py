@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, MutableMapping
+from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, cast
 from urllib import parse
@@ -25,6 +25,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+QueryParamValue = str | Iterable[str]
+QueryParamsInput = Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
 
 
 EMBED_QUERY_PARAM: Final[str] = "embed"
@@ -242,6 +245,24 @@ def process_query_params(
     else:
         query_params = cast("Iterable[tuple[str, str | Iterable[str]]]", query_params)
         for key, value in query_params:
-            _set_item_in_dict(processed_params, key, value)
+            if key in processed_params:
+                # If the key already exists, we need to accumulate the values.
+                if isinstance(value, dict):
+                    raise StreamlitAPIException(
+                        f"You cannot set a query params key `{key}` to a dictionary."
+                    )
+
+                current_val = processed_params[key]
+                if not isinstance(current_val, list):
+                    current_val = [current_val]
+
+                if isinstance(value, Iterable) and not isinstance(value, str):
+                    current_val.extend([str(item) for item in value])
+                else:
+                    current_val.append(str(value))
+
+                processed_params[key] = current_val
+            else:
+                _set_item_in_dict(processed_params, key, value)
 
     return parse.urlencode(processed_params, doseq=True)

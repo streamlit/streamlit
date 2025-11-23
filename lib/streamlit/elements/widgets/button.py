@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
@@ -68,6 +68,7 @@ from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.query_params import QueryParamsInput
 
 FORM_DOCS_INFO: Final = """
 
@@ -783,7 +784,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
-        query_params: dict[str, str | Iterable[str]] | None = None,
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -876,7 +877,7 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
-        query_params : dict or None
+        query_params : dict, list of tuples, or None
             The query parameters to set when switching pages. This can be a
             dictionary or an iterable of key-value pairs.
 
@@ -1059,7 +1060,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
-        query_params: dict[str, str | Iterable[str]] | None = None,
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         if query_params:
