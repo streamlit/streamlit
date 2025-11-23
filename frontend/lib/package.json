@@ -16,6 +16,7 @@
       "default": "./dist/streamlit-lib.umd.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
