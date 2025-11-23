@@ -473,6 +473,10 @@ def test_uploads_and_deletes_single_file(
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     uploaded_files.scroll_into_view_if_needed()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-single_file_uploaded")
 
     # Upload a second file. This one will replace the first.
@@ -514,6 +518,9 @@ def test_uploads_and_deletes_multiple_files(
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
 
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
@@ -553,7 +560,14 @@ def test_file_upload_error_message_disallowed_files(
         .first
     )
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
+    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
+    reset_hovering(themed_app)
+
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
+
+    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
+    reset_hovering(themed_app)
 
     uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
     expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
@@ -571,15 +585,16 @@ def test_file_upload_error_message_file_too_large(app: Page):
         buffer=b"x" * (2 * 1024 * 1024),  # 2MB
     )
 
-    expect(app.get_by_text(file_name1)).not_to_be_attached()
     chat_input = get_element_by_key(app, "chat_input_4")
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
-    expect(app.get_by_text(file_name1)).to_be_visible()
-
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
+
+    # Verify the file appears in the uploaded files list
+    expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
+
     uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
     expect(uploaded_file).to_be_visible()
 
@@ -588,6 +603,14 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # Reset hovering to not cause issues with the upload tooltip being
     # shown over the uploaded file tooltip hover target:
     reset_hovering(app)
+
+    # Ensure the upload button tooltip has disappeared before checking the error tooltip
+    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
+
+    # Ensure the tooltip hover target is in viewport before hovering (WebKit requirement)
+    hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget")
+    hover_target.scroll_into_view_if_needed()
+
     expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
 
 
@@ -997,6 +1020,7 @@ def test_audio_rapid_re_recordings(app: Page):
     for i in range(3):
         mic_button = chat_input.get_by_test_id("stChatInputMicButton")
         expect(mic_button).to_be_visible()
+        expect(mic_button).to_be_enabled()
         mic_button.click()
 
         # Wait for approve button to appear
@@ -1010,8 +1034,11 @@ def test_audio_rapid_re_recordings(app: Page):
         approve_button.click()
 
         if i < 2:  # Don't wait after last recording
-            # Wait for approve button to disappear (indicates ready for next recording)
-            expect(approve_button).not_to_be_visible()
+            # Wait for upload to complete and component to reset before next recording
+            wait_for_app_run(app)
+            # Ensure mic button is ready for next recording
+            expect(mic_button).to_be_visible()
+            expect(mic_button).to_be_enabled()
 
     # Wait for the final upload to complete
     wait_for_app_run(app)
