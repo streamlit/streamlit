@@ -27,6 +27,7 @@ import {
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
+import { ErrorDetails } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
@@ -285,7 +286,7 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      TEST_ERROR_MESSAGE,
+      { message: TEST_ERROR_MESSAGE },
       expect.anything()
     )
   })
@@ -321,7 +322,7 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Connection timed out.",
+      { message: "Connection timed out." },
       expect.anything()
     )
   })
@@ -361,7 +362,10 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Streamlit server is not responding. Are you connected to the internet?",
+      {
+        message:
+          "Streamlit server is not responding. Are you connected to the internet?",
+      },
       expect.anything()
     )
   })
@@ -399,7 +403,10 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Streamlit server is not responding. Are you connected to the internet?",
+      {
+        message:
+          "Streamlit server is not responding. Are you connected to the internet?",
+      },
       expect.anything()
     )
   })
@@ -501,7 +508,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      forbiddenMarkdown,
+      { message: forbiddenMarkdown },
       expect.anything()
     )
   })
@@ -542,10 +549,10 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      `Connection failed with status ${TEST_ERROR.response.status}, ` +
-        "and response:\n```\n" +
-        TEST_ERROR.response.data +
-        "\n```",
+      {
+        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
+        codeBlock: TEST_ERROR.response.data,
+      },
       expect.anything()
     )
   })
@@ -588,10 +595,10 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      `Connection failed with status ${TEST_ERROR.response.status}, ` +
-        "and response:\n```\n" +
-        JSON.stringify(TEST_ERROR.response.data, null, 2) +
-        "\n```",
+      {
+        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
+        codeBlock: JSON.stringify(TEST_ERROR.response.data, null, 2),
+      },
       expect.anything()
     )
   })
@@ -667,7 +674,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -733,7 +740,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -788,7 +795,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -818,7 +825,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts2: number[] = []
     const retryCallback2 = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts2.push(timeout)

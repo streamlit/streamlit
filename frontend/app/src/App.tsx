@@ -36,6 +36,7 @@ import {
   WarningProps,
 } from "@streamlit/app/src/components/StreamlitDialog"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import withScreencast, {
@@ -51,6 +52,7 @@ import {
   ConnectionManager,
   ConnectionState,
   DefaultStreamlitEndpoints,
+  ErrorDetails,
   IHostConfigResponse,
   LibConfig,
   parseUriIntoBaseParts,
@@ -100,7 +102,6 @@ import {
   PresetThemeName,
   ScriptRunState,
   SessionInfo,
-  StreamlitMarkdown,
   ThemeConfig,
   toExportedTheme,
   toThemeInput,
@@ -654,19 +655,25 @@ export class App extends PureComponent<Props, State> {
 
   showError(
     title: string,
-    errorMarkdown: string,
+    errorDetails: ErrorDetails,
     dialogType:
       | DialogType.WARNING
       | DialogType.CONNECTION_ERROR = DialogType.WARNING
   ): void {
-    LOG.error(errorMarkdown)
+    LOG.error(errorDetails.message)
+
     const newDialog: WarningProps | ConnectionErrorProps = {
       type: dialogType,
       title,
-      msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
+      msg: (
+        <DialogErrorMessage
+          message={errorDetails.message}
+          codeBlock={errorDetails.codeBlock}
+        />
+      ),
       onClose: () => {},
     }
-    this.maybeShowErrorDialog(newDialog, errorMarkdown)
+    this.maybeShowErrorDialog(newDialog, errorDetails.message)
   }
 
   showDeployError = (
@@ -901,7 +908,7 @@ export class App extends PureComponent<Props, State> {
     } catch (e) {
       const err = ensureError(e)
       LOG.error(err)
-      this.showError("Bad message format", err.message)
+      this.showError("Bad message format", { message: err.message })
     }
   }
 
@@ -993,7 +1000,9 @@ export class App extends PureComponent<Props, State> {
     const errMsg = pageName
       ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
       : "The page that you have requested does not seem to exist"
-    this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+    this.showError("Page not found", {
+      message: `${errMsg}. Running the app's main page.`,
+    })
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
@@ -1883,7 +1892,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Updates the app body when there's a connection error.
    */
-  handleConnectionError = (errMarkdown: string): void => {
+  handleConnectionError = (errDetails: ErrorDetails): void => {
     // Don't show the error dialog if it has been dismissed for this session
     if (this.state.connectionErrorDismissed) {
       return
@@ -1891,11 +1900,7 @@ export class App extends PureComponent<Props, State> {
 
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
-    this.showError(
-      "Connection error",
-      errMarkdown,
-      DialogType.CONNECTION_ERROR
-    )
+    this.showError("Connection error", errDetails, DialogType.CONNECTION_ERROR)
   }
 
   /**
