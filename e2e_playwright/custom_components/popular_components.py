@@ -197,7 +197,7 @@ def use_url_fragment():
 
 
 def use_bokeh():
-    from bokeh.plotting import figure
+    from bokeh.plotting import figure  # type: ignore
     from streamlit_bokeh import streamlit_bokeh  # type: ignore
 
     # Data

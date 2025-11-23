@@ -31,7 +31,7 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import AnyNumber, clean_text, from_number
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 Value: TypeAlias = AnyNumber | str | None
 Delta: TypeAlias = AnyNumber | str | None
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
+DeltaArrow: TypeAlias = Literal["auto", "up", "down", "off"]
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class MetricMixin:
         height: Height = "content",
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
+        delta_arrow: DeltaArrow = "auto",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -110,6 +112,12 @@ class MetricMixin:
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
+
+        delta_arrow : "auto", "up", "down", or "off"
+            Controls the direction of the delta indicator arrow. If "auto"
+            (default), the arrow direction follows the sign of ``delta``. If
+            "up" or "down", the arrow is forced to point in that direction.
+            If "off", no arrow is shown, but the delta value remains visible.
 
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
@@ -280,6 +288,17 @@ class MetricMixin:
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
+        parsed_delta_arrow = _parse_delta_arrow(
+            cast("DeltaArrow", clean_text(delta_arrow))
+        )
+
+        if parsed_delta_arrow != "auto":
+            if parsed_delta_arrow == "off":
+                metric_proto.direction = MetricProto.MetricDirection.NONE
+            elif parsed_delta_arrow == "up":
+                metric_proto.direction = MetricProto.MetricDirection.UP
+            elif parsed_delta_arrow == "down":
+                metric_proto.direction = MetricProto.MetricDirection.DOWN
         metric_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -320,6 +339,12 @@ def _parse_chart_type(
         return MetricProto.ChartType.AREA
     # Use line as default chart:
     return MetricProto.ChartType.LINE
+
+
+def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
+    if delta_arrow not in {"auto", "up", "down", "off"}:
+        raise StreamlitValueError("delta_arrow", ["auto", "up", "down", "off"])
+    return delta_arrow
 
 
 def _parse_label(label: str) -> str:

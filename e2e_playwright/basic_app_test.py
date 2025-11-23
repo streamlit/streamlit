@@ -42,7 +42,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     # frontend (in MB) for a basic app run. While its important to keep the total
     # size of web assets low, you can modify this threshold if it's really needed
     # to add some new features. But make sure that its justified and intended.
-    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.5  # noqa: N806
+    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.9  # noqa: N806
 
     total_size_bytes = 0
 

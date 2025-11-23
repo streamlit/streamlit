@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, ReactNode, useCallback, useMemo } from "react"
 
 import {
   createElement,
   Prism as SyntaxHighlighter,
+  SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
+
+import { isNullOrUndefined } from "@streamlit/utils"
 
 import CopyButton from "./CopyButton"
 import {
@@ -29,12 +32,18 @@ import {
 } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
-  children: string | string[]
+  children: string | string[] | undefined | null
   language?: string
   showLineNumbers?: boolean
   wrapLines?: boolean
   height?: number
 }
+
+/** Extracted Renderer Props from `react-syntax-highlighter`'s internal
+ * structure since it isn't exported */
+type RendererProps = Parameters<
+  NonNullable<SyntaxHighlighterProps["renderer"]>
+>[0]
 
 function StreamlitSyntaxHighlighter({
   language,
@@ -43,10 +52,8 @@ function StreamlitSyntaxHighlighter({
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ({ rows, stylesheet, useInlineStyles }: any): any =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      rows.map((row: any, index: any): any => {
+    ({ rows, stylesheet, useInlineStyles }: RendererProps): ReactNode => {
+      return rows.map((row, index) => {
         const rowChildren = row.children
 
         if (rowChildren) {
@@ -71,9 +78,20 @@ function StreamlitSyntaxHighlighter({
           useInlineStyles,
           key: index,
         })
-      }),
+      })
+    },
     []
   )
+
+  const text = useMemo(() => {
+    if (isNullOrUndefined(children)) {
+      return ""
+    }
+
+    return Array.isArray(children) ? children.join("") : children
+  }, [children])
+
+  const isEmpty = !text || text.trim().length === 0
 
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
@@ -94,12 +112,12 @@ function StreamlitSyntaxHighlighter({
           // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
           renderer={showLineNumbers && wrapLines ? renderer : undefined}
         >
-          {children}
+          {text}
         </SyntaxHighlighter>
       </StyledPre>
-      {typeof children === "string" && children.trim() !== "" && (
+      {!isEmpty && (
         <StyledCopyButtonContainer>
-          <CopyButton text={children} />
+          <CopyButton text={text} />
         </StyledCopyButtonContainer>
       )}
     </StyledCodeBlock>

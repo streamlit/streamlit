@@ -400,6 +400,15 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
     expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
 
 
+def test_switch_page_with_query_params(app: Page, app_port: int):
+    """Test that st.switch_page applies provided query params."""
+
+    click_button(app, "Navigate with query params")
+
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_5?team=streamlit")
+    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
+
+
 def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
     """Test that query params are removed when swapping pages by clicking on a link."""
 

@@ -25,9 +25,9 @@ from e2e_playwright.shared.app_utils import (
 )
 
 # Does not include divider header/subheaders
-TITLE_COUNT = 9
-HEADER_COUNT = 8
-SUBHEADER_COUNT = 11
+TITLE_COUNT = 11
+HEADER_COUNT = 10
+SUBHEADER_COUNT = 13
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -372,3 +372,52 @@ def test_heading_widths_snapshot(
     subheader_content = get_heading(themed_app, "Subheader with content width")
     subheader_content.scroll_into_view_if_needed()
     assert_snapshot(subheader_content, name="st_subheader-width_content")
+
+
+def test_title_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.title with text alignment."""
+    # Test center alignment with help tooltip
+    title_center = get_heading(app, "Centered Title")
+    title_center.scroll_into_view_if_needed()
+    expect(title_center).to_have_css("text-align", "center")
+    assert_snapshot(title_center, name="st_title-text_alignment_center_with_help")
+
+    # Test right alignment with help tooltip
+    title_right = get_heading(app, "Right Aligned Title")
+    title_right.scroll_into_view_if_needed()
+    expect(title_right).to_have_css("text-align", "right")
+    assert_snapshot(title_right, name="st_title-text_alignment_right_with_help")
+
+
+def test_header_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.header with text alignment."""
+    # Test center alignment with divider
+    header_center = get_heading(app, "Centered Header with longer text")
+    header_center.scroll_into_view_if_needed()
+    expect(header_center).to_have_css("text-align", "center")
+    assert_snapshot(header_center, name="st_header-text_alignment_center")
+
+    # Test right alignment with help tooltip
+    header_right = get_heading(app, "Right Aligned Header with longer text")
+    header_right.scroll_into_view_if_needed()
+    expect(header_right).to_have_css("text-align", "right")
+    assert_snapshot(header_right, name="st_header-text_alignment_right_with_help")
+
+
+def test_subheader_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.subheader with text alignment."""
+    # Test center alignment with help tooltip and divider
+    subheader_center = get_heading(app, "Centered Subheader")
+    subheader_center.scroll_into_view_if_needed()
+    expect(subheader_center).to_have_css("text-align", "center")
+    assert_snapshot(
+        subheader_center, name="st_subheader-text_alignment_center_with_help"
+    )
+
+    # Test justify alignment with help tooltip
+    subheader_justify = get_heading(app, "Justified Subheader with longer text")
+    subheader_justify.scroll_into_view_if_needed()
+    expect(subheader_justify).to_have_css("text-align", "justify")
+    assert_snapshot(
+        subheader_justify, name="st_subheader-text_alignment_justify_with_help"
+    )

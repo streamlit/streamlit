@@ -769,6 +769,7 @@ def assert_snapshot(
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
         style: str | None = None,
+        show_app_header: bool | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -788,12 +789,24 @@ def assert_snapshot(
             If True, the comparison will stop at the first pixel mismatch.
         file_type: "png" or "jpg"
             The file type of the screenshot. Defaults to "png".
+        show_app_header : bool or None
+            Whether to make the app header background transparent before taking the screenshot.
+            If None (default), the app header will be shown based on the
+            element type (page will always show the app header, other elements will hide it).
         """
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
+
+        if show_app_header is False or (
+            show_app_header is None and not isinstance(element, Page)
+        ):
+            # Make the app header background transparent:
+            if style is None:
+                style = ""
+            style += " .stAppHeader { background: transparent; }"
 
         if file_type == "jpg":
             file_extension = ".jpg"

@@ -17,7 +17,6 @@
 import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
-import debounceRender from "react-debounce-render"
 
 import {
   Alert as AlertProto,
@@ -25,7 +24,6 @@ import {
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
-  BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
   CameraInput as CameraInputProto,
@@ -70,7 +68,6 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import Maybe from "~lib/components/core/Maybe"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
@@ -110,15 +107,6 @@ const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
 const Toast = lazy(() => import("~lib/components/elements/Toast"))
-
-// BokehChart render function is sluggish. If the component is not debounced,
-// AutoSizer causes it to rerender multiple times for different widths
-// when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
-
-const DebouncedBokehChart = withCalculatedWidth(
-  debounceRender(BokehChart, 100)
-)
 
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
@@ -248,14 +236,6 @@ const RawElementNodeRenderer = (
       return hideIfStale(
         props.isStale,
         <Balloons scriptRunId={node.scriptRunId} />
-      )
-
-    case "bokehChart":
-      return (
-        <DebouncedBokehChart
-          element={node.element.bokehChart as BokehChartProto}
-          {...elementProps}
-        />
       )
 
     case "code": {
