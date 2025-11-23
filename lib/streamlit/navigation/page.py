@@ -41,7 +41,7 @@ class Page:
         title: str | None = None,
         icon: str | None = None,
         url_path: str | None = None,
-        default: bool = False,
+        default: bool = False
     ) -> None:
         self.page = page
         self.title = title
