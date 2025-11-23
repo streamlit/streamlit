@@ -102,6 +102,21 @@ export const StyledPre = styled.pre<StyledCodeProps>(
 
     code: { ...codeBlockStyle(theme, wrapLines) },
 
+    // Apply padding to the inner content to ensure that the copy button
+    // doesn't overlap the code when scrolling to the right.
+    // We need to set min-width to 100% to ensure that the padding is
+    // applied to the full width of the container.
+    // We also need to use fit-content to ensure that the background color
+    // extends to the full width of the content when scrolling.
+    // This is a workaround for the fact that we can't easily target the
+    // inner div rendered by react-syntax-highlighter.
+    "& > div": {
+      paddingRight: theme.iconSizes.threeXL,
+      boxSizing: "border-box",
+      minWidth: "100%",
+      width: "fit-content",
+    },
+
     // The token can consist of many lines, e.g. a triple-quote string, so
     // we need to make sure that the color is not overwritten.
     ".comment.linenumber": {
@@ -207,9 +222,6 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
   top: 0,
   right: 0,
   position: "absolute",
-  width: "100%",
-  height: "100%",
-  backgroundColor: theme.colors.transparent,
   zIndex: theme.zIndices.sidebar + 1,
   display: "flex",
   justifyContent: "flex-end",
@@ -239,7 +251,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   width: theme.iconSizes.threeXL,
   padding: theme.spacing.none,
   border: "none",
-  backgroundColor: theme.colors.transparent,
+  backgroundColor: theme.colors.codeBackgroundColor,
   color: theme.colors.fadedText60,
   transform: "scale(0)",
   top: 0,
