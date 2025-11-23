@@ -18,7 +18,6 @@ import React, { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
-import without from "lodash/without"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
@@ -2003,9 +2002,8 @@ export class App extends PureComponent<Props, State> {
   removeScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: without(
-          prevState.scriptFinishedHandlers,
-          func
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.filter(
+          h => h !== func
         ),
       }
     })

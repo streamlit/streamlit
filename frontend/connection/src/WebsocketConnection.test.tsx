@@ -15,7 +15,7 @@
  */
 
 import axios from "axios"
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"

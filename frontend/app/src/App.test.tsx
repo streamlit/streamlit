@@ -24,7 +24,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import cloneDeep from "lodash/cloneDeep"
+import { cloneDeep } from "lodash-es"
 
 import {
   getMenuStructure,

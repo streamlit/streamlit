@@ -33,8 +33,7 @@ import React, {
 
 import slugify from "@sindresorhus/slugify"
 import { type Element, type Root } from "hast"
-import omit from "lodash/omit"
-import once from "lodash/once"
+import { omit, once } from "lodash-es"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {

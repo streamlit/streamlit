@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import merge from "lodash/merge"
+import { merge } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
