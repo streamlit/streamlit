@@ -14,6 +14,7 @@
 
 
 import time
+from typing import cast
 
 import altair as alt
 import pandas as pd
@@ -28,7 +29,7 @@ st.header("Altair Chart with point and interval selection")
 # taken from vega_datasets cars example
 @st.cache_data  # use caching to avoid a potential issue with flakiness
 def get_cars_data() -> pd.DataFrame:
-    return data.cars()
+    return cast("pd.DataFrame", data.cars())
 
 
 cars = get_cars_data()
