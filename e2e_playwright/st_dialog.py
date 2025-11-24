@@ -42,7 +42,7 @@ def dialog_with_images() -> None:
 
     if st.button("Submit", key="dialog-btn"):
         st.rerun()
-    st.write("End of dialog")
+    st.space("large")
 
 
 if st.button("Open Dialog with Images"):

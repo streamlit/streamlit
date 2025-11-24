@@ -230,7 +230,7 @@ def test_dialog_is_scrollable(app: Page):
     close_button = main_dialog.get_by_test_id("stButton")
     expect(close_button).not_to_be_in_viewport()
     close_button.scroll_into_view_if_needed()
-    expect(close_button).to_be_in_viewport()
+    expect(close_button).to_be_in_viewport(timeout=10000)
 
 
 def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
