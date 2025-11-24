@@ -17,7 +17,6 @@
 import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
-import debounceRender from "react-debounce-render"
 
 import {
   Alert as AlertProto,
@@ -25,7 +24,6 @@ import {
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
-  BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
   CameraInput as CameraInputProto,
@@ -35,6 +33,7 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
+  DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
@@ -69,7 +68,6 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import Maybe from "~lib/components/core/Maybe"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
@@ -110,15 +108,6 @@ const ArrowVegaLiteChart = lazy(
 )
 const Toast = lazy(() => import("~lib/components/elements/Toast"))
 
-// BokehChart render function is sluggish. If the component is not debounced,
-// AutoSizer causes it to rerender multiple times for different widths
-// when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
-
-const DebouncedBokehChart = withCalculatedWidth(
-  debounceRender(BokehChart, 100)
-)
-
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
 )
@@ -148,6 +137,9 @@ const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
 const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
 const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
 const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const DateTimeInput = lazy(
+  () => import("~lib/components/widgets/DateTimeInput")
+)
 const Html = lazy(() => import("~lib/components/elements/Html"))
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
 const Progress = lazy(() => import("~lib/components/elements/Progress"))
@@ -244,14 +236,6 @@ const RawElementNodeRenderer = (
       return hideIfStale(
         props.isStale,
         <Balloons scriptRunId={node.scriptRunId} />
-      )
-
-    case "bokehChart":
-      return (
-        <DebouncedBokehChart
-          element={node.element.bokehChart as BokehChartProto}
-          {...elementProps}
-        />
       )
 
     case "code": {
@@ -680,6 +664,20 @@ const RawElementNodeRenderer = (
         <TextInput
           key={textInputProto.id}
           element={textInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "dateTimeInput": {
+      const dateTimeInputProto = node.element
+        .dateTimeInput as DateTimeInputProto
+      widgetProps.disabled =
+        widgetProps.disabled || dateTimeInputProto.disabled
+      return (
+        <DateTimeInput
+          key={dateTimeInputProto.id}
+          element={dateTimeInputProto}
           {...widgetProps}
         />
       )

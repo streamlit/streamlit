@@ -793,6 +793,8 @@ class LayoutsMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
 
@@ -942,6 +944,8 @@ class LayoutsMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         disabled : bool
             An optional boolean that disables the popover button if set to

@@ -39,7 +39,9 @@ INSTALL_REQUIRES = [
     "cachetools>=4.0, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
-    "packaging>=20, <26",
+    # The "packaging" package isn't version-capped because they use calendar-based
+    # versioning, i.e. "major" version increase != breaking changes
+    "packaging>=20",
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
@@ -182,6 +184,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",

@@ -47,6 +47,7 @@ export interface StyledElementContainerProps {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
+  textAlign?: React.CSSProperties["textAlign"]
 }
 
 export const StyledSpace = styled.div({
@@ -67,9 +68,11 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     overflow,
     flex,
     minWidth,
+    textAlign,
   }) => ({
     width,
     height,
+    textAlign,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.

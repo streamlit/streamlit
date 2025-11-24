@@ -910,6 +910,12 @@ class ArrowMixin:
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
+        .. important::
+            ``add_rows`` is deprecated and might be removed in a future version.
+            If you have a specific use-case that requires the ``add_rows``
+            functionality, please tell us via this
+            [issue on Github](https://github.com/streamlit/streamlit/issues/13063).
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
@@ -962,6 +968,14 @@ class ArrowMixin:
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """  # noqa: E501
+        show_deprecation_warning(
+            "`add_rows` is deprecated and might be removed in a future version."
+            " If you have a specific use-case that requires the `add_rows` "
+            "functionality, please tell us via this "
+            "[issue on Github](https://github.com/streamlit/streamlit/issues/13063).",
+            show_in_browser=False,
+        )
+
         return _arrow_add_rows(self.dg, data, **kwargs)
 
     @property

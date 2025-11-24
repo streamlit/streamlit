@@ -41,6 +41,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -246,6 +247,75 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         st.session_state.feedback_command_key = session_state_index
         val = st.feedback("thumbs", key="feedback_command_key")
         assert val == session_state_index
+
+    def test_feedback_converts_small_width_to_content(self):
+        """Test that st.feedback converts small pixel widths to content width.
+
+        The threshold is calculated dynamically based on theme.baseFontSize,
+        so this tests with default 16px base font size.
+        """
+        # With default 16px base font: thumbs threshold ~55px (3.125rem x 16 x 1.1)
+        st.feedback("thumbs", width=30, key="thumbs_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+        # With default 16px base font: faces threshold ~141px (8rem x 16 x 1.1)
+        st.feedback("faces", width=100, key="faces_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_feedback_preserves_adequate_pixel_widths(self):
+        """Test that st.feedback preserves pixel widths above the threshold."""
+        # Large widths well above any threshold should be preserved
+        st.feedback("thumbs", width=100, key="thumbs_adequate")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 100
+
+        st.feedback("stars", width=200, key="stars_adequate")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 200
+
+    def test_feedback_threshold_adapts_to_base_font_size(self):
+        """Test that the conversion threshold adapts to theme.baseFontSize."""
+
+        # Test with 20px base font size (larger than default 16px)
+        # Threshold calculation: 3.125rem x 20 x 1.1 = 68.75px (thumbs)
+        # So width=65 should convert to "content" at 20px, but preserves at 16px
+        with patch_config_options({"theme.baseFontSize": 20}):
+            st.feedback("thumbs", width=65, key="thumbs_20px_font")
+            el = self.get_delta_from_queue().new_element
+            # At 20px base font, 65px is below threshold, converts to content
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_CONTENT.value
+            )
+            assert el.width_config.use_content is True
+
+        # At 16px base font, same 65px width is above threshold, preserved
+        with patch_config_options({"theme.baseFontSize": 16}):
+            st.feedback("thumbs", width=65, key="thumbs_16px_font")
+            el = self.get_delta_from_queue().new_element
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.PIXEL_WIDTH.value
+            )
+            assert el.width_config.pixel_width == 65
 
 
 def get_command_matrix(

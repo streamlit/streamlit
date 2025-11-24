@@ -182,6 +182,8 @@ class ButtonMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
             The default is ``False``.
@@ -432,6 +434,8 @@ class ButtonMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         disabled : bool
             An optional boolean that disables the download button if set to
@@ -702,6 +706,8 @@ class ButtonMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             An optional boolean that disables the link button if set to
             ``True``. The default is ``False``.
@@ -829,6 +835,8 @@ class ButtonMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
