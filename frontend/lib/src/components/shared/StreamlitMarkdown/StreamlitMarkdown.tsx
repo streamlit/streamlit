@@ -626,7 +626,7 @@ function createRemarkStreamlitLogo() {
       }
     } {
       return {
-        type: "text" as const,
+        type: "text",
         value: "",
         data: {
           hName: "img",
