@@ -32,6 +32,7 @@ st.header("Vega Charts Height Tests")
 # Test explicit height parameters
 st.subheader("Explicit Height Parameter Tests")
 
+st.write("Test")
 st.write("Chart with height='content':")
 st.vega_lite_chart(simple_df, simple_spec, height="content")
 
