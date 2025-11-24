@@ -107,7 +107,6 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 export {
   AUTO_THEME_NAME,
   baseTheme,

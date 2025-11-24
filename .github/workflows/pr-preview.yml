@@ -372,7 +372,7 @@ jobs:
             - Current PR: ${currentSizeKB} KB
             - Latest develop: ${developSizeKB} KB
 
-            Please verify this change is expected.`;
+            Please verify that this change is expected.`;
 
             // Unique identifier for our comment
             const commentIdentifier = '<!-- STREAMLIT-WHEEL-SIZE-CHECK -->';
@@ -573,21 +573,26 @@ jobs:
                     ? `### ${emoji} Significant bundle size change detected`
                     : `### ✅ Bundle size change is within normal range`;
 
-                const commentBody = [
+                const lines = [
                     header,
                     '',
-                    `Threshold: ${threshold}%`,
-                    '',
-                    '| Metric | Current | Develop | Change |',
+                    '| Metric | This Branch | `develop` | Change (%) |',
                     '| :--- | :--- | :--- | :--- |',
-                    `| **Total Gzip** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
-                    `| **Entry Gzip** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
+                    `| **Total (gzip)** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
+                    `| **Entry (gzip)** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
+                    ''
+                ];
+
+                if (isSignificant) {
+                    lines.push('Please verify that this change is expected.', '');
+                }
+
+                lines.push(
                     '',
-                    '<details>',
-                    '<summary>Debug Info</summary>',
-                    `Run ID: ${context.runId}`,
-                    '</details>'
-                ].join('\n');
+                    `📊 [View detailed bundle comparison](https://issues.streamlit.app/frontend_bundle_analysis?pr=${context.issue.number})`
+                );
+
+                const commentBody = lines.join('\n');
 
                 const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
 
