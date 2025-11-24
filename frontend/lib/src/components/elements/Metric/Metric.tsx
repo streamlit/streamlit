@@ -332,7 +332,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
           <StyledTruncateText>
+            {" "}
             <StreamlitMarkdown source={body} allowHTML={false} inheritFont />
+            {" "}
           </StyledTruncateText>
         </StyledMetricValueText>
         {deltaExists && (
