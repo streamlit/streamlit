@@ -1164,7 +1164,8 @@ def start_app_server(
         print(stdout, flush=True)
         if i < app_server_start_retries - 1:
             print(
-                f"Retrying to start app server in {app_server_start_retry_delay_seconds} seconds... (Attempt {i + 1}/{app_server_start_retries})",
+                f"Retrying to start app server in {app_server_start_retry_delay_seconds} seconds... "
+                f"(Attempt {i + 1}/{app_server_start_retries})",
                 flush=True,
             )
             time.sleep(app_server_start_retry_delay_seconds)
