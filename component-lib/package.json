@@ -53,7 +53,8 @@
   },
   "resolutions": {
     "@types/react": "^16.14.41",
-    "@types/react-dom": "^16.9.24"
+    "@types/react-dom": "^16.9.24",
+    "glob": "^10.5.0"
   },
   "packageManager": "yarn@4.5.3"
 }
