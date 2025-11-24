@@ -108,7 +108,7 @@ EXTRA_REQUIRES = {
         # orjson speeds up large plotly figure processing by 5-10x:
         "orjson>=3.5.0",
         # uvloop speeds up the event loop:
-        "uvloop>=0.15.1; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
     ],
     # Install all optional dependencies:
     "all": [
