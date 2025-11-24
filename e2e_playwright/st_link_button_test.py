@@ -79,7 +79,9 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
 
 
-@pytest.mark.skip_browser("firefox")  # Firefox can be slightly flaky with expect_popup
+@pytest.mark.only_browser(
+    "webkit"  # Firefox and Chromium are a bit flaky on the expect_popup.
+)
 def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
     shortcut_button = (
