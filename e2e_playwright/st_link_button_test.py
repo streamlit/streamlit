@@ -89,9 +89,7 @@ def test_link_button_shortcut_triggers(app: Page):
     )
     expect(shortcut_button).to_be_visible()
     # Ensure shortcut labels are rendered for link buttons:
-    expect(shortcut_button.locator("kbd")).to_have_text(
-        re.compile(r"Ctrl \+ (Alt|Option) \+ L")
-    )
+    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"Ctrl \+ L"))
     expect(shortcut_button).to_be_enabled()
     shortcut_button.scroll_into_view_if_needed()
 
