@@ -44,7 +44,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg.add_rows."""
 
     @parameterized.expand(ST_CHART_ARGS)
-    def test_charts_with_implict_x_and_y(self, chart_command):
+    def test_charts_with_implicit_x_and_y(self, chart_command):
         expected = pd.DataFrame(
             {
                 f"index{_PROTECTION_SUFFIX}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
@@ -92,7 +92,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(proto, expected)
 
     @parameterized.expand(ST_CHART_ARGS)
-    def test_charts_with_implict_x_and_explicit_y(self, chart_command):
+    def test_charts_with_implicit_x_and_explicit_y(self, chart_command):
         expected = pd.DataFrame(
             {
                 f"index{_PROTECTION_SUFFIX}": [1, 2, 3],
