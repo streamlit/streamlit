@@ -19,7 +19,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import DialogErrorMessage, {
   DialogErrorMessageProps,
@@ -116,32 +116,27 @@ Line 3`
     expect(screen.getByText("streamlit run yourscript.py")).toBeVisible()
   })
 
-  it("renders plain URLs as clickable links", () => {
+  it("renders multiple markdown links in message", () => {
     renderDialogErrorMessage({
       message:
-        "Cannot connect to Streamlit (HTTP status: 403).\n\nIf you are trying to access a Streamlit app running on another server, this could be due to the app's CORS settings. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS",
+        "Error occurred. See [docs](https://example.com/docs) or [support](https://example.com/support) for help.",
     })
 
-    // Check for key parts of the message
-    expect(
-      screen.getByText("Cannot connect to Streamlit (HTTP status: 403).", {
-        exact: false,
-      })
-    ).toBeVisible()
-    expect(screen.getByText(/CORS settings/)).toBeVisible()
+    // Verify both links are clickable
+    const links = screen.getAllByRole("link")
+    expect(links).toHaveLength(2)
 
-    // Verify plain URL is clickable
-    const link = screen.getByRole("link")
-    expect(link).toBeVisible()
-    expect(link).toHaveAttribute(
-      "href",
-      "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
-    )
-    expect(link).toHaveAttribute("target", "_blank")
-    expect(link).toHaveAttribute("rel", "noopener noreferrer")
-    expect(link).toHaveTextContent(
-      "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
-    )
+    expect(links[0]).toBeVisible()
+    expect(links[0]).toHaveAttribute("href", "https://example.com/docs")
+    expect(links[0]).toHaveAttribute("target", "_blank")
+    expect(links[0]).toHaveAttribute("rel", "noopener noreferrer")
+    expect(links[0]).toHaveTextContent("docs")
+
+    expect(links[1]).toBeVisible()
+    expect(links[1]).toHaveAttribute("href", "https://example.com/support")
+    expect(links[1]).toHaveAttribute("target", "_blank")
+    expect(links[1]).toHaveAttribute("rel", "noopener noreferrer")
+    expect(links[1]).toHaveTextContent("support")
   })
 
   it("renders markdown links but not other markdown syntax", () => {

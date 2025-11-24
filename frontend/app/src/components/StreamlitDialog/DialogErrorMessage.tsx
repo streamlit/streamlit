@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, ReactElement, ReactNode } from "react"
+import React, { Fragment, memo, ReactElement, ReactNode } from "react"
 
 import { StreamlitErrorCodeBlock } from "@streamlit/lib"
 
@@ -26,16 +26,15 @@ export interface DialogErrorMessageProps {
 }
 
 /**
- * Parse message text and convert markdown links [text](url) and plain URLs
- * into clickable anchor tags.
+ * Parse message text and convert markdown links [text](url) into clickable anchor tags.
  */
 function parseLinks(text: string): ReactNode[] {
   const parts: ReactNode[] = []
   let currentIndex = 0
   let key = 0
 
-  // Match: 1) Markdown links [text](url)  2) Plain URLs http(s)://...
-  const pattern = /(\[([^\]]+)\]\(([^)]+)\))|(https?:\/\/[^\s]+)/g
+  // Match markdown links: [text](url)
+  const pattern = /\[([^\]]+)\]\(([^)]+)\)/g
   let match: RegExpExecArray | null
 
   while ((match = pattern.exec(text)) !== null) {
@@ -48,31 +47,12 @@ function parseLinks(text: string): ReactNode[] {
       )
     }
 
-    if (match[1]) {
-      // Markdown link: [text](url)
-      parts.push(
-        <a
-          key={key++}
-          href={match[3]}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {match[2]}
-        </a>
-      )
-    } else if (match[4]) {
-      // Plain URL
-      parts.push(
-        <a
-          key={key++}
-          href={match[4]}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {match[4]}
-        </a>
-      )
-    }
+    // Add markdown link: [text](url)
+    parts.push(
+      <a key={key++} href={match[2]} target="_blank" rel="noopener noreferrer">
+        {match[1]}
+      </a>
+    )
 
     currentIndex = match.index + match[0].length
   }
@@ -88,7 +68,7 @@ function parseLinks(text: string): ReactNode[] {
 /**
  * Component for displaying error messages with optional code blocks.
  * Used in error dialogs to display text messages with links and formatted code.
- * Supports markdown-style links [text](url) and plain URLs.
+ * Supports markdown-style links [text](url).
  */
 function DialogErrorMessage({
   message,
@@ -106,4 +86,4 @@ function DialogErrorMessage({
   )
 }
 
-export default DialogErrorMessage
+export default memo(DialogErrorMessage)
