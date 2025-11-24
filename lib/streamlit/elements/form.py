@@ -374,9 +374,18 @@ class FormMixin:
 
         shortcut : str or None
             An optional keyboard shortcut that triggers the submit button.
-            Provide a single key (for example, ``"K"``) or a modifier
-            combination such as ``"Ctrl+K"``. The keys ``"C"`` and ``"R"`` are
-            reserved and may not be used.
+            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
+            function key (e.g. ``"F11"``), or a supported special key (e.g.
+            ``"Enter"``, ``"Esc"``) combined with modifiers.
+
+            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+
+            .. note::
+                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
+                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
+                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
+                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
+                ``","``) are not currently supported.
 
         Returns
         -------
