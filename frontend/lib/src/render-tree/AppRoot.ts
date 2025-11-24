@@ -39,6 +39,7 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -353,6 +354,24 @@ export class AppRoot {
         currentScriptRunId
       ),
       appLogo
+    )
+  }
+
+  public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
+    const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
     )
   }
 
