@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
-from playwright.sync_api import FilePayload, Locator, Page, expect
+from playwright.sync_api import Error, FilePayload, Locator, Page, expect
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -167,7 +167,8 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
 
     # Ensure button is ready to be clicked (WebKit specific issue)
     expect(upload_button).to_be_enabled()
-    app.wait_for_timeout(100)  # Small delay to ensure button is fully ready
+    # Wait until the upload button is fully enabled, up to 2 seconds
+    expect(upload_button).to_be_enabled(timeout=2000)
 
     with app.expect_file_chooser() as fc_info:
         # Use force=True for WebKit to ensure the click triggers file chooser
@@ -208,8 +209,9 @@ def grant_microphone_permissions(page: Page) -> None:
     """Grant microphone permissions where supported."""
     try:
         page.context.grant_permissions(["microphone"])
-    except Exception:
-        pass
+    except Error as e:
+        # It's safe to ignore failure: contexts might not support permissions in all environments.
+        print(f"Could not grant microphone permissions: {e}")
 
 
 def record_audio_in_chat_input(
@@ -514,6 +516,7 @@ def test_grows_shrinks_input_text(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that input grows with long text and shrinks when text is deleted."""
+    num_backspaces = 20  # Number of backspaces to simulate shrinking the input
     themed_app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input = get_element_by_key(themed_app, "bottom_max_chars")
@@ -524,8 +527,9 @@ def test_grows_shrinks_input_text(
         "eu pellentesque metus pellentesque at. Ut et dui molestie, iaculis magna."
     )
     assert_snapshot(chat_input, name="st_chat_input-grows")
-    for _ in range(20):
-        chat_input_area.press("Backspace", delay=10)
+    backspace_press_delay_ms = 10
+    for _ in range(num_backspaces):
+        chat_input_area.press("Backspace", delay=backspace_press_delay_ms)
     assert_snapshot(chat_input, name="st_chat_input-shrinks")
 
 

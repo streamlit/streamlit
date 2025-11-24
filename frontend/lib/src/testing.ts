@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import React from "react"
+/**
+ * Test-only utilities for @streamlit/lib.
+ *
+ * These helpers intentionally live outside the main public entry point so we
+ * can keep heavy testing dependencies (like @testing-library) out of production
+ * bundles.  Import them from "@streamlit/lib/testing" when you need to render
+ * components in tests.
+ */
 
-import { screen } from "@testing-library/react"
+export {
+  mockWindowLocation,
+  render,
+  renderWithContexts,
+  TestAppWrapper,
+} from "./test_util"
 
-import { render } from "@streamlit/lib/testing"
-
-import EventContainer from "./EventContainer"
-
-describe("EventContainer Component", () => {
-  test("renders Toast Container", () => {
-    render(<EventContainer />)
-
-    const toastContainer = screen.getByTestId("stToastContainer")
-    expect(toastContainer).toBeInTheDocument()
-    expect(toastContainer).toHaveClass("stToastContainer")
-  })
-})
+export type {
+  RenderWithContextsOptions,
+  RenderWithContextsResult,
+} from "./test_util"

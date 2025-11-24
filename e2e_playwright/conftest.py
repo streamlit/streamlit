@@ -1145,20 +1145,32 @@ def start_app_server(
         "true",
     ]
 
+    app_server_start_retries = 3
+    app_server_start_retry_delay_seconds = 20
+
     # Append any caller-supplied extra args at the end so they can override
     # defaults when necessary.
     if extra_args:
         args.extend(extra_args)
 
-    proc = AsyncSubprocess(args, cwd=".", env=env)
-    proc.start()
+    for i in range(app_server_start_retries):
+        proc = AsyncSubprocess(args, cwd=".", env=env)
+        proc.start()
 
-    if not wait_for_app_server_to_start(app_port):
+        if wait_for_app_server_to_start(app_port):
+            return proc
+
         stdout = proc.terminate()
         print(stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
+        if i < app_server_start_retries - 1:
+            print(
+                f"Retrying to start app server in {app_server_start_retry_delay_seconds} seconds... "
+                f"(Attempt {i + 1}/{app_server_start_retries})",
+                flush=True,
+            )
+            time.sleep(app_server_start_retry_delay_seconds)
 
-    return proc
+    raise RuntimeError("Unable to start Streamlit app")
 
 
 # endregion
