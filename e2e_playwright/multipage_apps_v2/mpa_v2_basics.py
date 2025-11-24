@@ -129,6 +129,9 @@ pg = st.navigation(
 if st.button("page 5"):
     st.switch_page("page_5.py")
 
+if st.button("Navigate with query params"):
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
 if st.button("page 9"):
     st.switch_page(page9)
 
@@ -144,3 +147,5 @@ st.page_link(page9, label="page 9 page link")
 st.write("Context URL:", st.context.url)
 
 st.write("End of Script")
+
+st.write("Query Params:", str(st.query_params))
