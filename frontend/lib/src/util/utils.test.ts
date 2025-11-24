@@ -734,11 +734,14 @@ describe("getSelectPlaceholder", () => {
 
 describe("getScreencastTimestamp", () => {
   beforeEach(() => {
+    // Set timezone to UTC for consistent test results across all environments
+    process.env.TZ = "UTC"
     vi.useFakeTimers()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    delete process.env.TZ
   })
 
   it("should return a timestamp in the correct format", () => {

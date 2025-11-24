@@ -229,14 +229,17 @@ export function getUrl(): string {
 
 /**
  * Returns date in "YYYY-MM-DD-HH-MM-SS" format to be used for screencast recording file name.
- * Example: ISO format "2025-11-18T12:00:00.000Z" will be converted to "2025-11-18-12-00-00"
  */
 export function getScreencastTimestamp(): string {
-  return new Date()
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", "-")
-    .replaceAll(":", "-")
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`
 }
 
 /**
