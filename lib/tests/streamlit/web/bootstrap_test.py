@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import os.path
 import sys
+import types
 from io import StringIO
-from unittest import IsolatedAsyncioTestCase
+from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, patch
 
 from streamlit import config
@@ -441,3 +442,50 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+
+class BootstrapUvloopTest(TestCase):
+    def test_installs_uvloop_when_available(self):
+        """uvloop is installed as the default policy when present."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+        fake_uvloop.install.assert_called_once()
+
+    def test_skips_install_when_loop_running(self):
+        """uvloop installation is skipped if a loop is already running."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
+
+        fake_uvloop.install.assert_not_called()
+
+    def test_skips_install_on_windows(self):
+        """uvloop installation is skipped on Windows."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", True),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+        fake_uvloop.install.assert_not_called()
+
+    def test_handles_missing_uvloop(self):
+        """Missing uvloop does not raise."""
+        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
+            with patch.dict("sys.modules", {"uvloop": None}):
+                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
