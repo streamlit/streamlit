@@ -702,3 +702,34 @@ class ChatTest(DeltaGeneratorTestCase):
         st.chat_input(accept_audio=True)
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.accept_audio is True
+
+    def test_chat_input_audio_sample_rate_default(self):
+        """Test that audio_sample_rate defaults to 16000."""
+        st.chat_input(accept_audio=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == 16000
+
+    @parameterized.expand(
+        [
+            (8000,),
+            (16000,),
+            (48000,),
+        ]
+    )
+    def test_chat_input_audio_sample_rate_valid(self, sample_rate: int):
+        """Test that valid audio_sample_rate values are set correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=sample_rate)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == sample_rate
+
+    def test_chat_input_audio_sample_rate_none(self):
+        """Test that audio_sample_rate=None is handled correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=None)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.HasField("audio_sample_rate") is False
+
+    def test_chat_input_audio_sample_rate_invalid(self):
+        """Test that invalid audio_sample_rate raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input(accept_audio=True, audio_sample_rate=12345)
+        assert "Invalid audio_sample_rate" in str(exc.value)

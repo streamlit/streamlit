@@ -39,7 +39,9 @@ INSTALL_REQUIRES = [
     "cachetools>=4.0, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
-    "packaging>=20, <26",
+    # The "packaging" package isn't version-capped because they use calendar-based
+    # versioning, i.e. "major" version increase != breaking changes
+    "packaging>=20",
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
@@ -103,9 +105,16 @@ EXTRA_REQUIRES = {
     "sql": [
         "SQLAlchemy>=2.0.0",
     ],
+    # Optional dependency for better performance:
+    "performance": [
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+        # uvloop speeds up the event loop:
+        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+    ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake,sql,pdf]",
+        "streamlit[auth,charts,snowflake,sql,pdf,performance]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],

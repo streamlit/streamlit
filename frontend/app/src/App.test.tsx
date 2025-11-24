@@ -51,7 +51,6 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
-  mockWindowLocation,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -59,6 +58,7 @@ import {
   WidgetStateManager,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
+import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
   Config,
   CustomThemeConfig,

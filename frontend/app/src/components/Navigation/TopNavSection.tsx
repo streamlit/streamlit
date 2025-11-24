@@ -16,7 +16,6 @@
 
 import React, { useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
@@ -24,7 +23,7 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon } from "@streamlit/lib"
+import { hasLightBackgroundColor, Icon, useEmotionTheme } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -61,7 +60,7 @@ const TopNavSection = ({
   widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 

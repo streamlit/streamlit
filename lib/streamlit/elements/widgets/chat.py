@@ -47,6 +47,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
+from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -514,6 +515,7 @@ class ChatMixin:
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -531,6 +533,7 @@ class ChatMixin:
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -548,6 +551,7 @@ class ChatMixin:
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -618,6 +622,19 @@ class ChatMixin:
             The ``audio`` attribute will be ``None`` when ``accept_audio=False``
             or when no audio is recorded.
             This defaults to ``False``.
+
+        audio_sample_rate : int or None
+            The target sample rate for audio recording in Hz. This defaults to
+            16000 Hz, which is optimal for speech recognition. Common sample
+            rates include:
+
+            - ``8000`` Hz: Telephone quality
+            - ``16000`` Hz: Speech recognition (default)
+            - ``48000`` Hz: High-quality recording
+
+            Set to ``None`` to use the browser's default sample rate (no
+            resampling). Allowed values are ``8000``, ``11025``, ``16000``,
+            ``22050``, ``24000``, ``32000``, ``44100``, ``48000``, or ``None``.
 
         disabled : bool
             Whether the chat input should be disabled. This defaults to
@@ -808,11 +825,22 @@ class ChatMixin:
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
+            audio_sample_rate=audio_sample_rate,
             width=width,
         )
 
         if file_type:
             file_type = normalize_upload_file_type(file_type)
+
+        # Validate audio_sample_rate if provided
+        if (
+            audio_sample_rate is not None
+            and audio_sample_rate not in ALLOWED_SAMPLE_RATES
+        ):
+            raise StreamlitAPIException(
+                f"Invalid audio_sample_rate: {audio_sample_rate}. "
+                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            )
 
         # It doesn't make sense to create a chat input inside a form.
         # We throw an error to warn the user about this.
@@ -853,6 +881,9 @@ class ChatMixin:
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
         chat_input_proto.accept_audio = accept_audio
+
+        if audio_sample_rate is not None:
+            chat_input_proto.audio_sample_rate = audio_sample_rate
 
         serde = ChatInputSerde(
             accept_files=accept_file in {True, "multiple", "directory"},
