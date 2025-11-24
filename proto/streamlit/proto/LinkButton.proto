@@ -20,6 +20,8 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "LinkButtonProto";
 
 message LinkButton {
+  // The ID is only needed if a shortcut is provided.
+  string id = 1;
   string label = 2;
   string help = 4;
   string url = 6;
@@ -27,4 +29,5 @@ message LinkButton {
   bool use_container_width = 8;
   string type = 9;
   string icon = 10;
+  string shortcut = 11;
 }

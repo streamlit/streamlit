@@ -22,9 +22,9 @@ import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  render,
   ThemeConfig,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
@@ -34,28 +34,29 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     endpoints: mockEndpoints(),
     hasElements: true,
-    appPages: [],
-    navSections: [],
-    onPageChange: vi.fn(),
-    currentPageScriptHash: "",
-    hideSidebarNav: false,
-    expandSidebarNav: false,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
-    appLogo: null,
+    widgetsDisabled: false,
     ...props,
   }
 }
 
+// Helper to render ThemedSidebar with default context values
+function renderThemedSidebar(
+  props: Partial<SidebarProps> = {}
+): ReturnType<typeof renderWithContexts> {
+  return renderWithContexts(<ThemedSidebar {...getProps(props)} />)
+}
+
 describe("ThemedSidebar Component", () => {
   it("should render without crashing", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,

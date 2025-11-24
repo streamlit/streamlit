@@ -16,7 +16,6 @@
 
 import React, { useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   AccessibilityNew,
   AccessibleForward,
@@ -27,7 +26,7 @@ import {
 } from "@emotion-icons/material-outlined"
 
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 import { StyledAppRunningIcon } from "./styled-components"
 
@@ -61,7 +60,7 @@ const DEFAULT_SPEED = 200
  */
 const IconRunning: React.FC = () => {
   const [index, setIndex] = useState(0)
-  const theme = useTheme() as EmotionTheme
+  const theme = useEmotionTheme()
   const isNewYear = useMemo(() => isNewYears(), [])
 
   useEffect(() => {

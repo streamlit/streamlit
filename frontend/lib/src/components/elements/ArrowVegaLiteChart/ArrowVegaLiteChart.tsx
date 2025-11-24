@@ -177,8 +177,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // With updateView as dependency, the chart seems to
     // expand within the parent container (less left/right padding).
 
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [data, datasets])
 
   useEffect(() => {

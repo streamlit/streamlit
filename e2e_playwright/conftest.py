@@ -560,6 +560,11 @@ def browser_type_launch_args(
                 "media.navigator.permission.disabled": True,
                 "permissions.default.microphone": 1,
                 "permissions.default.camera": 1,
+                # Reduces screenshot flakiness caused by subpixel rendering and
+                # font rendering:
+                "layout.css.devPixelsPerPx": "1.0",
+                "browser.display.use_system_colors": False,
+                "gfx.font_rendering.cleartype_params.rendering_mode": 5,
             },
         }
     return browser_type_launch_args
@@ -591,6 +596,37 @@ def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
     """Fixture that opens the app with the given theme."""
     page.goto(f"http://localhost:{app_port}/?embed_options={app_theme}")
     start_capture_traces(page)
+    wait_for_app_loaded(page)
+    return page
+
+
+@pytest.fixture
+def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
+    """Fixture that opens the app with getUserMedia mocked to deny microphone permissions.
+
+    This fixture is used for testing microphone permission denied error handling in audio
+    components. It injects a script that overrides navigator.mediaDevices.getUserMedia
+    to always reject with a NotAllowedError before the app loads.
+    """
+    # Add init script BEFORE navigating to the page
+    page.add_init_script("""
+        // Override getUserMedia to always reject with NotAllowedError
+        // Must use DOMException to match browser behavior
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+            writable: false,
+            configurable: true,
+            value: async function() {
+                const error = new DOMException(
+                    'Permission denied',
+                    'NotAllowedError'
+                );
+                throw error;
+            }
+        });
+    """)
+
+    # Now navigate to the app
+    page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
 
@@ -733,6 +769,7 @@ def assert_snapshot(
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
         style: str | None = None,
+        show_app_header: bool | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -752,12 +789,24 @@ def assert_snapshot(
             If True, the comparison will stop at the first pixel mismatch.
         file_type: "png" or "jpg"
             The file type of the screenshot. Defaults to "png".
+        show_app_header : bool or None
+            Whether to make the app header background transparent before taking the screenshot.
+            If None (default), the app header will be shown based on the
+            element type (page will always show the app header, other elements will hide it).
         """
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
+
+        if show_app_header is False or (
+            show_app_header is None and not isinstance(element, Page)
+        ):
+            # Make the app header background transparent:
+            if style is None:
+                style = ""
+            style += " .stAppHeader { background: transparent; }"
 
         if file_type == "jpg":
             file_extension = ".jpg"
@@ -1096,20 +1145,32 @@ def start_app_server(
         "true",
     ]
 
+    app_server_start_retries = 3
+    app_server_start_retry_delay_seconds = 20
+
     # Append any caller-supplied extra args at the end so they can override
     # defaults when necessary.
     if extra_args:
         args.extend(extra_args)
 
-    proc = AsyncSubprocess(args, cwd=".", env=env)
-    proc.start()
+    for i in range(app_server_start_retries):
+        proc = AsyncSubprocess(args, cwd=".", env=env)
+        proc.start()
 
-    if not wait_for_app_server_to_start(app_port):
+        if wait_for_app_server_to_start(app_port):
+            return proc
+
         stdout = proc.terminate()
         print(stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
+        if i < app_server_start_retries - 1:
+            print(
+                f"Retrying to start app server in {app_server_start_retry_delay_seconds} seconds... "
+                f"(Attempt {i + 1}/{app_server_start_retries})",
+                flush=True,
+            )
+            time.sleep(app_server_start_retry_delay_seconds)
 
-    return proc
+    raise RuntimeError("Unable to start Streamlit app")
 
 
 # endregion

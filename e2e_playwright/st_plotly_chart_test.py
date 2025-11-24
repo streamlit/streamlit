@@ -43,56 +43,12 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-histogram_chart",
         "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(18)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(14)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
             name=name,
         )
-
-
-def test_plotly_content_width_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 14
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-content_width_fullscreen",
-    )
-
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-content_width_exited_fullscreen",
-    )
-
-
-def test_plotly_stretch_width_fullscreen(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    index = 15
-    themed_app.get_by_test_id("stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-stretch_width_fullscreen",
-    )
-
-    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
-    fullscreen_button.hover()
-    fullscreen_button.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stPlotlyChart").nth(index),
-        name="st_plotly_chart-stretch_width_exited_fullscreen",
-    )
 
 
 def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFunction):
@@ -131,6 +87,10 @@ def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFu
     reset_button = app.locator('[data-title="Reset axes"]').nth(0)
     reset_button.hover()
     reset_button.click()
+
+    wait_for_app_loaded(app)
+    # Give time for CSS styles to resettle after the reset button click
+    app.wait_for_timeout(200)
 
     assert_snapshot(
         chart,
@@ -179,21 +139,8 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_loaded(app)
 
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(18)
+    expect(plotly_elements).to_have_count(14)
 
     # Take a snapshot of the single mark chart, shows it applies the first color
     # from chartCategoricalColors (orange):
     assert_snapshot(plotly_elements.nth(6), name="st_plotly_chart-custom-theme")
-
-
-def test_plotly_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
-    """Tests that width and height parameters work correctly."""
-    plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(18)
-
-    assert_snapshot(plotly_elements.nth(14), name="st_plotly_chart-width_content")
-    assert_snapshot(plotly_elements.nth(15), name="st_plotly_chart-width_stretch")
-    assert_snapshot(plotly_elements.nth(16), name="st_plotly_chart-width_400px")
-    assert_snapshot(
-        plotly_elements.nth(17), name="st_plotly_chart-width_1000px_content"
-    )

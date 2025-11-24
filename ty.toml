@@ -17,7 +17,10 @@ root = ["./lib/streamlit"]
 
 [src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]
-exclude = ["e2e_playwright/compilation_error_dialog.py"]
+exclude = [
+  "e2e_playwright/compilation_error_dialog.py",
+  "lib/streamlit/vendor/**",
+]
 
 
 [rules]

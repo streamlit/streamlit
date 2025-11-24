@@ -92,19 +92,29 @@ describe("AudioInput Recording Journey", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -169,11 +179,11 @@ describe("AudioInput Recording Journey", () => {
     // Simulate recording progress
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(1500)
+      void latestEvents?.onProgressMs?.(1500)
     })
 
     // Verify stop button appears
@@ -186,11 +196,11 @@ describe("AudioInput Recording Journey", () => {
     const testBlob = new Blob(["test audio"], { type: "audio/wav" })
     act(() => {
       controllerState = "idle"
-      latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
     })
 
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Verify upload was triggered
@@ -207,11 +217,11 @@ describe("AudioInput Recording Journey", () => {
 
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(2000)
+      void latestEvents?.onProgressMs?.(2000)
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -220,7 +230,7 @@ describe("AudioInput Recording Journey", () => {
     // Cancel recording
     act(() => {
       controllerState = "idle"
-      latestEvents?.onCancel?.()
+      void latestEvents?.onCancel?.()
     })
 
     // Verify state reset
@@ -243,8 +253,8 @@ describe("AudioInput Recording Journey", () => {
     // Simulate existing recording
     const oldBlob = new Blob(["old"])
     act(() => {
-      latestEvents?.onRecordReady?.(oldBlob)
-      latestEvents?.onApprove?.(oldBlob)
+      void latestEvents?.onRecordReady?.(oldBlob)
+      void latestEvents?.onApprove?.(oldBlob)
     })
 
     await waitFor(() => {
@@ -268,7 +278,7 @@ describe("AudioInput Recording Journey", () => {
     // Approve new recording
     const newBlob = new Blob(["new"])
     act(() => {
-      latestEvents?.onApprove?.(newBlob)
+      void latestEvents?.onApprove?.(newBlob)
     })
 
     // Verify old blob URL was revoked when new one created
@@ -290,17 +300,17 @@ describe("AudioInput Recording Journey", () => {
 
     act(() => {
       controllerState = "recording"
-      latestEvents?.onRecordStart?.()
+      void latestEvents?.onRecordStart?.()
     })
 
     act(() => {
-      latestEvents?.onProgressMs?.(1234)
+      void latestEvents?.onProgressMs?.(1234)
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:01"))
 
     act(() => {
-      latestEvents?.onProgressMs?.(5678)
+      void latestEvents?.onProgressMs?.(5678)
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:05"))
@@ -309,7 +319,7 @@ describe("AudioInput Recording Journey", () => {
     act(() => {
       controllerState = "idle"
       controller.playback.getDurationMs = vi.fn().mockReturnValue(5678)
-      latestEvents?.onRecordReady?.(new Blob())
+      void latestEvents?.onRecordReady?.(new Blob())
     })
 
     await waitFor(() => expect(timer).toHaveTextContent("00:05"))
@@ -329,19 +339,29 @@ describe("AudioInput Playback Journey", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -391,11 +411,11 @@ describe("AudioInput Playback Journey", () => {
     ).mockReturnValue(5000)
 
     act(() => {
-      latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
     })
 
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload to complete
@@ -415,7 +435,7 @@ describe("AudioInput Playback Journey", () => {
     ).mockReturnValue(1500)
     act(() => {
       isPlaybackPlaying = false
-      latestEvents?.onPlaybackPause?.()
+      void latestEvents?.onPlaybackPause?.()
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -428,7 +448,7 @@ describe("AudioInput Playback Journey", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onPlaybackFinish?.()
+      void latestEvents?.onPlaybackFinish?.()
     })
 
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
@@ -457,8 +477,8 @@ describe("AudioInput Playback Journey", () => {
     // Setup recording
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onRecordReady?.(testBlob)
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload
@@ -492,19 +512,29 @@ describe("AudioInput Upload & Abort", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -557,7 +587,7 @@ describe("AudioInput Upload & Abort", () => {
     // Trigger upload
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     // Wait for upload to start
@@ -587,7 +617,7 @@ describe("AudioInput Upload & Abort", () => {
     // Start first upload
     const testBlob1 = new Blob(["first"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob1)
+      void latestEvents?.onApprove?.(testBlob1)
     })
 
     await waitFor(() => {
@@ -600,7 +630,7 @@ describe("AudioInput Upload & Abort", () => {
     // Trigger second upload (which should abort first)
     const testBlob2 = new Blob(["second"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob2)
+      void latestEvents?.onApprove?.(testBlob2)
     })
 
     // First upload should have been aborted
@@ -618,7 +648,7 @@ describe("AudioInput Upload & Abort", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {
@@ -642,7 +672,7 @@ describe("AudioInput Upload & Abort", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {
@@ -668,19 +698,29 @@ describe("AudioInput Memory Management", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -730,7 +770,7 @@ describe("AudioInput Memory Management", () => {
     // Create first recording
     const blob1 = new Blob(["first"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob1)
+      void latestEvents?.onApprove?.(blob1)
     })
 
     await waitFor(() => {
@@ -742,7 +782,7 @@ describe("AudioInput Memory Management", () => {
     // Create second recording
     const blob2 = new Blob(["second"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob2)
+      void latestEvents?.onApprove?.(blob2)
     })
 
     await waitFor(() => {
@@ -764,7 +804,7 @@ describe("AudioInput Memory Management", () => {
     // Create recording
     const blob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob)
+      void latestEvents?.onApprove?.(blob)
     })
 
     await waitFor(() => {
@@ -821,19 +861,29 @@ describe("AudioInput Form Integration", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -887,7 +937,7 @@ describe("AudioInput Form Integration", () => {
     // Create recording
     const blob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(blob)
+      void latestEvents?.onApprove?.(blob)
     })
 
     await waitFor(() => {
@@ -929,19 +979,29 @@ describe("AudioInput Error Handling", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -973,7 +1033,7 @@ describe("AudioInput Error Handling", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onPermissionDenied?.()
+      void latestEvents?.onPermissionDenied?.()
     })
 
     await waitFor(() => {
@@ -993,7 +1053,7 @@ describe("AudioInput Error Handling", () => {
     render(<AudioInput {...createProps()} />)
 
     act(() => {
-      latestEvents?.onError?.(new Error("Test error"))
+      void latestEvents?.onError?.(new Error("Test error"))
     })
 
     await waitFor(() => {
@@ -1033,19 +1093,29 @@ describe("AudioInput Widget State", () => {
     get isPlaybackPlaying() {
       return isPlaybackPlaying
     },
+    mountRef: { current: document.createElement("div") },
     start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(new Blob()),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
     approve: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
     playback: {
       isPlaying: vi.fn().mockImplementation(() => isPlaybackPlaying),
       play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
+      pause: vi.fn().mockReturnValue(undefined),
       load: vi.fn().mockResolvedValue(undefined),
       getCurrentTimeMs: vi.fn().mockReturnValue(0),
       getDurationMs: vi.fn().mockReturnValue(0),
     },
-    setEventHandlers: vi.fn(),
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
   })
 
   beforeEach(() => {
@@ -1106,7 +1176,7 @@ describe("AudioInput Widget State", () => {
 
     const testBlob = new Blob(["test"], { type: "audio/wav" })
     act(() => {
-      latestEvents?.onApprove?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
     })
 
     await waitFor(() => {

@@ -462,6 +462,10 @@ class ContainerTest(DeltaGeneratorTestCase):
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.width_config.use_stretch
 
+        st.container(width="content")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.width_config.use_content
+
     @parameterized.expand(
         [
             (None,),

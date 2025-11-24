@@ -192,12 +192,13 @@ function getButtonGroupOverridesStyle(
 ): Record<string, any> {
   const baseStyle = {
     flexWrap: "wrap",
-    maxWidth: "100%",
-    // This ensures that the button
-    // group does not overflow the container due
-    // to the negative margins that BaseWeb adds.
-    // When maxWidth is set to 100%, without this,
-    // the buttons will wrap to the next line.
+    // maxWidth must be conditional:
+    // - "100%" for stretch width: allows buttons to fill container
+    // - "fit-content" for content width: prevents flexbox calculation errors
+    //   that cause the last button to wrap incorrectly (gh-12067)
+    maxWidth: containerWidth ? "100%" : "fit-content",
+    // This ensures that the button group does not overflow the container
+    // due to the negative margins that BaseWeb adds.
     margin: "0 0",
   }
   const width = containerWidth ? "100%" : "auto"

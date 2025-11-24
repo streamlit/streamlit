@@ -37,6 +37,7 @@ import {
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
+  ErrorDetails,
   Event,
   IHostConfigResponse,
   OnConnectionStateChange,
@@ -214,7 +215,10 @@ export class WebsocketConnection {
   }
 
   // This should only be called inside stepFsm().
-  private setFsmState(state: ConnectionState, errMsg?: string): void {
+  private setFsmState(
+    state: ConnectionState,
+    errDetails?: ErrorDetails
+  ): void {
     LOG.info(`New state: ${state}`)
     this.state = state
 
@@ -229,7 +233,7 @@ export class WebsocketConnection {
         break
     }
 
-    this.args.onConnectionStateChange(state, errMsg)
+    this.args.onConnectionStateChange(state, errDetails)
 
     // Perform post-callback actions when entering certain states.
     switch (this.state) {
@@ -273,7 +277,9 @@ export class WebsocketConnection {
       )
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
-      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        message: errMsg || "Unknown error",
+      })
       return
     }
 

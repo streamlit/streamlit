@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   run-semgrep-reusable-workflow:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@main
     secrets:
       token: ${{ secrets.SEMGREP_APP_TOKEN }}

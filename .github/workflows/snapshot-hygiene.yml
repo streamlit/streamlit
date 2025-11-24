@@ -9,6 +9,7 @@ on:
     paths:
       - "e2e_playwright/**"
       - "scripts/snapshot_cleanup.py"
+
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:
@@ -38,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false

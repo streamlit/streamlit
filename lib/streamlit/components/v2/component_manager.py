@@ -304,11 +304,18 @@ class BidiComponentManager:
         else:
             _LOGGER.debug("File watching not started")
 
-    def discover_and_register_components(self) -> None:
+    def discover_and_register_components(
+        self, *, start_file_watching: bool = True
+    ) -> None:
         """Discover installed v2 components and register them.
 
         This scans installed distributions for manifests, registers all discovered
         components, and starts file watching for development workflows.
+
+        Parameters
+        ----------
+        start_file_watching : bool
+            Whether to start file watching after components are registered.
         """
         try:
             from streamlit.components.v2.manifest_scanner import (
@@ -318,14 +325,15 @@ class BidiComponentManager:
             manifests = scan_component_manifests()
             for manifest, package_root in manifests:
                 self.register_from_manifest(manifest, package_root)
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Registered components from pyproject.toml: %s v%s",
                     manifest.name,
                     manifest.version,
                 )
 
             # Start file watching for development mode after all components are registered
-            self.start_file_watching()
+            if start_file_watching:
+                self.start_file_watching()
 
         except Exception as e:
             _LOGGER.warning("Failed to scan component manifests: %s", e)

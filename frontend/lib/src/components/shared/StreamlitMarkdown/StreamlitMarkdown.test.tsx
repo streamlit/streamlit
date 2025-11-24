@@ -22,9 +22,8 @@ import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { getMarkdownBgColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
@@ -528,37 +527,41 @@ st.write("Hello")
 })
 
 describe("CustomCodeTag Element", () => {
-  it("should render without crashing", () => {
+  it("should render without crashing", async () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
-    const stCode = screen.getByTestId("stCode")
+    const stCode = await screen.findByTestId("stCode")
     expect(stCode).toBeInTheDocument()
   })
 
-  it("should render as plaintext", () => {
+  it("should render as plaintext", async () => {
     const props = getCustomCodeTagProps({ className: "language-plaintext" })
     render(<CustomCodeTag {...props} />)
 
-    const stCode = screen.getByTestId("stCode")
+    const stCode = await screen.findByTestId("stCode")
     expect(stCode.innerHTML.indexOf(`class="language-plaintext"`)).not.toBe(-1)
   })
 
-  it("should render copy button when code block has content", () => {
+  it("should render copy button when code block has content", async () => {
     const props = getCustomCodeTagProps({
       children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
-    const copyButton = screen.getByTitle("Copy to clipboard")
+    const copyButton = await screen.findByTitle("Copy to clipboard")
 
     expect(copyButton).not.toBeNull()
   })
 
-  it("should not render copy button when code block is empty", () => {
+  it("should not render copy button when code block is empty", async () => {
     const props = getCustomCodeTagProps({
       children: "",
     })
     render(<CustomCodeTag {...props} />)
+
+    // Wait for the component to load
+    await screen.findByTestId("stCode")
+
     // queryBy returns null vs. error
     const copyButton = screen.queryByRole("button")
 
@@ -579,6 +582,17 @@ describe("CustomCodeTag Element", () => {
         'st.write("Hello")\n' +
         "</code></div>"
     )
+  })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getCustomCodeTagProps({ children })
+    render(<CustomCodeTag {...props} />)
+    expect(screen.getByTestId("stCode")).toHaveTextContent(expected)
   })
 })
 
@@ -606,16 +620,6 @@ describe("CustomMediaTag", () => {
     alt: "Test image",
   }
 
-  // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
-  const createMockLibContextValue = (
-    resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): any => {
-    return {
-      libConfig: { resourceCrossOriginMode },
-    }
-  }
-
   it.each([
     { resourceCrossOriginMode: "anonymous" },
     { resourceCrossOriginMode: "use-credentials" },
@@ -623,14 +627,11 @@ describe("CustomMediaTag", () => {
   ] as const)(
     "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
-      const mockContextValue = createMockLibContextValue(
-        resourceCrossOriginMode
-      )
-      render(
-        <LibContext.Provider value={mockContextValue}>
-          <CustomMediaTag node={mockNode} {...mockProps} />
-        </LibContext.Provider>
-      )
+      renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
+        libConfigContext: {
+          resourceCrossOriginMode,
+        },
+      })
 
       const imgElement = screen.getByRole("img")
 
@@ -738,13 +739,13 @@ describe("CustomMediaTag", () => {
         const node = { tagName } as any
         const props = { src, ...extraProps }
 
-        const mockContextValue = createMockLibContextValue(
-          resourceCrossOriginMode
-        )
-        const { container } = render(
-          <LibContext.Provider value={mockContextValue}>
-            <CustomMediaTag node={node} {...props} />
-          </LibContext.Provider>
+        const { container } = renderWithContexts(
+          <CustomMediaTag node={node} {...props} />,
+          {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          }
         )
 
         const element =

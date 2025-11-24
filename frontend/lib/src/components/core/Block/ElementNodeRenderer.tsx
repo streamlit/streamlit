@@ -17,7 +17,6 @@
 import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
-import debounceRender from "react-debounce-render"
 
 import {
   Alert as AlertProto,
@@ -25,7 +24,6 @@ import {
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
-  BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
   CameraInput as CameraInputProto,
@@ -35,6 +33,7 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
+  DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
@@ -69,18 +68,15 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { LibContext } from "~lib/components/core/LibContext"
 import Maybe from "~lib/components/core/Maybe"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
-import ArrowTable from "~lib/components/elements/ArrowTable"
 import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
-import Json from "~lib/components/elements/Json"
 import Markdown from "~lib/components/elements/Markdown"
-import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
@@ -102,21 +98,15 @@ import {
 // Lazy-load elements.
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
 const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Json = lazy(() => import("~lib/components/elements/Json"))
+const Metric = lazy(() => import("~lib/components/elements/Metric"))
 const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
 const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
 const Toast = lazy(() => import("~lib/components/elements/Toast"))
-
-// BokehChart render function is sluggish. If the component is not debounced,
-// AutoSizer causes it to rerender multiple times for different widths
-// when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
-
-const DebouncedBokehChart = withCalculatedWidth(
-  debounceRender(BokehChart, 100)
-)
 
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
@@ -147,6 +137,9 @@ const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
 const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
 const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
 const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const DateTimeInput = lazy(
+  () => import("~lib/components/widgets/DateTimeInput")
+)
 const Html = lazy(() => import("~lib/components/elements/Html"))
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
 const Progress = lazy(() => import("~lib/components/elements/Progress"))
@@ -200,6 +193,7 @@ const RawElementNodeRenderer = (
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
+    componentRegistry: props.componentRegistry,
   }
 
   switch (node.element.type) {
@@ -242,14 +236,6 @@ const RawElementNodeRenderer = (
       return hideIfStale(
         props.isStale,
         <Balloons scriptRunId={node.scriptRunId} />
-      )
-
-    case "bokehChart":
-      return (
-        <DebouncedBokehChart
-          element={node.element.bokehChart as BokehChartProto}
-          {...elementProps}
-        />
       )
 
     case "code": {
@@ -683,6 +669,20 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "dateTimeInput": {
+      const dateTimeInputProto = node.element
+        .dateTimeInput as DateTimeInputProto
+      widgetProps.disabled =
+        widgetProps.disabled || dateTimeInputProto.disabled
+      return (
+        <DateTimeInput
+          key={dateTimeInputProto.id}
+          element={dateTimeInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
     case "timeInput": {
       const timeInputProto = node.element.timeInput as TimeInputProto
       widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
@@ -717,8 +717,9 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const { isFullScreen } = useContext(ViewStateContext)
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
   const { node } = props
 
   const elementType = node.element.type || ""

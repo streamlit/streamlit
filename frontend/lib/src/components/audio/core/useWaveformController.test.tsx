@@ -45,11 +45,11 @@ vi.mock("~lib/theme/utils", () => ({
 describe("useWaveformController", () => {
   let mockContainerRef: { current: HTMLDivElement | null }
   let mockEvents: {
-    onPermissionDenied?: () => void
-    onError?: (error: Error) => void
+    onPermissionDenied: () => void
+    onError: (error: Error) => void
     onRecordStart?: () => void
     onRecordReady?: (blob: Blob) => void
-    onApprove?: (wav: Blob) => void
+    onApprove?: (wav: Blob) => Promise<void>
     onCancel?: () => void
     onProgressMs?: (ms: number) => void
     onPlaybackPlay?: () => void
@@ -68,7 +68,7 @@ describe("useWaveformController", () => {
       onError: vi.fn(),
       onRecordStart: vi.fn(),
       onRecordReady: vi.fn(),
-      onApprove: vi.fn(),
+      onApprove: vi.fn().mockResolvedValue(undefined),
       onCancel: vi.fn(),
       onProgressMs: vi.fn(),
       onPlaybackPlay: vi.fn(),
@@ -141,6 +141,7 @@ describe("useWaveformController", () => {
     )
 
     const newEvents = {
+      onPermissionDenied: vi.fn(),
       onError: vi.fn(),
     }
 
@@ -169,7 +170,7 @@ describe("useWaveformController", () => {
     expect(mockEvents.onCancel).toHaveBeenCalled()
   })
 
-  it("should throw error when approving without recording", async () => {
+  it("should call onError when approving without recording", async () => {
     const { result } = renderHook(
       () =>
         useWaveformController({
@@ -179,8 +180,12 @@ describe("useWaveformController", () => {
       { wrapper }
     )
 
-    await expect(result.current.approve()).rejects.toThrow(
-      "No recorded audio to approve"
+    await result.current.approve()
+
+    expect(mockEvents.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "No recorded audio to approve",
+      })
     )
   })
 
@@ -281,7 +286,7 @@ describe("useWaveformController", () => {
   })
 
   it("handles errors from WaveSurfer initialization", async () => {
-    const onError = vi.fn()
+    const onError = vi.fn().mockResolvedValue(undefined)
     const WaveSurferModule = await import("wavesurfer.js")
 
     // Reset the mock first

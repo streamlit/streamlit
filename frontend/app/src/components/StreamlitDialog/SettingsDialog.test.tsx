@@ -28,13 +28,13 @@ import {
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  LibContextProps,
   lightTheme,
   mockSessionInfo,
-  renderWithContexts,
   SessionInfo,
   ThemeConfig,
+  ThemeContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 
@@ -61,9 +61,9 @@ const customThemeDark: ThemeConfig = {
   primitives: darkTheme.primitives,
 }
 
-const getContext = (
-  extend?: Partial<LibContextProps>
-): Partial<LibContextProps> => ({
+const getThemeContext = (
+  extend?: Partial<ThemeContextProps>
+): Partial<ThemeContextProps> => ({
   activeTheme: lightTheme,
   setTheme: mockSetTheme,
   availableThemes: [],
@@ -86,9 +86,11 @@ describe("SettingsDialog", () => {
   it("renders without crashing", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
-    const context = getContext({ availableThemes })
+    const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Settings")).toBeVisible()
   })
@@ -98,8 +100,10 @@ describe("SettingsDialog", () => {
     const props = getProps({
       allowRunOnSave: true,
     })
-    const context = getContext()
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    const themeContext = getThemeContext()
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     await user.click(screen.getByText("Run on save"))
 
@@ -112,8 +116,10 @@ describe("SettingsDialog", () => {
   it("should render wide mode checkbox", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    const context = getContext()
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    const themeContext = getThemeContext()
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
     expect(screen.getByText("Wide mode")).toBeVisible()
 
     await user.click(screen.getByText("Wide mode"))
@@ -127,9 +133,11 @@ describe("SettingsDialog", () => {
   it("should render theme selector", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
-    const context = getContext({ availableThemes })
+    const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Choose app theme")).toBeVisible()
 
@@ -141,9 +149,14 @@ describe("SettingsDialog", () => {
     // and the preset themes are removed from available themes
     const availableThemes = [customTheme]
     const props = getProps()
-    const context = getContext({ availableThemes, activeTheme: customTheme })
+    const themeContext = getThemeContext({
+      availableThemes,
+      activeTheme: customTheme,
+    })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const selectbox = screen.getByRole("combobox")
     expect(selectbox).toBeVisible()
@@ -162,12 +175,14 @@ describe("SettingsDialog", () => {
       customThemeDark,
     ]
     const props = getProps()
-    const context = getContext({
+    const themeContext = getThemeContext({
       availableThemes,
       activeTheme: customThemeLight,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_LIGHT_NAME)).toBeVisible()
@@ -191,12 +206,14 @@ describe("SettingsDialog", () => {
       customThemeDark,
     ]
     const props = getProps()
-    const context = getContext({
+    const themeContext = getThemeContext({
       availableThemes,
       activeTheme: customThemeDark,
     })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     // Correct selected theme is shown
     expect(screen.getByText(CUSTOM_THEME_DARK_NAME)).toBeVisible()
@@ -217,9 +234,11 @@ describe("SettingsDialog", () => {
     const presetThemes = createPresetThemes()
     const availableThemes = [...presetThemes]
     const props = getProps()
-    const context = getContext({ availableThemes })
+    const themeContext = getThemeContext({ availableThemes })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Light")).toBeVisible()
 
@@ -233,9 +252,14 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const presetThemes = createPresetThemes()
     const availableThemes = [...presetThemes]
-    const context = getContext({ activeTheme: darkTheme, availableThemes })
+    const themeContext = getThemeContext({
+      activeTheme: darkTheme,
+      availableThemes,
+    })
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     expect(screen.getByText("Dark")).toBeVisible()
 
@@ -247,9 +271,11 @@ describe("SettingsDialog", () => {
     const props = getProps({
       sessionInfo: mockSessionInfo({ streamlitVersion: "42.42.42" }),
     })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const versionRegex = /Made with Streamlit\s*42\.42\.42/
     const versionText = screen.getByText(versionRegex)
@@ -261,9 +287,11 @@ describe("SettingsDialog", () => {
     expect(sessionInfo.isSet).toBe(false)
 
     const props = getProps({ sessionInfo })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const versionRegex = /^Made with Streamlit.*/
     const nonExistentText = screen.queryByText(versionRegex)

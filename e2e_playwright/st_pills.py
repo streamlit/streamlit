@@ -16,6 +16,10 @@ import time
 
 import streamlit as st
 
+# Regression test for gh-12067: Pills at the start of the app should not wrap
+# The bug only reproduces when pills are among the first elements rendered
+st.pills("Regression test 3", ["1", "2", "3"], key="regression_3")
+
 st.header("Pills - standard")
 
 pills_options = [
@@ -190,6 +194,8 @@ val = st.pills(
     default=st.session_state.default_pills,
 )
 st.write("Pills with default options:", str(val))
+
+st.markdown("Pills - dynamic props:")
 
 if st.toggle("Update pills props"):
     dyn_val = st.pills(
