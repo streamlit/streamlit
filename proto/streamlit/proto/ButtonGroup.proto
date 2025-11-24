@@ -15,6 +15,7 @@
  */
 
 syntax = "proto3";
+package streamlit;
 
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ButtonGroupProto";
