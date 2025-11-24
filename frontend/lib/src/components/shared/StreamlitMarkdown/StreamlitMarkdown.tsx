@@ -28,9 +28,10 @@ import React, {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { type Element, type Root } from "hast"
+import { type Element, type Root as HastRoot } from "hast"
 import omit from "lodash/omit"
 import once from "lodash/once"
+import type { Root, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -130,7 +131,7 @@ export interface Props {
  * It is needed for versions of react-markdown from v9 onwards.
  */
 function rehypeSetCodeInlineProperty() {
-  return (tree: Root) => {
+  return (tree: HastRoot) => {
     visit(tree, "element", (node: Element, _index, parent) => {
       if (node.tagName !== "code") {
         return
@@ -461,8 +462,7 @@ function createRemarkColoringAndSmall(
   theme: EmotionTheme,
   colorMapping: Map<string, string>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: Root) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -528,8 +528,9 @@ function createRemarkColoringAndSmall(
       // We convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
-      node.type = "text"
-      node.value = `:${nodeName}`
+      // Type assertion needed because we're mutating the node type at runtime
+      ;(node as unknown as Text).type = "text"
+      ;(node as unknown as Text).value = `:${nodeName}`
       node.data = {}
     })
     return tree
@@ -540,12 +541,29 @@ function createRemarkColoringAndSmall(
  * Factory function to create the material icons directive plugin
  */
 function createRemarkMaterialIcons(theme: EmotionTheme) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replace(fullMatch: string, iconName: string): any {
+  return () => (tree: Root) => {
+    // The replace function returns a custom mdast node with hast transformation data.
+    // Type assertion needed because we're using mdast-util-to-hast's data properties
+    // which aren't reflected in the standard PhrasingContent types.
+    function replace(
+      fullMatch: string,
+      iconName: string
+    ): {
+      type: "text"
+      value: string
+      data: {
+        hName: string
+        hProperties: {
+          role: string
+          ariaLabel: string
+          translate: string
+          style: string
+        }
+        hChildren: Array<{ type: string; value: string }>
+      }
+    } {
       return {
-        type: "text",
+        type: "text" as const,
         value: fullMatch,
         data: {
           hName: "span",
@@ -577,7 +595,9 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     // Since all `:material/` already got replaced with `:material_`
     // within the markdown text (see below), we need to use `:material_`
     // within the regex.
-    findAndReplace(tree, [[/:material_(\w+):/g, replace]])
+    findAndReplace(tree, [
+      [/:material_(\w+):/g, replace as unknown as () => Text],
+    ])
     return tree
   }
 }
@@ -586,12 +606,24 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  * Factory function to create the streamlit logo plugin
  */
 function createRemarkStreamlitLogo() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replaceStreamlit(): any {
+  return () => (tree: Root) => {
+    // The replace function returns a custom mdast node with hast transformation data.
+    // Type assertion needed because we're using mdast-util-to-hast's data properties
+    // which aren't reflected in the standard PhrasingContent types.
+    function replaceStreamlit(): {
+      type: "text"
+      value: string
+      data: {
+        hName: string
+        hProperties: {
+          src: string
+          alt: string
+          style: string
+        }
+      }
+    } {
       return {
-        type: "text",
+        type: "text" as const,
         value: "",
         data: {
           hName: "img",
@@ -607,7 +639,9 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit]])
+    findAndReplace(tree, [
+      [/:streamlit:/g, replaceStreamlit as unknown as () => Text],
+    ])
     return tree
   }
 }
@@ -616,8 +650,7 @@ function createRemarkStreamlitLogo() {
  * Factory function to create typographical symbols plugin
  */
 function createRemarkTypographicalSymbols() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: Root) => {
     visit(tree, (node, _index, parent) => {
       if (
         parent &&
