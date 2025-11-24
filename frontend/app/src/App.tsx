@@ -1236,8 +1236,14 @@ export class App extends PureComponent<Props, State> {
       })
       this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // Set the favicon to its default values
-      this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      // Only set default favicon once per page load, and only if no custom icon has been set
+      if (
+        !this.appNavigation.hasSetDefaultFavicon &&
+        !this.appNavigation.isPageIconSet
+      ) {
+        this.appNavigation.hasSetDefaultFavicon = true
+        this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      }
     } else {
       this.setState({
         fragmentIdsThisRun,
