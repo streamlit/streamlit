@@ -596,7 +596,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     // within the markdown text (see below), we need to use `:material_`
     // within the regex.
     findAndReplace(tree, [
-      [/:material_(\w+):/g, replace as unknown as () => Text],
+      [
+        /:material_(\w+):/g,
+        replace as (fullMatch: string, iconName: string) => Text,
+      ],
     ])
     return tree
   }
@@ -639,9 +642,7 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [
-      [/:streamlit:/g, replaceStreamlit as unknown as () => Text],
-    ])
+    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
     return tree
   }
 }
