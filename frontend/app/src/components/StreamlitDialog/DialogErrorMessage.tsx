@@ -18,6 +18,8 @@ import React, { Fragment, ReactElement, ReactNode } from "react"
 
 import { StreamlitErrorCodeBlock } from "@streamlit/lib"
 
+import { StyledErrorText } from "./styled-components"
+
 export interface DialogErrorMessageProps {
   message: string
   codeBlock?: string
@@ -94,7 +96,9 @@ function DialogErrorMessage({
 }: Readonly<DialogErrorMessageProps>): ReactElement {
   return (
     <>
-      <div>{parseLinks(message)}</div>
+      <StyledErrorText hasCodeBelow={!!codeBlock}>
+        {parseLinks(message)}
+      </StyledErrorText>
       {codeBlock && (
         <StreamlitErrorCodeBlock>{codeBlock}</StreamlitErrorCodeBlock>
       )}
