@@ -125,7 +125,13 @@ def test_value_correct_on_ignore_click(app: Page):
         download_button.click()
 
     # Check that rerun does not happen
+
+    # While a rerun isn't expected, we still wait for a rerun here to ensure that the text actually
+    # fails if the rerun happens.
+    # The reason is that the default download button return is false, so if we do the
+    # markdown check immidately it might suceedd even if the rerun happens slightly later.
     wait_for_app_run(app)
+
     expect_prefixed_markdown(
         app,
         "Ignore rerun download button value:",
@@ -316,7 +322,7 @@ def test_download_button_shortcut_triggers(app: Page):
     shortcut_button = get_element_by_key(app, "shortcut_download_button")
     expect(shortcut_button).to_be_visible()
     expect(shortcut_button.locator("kbd")).to_have_text(
-        re.compile(r"Ctrl \+ (Alt|Option) \+ D")
+        re.compile(r"(Ctrl|⌘) \+ (Alt|Option|⌥) \+ D")
     )
 
     # Press hotkey to trigger the button:
