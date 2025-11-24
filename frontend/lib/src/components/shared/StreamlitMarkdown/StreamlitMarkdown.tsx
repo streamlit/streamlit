@@ -93,7 +93,7 @@ const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
   import("remark-emoji")
 
 /**
- * Detects if the markdown source contains emoji shortcodes that require remark-emoji.
+ * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
  * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
  * :streamlit: syntax which are handled separately.
  *
@@ -101,9 +101,7 @@ const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
  * @returns true if emoji shortcodes are detected, false otherwise
  */
 function containsEmojiShortcodes(source: string): boolean {
-  // Match :word: or :word_with_underscores: but not :material/ or :streamlit:
-  // This is a heuristic - we'll load the plugin if we see any potential shortcodes
-  return /:(?!material\/|streamlit:)\w[\w_]*:/.test(source)
+  return /:(?!material\/|streamlit:)\w[\w_-]*:/.test(source)
 }
 
 /**
@@ -811,12 +809,16 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   // Load katex plugin when needed
   useEffect(() => {
+    let isMounted = true
+
     if (needsKatex && !katexPlugin && !isLoadingKatexRef.current) {
       isLoadingKatexRef.current = true
       loadKatexStyles()
       void loadKatexPlugin()
         .then(module => {
-          setKatexPlugin(() => module.default)
+          if (isMounted) {
+            setKatexPlugin(() => module.default)
+          }
         })
         .catch(() => {
           // Silently fail - math will render as plain text
@@ -825,15 +827,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
           isLoadingKatexRef.current = false
         })
     }
+
+    return () => {
+      isMounted = false
+    }
   }, [needsKatex, katexPlugin])
 
   // Load rehype-raw plugin when HTML is allowed
   useEffect(() => {
+    let isMounted = true
+
     if (allowHTML && !rawPlugin && !isLoadingRawRef.current) {
       isLoadingRawRef.current = true
       void loadRehypeRaw()
         .then(module => {
-          setRawPlugin(() => module.default)
+          if (isMounted) {
+            setRawPlugin(() => module.default)
+          }
         })
         .catch(() => {
           // Silently fail - HTML will be escaped
@@ -842,15 +852,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
           isLoadingRawRef.current = false
         })
     }
+
+    return () => {
+      isMounted = false
+    }
   }, [allowHTML, rawPlugin])
 
   // Load remark-emoji plugin when emoji shortcodes are detected
   useEffect(() => {
+    let isMounted = true
+
     if (needsEmoji && !emojiPlugin && !isLoadingEmojiRef.current) {
       isLoadingEmojiRef.current = true
       void loadRemarkEmoji()
         .then(module => {
-          setEmojiPlugin(() => module.default)
+          if (isMounted) {
+            setEmojiPlugin(() => module.default)
+          }
         })
         .catch(() => {
           // Silently fail - emoji shortcodes will render as plain text
@@ -858,6 +876,10 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         .finally(() => {
           isLoadingEmojiRef.current = false
         })
+    }
+
+    return () => {
+      isMounted = false
     }
   }, [needsEmoji, emojiPlugin])
 

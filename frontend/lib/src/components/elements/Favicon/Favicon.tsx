@@ -63,20 +63,28 @@ export function handleFavicon(
     return
   }
 
-  // Check for emoji shortcode (asynchronous, may need to lazy-load node-emoji)
-  void convertShortcodeToEmoji(favicon)
-    .then(emoji => {
-      if (emoji) {
-        setFavicon(createEmojiDataUrl(emoji))
-      } else {
-        // Not a valid shortcode, treat as URL
+  // Check if it looks like a shortcode pattern before attempting conversion
+  // This avoids unnecessarily lazy-loading node-emoji for regular URLs
+  const shortcodePattern = /^:[a-zA-Z0-9_+-]+:$/
+  if (shortcodePattern.test(favicon)) {
+    // Check for emoji shortcode (asynchronous, may need to lazy-load node-emoji)
+    void convertShortcodeToEmoji(favicon)
+      .then(emoji => {
+        if (emoji) {
+          setFavicon(createEmojiDataUrl(emoji))
+        } else {
+          // Not a valid shortcode, treat as URL
+          setFavicon(endpoints.buildMediaURL(favicon))
+        }
+      })
+      .catch(() => {
+        // Error loading node-emoji, treat as URL
         setFavicon(endpoints.buildMediaURL(favicon))
-      }
-    })
-    .catch(() => {
-      // Error loading node-emoji, treat as URL
-      setFavicon(endpoints.buildMediaURL(favicon))
-    })
+      })
+  } else {
+    // Not a shortcode pattern, treat as URL
+    setFavicon(endpoints.buildMediaURL(favicon))
+  }
 }
 
 /**
