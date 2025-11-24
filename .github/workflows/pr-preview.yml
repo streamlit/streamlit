@@ -576,7 +576,7 @@ jobs:
                 const lines = [
                     header,
                     '',
-                    '| Metric | Current | Develop | Change |',
+                    '| Metric | This Branch | `develop` | Change (%) |',
                     '| :--- | :--- | :--- | :--- |',
                     `| **Total (gzip)** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
                     `| **Entry (gzip)** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
