@@ -372,7 +372,7 @@ jobs:
             - Current PR: ${currentSizeKB} KB
             - Latest develop: ${developSizeKB} KB
 
-            Please verify this change is expected.`;
+            Please verify that this change is expected.`;
 
             // Unique identifier for our comment
             const commentIdentifier = '<!-- STREAMLIT-WHEEL-SIZE-CHECK -->';
@@ -576,17 +576,15 @@ jobs:
                 const lines = [
                     header,
                     '',
-                    `Threshold: ${threshold}%`,
-                    '',
                     '| Metric | Current | Develop | Change |',
                     '| :--- | :--- | :--- | :--- |',
-                    `| **Total Gzip** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
-                    `| **Entry Gzip** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
+                    `| **Total (gzip)** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
+                    `| **Entry (gzip)** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
                     ''
                 ];
 
                 if (isSignificant) {
-                    lines.push('Please verify this change is expected.', '');
+                    lines.push('Please verify that this change is expected.', '');
                 }
 
                 lines.push(
