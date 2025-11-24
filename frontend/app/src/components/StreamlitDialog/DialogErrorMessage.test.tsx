@@ -116,29 +116,6 @@ Line 3`
     expect(screen.getByText("streamlit run yourscript.py")).toBeVisible()
   })
 
-  it("renders multiple markdown links in message", () => {
-    renderDialogErrorMessage({
-      message:
-        "Error occurred. See [docs](https://example.com/docs) or [support](https://example.com/support) for help.",
-    })
-
-    // Verify both links are clickable
-    const links = screen.getAllByRole("link")
-    expect(links).toHaveLength(2)
-
-    expect(links[0]).toBeVisible()
-    expect(links[0]).toHaveAttribute("href", "https://example.com/docs")
-    expect(links[0]).toHaveAttribute("target", "_blank")
-    expect(links[0]).toHaveAttribute("rel", "noopener noreferrer")
-    expect(links[0]).toHaveTextContent("docs")
-
-    expect(links[1]).toBeVisible()
-    expect(links[1]).toHaveAttribute("href", "https://example.com/support")
-    expect(links[1]).toHaveAttribute("target", "_blank")
-    expect(links[1]).toHaveAttribute("rel", "noopener noreferrer")
-    expect(links[1]).toHaveTextContent("support")
-  })
-
   it("renders markdown links but not other markdown syntax", () => {
     renderDialogErrorMessage({
       message:
@@ -285,5 +262,116 @@ Line 3`
     expect(
       screen.getByText(/"error": "Long error"/, { exact: false })
     ).toBeVisible()
+  })
+
+  describe("parseLinks function", () => {
+    it.each([
+      {
+        description: "GitHub issue link",
+        message:
+          "This is not expected to happen. Please [report this bug](https://github.com/streamlit/streamlit/issues).",
+        expectedLinks: [
+          {
+            text: "report this bug",
+            href: "https://github.com/streamlit/streamlit/issues",
+          },
+        ],
+      },
+      {
+        description: "MDN CORS documentation link",
+        message:
+          "This could be due to the app's [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) settings.",
+        expectedLinks: [
+          {
+            text: "CORS",
+            href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS",
+          },
+        ],
+      },
+      {
+        description: "multiple links in one message",
+        message:
+          "Error occurred. See [documentation](https://docs.streamlit.io) or [contact support](https://support.streamlit.io) for help.",
+        expectedLinks: [
+          {
+            text: "documentation",
+            href: "https://docs.streamlit.io",
+          },
+          {
+            text: "contact support",
+            href: "https://support.streamlit.io",
+          },
+        ],
+      },
+      {
+        description: "link with text before and after",
+        message:
+          "Connection failed. Check your [network settings](https://example.com/network) and try again.",
+        expectedLinks: [
+          {
+            text: "network settings",
+            href: "https://example.com/network",
+          },
+        ],
+      },
+      {
+        description: "link at the start of message",
+        message:
+          "[Click here](https://example.com) to learn more about this error.",
+        expectedLinks: [
+          {
+            text: "Click here",
+            href: "https://example.com",
+          },
+        ],
+      },
+      {
+        description: "link at the end of message",
+        message:
+          "For more information, see [this guide](https://example.com/guide)",
+        expectedLinks: [
+          {
+            text: "this guide",
+            href: "https://example.com/guide",
+          },
+        ],
+      },
+      {
+        description: "link with special characters in URL",
+        message:
+          "Reference: [API docs](https://api.example.com/v1/docs?section=auth&format=json)",
+        expectedLinks: [
+          {
+            text: "API docs",
+            href: "https://api.example.com/v1/docs?section=auth&format=json",
+          },
+        ],
+      },
+      {
+        description: "link with parentheses in text",
+        message:
+          "See [Python docs (3.9+)](https://docs.python.org/3/) for details.",
+        expectedLinks: [
+          {
+            text: "Python docs (3.9+)",
+            href: "https://docs.python.org/3/",
+          },
+        ],
+      },
+    ])("renders $description correctly", ({ message, expectedLinks }) => {
+      renderDialogErrorMessage({ message })
+
+      // Verify all expected links are rendered correctly
+      const links = screen.getAllByRole("link")
+      expect(links).toHaveLength(expectedLinks.length)
+
+      expectedLinks.forEach((expectedLink, index) => {
+        expect(links[index]).toBeVisible()
+        expect(links[index]).toHaveTextContent(expectedLink.text)
+        expect(links[index]).toHaveAttribute("href", expectedLink.href)
+        expect(links[index]).toHaveAttribute("target", "_blank")
+        expect(links[index]).toHaveAttribute("rel", "noopener noreferrer")
+      })
+    })
   })
 })
