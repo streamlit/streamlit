@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
+import wave
+
 import streamlit as st
 from streamlit import config, runtime
 
@@ -236,3 +239,78 @@ if key is None or key == "audio_column":
 
             if audio_column_b_value.audio:
                 st.audio(audio_column_b_value.audio)
+
+if key is None or key == "audio_sample_rate":
+    st.subheader("Audio Sample Rate Testing")
+
+    # Dropdown to select sample rate
+    sample_rate_options = {
+        "8 kHz (Low quality)": 8000,
+        "16 kHz (Default)": 16000,
+        "22.05 kHz": 22050,
+        "44.1 kHz (CD quality)": 44100,
+        "48 kHz (High quality)": 48000,
+        "Browser default (None)": None,
+    }
+
+    selected_option = st.selectbox(
+        "Select audio sample rate",
+        options=list(sample_rate_options.keys()),
+        key="sample_rate_selector",
+        index=1,  # Default to 16 kHz
+    )
+
+    selected_sample_rate = sample_rate_options[selected_option]
+
+    st.write(f"Selected sample rate: {selected_sample_rate}")
+
+    # Create chat input with selected sample rate
+    audio_sample_rate_value = st.container().chat_input(
+        f"Chat input (audio with {selected_option})",
+        accept_audio=True,
+        audio_sample_rate=selected_sample_rate,
+        key="audio_sample_rate_test",
+    )
+
+    if audio_sample_rate_value:
+        st.write(f"audio_sample_rate_test - text: {audio_sample_rate_value.text}")
+        audio_name = (
+            audio_sample_rate_value.audio.name
+            if audio_sample_rate_value.audio
+            else None
+        )
+        st.write(f"audio_sample_rate_test - audio: {audio_name}")
+
+        if audio_sample_rate_value.audio:
+            # Validate the actual sample rate of the recorded audio
+            audio_bytes = audio_sample_rate_value.audio.read()
+            audio_sample_rate_value.audio.seek(0)  # Reset for playback
+
+            with wave.open(io.BytesIO(audio_bytes), "rb") as wav:
+                actual_sample_rate = wav.getframerate()
+                num_channels = wav.getnchannels()
+                sample_width = wav.getsampwidth()
+
+                st.success(f"Actual sample rate: {actual_sample_rate} Hz")
+                st.write(f"Channels: {num_channels}")
+                st.write(f"Sample width: {sample_width} bytes")
+
+                # Validate that the actual sample rate matches the expected
+                if selected_sample_rate is not None:
+                    if actual_sample_rate == selected_sample_rate:
+                        st.success(
+                            f"Sample rate validation PASSED: "
+                            f"Expected {selected_sample_rate} Hz, "
+                            f"got {actual_sample_rate} Hz"
+                        )
+                    else:
+                        st.error(
+                            f"Sample rate validation FAILED: "
+                            f"Expected {selected_sample_rate} Hz, "
+                            f"got {actual_sample_rate} Hz"
+                        )
+                else:
+                    st.info(f"Browser default used: {actual_sample_rate} Hz")
+
+            # Play the audio
+            st.audio(audio_sample_rate_value.audio)
