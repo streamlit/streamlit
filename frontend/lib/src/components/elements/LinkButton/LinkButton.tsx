@@ -63,6 +63,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   const handleClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>): void => {
       if (element.disabled) {
+        // Prevent the link from being followed if the button is disabled.
         event.preventDefault()
       }
     },
