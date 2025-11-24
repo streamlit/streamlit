@@ -356,11 +356,13 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
               />
             )}
             <StyledTruncateText>
+              {" "}
               <StreamlitMarkdown
                 source={delta}
                 allowHTML={false}
                 inheritFont
               />
+              {" "}
             </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
