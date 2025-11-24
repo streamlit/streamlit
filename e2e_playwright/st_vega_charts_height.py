@@ -32,7 +32,9 @@ st.header("Vega Charts Height Tests")
 # Test explicit height parameters
 st.subheader("Explicit Height Parameter Tests")
 
-st.write(" ")  # Empty space to avoid flakiness in firefox (changes subpixel sizing)
+# Add some additional text to remove flakiness in firefox caused by subpixel sizing:
+st.write("Testing different height parameters for vega charts")
+
 st.write("Chart with height='content':")
 st.vega_lite_chart(simple_df, simple_spec, height="content")
 
