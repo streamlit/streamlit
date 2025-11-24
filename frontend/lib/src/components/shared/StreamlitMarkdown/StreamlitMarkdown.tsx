@@ -563,7 +563,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
       }
     } {
       return {
-        type: "text" as const,
+        type: "text",
         value: fullMatch,
         data: {
           hName: "span",
