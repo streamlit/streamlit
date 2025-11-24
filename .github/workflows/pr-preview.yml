@@ -415,6 +415,203 @@ jobs:
         env:
           COMPARE_RESULT: ${{ steps.compare-sizes.outputs.result }}
 
+  check-bundle-size:
+    runs-on: ubuntu-latest
+    needs: analyze-frontend-bundle
+    if: github.event_name == 'pull_request' && github.repository == 'streamlit/streamlit'
+    continue-on-error: true
+
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+
+    env:
+      BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: 0.5
+
+    steps:
+      - name: Download current bundle analysis
+        uses: actions/download-artifact@v6
+        with:
+          name: bundle_analysis_json
+          path: current_bundle
+
+      - name: Get latest develop run ID
+        id: get-latest-run
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pr-preview.yml',
+              branch: 'develop',
+              status: 'success',
+              per_page: 1
+            });
+
+            if (runs.workflow_runs.length === 0) {
+              core.warning('No successful workflow runs found on develop branch');
+              return;
+            }
+
+            core.setOutput('run_id', runs.workflow_runs[0].id);
+
+      - name: Download develop bundle analysis
+        uses: actions/download-artifact@v6
+        continue-on-error: true
+        with:
+          repository: streamlit/streamlit
+          run-id: ${{ steps.get-latest-run.outputs.run_id }}
+          name: bundle_analysis_json
+          path: develop_bundle
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare bundle sizes and comment
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const loadBundle = (dir) => {
+                try {
+                    const jsonPath = path.join(process.cwd(), dir, 'bundle-analysis.json');
+                    if (fs.existsSync(jsonPath)) {
+                        return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                    }
+                    console.log(`File not found: ${jsonPath}`);
+                    return null;
+                } catch (e) {
+                    console.log(`Error loading bundle from ${dir}:`, e.message);
+                    return null;
+                }
+            };
+
+            const currentData = loadBundle('current_bundle');
+            const developData = loadBundle('develop_bundle');
+
+            if (!currentData) {
+                console.log('Missing current bundle data, skipping comparison.');
+                return;
+            }
+
+            if (!developData) {
+                console.log('Missing develop bundle data, skipping comparison.');
+                return;
+            }
+
+            const calculateMetrics = (data) => {
+                let totalGzip = 0;
+                let entryGzip = 0;
+                if (data) {
+                    for (const item of data) {
+                        totalGzip += (item.gzipSize || 0);
+                        if (item.isEntry) {
+                            entryGzip += (item.gzipSize || 0);
+                        }
+                    }
+                }
+                return { totalGzip, entryGzip };
+            };
+
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KiB', 'MiB', 'GiB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const currentMetrics = calculateMetrics(currentData);
+            const developMetrics = calculateMetrics(developData);
+
+            const threshold = parseFloat(process.env.BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD);
+
+            const checkSignificant = (current, develop) => {
+                if (develop === 0) {
+                    return current === 0
+                        ? { diff: 0, percent: 0, isSignificant: false }
+                        : { diff: current, percent: 100, isSignificant: true };
+                }
+                const diff = current - develop;
+                const percent = (diff / develop) * 100;
+                return {
+                    diff,
+                    percent,
+                    isSignificant: Math.abs(percent) >= threshold
+                };
+            };
+
+            const total = checkSignificant(currentMetrics.totalGzip, developMetrics.totalGzip);
+            const entry = checkSignificant(currentMetrics.entryGzip, developMetrics.entryGzip);
+
+            console.log(`Total Gzip: Current=${formatBytes(currentMetrics.totalGzip)}, Develop=${formatBytes(developMetrics.totalGzip)}, Change=${total.percent.toFixed(2)}%`);
+            console.log(`Entry Gzip: Current=${formatBytes(currentMetrics.entryGzip)}, Develop=${formatBytes(developMetrics.entryGzip)}, Change=${entry.percent.toFixed(2)}%`);
+
+            const isSignificant = total.isSignificant || entry.isSignificant;
+            const isIncreased = total.percent > 0 || entry.percent > 0;
+
+            // Find existing comment
+            const commentIdentifier = '<!-- STREAMLIT-BUNDLE-SIZE-CHECK -->';
+            const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+            });
+            const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+            if (isSignificant || existingComment) {
+                const emoji = isIncreased ? '📈' : '📉';
+
+                const formatChange = (res) => {
+                     const sign = res.percent > 0 ? '+' : '';
+                     return `${sign}${res.percent.toFixed(2)}%`;
+                };
+
+                const header = isSignificant
+                    ? `### ${emoji} Significant bundle size change detected`
+                    : `### ✅ Bundle size change is within normal range`;
+
+                const commentBody = [
+                    header,
+                    '',
+                    `Threshold: ${threshold}%`,
+                    '',
+                    '| Metric | Current | Develop | Change |',
+                    '| :--- | :--- | :--- | :--- |',
+                    `| **Total Gzip** | ${formatBytes(currentMetrics.totalGzip)} | ${formatBytes(developMetrics.totalGzip)} | ${formatChange(total)} |`,
+                    `| **Entry Gzip** | ${formatBytes(currentMetrics.entryGzip)} | ${formatBytes(developMetrics.entryGzip)} | ${formatChange(entry)} |`,
+                    '',
+                    '<details>',
+                    '<summary>Debug Info</summary>',
+                    `Run ID: ${context.runId}`,
+                    '</details>'
+                ].join('\n');
+
+                const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
+
+                if (existingComment) {
+                    await github.rest.issues.updateComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        comment_id: existingComment.id,
+                        body: fullCommentBody
+                    });
+                    console.log('Updated existing comment');
+                } else {
+                    await github.rest.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                        body: fullCommentBody
+                    });
+                    console.log('Created new comment');
+                }
+            } else {
+                console.log('Changes within threshold and no existing comment, skipping.');
+            }
+
   build-component-v2-lib:
     runs-on: ubuntu-latest
 
