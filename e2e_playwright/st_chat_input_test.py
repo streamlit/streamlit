@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import logging
 from functools import wraps
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -44,8 +43,6 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
     reset_hovering,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def use_chat_input(key: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -214,7 +211,7 @@ def grant_microphone_permissions(page: Page) -> None:
         page.context.grant_permissions(["microphone"])
     except Error as e:
         # It's safe to ignore failure: contexts might not support permissions in all environments.
-        _LOGGER.warning("Could not grant microphone permissions: %s", e)
+        print(f"Could not grant microphone permissions: {e}")
 
 
 def record_audio_in_chat_input(
