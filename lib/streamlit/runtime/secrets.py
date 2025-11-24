@@ -56,8 +56,8 @@ class SecretErrorMessages:
             "on Streamlit Cloud? More info: "
             "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
-        self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
-            f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(file_paths)}"
+	self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
+	f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(f'`{path}`' for path in file_paths)}"
         )
         self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
             lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
