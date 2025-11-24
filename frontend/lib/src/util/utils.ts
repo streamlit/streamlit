@@ -236,7 +236,7 @@ export function getScreencastTimestamp(): string {
     .toISOString()
     .slice(0, 19)
     .replace("T", "-")
-    .replace(/:/g, "-")
+    .replaceAll(":", "-")
 }
 
 /**
