@@ -84,7 +84,7 @@ let filterConfigured = false
 /**
  * Ensure the hotkeys filter is configured.
  */
-function ensureHotkeysFilterConfigured(): void {
+export function ensureHotkeysFilterConfigured(): void {
   // `hotkeys-js` uses a single global filter. Configure it once so that
   // shortcuts never fire while the user is typing in a text input unless a
   // system modifier is pressed (mirrors native browser behavior).
@@ -365,10 +365,6 @@ export function useRegisterShortcut({
     () => buildSequences(parsedShortcut),
     [parsedShortcut]
   )
-
-  useEffect(() => {
-    ensureHotkeysFilterConfigured()
-  }, [])
 
   useEffect(() => {
     if (!parsedShortcut || sequences.length === 0 || disabled) {

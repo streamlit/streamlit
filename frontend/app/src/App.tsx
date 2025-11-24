@@ -67,6 +67,7 @@ import {
   CUSTOM_THEME_AUTO_NAME,
   DeployedAppMetadata,
   ensureError,
+  ensureHotkeysFilterConfigured,
   extractPageNameFromPathName,
   FileUploadClient,
   FormsData,
@@ -271,6 +272,9 @@ export class App extends PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
+
+    // Register hotkey filter:
+    ensureHotkeysFilterConfigured()
 
     // Initialize immerjs
     enablePatches()
