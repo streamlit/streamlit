@@ -179,4 +179,16 @@ describe("Button widget", () => {
       undefined
     )
   })
+
+  it("does not trigger the widget manager when shortcut is activated but button is disabled", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" }, { disabled: true })
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    render(<Button {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
 })
