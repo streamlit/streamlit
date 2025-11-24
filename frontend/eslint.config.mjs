@@ -48,6 +48,52 @@ const streamlitCustom = await jiti.import(
   { default: true }
 )
 
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -295,29 +341,7 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-            {
-              name: "axios",
-              importNames: ["CancelToken"],
-              message:
-                "Please use the `AbortController` API instead of `CancelToken`",
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
@@ -360,6 +384,7 @@ export default defineConfig([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
   // Theme files specific configuration
