@@ -79,7 +79,7 @@ st.link_button(
 st.link_button(
     "Link Button with shortcut",
     url="https://streamlit.io",
-    shortcut="Ctrl+L",
+    shortcut="Ctrl+Alt+Z",
 )
 
 with st.expander("Link Button Width Examples", expanded=True):

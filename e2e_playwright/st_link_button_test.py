@@ -89,15 +89,17 @@ def test_link_button_shortcut_triggers(app: Page):
     )
     expect(shortcut_button).to_be_visible()
     # Ensure shortcut labels are rendered for link buttons:
-    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"Ctrl \+ L"))
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|Option|⌥) \+ Z")
+    )
     expect(shortcut_button).to_be_enabled()
     shortcut_button.scroll_into_view_if_needed()
     # This test seems a bit flaky without a timeout:
-    app.wait_for_timeout(2000)
+    app.wait_for_timeout(3000)
 
     # Press hotkey to trigger the button:
     with app.expect_popup() as popup_info:
-        app.keyboard.press("ControlOrMeta+KeyL")
+        app.keyboard.press("ControlOrMeta+Alt+KeyZ")
 
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
