@@ -222,7 +222,7 @@ class ButtonMixin:
             An optional keyboard shortcut that triggers the button. Provide a
             single alphanumeric key (e.g. ``"K"``, ``"4"``), a function key
             (e.g. ``"F11"``), or a supported special key (e.g. ``"Enter"``,
-            ``"Esc"``) combined with modifiers.
+            ``"Esc"``), optionally combined with modifiers.
 
             Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
 
@@ -492,7 +492,7 @@ class ButtonMixin:
             An optional keyboard shortcut that triggers the download button.
             Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
             function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``) combined with modifiers.
+            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
 
             Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
 
@@ -780,7 +780,7 @@ class ButtonMixin:
             An optional keyboard shortcut that triggers the link button.
             Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
             function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``) combined with modifiers.
+            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
 
             Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
 
