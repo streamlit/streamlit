@@ -26,6 +26,7 @@ import React, {
 import { X } from "@emotion-icons/open-iconic"
 import isEqual from "lodash/isEqual"
 import { getLogger } from "loglevel"
+import { flushSync } from "react-dom"
 
 import {
   CameraInput as CameraInputProto,
@@ -185,6 +186,12 @@ const CameraInput = ({
   // Files and imgSrc use regular useState to ensure they always reflect widget value on mount
   // (matching FileUploader behavior)
   const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
+  // Keep a ref to the current files for use in callbacks that need current state
+  const filesRef = useRef<UploadFileInfo[]>(files)
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
+
   const [imgSrc, setImgSrc] = useState<string | null>(() => initialImgSrc)
 
   // UI state uses useWidgetManagerElementState for persistence across mounts
@@ -244,12 +251,12 @@ const CameraInput = ({
 
   /**
    * Get a file by its local ID.
+   * Uses filesRef to always access the current state in async callbacks.
    */
   const getFile = useCallback(
-    (fileId: number): UploadFileInfo | undefined => {
-      return files.find(file => file.id === fileId)
-    },
-    [files]
+    (fileId: number): UploadFileInfo | undefined =>
+      filesRef.current.find(file => file.id === fileId),
+    []
   )
 
   /**
@@ -257,7 +264,22 @@ const CameraInput = ({
    */
   const addFile = useCallback(
     (file: UploadFileInfo): void => {
-      setFiles(prevFiles => [...prevFiles, file])
+      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+       * Using flushSync here because we need the state to be immediately updated
+       * before any subsequent file upload operations occur. Without this, React
+       * can defer the commit and our upload callbacks (progress, completion, or
+       * abort) may run while filesRef.current still points to the previous state.
+       * Those callbacks rely on filesRef.current to locate the in-flight upload,
+       * so deferring the update would cause them to no-op and break progress
+       * tracking.
+       */
+      flushSync(() => {
+        setFiles(prevFiles => {
+          const next = [...prevFiles, file]
+          filesRef.current = next
+          return next
+        })
+      })
     },
     [setFiles]
   )
@@ -267,7 +289,11 @@ const CameraInput = ({
    */
   const removeFile = useCallback(
     (idToRemove: number): void => {
-      setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
+      setFiles(prevFiles => {
+        const next = prevFiles.filter(file => file.id !== idToRemove)
+        filesRef.current = next
+        return next
+      })
     },
     [setFiles]
   )
@@ -277,9 +303,13 @@ const CameraInput = ({
    */
   const updateFile = useCallback(
     (curFileId: number, newFile: UploadFileInfo): void => {
-      setFiles(prevFiles =>
-        prevFiles.map(file => (file.id === curFileId ? newFile : file))
-      )
+      setFiles(prevFiles => {
+        const next = prevFiles.map(file =>
+          file.id === curFileId ? newFile : file
+        )
+        filesRef.current = next
+        return next
+      })
     },
     [setFiles]
   )
