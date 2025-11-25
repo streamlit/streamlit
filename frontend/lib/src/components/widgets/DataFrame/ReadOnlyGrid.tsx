@@ -23,12 +23,11 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import type { Quiver } from "~lib/dataframes/Quiver"
-
 import DataFrame from "./DataFrame"
 
 interface ReadOnlyGridProps {
-  data: IArrow | Quiver
+  data: IArrow
+  addedRowsList?: IArrow[]
   height?: number
   width?: streamlit.IWidthConfig
   customToolbarActions?: React.ReactNode[]
@@ -42,6 +41,7 @@ interface ReadOnlyGridProps {
  * The width is always set to stretch, but the height can be configured.
  *
  * @param data - The arrow data to display in the grid.
+ * @param addedRowsList - Optional list of added rows data to merge with the base data.
  * @param height - The height of the grid.
  * @param customToolbarActions - Custom toolbar actions to display in the grid toolbar.
  *
@@ -49,6 +49,7 @@ interface ReadOnlyGridProps {
  */
 export const ReadOnlyGrid = ({
   data,
+  addedRowsList,
   height,
   width,
   customToolbarActions,
@@ -63,9 +64,8 @@ export const ReadOnlyGrid = ({
           // Enforces read-only mode:
           editingMode: Arrow.EditingMode.READ_ONLY,
           disabled: true,
-          // Data from the provided IArrow (or extract from Quiver):
-          data:
-            "data" in data ? data.data || new Uint8Array() : new Uint8Array(),
+          // Data from the provided IArrow:
+          data: data.data || new Uint8Array(),
           styler: null,
           width: undefined,
           height: height ?? null,
@@ -76,6 +76,7 @@ export const ReadOnlyGrid = ({
           selectionMode: [],
         })
       }
+      addedRowsList={addedRowsList}
       widgetMgr={undefined}
       disabled={true}
       fragmentId={undefined}

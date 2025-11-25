@@ -213,13 +213,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   if (showData) {
-    // Get raw Arrow data for ReadOnlyGrid (it needs IArrow, not Quiver)
+    // Get raw Arrow data and added rows for ReadOnlyGrid
     const rawDataForGrid = inputElement.rawData ??
       datasets[0]?.rawData ?? { data: new Uint8Array() }
+    const addedRowsForGrid =
+      inputElement.addedRowsData ?? datasets[0]?.addedRowsData
 
     return (
       <ReadOnlyGrid
         data={rawDataForGrid}
+        addedRowsList={addedRowsForGrid}
         height={fullScreenHeight ?? chartContainerHeight ?? undefined}
         width={widthConfig ?? undefined}
         customToolbarActions={[

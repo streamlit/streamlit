@@ -88,4 +88,25 @@ describe("ReadOnlyGrid", () => {
 
     expect(receivedProps?.customToolbarActions).toBe(actions)
   })
+
+  it("forwards addedRowsList to DataFrame when provided", () => {
+    const fakeArrowData = { data: new Uint8Array() } as IArrow
+    const addedRows = [
+      { data: new Uint8Array([1, 2, 3]) } as IArrow,
+      { data: new Uint8Array([4, 5, 6]) } as IArrow,
+    ]
+
+    render(<ReadOnlyGrid data={fakeArrowData} addedRowsList={addedRows} />)
+
+    expect(receivedProps?.addedRowsList).toBe(addedRows)
+    expect(receivedProps?.addedRowsList).toHaveLength(2)
+  })
+
+  it("does not forward addedRowsList when not provided", () => {
+    const fakeArrowData = { data: new Uint8Array() } as IArrow
+
+    render(<ReadOnlyGrid data={fakeArrowData} />)
+
+    expect(receivedProps?.addedRowsList).toBeUndefined()
+  })
 })

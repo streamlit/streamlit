@@ -54,6 +54,9 @@ export interface VegaLiteChartElement {
   /** Raw Arrow data for ReadOnlyGrid (avoids accessing Quiver internals). */
   rawData?: IArrow | null
 
+  /** Added rows data for ReadOnlyGrid (to show merged data correctly). */
+  addedRowsData?: IArrow[]
+
   /** The a JSON-formatted string with the Vega-Lite spec. */
   spec: string
 
@@ -92,6 +95,9 @@ export interface WrappedNamedDataset {
 
   /** Raw Arrow data for ReadOnlyGrid (avoids accessing Quiver internals). */
   rawData?: IArrow | null | undefined
+
+  /** Added rows data for ReadOnlyGrid (to show merged data correctly). */
+  addedRowsData?: IArrow[]
 }
 
 interface BuildVegaLiteChartElementArgs {
@@ -133,6 +139,7 @@ export function buildVegaLiteChartElement({
 }: BuildVegaLiteChartElementArgs): VegaLiteChartElement {
   let baseData = createQuiverOrNull(proto.data ?? null)
   let rawData: IArrow | null = proto.data ?? null
+  const addedRowsData: IArrow[] = []
 
   const baseDatasets: WrappedNamedDataset[] =
     proto.datasets && proto.datasets.length > 0
@@ -141,6 +148,7 @@ export function buildVegaLiteChartElement({
           name: dataset.name ?? "",
           data: createQuiverFromProto(dataset.data),
           rawData: dataset.data ?? undefined,
+          addedRowsData: [],
         }))
       : []
 
@@ -163,9 +171,16 @@ export function buildVegaLiteChartElement({
           existingDataset.data,
           addRowsData.data
         )
+        // Track added rows for ReadOnlyGrid
+        if (!existingDataset.addedRowsData) {
+          existingDataset.addedRowsData = []
+        }
+        existingDataset.addedRowsData.push(addRowsData.data)
       } else if (baseData) {
         // Merge into inline data
         baseData = mergeQuiverData(baseData, addRowsData.data)
+        // Track added rows for ReadOnlyGrid
+        addedRowsData.push(addRowsData.data)
       } else {
         // No datasets matched and there is no base data:
         // treat added rows as the sole data source
@@ -178,6 +193,7 @@ export function buildVegaLiteChartElement({
   return {
     data: baseData,
     rawData,
+    addedRowsData: addedRowsData.length > 0 ? addedRowsData : undefined,
     spec: proto.spec ?? "",
     datasets: baseDatasets,
     useContainerWidth: proto.useContainerWidth ?? false,

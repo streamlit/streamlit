@@ -317,8 +317,8 @@ export class Quiver {
     if (this.styler || other.styler) {
       throw this.createError(
         "Unsupported operation. add_rows() does not support Pandas Styler objects." +
-          " If you do not need the Styler's styles, try passing the .data attribute of" +
-          "the Styler object instead to concatenate just the underlying dataframe." +
+          " If you do not need the Styler's styles, try passing the .data attribute of " +
+          "the Styler object instead to concatenate just the underlying dataframe. " +
           "For example: st.add_rows(my_styler.data)."
       )
     }

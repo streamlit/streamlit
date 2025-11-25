@@ -181,6 +181,87 @@ describe("buildVegaLiteChartElement", () => {
     expect(element.datasets).toHaveLength(0)
     expect(element.rawData).toEqual(addRows.data)
   })
+
+  it("tracks addedRowsData for ReadOnlyGrid when merging into inline data", () => {
+    const proto = createChartProto({
+      data: ArrowProto.create({ data: UNICODE }),
+      datasets: [],
+    })
+
+    // Store original row count before merging
+    const originalRowCount = proto.data
+      ? new Quiver(proto.data).dimensions.numDataRows
+      : 0
+
+    const addRows1 = createNamedDataset("unmatched", true, UNICODE)
+    const addRows2 = createNamedDataset("also-unmatched", true, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addedRowsList: [addRows1, addRows2],
+    })
+
+    // Data should be merged in the Quiver
+    expect(element.data).not.toBeNull()
+    expect(element.data?.dimensions.numDataRows).toBeGreaterThan(
+      originalRowCount
+    )
+
+    // addedRowsData should track the raw IArrow data for ReadOnlyGrid
+    expect(element.addedRowsData).toBeDefined()
+    expect(element.addedRowsData).toHaveLength(2)
+    expect(element.addedRowsData?.[0]).toEqual(addRows1.data)
+    expect(element.addedRowsData?.[1]).toEqual(addRows2.data)
+
+    // rawData should still point to original proto data
+    expect(element.rawData).toEqual(proto.data)
+  })
+
+  it("tracks addedRowsData in datasets when merging into dataset", () => {
+    const baseDataset = createNamedDataset("target", true, UNICODE)
+
+    // Store original row count before merging
+    const originalRowCount = baseDataset.data
+      ? new Quiver(baseDataset.data).dimensions.numDataRows
+      : 0
+
+    const proto = createChartProto({
+      data: null,
+      datasets: [baseDataset],
+    })
+
+    const addRows1 = createNamedDataset("target", true, UNICODE)
+    const addRows2 = createNamedDataset("target", true, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addedRowsList: [addRows1, addRows2],
+    })
+
+    expect(element.datasets).toHaveLength(1)
+
+    const targetDataset = element.datasets[0]
+    // Data should be merged
+    expect(targetDataset.data.dimensions.numDataRows).toBeGreaterThan(
+      originalRowCount
+    )
+
+    // addedRowsData should track the raw IArrow data for ReadOnlyGrid
+    expect(targetDataset.addedRowsData).toBeDefined()
+    expect(targetDataset.addedRowsData).toHaveLength(2)
+    expect(targetDataset.addedRowsData?.[0]).toEqual(addRows1.data)
+    expect(targetDataset.addedRowsData?.[1]).toEqual(addRows2.data)
+  })
+
+  it("does not populate addedRowsData when no rows are added", () => {
+    const proto = createChartProto({
+      data: ArrowProto.create({ data: UNICODE }),
+    })
+
+    const element = buildVegaLiteChartElement({ proto })
+
+    expect(element.addedRowsData).toBeUndefined()
+  })
 })
 
 describe("Types of dataframe indexes as x axis", () => {
