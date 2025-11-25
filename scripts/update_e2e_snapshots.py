@@ -61,21 +61,26 @@ def get_token_from_credential_manager() -> str:
     return ""
 
 
-def get_last_commit_sha() -> str:
-    """Get the last commit SHA of the local branch."""
-    cmd = ["git", "rev-parse", "HEAD"]
+def get_current_branch_name() -> str:
+    """Get the current branch name."""
+    cmd = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        raise Exception(f"Error getting last commit SHA: {result.stderr.strip()}")
+        raise Exception(f"Error getting branch name: {result.stderr.strip()}")
     return result.stdout.strip()
 
 
 def get_latest_workflow_run(
-    owner: str, repo: str, workflow_file_name: str, commit_sha: str, token: str
+    owner: str, repo: str, workflow_file_name: str, branch_name: str, token: str
 ) -> dict[str, Any]:
-    """Get the latest workflow run for a given workflow file name and commit SHA."""
+    """Get the latest workflow run for a given workflow file name and branch.
+
+    Queries by branch name instead of commit SHA, which handles tools like
+    Graphite that frequently rebase commits (changing SHAs while branch name
+    stays constant).
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file_name}/runs"
-    params = {"head_sha": commit_sha}
+    params = {"branch": branch_name, "per_page": 5}
     headers = {
         "Accept": "application/vnd.github.v3+json",
         "Authorization": f"token {token}",
@@ -89,20 +94,20 @@ def get_latest_workflow_run(
     runs = data.get("workflow_runs", [])
     if not runs:
         print(
-            f"No workflow runs found for {workflow_file_name} with head SHA {commit_sha}"
+            f"No workflow runs found for {workflow_file_name} on branch {branch_name}"
         )
         sys.exit(1)
-    # Assuming the latest one is the first in the list
+    # Return the most recent run (first in list, sorted by created_at desc)
     return runs[0]  # type: ignore
 
 
 def wait_for_workflow_completion(
-    owner: str, repo: str, workflow_file_name: str, commit_sha: str, token: str
+    owner: str, repo: str, workflow_file_name: str, branch_name: str, token: str
 ) -> dict[str, Any]:
     """Wait for the workflow to complete, checking every few seconds."""
     while True:
         workflow_run = get_latest_workflow_run(
-            owner, repo, workflow_file_name, commit_sha, token
+            owner, repo, workflow_file_name, branch_name, token
         )
         status = workflow_run.get("status")
         conclusion = workflow_run.get("conclusion")
@@ -233,8 +238,8 @@ def main() -> None:
     print("Retrieving latest workflow run...")
 
     try:
-        commit_sha = get_last_commit_sha()
-        print(f"Current head SHA: {commit_sha}")
+        branch_name = get_current_branch_name()
+        print(f"Looking up workflow runs for branch: {branch_name}")
 
         # Wait for the workflow to complete with status 'failure'
         workflow_file_name = (
@@ -243,10 +248,13 @@ def main() -> None:
             else GITHUB_WORKFLOW_FILE_NAME
         )
         workflow_run = wait_for_workflow_completion(
-            GITHUB_OWNER, GITHUB_REPO, workflow_file_name, commit_sha, token
+            GITHUB_OWNER, GITHUB_REPO, workflow_file_name, branch_name, token
         )
         run_id = workflow_run["id"]
-        print(f"Found completed workflow run with ID: {run_id}")
+        run_head_sha = workflow_run["head_sha"]
+        print(
+            f"Found completed workflow run with ID: {run_id} (head_sha: {run_head_sha[:8]})"
+        )
 
         # Get artifacts for this run
         artifacts = get_artifacts(GITHUB_OWNER, GITHUB_REPO, run_id, token)
@@ -254,8 +262,8 @@ def main() -> None:
             print(f"No artifacts found for workflow run with ID {run_id}")
             sys.exit(1)
         # Find the correct artifact with the commit SHA in the name:
-        # Get the short SHA (first 6 characters)
-        short_sha = commit_sha[:6]
+        # Get the short SHA (first 6 characters) from the workflow run's head_sha
+        short_sha = run_head_sha[:6]
         expected_artifact_name = f"{PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX}{short_sha}"
 
         artifact = next(
