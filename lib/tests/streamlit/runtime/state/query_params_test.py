@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import QueryParams, process_query_params
@@ -387,42 +388,35 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
 
 
 class ProcessQueryParamsTest(DeltaGeneratorTestCase):
-    def test_process_query_params_with_dict(self):
-        """Test process_query_params with a dictionary."""
-        params = {"foo": "bar", "baz": "qux"}
-        assert process_query_params(params) == "foo=bar&baz=qux"
+    @parameterized.expand(
+        [
+            ("dict_input", {"foo": "bar", "baz": "qux"}, "foo=bar&baz=qux"),
+            ("iterable_input", [("foo", "bar"), ("baz", "qux")], "foo=bar&baz=qux"),
+            ("list_values", {"foo": ["bar", "baz"]}, "foo=bar&foo=baz"),
+            ("type_conversion", {"foo": 1, "bar": 1.5}, "foo=1&bar=1.5"),
+            (
+                "iterable_accumulates_duplicate_keys",
+                [("foo", "bar"), ("baz", "1"), ("baz", "2")],
+                "foo=bar&baz=1&baz=2",
+            ),
+        ]
+    )
+    def test_process_query_params(
+        self, _name: str, params: dict | list, expected: str
+    ) -> None:
+        """Test process_query_params converts various inputs to query string."""
+        assert process_query_params(params) == expected
 
-    def test_process_query_params_with_iterable(self):
-        """Test process_query_params with an iterable."""
-        params = [("foo", "bar"), ("baz", "qux")]
-        assert process_query_params(params) == "foo=bar&baz=qux"
-
-    def test_process_query_params_with_list_values(self):
-        """Test process_query_params with list values."""
-        params = {"foo": ["bar", "baz"]}
-        assert process_query_params(params) == "foo=bar&foo=baz"
-
-    def test_process_query_params_converts_types(self):
-        """Test process_query_params converts types to string."""
-        params = {"foo": 1, "bar": 1.5}
-        assert process_query_params(params) == "foo=1&bar=1.5"
-
-    def test_process_query_params_raises_on_embed(self):
-        """Test process_query_params raises exception on embed key."""
+    @parameterized.expand(
+        [
+            ("embed_key", {"embed": "true"}),
+            ("embed_options_key", {"embed_options": "show_toolbar"}),
+            ("dict_value", {"foo": {"bar": "baz"}}),
+        ]
+    )
+    def test_process_query_params_raises_on_invalid_input(
+        self, _name: str, params: dict
+    ) -> None:
+        """Test process_query_params raises exception on invalid input."""
         with pytest.raises(StreamlitAPIException):
-            process_query_params({"embed": "true"})
-
-    def test_process_query_params_raises_on_embed_options(self):
-        """Test process_query_params raises exception on embed_options key."""
-        with pytest.raises(StreamlitAPIException):
-            process_query_params({"embed_options": "show_toolbar"})
-
-    def test_process_query_params_raises_on_dict_value(self):
-        """Test process_query_params raises exception on dictionary value."""
-        with pytest.raises(StreamlitAPIException):
-            process_query_params({"foo": {"bar": "baz"}})
-
-    def test_process_query_params_accumulates_values_from_iterable(self):
-        """Test process_query_params accumulates values from iterable with duplicate keys."""
-        params = [("foo", "bar"), ("baz", "1"), ("baz", "2")]
-        assert process_query_params(params) == "foo=bar&baz=1&baz=2"
+            process_query_params(params)
