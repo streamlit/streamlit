@@ -19,7 +19,6 @@ import React from "react"
 import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/testing"
-import { Config } from "@streamlit/protobuf"
 
 import Header, { HeaderProps } from "./Header"
 
@@ -29,7 +28,6 @@ const getProps = (propOverrides: Partial<HeaderProps> = {}): HeaderProps => ({
   onToggleSidebar: vi.fn(),
   showToolbar: true,
   isWideMode: false,
-  headerTransparency: Config.HeaderTransparency.HEADER_TRANSPARENCY_AUTO,
   ...propOverrides,
 })
 

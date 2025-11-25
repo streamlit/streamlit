@@ -22,7 +22,6 @@ import {
   DynamicIcon,
   ThemeContext,
 } from "@streamlit/lib"
-import { Config } from "@streamlit/protobuf"
 
 import {
   StyledHeader,
@@ -44,7 +43,6 @@ export interface HeaderProps {
   logoComponent?: ReactNode
   showToolbar: boolean
   isWideMode: boolean
-  headerTransparency: Config.HeaderTransparency
 }
 
 const Header = ({
@@ -56,7 +54,6 @@ const Header = ({
   logoComponent,
   showToolbar,
   isWideMode,
-  headerTransparency,
 }: HeaderProps): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
 
@@ -75,12 +72,11 @@ const Header = ({
     navigation ||
     shouldShowRightContent
 
-  // Determine if the header should be transparent based on content, layout, and config
+  // Determine if the header should be transparent based on content and layout
   const { isTransparent, leftRef, rightRef } = useHeaderTransparency(
     !!navigation,
     !!hasAnyContent,
-    isWideMode,
-    headerTransparency
+    isWideMode
   )
 
   return (
