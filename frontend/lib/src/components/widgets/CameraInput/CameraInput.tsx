@@ -161,6 +161,11 @@ const CameraInput = ({
   fragmentId,
   testOverride,
 }: Props): React.ReactElement => {
+  /**
+   * TODO: This component should be refactored to remove the width calculation
+   * from JS entirely and instead utilize width: 100%; height: 100%;
+   * aspect-ratio: 16 / 9; on the StyledBox CSS instead.
+   */
   const { width, elementRef } = useCalculatedDimensions()
 
   // Initialize files and local ID counter from widget state
