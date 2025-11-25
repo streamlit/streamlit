@@ -1316,7 +1316,11 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    // Pass preserveQueryParams=true to preserve query params from the URL when
+    // navigating via browser history (back/forward buttons). This ensures that
+    // query params present in the URL after history navigation are sent to the
+    // server on the first script run.
+    this.onPageChange(targetAppPage.pageScriptHash as string, true)
   }
 
   /**
@@ -1670,7 +1674,10 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (
+    pageScriptHash: string,
+    preserveQueryParams?: boolean
+  ): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1694,7 +1701,9 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      preserveQueryParams
     )
   }
 
@@ -1711,7 +1720,8 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1739,9 +1749,11 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
+      if (pageScriptHash != currentPageScriptHash && !preserveQueryParams) {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
+        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
+        // navigation where query params from the URL should be preserved).
         const preservedQueryParams = preserveEmbedQueryParams()
         queryString = preservedQueryParams
         this.setState({ queryParams: preservedQueryParams })
