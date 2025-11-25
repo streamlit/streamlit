@@ -60,7 +60,7 @@ class SecretErrorMessages:
             f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(f'`{path}`' for path in file_paths)}"
         )
         self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
-            lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
+            lambda path, ex: f"Error parsing secrets file at `{path}`: {ex}"
         )
         self.subfolder_path_is_not_a_folder: Callable[[str], str] = (
             lambda sub_folder_path: (
