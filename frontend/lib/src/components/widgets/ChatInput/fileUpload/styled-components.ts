@@ -86,7 +86,6 @@ export const StyledChatUploadedFile = styled.div(({ theme }) => ({
   padding: theme.spacing.twoXS,
   borderRadius: theme.radii.default,
   gap: theme.spacing.sm,
-  maxWidth: "9rem",
 }))
 
 export const StyledChatUploadedFileIcon = styled.div(({ theme }) => ({
