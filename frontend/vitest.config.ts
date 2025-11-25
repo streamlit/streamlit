@@ -28,7 +28,7 @@ export default defineConfig({
       include: ["*/src/**/*"],
       exclude: [
         "lib/src/vendor/**",
-        "eslint-plugin-streamlit-custom/**",
+        "eslint-plugin-streamlit-custom/src/**",
         "**/*.interface.ts",
         ...coverageConfigDefaults.exclude,
       ],
