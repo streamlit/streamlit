@@ -76,7 +76,7 @@ function handleSelection(
   index: number,
   currentSelection?: number[]
 ): number[] {
-  if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
+  if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(index, currentSelection ?? [])
   }
 
