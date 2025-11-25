@@ -28,7 +28,7 @@ console.log(`Proto files: ${protoGlob}`)
 const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
-// Commands to run
+// Commands to run with optimization flags
 const pbjsCommand = [
   "yarn",
   "run",
@@ -41,11 +41,13 @@ const pbjsCommand = [
   "static-module",
   "--wrap",
   "es6",
+  "--no-verify", // Remove verification methods (not used)
+  "--no-delimited", // Remove delimited encoding (not used)
 ]
 const pbtsCommand = ["yarn", "run", "--silent", "pbts", "proto.js"]
 const TEMPLATE = "/* eslint-disable */\n\n"
 
-const runCommand = (commandAndArgs, outputFile) => {
+const runCommand = (commandAndArgs, outputFile, postProcess = null) => {
   const [cmd, ...args] = commandAndArgs
   const result = spawnSync(cmd, args, {
     maxBuffer: 4096 * 1024,
@@ -66,20 +68,29 @@ const runCommand = (commandAndArgs, outputFile) => {
     console.warn(`Warnings:\n${result.stderr}`)
   }
 
-  fs.writeFileSync(outputFile, `${TEMPLATE}${result.stdout}`, "utf8")
+  let output = result.stdout
+
+  // Apply post-processing if provided
+  if (postProcess) {
+    output = postProcess(output)
+  }
+
+  fs.writeFileSync(outputFile, `${TEMPLATE}${output}`, "utf8")
   console.log(`Generated: ${outputFile}`)
 }
 
 // Run the commands sequentially
 try {
-  console.log("Generating proto.js...")
+  console.log("Generating proto.js with optimizations...")
+
+  // No post-processing needed - keeping protobufjs/minimal import
   runCommand(pbjsCommand, outputJsFile)
 
   console.log("Generating proto.d.ts...")
   runCommand(pbtsCommand, outputDtsFile)
 
-  console.log("Protobuf files generated successfully!")
+  console.log("✅ Protobuf files generated successfully!")
 } catch (err) {
-  console.error("Failed to generate protobuf files:", err)
+  console.error("❌ Failed to generate protobuf files:", err)
   process.exit(1)
 }

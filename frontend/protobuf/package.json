@@ -24,6 +24,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "protobufjs": "^7.5.4",
     "protobufjs-cli": "^1.2.0",
     "typesync": "^0.14.3"
   }
