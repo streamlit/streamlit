@@ -112,7 +112,7 @@ describe("buildVegaLiteChartElement", () => {
 
     const element = buildVegaLiteChartElement({
       proto,
-      addRowsData: addRows,
+      addedRowsList: [addRows],
     })
 
     expect(element.data).toBeNull()
@@ -136,7 +136,7 @@ describe("buildVegaLiteChartElement", () => {
 
     const element = buildVegaLiteChartElement({
       proto,
-      addRowsData: addRows,
+      addedRowsList: [addRows],
     })
 
     expect(element.datasets).toHaveLength(2)
@@ -156,7 +156,7 @@ describe("buildVegaLiteChartElement", () => {
 
     const element = buildVegaLiteChartElement({
       proto,
-      addRowsData: addRows,
+      addedRowsList: [addRows],
     })
 
     expect(element.data).not.toBeNull()
@@ -174,7 +174,7 @@ describe("buildVegaLiteChartElement", () => {
 
     const element = buildVegaLiteChartElement({
       proto,
-      addRowsData: addRows,
+      addedRowsList: [addRows],
     })
 
     expect(element.data).not.toBeNull()

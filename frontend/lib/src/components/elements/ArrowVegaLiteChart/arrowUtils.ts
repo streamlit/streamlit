@@ -130,63 +130,61 @@ function getNamedDataset(
 export function buildVegaLiteChartElement({
   proto,
   addedRowsList,
-}: BuildVegaLiteChartElementArgs): VegaLiteChartElement | { error: Error } {
-  try {
-    let baseData = createQuiverOrNull(proto.data ?? null)
+}: BuildVegaLiteChartElementArgs): VegaLiteChartElement {
+  let baseData = createQuiverOrNull(proto.data ?? null)
+  let rawData: IArrow | null = proto.data ?? null
 
-    let baseDatasets: WrappedNamedDataset[] =
-      proto.datasets && proto.datasets.length > 0
-        ? proto.datasets.filter(hasDatasetData).map(dataset => ({
-            hasName: dataset.hasName ?? false,
-            name: dataset.name ?? "",
-            data: createQuiverFromProto(dataset.data),
-            rawData: dataset.data ?? undefined,
-          }))
-        : []
+  const baseDatasets: WrappedNamedDataset[] =
+    proto.datasets && proto.datasets.length > 0
+      ? proto.datasets.filter(hasDatasetData).map(dataset => ({
+          hasName: dataset.hasName ?? false,
+          name: dataset.name ?? "",
+          data: createQuiverFromProto(dataset.data),
+          rawData: dataset.data ?? undefined,
+        }))
+      : []
 
-    // Apply all added rows sequentially
-    if (addedRowsList) {
-      for (const addRowsData of addedRowsList) {
-        if (!addRowsData?.data) {
-          continue
-        }
+  // Apply all added rows sequentially
+  if (addedRowsList) {
+    for (const addRowsData of addedRowsList) {
+      if (!addRowsData?.data) {
+        continue
+      }
 
-        const newDataSetName = addRowsData.hasName
-          ? (addRowsData.name ?? null)
-          : null
+      const newDataSetName = addRowsData.hasName
+        ? (addRowsData.name ?? null)
+        : null
 
-        const existingDataset = getNamedDataset(baseDatasets, newDataSetName)
+      const existingDataset = getNamedDataset(baseDatasets, newDataSetName)
 
-        if (existingDataset) {
-          // Merge into existing dataset
-          existingDataset.data = mergeQuiverData(
-            existingDataset.data,
-            addRowsData.data
-          )
-        } else if (baseData) {
-          // Merge into inline data
-          baseData = mergeQuiverData(baseData, addRowsData.data)
-        } else {
-          // No datasets matched and there is no base data:
-          // treat added rows as the sole data source
-          baseData = createQuiverFromProto(addRowsData.data)
-        }
+      if (existingDataset) {
+        // Merge into existing dataset
+        existingDataset.data = mergeQuiverData(
+          existingDataset.data,
+          addRowsData.data
+        )
+      } else if (baseData) {
+        // Merge into inline data
+        baseData = mergeQuiverData(baseData, addRowsData.data)
+      } else {
+        // No datasets matched and there is no base data:
+        // treat added rows as the sole data source
+        baseData = createQuiverFromProto(addRowsData.data)
+        rawData = addRowsData.data ?? rawData
       }
     }
+  }
 
-    return {
-      data: baseData,
-      rawData: proto.data ?? null,
-      spec: proto.spec ?? "",
-      datasets: baseDatasets,
-      useContainerWidth: proto.useContainerWidth ?? false,
-      vegaLiteTheme: proto.theme ?? "streamlitTheme",
-      id: proto.id ?? "",
-      selectionMode: proto.selectionMode ?? [],
-      formId: proto.formId ?? "",
-    }
-  } catch (error) {
-    return { error: error as Error }
+  return {
+    data: baseData,
+    rawData,
+    spec: proto.spec ?? "",
+    datasets: baseDatasets,
+    useContainerWidth: proto.useContainerWidth ?? false,
+    vegaLiteTheme: proto.theme ?? "streamlitTheme",
+    id: proto.id ?? "",
+    selectionMode: proto.selectionMode ?? [],
+    formId: proto.formId ?? "",
   }
 }
 

@@ -191,8 +191,9 @@ describe("ElementNode", () => {
 
         // Check that we have both original data and addedRows
         expect(arrowData.data).toBeDefined()
-        expect(arrowData.addedRows).toBeDefined()
-        expect(arrowData.addedRows).toBe(MOCK_UNNAMED_DATASET.data)
+        expect(arrowData.addedRowsList).toBeDefined()
+        expect(arrowData.addedRowsList).toHaveLength(1)
+        expect(arrowData.addedRowsList?.[0]).toBe(MOCK_UNNAMED_DATASET.data)
       })
 
       test("addRows throws an error when called with a named dataset", () => {
@@ -216,8 +217,9 @@ describe("ElementNode", () => {
 
         // Check that we have both original data and addedRows
         expect(arrowData.data).toBeDefined()
-        expect(arrowData.addedRows).toBeDefined()
-        expect(arrowData.addedRows).toBe(MOCK_UNNAMED_DATASET.data)
+        expect(arrowData.addedRowsList).toBeDefined()
+        expect(arrowData.addedRowsList).toHaveLength(1)
+        expect(arrowData.addedRowsList?.[0]).toBe(MOCK_UNNAMED_DATASET.data)
       })
 
       test("addRows throws an error when called with a named dataset", () => {
@@ -260,11 +262,12 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element now returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(true)
-          expect(element.addRowsData?.name).toEqual("foo")
-          expect(element.addRowsData?.data).toBe(MOCK_NAMED_DATASET.data)
+          // Element now returns proto and addedRowsList separately
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(true)
+          expect(element.addedRowsList?.[0].name).toEqual("foo")
+          expect(element.addedRowsList?.[0].data).toBe(MOCK_NAMED_DATASET.data)
         })
 
         test("element has a dataset with the given name -> stores add rows data", () => {
@@ -277,10 +280,10 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(true)
-          expect(element.addRowsData?.name).toEqual("foo")
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(true)
+          expect(element.addedRowsList?.[0].name).toEqual("foo")
         })
 
         test("element doesn't have a matched dataset, but has data -> stores add rows data", () => {
@@ -291,9 +294,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(true)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(true)
         })
 
         test("element doesn't have a matched dataset or data -> stores add rows data", () => {
@@ -309,9 +312,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(true)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(true)
         })
 
         test("element doesn't have any datasets or data -> stores add rows data", () => {
@@ -322,9 +325,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(true)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(true)
         })
       })
 
@@ -339,9 +342,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(false)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(false)
         })
 
         test("element has data -> stores add rows data", () => {
@@ -352,9 +355,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(false)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(false)
         })
 
         test("element doesn't have any datasets or data -> stores add rows data", () => {
@@ -365,9 +368,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          // Element returns proto and addRowsData separately
-          expect(element.addRowsData).toBeDefined()
-          expect(element.addRowsData?.hasName).toBe(false)
+          expect(element.addedRowsList).toBeDefined()
+          expect(element.addedRowsList).toHaveLength(1)
+          expect(element.addedRowsList?.[0].hasName).toBe(false)
         })
       })
     })

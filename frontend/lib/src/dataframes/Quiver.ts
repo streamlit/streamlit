@@ -300,22 +300,27 @@ export class Quiver {
   }
 
   /**
+   * Create an error without a stack trace for cleaner display in the UI.
+   * This is used for user-facing errors in add_rows operations.
+   */
+  private createError(message: string): Error {
+    const error = new Error(message)
+    error.stack = undefined
+    return error
+  }
+
+  /**
    * Add the contents of another table (data + indexes) to this table.
    * Extra columns will not be created.
    */
   public addRows(other: Quiver): Quiver {
     if (this.styler || other.styler) {
-      throw new Error(`
-Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
-
-If you do not need the Styler's styles, try passing the \`.data\` attribute of
-the Styler object instead to concatenate just the underlying dataframe.
-
-For example:
-\`\`\`
-st.add_rows(my_styler.data)
-\`\`\`
-`)
+      throw this.createError(
+        "Unsupported operation. add_rows() does not support Pandas Styler objects." +
+          " If you do not need the Styler's styles, try passing the .data attribute of" +
+          "the Styler object instead to concatenate just the underlying dataframe." +
+          "For example: st.add_rows(my_styler.data)."
+      )
     }
 
     // Don't do anything if the incoming DataFrame is empty.

@@ -29,6 +29,16 @@ import {
   PandasRangeIndex,
 } from "./arrowTypeUtils"
 
+/**
+ * Create an error without a stack trace for cleaner display in the UI.
+ * This is used for user-facing errors in add_rows operations.
+ */
+function createError(message: string): Error {
+  const error = new Error(message)
+  error.stack = undefined
+  return error
+}
+
 /** True if both arrays contain the same data types in the same order.
  *
  * Dataframes to have the same types if all columns that exist in t1
@@ -84,18 +94,20 @@ function concatIndexes(
       getPandasTypeName(index)
     )
 
-    throw new Error(`
-Unsupported operation. The data passed into \`add_rows()\` must have the same
-index signature as the original data.
-
-In this case, \`add_rows()\` received \`${JSON.stringify(receivedIndexTypes)}\`
-but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
-`)
+    throw createError(
+      "Unsupported operation. The data passed into add_rows() must have the same " +
+        "index signature as the original data." +
+        " In this case, add_rows() received " +
+        JSON.stringify(receivedIndexTypes) +
+        " but was expecting " +
+        JSON.stringify(expectedIndexTypes) +
+        "."
+    )
   }
 
   if (baseIndexTypes.length === 0) {
     // This should never happen!
-    throw new Error("There was an error while parsing index types.")
+    throw createError("There was an error while parsing index types.")
   }
 
   // NOTE: "range" index cannot be a part of a multi-index, i.e.
@@ -147,13 +159,15 @@ function concatData(
     )
     const expectedDataTypes = baseDataType.map(t => t.pandasType?.pandas_type)
 
-    throw new Error(`
-Unsupported operation. The data passed into \`add_rows()\` must have the same
-data signature as the original data.
-
-In this case, \`add_rows()\` received \`${JSON.stringify(receivedDataTypes)}\`
-but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
-`)
+    throw createError(
+      "Unsupported operation. The data passed into add_rows() must have the same " +
+        "data signature as the original data." +
+        " In this case, add_rows() received " +
+        JSON.stringify(receivedDataTypes) +
+        " but was expecting " +
+        JSON.stringify(expectedDataTypes) +
+        "."
+    )
   }
 
   // Remove extra columns from the "append" DataFrame.
@@ -197,13 +211,15 @@ function concatIndexTypes(
       getPandasTypeName(index)
     )
 
-    throw new Error(`
-Unsupported operation. The data passed into \`add_rows()\` must have the same
-index signature as the original data.
-
-In this case, \`add_rows()\` received \`${JSON.stringify(receivedIndexTypes)}\`
-but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
-`)
+    throw createError(
+      "Unsupported operation. The data passed into add_rows() must have the same " +
+        "index signature as the original data." +
+        " In this case, add_rows() received " +
+        JSON.stringify(receivedIndexTypes) +
+        " but was expecting " +
+        JSON.stringify(expectedIndexTypes) +
+        "."
+    )
   }
 
   // TL;DR This sets the new stop value.
