@@ -44,6 +44,7 @@ from streamlit.runtime.state.session_state import (
     STREAMLIT_INTERNAL_KEY_PREFIX,
     _is_internal_key,
 )
+from streamlit.util import calc_md5
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -1233,6 +1234,70 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
         assert identity["mixed_json"] == "{}"
         assert identity["mixed_arrow_blobs"] == "a,b"
+
+    def test_identity_kwargs_json_canonicalizes_order(self):
+        """Identity canonicalization should ignore key insertion order for JSON data."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        proto.json = json.dumps({"b": 2, "a": 1})
+
+        identity = mixin._build_bidi_identity_kwargs(
+            component_name="cmp",
+            isolate_styles=True,
+            width="stretch",
+            height="content",
+            proto=proto,
+        )
+
+        assert identity["json"] == json.dumps({"a": 1, "b": 2}, sort_keys=True)
+
+    def test_identity_kwargs_mixed_json_canonicalizes_order(self):
+        """MixedData identity must canonicalize JSON portion independently of storage order."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        proto.mixed.json = json.dumps({"b": 2, "a": 1})
+
+        identity = mixin._build_bidi_identity_kwargs(
+            component_name="cmp",
+            isolate_styles=True,
+            width="stretch",
+            height="content",
+            proto=proto,
+        )
+
+        assert identity["mixed_json"] == json.dumps({"a": 1, "b": 2}, sort_keys=True)
+
+    def test_identity_kwargs_bytes_use_digest(self):
+        """Raw byte payloads should contribute content digests, not the full payload."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        proto.bytes = b"bytes payload"
+
+        identity = mixin._build_bidi_identity_kwargs(
+            component_name="cmp",
+            isolate_styles=True,
+            width="stretch",
+            height="content",
+            proto=proto,
+        )
+
+        assert identity["bytes"] == calc_md5(b"bytes payload")
+
+    def test_identity_kwargs_arrow_data_use_digest(self):
+        """Arrow payloads should contribute digests to avoid hashing large blobs repeatedly."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        proto.arrow_data.data = b"\x00\x01"
+
+        identity = mixin._build_bidi_identity_kwargs(
+            component_name="cmp",
+            isolate_styles=True,
+            width="stretch",
+            height="content",
+            proto=proto,
+        )
+
+        assert identity["arrow_data"] == calc_md5(b"\x00\x01")
 
     def test_unkeyed_id_stable_when_json_key_order_changes(self):
         """Without a user key, changing the insertion order of keys in a JSON dict should NOT change the backend id."""

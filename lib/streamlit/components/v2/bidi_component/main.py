@@ -59,6 +59,7 @@ from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import (
@@ -118,6 +119,26 @@ def _make_trigger_id(base: str, event: str) -> str:
 class BidiComponentMixin:
     """Mixin class for the bidi_component DeltaGenerator method."""
 
+    def _canonicalize_json_for_identity(self, payload: str) -> str:
+        """Return a deterministic JSON string for identity comparisons.
+
+        Payloads that cannot be parsed (or re-serialized) are returned as-is to
+        avoid mutating developer data.
+        """
+
+        if not payload:
+            return payload
+
+        try:
+            parsed = json.loads(payload)
+        except (TypeError, ValueError):
+            return payload
+
+        try:
+            return json.dumps(parsed, sort_keys=True)
+        except (TypeError, ValueError):
+            return payload
+
     def _build_bidi_identity_kwargs(
         self,
         *,
@@ -175,15 +196,23 @@ class BidiComponentMixin:
             return identity
 
         if data_field == "json":
-            identity["json"] = proto.json
+            # Canonicalize only for identity so unkeyed widgets don't churn when
+            # dict insertion order changes, while the original ordering still
+            # reaches the frontend untouched.
+            identity["json"] = self._canonicalize_json_for_identity(proto.json)
         elif data_field == "arrow_data":
-            identity["arrow_data"] = proto.arrow_data.data
+            # Hash large payloads instead of shoving raw bytes through the ID
+            # hasher for performance.
+            identity["arrow_data"] = calc_md5(proto.arrow_data.data)
         elif data_field == "bytes":
-            identity["bytes"] = proto.bytes
+            # Same story for arbitrary bytes payloads: content-address the data
+            # so identity changes track real mutations without re-hashing the
+            # whole blob every run.
+            identity["bytes"] = calc_md5(proto.bytes)
         elif data_field == "mixed":
             mixed: MixedDataProto = proto.mixed
             # Add the JSON content of the MixedData to the identity.
-            identity["mixed_json"] = mixed.json
+            identity["mixed_json"] = self._canonicalize_json_for_identity(mixed.json)
             # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
             # Unlike other data types where we include actual bytes, here we only include
             # the blob keys. This is sufficient because keys are MD5 hashes of the blob
@@ -353,13 +382,16 @@ class BidiComponentMixin:
 
                         bidi_component_proto.arrow_data.CopyFrom(arrow_data_proto)
                     else:
-                        # Fallback to JSON.
-                        bidi_component_proto.json = json.dumps(data, sort_keys=True)
+                        # Fallback to JSON: leave insertion order intact so component
+                        # authors can rely on whatever ordering semantics they encoded.
+                        bidi_component_proto.json = json.dumps(data)
             except Exception:
                 # As a last resort attempt JSON serialization so that we don't
                 # silently drop developer data.
                 try:
-                    bidi_component_proto.json = json.dumps(data, sort_keys=True)
+                    # Same as above—never sort here; identity canonicalization handles
+                    # stability without mutating developer payloads.
+                    bidi_component_proto.json = json.dumps(data)
                 except Exception:
                     raise BidiComponentUnserializableDataError()
         bidi_component_proto.form_id = current_form_id(self.dg)

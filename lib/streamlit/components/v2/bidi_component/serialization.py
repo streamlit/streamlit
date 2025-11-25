@@ -118,7 +118,7 @@ def serialize_mixed_data(data: Any, bidi_component_proto: BidiComponentProto) ->
         # We have dataframes, use mixed data serialization
         mixed_proto = MixedDataProto()
         try:
-            mixed_proto.json = json.dumps(processed_data, sort_keys=True)
+            mixed_proto.json = json.dumps(processed_data)
         except TypeError:
             # If JSON serialization fails (e.g., due to undetected dataframes),
             # fall back to string representation
@@ -132,7 +132,7 @@ def serialize_mixed_data(data: Any, bidi_component_proto: BidiComponentProto) ->
     else:
         # No dataframes found, use regular JSON serialization
         try:
-            bidi_component_proto.json = json.dumps(processed_data, sort_keys=True)
+            bidi_component_proto.json = json.dumps(processed_data)
         except TypeError:
             # If JSON serialization fails (e.g., due to dataframes in lists/tuples),
             # fall back to string representation
