@@ -88,6 +88,7 @@ FD = FieldDescriptor
                 ("hide_top_bar", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_sidebar_nav", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("toolbar_mode", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
+                ("header_transparency", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
             },
         ),
         (

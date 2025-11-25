@@ -798,6 +798,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "ui.headerTransparency",
                 "ui.hideTopBar",
             ]
         )
