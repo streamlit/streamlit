@@ -83,7 +83,7 @@ export const StyledChatUploadedFile = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   backgroundColor: theme.colors.bgColor,
-  padding: theme.spacing.twoXS,
+  padding: theme.spacing.sm,
   borderRadius: theme.radii.default,
   gap: theme.spacing.sm,
 }))
