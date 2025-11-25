@@ -1232,7 +1232,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["mixed_json"] == "{}"
+        assert identity["mixed_json"] == calc_md5("{}")
         assert identity["mixed_arrow_blobs"] == "a,b"
 
     def test_identity_kwargs_json_canonicalizes_order(self):
@@ -1249,7 +1249,8 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["json"] == json.dumps({"a": 1, "b": 2}, sort_keys=True)
+        expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
+        assert identity["json"] == calc_md5(expected)
 
     def test_identity_kwargs_mixed_json_canonicalizes_order(self):
         """MixedData identity must canonicalize JSON portion independently of storage order."""
@@ -1265,7 +1266,8 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["mixed_json"] == json.dumps({"a": 1, "b": 2}, sort_keys=True)
+        expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
+        assert identity["mixed_json"] == calc_md5(expected)
 
     def test_identity_kwargs_bytes_use_digest(self):
         """Raw byte payloads should contribute content digests, not the full payload."""

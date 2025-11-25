@@ -139,6 +139,17 @@ class BidiComponentMixin:
         except (TypeError, ValueError):
             return payload
 
+    def _canonical_json_digest_for_identity(self, payload: str) -> str:
+        """Return the hash of the canonicalized JSON payload for identity use.
+
+        Hashing keeps the kwargs passed to ``compute_and_register_element_id``
+        small even when the JSON payload is very large, while still changing the
+        identity whenever the canonical JSON content changes.
+        """
+
+        canonical = self._canonicalize_json_for_identity(payload)
+        return calc_md5(canonical)
+
     def _build_bidi_identity_kwargs(
         self,
         *,
@@ -199,7 +210,7 @@ class BidiComponentMixin:
             # Canonicalize only for identity so unkeyed widgets don't churn when
             # dict insertion order changes, while the original ordering still
             # reaches the frontend untouched.
-            identity["json"] = self._canonicalize_json_for_identity(proto.json)
+            identity["json"] = self._canonical_json_digest_for_identity(proto.json)
         elif data_field == "arrow_data":
             # Hash large payloads instead of shoving raw bytes through the ID
             # hasher for performance.
@@ -212,7 +223,9 @@ class BidiComponentMixin:
         elif data_field == "mixed":
             mixed: MixedDataProto = proto.mixed
             # Add the JSON content of the MixedData to the identity.
-            identity["mixed_json"] = self._canonicalize_json_for_identity(mixed.json)
+            identity["mixed_json"] = self._canonical_json_digest_for_identity(
+                mixed.json
+            )
             # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
             # Unlike other data types where we include actual bytes, here we only include
             # the blob keys. This is sufficient because keys are MD5 hashes of the blob
