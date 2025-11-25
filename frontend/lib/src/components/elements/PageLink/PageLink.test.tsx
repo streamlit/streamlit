@@ -256,6 +256,17 @@ describe("PageLink", () => {
     )
   })
 
+  it("constructs href with queryString for internal links", () => {
+    const props = getProps({
+      page: "page_1",
+      queryString: "foo=bar&baz=qux",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("href", "page_1?foo=bar&baz=qux")
+  })
+
   it("renders with help properly", async () => {
     const user = userEvent.setup()
     render(<PageLink {...getProps({ help: "mockHelpText" })} />)

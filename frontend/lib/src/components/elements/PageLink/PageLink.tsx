@@ -61,14 +61,20 @@ function PageLink(props: Readonly<Props>): ReactElement {
   }
 
   let href = element.page
-  if (element.external && element.queryString) {
-    try {
-      const url = new URL(element.page)
-      const params = new URLSearchParams(element.queryString)
-      params.forEach((value, key) => url.searchParams.append(key, value))
-      href = url.toString()
-    } catch {
-      // Fallback to original logic if URL parsing fails
+  if (element.queryString) {
+    if (element.external) {
+      // External links: use URL API to properly handle fragments
+      try {
+        const url = new URL(element.page)
+        const params = new URLSearchParams(element.queryString)
+        params.forEach((value, key) => url.searchParams.append(key, value))
+        href = url.toString()
+      } catch {
+        // Fallback if URL parsing fails
+        href += (href.includes("?") ? "&" : "?") + element.queryString
+      }
+    } else {
+      // Internal links: append query string to relative path
       href += (href.includes("?") ? "&" : "?") + element.queryString
     }
   }
