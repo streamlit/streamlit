@@ -474,9 +474,13 @@ def test_page_link_with_st_file(app: Page):
 def test_page_link_with_query_params(app: Page, app_port: int):
     """Test st.page_link with query params works."""
 
-    app.get_by_test_id("stPageLink-NavLink").filter(
+    page_link = app.get_by_test_id("stPageLink-NavLink").filter(
         has_text="page 9 with query params"
-    ).click()
+    )
+    expect(page_link).to_be_visible()
+    expect(page_link).to_have_attribute("href", "page_9?foo=bar&baz=1&baz=2")
+
+    page_link.click()
     wait_for_app_loaded(app)
 
     expect(page_heading(app)).to_contain_text("Page 9")
