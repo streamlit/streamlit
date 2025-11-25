@@ -301,7 +301,7 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? null
+  return element.value ?? []
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
