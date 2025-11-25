@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { X } from "@emotion-icons/open-iconic"
 import isEqual from "lodash/isEqual"
@@ -43,7 +50,6 @@ import {
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -171,52 +177,18 @@ const CameraInput = ({
 
   const localFileIdCounterRef = useRef(initialNextLocalId)
 
-  // Use widget manager element state for persistence across mounts
-  const [files, setFiles] = useWidgetManagerElementState<UploadFileInfo[]>({
-    widgetMgr,
-    id: element.id,
-    key: "files",
-    defaultValue: initialFiles,
-  })
+  // Files and imgSrc use regular useState to ensure they always reflect widget value on mount
+  // (matching FileUploader behavior)
+  const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
+  const [imgSrc, setImgSrc] = useState<string | null>(() => initialImgSrc)
 
-  const [imgSrc, setImgSrc] = useWidgetManagerElementState<string | null>({
-    widgetMgr,
-    id: element.id,
-    key: "imgSrc",
-    defaultValue: initialImgSrc,
-  })
-
-  const [shutter, setShutter] = useWidgetManagerElementState<boolean>({
-    widgetMgr,
-    id: element.id,
-    key: "shutter",
-    defaultValue: false,
-  })
-
+  // UI state uses useWidgetManagerElementState for persistence across mounts
+  const [shutter, setShutter] = useState<boolean>(false)
   const [minShutterEffectPassed, setMinShutterEffectPassed] =
-    useWidgetManagerElementState<boolean>({
-      widgetMgr,
-      id: element.id,
-      key: "minShutterEffectPassed",
-      defaultValue: true,
-    })
-
+    useState<boolean>(true)
   const [clearPhotoInProgress, setClearPhotoInProgress] =
-    useWidgetManagerElementState<boolean>({
-      widgetMgr,
-      id: element.id,
-      key: "clearPhotoInProgress",
-      defaultValue: false,
-    })
-
-  const [facingMode, setFacingMode] = useWidgetManagerElementState<FacingMode>(
-    {
-      widgetMgr,
-      id: element.id,
-      key: "facingMode",
-      defaultValue: FacingMode.USER,
-    }
-  )
+    useState<boolean>(false)
+  const [facingMode, setFacingMode] = useState<FacingMode>(FacingMode.USER)
 
   /**
    * Generate a unique ID for a new file.
@@ -243,9 +215,9 @@ const CameraInput = ({
   }, [files])
 
   /**
-   * Get upload progress for the current file.
+   * Upload progress for the current file, derived during render.
    */
-  const getProgress = useCallback((): number | null | undefined => {
+  const progress: number | undefined = useMemo(() => {
     if (
       files.length > 0 &&
       files[files.length - 1].status.type === "uploading"
@@ -575,8 +547,6 @@ const CameraInput = ({
     widgetMgr,
     onFormCleared,
   })
-
-  const progress = getProgress()
 
   return (
     <StyledCameraInput
