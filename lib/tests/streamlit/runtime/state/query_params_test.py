@@ -18,7 +18,11 @@ import pytest
 from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state.query_params import QueryParams, process_query_params
+from streamlit.runtime.state.query_params import (
+    QueryParams,
+    _set_item_in_dict,
+    process_query_params,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 QUERY_PARAMS_DICT_WITH_EMBED_KEY: dict[str, list[str] | str] = {
@@ -420,3 +424,42 @@ class ProcessQueryParamsTest(DeltaGeneratorTestCase):
         """Test process_query_params raises exception on invalid input."""
         with pytest.raises(StreamlitAPIException):
             process_query_params(params)
+
+
+class TestSetItemInDict:
+    """Tests for _set_item_in_dict helper function."""
+
+    @parameterized.expand(
+        [
+            ("string_value", "bar", {"foo": "bar"}),
+            ("int_to_string", 123, {"foo": "123"}),
+            ("float_to_string", 1.5, {"foo": "1.5"}),
+            ("list_of_strings", ["a", "b", "c"], {"foo": ["a", "b", "c"]}),
+            ("list_of_ints_to_strings", [1, 2, 3], {"foo": ["1", "2", "3"]}),
+        ]
+    )
+    def test_sets_value(self, _name: str, value: str | list, expected: dict) -> None:
+        """Test _set_item_in_dict sets and converts values correctly."""
+        target: dict[str, list[str] | str] = {}
+        _set_item_in_dict(target, "foo", value)  # type: ignore[arg-type]
+        assert target == expected
+
+    @parameterized.expand(
+        [
+            ("dict_value", "foo", {"bar": "baz"}, "cannot set.*to a dictionary"),
+            ("embed_key", "embed", "true", "embed.*cannot be set"),
+            (
+                "embed_options_key",
+                "embed_options",
+                "show_toolbar",
+                "embed.*cannot be set",
+            ),
+        ]
+    )
+    def test_raises_on_invalid_input(
+        self, _name: str, key: str, value: str | dict, match: str
+    ) -> None:
+        """Test _set_item_in_dict raises exception on invalid input."""
+        target: dict[str, list[str] | str] = {}
+        with pytest.raises(StreamlitAPIException, match=match):
+            _set_item_in_dict(target, key, value)  # type: ignore[arg-type]
