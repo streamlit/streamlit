@@ -116,7 +116,7 @@ describe("PlotlyChart CustomTheme", () => {
       applyStreamlitTheme(spec, theme)
 
       expect(spec.layout.title.text).toBe("<b>My Chart</b>")
-      // Check if applyStreamlitThemeTemplateLayout was called (side effect on template.layout)
+      // Verify that template.layout was modified with theme properties
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 

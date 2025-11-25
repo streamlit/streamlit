@@ -78,19 +78,21 @@ function getLastPlotProps(): any {
   return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0]
 }
 
-describe("PlotlyChart Component", () => {
-  const defaultElement = new PlotlyChartProto({
-    spec: JSON.stringify({
-      data: [{ type: "scatter", x: [1, 2], y: [1, 2] }],
-      layout: { title: "Test Chart" },
-    }),
-    config: JSON.stringify({}),
-    selectionMode: [],
-    id: "test_chart_id",
-    theme: "streamlit",
-  })
+// Static test data - extracted to module level per coding guidelines
+const DEFAULT_ELEMENT = new PlotlyChartProto({
+  spec: JSON.stringify({
+    data: [{ type: "scatter", x: [1, 2], y: [1, 2] }],
+    layout: { title: "Test Chart" },
+  }),
+  config: JSON.stringify({}),
+  selectionMode: [],
+  id: "test_chart_id",
+  theme: "streamlit",
+})
 
-  const widgetMgr = createWidgetManager()
+describe("PlotlyChart Component", () => {
+  // Create fresh widgetMgr for each test to avoid shared state
+  let widgetMgr: WidgetStateManager
 
   const renderComponent = (
     props: Partial<React.ComponentProps<typeof PlotlyChart>> = {},
@@ -109,7 +111,7 @@ describe("PlotlyChart Component", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       <ElementFullscreenContext.Provider value={finalContext as any}>
         <PlotlyChart
-          element={defaultElement}
+          element={DEFAULT_ELEMENT}
           widgetMgr={widgetMgr}
           disabled={false}
           width={600}
@@ -121,6 +123,7 @@ describe("PlotlyChart Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    widgetMgr = createWidgetManager()
   })
 
   it("renders without crashing", () => {
@@ -170,7 +173,7 @@ describe("PlotlyChart Component", () => {
 
   it("configures selection modes correctly (Points)", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
 
@@ -185,7 +188,7 @@ describe("PlotlyChart Component", () => {
 
   it("configures selection modes correctly (Box)", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.BOX],
     })
 
@@ -201,7 +204,7 @@ describe("PlotlyChart Component", () => {
 
   it("configures selection modes correctly (Lasso)", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.LASSO],
     })
 
@@ -217,7 +220,7 @@ describe("PlotlyChart Component", () => {
 
   it("disables interactions when disabled prop is true", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
 
@@ -232,7 +235,7 @@ describe("PlotlyChart Component", () => {
 
   it("handles empty spec gracefully", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       spec: "",
     })
 
@@ -246,7 +249,7 @@ describe("PlotlyChart Component", () => {
 
   it("calls handleSelection on selection event", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
 
@@ -263,14 +266,14 @@ describe("PlotlyChart Component", () => {
     expect(handleSelection).toHaveBeenCalledWith(
       mockEvent,
       widgetMgr,
-      expect.objectContaining({ id: defaultElement.id }),
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
       undefined
     )
   })
 
   it("calls sendEmptySelection on deselect event", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
 
@@ -286,14 +289,14 @@ describe("PlotlyChart Component", () => {
     // And it also calls resetSelectionsCallback(false) inside component
     expect(sendEmptySelection).toHaveBeenCalledWith(
       widgetMgr,
-      expect.objectContaining({ id: defaultElement.id }),
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
       undefined
     )
   })
 
   it("resets selections on double-click when selection is activated", () => {
     const element = new PlotlyChartProto({
-      ...defaultElement,
+      ...DEFAULT_ELEMENT,
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
 
@@ -311,7 +314,7 @@ describe("PlotlyChart Component", () => {
     // Double-click should reset selections by calling sendEmptySelection
     expect(sendEmptySelection).toHaveBeenCalledWith(
       widgetMgr,
-      expect.objectContaining({ id: defaultElement.id }),
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
       undefined
     )
   })
@@ -337,7 +340,7 @@ describe("PlotlyChart Component", () => {
     })
 
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
-      defaultElement.id,
+      DEFAULT_ELEMENT.id,
       "figure",
       newFigure
     )
