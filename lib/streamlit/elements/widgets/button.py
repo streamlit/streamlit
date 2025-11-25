@@ -34,6 +34,7 @@ from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
@@ -111,6 +112,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         r"""Display a button widget.
 
@@ -218,6 +220,21 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. Provide a
+            single alphanumeric key (e.g. ``"K"``, ``"4"``), a function key
+            (e.g. ``"F11"``), or a supported special key (e.g. ``"Enter"``,
+            ``"Esc"``), optionally combined with modifiers.
+
+            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+
+            .. note::
+                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
+                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
+                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
+                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
+                ``","``) are not currently supported.
+
         Returns
         -------
         bool
@@ -289,6 +306,7 @@ class ButtonMixin:
             icon=icon,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("download_button")
@@ -309,6 +327,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         r"""Display a download button widget.
 
@@ -471,6 +490,21 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the download button.
+            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
+            function key (e.g. ``"F11"``), or a supported special key (e.g.
+            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+
+            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+
+            .. note::
+                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
+                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
+                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
+                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
+                ``","``) are not currently supported.
+
         Returns
         -------
         bool
@@ -629,6 +663,7 @@ class ButtonMixin:
             disabled=disabled,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("link_button")
@@ -643,6 +678,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> DeltaGenerator:
         r"""Display a link button element.
 
@@ -742,6 +778,21 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the link button.
+            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
+            function key (e.g. ``"F11"``), or a supported special key (e.g.
+            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+
+            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+
+            .. note::
+                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
+                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
+                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
+                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
+                ``","``) are not currently supported.
+
         Example
         -------
         >>> import streamlit as st
@@ -771,6 +822,7 @@ class ButtonMixin:
             type=type,
             icon=icon,
             width=width,
+            shortcut=shortcut,
         )
 
     @gather_metrics("page_link")
@@ -945,6 +997,7 @@ class ButtonMixin:
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         key = to_key(key)
 
@@ -953,6 +1006,10 @@ class ButtonMixin:
             if on_click is None or on_click in {"ignore", "rerun"}
             else cast("WidgetCallback", on_click)
         )
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -974,6 +1031,7 @@ class ButtonMixin:
             help=help,
             type=type,
             width=width,
+            shortcut=normalized_shortcut,
         )
 
         if is_in_form(self.dg):
@@ -1001,6 +1059,9 @@ class ButtonMixin:
             download_button_proto.ignore_rerun = True
         else:
             download_button_proto.ignore_rerun = False
+
+        if normalized_shortcut is not None:
+            download_button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 
@@ -1032,8 +1093,30 @@ class ButtonMixin:
         icon: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = normalize_shortcut(shortcut)
+
+        if normalized_shortcut is not None:
+            # We only register the element ID if a shortcut is provide.
+            # The ID is required to correctly register and handle the shortcut
+            # on the client side.
+            link_button_proto.id = compute_and_register_element_id(
+                "link_button",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                icon=icon,
+                url=url,
+                help=help,
+                type=type,
+                width=width,
+                shortcut=normalized_shortcut,
+            )
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
@@ -1044,6 +1127,9 @@ class ButtonMixin:
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
+
+        if normalized_shortcut is not None:
+            link_button_proto.shortcut = normalized_shortcut
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
@@ -1160,8 +1246,13 @@ class ButtonMixin:
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         key = to_key(key)
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -1185,6 +1276,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             width=width,
+            shortcut=normalized_shortcut,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -1216,6 +1308,9 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
+
+        if normalized_shortcut is not None:
+            button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 

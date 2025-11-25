@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -47,6 +47,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
+from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -98,43 +99,93 @@ class ChatInputValue(MutableMapping[str, Any]):
     text : str
         The text input provided by the user.
     files : list[UploadedFile]
-        A list of files uploaded by the user.
+        A list of files uploaded by the user. Only present when accept_file=True.
     audio : UploadedFile or None, optional
-        An audio recording uploaded by the user, if any.
+        An audio recording uploaded by the user, if any. Only present when accept_audio=True.
 
     Notes
     -----
     - Supports dict-like access via `__getitem__`, `__setitem__`, and `__delitem__`.
     - Use `to_dict()` to convert the value to a standard dictionary.
+    - The 'files' key is only present when accept_file=True.
+    - The 'audio' key is only present when accept_audio=True.
     """
 
     text: str
-    files: list[UploadedFile]
+    files: list[UploadedFile] = field(default_factory=list)
     audio: UploadedFile | None = None
+    _include_files: bool = field(default=False, repr=False, compare=False)
+    _include_audio: bool = field(default=False, repr=False, compare=False)
+    _included_keys: tuple[str, ...] = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Compute and cache the included keys after initialization."""
+        keys: list[str] = ["text"]
+        if self._include_files:
+            keys.append("files")
+        if self._include_audio:
+            keys.append("audio")
+        object.__setattr__(self, "_included_keys", tuple(keys))
+
+    def _get_included_keys(self) -> tuple[str, ...]:
+        """Return tuple of keys that should be exposed based on inclusion flags."""
+        return self._included_keys
 
     def __len__(self) -> int:
-        return len(vars(self))
+        return len(self._get_included_keys())
 
     def __iter__(self) -> Iterator[str]:
-        return iter(vars(self))
+        return iter(self._get_included_keys())
+
+    def __contains__(self, key: object) -> bool:
+        if not isinstance(key, str):
+            return False
+        return key in self._get_included_keys()
 
     def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
+        if item not in self._get_included_keys():
+            raise KeyError(f"Invalid key: {item}")
         try:
             return getattr(self, item)  # type: ignore[no-any-return]
         except AttributeError:
             raise KeyError(f"Invalid key: {item}") from None
 
+    def __getattribute__(self, name: str) -> Any:
+        # Intercept access to files/audio when they're excluded
+        # Use object.__getattribute__ to avoid infinite recursion
+        if name == "files" and not object.__getattribute__(self, "_include_files"):
+            raise AttributeError(
+                "'ChatInputValue' object has no attribute 'files' (accept_file=False)"
+            )
+        if name == "audio" and not object.__getattribute__(self, "_include_audio"):
+            raise AttributeError(
+                "'ChatInputValue' object has no attribute 'audio' (accept_audio=False)"
+            )
+        # For all other attributes, use normal lookup
+        return object.__getattribute__(self, name)
+
     def __setitem__(self, key: str, value: Any) -> None:
+        if key not in self._get_included_keys():
+            raise KeyError(f"Invalid key: {key}")
         setattr(self, key, value)
 
     def __delitem__(self, key: str) -> None:
+        if key not in self._get_included_keys():
+            raise KeyError(f"Invalid key: {key}")
         try:
             delattr(self, key)
         except AttributeError:
             raise KeyError(f"Invalid key: {key}") from None
 
     def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
-        return vars(self)
+        result: dict[str, str | list[UploadedFile] | UploadedFile | None] = {
+            "text": self.text
+        }
+        if self._include_files:
+            result["files"] = self.files
+        if self._include_audio:
+            result["audio"] = self.audio
+        return result
 
 
 class PresetNames(str, Enum):
@@ -334,6 +385,8 @@ class ChatInputSerde:
             text=ui_value.data,
             files=uploaded_files,
             audio=audio_file,
+            _include_files=self.accept_files,
+            _include_audio=self.accept_audio,
         )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
@@ -514,6 +567,7 @@ class ChatMixin:
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -531,6 +585,7 @@ class ChatMixin:
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -548,6 +603,7 @@ class ChatMixin:
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -615,9 +671,23 @@ class ChatMixin:
             When enabled, users can record and submit audio messages.
             Recorded audio is uploaded as a WAV file and can be accessed
             through the ``audio`` attribute of the returned dict-like object.
-            The ``audio`` attribute will be ``None`` when ``accept_audio=False``
-            or when no audio is recorded.
+            The ``audio`` attribute is only present when ``accept_audio=True``.
+            When present, it contains an ``UploadedFile`` object or ``None``
+            if no audio was recorded.
             This defaults to ``False``.
+
+        audio_sample_rate : int or None
+            The target sample rate for audio recording in Hz. This defaults to
+            16000 Hz, which is optimal for speech recognition. Common sample
+            rates include:
+
+            - ``8000`` Hz: Telephone quality
+            - ``16000`` Hz: Speech recognition (default)
+            - ``48000`` Hz: High-quality recording
+
+            Set to ``None`` to use the browser's default sample rate (no
+            resampling). Allowed values are ``8000``, ``11025``, ``16000``,
+            ``22050``, ``24000``, ``32000``, ``44100``, ``48000``, or ``None``.
 
         disabled : bool
             Whether the chat input should be disabled. This defaults to
@@ -656,7 +726,9 @@ class ChatMixin:
             - A dict-like object: When the widget is configured to accept files
               and/or audio and the user submitted a message and/or file(s)
               and/or audio in the last rerun, the widget returns a dict-like
-              object with three attributes: ``text``, ``files``, and ``audio``.
+              object. The object always includes the ``text`` attribute, and
+              optionally includes ``files`` and/or ``audio`` attributes depending
+              on the ``accept_file`` and ``accept_audio`` parameters.
 
             When the widget is configured to accept files or audio and the user
             submits something in the last rerun, you can access the user's
@@ -667,14 +739,15 @@ class ChatMixin:
             This is an empty string if the user only submitted one or more
             files or audio.
 
-            The ``files`` attribute holds a list of UploadedFile objects.
+            The ``files`` attribute is only present when ``accept_file`` is not
+            ``False``. When present, it holds a list of ``UploadedFile`` objects.
             The list is empty if the user only submitted a message or audio.
             Unlike ``st.file_uploader``, this attribute always returns a list,
             even when the widget is configured to accept only one file at a time.
 
-            The ``audio`` attribute holds an UploadedFile object representing
-            the recorded audio, or ``None`` if no audio was recorded or when
-            ``accept_audio=False``.
+            The ``audio`` attribute is only present when ``accept_audio=True``.
+            When present, it holds an ``UploadedFile`` object representing
+            the recorded audio, or ``None`` if no audio was recorded.
 
             The UploadedFile class is a subclass of BytesIO, and therefore is
             "file-like". This means you can pass an instance of it anywhere a
@@ -808,11 +881,22 @@ class ChatMixin:
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
+            audio_sample_rate=audio_sample_rate,
             width=width,
         )
 
         if file_type:
             file_type = normalize_upload_file_type(file_type)
+
+        # Validate audio_sample_rate if provided
+        if (
+            audio_sample_rate is not None
+            and audio_sample_rate not in ALLOWED_SAMPLE_RATES
+        ):
+            raise StreamlitAPIException(
+                f"Invalid audio_sample_rate: {audio_sample_rate}. "
+                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            )
 
         # It doesn't make sense to create a chat input inside a form.
         # We throw an error to warn the user about this.
@@ -853,6 +937,9 @@ class ChatMixin:
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
         chat_input_proto.accept_audio = accept_audio
+
+        if audio_sample_rate is not None:
+            chat_input_proto.audio_sample_rate = audio_sample_rate
 
         serde = ChatInputSerde(
             accept_files=accept_file in {True, "multiple", "directory"},

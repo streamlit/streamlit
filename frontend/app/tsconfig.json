@@ -5,6 +5,7 @@
     "paths": {
       "~lib/*": ["../lib/src/*"],
       "@streamlit/lib": ["../lib/src"],
+      "@streamlit/lib/testing": ["../lib/src/testing.ts"],
       "@streamlit/app": ["./src"],
       "@streamlit/connection": ["../connection/src"],
       "@streamlit/protobuf": ["../protobuf/src"],

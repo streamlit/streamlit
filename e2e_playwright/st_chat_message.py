@@ -26,7 +26,7 @@ np.random.seed(0)
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=(f"col_{i}" for i in range(5)),
+    columns=[f"col_{i}" for i in range(5)],
 )
 
 with st.chat_message("user"):

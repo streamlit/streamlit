@@ -202,12 +202,6 @@ function getButtonGroupOverridesStyle(
     margin: "0 0",
   }
   const width = containerWidth ? "100%" : "auto"
-  const segmentedControlNoStretch = containerWidth
-    ? {}
-    : {
-        content: "''",
-        flex: 10000,
-      }
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -228,10 +222,6 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
-        // Adding an empty pseudo-element after the last button in the group.
-        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        // This is only needed if the button group has content width.
-        "::after": segmentedControlNoStretch,
         width,
       }
     default:

@@ -29,6 +29,7 @@ import {
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getScreencastTimestamp,
   getSelectPlaceholder,
   getUrl,
   isDarkThemeInQueryParams,
@@ -728,5 +729,63 @@ describe("getSelectPlaceholder", () => {
       expect(result.placeholder).toBe(" ")
       expect(result.shouldDisable).toBe(false)
     })
+  })
+})
+
+describe("getScreencastTimestamp", () => {
+  beforeEach(() => {
+    // Set timezone to UTC for consistent test results across all environments
+    process.env.TZ = "UTC"
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    delete process.env.TZ
+  })
+
+  it("should return a timestamp in the correct format", () => {
+    vi.setSystemTime(new Date("2025-11-18T12:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-11-18-12-00-00")
+  })
+
+  it("should handle single-digit months with proper padding", () => {
+    vi.setSystemTime(new Date("2025-01-05T08:03:07.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-01-05-08-03-07")
+  })
+
+  it("should handle single-digit days with proper padding", () => {
+    vi.setSystemTime(new Date("2025-12-09T14:30:45.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-12-09-14-30-45")
+  })
+
+  it("should handle single-digit hours with proper padding", () => {
+    vi.setSystemTime(new Date("2025-06-15T03:25:50.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-06-15-03-25-50")
+  })
+
+  it("should handle single-digit minutes with proper padding", () => {
+    vi.setSystemTime(new Date("2025-07-20T18:05:30.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-07-20-18-05-30")
+  })
+
+  it("should handle single-digit seconds with proper padding", () => {
+    vi.setSystemTime(new Date("2025-08-25T23:45:09.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-08-25-23-45-09")
+  })
+
+  it("should handle midnight correctly", () => {
+    vi.setSystemTime(new Date("2025-03-10T00:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-03-10-00-00-00")
+  })
+
+  it("should handle end of year correctly", () => {
+    vi.setSystemTime(new Date("2024-12-31T23:59:59.000Z"))
+    expect(getScreencastTimestamp()).toBe("2024-12-31-23-59-59")
+  })
+
+  it("should ignore milliseconds", () => {
+    vi.setSystemTime(new Date("2025-05-15T10:20:30.999Z"))
+    expect(getScreencastTimestamp()).toBe("2025-05-15-10-20-30")
   })
 })

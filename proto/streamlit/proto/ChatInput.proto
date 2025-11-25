@@ -50,4 +50,8 @@ message ChatInput {
 
   // Whether to show audio recording button
   bool accept_audio = 12;
+
+  // Sample rate for audio recording in Hz (e.g., 16000, 48000)
+  // If not set, uses browser default
+  optional int32 audio_sample_rate = 13;
 }

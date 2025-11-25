@@ -8,7 +8,13 @@ Central registry of resources available to AI agents working on Streamlit.
 
 ## Available Resources
 
-No resources have been added yet. Check back as content is introduced.
+### [Guides](references/guides/)
+
+System overviews and comprehensive documentation (e.g., layout system, caching, state management)
+
+### [Features](references/features/)
+
+Feature development artifacts (specs + implementation plans) organized by area. Not tracked in git.
 
 ## Contributing
 

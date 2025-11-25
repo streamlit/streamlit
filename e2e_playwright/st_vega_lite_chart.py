@@ -175,7 +175,7 @@ spec = {
 st.vega_lite_chart(spec, use_container_width=True)
 
 data1 = {"VALUE": [420, 380, 390], "DATE": [50, 60, 70]}
-data = pd.DataFrame(data1)
+df_data = pd.DataFrame(data1)
 
 data2 = {
     "VALUE": [420, 380, 600, 390],
@@ -184,11 +184,11 @@ data2 = {
 
 
 if st.button(label="change"):
-    data = pd.DataFrame(data2)
+    df_data = pd.DataFrame(data2)
 
-st.dataframe(data)
+st.dataframe(df_data)
 st.vega_lite_chart(
-    data=data,
+    data=df_data,
     spec={
         "autosize": {
             "type": "fit",
