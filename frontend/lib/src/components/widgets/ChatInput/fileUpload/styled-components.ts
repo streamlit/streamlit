@@ -103,9 +103,9 @@ export const StyledChatUploadedFileName =
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color:
-      fileStatus.type === "uploaded"
-        ? theme.colors.bodyText
-        : theme.colors.fadedText60,
+      fileStatus.type === "uploading"
+        ? theme.colors.fadedText60
+        : theme.colors.bodyText,
   }))
 
 export const StyledChatUploadedFileSize = styled.div(({ theme }) => ({
