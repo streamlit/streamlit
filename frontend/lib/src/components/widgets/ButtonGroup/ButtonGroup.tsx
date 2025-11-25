@@ -297,7 +297,7 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  return element.default ?? null
+  return element.default ?? []
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
