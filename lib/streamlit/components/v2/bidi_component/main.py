@@ -414,15 +414,12 @@ class BidiComponentMixin:
 
                         bidi_component_proto.arrow_data.CopyFrom(arrow_data_proto)
                     else:
-                        # Fallback to JSON: leave insertion order intact so component
-                        # authors can rely on whatever ordering semantics they encoded.
+                        # Fallback to JSON.
                         bidi_component_proto.json = json.dumps(data)
             except Exception:
                 # As a last resort attempt JSON serialization so that we don't
                 # silently drop developer data.
                 try:
-                    # Same as above—never sort here; identity canonicalization handles
-                    # stability without mutating developer payloads.
                     bidi_component_proto.json = json.dumps(data)
                 except Exception:
                     raise BidiComponentUnserializableDataError()
