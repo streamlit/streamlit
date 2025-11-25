@@ -252,9 +252,9 @@ const CameraInput = ({
    */
   const addFile = useCallback(
     (file: UploadFileInfo): void => {
-      setFiles([...files, file])
+      setFiles(prevFiles => [...prevFiles, file])
     },
-    [files, setFiles]
+    [setFiles]
   )
 
   /**
@@ -262,9 +262,9 @@ const CameraInput = ({
    */
   const removeFile = useCallback(
     (idToRemove: number): void => {
-      setFiles(files.filter(file => file.id !== idToRemove))
+      setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
     },
-    [files, setFiles]
+    [setFiles]
   )
 
   /**
@@ -272,9 +272,11 @@ const CameraInput = ({
    */
   const updateFile = useCallback(
     (curFileId: number, newFile: UploadFileInfo): void => {
-      setFiles(files.map(file => (file.id === curFileId ? newFile : file)))
+      setFiles(prevFiles =>
+        prevFiles.map(file => (file.id === curFileId ? newFile : file))
+      )
     },
-    [files, setFiles]
+    [setFiles]
   )
 
   /**
