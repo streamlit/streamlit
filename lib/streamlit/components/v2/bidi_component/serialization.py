@@ -67,12 +67,19 @@ def _extract_dataframes_from_dict(
             try:
                 arrow_bytes = convert_anything_to_arrow_bytes(value)
                 # Use deterministic, content-addressed ref IDs so placeholders
-                # are stable for identical content on each run.
+                # are stable for identical content on each run. This also provides
+                # natural deduplication - identical DataFrames share a single blob.
                 ref_id = calc_md5(arrow_bytes)
                 arrow_blobs[ref_id] = arrow_bytes
                 processed_data[key] = {ARROW_REF_KEY: ref_id}
-            except Exception:
-                # If Arrow serialization fails, keep the original value for JSON serialization
+            except Exception as e:
+                # If Arrow serialization fails, keep the original value for JSON
+                # serialization attempt downstream.
+                _LOGGER.debug(
+                    "Arrow serialization failed for key %r, keeping original value: %s",
+                    key,
+                    e,
+                )
                 processed_data[key] = value
         else:
             # Not dataframe-like, keep as-is

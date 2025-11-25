@@ -185,6 +185,9 @@ class BidiComponentMixin:
             # Add the JSON content of the MixedData to the identity.
             identity["mixed_json"] = mixed.json
             # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
+            # Unlike other data types where we include actual bytes, here we only include
+            # the blob keys. This is sufficient because keys are MD5 hashes of the blob
+            # content (content-addressed), so identical content produces identical keys.
             identity["mixed_arrow_blobs"] = ",".join(sorted(mixed.arrow_blobs.keys()))
         else:
             raise RuntimeError(

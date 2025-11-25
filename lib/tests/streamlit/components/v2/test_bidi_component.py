@@ -1269,6 +1269,25 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
         assert id1 == id2
 
+    def test_unkeyed_id_stable_with_duplicate_dataframe_content(self):
+        """Two different keys with identical DataFrame content should produce stable IDs.
+
+        This validates content-addressing deduplication: identical DataFrames under
+        different keys share the same blob ref ID, so the identity is stable.
+        """
+        data1 = {"df1": pd.DataFrame({"x": [1]}), "df2": pd.DataFrame({"x": [1]})}
+        st._bidi_component("ident", data=data1)
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        # Same structure, new DataFrame objects with identical content
+        data2 = {"df1": pd.DataFrame({"x": [1]}), "df2": pd.DataFrame({"x": [1]})}
+        st._bidi_component("ident", data=data2)
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
     """Verify that per-state callbacks fire exclusively for their key."""
