@@ -488,6 +488,25 @@ def test_page_link_with_query_params(app: Page, app_port: int):
     expect_prefixed_markdown(app, "Query Params:", "{'foo': 'bar', 'baz': ['1', '2']}")
 
 
+def test_page_link_same_page_updates_params(app: Page, app_port: int):
+    """Test that st.page_link to the same page with query params updates the URL."""
+
+    # Navigate to page 9
+    get_page_link(app, "page 9").click()
+    wait_for_app_loaded(app)
+    expect(page_heading(app)).to_contain_text("Page 9")
+
+    # Click the link that points to page 9 (same page) with query params
+    page_link = app.get_by_test_id("stPageLink-NavLink").filter(
+        has_text="page 9 with query params"
+    )
+    page_link.click()
+    wait_for_app_loaded(app)
+
+    # Check URL has params
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_9?foo=bar&baz=1&baz=2")
+
+
 def test_hidden_navigation(app: Page):
     """Test position=hidden hides the navigation."""
 

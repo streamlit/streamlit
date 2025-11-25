@@ -1159,12 +1159,11 @@ export class App extends PureComponent<Props, State> {
       // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
-      if (prevPageName !== newPageName) {
-        const pagePath = isViewingMainPage ? "" : newPageName
-        const queryString =
-          this.state.queryParams || preserveEmbedQueryParams()
-        const qs = queryString ? `?${queryString}` : ""
+      const pagePath = isViewingMainPage ? "" : newPageName
+      const queryString = this.state.queryParams || preserveEmbedQueryParams()
+      const qs = queryString ? `?${queryString}` : ""
 
+      if (prevPageName !== newPageName || document.location.search !== qs) {
         const basePathPrefix = pathname === "/" ? "" : pathname
 
         const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
@@ -1737,7 +1736,10 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
+      if (
+        pageScriptHash != currentPageScriptHash ||
+        queryStringOverride !== undefined
+      ) {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
         const preservedQueryParams = preserveEmbedQueryParams()
