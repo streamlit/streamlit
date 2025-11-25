@@ -158,6 +158,7 @@ class BidiComponentMixin:
         width: Width,
         height: Height,
         proto: BidiComponentProto,
+        data: BidiComponentData = None,
     ) -> dict[str, Any]:
         """Build deterministic identity kwargs for ID computation.
 
@@ -182,6 +183,9 @@ class BidiComponentMixin:
             The populated component protobuf. Its ``data`` oneof determines
             which serialized payload (JSON, Arrow, bytes, or Mixed) contributes
             to identity.
+        data : BidiComponentData
+            The raw data passed to the component. Used to optimize identity
+            calculation for JSON payloads by avoiding a parse/serialize cycle.
 
         Returns
         -------
@@ -208,9 +212,24 @@ class BidiComponentMixin:
 
         if data_field == "json":
             # Canonicalize only for identity so unkeyed widgets don't churn when
-            # dict insertion order changes, while the original ordering still
-            # reaches the frontend untouched.
-            identity["json"] = self._canonical_json_digest_for_identity(proto.json)
+            # dict insertion order changes.
+            #
+            # Optimization: Use raw `data` if available to avoid the overhead of
+            # parsing `proto.json` back into a dict.
+            canonical_digest = None
+
+            if data is not None:
+                try:
+                    canonical = json.dumps(data, sort_keys=True)
+                    canonical_digest = calc_md5(canonical)
+                except (TypeError, ValueError):
+                    # Fallback to existing logic if direct dump fails
+                    pass
+
+            if canonical_digest is None:
+                canonical_digest = self._canonical_json_digest_for_identity(proto.json)
+
+            identity["json"] = canonical_digest
         elif data_field == "arrow_data":
             # Hash large payloads instead of shoving raw bytes through the ID
             # hasher for performance.
@@ -417,6 +436,7 @@ class BidiComponentMixin:
             width=width,
             height=height,
             proto=bidi_component_proto,
+            data=data,
         )
         # Compute a unique ID for this component instance now that the proto is
         # populated.

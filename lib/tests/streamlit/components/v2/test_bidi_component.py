@@ -1355,6 +1355,54 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
         assert id1 == id2
 
+    def test_identity_kwargs_uses_optimization_when_data_provided(self):
+        """When data is provided, identity calculation should skip unnecessary deserialization."""
+        mixin = BidiComponentMixin()
+        proto = BidiComponentProto()
+        data = {"a": 1, "b": 2}
+        # Pre-populate proto.json to simulate what happens in main
+        proto.json = json.dumps(data)
+
+        # Mock _canonical_json_digest_for_identity to ensure it's NOT called
+        # when the optimization path is taken.
+        with patch.object(mixin, "_canonical_json_digest_for_identity") as mock_digest:
+            identity = mixin._build_bidi_identity_kwargs(
+                component_name="cmp",
+                isolate_styles=True,
+                width="stretch",
+                height="content",
+                proto=proto,
+                data=data,
+            )
+
+            # Verify the result is correct (sorted keys)
+            expected_canonical = json.dumps(data, sort_keys=True)
+            assert identity["json"] == calc_md5(expected_canonical)
+
+            # Verify the slow path was skipped
+            mock_digest.assert_not_called()
+
+        # Verify behavior WITHOUT data (slow path fallback)
+        with patch.object(
+            mixin,
+            "_canonical_json_digest_for_identity",
+            wraps=mixin._canonical_json_digest_for_identity,
+        ) as mock_digest:
+            identity = mixin._build_bidi_identity_kwargs(
+                component_name="cmp",
+                isolate_styles=True,
+                width="stretch",
+                height="content",
+                proto=proto,
+                data=None,
+            )
+
+            # Verify result is still correct
+            assert identity["json"] == calc_md5(expected_canonical)
+
+            # Verify the slow path WAS called
+            mock_digest.assert_called_once()
+
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
     """Verify that per-state callbacks fire exclusively for their key."""
