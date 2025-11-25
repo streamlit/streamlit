@@ -189,7 +189,7 @@ function getButtonGroupOverridesStyle(
   spacing: EmotionTheme["spacing"],
   containerWidth: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
+): React.CSSProperties {
   const baseStyle = {
     flexWrap: "wrap",
     // maxWidth must be conditional:
